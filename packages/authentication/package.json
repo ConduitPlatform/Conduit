@@ -1,0 +1,15 @@
+{
+  "name": "@conduit/authentication",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.7.2",
+    "mongoose": "^5.8.9",
+    "passport-facebook-token": "^1.0.0",
+    "passport-github": "^1.0.0"
+  }
+}

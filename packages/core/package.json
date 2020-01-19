@@ -1,0 +1,21 @@
+{
+  "name": "@conduit/core",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "./node_modules/.bin/nodemon -e js ./app.js",
+    "production": "node app.js",
+    "test": "./node_modules/.bin/eslint ."
+  },
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "morgan": "~1.9.1",
+    "@conduit/authentication": "1.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.12.1"
+  }
+}
