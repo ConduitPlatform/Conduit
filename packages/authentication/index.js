@@ -4,7 +4,7 @@ let local = require('./authenticators/local');
 let Token = require('./models/Token');
 const jwt = require('jsonwebtoken');
 
-
+let initialized = false;
 const configuration = {
     local: {
         identifier: 'email',
@@ -57,20 +57,25 @@ function authentication(app, config) {
     if (config.local) {
         app.get('/authentication/local', local.authenticate);
         app.get('/authentication/local/new', local.register);
-
+        initialized = true;
     }
 
     if (config.facebook) {
         app.get('/authentication/facebook', facebook.authenticate);
+        initialized = true;
     }
 
     if (config.google) {
         app.get('/authentication/google', google.authenticate);
+        initialized = true;
     }
 
 }
 
 function middleware(req, res, next) {
+    if (!initialized) {
+        throw new Error("Authentication module not initialized");
+    }
     const header = req.headers['Authorization'] || req.headers['authorization'];
     if (header === null || header === undefined) {
         return res.status(401).json({error: 'Unauthorized'});
