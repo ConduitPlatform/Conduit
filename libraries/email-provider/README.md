@@ -8,3 +8,4 @@ This library can be used with anything really.
 - Transport: SMTP
 - Transport: SendGrid
 - Transport: Mandrill
+- Tests
