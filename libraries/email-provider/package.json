@@ -1,0 +1,30 @@
+{
+  "name": "@conduit/email-provider",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc",
+    "publish": "npm publish"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@types/nodemailer": "^6.4.0",
+    "@types/nodemailer-mailgun-transport": "^1.4.1",
+    "nodemailer": "^6.4.2",
+    "nodemailer-mailgun-transport": "^2.0.0"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
+  "devDependencies": {
+    "typescript": "^3.7.5"
+  }
+}

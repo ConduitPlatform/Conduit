@@ -1,6 +1,7 @@
 {
   "packages": [
     "packages/*",
+    "libraries/*",
     "admin/*"
   ],
   "version": "independent"
