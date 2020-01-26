@@ -1,20 +1,18 @@
-const mongoose = require('../db/mongoose');
-const Schema = mongoose.Schema;
-
-const AccessToken = new Schema({
+module.exports = {
+    name: 'AccessToken',
+    schema: {
         userId: {
-            type: Schema.Types.ObjectId,
-            ref: 'User'
+            type: 'Relation',
+            model: 'User'
         },
         token: {
             type: String
         },
-        expiresOn: Date
+        expiresOn: {
+            type: Date
+        }
     },
-    {
+    options: {
         timestamps: true
-    });
-
-module.exports = mongoose.model('AccessToken', AccessToken);
-
-
+    }
+};

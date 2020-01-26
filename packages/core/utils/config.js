@@ -10,4 +10,7 @@ config.loadFile('../config/env.json');
 // Perform validation
 config.validate({allowed: 'strict'});
 
+process.env.databaseType = config.get('database').type;
+process.env.databaseURL = config.get('database').databaseURL;
+
 module.exports = config;

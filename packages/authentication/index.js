@@ -1,10 +1,16 @@
 let facebook = require('./authenticators/facebook');
 let google = require('./authenticators/google');
 let local = require('./authenticators/local');
-let Token = require('./models/Token');
+
 const jwt = require('jsonwebtoken');
 
+
+let refreshToken = require('./models/RefreshToken');
+let accessToken = require('./models/Token');
+let userModel = require('./models/User');
+
 let initialized = false;
+let database;
 const configuration = {
     local: {
         identifier: 'email',
@@ -18,7 +24,7 @@ const configuration = {
 };
 
 /**
- * @param router
+ * @param app
  * @param config The configuration for the plugin
  * {
  *     local: {
@@ -50,9 +56,11 @@ function authentication(app, config) {
         throw new Error("Malformed config provided")
     }
 
-    if (!router) {
-        throw new Error("No router provided")
+    if (!app) {
+        throw new Error("No app provided")
     }
+    database = app.database.getDbAdapter();
+    registerSchemas();
 
     if (config.local) {
         app.get('/authentication/local', local.authenticate);
@@ -70,6 +78,12 @@ function authentication(app, config) {
         initialized = true;
     }
 
+}
+
+function registerSchemas() {
+    database.createSchemaFromAdapter(userModel);
+    database.createSchemaFromAdapter(refreshToken);
+    database.createSchemaFromAdapter(accessToken);
 }
 
 function middleware(req, res, next) {
@@ -97,9 +111,11 @@ function middleware(req, res, next) {
 
     const {id: userId} = decoded;
 
-    Token.findOne({_id: userId})
+    database.getSchema('Token')
+        .findOne({_id: userId})
         .then(async user => {
             if (user === null || user === undefined) {
+                // todo change this to proper error
                 throw new HttpError(null, 'User not found', 404);
             }
             req.user = user;

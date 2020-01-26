@@ -9,11 +9,16 @@ module.exports = {
         default: 'development',
         env: 'NODE_ENV'
     },
-    mongoConnection: {
-        doc: 'The connection string for MongoDB',
-        format: "String",
-        default: 'mongodb://localhost:27017,localhost:27018,localhost:27019/Parse?replicaSet=rs',
-        env: 'MONGO_CONNECTION_STRING'
+    database: {
+        doc: 'The connection details for Prisma',
+        type: {
+            format: "String",
+            default: 'mongodb'
+        },
+        databaseURL: {
+            format: "String",
+            default: 'mongodb://localhost:27017/conduit'
+        }
     },
     port: {
         doc: 'The port to bind.',

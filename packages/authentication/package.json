@@ -7,8 +7,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "bluebird": "^3.7.2",
-    "mongoose": "^5.8.9",
+    "bcrypt": "^3.0.7",
+    "jsonwebtoken": "^8.5.1",
     "passport-facebook-token": "^1.0.0",
     "passport-github": "^1.0.0"
   }

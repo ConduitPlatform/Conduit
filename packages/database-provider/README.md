@@ -17,3 +17,23 @@ will know which DB to query.
 
 It is important to implement all logic in files and not 'create' all schemas during
 runtime and have their existance be logical. We need them in file format to guarantee performance  
+
+# Mongoose Adapter module
+
+This module will be required by the database-adapter, depending on configuration,
+and will allow for basic query execution through its functions, access to the underlying connector,
+direct-model access, mongoose schema generation through .json models.
+
+# Sequelize Adapter module
+
+This module will be required by the database-adapter, depending on configuration,
+and will allow for basic query execution through its functions, access to the underlying connector,
+direct-model access, sql schema generation through .json models.
+
+
+#NOTE
+
+Mongoose and sequelize where selected due to their similar nature, so that we can maintain 
+a compatibility layer fairly easily. This provider would probably be best to be exported as 
+a library down the road. The purpose of the library should be to provide a compatibility between MongoDB
+and sequelize. 

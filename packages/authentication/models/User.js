@@ -1,10 +1,6 @@
-const mongoose = require('../db/mongoose');
-const Schema = mongoose.Schema;
-
-const bcrypt = require('bcrypt');
-const SALT_ROUNDS = 10;
-
-const User = new Schema({
+module.exports = {
+    name: 'User',
+    schema: {
         email: {
             type: String,
             unique: true,
@@ -15,16 +11,32 @@ const User = new Schema({
             select: false
         },
         google: {
-            token: String,
-            tokenExpires: String,
-            refreshToken: String,
-            refreshTokenExpires: String
+            token: {
+                type: String
+            },
+            tokenExpires: {
+                type: String
+            },
+            refreshToken: {
+                type: String
+            },
+            refreshTokenExpires: {
+                type: String
+            }
         },
         facebook: {
-            token: String,
-            tokenExpires: String,
-            refreshToken: String,
-            refreshTokenExpires: String
+            token: {
+                type: String
+            },
+            tokenExpires: {
+                type: String
+            },
+            refreshToken: {
+                type: String
+            },
+            refreshTokenExpires: {
+                type: String
+            }
         },
         active: {
             type: Boolean,
@@ -32,37 +44,8 @@ const User = new Schema({
         },
         isVerified: {type: Boolean, default: false},
     },
-    {
+    options: {
         timestamps: true
-    });
-
-
-User.virtual('password')
-    .set(function (password) {
-        this["_plainPassword"] = password;
-        const self = this;
-        bcrypt.hash(password, SALT_ROUNDS, function (err, hash) {
-            if (err) {
-                console.log(err);
-            } else {
-                self.hashedPassword = hash;
-            }
-        });
-    })
-    .get(function () {
-        return this["_plainPassword"];
-    });
-
-
-User.methods.checkPassword = function (password, callback) {
-    bcrypt.compare(password, this.hashedPassword, function (err, res) {
-        if (err) {
-            callback(err);
-            console.log('Could not check password');
-        } else {
-            callback(null, res);
-        }
-    });
+    }
 };
 
-module.exports = mongoose.model('User', User);

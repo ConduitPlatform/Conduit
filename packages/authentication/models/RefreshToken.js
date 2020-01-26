@@ -1,24 +1,22 @@
-const mongoose = require('../db/mongoose');
-const Schema = mongoose.Schema;
-
-const RefreshToken = new Schema({
+module.exports = {
+    name: 'RefreshToken',
+    schema: {
         userId: {
-            type: Schema.Types.ObjectId,
-            ref: 'User'
+            type: 'Relation',
+            model: 'User'
         },
         token: {
             type: String
         },
-        expiresOn: Date,
+        expiresOn: {
+            type: Date
+        },
         securityDetails: {
             macAddress: String,
             userAgent: String
         }
     },
-    {
+    options: {
         timestamps: true
-    });
-
-module.exports = mongoose.model('RefreshToken', RefreshToken);
-
-
+    }
+};
