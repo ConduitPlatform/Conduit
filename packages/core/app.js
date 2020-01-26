@@ -1,8 +1,8 @@
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var config = require('./utils/config.js');
+var config = require('./utils/config/config.js');
+var logger = require('./utils/logging/logger.js');
 var authentication = require('@conduit/authentication');
 var database = require('@conduit/database-provider');
 
@@ -12,11 +12,12 @@ var usersRouter = require('./routes/users');
 
 var app = express();
 
-app.use(logger('dev'));
+app.use(logger.logger());
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 app.config = config;
 app.database = database;
@@ -26,8 +27,16 @@ if (config.get('authentication')) {
     authentication.initialize(app, config.get('authentication'));
 }
 
+
 app.use('/', indexRouter);
 app.use('/users', authentication.authenticate, usersRouter);
 
+app.use(logger.errorLogger());
+
+app.use((error, req, res, next) => {
+    let status = error.status;
+    if (status === null || status === undefined) status = 500;
+    res.status(status).json({error: error.message});
+});
 
 module.exports = app;

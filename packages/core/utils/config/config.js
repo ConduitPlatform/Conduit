@@ -5,7 +5,7 @@ let schema = require('./config.schema');
 const config = convict(schema);
 
 // Load environment dependent configuration
-config.loadFile('../config/env.json');
+config.loadFile('../../config/env.json');
 
 // Perform validation
 config.validate({allowed: 'strict'});
