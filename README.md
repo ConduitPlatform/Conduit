@@ -2,6 +2,9 @@
 # Conduit Platform
 Conduit is a NodeJS Based API platform/Gateway, that aims to cut down backend development times
 
+##Running
+- npm install
+-  lerna bootstrap 
 
 ## TODO
 - Create the modules (duh)
