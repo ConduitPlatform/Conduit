@@ -20,9 +20,11 @@ export class CMS {
             .find({})
             .then((r: any) => {
                 if (r) {
-                    this._schemas = r;
                     r.forEach((r: any) => {
-                        this._adapter.createSchemaFromAdapter(r);
+                        let model = this._adapter.createSchemaFromAdapter(r);
+                        this._schemas.push({
+                            [r.name]: model
+                        });
                     })
                 }
 
@@ -37,15 +39,17 @@ export class CMS {
         let schema: any = {};
         schema['name'] = name;
         schema['schema'] = properties;
-        this._adapter.createSchemaFromAdapter(schema);
-        this._schemas = schema;
+        let model = this._adapter.createSchemaFromAdapter(schema);
+        this._schemas.push({
+            [name]: model
+        });
     }
 
     constructRouter() {
         // should support query params for multiple filters, finding by id and paging
         this._router.get('/content/:name', (req: any, res: any, next: any) => {
             //todo change to more robust mechanism
-            this._adapter.getSchema(req.params.name)
+            this._schemas[req.params.name]
                 .find({})
                 .then((r: any) => {
                     if (r) {
@@ -56,7 +60,7 @@ export class CMS {
                 })
                 .catch((err: Error) => {
                     res.status(500).json({message: "Something went wrong, view logs for details"});
-                    console.error(rr);
+                    console.error(err);
                 })
 
         });
