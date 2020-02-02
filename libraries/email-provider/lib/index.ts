@@ -4,39 +4,47 @@ import {MailgunMailBuilder} from "./transports/mailgun/mailgunMailBuilder";
 import {EmailBuilder} from "./interfaces/EmailBuilder";
 import {createTransport, SentMessageInfo} from "nodemailer";
 
-let _transport: Mail;
-let _transportName: string;
 
-export function initialize(transport: string, transportSettings: any): boolean {
-    if (transport === 'mailgun') {
-        _transportName = 'mailgun';
-        _transport = createTransport(initializeMailgun(transportSettings));
-        return _transport && true;
+export class EmailProvider {
+
+    _transport?: Mail;
+    _transportName?: string;
+
+    constructor(transport: string, transportSettings: any) {
+        if (transport === 'mailgun') {
+            this._transportName = 'mailgun';
+            this._transport = createTransport(initializeMailgun(transportSettings));
+        } else {
+            this._transportName = undefined;
+            this._transport = undefined;
+        }
     }
-    return false;
+
+    sendEmailDirect(mailOptions: any): Promise<SentMessageInfo> {
+        if (!this._transport) {
+            throw new Error("Email  transport not initialized!");
+        }
+        return this._transport.sendMail(mailOptions);
+    }
+
+    emailBuilder(): EmailBuilder | undefined {
+        if (!this._transport) {
+            throw new Error("Email  transport not initialized!");
+        }
+        if (this._transportName === 'mailgun') {
+            return new MailgunMailBuilder();
+        }
+
+        return undefined;
+    }
+
+    sendEmail(email: EmailBuilder): Promise<SentMessageInfo> {
+        if (!this._transport) {
+            throw new Error("Email  transport not initialized!");
+        }
+        return this._transport.sendMail(email.getMailObject());
+    }
 }
 
-export function sendEmailDirect(mailOptions: any): Promise<SentMessageInfo> {
-    if (!_transport) {
-        throw new Error("Email  transport not initialized!");
-    }
-    return _transport.sendMail(mailOptions);
-}
 
-export function emailBuilder(): EmailBuilder | undefined {
-    if (!_transport) {
-        throw new Error("Email  transport not initialized!");
-    }
-    if (_transportName === 'mailgun') {
-        return new MailgunMailBuilder();
-    }
 
-    return undefined;
-}
-
-export function sendEmail(email: EmailBuilder): Promise<SentMessageInfo> {
-    if (!_transport) {
-        throw new Error("Email  transport not initialized!");
-    }
-    return _transport.sendMail(email.getMailObject());
-}

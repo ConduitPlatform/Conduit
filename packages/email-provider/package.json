@@ -7,5 +7,6 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@conduit/email-provider": "1.0.0"
   }
 }

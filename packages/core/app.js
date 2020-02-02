@@ -18,9 +18,10 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-app.config = config;
-app.database = database;
+// Obejct to contain all modules
+app.conduit = {};
+app.conduit.config = config;
+app.conduit.database = database;
 database.connectToDB(process.env.databaseType, process.env.databaseURL);
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
 if (config.get('authentication')) {
