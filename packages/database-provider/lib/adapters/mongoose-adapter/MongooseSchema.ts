@@ -14,15 +14,11 @@ export class MongooseSchema implements SchemaAdapter {
     }
 
     findMany(query: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-
-        });
+        return this.model.find(query).lean().exec();
     }
 
     findOne(query: any): Promise<any> {
-        return new Promise((resolve, reject) => {
-
-        });
+        return this.model.findOne(query).lean().exec();
     }
 
 }
