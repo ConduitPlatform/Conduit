@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import React from "react";
 
 const Home = () => (
   <div className="container">
@@ -198,6 +199,6 @@ const Home = () => (
       }
     `}</style>
   </div>
-)
+);
 
 export default Home
