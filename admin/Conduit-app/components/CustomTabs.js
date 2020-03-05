@@ -21,7 +21,7 @@ export default function CustomTabs({tabs, selected, handleChange, ...rest}) {
       <Box {...rest}>
         <Tabs indicatorColor={'primary'} textColor={'primary'} value={selected} onChange={handleChange}>
           {tabs && tabs.map((tab, index) =>
-              <Tab key={`tab-${index}`} label={tab} disableRipple className={classes.tab}/>
+              <Tab key={`tab-${index}`} label={tab} className={classes.tab}/>
           )}
         </Tabs>
         <Divider className={classes.divider}/>
