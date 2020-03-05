@@ -9,6 +9,7 @@ import Switch from "@material-ui/core/Switch";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
+import clsx from "clsx";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -26,14 +27,16 @@ const useStyles = makeStyles(theme => ({
     }
   },
   details: {
-    minHeight: theme.spacing(20),
     borderTop: '1px solid',
     borderColor: 'rgb(217, 217, 217)'
   },
-  green: {
+  typography: {
+    flex: 1,
+  },
+  statusEnabled: {
     color: 'green'
   },
-  red: {
+  statusDisabled: {
     color: 'red'
   }
 }));
@@ -141,236 +144,244 @@ export default function AuthAccordion(props) {
     switch (providerData) {
       case email:
         return (
-          <ExpansionPanel
-            expanded={expanded.includes('email')}
-            onChange={() => openExpanded('email')}
-            style={{cursor: 'default'}}
-            classes={{root: classes.expandedPanel}}>
-            <ExpansionPanelSummary
-              id={'email'}>
-              <Box display={'flex'} alignItems={'center'} flex={1}>
-                <Typography variant={"subtitle2"} style={{flex: 1}}>
-                  Email
-                </Typography>
-                <Typography variant={"subtitle2"} style={{flex: 1}}
-                            className={data.email.enabled ? classes.green : classes.red}>
-                  {data.email.enabled ? 'Enabled' : 'Disabled'}
-                </Typography>
-              </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{root: classes.details}}>
-              <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
-                   width={'100%'}>
-                <Box mb={4} display={'flex'} maxWidth={800} width={'100%'} flexDirection={'column'}
-                     justifyContent={'flex-end'} alignItems={'center'}>
-                  <FormControlLabel
-                    style={{alignSelf: 'flex-end', marginBottom: 32}}
-                    control={
-                      <Switch
-                        checked={email.enabled}
-                        onChange={() => setEmail({...email, enabled: !email.enabled})}
-                        value={'email'}
-                        color="primary"
+            <ExpansionPanel
+                expanded={expanded.includes('email')}
+                onChange={() => openExpanded('email')}
+                style={{cursor: 'default'}}
+                classes={{root: classes.expandedPanel}}>
+              <ExpansionPanelSummary
+                  id={'email'}>
+                <Box display={'flex'} alignItems={'center'} flex={1}>
+                  <Typography variant={"subtitle2"} className={classes.typography}>
+                    Email/Password
+                  </Typography>
+                  <Typography variant={"subtitle2"}
+                              className={data.email.enabled ? clsx(classes.typography, classes.statusEnabled) :
+                                  clsx(classes.typography, classes.statusDisabled)}>
+                    {data.email.enabled ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                </Box>
+              </ExpansionPanelSummary>
+              <ExpansionPanelDetails classes={{root: classes.details}}>
+                <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
+                     width={'100%'}>
+                  <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
+                    <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                      <Typography variant={"subtitle2"} style={{width: '100%'}}>
+                        Allow users to sign up using their email address and password.
+                      </Typography>
+                      <FormControlLabel
+                          control={
+                            <Switch
+                                checked={email.enabled}
+                                onChange={() => setEmail({...email, enabled: !email.enabled})}
+                                value={'email'}
+                                color="primary"
+                            />
+                          }
+                          label={providerData.enabled ? 'Enabled' : 'Disabled'}
                       />
-                    }
-                    label={providerData.enabled ? 'Enabled' : 'Disabled'}
-                  />
-                  <Box width={'100%'}>
-                    <Typography variant={"subtitle2"} style={{width: '100%', marginBottom: 16}}>
-                      Allow users to sign up using their email addresses and password.
-                    </Typography>
+                    </Box>
+                  </Box>
+                  <Box alignSelf={'flex-end'}>
+                    <Button onClick={() => handleCancel('email')} style={{marginRight: 16}}
+                            color={'primary'}>Cancel</Button>
+                    <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
+                            onClick={() => handleSubmit('email', email)}>
+                      Save
+                    </Button>
                   </Box>
                 </Box>
-                <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('email')} style={{marginRight: 16}}
-                          color={'primary'}>Cancel</Button>
-                  <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
-                          onClick={() => handleSubmit('email', email)}>
-                    Save
-                  </Button>
-                </Box>
-              </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+              </ExpansionPanelDetails>
+            </ExpansionPanel>
         );
 
       case phone:
         return (
-          <ExpansionPanel
-            expanded={expanded.includes('phone')}
-            onChange={() => openExpanded('phone')}>
-            <ExpansionPanelSummary
-              id={'phone'}>
-              <Box display={'flex'} alignItems={'center'} flex={1}>
-                <Typography variant={"subtitle2"} style={{flex: 1}}>
-                  Phone
-                </Typography>
-                <Typography variant={"subtitle2"} style={{flex: 1}}
-                            className={data.phone.enabled ? classes.green : classes.red}>
-                  {data.phone.enabled ? 'Enabled' : 'Disabled'}
-                </Typography>
-              </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{root: classes.details}}>
-              <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
-                   width={'100%'}>
-                <Box mb={4} display={'flex'} maxWidth={800} width={'100%'} flexDirection={'column'}
-                     justifyContent={'flex-end'} alignItems={'center'}>
-                  <FormControlLabel
-                    style={{alignSelf: 'flex-end', marginBottom: 32}}
-                    control={
-                      <Switch
-                        checked={phone.enabled}
-                        onChange={() => setPhone({...phone, enabled: !phone.enabled})}
-                        value={'email'}
-                        color="primary"
+            <ExpansionPanel
+                expanded={expanded.includes('phone')}
+                onChange={() => openExpanded('phone')}>
+              <ExpansionPanelSummary
+                  id={'phone'}>
+                <Box display={'flex'} alignItems={'center'} flex={1}>
+                  <Typography variant={"subtitle2"} className={classes.typography}>
+                    Phone
+                  </Typography>
+                  <Typography variant={"subtitle2"}
+                              className={data.phone.enabled ? clsx(classes.typography, classes.statusEnabled) :
+                                  clsx(classes.typography, classes.statusDisabled)}>
+                    {data.phone.enabled ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                </Box>
+              </ExpansionPanelSummary>
+              <ExpansionPanelDetails classes={{root: classes.details}}>
+                <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
+                     width={'100%'}>
+                  <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
+                    <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                      <Typography variant={"subtitle2"} style={{width: '100%'}}>
+                        Allow users to sign up using their mobile phone.
+                      </Typography>
+                      <FormControlLabel
+                          control={
+                            <Switch
+                                checked={phone.enabled}
+                                onChange={() => setPhone({...phone, enabled: !phone.enabled})}
+                                value={'email'}
+                                color="primary"
+                            />
+                          }
+                          label={providerData.enabled ? 'Enabled' : 'Disabled'}
                       />
-                    }
-                    label={providerData.enabled ? 'Enabled' : 'Disabled'}
-                  />
-                  <Box width={'100%'}>
-                    <Typography variant={"subtitle2"} style={{width: '100%', marginBottom: 16}}>
-                      Allow users to sign up using their mobile phone.
-                    </Typography>
+                    </Box>
+                  </Box>
+                  <Box alignSelf={'flex-end'}>
+                    <Button onClick={() => handleCancel('phone')} style={{marginRight: 16}}
+                            color={'primary'}>Cancel</Button>
+                    <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
+                            onClick={() => handleSubmit('phone', phone)}>
+                      Save
+                    </Button>
                   </Box>
                 </Box>
-                <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('phone')} style={{marginRight: 16}}
-                          color={'primary'}>Cancel</Button>
-                  <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
-                          onClick={() => handleSubmit('phone', phone)}>
-                    Save
-                  </Button>
-                </Box>
-              </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+              </ExpansionPanelDetails>
+            </ExpansionPanel>
         );
 
       case google:
         return (
-          <ExpansionPanel
-            expanded={expanded.includes('google')}
-            onChange={() => openExpanded('google')}>
-            <ExpansionPanelSummary
-              id={'google'}>
-              <Box display={'flex'} alignItems={'center'} flex={1}>
-                <Typography variant={"subtitle2"} style={{flex: 1}}>
-                  Google
-                </Typography>
-                <Typography variant={"subtitle2"} style={{flex: 1}}
-                            className={data.google.enabled ? classes.green : classes.red}>
-                  {data.google.enabled ? 'Enabled' : 'Disabled'}
-                </Typography>
-              </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{root: classes.details}}>
-              <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
-                   width={'100%'}>
-                <Box mb={4} display={'flex'} maxWidth={800} width={'100%'} flexDirection={'column'}
-                     justifyContent={'flex-end'} alignItems={'center'}>
-                  <FormControlLabel
-                    style={{alignSelf: 'flex-end', marginBottom: 32}}
-                    control={
-                      <Switch
-                        checked={google.enabled}
-                        onChange={() => setGoogle({...google, enabled: !google.enabled})}
-                        value={'email'}
-                        color="primary"
+            <ExpansionPanel
+                expanded={expanded.includes('google')}
+                onChange={() => openExpanded('google')}>
+              <ExpansionPanelSummary
+                  id={'google'}>
+                <Box display={'flex'} alignItems={'center'} flex={1}>
+                  <Typography variant={"subtitle2"} className={classes.typography}>
+                    Google
+                  </Typography>
+                  <Typography variant={"subtitle2"}
+                              className={data.google.enabled ? clsx(classes.typography, classes.statusEnabled) :
+                                  clsx(classes.typography, classes.statusDisabled)}>
+                    {data.google.enabled ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                </Box>
+              </ExpansionPanelSummary>
+              <ExpansionPanelDetails classes={{root: classes.details}}>
+                <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
+                     width={'100%'}>
+                  <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
+                    <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                      <Typography variant={"subtitle2"} style={{width: '100%'}}>
+                        Allow users to sign up using their google account.
+                      </Typography>
+                      <FormControlLabel
+                          control={
+                            <Switch
+                                checked={google.enabled}
+                                onChange={() => setGoogle({...google, enabled: !google.enabled})}
+                                value={'email'}
+                                color="primary"
+                            />
+                          }
+                          label={providerData.enabled ? 'Enabled' : 'Disabled'}
                       />
-                    }
-                    label={providerData.enabled ? 'Enabled' : 'Disabled'}
-                  />
-                  <Box width={'100%'}>
-                    <TextField style={{width: '100%', marginBottom: 16}} id="google-id" label="Google ID"
-                               variant="outlined"
-                               value={google.id} onChange={handleGoogleID} disabled={!google.enabled}/>
-                    <TextField style={{width: '100%'}} id="google-secret" label="Google Secret" variant="outlined"
-                               value={google.secret} onChange={handleGoogleSecret} disabled={!google.enabled}/>
+                    </Box>
+                    <Box width={'100%'} mt={2}>
+                      <TextField style={{width: '100%', marginBottom: 8}} id="google-id" label="Google ID"
+                                 variant="outlined"
+                                 value={google.id} onChange={handleGoogleID} disabled={!google.enabled}/>
+                      <TextField style={{width: '100%'}} id="google-secret" label="Google Secret" variant="outlined"
+                                 value={google.secret} onChange={handleGoogleSecret} disabled={!google.enabled}/>
+                    </Box>
+                  </Box>
+                  <Box alignSelf={'flex-end'}>
+                    <Button onClick={() => handleCancel('google')} style={{marginRight: 16}}
+                            color={'primary'}>Cancel</Button>
+                    <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
+                            onClick={() => handleSubmit('google', google)}>
+                      Save
+                    </Button>
                   </Box>
                 </Box>
-                <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('google')} style={{marginRight: 16}}
-                          color={'primary'}>Cancel</Button>
-                  <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
-                          onClick={() => handleSubmit('google', google)}>
-                    Save
-                  </Button>
-                </Box>
-              </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+              </ExpansionPanelDetails>
+            </ExpansionPanel>
         );
 
       case facebook:
         return (
-          <ExpansionPanel
-            expanded={expanded.includes('facebook')}
-            onChange={() => openExpanded('facebook')}>
-            <ExpansionPanelSummary
-              id={'email'}>
-              <Box display={'flex'} alignItems={'center'} flex={1}>
-                <Typography variant={"subtitle2"} style={{flex: 1}}>
-                  Facebook
-                </Typography>
-                <Typography variant={"subtitle2"} style={{flex: 1}}
-                            className={data.facebook.enabled ? classes.green : classes.red}>
-                  {data.facebook.enabled ? 'Enabled' : 'Disabled'}
-                </Typography>
-              </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{root: classes.details}}>
-              <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
-                   width={'100%'}>
-                <Box mb={4} display={'flex'} maxWidth={800} width={'100%'} flexDirection={'column'}
-                     justifyContent={'flex-end'} alignItems={'center'}>
-                  <FormControlLabel
-                    style={{alignSelf: 'flex-end', marginBottom: 32}}
-                    control={
-                      <Switch
-                        checked={facebook.enabled}
-                        onChange={() => setFacebook({...facebook, enabled: !facebook.enabled})}
-                        value={'facebook'}
-                        color="primary"
+            <ExpansionPanel
+                expanded={expanded.includes('facebook')}
+                onChange={() => openExpanded('facebook')}>
+              <ExpansionPanelSummary
+                  id={'email'}>
+                <Box display={'flex'} alignItems={'center'} flex={1}>
+                  <Typography variant={"subtitle2"} className={classes.typography}>
+                    Facebook
+                  </Typography>
+                  <Typography variant={"subtitle2"}
+                              className={data.facebook.enabled ? clsx(classes.typography, classes.statusEnabled) :
+                                  clsx(classes.typography, classes.statusDisabled)}>
+                    {data.facebook.enabled ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                </Box>
+              </ExpansionPanelSummary>
+              <ExpansionPanelDetails classes={{root: classes.details}}>
+                <Box display={'flex'} flexDirection={'column'} justifyContent={'space-between'} alignItems={'center'}
+                     width={'100%'}>
+                  <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
+                    <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                      <Typography variant={"subtitle2"} style={{width: '100%'}}>
+                        Allow users to sign up using their facebook account.
+                      </Typography>
+                      <FormControlLabel
+                          control={
+                            <Switch
+                                checked={facebook.enabled}
+                                onChange={() => setFacebook({...facebook, enabled: !facebook.enabled})}
+                                value={'facebook'}
+                                color="primary"
+                            />
+                          }
+                          label={facebook.enabled ? 'Enabled' : 'Disabled'}
                       />
-                    }
-                    label={facebook.enabled ? 'Enabled' : 'Disabled'}
-                  />
-                  <Box width={'100%'}>
-                    <TextField style={{width: '100%', marginBottom: 16}} id="facebook-id" label="Facebook ID"
-                               variant="outlined"
-                               value={facebook.id} onChange={handleFacebookID} disabled={!facebook.enabled}/>
-                    <TextField style={{width: '100%'}} id="facebook-secret" label="Facebook Secret" variant="outlined"
-                               value={facebook.secret} onChange={handleFacebookSecret} disabled={!facebook.enabled}/>
+                    </Box>
+                    <Box width={'100%'} mt={2}>
+                      <TextField style={{width: '100%', marginBottom: 8}} id="facebook-id" label="Facebook ID"
+                                 variant="outlined"
+                                 value={facebook.id} onChange={handleFacebookID} disabled={!facebook.enabled}/>
+                      <TextField style={{width: '100%'}} id="facebook-secret" label="Facebook Secret"
+                                 variant="outlined"
+                                 value={facebook.secret} onChange={handleFacebookSecret}
+                                 disabled={!facebook.enabled}/>
+                    </Box>
+                  </Box>
+                  <Box alignSelf={'flex-end'}>
+                    <Button onClick={() => handleCancel('facebook')} style={{marginRight: 16}}
+                            color={'primary'}>Cancel</Button>
+                    <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
+                            onClick={() => handleSubmit('facebook', facebook)}>
+                      Save
+                    </Button>
                   </Box>
                 </Box>
-                <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('facebook')} style={{marginRight: 16}}
-                          color={'primary'}>Cancel</Button>
-                  <Button variant="contained" color="primary" style={{alignSelf: 'flex-end'}}
-                          onClick={() => handleSubmit('facebook', facebook)}>
-                    Save
-                  </Button>
-                </Box>
-              </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+              </ExpansionPanelDetails>
+            </ExpansionPanel>
         );
       default:
-        return
+        return null
     }
   };
 
   return (
-    <Box className={classes.root} {...rest}>
-      <Box display={'flex'} alignItems={'center'} className={classes.titleContent} boxShadow={2}>
-        <Typography variant={"subtitle2"} style={{width: '50%', paddingLeft: 24}}>Provider</Typography>
-        <Typography variant={"subtitle2"} style={{width: '50%'}}>Status</Typography>
+      <Box className={classes.root} {...rest}>
+        <Box display={'flex'} alignItems={'center'} className={classes.titleContent} boxShadow={2}>
+          <Typography variant={"subtitle2"} style={{width: '50%', paddingLeft: 24}}>Provider</Typography>
+          <Typography variant={"subtitle2"} style={{width: '50%'}}>Status</Typography>
+        </Box>
+        {expansionPanelGenerator(email)}
+        {expansionPanelGenerator(phone)}
+        {expansionPanelGenerator(google)}
+        {expansionPanelGenerator(facebook)}
       </Box>
-      {expansionPanelGenerator(email)}
-      {expansionPanelGenerator(phone)}
-      {expansionPanelGenerator(google)}
-      {expansionPanelGenerator(facebook)}
-    </Box>
   );
 }

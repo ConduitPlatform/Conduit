@@ -6,7 +6,7 @@ import ListItem from "@material-ui/core/ListItem";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import makeStyles from "@material-ui/styles/makeStyles";
-import IconSvg from '@material-ui/icons/Add'
+import {Home, People} from '@material-ui/icons'
 import clsx from "clsx";
 import Link from "next/link";
 
@@ -31,35 +31,39 @@ const useStyles = makeStyles(theme => ({
   },
   toolbar: theme.mixins.toolbar,
   listItem: {
-    color: theme.palette.common.white,
-    background: theme.palette.primary.main,
+    color: theme.palette.common.black,
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: theme.palette.secondary.main,
+    borderColor: theme.palette.primary.main,
     paddingLeft: 4,
     paddingRight: 4,
     '&:hover': {
-      background: theme.palette.primary.main,
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.palette.primary.main,
+    },
+    '&:focus': {
       borderWidth: '1px',
       borderStyle: 'solid',
       borderColor: theme.palette.primary.main,
     },
     '&.Mui-selected': {
+      color: theme.palette.common.white,
       background: theme.palette.primary.main,
       borderWidth: '1px',
       borderStyle: 'solid',
       borderColor: theme.palette.primary.main,
       '&:hover': {
-        background: theme.palette.primary.main,
+        background: theme.palette.primary.dark,
         borderWidth: '1px',
         borderStyle: 'solid',
-        borderColor: theme.palette.primary.main,
+        borderColor: theme.palette.primary.dark,
       },
       '&:focus': {
-        background: theme.palette.primary.main,
+        background: theme.palette.primary.dark,
         borderWidth: '1px',
         borderStyle: 'solid',
-        borderColor: theme.palette.primary.main,
+        borderColor: theme.palette.primary.dark,
       },
     },
   },
@@ -68,6 +72,8 @@ const useStyles = makeStyles(theme => ({
   },
   listItemIcon: {
     minWidth: 36,
+    marginRight: theme.spacing(1),
+    color: 'inherit'
   }
 }));
 
@@ -118,22 +124,22 @@ function CustomDrawer(props) {
         <Divider/>
 
         <List component="nav">
-          <Link href='/login'>
-            <ListItem button key={"Login"} className={classes.listItem} style={itemStyle}
-                      selected={itemSelected === 1}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <IconSvg svgicon={IconSvg}/>
-              </ListItemIcon>
-              <ListItemText primary={"Login"} classes={{primary: classes.listItemText}}/>
-            </ListItem>
-          </Link>
           <Link href='/'>
             <ListItem button key={"Home"} className={classes.listItem} style={itemStyle}
-                      selected={itemSelected === 2}>
+                      selected={itemSelected === 0}>
               <ListItemIcon className={classes.listItemIcon}>
-                <IconSvg svgicon={IconSvg}/>
+                <Home color={'inherit'}/>
               </ListItemIcon>
               <ListItemText primary={"Home"} classes={{primary: classes.listItemText}}/>
+            </ListItem>
+          </Link>
+          <Link href='/authentication'>
+            <ListItem button key={"Authentication"} className={classes.listItem} style={itemStyle}
+                      selected={itemSelected === 1}>
+              <ListItemIcon className={classes.listItemIcon}>
+                <People color={'inherit'}/>
+              </ListItemIcon>
+              <ListItemText primary={"Authentication"} classes={{primary: classes.listItemText}}/>
             </ListItem>
           </Link>
         </List>

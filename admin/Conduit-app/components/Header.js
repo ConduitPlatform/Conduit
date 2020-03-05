@@ -48,11 +48,11 @@ export function CustomAppBar(props) {
     menuButton = <div style={EmptyDivStyle}/>
   }
   return (
-    <AppBar color="primary" position="fixed" style={{boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.12)'}} {...rest}> {rest.children}
+    <AppBar color="primary" position="fixed" {...rest}> {rest.children}
       <Toolbar>
         {menuButton}
         <Box style={BoxStyle}>
-          <Typography variant={"subtitle1"} style={onLogoClick ? {cursor: 'pointer'} : {}} onClick={() => onLogoClick ? onLogoClick() : null}>
+          <Typography variant={"h6"} style={onLogoClick ? {cursor: 'pointer'} : {}} onClick={() => onLogoClick ? onLogoClick() : null}>
             Conduit
           </Typography>
         </Box>

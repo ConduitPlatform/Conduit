@@ -9,7 +9,7 @@ const Home = () => (
       <link rel="icon" href="/favicon.ico"/>
     </Head>
 
-    <Layout itemSelected={2}>
+    <Layout itemSelected={0}>
       <main>
         <h1 className="title">
           Welcome to <a href="https://nextjs.org">Next.js!</a>

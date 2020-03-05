@@ -25,7 +25,7 @@ const useStyles = makeStyles(theme => ({
 
 export function Layout(props) {
   const classes = useStyles();
-  const {menuEnabled, itemSelected, ...rest} = props;
+  const {menuDisabled, itemSelected, ...rest} = props;
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -45,16 +45,16 @@ export function Layout(props) {
     router.push('/')
   }
 
-  const drawerEnabled = (() => {
-      if (menuEnabled === null || menuEnabled === undefined) {
-        return true;
+  const drawerDisabled = (() => {
+      if (menuDisabled === null || menuDisabled === undefined) {
+        return false;
       }
-      return menuEnabled;
+      return menuDisabled;
     }
   );
 
   let appBar, drawer;
-  if (drawerEnabled()) {
+  if (!drawerDisabled()) {
     appBar = <CustomAppBar className={classes.appBar} onMenuClick={() => menuClick()} onLogoClick={() => logoClick()}/>;
     drawer = <CustomDrawer itemSelected={itemSelected} open={open}/>;
   } else {
