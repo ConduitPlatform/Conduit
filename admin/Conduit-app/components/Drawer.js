@@ -31,7 +31,7 @@ const useStyles = makeStyles(theme => ({
   },
   toolbar: theme.mixins.toolbar,
   listItem: {
-    color: theme.palette.common.black,
+    color: theme.palette.primary.main,
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: theme.palette.primary.main,
