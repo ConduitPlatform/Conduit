@@ -24,12 +24,13 @@ app.conduit = {};
 app.conduit.config = config;
 app.conduit.database = database;
 database.connectToDB(process.env.databaseType, process.env.databaseURL);
-app.conduit.cms = new cms(database, app);
+
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
 if (config.get('authentication')) {
     authentication.initialize(app, config.get('authentication'));
 }
-
+// initialize plugin AFTER the authentication so that we may provide access control to the plugins
+app.conduit.cms = new cms(database, app);
 
 app.use('/', indexRouter);
 app.use('/users', authentication.authenticate, usersRouter);
