@@ -5,9 +5,9 @@ const schema = {
             type: String,
         },
         //todo The properties in JSON, replace adequetly
-        schema: {
-            type: String
-        }
+        // schema: {
+        //     type: String
+        // }
     },
     options: {
         timestamps: true
