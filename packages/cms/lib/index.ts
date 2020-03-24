@@ -9,14 +9,14 @@ export class CMS {
     constructor(databaseAdapter: any, router: any) {
         this._schemas = [];
         this._router = router;
-        this._adapter = databaseAdapter;
+        this._adapter = databaseAdapter.getDbAdapter();
         this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
         this.constructRouter();
     }
 
     private loadExistingSchemas() {
-        this._adapter.getSchema('SchemaDefinitions')
+        this._adapter.getSchema('SchemaDefinitions').model
             .find({})
             .then((r: any) => {
                 if (r) {
