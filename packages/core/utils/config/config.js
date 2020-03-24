@@ -1,3 +1,4 @@
+const path = require('path');
 var convict = require('convict');
 let schema = require('./config.schema');
 
@@ -5,7 +6,7 @@ let schema = require('./config.schema');
 const config = convict(schema);
 
 // Load environment dependent configuration
-config.loadFile('../../config/env.json');
+config.loadFile(path.join(__dirname,'../../config/env.json'));
 
 // Perform validation
 config.validate({allowed: 'strict'});
