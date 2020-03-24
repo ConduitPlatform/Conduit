@@ -59,7 +59,7 @@ function authentication(app, config) {
     if (!app) {
         throw new Error("No app provided")
     }
-    database = app.database.getDbAdapter();
+    database = app.conduit.database.getDbAdapter();
     registerSchemas();
 
     if (config.local) {
