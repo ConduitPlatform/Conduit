@@ -3,14 +3,14 @@ import schema from "./interfaces/schema";
 export class CMS {
 
     _adapter: any;
-    _schemas: any[];
+    _schemas: any;
     _router: any;
 
     constructor(databaseAdapter: any, router: any) {
         this._schemas = [];
         this._router = router;
         this._adapter = databaseAdapter.getDbAdapter();
-        this._adapter.createSchemaFromAdapter(schema);
+        this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
         this.constructRouter();
     }
@@ -21,10 +21,7 @@ export class CMS {
             .then((r: any) => {
                 if (r) {
                     r.forEach((r: any) => {
-                        let model = this._adapter.createSchemaFromAdapter(r);
-                        this._schemas.push({
-                            [r.name]: model
-                        });
+                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(r)
                     })
                 }
 
@@ -39,17 +36,14 @@ export class CMS {
         let schema: any = {};
         schema['name'] = name;
         schema['schema'] = properties;
-        let model = this._adapter.createSchemaFromAdapter(schema);
-        this._schemas.push({
-            [name]: model
-        });
+        this._schemas[name] = this._adapter.createSchemaFromAdapter(schema);
     }
 
     constructRouter() {
         // should support query params for multiple filters, finding by id and paging
         this._router.get('/content/:name', (req: any, res: any, next: any) => {
             //todo change to more robust mechanism
-            this._schemas[req.params.name]
+            this._schemas[req.params.name].model
                 .find({})
                 .then((r: any) => {
                     if (r) {

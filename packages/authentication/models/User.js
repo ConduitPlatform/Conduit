@@ -1,6 +1,6 @@
 module.exports = {
     name: 'User',
-    schema: {
+    modelSchema: {
         email: {
             type: String,
             unique: true,
@@ -44,7 +44,7 @@ module.exports = {
         },
         isVerified: {type: Boolean, default: false},
     },
-    options: {
+    modelOptions: {
         timestamps: true
     }
 };

@@ -1,15 +1,17 @@
 const schema = {
     name: 'SchemaDefinitions',
-    schema: {
+    modelSchema: {
         name: {
             type: String,
         },
         //todo The properties in JSON, replace adequetly
-        // schema: {
-        //     type: String
-        // }
+        modelSchema: {
+            type: String
+        },
+        //todo The properties in JSON, replace adequetly
+        modelOptions: String
     },
-    options: {
+    modelOptions: {
         timestamps: true
     }
 };

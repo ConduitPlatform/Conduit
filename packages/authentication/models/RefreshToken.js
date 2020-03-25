@@ -1,6 +1,6 @@
 module.exports = {
     name: 'RefreshToken',
-    schema: {
+    modelSchema: {
         userId: {
             type: 'Relation',
             model: 'User'
@@ -16,7 +16,7 @@ module.exports = {
             userAgent: String
         }
     },
-    options: {
+    modelOptions: {
         timestamps: true
     }
 };

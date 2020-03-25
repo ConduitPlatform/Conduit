@@ -8,7 +8,7 @@ import {Schema} from "mongoose";
  */
 export function schemaConverter(jsonSchema: SchemaInterface) {
 
-    let actual = jsonSchema.schema;
+    let actual = jsonSchema.model;
 
     // converts relations to mongoose relations
     for (const key in actual) {
@@ -19,6 +19,6 @@ export function schemaConverter(jsonSchema: SchemaInterface) {
         }
     }
     // just to be sure
-    jsonSchema.schema = actual;
+    jsonSchema.model = actual;
     return jsonSchema;
 }
