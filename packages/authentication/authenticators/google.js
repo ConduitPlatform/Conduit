@@ -29,7 +29,7 @@ async function authenticate(req, res, next) {
         refreshToken: refresh_token
       },
       isVerified: payload.email_verified
-    }).catch(err=>throw new Error(`Internal Server Error: ${err}`));
+    }).catch(err=> res.status(500).json({error: err}));
   }
 
   await accessTokenModel.deleteOne({userId: user._id});
@@ -37,7 +37,7 @@ async function authenticate(req, res, next) {
     userId: user._id,
     token: authHelper.encode({id: user._id}),
     expiresOn: moment().add(1200, 'seconds').format()
-  }).catch(err=>throw new Error(`Internal Server Error: ${err}`));
+  }).catch(err=> res.status(500).json({error: err}));
 
 
   let refreshToken = await refreshTokenModel.findOne({userId: user._id});
@@ -45,7 +45,7 @@ async function authenticate(req, res, next) {
     refreshToken = await refreshTokenModel.create({
       userId: user._id,
       token: authHelper.generate()
-    }).catch(err=>throw new Error(`Internal Server Error: ${err}`));
+    }).catch(err=> res.status(500).json({error: err}));
   }
 
   return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
