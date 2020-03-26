@@ -28,18 +28,18 @@ module.exports = {
         arg: 'port'
     },
     authentication: {
-        // local: {
-        //     identifier: {
-        //         doc: 'The field name to use for id for a user logging in with local strategy ex. email/username',
-        //         format: 'String',
-        //         default: 'email'
-        //     },
-        //     active: {
-        //         doc: 'Defines if this strategy is active or not',
-        //         format: 'Boolean',
-        //         default: true
-        //     }
-        // },
+        local: {
+            identifier: {
+                doc: 'The field name to use for id for a user logging in with local strategy ex. email/username',
+                format: 'String',
+                default: 'email'
+            },
+            active: {
+                doc: 'Defines if this strategy is active or not',
+                format: 'Boolean',
+                default: true
+            }
+        },
         google: {
             clientId:{
                 type: String,
