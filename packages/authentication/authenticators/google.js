@@ -8,47 +8,51 @@ async function authenticate(req, res, next) {
   const database = req.app.conduit.database.getDbAdapter();
 
   const client = new OAuth2Client();
-  const ticket = await client.verifyIdToken({
-    idToken: id_token,
-    audience: process.env.googleClientId
-  }).catch(() => res.status(401).json({error: 'Unauthorized'}));
-  const payload = ticket.getPayload();
 
-  const userModel = database.getSchema('User');
-  const accessTokenModel = database.getSchema('AccessToken');
-  const refreshTokenModel = database.getSchema('RefreshToken');
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.googleClientId
+    });
 
-  let user = await userModel.findOne({'google.id': payload.sub});
-  if (isNil(user)) {
-    user = await userModel.create({
-      email: payload.email,
-      google: {
-        id: payload.sub,
-        token: access_token,
-        tokenExpires: moment().add(expires_in).format(),
-        refreshToken: refresh_token
-      },
-      isVerified: payload.email_verified
-    }).catch(err=> res.status(500).json({error: err}));
-  }
+    const payload = ticket.getPayload();
 
-  await accessTokenModel.deleteOne({userId: user._id});
-  const accessToken = await accessTokenModel.create({
-    userId: user._id,
-    token: authHelper.encode({id: user._id}),
-    expiresOn: moment().add(1200, 'seconds').format()
-  }).catch(err=> res.status(500).json({error: err}));
+    const userModel = database.getSchema('User');
+    const accessTokenModel = database.getSchema('AccessToken');
+    const refreshTokenModel = database.getSchema('RefreshToken');
 
+    let user = await userModel.findOne({'google.id': payload.sub});
+    if (isNil(user)) {
+      user = await userModel.create({
+        email: payload.email,
+        google: {
+          id: payload.sub,
+          token: access_token,
+          tokenExpires: moment().add(expires_in).format(),
+          refreshToken: refresh_token
+        },
+        isVerified: payload.email_verified
+      });
+    }
 
-  let refreshToken = await refreshTokenModel.findOne({userId: user._id});
-  if (isNil(refreshToken)) {
-    refreshToken = await refreshTokenModel.create({
+    await accessTokenModel.deleteOne({userId: user._id});
+    const accessToken = await accessTokenModel.create({
       userId: user._id,
-      token: authHelper.generate()
-    }).catch(err=> res.status(500).json({error: err}));
-  }
+      token: authHelper.encode({id: user._id}),
+      expiresOn: moment().add(1200, 'seconds').format()
+    });
 
-  return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
+    let refreshToken = await refreshTokenModel.findOne({userId: user._id});
+    if (isNil(refreshToken)) {
+      refreshToken = await refreshTokenModel.create({
+        userId: user._id,
+        token: authHelper.generate()
+      });
+    }
+    return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
+  } catch (e) {
+    return next(e);
+  }
 }
 
 module.exports.authenticate = authenticate;
