@@ -60,7 +60,7 @@ export class MongooseAdapter implements DatabaseAdapter {
             this.models = {};
         }
         let newSchema = schemaConverter(schema);
-        this.models[schema.name] = new MongooseSchema(this.mongoose.model(newSchema.name, new Schema(newSchema.schema, newSchema.options)));
+        this.models[schema.name] = new MongooseSchema(this.mongoose.model(newSchema.name, new Schema(newSchema.model, newSchema.modelOptions)));
         return this.models[schema.name];
     }
 

@@ -1,17 +1,17 @@
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var config = require('./utils/config/config.js');
-var logger = require('./utils/logging/logger.js');
-var authentication = require('@conduit/authentication');
-var database = require('@conduit/database-provider');
-var cms = require('@conduit/cms').CMS;
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const config = require('./utils/config/config.js');
+const logger = require('./utils/logging/logger.js');
+const authentication = require('@conduit/authentication');
+const database = require('@conduit/database-provider');
+const cms = require('@conduit/cms').CMS;
 
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const indexRouter = require('./routes/index');
+const usersRouter = require('./routes/users');
 
-var app = express();
+const app = express();
 
 app.use(logger.logger());
 app.use(express.json());

@@ -1,6 +1,6 @@
 module.exports = {
     name: 'AccessToken',
-    schema: {
+    modelSchema: {
         userId: {
             type: 'Relation',
             model: 'User'
@@ -12,7 +12,7 @@ module.exports = {
             type: Date
         }
     },
-    options: {
+    modelOptions: {
         timestamps: true
     }
 };
