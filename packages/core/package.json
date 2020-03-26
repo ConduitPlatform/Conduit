@@ -9,8 +9,8 @@
   "license": "ISC",
   "dependencies": {
     "@conduit/authentication": "1.0.0",
-    "@conduit/database-provider": "1.0.0",
     "@conduit/cms": "1.0.0",
+    "@conduit/database-provider": "1.0.0",
     "convict": "^5.2.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",

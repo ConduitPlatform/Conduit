@@ -9,9 +9,11 @@ const config = convict(schema);
 config.loadFile(path.join(__dirname,'../../config/env.json'));
 
 // Perform validation
-config.validate({allowed: 'strict'});
+// config.validate({allowed: 'strict'});
 
 process.env.databaseType = config.get('database').type;
 process.env.databaseURL = config.get('database').databaseURL;
+process.env.googleClientId = config.get('authentication').google.clientId;
+process.env.jwtSecret = config.get('authentication').jwtSecret;
 
 module.exports = config;

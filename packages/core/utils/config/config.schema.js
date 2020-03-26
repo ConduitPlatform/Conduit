@@ -28,16 +28,22 @@ module.exports = {
         arg: 'port'
     },
     authentication: {
-        local: {
-            identifier: {
-                doc: 'The field name to use for id for a user logging in with local strategy ex. email/username',
-                format: 'String',
-                default: 'email'
-            },
-            active: {
-                doc: 'Defines if this strategy is active or not',
-                format: 'Boolean',
-                default: true
+        // local: {
+        //     identifier: {
+        //         doc: 'The field name to use for id for a user logging in with local strategy ex. email/username',
+        //         format: 'String',
+        //         default: 'email'
+        //     },
+        //     active: {
+        //         doc: 'Defines if this strategy is active or not',
+        //         format: 'Boolean',
+        //         default: true
+        //     }
+        // },
+        google: {
+            clientId:{
+                type: String,
+                default: '407408718192.apps.googleusercontent.com'
             }
         },
         generateRefreshToken: {
@@ -63,7 +69,7 @@ module.exports = {
         jwtSecret: {
             doc: 'The secret to use when generating an access token',
             format: 'String',
-            default: ''
+            default: 'S3CR3T'
         }
     }
 };

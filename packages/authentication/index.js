@@ -111,7 +111,7 @@ function middleware(req, res, next) {
 
     const {id: userId} = decoded;
 
-    database.getSchema('Token')
+    database.getSchema('AccessToken')
         .findOne({_id: userId})
         .then(async user => {
             if (user === null || user === undefined) {
