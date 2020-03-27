@@ -74,9 +74,7 @@ function authentication(app, config) {
     }
 
     if (config.google) {
-        app.get('/authentication/google', (req,res,next)=> {
-            google.authenticate(req,res,next).catch(next)
-        });
+        app.get('/authentication/google', google.authenticate);
         initialized = true;
     }
 
