@@ -11,7 +11,7 @@ function middleware() {
             winston.format.colorize(),
             winston.format.json()
         ),
-        meta: true,
+        meta: false,
         msg: "HTTP {{req.method}} {{req.url}}",
         expressFormat: true,
         colorize: false

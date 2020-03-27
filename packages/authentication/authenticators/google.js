@@ -9,7 +9,6 @@ async function authenticate(req, res, next) {
   const {id_token, access_token, refresh_token, expires_in} = req.body;
   const database = req.app.conduit.database.getDbAdapter();
 
-  try {
     const ticket = await client.verifyIdToken({
       idToken: id_token,
       audience: process.env.googleClientId
@@ -66,9 +65,6 @@ async function authenticate(req, res, next) {
     });
 
     return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
-  } catch (e) {
-    return next(e);
-  }
 }
 
 module.exports.authenticate = authenticate;
