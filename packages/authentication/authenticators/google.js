@@ -3,11 +3,11 @@ const isNil = require('lodash/isNil');
 const moment = require('moment');
 const authHelper = require('../helpers/authHelper');
 
+const client = new OAuth2Client();
+
 async function authenticate(req, res, next) {
   const {id_token, access_token, refresh_token, expires_in} = req.body;
   const database = req.app.conduit.database.getDbAdapter();
-
-  const client = new OAuth2Client();
 
   const ticket = await client.verifyIdToken({
     idToken: id_token,
