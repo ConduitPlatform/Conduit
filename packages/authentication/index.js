@@ -63,8 +63,8 @@ function authentication(app, config) {
     registerSchemas();
 
     if (config.local) {
-        app.get('/authentication/local', local.authenticate);
-        app.get('/authentication/local/new', local.register);
+        app.get('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
+        app.get('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
         initialized = true;
     }
 

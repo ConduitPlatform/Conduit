@@ -6,7 +6,6 @@ async function register(req, res, next) {
   const {email, password} = req.body;
   const database = req.app.conduit.database.getDbAdapter();
 
-  try {
     if (process.env.localAuthIsActive === 'false') return res.status(403).json({error: 'Local authentication is disabled'});
     if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
@@ -22,16 +21,12 @@ async function register(req, res, next) {
     });
 
     return res.json({message: 'Registration was successful'});
-  } catch (e) {
-    return next(e);
-  }
 }
 
 async function authenticate(req, res, next) {
   const {email, password} = req.body;
   const database = req.app.conduit.database.getDbAdapter();
 
-  try {
     if (process.env.localAuthIsActive === 'false') return res.status(403).json({error: 'Local authentication is disabled'});
     if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
@@ -60,9 +55,6 @@ async function authenticate(req, res, next) {
     });
 
       return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
-  } catch (e) {
-    return next(e);
-  }
 }
 
 
