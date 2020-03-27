@@ -54,12 +54,14 @@ async function authenticate(req, res, next) {
     });
   }
 
-  await accessTokenModel.deleteOne({userId: user._id});
-  const accessToken = await accessTokenModel.create({
-    userId: user._id,
-    token: authHelper.encode({id: user._id}),
-    expiresOn: moment().add(1200, 'seconds').format()
-  });
+  let accessToken = await accessTokenModel.findOne({userId: user._id});
+  if (isNil(accessToken)) {
+    accessToken = await accessTokenModel.create({
+      userId: user._id,
+      token: authHelper.encode({id: user._id}),
+      expiresOn: moment().add(1200, 'seconds').format()
+    });
+  }
 
   let refreshToken = await refreshTokenModel.findOne({userId: user._id});
   if (isNil(refreshToken)) {
