@@ -8,8 +8,6 @@ async function authenticate(req, res, next) {
   const database = req.app.conduit.database.getDbAdapter();
 
   try {
-
-
     const facebookOptions = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
@@ -55,22 +53,17 @@ async function authenticate(req, res, next) {
       });
     }
 
-    let accessToken = await accessTokenModel.findOne({userId: user._id});
-    if (isNil(accessToken)) {
-      accessToken = await accessTokenModel.create({
-        userId: user._id,
-        token: authHelper.encode({id: user._id}),
-        expiresOn: moment().add(1200, 'seconds').format()
-      });
-    }
+    const accessToken = await accessTokenModel.create({
+      userId: user._id,
+      token: authHelper.encode({id: user._id}),
+      expiresOn: moment().add(1200, 'seconds').format()
+    });
 
-    let refreshToken = await refreshTokenModel.findOne({userId: user._id});
-    if (isNil(refreshToken)) {
-      refreshToken = await refreshTokenModel.create({
-        userId: user._id,
-        token: authHelper.generate()
-      });
-    }
+    const refreshToken = await refreshTokenModel.create({
+      userId: user._id,
+      token: authHelper.generate()
+    });
+
     return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
   } catch (e) {
     return next(e);
