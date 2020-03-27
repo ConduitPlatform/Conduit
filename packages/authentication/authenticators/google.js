@@ -56,12 +56,13 @@ async function authenticate(req, res, next) {
     const accessToken = await accessTokenModel.create({
       userId: user._id,
       token: authHelper.encode({id: user._id}),
-      expiresOn: moment().add(1200, 'seconds').format()
+      expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
     });
 
     const refreshToken = await refreshTokenModel.create({
       userId: user._id,
-      token: authHelper.generate()
+      token: authHelper.generate(),
+      expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
     });
 
     return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});

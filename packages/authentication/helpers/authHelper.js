@@ -14,7 +14,7 @@ function encode(data) {
     if (data instanceof Object && Object.keys(data).length === 0) {
         return null;
     }
-    return jwt.sign(data, process.env.jwtSecret, { expiresIn: 1200 });
+    return jwt.sign(data, process.env.jwtSecret, { expiresIn: Number(process.env.tokenInvalidationPeriod) * 100 });
 }
 
 function verify(token) {
