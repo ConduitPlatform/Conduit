@@ -16,6 +16,9 @@ async function authenticate(req, res, next) {
     });
 
     const payload = ticket.getPayload();
+    if (!payload.email_verified) {
+      return res.status(401).json({error: 'Unauthorized'});
+    }
 
     const userModel = database.getSchema('User');
     const accessTokenModel = database.getSchema('AccessToken');
@@ -31,7 +34,7 @@ async function authenticate(req, res, next) {
           tokenExpires: moment().add(expires_in).format(),
           refreshToken: refresh_token
         },
-        isVerified: payload.email_verified
+        isVerified: true
       });
     }
 
