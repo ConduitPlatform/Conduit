@@ -7,7 +7,6 @@ async function authenticate(req, res, next) {
   const access_token = req.body.access_token;
   const database = req.app.conduit.database.getDbAdapter();
 
-  try {
     const facebookOptions = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
@@ -64,9 +63,6 @@ async function authenticate(req, res, next) {
     });
 
     return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
-  } catch (e) {
-    return next(e);
-  }
 }
 
 module.exports.authenticate = authenticate;

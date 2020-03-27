@@ -69,7 +69,7 @@ function authentication(app, config) {
     }
 
     if (config.facebook) {
-        app.get('/authentication/facebook', facebook.authenticate);
+        app.get('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
         initialized = true;
     }
 
