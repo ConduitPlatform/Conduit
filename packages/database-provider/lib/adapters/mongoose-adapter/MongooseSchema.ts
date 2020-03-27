@@ -17,8 +17,8 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.find(query).lean().exec();
     }
 
-    findOne(query: any): Promise<any> {
-        return this.model.findOne(query).lean().exec();
+    findOne(query: any, select?: string): Promise<any> {
+        return this.model.findOne(query, select).lean().exec();
     }
 
 }

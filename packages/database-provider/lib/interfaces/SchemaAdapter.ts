@@ -8,8 +8,9 @@ export interface SchemaAdapter {
     /**
      * Should find one
      * @param query
+     * @param select
      */
-    findOne(query: any): Promise<any>;
+    findOne(query: any, select?: string): Promise<any>;
 
 
     /**

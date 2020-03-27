@@ -1,10 +1,28 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const SALT_ROUNDS = 10;
 
 function generate() {
-    return crypto.randomBytes(64).toString('hex');
+    return crypto.randomBytes(64).toString('base64');
+}
 
+function encode(data) {
+    if (data === null || data === undefined) {
+        return null;
+    }
+    if (data instanceof Object && Object.keys(data).length === 0) {
+        return null;
+    }
+    return jwt.sign(data, process.env.jwtSecret, { expiresIn: Number(process.env.tokenInvalidationPeriod) * 100 });
+}
+
+function verify(token) {
+    try {
+        return jwt.verify(token, process.env.jwtSecret);
+    } catch (error) {
+        return null;
+    }
 }
 
 function hashPassword(plainTextPass) {
@@ -20,14 +38,16 @@ function hashPassword(plainTextPass) {
 
 }
 
-function checkPassword(password, callback) {
-    bcrypt.compare(password, this.hashedPassword, function (err, res) {
-        if (err) {
-            callback(err);
-            console.log('Could not check password');
-        } else {
-            callback(null, res);
-        }
+function checkPassword(password, hashedPassword) {
+    return new Promise( (resolve, reject) => {
+        bcrypt.compare(password, hashedPassword, (err, result) => {
+           if (err) {
+               console.log('Could not check password');
+               reject(err);
+           } else {
+               resolve(result);
+           }
+        });
     });
 }
 
@@ -35,4 +55,6 @@ module.exports = {
     generate: generate,
     hashPassword: hashPassword,
     checkPassword: checkPassword,
+    encode: encode,
+    verify: verify
 };
