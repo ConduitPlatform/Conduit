@@ -42,8 +42,14 @@ module.exports = {
         },
         google: {
             clientId:{
-                type: String,
+                doc: 'The client id that is provided by google developer console for a specific app',
+                format: 'String',
                 default: '407408718192.apps.googleusercontent.com'
+            },
+            accountLinking: {
+                doc: 'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',
+                format: 'Boolean',
+                default: true
             }
         },
         generateRefreshToken: {
