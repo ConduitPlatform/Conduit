@@ -53,6 +53,11 @@ module.exports = {
             }
         },
         facebook: {
+            clientId:{
+                doc: 'Facebook client id',
+                format: 'String',
+                default: ''
+            },
             accountLinking: {
                 doc: 'When enabled, if a new facebook user matches with an existing email on the database, they will be enriched with facebook details',
                 format: 'Boolean',
