@@ -25,10 +25,10 @@ async function authenticate(req, res, next) {
 
   let user = await userModel.findOne({email: payload.email});
 
-  if (process.env.googleAccountLinking === 'false' && !isNil(user)) {
-    return res.status(401).json({error: 'User with this email already exists'});
-  }
-  if (process.env.googleAccountLinking === 'true' && !isNil(user)) {
+  if (!isNil(user)) {
+    if (process.env.googleAccountLinking === 'false') {
+      return res.status(401).json({error: 'User with this email already exists'});
+    }
     if (isNil(user.google)) {
       user.google = {
         id: payload.sub,
@@ -39,9 +39,7 @@ async function authenticate(req, res, next) {
       if (!user.isVerified) user.isVerified = true;
       user = await userModel.findByIdAndUpdate(user);
     }
-  }
-
-  if (isNil(user)) {
+  } else {
     user = await userModel.create({
       email: payload.email,
       google: {
