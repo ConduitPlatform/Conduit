@@ -30,10 +30,10 @@ async function authenticate(req, res, next) {
 
     let user = await userModel.findOne({email: facebookResponse.email});
 
-    if (process.env.facebookAccountLinking === 'false' && !isNil(user)) {
-      return res.status(401).json({error: 'User with this email already exists'});
-    }
-    if (process.env.facebookAccountLinking === 'true' && !isNil(user)) {
+    if (!isNil(user)) {
+      if (process.env.facebookAccountLinking === 'false') {
+        return res.status(401).json({error: 'User with this email already exists'});
+      }
       if (isNil(user.facebook)) {
         user.facebook = {
           id: facebookResponse.id,
@@ -41,9 +41,7 @@ async function authenticate(req, res, next) {
         if (!user.isVerified) user.isVerified = true;
         user = await userModel.findByIdAndUpdate(user);
       }
-    }
-
-    if (isNil(user)) {
+    } else {
       user = await userModel.create({
         email: facebookResponse.email,
         facebook: {
