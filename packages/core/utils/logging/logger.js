@@ -8,8 +8,8 @@ function middleware() {
             new winston.transports.Console()
         ],
         format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.json()
+                winston.format.colorize(),
+                winston.format.cli()
         ),
         meta: false,
         msg: "HTTP {{req.method}} {{req.url}}",
@@ -24,9 +24,9 @@ function errorLogger() {
             new winston.transports.Console()
         ],
         format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.json()
-        )
+            winston.format.prettyPrint({colorize: true})
+        ),
+        meta: false,
     });
 }
 
