@@ -1,5 +1,5 @@
 export interface SchemaInterface {
     name: string;
-    model: any;
+    modelSchema: any;
     modelOptions: any;
 }

@@ -24,4 +24,8 @@ export interface SchemaAdapter {
      */
     create(query: string): Promise<any>;
 
+    deleteOne(query: any): Promise<any>;
+
+    findByIdAndUpdate(document: any): Promise<any>;
+
 }

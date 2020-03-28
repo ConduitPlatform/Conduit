@@ -13,6 +13,14 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.create(query);
     }
 
+    findByIdAndUpdate(document: any): Promise<any> {
+        return this.model.findByIdAndUpdate(document._id, document).exec();
+    }
+
+    deleteOne(query: any): Promise<any> {
+        return this.model.deleteOne(query).exec();
+    }
+
     findMany(query: string): Promise<any> {
         return this.model.find(query).lean().exec();
     }

@@ -74,7 +74,7 @@ function authentication(app, config) {
     }
 
     if (config.google) {
-        app.get('/authentication/google', google.authenticate);
+        app.get('/authentication/google', (req,res,next) => google.authenticate(req, res, next).catch(next));
         initialized = true;
     }
 
@@ -111,7 +111,7 @@ function middleware(req, res, next) {
 
     const {id: userId} = decoded;
 
-    database.getSchema('Token')
+    database.getSchema('AccessToken')
         .findOne({_id: userId})
         .then(async user => {
             if (user === null || user === undefined) {
