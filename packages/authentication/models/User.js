@@ -11,6 +11,9 @@ module.exports = {
             select: false
         },
         google: {
+            id: {
+              type: String
+            },
             token: {
                 type: String
             },

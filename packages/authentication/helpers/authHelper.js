@@ -1,10 +1,28 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const SALT_ROUNDS = 10;
 
 function generate() {
-    return crypto.randomBytes(64).toString('hex');
+    return crypto.randomBytes(64).toString('base64');
+}
 
+function encode(data) {
+    if (data === null || data === undefined) {
+        return null;
+    }
+    if (data instanceof Object && Object.keys(data).length === 0) {
+        return null;
+    }
+    return jwt.sign(data, process.env.jwtSecret, { expiresIn: Number(process.env.tokenInvalidationPeriod) * 100 });
+}
+
+function verify(token) {
+    try {
+        return jwt.verify(token, process.env.jwtSecret);
+    } catch (error) {
+        return null;
+    }
 }
 
 function hashPassword(plainTextPass) {
@@ -35,4 +53,6 @@ module.exports = {
     generate: generate,
     hashPassword: hashPassword,
     checkPassword: checkPassword,
+    encode: encode,
+    verify: verify
 };
