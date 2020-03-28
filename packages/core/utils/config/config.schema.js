@@ -52,6 +52,18 @@ module.exports = {
                 default: true
             }
         },
+        facebook: {
+            clientId:{
+                doc: 'Facebook client id',
+                format: 'String',
+                default: ''
+            },
+            accountLinking: {
+                doc: 'When enabled, if a new facebook user matches with an existing email on the database, they will be enriched with facebook details',
+                format: 'Boolean',
+                default: true
+            }
+        },
         generateRefreshToken: {
             doc: 'If the module should generate refresh tokens along with the access tokens',
             format: 'Boolean',

@@ -13,6 +13,8 @@
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "passport-facebook-token": "^1.0.0",
-    "passport-github": "^1.0.0"
+    "passport-github": "^1.0.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5"
   }
 }

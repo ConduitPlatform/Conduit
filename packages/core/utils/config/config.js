@@ -18,5 +18,6 @@ process.env.googleAccountLinking = config.get('authentication').google.accountLi
 process.env.jwtSecret = config.get('authentication').jwtSecret;
 process.env.tokenInvalidationPeriod = config.get('authentication').tokenInvalidationPeriod;
 process.env.refreshTokenInvalidationPeriod = config.get('authentication').refreshTokenInvalidationPeriod;
+process.env.facebookAccountLinking = config.get('authentication').facebook.accountLinking;
 
 module.exports = config;

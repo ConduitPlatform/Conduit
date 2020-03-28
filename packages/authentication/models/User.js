@@ -28,6 +28,9 @@ module.exports = {
             }
         },
         facebook: {
+            id: {
+                type: String
+            },
             token: {
                 type: String
             },
