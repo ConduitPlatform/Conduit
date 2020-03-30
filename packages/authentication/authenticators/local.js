@@ -1,6 +1,7 @@
 const isNil = require('lodash/isNil');
 const authHelper = require('../helpers/authHelper');
 const moment = require('moment');
+const emailProvider = require('@conduit/email');
 
 async function register(req, res, next) {
   const {email, password} = req.body;
@@ -19,6 +20,11 @@ async function register(req, res, next) {
       email,
       hashedPassword
     });
+
+    if (process.env.localSendVerificationEmail === 'true') {
+      // this will be completed when we build the email provider module
+      await emailProvider.sendMail();
+    }
 
     return res.json({message: 'Registration was successful'});
 }

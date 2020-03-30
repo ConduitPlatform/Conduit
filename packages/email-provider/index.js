@@ -23,3 +23,4 @@ function initialize(app, config) {
 }
 
 module.exports = initialize;
+module.exports.sendMail = sendMail;
