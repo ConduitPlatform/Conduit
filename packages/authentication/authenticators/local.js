@@ -12,6 +12,7 @@ async function register(req, res, next) {
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
   const userModel = database.getSchema('User');
+  const verificationTokenModel = database.getSchema('VerificationToken');
 
   let user = await userModel.findOne({email});
   if (!isNil(user)) return res.status(403).json({error: 'User already exists'});
@@ -23,8 +24,16 @@ async function register(req, res, next) {
   });
 
   if (process.env.localSendVerificationEmail === 'true') {
+    const verificationTokenDoc = await verificationTokenModel.create({
+      userId: user._id,
+      token: uuid()
+    });
     // this will be completed when we build the email provider module
-    await emailProvider.sendMail();
+    const link = `http://localhost:3000/authentication/verify-email/${verificationTokenDoc.token}`;
+    await emailProvider.sendMail({
+      email: user.email,
+      body: link
+    });
   }
 
   return res.json({message: 'Registration was successful'});
@@ -126,7 +135,24 @@ async function resetPassword(req, res, next) {
 }
 
 async function verifyEmail(req, res, next) {
+  const verificationTokenParam = req.params.verificationToken;
+  if (isNil(verificationTokenParam)) return res.status(401).json({error: 'Invalid parameters'});
 
+  const database = req.app.conduit.database.getDbAdapter();
+  const userModel = database.getSchema('User');
+  const verificationTokenModel = database.getSchema('VerificationToken');
+
+  const verificationTokenDoc = await verificationTokenModel.findOne({token: verificationTokenParam});
+  if (isNil(verificationTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
+
+  const user = await userModel.findOne({_id: verificationTokenDoc.userId});
+  if (isNil(user)) return res.status(404).json({error: 'User not found'});
+
+  user.isVerified = true;
+  await user.save();
+  await verificationTokenDoc.remove();
+
+  return res.json({message: 'Email verified'});
 }
 
 module.exports.authenticate = authenticate;
