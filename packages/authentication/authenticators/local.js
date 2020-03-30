@@ -164,8 +164,44 @@ async function verifyEmail(req, res, next) {
   return res.json({message: 'Email verified'});
 }
 
+async function renewAuth(req, res, next) {
+  const refreshToken = req.body.refreshToken;
+  if (isNil(refreshToken))
+    return res.status(401).json({error: 'Invalid parameters'});
+
+  const database = req.app.conduit.database.getDbAdapter();
+  const accessTokenModel = database.getSchema('AccessToken');
+  const refreshTokenModel = database.getSchema('RefreshToken');
+
+  // TODO Delete old access token with the same ClientId
+
+  const oldRefreshToken = await refreshTokenModel.findOne({token: refreshToken});
+  if (isNil(oldRefreshToken))
+    return res.status(401).json({error: 'Invalid parameters'});
+
+  const newAccessToken = await accessTokenModel.create({
+    userId: oldRefreshToken.userId,
+    token: authHelper.encode({id: oldRefreshToken.userId}),
+    expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
+  });
+
+  const newRefreshToken = await refreshTokenModel.create({
+    userId: oldRefreshToken.userId,
+    token: authHelper.generate(),
+    expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
+  });
+
+  await oldRefreshToken.remove();
+
+  return res.json({
+    accessToken: newAccessToken.token,
+    refreshToken: newRefreshToken.token
+  });
+}
+
 module.exports.authenticate = authenticate;
 module.exports.register = register;
 module.exports.forgotPassword = forgotPassword;
 module.exports.resetPassword = resetPassword;
 module.exports.verifyEmail = verifyEmail;
+module.exports.renewAuth = renewAuth;

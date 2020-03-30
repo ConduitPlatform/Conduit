@@ -71,6 +71,7 @@ function authentication(app, config) {
         app.get('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
         app.get('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
         app.get('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+        app.get('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
         initialized = true;
     }
 
