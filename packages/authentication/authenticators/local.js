@@ -65,6 +65,20 @@ async function authenticate(req, res, next) {
       return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
 }
 
+async function forgotPassword(req, res, next) {
+
+}
+
+async function resetPassword(req, res, next) {
+
+}
+
+async function verifyEmail(req, res, next) {
+
+}
 
 module.exports.authenticate = authenticate;
 module.exports.register = register;
+module.exports.forgotPassword = forgotPassword;
+module.exports.resetPassword = resetPassword;
+module.exports.verifyEmail = verifyEmail;

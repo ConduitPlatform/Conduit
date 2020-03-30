@@ -65,6 +65,9 @@ function authentication(app, config) {
     if (config.local) {
         app.get('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
         app.get('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
+        app.get('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
+        app.get('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
+        app.get('/authentication/verify-email', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
         initialized = true;
     }
 
