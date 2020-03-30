@@ -19,5 +19,9 @@ process.env.jwtSecret = config.get('authentication').jwtSecret;
 process.env.tokenInvalidationPeriod = config.get('authentication').tokenInvalidationPeriod;
 process.env.refreshTokenInvalidationPeriod = config.get('authentication').refreshTokenInvalidationPeriod;
 process.env.facebookAccountLinking = config.get('authentication').facebook.accountLinking;
+process.env.localAuthIdentifier = config.get('authentication').local.identifier;
+process.env.localAuthIsActive = config.get('authentication').local.active;
+process.env.localSendVerificationEmail = config.get('authentication').local.sendVerificationEmail;
+process.env.localVerificationRequired = config.get('authentication').local.verificationRequired;
 
 module.exports = config;

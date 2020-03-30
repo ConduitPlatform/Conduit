@@ -8,8 +8,9 @@ export interface SchemaAdapter {
     /**
      * Should find one
      * @param query
+     * @param select
      */
-    findOne(query: any): Promise<any>;
+    findOne(query: any, select?: string): Promise<any>;
 
 
     /**
@@ -22,7 +23,7 @@ export interface SchemaAdapter {
      * Should create
      * @param query
      */
-    create(query: string): Promise<any>;
+    create(query: any): Promise<any>;
 
     deleteOne(query: any): Promise<any>;
 

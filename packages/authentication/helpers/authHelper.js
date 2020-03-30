@@ -38,14 +38,16 @@ function hashPassword(plainTextPass) {
 
 }
 
-function checkPassword(password, callback) {
-    bcrypt.compare(password, this.hashedPassword, function (err, res) {
-        if (err) {
-            callback(err);
-            console.log('Could not check password');
-        } else {
-            callback(null, res);
-        }
+function checkPassword(password, hashedPassword) {
+    return new Promise( (resolve, reject) => {
+        bcrypt.compare(password, hashedPassword, (err, result) => {
+           if (err) {
+               console.log('Could not check password');
+               reject(err);
+           } else {
+               resolve(result);
+           }
+        });
     });
 }
 

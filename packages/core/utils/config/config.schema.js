@@ -38,6 +38,16 @@ module.exports = {
                 doc: 'Defines if this strategy is active or not',
                 format: 'Boolean',
                 default: true
+            },
+            sendVerificationEmail: {
+                doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
+                format: 'Boolean',
+                default: true
+            },
+            verificationRequired: {
+                doc: 'Defines if email verification is required for login',
+                format: 'Boolean',
+                default: true
             }
         },
         google: {

@@ -9,7 +9,7 @@ export class MongooseSchema implements SchemaAdapter {
         this.model = mongooseModel;
     }
 
-    create(query: string): Promise<any> {
+    create(query: any): Promise<any> {
         return this.model.create(query);
     }
 
@@ -25,8 +25,8 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.find(query).lean().exec();
     }
 
-    findOne(query: any): Promise<any> {
-        return this.model.findOne(query).lean().exec();
+    findOne(query: any, select?: string): Promise<any> {
+        return this.model.findOne(query, select).exec();
     }
 
 }
