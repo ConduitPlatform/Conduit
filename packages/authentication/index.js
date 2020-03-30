@@ -6,13 +6,15 @@ const jwt = require('jsonwebtoken');
 
 
 let refreshToken = require('./models/RefreshToken');
-let accessToken = require('./models/Token');
+let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
 let passwordResetTokenModel = require('./models/PasswordResetToken');
 let verificationTokenModel = require('./models/VerificationToken');
 
 let initialized = false;
 let database;
+
+// this is for testing purposes
 const configuration = {
     local: {
         identifier: 'email',
