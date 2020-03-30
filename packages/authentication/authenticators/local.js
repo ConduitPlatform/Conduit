@@ -37,7 +37,9 @@ async function authenticate(req, res, next) {
     const user = await userModel.findOne({email}, '+hashedPassword');
     if (isNil(user)) return res.status(401).json({error: 'Invalid login credentials'});
     if (!user.active) return res.status(403).json({error: 'Inactive user'});
-    // if (!user.isVerified) return res.status(403).json({error: 'You must verify your account to login'});
+
+    if (process.env.localVerificationRequired === 'true' && !user.isVerified)
+      return res.status(403).json({error: 'You must verify your account to login'});
 
     const passwordsMatch = await authHelper.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch) return res.status(401).json({error: 'Invalid login credentials'});
