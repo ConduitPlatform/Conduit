@@ -83,6 +83,14 @@ export class MailgunMailBuilder implements EmailBuilder {
         }
     }
 
+    setSubject(subject: string) {
+        this._subject = subject;
+    }
+
+    getSubject(): string | undefined {
+        return this._subject;
+    }
+
     getCC(): string | string[] | undefined {
         return this._cc;
     }
@@ -125,7 +133,7 @@ export class MailgunMailBuilder implements EmailBuilder {
         this["h:Reply-To"] = replyTo;
     }
 
-    getReplyTo(replyTo: string) {
+    getReplyTo() {
         return this["h:Reply-To"];
     }
 
