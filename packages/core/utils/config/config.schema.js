@@ -40,6 +40,30 @@ module.exports = {
                 default: true
             }
         },
+        google: {
+            clientId:{
+                doc: 'The client id that is provided by google developer console for a specific app',
+                format: 'String',
+                default: '407408718192.apps.googleusercontent.com'
+            },
+            accountLinking: {
+                doc: 'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',
+                format: 'Boolean',
+                default: true
+            }
+        },
+        facebook: {
+            clientId:{
+                doc: 'Facebook client id',
+                format: 'String',
+                default: ''
+            },
+            accountLinking: {
+                doc: 'When enabled, if a new facebook user matches with an existing email on the database, they will be enriched with facebook details',
+                format: 'Boolean',
+                default: true
+            }
+        },
         generateRefreshToken: {
             doc: 'If the module should generate refresh tokens along with the access tokens',
             format: 'Boolean',
@@ -63,7 +87,7 @@ module.exports = {
         jwtSecret: {
             doc: 'The secret to use when generating an access token',
             format: 'String',
-            default: ''
+            default: 'S3CR3T'
         }
     }
 };
