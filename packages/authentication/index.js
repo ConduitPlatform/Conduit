@@ -8,8 +8,7 @@ const jwt = require('jsonwebtoken');
 let refreshToken = require('./models/RefreshToken');
 let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
-let passwordResetTokenModel = require('./models/PasswordResetToken');
-let verificationTokenModel = require('./models/VerificationToken');
+const tokenModel = require('./models/Token');
 
 let initialized = false;
 let database;
@@ -91,8 +90,7 @@ function registerSchemas() {
     database.createSchemaFromAdapter(userModel);
     database.createSchemaFromAdapter(refreshToken);
     database.createSchemaFromAdapter(accessToken);
-    database.createSchemaFromAdapter(passwordResetTokenModel);
-    database.createSchemaFromAdapter(verificationTokenModel);
+    database.createSchemaFromAdapter(tokenModel);
 }
 
 function middleware(req, res, next) {
