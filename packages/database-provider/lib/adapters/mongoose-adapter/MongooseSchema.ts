@@ -9,7 +9,7 @@ export class MongooseSchema implements SchemaAdapter {
         this.model = mongooseModel;
     }
 
-    create(query: string): Promise<any> {
+    create(query: any): Promise<any> {
         return this.model.create(query);
     }
 
