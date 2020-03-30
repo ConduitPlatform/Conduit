@@ -199,9 +199,15 @@ async function renewAuth(req, res, next) {
   });
 }
 
+async function logOut(req, res, next) {
+  // TODO delete access and refresh tokens with the clientId
+  return res.json({message: 'Logged out'});
+}
+
 module.exports.authenticate = authenticate;
 module.exports.register = register;
 module.exports.forgotPassword = forgotPassword;
 module.exports.resetPassword = resetPassword;
 module.exports.verifyEmail = verifyEmail;
 module.exports.renewAuth = renewAuth;
+module.exports.logOut = logOut;
