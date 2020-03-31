@@ -1,12 +1,12 @@
 const emailProvider = require('@conduit/email-provider');
 const {isNil} = require('lodash');
+const templateModel = require('./models/EmailTemplate');
 
 let emailer;
+let database;
 
-function sendMail(params) {
+async function sendMail(templateName, params) {
     const {
-        subject,
-        body,
         email,
         variables,
         sender
@@ -16,13 +16,18 @@ function sendMail(params) {
         throw new Error("Module not initialized");
     }
 
+    if (isNil(database)) {
+        throw new Error("Database not initialized")
+    }
+
+
     const builder = emailer.emailBuilder();
     if (isNil(builder)) {
         return;
     }
 
-    if (isNil(subject)) {
-        throw new Error("Cannot send email without subject");
+    if (isNil(templateName)) {
+        throw new Error("Cannot send email without a template");
     }
 
     if (isNil(email)) {
@@ -33,12 +38,18 @@ function sendMail(params) {
         throw new Error("Cannot send email without a sender");
     }
 
-    const bodyString = replaceVars(body, variables);
+    const template = await database.getSchema('EmailTemplate').findOne({name: templateName});
+    if (isNil(template)){
+        throw new Error('Template with given name not found');
+    }
+
+    const bodyString = replaceVars(template.body, variables);
+    const subjectString = replaceVars(template.subject, variables);
 
     builder.setSender(sender);
     builder.setContent(bodyString);
     builder.setReceiver(email);
-    builder.setSubject(subject);
+    builder.setSubject(subjectString);
 
     return emailer.sendEmail(builder);
 }
@@ -58,6 +69,35 @@ function replaceVars(body, variables) {
     return str;
 }
 
+async function registerTemplate(name, subject, body, variables) {
+    if (isNil(name)) {
+        throw new Error("Template name is required");
+    }
+
+    if (isNil(subject)) {
+        throw new Error("Template subject is required");
+    }
+
+    if (isNil(body)) {
+        throw new Error("Template body is required");
+    }
+
+    if (isNil(database)) {
+        throw new Error("Module not initialized")
+    }
+
+    const templateSchema = database.getSchema('EmailTemplate');
+
+    const temp = await templateSchema.findOne({name});
+    if (!isNil(temp)) return temp;
+
+    return templateSchema.create({
+        name,
+        subject,
+        body,
+        variables
+    });
+}
 
 function initialize(app) {
     if (!app) {
@@ -86,10 +126,15 @@ function initialize(app) {
     }
 
     emailer = new emailProvider.EmailProvider(transport, transportSettings);
+
+    database = app.conduit.database.getDbAdapter();
+    database.createSchemaFromAdapter(templateModel);
+
     return true;
 }
 
 module.exports = {
     initialize,
-    sendMail
+    sendMail,
+    registerTemplate
 };
