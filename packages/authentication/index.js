@@ -66,23 +66,23 @@ function authentication(app, config) {
     registerSchemas();
 
     if (config.local) {
-        app.get('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
-        app.get('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
-        app.get('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
-        app.get('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
-        app.get('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
-        app.get('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
-        app.get('/authentication/logout', (req, res, next) => local.logOut(req, res, next).catch(next));
+        app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
+        app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
+        app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
+        app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
+        app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+        app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
+        app.post('/authentication/logout', (req, res, next) => local.logOut(req, res, next).catch(next));
         initialized = true;
     }
 
     if (config.facebook) {
-        app.get('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
+        app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
         initialized = true;
     }
 
     if (config.google) {
-        app.get('/authentication/google', (req,res,next) => google.authenticate(req, res, next).catch(next));
+        app.post('/authentication/google', (req,res,next) => google.authenticate(req, res, next).catch(next));
         initialized = true;
     }
 
