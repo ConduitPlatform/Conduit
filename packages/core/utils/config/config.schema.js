@@ -25,6 +25,31 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    email: {
+        doc: 'The options for the conduit email provider',
+        transport: {
+            format: 'String',
+            default: 'mailgun'
+        },
+        transportSettings: {
+            doc: 'The settings for the transport',
+            apiKey: {
+                doc: 'The email service API key',
+                format: 'String',
+                default: 'nadda'
+            },
+            domain: {
+                doc: 'The domain for the emails',
+                format: 'String',
+                default: '***REMOVED***'
+            },
+            proxy: {
+                doc: 'The email proxy',
+                format: 'String',
+                default: undefined
+            }
+        }
+    },
     port: {
         doc: 'The port to bind.',
         format: 'port',

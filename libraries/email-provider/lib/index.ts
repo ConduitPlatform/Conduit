@@ -3,6 +3,7 @@ import Mail from "nodemailer/lib/mailer";
 import {MailgunMailBuilder} from "./transports/mailgun/mailgunMailBuilder";
 import {EmailBuilder} from "./interfaces/EmailBuilder";
 import {createTransport, SentMessageInfo} from "nodemailer";
+import { MailgunConfig } from './transports/mailgun/mailgun.config';
 
 
 export class EmailProvider {
@@ -13,7 +14,18 @@ export class EmailProvider {
     constructor(transport: string, transportSettings: any) {
         if (transport === 'mailgun') {
             this._transportName = 'mailgun';
-            this._transport = createTransport(initializeMailgun(transportSettings));
+
+            const { apiKey, domain, proxy } = transportSettings;
+
+            const mailgunSettings: MailgunConfig = {
+                auth: {
+                    api_key: apiKey,
+                    domain
+                },
+                proxy
+            };
+
+            this._transport = createTransport(initializeMailgun(mailgunSettings));
         } else {
             this._transportName = undefined;
             this._transport = undefined;

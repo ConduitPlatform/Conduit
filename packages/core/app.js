@@ -6,6 +6,7 @@ const dbConfig = require('./utils/config/db-config');
 const logger = require('./utils/logging/logger.js');
 const authentication = require('@conduit/authentication');
 const database = require('@conduit/database-provider');
+const email = require('@conduit/email');
 const cms = require('@conduit/cms').CMS;
 
 
@@ -24,6 +25,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.conduit = {};
 app.conduit.config = config;
 app.conduit.database = database;
+if (email.initialize(app)) {
+    app.conduit.email = email;
+}
+
 database.connectToDB(process.env.databaseType, process.env.databaseURL);
 dbConfig.configureFromDatabase(app.conduit.database);
 

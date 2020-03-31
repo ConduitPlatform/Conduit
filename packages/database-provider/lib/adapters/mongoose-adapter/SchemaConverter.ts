@@ -17,6 +17,10 @@ export function schemaConverter(jsonSchema: SchemaInterface) {
             actual[key].ref = actual[key].model;
             delete actual[key].model;
         }
+
+        if (actual[key].type === 'JSON') {
+            actual[key].type = Schema.Types.Mixed;
+        }
     }
     // just to be sure
     jsonSchema.modelSchema = actual;
