@@ -1,6 +1,6 @@
 const emailProvider = require('@conduit/email-provider');
 const {isNil} = require('lodash');
-const templateModel = require('./models/Template');
+const templateModel = require('./models/EmailTemplate');
 
 let emailer;
 let database;
@@ -38,7 +38,7 @@ async function sendMail(templateName, params) {
         throw new Error("Cannot send email without a sender");
     }
 
-    const template = await database.getSchema('Template').findOne({name: templateName});
+    const template = await database.getSchema('EmailTemplate').findOne({name: templateName});
     if (isNil(template)){
         throw new Error('Template with given name not found');
     }
@@ -76,7 +76,7 @@ async function registerTemplate(name, subject, body, variables) {
         throw new Error("Database not initialized")
     }
 
-    const templateSchema = database.getSchema('Template');
+    const templateSchema = database.getSchema('EmailTemplate');
 
     const temp = await templateSchema.findOne({name});
     if (!isNil(temp)) return temp;

@@ -1,5 +1,5 @@
 module.exports = {
-  name: 'Template',
+  name: 'EmailTemplate',
   modelSchema: {
     name: {
       type: String,
