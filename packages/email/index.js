@@ -5,10 +5,8 @@ const templateModel = require('./models/Template');
 let emailer;
 let database;
 
-function sendMail(templateName, params) {
+async function sendMail(templateName, params) {
     const {
-        subject,
-        body,
         email,
         variables,
         sender
@@ -18,13 +16,18 @@ function sendMail(templateName, params) {
         throw new Error("Module not initialized");
     }
 
+    if (isNil(database)) {
+        throw new Error("Database not initialized")
+    }
+
+
     const builder = emailer.emailBuilder();
     if (isNil(builder)) {
         return;
     }
 
-    if (isNil(subject)) {
-        throw new Error("Cannot send email without subject");
+    if (isNil(templateName)) {
+        throw new Error("Cannot send email without a template");
     }
 
     if (isNil(email)) {
@@ -35,12 +38,18 @@ function sendMail(templateName, params) {
         throw new Error("Cannot send email without a sender");
     }
 
-    const bodyString = replaceVars(body, variables);
+    const template = await database.getSchema('Template').findOne({name: templateName});
+    if (isNil(template)){
+        throw new Error('Template with given name not found');
+    }
+
+    const bodyString = replaceVars(template.body, variables);
+    const subjectString = replaceVars(template.subject, variables);
 
     builder.setSender(sender);
     builder.setContent(bodyString);
     builder.setReceiver(email);
-    builder.setSubject(subject);
+    builder.setSubject(subjectString);
 
     return emailer.sendEmail(builder);
 }
