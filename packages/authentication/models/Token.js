@@ -4,6 +4,10 @@ module.exports = {
     type: {
       type: String,
     },
+    userId: {
+      type: 'Relation',
+      model: 'User'
+    },
     token: {
       type: String
     },
