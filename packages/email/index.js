@@ -1,9 +1,11 @@
 const emailProvider = require('@conduit/email-provider');
 const {isNil} = require('lodash');
+const templateModel = require('./models/Template');
 
 let emailer;
+let database;
 
-function sendMail(params) {
+function sendMail(templateName, params) {
     const {
         subject,
         body,
@@ -58,6 +60,25 @@ function replaceVars(body, variables) {
     return str;
 }
 
+async function registerTemplate(name, subject, body, variables) {
+    if (isNil(name) || isNil(subject) || isNil(body))
+        throw new Error("Template fields are missing");
+    if (isNil(database)) {
+        throw new Error("Database not initialized")
+    }
+
+    const templateSchema = database.getSchema('Template');
+
+    const temp = await templateSchema.findOne({name});
+    if (!isNil(temp)) return temp;
+
+    return templateSchema.create({
+        name,
+        subject,
+        body,
+        variables
+    });
+}
 
 function initialize(app) {
     if (!app) {
@@ -86,10 +107,15 @@ function initialize(app) {
     }
 
     emailer = new emailProvider.EmailProvider(transport, transportSettings);
+
+    database = app.conduit.database.getDbAdapter();
+    database.createSchemaFromAdapter(templateModel);
+
     return true;
 }
 
 module.exports = {
     initialize,
-    sendMail
+    sendMail,
+    registerTemplate
 };
