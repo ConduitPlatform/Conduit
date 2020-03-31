@@ -6,13 +6,14 @@ const jwt = require('jsonwebtoken');
 
 
 let refreshToken = require('./models/RefreshToken');
-let accessToken = require('./models/Token');
+let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
-let passwordResetTokenModel = require('./models/PasswordResetToken');
-let verificationTokenModel = require('./models/VerificationToken');
+const tokenModel = require('./models/Token');
 
 let initialized = false;
 let database;
+
+// this is for testing purposes
 const configuration = {
     local: {
         identifier: 'email',
@@ -70,6 +71,8 @@ function authentication(app, config) {
         app.get('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
         app.get('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
         app.get('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+        app.get('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
+        app.get('/authentication/logout', (req, res, next) => local.logOut(req, res, next).catch(next));
         initialized = true;
     }
 
@@ -89,8 +92,7 @@ function registerSchemas() {
     database.createSchemaFromAdapter(userModel);
     database.createSchemaFromAdapter(refreshToken);
     database.createSchemaFromAdapter(accessToken);
-    database.createSchemaFromAdapter(passwordResetTokenModel);
-    database.createSchemaFromAdapter(verificationTokenModel);
+    database.createSchemaFromAdapter(tokenModel);
 }
 
 function middleware(req, res, next) {

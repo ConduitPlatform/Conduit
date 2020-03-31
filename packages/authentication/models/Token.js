@@ -1,18 +1,18 @@
 module.exports = {
-    name: 'AccessToken',
-    modelSchema: {
-        userId: {
-            type: 'Relation',
-            model: 'User'
-        },
-        token: {
-            type: String
-        },
-        expiresOn: {
-            type: Date
-        }
+  name: 'Token',
+  modelSchema: {
+    type: {
+      type: 'String',
     },
-    modelOptions: {
-        timestamps: true
-    }
+    userId: {
+      type: 'Relation',
+      model: 'User'
+    },
+    token: {
+      type: String
+    },
+  },
+  modelOptions: {
+    timestamps: true
+  }
 };

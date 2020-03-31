@@ -3,6 +3,7 @@ const authHelper = require('../helpers/authHelper');
 const moment = require('moment');
 const emailProvider = require('@conduit/email');
 const uuid = require('uuid/v4');
+const TOKEN_TYPE = require('../constants/TokenType').TOKEN_TYPE;
 
 async function register(req, res, next) {
   const {email, password} = req.body;
@@ -12,7 +13,7 @@ async function register(req, res, next) {
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
   const userModel = database.getSchema('User');
-  const verificationTokenModel = database.getSchema('VerificationToken');
+  const tokenModel = database.getSchema('Token');
 
   let user = await userModel.findOne({email});
   if (!isNil(user)) return res.status(403).json({error: 'User already exists'});
@@ -24,7 +25,8 @@ async function register(req, res, next) {
   });
 
   if (process.env.localSendVerificationEmail === 'true') {
-    const verificationTokenDoc = await verificationTokenModel.create({
+    const verificationTokenDoc = await tokenModel.create({
+      type: TOKEN_TYPE.VERIFICATION_TOKEN,
       userId: user._id,
       token: uuid()
     });
@@ -81,17 +83,18 @@ async function forgotPassword(req, res, next) {
 
   const database = req.app.conduit.database.getDbAdapter();
   const userModel = database.getSchema('User');
-  const passwordResetTokenModel = database.getSchema('PasswordResetToken');
+  const tokenModel = database.getSchema('Token');
 
   const user = await userModel.findOne({email});
 
   if (isNil(user) || (process.env.localVerificationRequired === 'true' && !user.isVerified))
     return res.json({message: 'Ok'});
 
-  const oldToken = await passwordResetTokenModel.findOne({userId: user._id});
+  const oldToken = await tokenModel.findOne({type: TOKEN_TYPE.PASSWORD_RESET_TOKEN, userId: user._id});
   if (!isNil(oldToken)) await oldToken.remove();
 
-  const passwordResetTokenDoc = await passwordResetTokenModel.create({
+  const passwordResetTokenDoc = await tokenModel.create({
+    type: TOKEN_TYPE.PASSWORD_RESET_TOKEN,
     userId: user._id,
     token: uuid()
   });
@@ -116,9 +119,12 @@ async function resetPassword(req, res, next) {
 
   const database = req.app.conduit.database.getDbAdapter();
   const userModel = database.getSchema('User');
-  const passwordResetTokenModel = database.getSchema('PasswordResetToken');
+  const tokenModel = database.getSchema('Token');
 
-  const passwordResetTokenDoc = await passwordResetTokenModel.findOne({token: passwordResetTokenParam});
+  const passwordResetTokenDoc = await tokenModel.findOne({
+    type: TOKEN_TYPE.PASSWORD_RESET_TOKEN,
+    token: passwordResetTokenParam
+  });
   if (isNil(passwordResetTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
 
   const user = await userModel.findOne({_id: passwordResetTokenDoc.userId}, '+hashedPassword');
@@ -140,9 +146,12 @@ async function verifyEmail(req, res, next) {
 
   const database = req.app.conduit.database.getDbAdapter();
   const userModel = database.getSchema('User');
-  const verificationTokenModel = database.getSchema('VerificationToken');
+  const tokenModel = database.getSchema('Token');
 
-  const verificationTokenDoc = await verificationTokenModel.findOne({token: verificationTokenParam});
+  const verificationTokenDoc = await tokenModel.findOne({
+    type: TOKEN_TYPE.VERIFICATION_TOKEN,
+    token: verificationTokenParam
+  });
   if (isNil(verificationTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
 
   const user = await userModel.findOne({_id: verificationTokenDoc.userId});
@@ -155,8 +164,50 @@ async function verifyEmail(req, res, next) {
   return res.json({message: 'Email verified'});
 }
 
+async function renewAuth(req, res, next) {
+  const refreshToken = req.body.refreshToken;
+  if (isNil(refreshToken))
+    return res.status(401).json({error: 'Invalid parameters'});
+
+  const database = req.app.conduit.database.getDbAdapter();
+  const accessTokenModel = database.getSchema('AccessToken');
+  const refreshTokenModel = database.getSchema('RefreshToken');
+
+  // TODO Delete old access token with the same ClientId
+
+  const oldRefreshToken = await refreshTokenModel.findOne({token: refreshToken});
+  if (isNil(oldRefreshToken))
+    return res.status(401).json({error: 'Invalid parameters'});
+
+  const newAccessToken = await accessTokenModel.create({
+    userId: oldRefreshToken.userId,
+    token: authHelper.encode({id: oldRefreshToken.userId}),
+    expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
+  });
+
+  const newRefreshToken = await refreshTokenModel.create({
+    userId: oldRefreshToken.userId,
+    token: authHelper.generate(),
+    expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
+  });
+
+  await oldRefreshToken.remove();
+
+  return res.json({
+    accessToken: newAccessToken.token,
+    refreshToken: newRefreshToken.token
+  });
+}
+
+async function logOut(req, res, next) {
+  // TODO delete access and refresh tokens with the clientId
+  return res.json({message: 'Logged out'});
+}
+
 module.exports.authenticate = authenticate;
 module.exports.register = register;
 module.exports.forgotPassword = forgotPassword;
 module.exports.resetPassword = resetPassword;
 module.exports.verifyEmail = verifyEmail;
+module.exports.renewAuth = renewAuth;
+module.exports.logOut = logOut;

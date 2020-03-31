@@ -30,6 +30,7 @@ async function authenticate(req, res, next) {
     let user = await userModel.findOne({email: facebookResponse.email});
 
     if (!isNil(user)) {
+      if (!user.active) return res.status(403).json({error: 'Inactive user'});
       if (process.env.facebookAccountLinking === 'false') {
         return res.status(401).json({error: 'User with this email already exists'});
       }
