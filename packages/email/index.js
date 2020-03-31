@@ -59,14 +59,27 @@ function replaceVars(body, variables) {
 }
 
 
-function initialize(app, config) {
+function initialize(app) {
+    if (!app) {
+        throw new Error("No app provided")
+    }
+
+    const appConfig = app.conduit.config;
+
+    if (isNil(appConfig)) {
+        throw new Error("No app config");
+    }
+
+    const config = appConfig.get('email');
+
+    if (isNil(config)) {
+        throw new Error("No email config provided");
+    }
+
     if (config && !Object.prototype.toString.call(config)) {
         throw new Error("Malformed config provided")
     }
 
-    if (!app) {
-        throw new Error("No app provided")
-    }
     const {transport, transportSettings} = config;
     if (isNil(transport) || isNil(transportSettings)) {
         throw new Error("You need to provide both a transport and a config");
@@ -74,8 +87,9 @@ function initialize(app, config) {
 
     emailer = new emailProvider.EmailProvider(transport, transportSettings);
     return true;
-
 }
 
-module.exports = initialize;
-module.exports.sendMail = sendMail;
+module.exports = {
+    initialize,
+    sendMail
+};
