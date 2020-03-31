@@ -24,11 +24,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.conduit = {};
 app.conduit.config = config;
 app.conduit.database = database;
+database.connectToDB(process.env.databaseType, process.env.databaseURL);
+
 if (email.initialize(app)) {
     app.conduit.email = email;
 }
-
-database.connectToDB(process.env.databaseType, process.env.databaseURL);
 
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
 if (config.get('authentication')) {
