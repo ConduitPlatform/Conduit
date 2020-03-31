@@ -1,9 +1,4 @@
 module.exports = {
-    version: {
-      doc: 'The version of the config file',
-      format: 'String',
-      default: '0.0.0'
-    },
     env: {
         doc: 'The application environment.',
         format: [
