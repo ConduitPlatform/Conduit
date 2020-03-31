@@ -15,12 +15,12 @@ function encode(data, options) {
     if (data instanceof Object && Object.keys(data).length === 0) {
         return null;
     }
-    return jwt.sign(data, process.env.jwtSecret, { expiresIn: options.tokenInvalidationPeriod * 100 });
+    return jwt.sign(data, options.jwtSecret, { expiresIn: options.tokenInvalidationPeriod * 100 });
 }
 
-function verify(token) {
+function verify(token, options) {
     try {
-        return jwt.verify(token, process.env.jwtSecret);
+        return jwt.verify(token, options.jwtSecret);
     } catch (error) {
         return null;
     }

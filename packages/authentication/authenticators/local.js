@@ -70,7 +70,7 @@ async function authenticate(req, res, next) {
 
   const accessToken = await accessTokenModel.create({
     userId: user._id,
-    token: authHelper.encode({id: user._id}, { tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    token: authHelper.encode({id: user._id}, { jwtSecret: config.jwtSecret, tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
     expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 
@@ -195,7 +195,7 @@ async function renewAuth(req, res, next) {
 
   const newAccessToken = await accessTokenModel.create({
     userId: oldRefreshToken.userId,
-    token: authHelper.encode({id: oldRefreshToken.userId}, {tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    token: authHelper.encode({id: oldRefreshToken.userId}, { jwtSecret: config.jwtSecret, tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
     expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 

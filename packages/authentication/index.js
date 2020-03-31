@@ -1,8 +1,7 @@
 let facebook = require('./authenticators/facebook');
 let google = require('./authenticators/google');
 let local = require('./authenticators/local');
-
-const jwt = require('jsonwebtoken');
+const authHelper = require('./helpers/authHelper');
 
 
 let refreshToken = require('./models/RefreshToken');
@@ -115,7 +114,7 @@ function middleware(req, res, next) {
         return res.status(401).json({error: 'No token provided'});
     }
 
-    const decoded = jwt.verify(token, configuration.jwtSecret);
+    const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.jwtSecret});
     if (decoded === null || decoded === undefined) return res.status(401).json({error: 'Invalid token'});
 
     const {id: userId} = decoded;
