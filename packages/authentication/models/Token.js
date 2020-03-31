@@ -2,7 +2,7 @@ module.exports = {
   name: 'Token',
   modelSchema: {
     type: {
-      type: 'String',
+      type: String,
     },
     token: {
       type: String
