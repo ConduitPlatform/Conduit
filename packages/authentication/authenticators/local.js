@@ -27,7 +27,7 @@ async function register(req, res, next) {
   if (process.env.localSendVerificationEmail === 'true') {
     const verificationTokenDoc = await tokenModel.create({
       type: TOKEN_TYPE.VERIFICATION_TOKEN,
-      userId: user._id,
+      'data.userId': user._id,
       token: uuid()
     });
     // this will be completed when we build the email provider module
@@ -95,7 +95,7 @@ async function forgotPassword(req, res, next) {
 
   const passwordResetTokenDoc = await tokenModel.create({
     type: TOKEN_TYPE.PASSWORD_RESET_TOKEN,
-    userId: user._id,
+    'data.userId': user._id,
     token: uuid()
   });
 
@@ -127,7 +127,7 @@ async function resetPassword(req, res, next) {
   });
   if (isNil(passwordResetTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
 
-  const user = await userModel.findOne({_id: passwordResetTokenDoc.userId}, '+hashedPassword');
+  const user = await userModel.findOne({_id: passwordResetTokenDoc.data.userId}, '+hashedPassword');
   if (isNil(user)) return res.status(404).json({error: 'User not found'});
 
   const passwordsMatch = await authHelper.checkPassword(newPassword, user.hashedPassword);
@@ -154,7 +154,7 @@ async function verifyEmail(req, res, next) {
   });
   if (isNil(verificationTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
 
-  const user = await userModel.findOne({_id: verificationTokenDoc.userId});
+  const user = await userModel.findOne({_id: verificationTokenDoc.data.userId});
   if (isNil(user)) return res.status(404).json({error: 'User not found'});
 
   user.isVerified = true;
