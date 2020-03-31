@@ -70,10 +70,20 @@ function replaceVars(body, variables) {
 }
 
 async function registerTemplate(name, subject, body, variables) {
-    if (isNil(name) || isNil(subject) || isNil(body))
-        throw new Error("Template fields are missing");
+    if (isNil(name)) {
+        throw new Error("Template name is required");
+    }
+
+    if (isNil(subject)) {
+        throw new Error("Template subject is required");
+    }
+
+    if (isNil(body)) {
+        throw new Error("Template body is required");
+    }
+
     if (isNil(database)) {
-        throw new Error("Database not initialized")
+        throw new Error("Module not initialized")
     }
 
     const templateSchema = database.getSchema('EmailTemplate');
