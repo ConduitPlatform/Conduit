@@ -11,6 +11,7 @@ config.loadFile(path.join(__dirname,'../../config/env.json'));
 // Perform validation
 config.validate({allowed: 'strict'});
 
+process.env.configVersion = config.get('version');
 process.env.databaseType = config.get('database').type;
 process.env.databaseURL = config.get('database').databaseURL;
 process.env.googleClientId = config.get('authentication').google.clientId;

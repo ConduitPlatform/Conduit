@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const config = require('./utils/config/config.js');
+const dbConfig = require('./utils/config/db-config');
 const logger = require('./utils/logging/logger.js');
 const authentication = require('@conduit/authentication');
 const database = require('@conduit/database-provider');
@@ -24,6 +25,8 @@ app.conduit = {};
 app.conduit.config = config;
 app.conduit.database = database;
 database.connectToDB(process.env.databaseType, process.env.databaseURL);
+dbConfig.configureFromDatabase(app.conduit.database);
+
 
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
 if (config.get('authentication')) {
