@@ -30,7 +30,6 @@ if (email.initialize(app)) {
     app.conduit.email = email;
 }
 
-app.conduit.email.registerTemplate('testName3', 'testSubj', 'TestBody', ['tete','mpempempe']).catch();
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
 if (config.get('authentication')) {
     authentication.initialize(app, config.get('authentication'));
