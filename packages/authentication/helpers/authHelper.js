@@ -1,20 +1,21 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const {isNil} = require('lodash');
 const SALT_ROUNDS = 10;
 
 function generate() {
     return crypto.randomBytes(64).toString('base64');
 }
 
-function encode(data) {
-    if (data === null || data === undefined) {
+function encode(data, options) {
+    if (isNil(data) || isNil(options)) {
         return null;
     }
     if (data instanceof Object && Object.keys(data).length === 0) {
         return null;
     }
-    return jwt.sign(data, process.env.jwtSecret, { expiresIn: Number(process.env.tokenInvalidationPeriod) * 100 });
+    return jwt.sign(data, process.env.jwtSecret, { expiresIn: options.tokenInvalidationPeriod * 100 });
 }
 
 function verify(token) {

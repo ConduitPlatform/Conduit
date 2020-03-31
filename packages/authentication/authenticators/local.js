@@ -7,9 +7,11 @@ const TOKEN_TYPE = require('../constants/TokenType').TOKEN_TYPE;
 
 async function register(req, res, next) {
   const {email, password} = req.body;
-  const database = req.app.conduit.database.getDbAdapter();
+  const conduit = req.app.conduit;
+  const database = conduit.database.getDbAdapter();
+  const config = conduit.config.get('authentication');
 
-  if (process.env.localAuthIsActive === 'false') return res.status(403).json({error: 'Local authentication is disabled'});
+  if (!config.local.active) return res.status(403).json({error: 'Local authentication is disabled'});
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
   const userModel = database.getSchema('User');
@@ -24,18 +26,20 @@ async function register(req, res, next) {
     hashedPassword
   });
 
-  if (process.env.localSendVerificationEmail === 'true') {
+  if (config.local.sendVerificationEmail) {
     const verificationTokenDoc = await tokenModel.create({
       type: TOKEN_TYPE.VERIFICATION_TOKEN,
       userId: user._id,
       token: uuid()
     });
     // this will be completed when we build the email provider module
-    const link = `http://localhost:3000/authentication/verify-email/${verificationTokenDoc.token}`;
-    await emailProvider.sendMail({
-      email: user.email,
-      body: link
-    });
+    // const link = `http://localhost:3000/authentication/verify-email/${verificationTokenDoc.token}`;
+    // await emailProvider.sendMail({
+    //   email: user.email,
+    //   body: link,
+    //   subject: 'test',
+    //   sender: 'lakispapakis@mail.ml'
+    // });
   }
 
   return res.json({message: 'Registration was successful'});
@@ -43,9 +47,11 @@ async function register(req, res, next) {
 
 async function authenticate(req, res, next) {
   const {email, password} = req.body;
-  const database = req.app.conduit.database.getDbAdapter();
+  const conduit = req.app.conduit;
+  const database = conduit.database.getDbAdapter();
+  const config = conduit.config.get('authentication');
 
-  if (process.env.localAuthIsActive === 'false') return res.status(403).json({error: 'Local authentication is disabled'});
+  if (!config.local.active) return res.status(403).json({error: 'Local authentication is disabled'});
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
 
   const userModel = database.getSchema('User');
@@ -56,7 +62,7 @@ async function authenticate(req, res, next) {
   if (isNil(user)) return res.status(401).json({error: 'Invalid login credentials'});
   if (!user.active) return res.status(403).json({error: 'Inactive user'});
 
-  if (process.env.localVerificationRequired === 'true' && !user.isVerified)
+  if (config.local.verificationRequired && !user.isVerified)
     return res.status(403).json({error: 'You must verify your account to login'});
 
   const passwordsMatch = await authHelper.checkPassword(password, user.hashedPassword);
@@ -64,14 +70,14 @@ async function authenticate(req, res, next) {
 
   const accessToken = await accessTokenModel.create({
     userId: user._id,
-    token: authHelper.encode({id: user._id}),
-    expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
+    token: authHelper.encode({id: user._id}, { tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 
   const refreshToken = await refreshTokenModel.create({
     userId: user._id,
     token: authHelper.generate(),
-    expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
+    expiresOn: moment().add(config.refreshTokenInvalidationPeriod).format()
   });
 
   return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});
@@ -79,15 +85,18 @@ async function authenticate(req, res, next) {
 
 async function forgotPassword(req, res, next) {
   const email = req.body.email;
+  const conduit = req.app.conduit;
+  const database = conduit.database.getDbAdapter();
+  const config = conduit.config.get('authentication');
+
   if (isNil(email)) res.status(401).json({error: 'Email field required'});
 
-  const database = req.app.conduit.database.getDbAdapter();
   const userModel = database.getSchema('User');
   const tokenModel = database.getSchema('Token');
 
   const user = await userModel.findOne({email});
 
-  if (isNil(user) || (process.env.localVerificationRequired === 'true' && !user.isVerified))
+  if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
     return res.json({message: 'Ok'});
 
   const oldToken = await tokenModel.findOne({type: TOKEN_TYPE.PASSWORD_RESET_TOKEN, userId: user._id});
@@ -111,13 +120,15 @@ async function forgotPassword(req, res, next) {
 }
 
 async function resetPassword(req, res, next) {
+  const conduit = req.app.conduit;
+  const database = conduit.database.getDbAdapter();
+
   const passwordResetTokenParam = req.body.passwordResetToken;
   const newPassword = req.body.password;
   if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
     return res.status(401).json({error: 'Required fields are missing'});
   }
 
-  const database = req.app.conduit.database.getDbAdapter();
   const userModel = database.getSchema('User');
   const tokenModel = database.getSchema('Token');
 
@@ -169,7 +180,10 @@ async function renewAuth(req, res, next) {
   if (isNil(refreshToken))
     return res.status(401).json({error: 'Invalid parameters'});
 
-  const database = req.app.conduit.database.getDbAdapter();
+  const conduit = req.app.conduit;
+  const database = conduit.database.getDbAdapter();
+  const config = conduit.config.get('authentication');
+
   const accessTokenModel = database.getSchema('AccessToken');
   const refreshTokenModel = database.getSchema('RefreshToken');
 
@@ -181,14 +195,14 @@ async function renewAuth(req, res, next) {
 
   const newAccessToken = await accessTokenModel.create({
     userId: oldRefreshToken.userId,
-    token: authHelper.encode({id: oldRefreshToken.userId}),
-    expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
+    token: authHelper.encode({id: oldRefreshToken.userId}, {tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 
   const newRefreshToken = await refreshTokenModel.create({
     userId: oldRefreshToken.userId,
     token: authHelper.generate(),
-    expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
+    expiresOn: moment().add(config.refreshTokenInvalidationPeriod).format()
   });
 
   await oldRefreshToken.remove();
