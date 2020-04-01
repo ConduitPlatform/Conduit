@@ -2,8 +2,7 @@ let facebook = require('./authenticators/facebook');
 let google = require('./authenticators/google');
 let local = require('./authenticators/local');
 const authHelper = require('./helpers/authHelper');
-const emailProvider = require('@conduit/email');
-
+const registerEmailTemplates = require('./templates/registerEmailTemplates');
 let refreshToken = require('./models/RefreshToken');
 let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
@@ -93,21 +92,6 @@ function registerSchemas() {
     database.createSchemaFromAdapter(refreshToken);
     database.createSchemaFromAdapter(accessToken);
     database.createSchemaFromAdapter(tokenModel);
-}
-
-async function registerEmailTemplates() {
-    await emailProvider.registerTemplate(
-      'ForgotPassword',
-      '{{applicationName}} - Forgot Password',
-      'Click <a href="{{link}}">here</a> to reset your password',
-      ['applicationName', 'link']);
-
-    await emailProvider.registerTemplate(
-      'EmailVerification',
-      '{{applicationName}} - Verify your email',
-      'Click <a href="{{link}}">here</a> to verify your email',
-      ['applicationName', 'link']
-    );
 }
 
 function middleware(req, res, next) {
