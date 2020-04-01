@@ -126,8 +126,6 @@ async function initialize(app) {
     let {transport, transportSettings} = config;
     if (isNil(transport) || isNil(transportSettings)) {
         testAccount = await createTestAccount();
-
-        // throw new Error("You need to provide both a transport and a config");
         const smtpServer = new SMTPServer({
             onAuth(auth, session, callback) {
                 if (auth.username !== testAccount.user || auth.password !== testAccount.pass) {
