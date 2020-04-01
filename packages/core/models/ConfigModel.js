@@ -57,6 +57,20 @@ module.exports = {
           type: String,
           default: 'S3CR3T'
         }
+      },
+      email: {
+        transport: String,
+        transportSettings: {
+          apiKey: {
+            type: String,
+            default: 'nadda'
+          },
+          domain: {
+            type: String,
+            default: '***REMOVED***'
+          },
+          proxy: String
+        }
       }
     }
   },
