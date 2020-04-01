@@ -38,6 +38,11 @@ module.exports = {
                 format: 'String',
                 default: '***REMOVED***'
             },
+            host: {
+                doc: 'The host for email service',
+                format: 'String',
+                default: undefined
+            },
             proxy: {
                 doc: 'The email proxy',
                 format: 'String',
