@@ -69,7 +69,8 @@ module.exports = {
             type: String,
             default: '***REMOVED***'
           },
-          proxy: String
+          proxy: String,
+          host: String
         }
       }
     }

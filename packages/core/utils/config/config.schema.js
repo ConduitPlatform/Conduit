@@ -24,19 +24,24 @@ module.exports = {
         doc: 'The options for the conduit email provider',
         transport: {
             format: 'String',
-            default: undefined
+            default: 'mailgun'
         },
         transportSettings: {
             doc: 'The settings for the transport',
             apiKey: {
                 doc: 'The email service API key',
                 format: 'String',
-                default: 'nadda'
+                default: '***REMOVED***'
             },
             domain: {
                 doc: 'The domain for the emails',
                 format: 'String',
                 default: '***REMOVED***'
+            },
+            host: {
+                doc: 'The host for email service',
+                format: 'String',
+                default: 'api.eu.mailgun.net'
             },
             proxy: {
                 doc: 'The email proxy',
