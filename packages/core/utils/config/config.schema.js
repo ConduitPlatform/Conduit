@@ -31,7 +31,7 @@ module.exports = {
             apiKey: {
                 doc: 'The email service API key',
                 format: 'String',
-                default: '***REMOVED***'
+                default: 'nadda'
             },
             domain: {
                 doc: 'The domain for the emails',
@@ -41,7 +41,7 @@ module.exports = {
             host: {
                 doc: 'The host for email service',
                 format: 'String',
-                default: 'api.eu.mailgun.net'
+                default: undefined
             },
             proxy: {
                 doc: 'The email proxy',
