@@ -5,7 +5,6 @@ const authentication = require('@conduit/authentication');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
-const emailProvider = require('@conduit/email');
 
 async function init(app) {
   await app.conduit.database.connectToDB(process.env.databaseType, process.env.databaseURL);
