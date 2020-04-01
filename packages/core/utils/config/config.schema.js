@@ -24,7 +24,7 @@ module.exports = {
         doc: 'The options for the conduit email provider',
         transport: {
             format: 'String',
-            default: 'mailgun'
+            default: undefined
         },
         transportSettings: {
             doc: 'The settings for the transport',
