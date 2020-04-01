@@ -13,15 +13,5 @@ config.validate({allowed: 'strict'});
 
 process.env.databaseType = config.get('database').type;
 process.env.databaseURL = config.get('database').databaseURL;
-process.env.googleClientId = config.get('authentication').google.clientId;
-process.env.googleAccountLinking = config.get('authentication').google.accountLinking;
-process.env.jwtSecret = config.get('authentication').jwtSecret;
-process.env.tokenInvalidationPeriod = config.get('authentication').tokenInvalidationPeriod;
-process.env.refreshTokenInvalidationPeriod = config.get('authentication').refreshTokenInvalidationPeriod;
-process.env.facebookAccountLinking = config.get('authentication').facebook.accountLinking;
-process.env.localAuthIdentifier = config.get('authentication').local.identifier;
-process.env.localAuthIsActive = config.get('authentication').local.active;
-process.env.localSendVerificationEmail = config.get('authentication').local.sendVerificationEmail;
-process.env.localVerificationRequired = config.get('authentication').local.verificationRequired;
 
 module.exports = config;
