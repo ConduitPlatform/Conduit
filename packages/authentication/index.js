@@ -2,7 +2,7 @@ let facebook = require('./authenticators/facebook');
 let google = require('./authenticators/google');
 let local = require('./authenticators/local');
 const authHelper = require('./helpers/authHelper');
-
+const emailProvider = require('@conduit/email');
 
 let refreshToken = require('./models/RefreshToken');
 let accessToken = require('./models/AccessToken');
@@ -52,7 +52,7 @@ const configuration = {
  *
  *
  */
-function authentication(app, config) {
+async function authentication(app, config) {
 
     if (config && !Object.prototype.toString.call(config)) {
         throw new Error("Malformed config provided")
@@ -63,6 +63,7 @@ function authentication(app, config) {
     }
     database = app.conduit.database.getDbAdapter();
     registerSchemas();
+    await registerEmailTemplates();
 
     if (config.local) {
         app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
@@ -92,6 +93,21 @@ function registerSchemas() {
     database.createSchemaFromAdapter(refreshToken);
     database.createSchemaFromAdapter(accessToken);
     database.createSchemaFromAdapter(tokenModel);
+}
+
+async function registerEmailTemplates() {
+    await emailProvider.registerTemplate(
+      'ForgotPassword',
+      '{{applicationName}} - Forgot Password',
+      'Click <a href="{{link}}">here</a> to reset your password',
+      ['applicationName', 'link']);
+
+    await emailProvider.registerTemplate(
+      'EmailVerification',
+      '{{applicationName}} - Verify your email',
+      'Click <a href="{{link}}">here</a> to verify your email',
+      ['applicationName', 'link']
+    );
 }
 
 function middleware(req, res, next) {
