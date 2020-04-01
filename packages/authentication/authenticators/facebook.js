@@ -5,9 +5,8 @@ const isNil = require('lodash/isNil');
 
 async function authenticate(req, res, next) {
   const access_token = req.body.access_token;
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
     const facebookOptions = {
       method: 'GET',

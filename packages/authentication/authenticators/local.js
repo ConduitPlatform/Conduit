@@ -7,9 +7,8 @@ const TOKEN_TYPE = require('../constants/TokenType').TOKEN_TYPE;
 
 async function register(req, res, next) {
   const {email, password} = req.body;
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
   if (!config.local.active) return res.status(403).json({error: 'Local authentication is disabled'});
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
@@ -47,9 +46,8 @@ async function register(req, res, next) {
 
 async function authenticate(req, res, next) {
   const {email, password} = req.body;
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
   if (!config.local.active) return res.status(403).json({error: 'Local authentication is disabled'});
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
@@ -85,9 +83,8 @@ async function authenticate(req, res, next) {
 
 async function forgotPassword(req, res, next) {
   const email = req.body.email;
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
   if (isNil(email)) res.status(401).json({error: 'Email field required'});
 
@@ -120,8 +117,7 @@ async function forgotPassword(req, res, next) {
 }
 
 async function resetPassword(req, res, next) {
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
+  const database = req.app.conduit.database.getDbAdapter();
 
   const passwordResetTokenParam = req.body.passwordResetToken;
   const newPassword = req.body.password;
@@ -180,9 +176,8 @@ async function renewAuth(req, res, next) {
   if (isNil(refreshToken))
     return res.status(401).json({error: 'Invalid parameters'});
 
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
   const accessTokenModel = database.getSchema('AccessToken');
   const refreshTokenModel = database.getSchema('RefreshToken');

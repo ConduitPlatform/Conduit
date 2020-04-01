@@ -7,9 +7,8 @@ const client = new OAuth2Client();
 
 async function authenticate(req, res, next) {
   const {id_token, access_token, refresh_token, expires_in} = req.body;
-  const conduit = req.app.conduit;
-  const database = conduit.database.getDbAdapter();
-  const config = conduit.config.get('authentication');
+  const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
   const ticket = await client.verifyIdToken({
     idToken: id_token,
