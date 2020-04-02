@@ -1,6 +1,5 @@
 tasks:
   - init: npm install
     command: lerna bootstrap
-    command: mkdir -p /workspace/data && mongod --dbpath /workspace/data
 image:
   file: .gitpod.Dockerfile
