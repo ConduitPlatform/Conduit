@@ -58,6 +58,22 @@ module.exports = {
           default: 'S3CR3T'
         }
       },
+      admin: {
+        auth: {
+          tokenSecret: {
+            type: String,
+            default: 'bsvhiuvseh'
+          },
+          hashRounds: {
+            type: Number,
+            default: 11
+          },
+          tokenExpirationTime: {
+            type: Number,
+            default: 21600
+          }
+        }
+      },
       email: {
         transport: String,
         transportSettings: {
