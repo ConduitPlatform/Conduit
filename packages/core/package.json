@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./bin/www",
-    "test": "./node_modules/.bin/eslint ."
+    "lint": "./node_modules/.bin/eslint .",
+    "test": "mocha --timeout 10000 --exit --reporter nyan",
+    "test-with-coverage": "nyc --reporter=text mocha --timeout 10000 --exit"
   },
   "license": "ISC",
   "dependencies": {
@@ -22,6 +24,10 @@
     "winston": "^3.2.1"
   },
   "devDependencies": {
-    "nodemon": "^1.12.1"
+    "chai": "^4.2.0",
+    "chai-http": "*",
+    "mocha": "^7.1.1",
+    "nodemon": "^1.12.1",
+    "nyc": "^15.0.0"
   }
 }
