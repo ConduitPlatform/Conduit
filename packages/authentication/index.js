@@ -1,6 +1,7 @@
 let facebook = require('./authenticators/facebook');
 let google = require('./authenticators/google');
 let local = require('./authenticators/local');
+const {isNil} = require('lodash');
 const authHelper = require('./helpers/authHelper');
 
 
@@ -71,7 +72,7 @@ function authentication(app, config) {
         app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
         app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
         app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
-        app.post('/authentication/logout', (req, res, next) => local.logOut(req, res, next).catch(next));
+        app.post('/authentication/logout', middleware, (req, res, next) => local.logOut(req, res, next).catch(next));
         initialized = true;
     }
 
@@ -114,17 +115,25 @@ function middleware(req, res, next) {
         return res.status(401).json({error: 'No token provided'});
     }
 
-    const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.jwtSecret});
+    database.getSchema('AccessToken')
+      .findOne({token, clientId: req.headers.clientid})
+      .then(accessTokenDoc => {
+          if (isNil(accessTokenDoc)){
+              return res.status(401).json({error: 'Invalid token'});
+          }
+      })
+      .catch(next);
+
+    const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.get('authentication.jwtSecret')});
     if (decoded === null || decoded === undefined) return res.status(401).json({error: 'Invalid token'});
 
-    const {id: userId} = decoded;
+    const userId = decoded.id;
 
-    database.getSchema('AccessToken')
+    database.getSchema('User')
         .findOne({_id: userId})
         .then(async user => {
             if (user === null || user === undefined) {
-                // todo change this to proper error
-                throw new HttpError(null, 'User not found', 404);
+                return res.status(404).json({error: 'User not found'});
             }
             req.user = user;
             next();

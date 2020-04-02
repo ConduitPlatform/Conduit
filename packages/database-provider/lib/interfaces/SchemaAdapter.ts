@@ -27,6 +27,8 @@ export interface SchemaAdapter {
 
     deleteOne(query: any): Promise<any>;
 
+    deleteMany(query: any): Promise<any>;
+
     findByIdAndUpdate(document: any): Promise<any>;
 
 }
