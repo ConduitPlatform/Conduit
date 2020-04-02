@@ -8,16 +8,17 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/authentication": "1.0.0",
-    "@conduit/email": "1.0.0",
     "@conduit/admin": "1.0.0",
+    "@conduit/authentication": "1.0.0",
     "@conduit/cms": "1.0.0",
     "@conduit/database-provider": "1.0.0",
+    "@conduit/email": "1.0.0",
     "convict": "^5.2.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "express": "~4.16.1",
     "express-winston": "^4.0.2",
+    "lodash": "^4.17.15",
     "winston": "^3.2.1"
   },
   "devDependencies": {
