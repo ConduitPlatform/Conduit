@@ -20,6 +20,25 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    admin: {
+        auth: {
+            tokenSecret: {
+                doc: 'The secret to be used to sing the admin tokens',
+                format: 'String',
+                default: 'fjeinqgwenf'
+            },
+            hashRounds: {
+                doc: 'The hash rounds to be used for bcrypt when hashing admin password',
+                format: 'Number',
+                default: 11
+            },
+            tokenExpirationTime: {
+                doc: 'Milliseconds after which the admin tokens expire',
+                format: 'Number',
+                default: 21600
+            }
+        }
+    },
     email: {
         doc: 'The options for the conduit email provider',
         transport: {
@@ -37,6 +56,11 @@ module.exports = {
                 doc: 'The domain for the emails',
                 format: 'String',
                 default: '***REMOVED***'
+            },
+            host: {
+                doc: 'The host for email service',
+                format: 'String',
+                default: undefined
             },
             proxy: {
                 doc: 'The email proxy',
