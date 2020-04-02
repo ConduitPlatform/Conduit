@@ -8,6 +8,7 @@ let refreshToken = require('./models/RefreshToken');
 let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
 const tokenModel = require('./models/Token');
+const {HttpError} = require("http-errors");
 
 let initialized = false;
 let database;
