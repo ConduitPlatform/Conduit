@@ -70,7 +70,7 @@ async function authentication(app, config) {
     app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
     app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
     app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
-    app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+    app.get('/hook/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
     app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
     app.post('/authentication/logout', middleware, (req, res, next) => local.logOut(req, res, next).catch(next));
     initialized = true;
