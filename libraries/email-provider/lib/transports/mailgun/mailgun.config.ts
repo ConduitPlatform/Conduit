@@ -4,4 +4,5 @@ export interface MailgunConfig {
         domain: string
     },
     proxy?: string;
+    host: string;
 }

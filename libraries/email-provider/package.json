@@ -12,7 +12,7 @@
   "dependencies": {
     "@types/nodemailer": "^6.4.0",
     "@types/nodemailer-mailgun-transport": "^1.4.1",
-    "nodemailer": "^6.4.2",
+    "nodemailer": "^6.4.6",
     "nodemailer-mailgun-transport": "^2.0.0"
   },
   "directories": {

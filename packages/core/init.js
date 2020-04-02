@@ -1,7 +1,6 @@
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
-const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');
@@ -17,7 +16,7 @@ async function init(app) {
     app.use(security.middleware);
   }
 
-  if (email.initialize(app)) {
+  if (await email.initialize(app)) {
     app.conduit.email = email;
   }
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized

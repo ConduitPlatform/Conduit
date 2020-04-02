@@ -9,5 +9,8 @@
   "dependencies": {
     "@conduit/email-provider": "1.0.0",
     "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "smtp-server": "^3.6.0"
   }
 }
