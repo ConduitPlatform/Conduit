@@ -1,6 +1,7 @@
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
+const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');
@@ -11,6 +12,10 @@ async function init(app) {
   registerSchemas(app.conduit.database);
 
   await dbConfig.configureFromDatabase(app);
+
+  if (security.initialize(app)) {
+    app.use(security.middleware);
+  }
 
   if (email.initialize(app)) {
     app.conduit.email = email;
