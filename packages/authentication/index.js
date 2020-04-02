@@ -100,7 +100,7 @@ function middleware(req, res, next) {
     throw new Error("Authentication module not initialized");
   }
   const header = req.headers['Authorization'] || req.headers['authorization'];
-  if (header === null || header === undefined) {
+  if (isNil(header)) {
     return res.status(401).json({error: 'Unauthorized'});
   }
   const args = header.split(' ');
@@ -111,7 +111,7 @@ function middleware(req, res, next) {
   }
 
   const token = args[1];
-  if (token === null || token === undefined) {
+  if (isNil(token)) {
     return res.status(401).json({error: 'No token provided'});
   }
 
@@ -123,14 +123,14 @@ function middleware(req, res, next) {
       }
 
       const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.get('authentication.jwtSecret')});
-      if (decoded === null || decoded === undefined) return res.status(401).json({error: 'Invalid token'});
+      if (isNil(decoded)) return res.status(401).json({error: 'Invalid token'});
 
       const userId = decoded.id;
 
       database.getSchema('User')
         .findOne({_id: userId})
         .then(async user => {
-          if (user === null || user === undefined) {
+          if (isNil(user)) {
             return res.status(404).json({error: 'User not found'});
           }
           req.user = user;
