@@ -26,7 +26,7 @@ module.exports = {
           },
           verifyEmailHost: {
             type: String,
-            default: 'http://localhost:3000/authentication/verify-email/'
+            default: 'http://localhost:3000/hook/verify-email/'
           }
         },
         google: {

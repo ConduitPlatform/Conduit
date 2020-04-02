@@ -106,7 +106,7 @@ module.exports = {
             verifyEmailHost: {
                 doc: 'The base url for the verify email link',
                 format: 'String',
-                default: 'http://localhost:3000/authentication/verify-email/'
+                default: 'http://localhost:3000/hook/verify-email/'
             }
         },
         google: {
