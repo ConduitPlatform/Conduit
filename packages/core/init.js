@@ -3,6 +3,7 @@ const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
 const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
+const admin = require('@conduit/admin');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -12,6 +13,8 @@ async function init(app) {
   registerSchemas(app.conduit.database);
 
   await dbConfig.configureFromDatabase(app);
+
+  await admin.init(app);
 
   if (security.initialize(app)) {
     app.use(security.middleware);
