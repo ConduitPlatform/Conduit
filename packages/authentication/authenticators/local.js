@@ -50,7 +50,6 @@ async function authenticate(req, res, next) {
   const config = req.app.conduit.config.get('authentication');
 
   const clientId = req.headers.clientid;
-  if (isNil(clientId)) return res.status(401).json({error: 'Unauthorized'});
 
   if (!config.local.active) return res.status(403).json({error: 'Local authentication is disabled'});
   if (isNil(email) || isNil(password)) return res.status(403).json({error: 'Email and password required'});
@@ -185,7 +184,6 @@ async function verifyEmail(req, res, next) {
 
 async function renewAuth(req, res, next) {
   const clientId = req.headers.clientid;
-  if (isNil(clientId)) return res.status(401).json({error: 'Unauthorized'});
 
   const refreshToken = req.body.refreshToken;
   if (isNil(refreshToken))
@@ -229,7 +227,6 @@ async function renewAuth(req, res, next) {
 
 async function logOut(req, res, next) {
   const clientId = req.headers.clientid;
-  if (isNil(clientId)) return res.status(401).json({error: 'Unauthorized'});
 
   const user = req.user;
   if (isNil(user)) return res.status(401).json({error: 'Unauthorized'});
