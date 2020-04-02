@@ -3,8 +3,9 @@ import Mail from "nodemailer/lib/mailer";
 import {MailgunMailBuilder} from "./transports/mailgun/mailgunMailBuilder";
 import {NodemailerBuilder} from './transports/nodemailer/nodemailerBuilder';
 import {EmailBuilder} from "./interfaces/EmailBuilder";
-import { createTransport, SentMessageInfo } from 'nodemailer';
-import { MailgunConfig } from './transports/mailgun/mailgun.config';
+import {createTransport, SentMessageInfo} from 'nodemailer';
+import {MailgunConfig} from './transports/mailgun/mailgun.config';
+import {EmailOptions} from "./interfaces/EmailOptions";
 
 
 export class EmailProvider {
@@ -16,7 +17,7 @@ export class EmailProvider {
         if (transport === 'mailgun') {
             this._transportName = 'mailgun';
 
-            const { apiKey, domain, proxy, host } = transportSettings;
+            const {apiKey, domain, proxy, host} = transportSettings;
 
             const mailgunSettings: MailgunConfig = {
                 auth: {
@@ -49,27 +50,26 @@ export class EmailProvider {
         } else {
             this._transportName = undefined;
             this._transport = undefined;
+            throw new Error("You need to specify a correct transport")
         }
     }
 
-    sendEmailDirect(mailOptions: any): Promise<SentMessageInfo> {
+    sendEmailDirect(mailOptions: EmailOptions): Promise<SentMessageInfo> {
         if (!this._transport) {
             throw new Error("Email  transport not initialized!");
         }
         return this._transport.sendMail(mailOptions);
     }
 
-    emailBuilder(): EmailBuilder | undefined {
+    emailBuilder(): EmailBuilder {
         if (!this._transport) {
             throw new Error("Email  transport not initialized!");
         }
         if (this._transportName === 'mailgun') {
             return new MailgunMailBuilder();
-        } else if (this._transportName === 'smtp') {
+        } else {
             return new NodemailerBuilder();
         }
-
-        return undefined;
     }
 
     sendEmail(email: EmailBuilder): Promise<SentMessageInfo> {

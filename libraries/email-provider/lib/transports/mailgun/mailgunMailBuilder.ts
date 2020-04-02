@@ -1,4 +1,6 @@
 import {EmailBuilder} from "../../interfaces/EmailBuilder";
+import {EmailOptions} from "../../interfaces/EmailOptions";
+import {checkIfHTML} from "../../utils";
 
 export class MailgunMailBuilder implements EmailBuilder {
 
@@ -11,15 +13,16 @@ export class MailgunMailBuilder implements EmailBuilder {
     private _html?: string;
     private _text?: string;
 
-    setSender(sender: string) {
+    setSender(sender: string): EmailBuilder {
         this._from = sender;
+        return this;
     }
 
     getSender(): string | undefined {
         return this._from;
     }
 
-    setReceiver(receiver: string | string[], clearReceiver?: boolean) {
+    setReceiver(receiver: string | string[], clearReceiver?: boolean): EmailBuilder {
         if (typeof receiver === "string") {
             if (this._to && this._to.length > 0) {
                 if (typeof this._to !== "string") {
@@ -47,13 +50,14 @@ export class MailgunMailBuilder implements EmailBuilder {
                 this._to = receiver;
             }
         }
+        return this;
     }
 
     getReceiver(): string | string[] | undefined {
         return this._to;
     }
 
-    setCC(cc: string | string[], clearCC?: boolean) {
+    setCC(cc: string | string[], clearCC?: boolean): EmailBuilder {
         if (typeof cc === "string") {
             if (this._cc && this._cc.length > 0) {
                 if (typeof this._cc !== "string") {
@@ -81,10 +85,13 @@ export class MailgunMailBuilder implements EmailBuilder {
                 this._cc = cc;
             }
         }
+
+        return this;
     }
 
-    setSubject(subject: string) {
+    setSubject(subject: string): EmailBuilder {
         this._subject = subject;
+        return this;
     }
 
     getSubject(): string | undefined {
@@ -95,7 +102,7 @@ export class MailgunMailBuilder implements EmailBuilder {
         return this._cc;
     }
 
-    setBCC(bcc: string | string[], clearBCC?: boolean) {
+    setBCC(bcc: string | string[], clearBCC?: boolean): EmailBuilder {
         if (typeof bcc === "string") {
             if (this._bcc && this._bcc.length > 0) {
                 if (typeof this._bcc !== "string") {
@@ -123,14 +130,16 @@ export class MailgunMailBuilder implements EmailBuilder {
                 this._bcc = bcc;
             }
         }
+        return this;
     }
 
     getBCC(): string | string[] | undefined {
         return this._bcc;
     }
 
-    setReplyTo(replyTo: string) {
+    setReplyTo(replyTo: string): EmailBuilder {
         this["h:Reply-To"] = replyTo;
+        return this;
     }
 
     getReplyTo() {
@@ -144,18 +153,20 @@ export class MailgunMailBuilder implements EmailBuilder {
 
     }
 
-    setContent(content: string) {
-        if (this.checkIfHTML(content)) {
+    setContent(content: string): EmailBuilder {
+        if (checkIfHTML(content)) {
             if (this._text) {
                 this._text = '';
             }
             this._html = content;
         } else {
+
             if (this._html) {
                 this._html = '';
             }
             this._text = content;
         }
+        return this;
     }
 
     getContent(): string | undefined {
@@ -167,7 +178,7 @@ export class MailgunMailBuilder implements EmailBuilder {
         return !prop || prop.length === 0;
     }
 
-    getMailObject(): any {
+    getMailObject(): EmailOptions {
         let finalObject: any = {};
 
         if (!this.nullOrEmptyCheck(this._from)) {

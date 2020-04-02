@@ -1,17 +1,33 @@
+import {EmailOptions} from "./EmailOptions";
+
 export interface EmailBuilder {
-    getMailObject(): any;
-    setSender(sender: string): void;
+    getMailObject(): EmailOptions;
+
+    setSender(sender: string): EmailBuilder;
+
     getSender(): string | undefined;
-    setReceiver(receiver: string | string[], clearReceiver?: boolean): void;
+
+    setReceiver(receiver: string | string[], clearReceiver?: boolean): EmailBuilder;
+
     getReceiver(): string | string[] | undefined;
-    setCC(cc: string | string[], clearCC?: boolean): void;
+
+    setCC(cc: string | string[], clearCC?: boolean): EmailBuilder;
+
     getCC(): string | string[] | undefined;
-    setSubject(subject: string): void;
+
+    setSubject(subject: string): EmailBuilder;
+
     getSubject(): string | undefined;
-    setBCC(bcc: string | string[], clearBCC?: boolean): void;
+
+    setBCC(bcc: string | string[], clearBCC?: boolean): EmailBuilder;
+
     getBCC(): string | string[] | undefined;
-    setReplyTo(replyTo: string): void;
+
+    setReplyTo(replyTo: string): EmailBuilder;
+
     getReplyTo(replyTo: string): string | undefined;
-    setContent(content: string): void;
+
+    setContent(content: string): EmailBuilder;
+
     getContent(): string | undefined
 }
