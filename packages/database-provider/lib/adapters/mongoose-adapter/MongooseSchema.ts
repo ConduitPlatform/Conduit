@@ -21,6 +21,10 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.deleteOne(query).exec();
     }
 
+    deleteMany(query: any): Promise<any> {
+        return this.model.deleteMany(query).exec();
+    }
+
     findMany(query: any): Promise<any> {
         return this.model.find(query).lean().exec();
     }

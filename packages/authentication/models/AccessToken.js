@@ -5,6 +5,10 @@ module.exports = {
             type: 'Relation',
             model: 'User'
         },
+        clientId: {
+          type: String,
+          required: true
+        },
         token: {
             type: String
         },
