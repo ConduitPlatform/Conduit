@@ -15,15 +15,15 @@ let database;
 
 // this is for testing purposes
 const configuration = {
-    local: {
-        identifier: 'email',
-        active: true
-    },
-    generateRefreshToken: false,
-    rateLimit: 3,
-    tokenInvalidationPeriod: 86400000,
-    refreshTokenInvalidationPeriod: 86400000 * 7,
-    jwtSecret: ''
+  local: {
+    identifier: 'email',
+    active: true
+  },
+  generateRefreshToken: false,
+  rateLimit: 3,
+  tokenInvalidationPeriod: 86400000,
+  refreshTokenInvalidationPeriod: 86400000 * 7,
+  jwtSecret: ''
 };
 
 /**
@@ -55,90 +55,89 @@ const configuration = {
  */
 function authentication(app, config) {
 
-    if (config && !Object.prototype.toString.call(config)) {
-        throw new Error("Malformed config provided")
-    }
+  if (config && !Object.prototype.toString.call(config)) {
+    throw new Error("Malformed config provided")
+  }
 
-    if (!app) {
-        throw new Error("No app provided")
-    }
-    database = app.conduit.database.getDbAdapter();
-    registerSchemas();
+  if (!app) {
+    throw new Error("No app provided")
+  }
+  database = app.conduit.database.getDbAdapter();
+  registerSchemas();
 
-    if (config.local) {
-        app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
-        app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
-        app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
-        app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
-        app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
-        app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
-        app.post('/authentication/logout', middleware, (req, res, next) => local.logOut(req, res, next).catch(next));
-        initialized = true;
-    }
+  if (config.local) {
+    app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
+    app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
+    app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
+    app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
+    app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+    app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
+    app.post('/authentication/logout', middleware, (req, res, next) => local.logOut(req, res, next).catch(next));
+    initialized = true;
+  }
 
-    if (config.facebook) {
-        app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
-        initialized = true;
-    }
+  if (config.facebook) {
+    app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
+    initialized = true;
+  }
 
-    if (config.google) {
-        app.post('/authentication/google', (req,res,next) => google.authenticate(req, res, next).catch(next));
-        initialized = true;
-    }
+  if (config.google) {
+    app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
+    initialized = true;
+  }
 
 }
 
 function registerSchemas() {
-    database.createSchemaFromAdapter(userModel);
-    database.createSchemaFromAdapter(refreshToken);
-    database.createSchemaFromAdapter(accessToken);
-    database.createSchemaFromAdapter(tokenModel);
+  database.createSchemaFromAdapter(userModel);
+  database.createSchemaFromAdapter(refreshToken);
+  database.createSchemaFromAdapter(accessToken);
+  database.createSchemaFromAdapter(tokenModel);
 }
 
 function middleware(req, res, next) {
-    if (!initialized) {
-        throw new Error("Authentication module not initialized");
-    }
-    const header = req.headers['Authorization'] || req.headers['authorization'];
-    if (header === null || header === undefined) {
-        return res.status(401).json({error: 'Unauthorized'});
-    }
-    const args = header.split(' ');
+  if (!initialized) {
+    throw new Error("Authentication module not initialized");
+  }
+  const header = req.headers['Authorization'] || req.headers['authorization'];
+  if (header === null || header === undefined) {
+    return res.status(401).json({error: 'Unauthorized'});
+  }
+  const args = header.split(' ');
 
-    const prefix = args[0];
-    if (prefix !== 'Bearer') {
-        return res.status(401).json({error: 'The auth header must begin with Bearer'});
-    }
+  const prefix = args[0];
+  if (prefix !== 'Bearer') {
+    return res.status(401).json({error: 'The auth header must begin with Bearer'});
+  }
 
-    const token = args[1];
-    if (token === null || token === undefined) {
-        return res.status(401).json({error: 'No token provided'});
-    }
+  const token = args[1];
+  if (token === null || token === undefined) {
+    return res.status(401).json({error: 'No token provided'});
+  }
 
-    database.getSchema('AccessToken')
-      .findOne({token, clientId: req.headers.clientid})
-      .then(accessTokenDoc => {
-          if (isNil(accessTokenDoc)){
-              return res.status(401).json({error: 'Invalid token'});
-          }
-      })
-      .catch(next);
+  database.getSchema('AccessToken')
+    .findOne({token, clientId: req.headers.clientid})
+    .then(accessTokenDoc => {
+      if (isNil(accessTokenDoc)) {
+        return res.status(401).json({error: 'Invalid token'});
+      }
 
-    const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.get('authentication.jwtSecret')});
-    if (decoded === null || decoded === undefined) return res.status(401).json({error: 'Invalid token'});
+      const decoded = authHelper.verify(token, {jwtSecret: req.app.conduit.config.get('authentication.jwtSecret')});
+      if (decoded === null || decoded === undefined) return res.status(401).json({error: 'Invalid token'});
 
-    const userId = decoded.id;
+      const userId = decoded.id;
 
-    database.getSchema('User')
+      database.getSchema('User')
         .findOne({_id: userId})
         .then(async user => {
-            if (user === null || user === undefined) {
-                return res.status(404).json({error: 'User not found'});
-            }
-            req.user = user;
-            next();
+          if (user === null || user === undefined) {
+            return res.status(404).json({error: 'User not found'});
+          }
+          req.user = user;
+          next();
         })
-        .catch(next);
+    })
+    .catch(next);
 }
 
 module.exports.initialize = authentication;

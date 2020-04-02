@@ -16,9 +16,10 @@ async function init(app) {
 
   await admin.init(app);
 
-  if (security.initialize(app)) {
-    app.use(security.middleware);
+  if (!security.initialize(app)) {
+    process.exit(9);
   }
+  app.use(security.middleware);
 
   if (await email.initialize(app)) {
     app.conduit.email = email;
