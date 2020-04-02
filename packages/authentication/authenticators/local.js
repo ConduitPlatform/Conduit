@@ -69,8 +69,8 @@ async function authenticate(req, res, next) {
   const passwordsMatch = await authHelper.checkPassword(password, user.hashedPassword);
   if (!passwordsMatch) return res.status(401).json({error: 'Invalid login credentials'});
 
-  await accessTokenModel.deleteOne({userId: user._id, clientId});
-  await refreshTokenModel.deleteOne({userId: user._id, clientId});
+  await accessTokenModel.deleteMany({userId: user._id, clientId});
+  await refreshTokenModel.deleteMany({userId: user._id, clientId});
 
   const accessToken = await accessTokenModel.create({
     userId: user._id,
