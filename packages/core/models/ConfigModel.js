@@ -19,6 +19,14 @@ module.exports = {
           verificationRequired: {
             type: Boolean,
             default: true
+          },
+          passwordResetHost: {
+            type: String,
+            default: 'http://localhost:3000/authentication/reset-password/'
+          },
+          verifyEmailHost: {
+            type: String,
+            default: 'http://localhost:3000/authentication/verify-email/'
           }
         },
         google: {
