@@ -1,6 +1,7 @@
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
+const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');

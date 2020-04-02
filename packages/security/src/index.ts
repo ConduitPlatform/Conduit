@@ -22,14 +22,14 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
 
   const { clientid, clientsecret } = req.headers;
   if (isNil(clientid) || isNil(clientsecret)) {
-    return res.status(401).json({message: 'Unauthorized'});
+    return res.status(401).json({error: 'Unauthorized'});
   }
 
   database.getSchema('Client')
     .findOne({clientId: clientid, clientSecret: clientsecret})
     .then(async( client: any )=> {
       if (isNil(client)) {
-        return res.status(401).json({message: 'Unauthorized'});
+        return res.status(401).json({error: 'Unauthorized'});
       }
       delete req.headers.clientsecret;
       next();
