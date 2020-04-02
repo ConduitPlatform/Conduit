@@ -18,6 +18,7 @@
     "@types/jsonwebtoken": "^8.3.8",
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.9.8",
+    "express": "~4.16.1",
     "rimraf": "^3.0.2",
     "typescript": "^3.8.3",
     "express": "~4.16.1"
