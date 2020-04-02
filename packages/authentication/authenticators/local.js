@@ -229,7 +229,6 @@ async function logOut(req, res, next) {
   const clientId = req.headers.clientid;
 
   const user = req.user;
-  if (isNil(user)) return res.status(401).json({error: 'Unauthorized'});
 
   const database = req.app.conduit.database.getDbAdapter();
   const accessTokenModel = database.getSchema('AccessToken');
