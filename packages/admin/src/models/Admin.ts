@@ -10,7 +10,7 @@ export default {
       required: true
     }
   },
-  options: {
+  modelOptions: {
     timestamps: true
   }
 }
