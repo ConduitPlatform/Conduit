@@ -21,6 +21,7 @@
     "debug": "~2.6.9",
     "express": "~4.16.1",
     "express-winston": "^4.0.2",
+    "lodash": "^4.17.15",
     "winston": "^3.2.1"
   },
   "devDependencies": {
