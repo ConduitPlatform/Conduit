@@ -6,6 +6,7 @@ const admin = require('@conduit/admin');
 const cms = require('@conduit/cms').CMS;
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
+const { getConfig, editConfig } = require('./handlers/config');
 
 async function init(app) {
   await app.conduit.database.connectToDB(process.env.databaseType, process.env.databaseURL);
@@ -14,6 +15,7 @@ async function init(app) {
   await dbConfig.configureFromDatabase(app);
 
   await admin.init(app);
+  registerAdminRoutes(app.conduit.admin);
 
   if (await email.initialize(app)) {
     app.conduit.email = email;
@@ -34,6 +36,11 @@ async function init(app) {
 function registerSchemas(database) {
   const db = database.getDbAdapter();
   db.createSchemaFromAdapter(configModel);
+}
+
+function registerAdminRoutes(admin) {
+  admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
+  admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
 }
 
 module.exports = init;
