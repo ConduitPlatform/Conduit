@@ -32,7 +32,7 @@ async function register(req, res, next) {
       token: uuid()
     });
 
-    const link = `${config.verifyEmailHost}${verificationTokenDoc.token}`;
+    const link = `${config.local.verifyEmailHost}${verificationTokenDoc.token}`;
     await emailProvider.sendMail('EmailVerification', {
       email: user.email,
       sender: 'conduit@gmail.com',
