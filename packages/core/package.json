@@ -4,15 +4,18 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./bin/www",
-    "test": "./node_modules/.bin/eslint ."
+    "lint": "./node_modules/.bin/eslint .",
+    "test": "mocha --timeout 10000 --exit --reporter nyan",
+    "test-with-coverage": "nyc --reporter=text mocha --timeout 10000 --exit"
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/admin": "1.0.0",
+    "@conduit/security": "1.0.0",
     "@conduit/authentication": "1.0.0",
+    "@conduit/email": "1.0.0",
+    "@conduit/admin": "1.0.0",
     "@conduit/cms": "1.0.0",
     "@conduit/database-provider": "1.0.0",
-    "@conduit/email": "1.0.0",
     "convict": "^5.2.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
@@ -22,6 +25,10 @@
     "winston": "^3.2.1"
   },
   "devDependencies": {
-    "nodemon": "^1.12.1"
+    "chai": "^4.2.0",
+    "chai-http": "*",
+    "mocha": "^7.1.1",
+    "nodemon": "^1.12.1",
+    "nyc": "^15.0.0"
   }
 }
