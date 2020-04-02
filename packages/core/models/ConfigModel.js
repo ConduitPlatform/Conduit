@@ -73,6 +73,21 @@ module.exports = {
             default: 21600
           }
         }
+      },
+      email: {
+        transport: String,
+        transportSettings: {
+          apiKey: {
+            type: String,
+            default: 'nadda'
+          },
+          domain: {
+            type: String,
+            default: '***REMOVED***'
+          },
+          proxy: String,
+          host: String
+        }
       }
     }
   },

@@ -15,7 +15,7 @@ async function init(app) {
 
   await admin.init(app);
 
-  if (email.initialize(app)) {
+  if (await email.initialize(app)) {
     app.conduit.email = email;
   }
 // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
