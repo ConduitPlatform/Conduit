@@ -1,0 +1,29 @@
+{
+  "name": "@conduit/in-memory-store",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc",
+    "publish": "npm publish"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "memjs": "^1.2.2",
+    "redis": "^3.0.2"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
+  "devDependencies": {
+    "@types/memjs": "^1.2.1",
+    "typescript": "^3.7.5"
+  }
+}
