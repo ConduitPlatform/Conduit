@@ -14,9 +14,8 @@ async function init(app) {
 
     await dbConfig.configureFromDatabase(app);
 
-    const admin = AdminModule.getInstance();
-    await admin.init(app);
-    registerAdminRoutes(app.conduit.admin);
+    const admin = AdminModule.getInstance(app);
+    registerAdminRoutes(admin);
 
     if (!security.initialize(app)) {
       process.exit(9);
