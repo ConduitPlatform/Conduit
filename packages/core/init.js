@@ -3,16 +3,19 @@ const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
 const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
-const admin = require('@conduit/admin');
+const AdminModule = require('@conduit/admin');
 const cms = require('@conduit/cms').CMS;
 const usersRouter = require('./routes/users');
-const { getConfig, editConfig } = require('./handlers/config');
+const { getConfig, editConfig } = require('./admin/config');
 
 async function init(app) {
     await app.conduit.database.connectToDB(process.env.databaseType, process.env.databaseURL);
     registerSchemas(app.conduit.database);
 
     await dbConfig.configureFromDatabase(app);
+
+    const admin = AdminModule.getInstance(app);
+    registerAdminRoutes(admin);
 
     if (!security.initialize(app)) {
         process.exit(9);
