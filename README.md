@@ -7,6 +7,10 @@ Conduit is a NodeJS Based API platform/Gateway, that aims to cut down backend de
 - npm install
 - lerna bootstrap 
 
+## Info
+- Server runs at: http://localhost:3000
+- Metrics dashboard available at: http://localhost:3000/appmetrics-dash
+
 ## TODO
 - Create the modules (duh)
 - Data persistence for config data
