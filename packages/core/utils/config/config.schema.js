@@ -20,6 +20,11 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    hostUrl: {
+        doc: 'The base host url',
+        format: 'String',
+        default: 'http://localhost:3000'
+    },
     admin: {
         auth: {
             tokenSecret: {

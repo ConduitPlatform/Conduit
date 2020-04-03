@@ -19,6 +19,9 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
   if (!initialized) {
     throw new Error('Security module not initialized');
   }
+  if (req.path.search( /\/hook\//i) !== -1) {
+    return next();
+  }
 
   const { clientid, clientsecret } = req.headers;
   if (isNil(clientid) || isNil(clientsecret)) {
