@@ -5,16 +5,56 @@ import { loginAdmin } from './handlers/auth';
 import AdminSchema from './models/Admin';
 
 class AdminModule {
-  private readonly router = Router();
+  private readonly router: Router;
   private static instance: AdminModule | null = null;
 
-  private constructor() {
+  private constructor(app: Application) {
+    this.router = Router();
+    const { conduit } = app as any;
 
+    if (isNil(conduit)) {
+      throw new Error('Conduit not initialized');
+    }
+
+    if (!isNil(conduit.admin)) {
+      return;
+    }
+
+    const { database, config } = conduit;
+
+    const databaseAdapter = database.getDbAdapter();
+
+    this.registerSchemas(databaseAdapter);
+
+    const AdminModel = databaseAdapter.getSchema('Admin');
+
+    AdminModel.findOne({ username: 'admin' })
+      .then((existing: any) => {
+        if (isNil(existing)) {
+          const hashRounds = config.get('admin.auth.hashRounds');
+          return hashPassword('admin', hashRounds);
+        }
+        return Promise.resolve(null);
+      })
+      .then((result: string | null) => {
+        if (!isNil(result)) {
+          return AdminModel.create({ username: 'admin', password: result });
+        }
+      })
+      .catch(console.log);
+
+    app.post('/admin/login', (req, res, next) => loginAdmin(req, res, next).catch(next));
+    app.use('/admin', this.authMiddleware, this.router);
+
+    conduit.admin = this;
   }
 
-  static getInstance() {
+  static getInstance(app?: Application) {
     if (AdminModule.instance === null) {
-      AdminModule.instance = new AdminModule();
+      if (isNil(app)) {
+        throw new Error('No app was provided to initialize an instance');
+      }
+      AdminModule.instance = new AdminModule(app);
     }
     return AdminModule.instance;
   }
@@ -82,38 +122,6 @@ class AdminModule {
         console.log(error);
         res.status(500).json({ error: 'Something went wrong' });
       });
-  }
-
-  async init(app: Application) {
-    const { conduit } = app as any;
-
-    if (isNil(conduit)) {
-      throw new Error('Conduit not initialized');
-    }
-
-    if (!isNil(conduit.admin)) {
-      return;
-    }
-
-    const { database, config } = conduit;
-
-    const databaseAdapter = database.getDbAdapter();
-
-    this.registerSchemas(databaseAdapter);
-
-    const AdminModel = databaseAdapter.getSchema('Admin');
-
-    const existing = await AdminModel.findOne({ username: 'admin' });
-    if (isNil(existing)) {
-      const hashRounds = config.get('admin.auth.hashRounds');
-      const password = await hashPassword('admin', hashRounds);
-      await AdminModel.create({ username: 'admin', password });
-    }
-
-    app.post('/admin/login', (req, res, next) => loginAdmin(req, res, next).catch(next));
-    app.use('/admin', this.authMiddleware, this.router);
-
-    conduit.admin = this;
   }
 }
 
