@@ -20,6 +20,11 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    hostUrl: {
+        doc: 'The base host url',
+        format: 'String',
+        default: 'http://localhost:3000'
+    },
     admin: {
         auth: {
             tokenSecret: {
@@ -36,6 +41,11 @@ module.exports = {
                 doc: 'Milliseconds after which the admin tokens expire',
                 format: 'Number',
                 default: 21600
+            },
+            masterkey: {
+                doc: 'The key that admin users need to have to interact with the admin service',
+                format: 'String',
+                default: 'M4ST3RK3Y'
             }
         }
     },

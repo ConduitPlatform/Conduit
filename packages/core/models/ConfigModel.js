@@ -2,6 +2,10 @@ module.exports = {
   name: 'Config',
   modelSchema: {
     config: {
+      hostUrl: {
+        type: String,
+        default: 'http://localhost:3000'
+      },
       authentication: {
         local: {
           identifier: {
@@ -19,6 +23,14 @@ module.exports = {
           verificationRequired: {
             type: Boolean,
             default: true
+          },
+          passwordResetHost: {
+            type: String,
+            default: 'http://localhost:3000/authentication/reset-password/'
+          },
+          verifyEmailHost: {
+            type: String,
+            default: 'http://localhost:3000/hook/verify-email/'
           }
         },
         google: {
@@ -71,6 +83,10 @@ module.exports = {
           tokenExpirationTime: {
             type: Number,
             default: 21600
+          },
+          masterkey: {
+            type: String,
+            default: 'M4ST3RK3Y'
           }
         }
       },

@@ -18,16 +18,20 @@ async function init(app) {
     registerAdminRoutes(admin);
 
     if (!security.initialize(app)) {
-      process.exit(9);
+        process.exit(9);
     }
+    app.use(security.adminMiddleware);
     app.use(security.middleware);
+
+    await admin.init(app);
+    registerAdminRoutes(app.conduit.admin);
 
     if (await email.initialize(app)) {
         app.conduit.email = email;
     }
     // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
     if (app.conduit.config.get('authentication')) {
-        authentication.initialize(app, app.conduit.config.get('authentication'));
+        await authentication.initialize(app, app.conduit.config.get('authentication'));
     }
 
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins

@@ -31,14 +31,16 @@ async function register(req, res, next) {
       userId: user._id,
       token: uuid()
     });
-    // this will be completed when we build the email provider module
-    // const link = `http://localhost:3000/authentication/verify-email/${verificationTokenDoc.token}`;
-    // await emailProvider.sendMail({
-    //   email: user.email,
-    //   body: link,
-    //   subject: 'test',
-    //   sender: 'lakispapakis@mail.ml'
-    // });
+
+    const link = `${req.app.conduit.config.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
+    await emailProvider.sendMail('EmailVerification', {
+      email: user.email,
+      sender: 'conduit@gmail.com',
+      variables: {
+        applicationName: 'Conduit',
+        link
+      }
+    });
   }
 
   return res.json({message: 'Registration was successful'});
@@ -74,7 +76,10 @@ async function authenticate(req, res, next) {
   const accessToken = await accessTokenModel.create({
     userId: user._id,
     clientId,
-    token: authHelper.encode({id: user._id}, { jwtSecret: config.jwtSecret, tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    token: authHelper.encode({id: user._id}, {
+      jwtSecret: config.jwtSecret,
+      tokenInvalidationPeriod: config.tokenInvalidationPeriod
+    }),
     expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 
@@ -112,13 +117,15 @@ async function forgotPassword(req, res, next) {
     token: uuid()
   });
 
-  // this will be completed when we build the email provider module
-
-  // const link = `http://localhost:3000/authentication/reset-password/${passwordResetTokenDoc.token}`;
-  // await emailProvider.sendMail({
-  //   email: user.email,
-  //   body: link
-  // });
+  const link = `${req.app.conduit.config.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
+  await emailProvider.sendMail('ForgotPassword', {
+    email: user.email,
+    sender: 'conduit@gmail.com',
+    variables: {
+      applicationName: 'Conduit',
+      link
+    }
+  });
 
   return res.json({message: 'Ok'});
 }
@@ -205,7 +212,10 @@ async function renewAuth(req, res, next) {
   const newAccessToken = await accessTokenModel.create({
     userId: oldRefreshToken.userId,
     clientId,
-    token: authHelper.encode({id: oldRefreshToken.userId}, { jwtSecret: config.jwtSecret, tokenInvalidationPeriod: config.tokenInvalidationPeriod}),
+    token: authHelper.encode({id: oldRefreshToken.userId}, {
+      jwtSecret: config.jwtSecret,
+      tokenInvalidationPeriod: config.tokenInvalidationPeriod
+    }),
     expiresOn: moment().add(config.tokenInvalidationPeriod).format()
   });
 
