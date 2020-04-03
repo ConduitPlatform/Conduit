@@ -36,6 +36,11 @@ module.exports = {
                 doc: 'Milliseconds after which the admin tokens expire',
                 format: 'Number',
                 default: 21600
+            },
+            masterkey: {
+                doc: 'The key that admin users need to have to interact with the admin service',
+                format: 'String',
+                default: 'M4ST3RK3Y'
             }
         }
     },
