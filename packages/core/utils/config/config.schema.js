@@ -20,6 +20,11 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    hostUrl: {
+        doc: 'The base host url',
+        format: 'String',
+        default: 'http://localhost:3000'
+    },
     admin: {
         auth: {
             tokenSecret: {
@@ -97,16 +102,6 @@ module.exports = {
                 doc: 'Defines if email verification is required for login',
                 format: 'Boolean',
                 default: true
-            },
-            passwordResetHost: {
-                doc: 'The base url for the password reset link',
-                format: 'String',
-                default: 'http://localhost:3000/authentication/reset-password/'
-            },
-            verifyEmailHost: {
-                doc: 'The base url for the verify email link',
-                format: 'String',
-                default: 'http://localhost:3000/hook/verify-email/'
             }
         },
         google: {

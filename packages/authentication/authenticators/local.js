@@ -32,7 +32,7 @@ async function register(req, res, next) {
       token: uuid()
     });
 
-    const link = `${config.local.verifyEmailHost}${verificationTokenDoc.token}`;
+    const link = `${req.app.conduit.config.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
     await emailProvider.sendMail('EmailVerification', {
       email: user.email,
       sender: 'conduit@gmail.com',
@@ -117,7 +117,7 @@ async function forgotPassword(req, res, next) {
     token: uuid()
   });
 
-  const link = `${config.local.passwordResetHost}${passwordResetTokenDoc.token}`;
+  const link = `${req.app.conduit.config.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
   await emailProvider.sendMail('ForgotPassword', {
     email: user.email,
     sender: 'conduit@gmail.com',

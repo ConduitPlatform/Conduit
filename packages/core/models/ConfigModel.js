@@ -2,6 +2,10 @@ module.exports = {
   name: 'Config',
   modelSchema: {
     config: {
+      hostUrl: {
+        type: String,
+        default: 'http://localhost:3000'
+      },
       authentication: {
         local: {
           identifier: {
