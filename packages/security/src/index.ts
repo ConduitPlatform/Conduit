@@ -19,7 +19,7 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
   if (!initialized) {
     throw new Error('Security module not initialized');
   }
-  if (req.path.search( /\/hook\//i) !== -1 || req.path.search( /\/admin\//i) !== -1) {
+  if (req.path.search( /\^\/hook\//i) !== -1 || req.path.search( /\^\/admin\//i) !== -1) {
     return next();
   }
 
@@ -44,7 +44,7 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
   if (!initialized) {
     throw new Error('Security module not initialized');
   }
-  if (req.path.search( /\/admin\//i) === -1) {
+  if (req.path.search( /\^\/admin\//i) === -1) {
     return next();
   }
 
