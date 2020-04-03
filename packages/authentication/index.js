@@ -3,8 +3,7 @@ let google = require('./authenticators/google');
 let local = require('./authenticators/local');
 const {isNil} = require('lodash');
 const authHelper = require('./helpers/authHelper');
-
-
+const registerEmailTemplates = require('./templates/registerEmailTemplates');
 let refreshToken = require('./models/RefreshToken');
 let accessToken = require('./models/AccessToken');
 let userModel = require('./models/User');
@@ -53,7 +52,7 @@ const configuration = {
  *
  *
  */
-function authentication(app, config) {
+async function authentication(app, config) {
 
   if (config && !Object.prototype.toString.call(config)) {
     throw new Error("Malformed config provided")
@@ -64,13 +63,14 @@ function authentication(app, config) {
   }
   database = app.conduit.database.getDbAdapter();
   registerSchemas();
+    await registerEmailTemplates();
 
   if (config.local) {
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
     app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
     app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
     app.post('/authentication/reset-password', (req, res, next) => local.resetPassword(req, res, next).catch(next));
-    app.post('/authentication/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
+    app.get('/hook/verify-email/:verificationToken', (req, res, next) => local.verifyEmail(req, res, next).catch(next));
     app.post('/authentication/renew', (req, res, next) => local.renewAuth(req, res, next).catch(next));
     app.post('/authentication/logout', middleware, (req, res, next) => local.logOut(req, res, next).catch(next));
     initialized = true;
