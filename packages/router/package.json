@@ -1,0 +1,28 @@
+{
+  "name": "@conduit/router",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc",
+    "publish": "npm publish"
+  },
+  "license": "ISC",
+  "dependencies": {},
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.4",
+    "@types/node": "^13.9.8",
+    "express": "~4.16.1",
+    "typescript": "^3.7.5"
+  }
+}
