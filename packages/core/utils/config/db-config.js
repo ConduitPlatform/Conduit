@@ -8,12 +8,10 @@ async function configureFromDatabase(app){
   let dbConfig = await db.getSchema('Config').findOne({});
 
   if (isNil(dbConfig)) {
-    return db.getSchema('Config').create({ config: config.get() });
+    return db.getSchema('Config').create({ config: config.get().config });
   }
 
-  config.load(dbConfig.config);
-
-  return;
+  config.load(dbConfig);
 }
 
 module.exports.configureFromDatabase = configureFromDatabase;

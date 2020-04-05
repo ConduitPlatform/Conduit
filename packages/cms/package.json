@@ -5,22 +5,24 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",
   "dependencies": {
+    "@conduit/sdk": "1.0.0"
   },
   "directories": {
-    "lib": "lib"
+    "lib": "src"
   },
   "files": [
-    "lib"
+    "src"
   ],
   "publishConfig": {
     "registry": "http://registry.quintessential.gr/"
   },
   "devDependencies": {
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "rimraf": "^3.0.2"
   }
 }

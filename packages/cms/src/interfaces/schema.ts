@@ -1,18 +1,18 @@
-const schema = {
-    name: 'SchemaDefinitions',
-    modelSchema: {
+import {ConduitSchema, TYPE} from "@conduit/sdk";
+
+
+const schema = new ConduitSchema('SchemaDefinitions', {
         name: {
-            type: String,
+            type: TYPE.String,
         },
         //todo The properties in JSON, replace adequetly
         modelSchema: {
-            type: String
+            type: TYPE.String
         },
         //todo The properties in JSON, replace adequetly
-        modelOptions: String
-    },
-    modelOptions: {
+        modelOptions: TYPE.String
+    }, {
         timestamps: true
     }
-};
+);
 export default schema;

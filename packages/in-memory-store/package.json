@@ -14,10 +14,10 @@
     "redis": "^3.0.2"
   },
   "directories": {
-    "lib": "lib"
+    "lib": "src"
   },
   "files": [
-    "lib"
+    "src"
   ],
   "publishConfig": {
     "registry": "http://registry.quintessential.gr/"

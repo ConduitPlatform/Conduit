@@ -16,6 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Obejct to contain all modules
 app.conduit = {};
+app.conduit.config = config;
 app.conduit.router = conduitRouter.getInstance(app);
 const router = app.conduit.router;
 router.registerGlobalMiddleware('logger', logger.logger());
@@ -24,7 +25,7 @@ router.registerGlobalMiddleware('urlEncoding', express.urlencoded({extended: fal
 router.registerGlobalMiddleware('cookieParser', cookieParser());
 router.registerGlobalMiddleware('staticResources', express.static(path.join(__dirname, 'public')));
 
-app.conduit.config = config;
+
 app.conduit.database = database;
 app.initialized = false;
 router.registerExpressRouter('/', indexRouter);
