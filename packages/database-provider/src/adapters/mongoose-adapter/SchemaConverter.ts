@@ -23,6 +23,6 @@ export function schemaConverter(jsonSchema: SchemaInterface) {
         }
     }
     // just to be sure
-    jsonSchema.modelSchema = actual;
+    // jsonSchema.modelSchema = actual;
     return jsonSchema;
 }

@@ -1,57 +1,57 @@
-module.exports = {
-    name: 'User',
-    modelSchema: {
+const {ConduitSchema, TYPE} = require("@conduit/sdk");
+
+module.exports = new ConduitSchema('User',
+    {
         email: {
-            type: String,
+            type: TYPE.String,
             unique: true,
             required: true
         },
         hashedPassword: {
-            type: String,
+            type: TYPE.String,
             select: false
         },
         google: {
             id: {
-              type: String
+                type: TYPE.String
             },
             token: {
-                type: String
+                type: TYPE.String
             },
             tokenExpires: {
-                type: String
+                type: TYPE.String
             },
             refreshToken: {
-                type: String
+                type: TYPE.String
             },
             refreshTokenExpires: {
-                type: String
+                type: TYPE.String
             }
         },
         facebook: {
             id: {
-                type: String
+                type: TYPE.String
             },
             token: {
-                type: String
+                type: TYPE.String
             },
             tokenExpires: {
-                type: String
+                type: TYPE.String
             },
             refreshToken: {
-                type: String
+                type: TYPE.String
             },
             refreshTokenExpires: {
-                type: String
+                type: TYPE.String
             }
         },
         active: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
         },
-        isVerified: {type: Boolean, default: false},
+        isVerified: {type: TYPE.Boolean, default: false},
     },
-    modelOptions: {
+    {
         timestamps: true
-    }
-};
+    });
 

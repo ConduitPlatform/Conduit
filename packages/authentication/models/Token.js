@@ -1,21 +1,21 @@
-module.exports = {
-  name: 'Token',
-  modelSchema: {
-    type: {
-      type: String,
+const {ConduitSchema, TYPE} = require("@conduit/sdk");
+
+module.exports = new ConduitSchema('Token',
+    {
+      type: {
+        type: TYPE.String,
+      },
+      userId: {
+        type: TYPE.Relation,
+        model: 'User'
+      },
+      token: {
+        type: TYPE.String
+      },
+      data: {
+        type: TYPE.JSON
+      }
     },
-    userId: {
-      type: 'Relation',
-      model: 'User'
-    },
-    token: {
-      type: String
-    },
-    data: {
-      type: 'JSON'
-    }
-  },
-  modelOptions: {
-    timestamps: true
-  }
-};
+    {
+      timestamps: true
+    });

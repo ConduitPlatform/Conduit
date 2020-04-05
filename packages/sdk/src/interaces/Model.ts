@@ -4,7 +4,8 @@ export enum TYPE {
     Boolean = 'Boolean',
     Date = 'Date',
     ObjectId = 'ObjectId',
-    JSON = 'Object'
+    JSON = 'JSON',
+    Relation = 'Relation'
 }
 
 export type Array = [];
@@ -12,6 +13,9 @@ export type Array = [];
 export type ConduitModelField = {
     type?: TYPE | Array | ConduitModelField;
     default?: any
+    model?: string
+    unique?: boolean
+    select?: boolean
     required?: boolean
 }
 

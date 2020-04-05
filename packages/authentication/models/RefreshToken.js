@@ -1,26 +1,26 @@
-module.exports = {
-    name: 'RefreshToken',
-    modelSchema: {
+const {ConduitSchema, TYPE} = require("@conduit/sdk");
+
+module.exports = new ConduitSchema('RefreshToken',
+    {
         userId: {
-            type: 'Relation',
+            type: TYPE.Relation,
             model: 'User'
         },
         clientId: {
-            type: String,
+            type: TYPE.String,
             required: true
         },
         token: {
-            type: String
+            type: TYPE.String
         },
         expiresOn: {
-            type: Date
+            type: TYPE.Date
         },
         securityDetails: {
-            macAddress: String,
-            userAgent: String
+            macAddress: TYPE.String,
+            userAgent: TYPE.String
         }
     },
-    modelOptions: {
+    {
         timestamps: true
-    }
-};
+    });
