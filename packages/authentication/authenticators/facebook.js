@@ -6,6 +6,7 @@ const isNil = require('lodash/isNil');
 async function authenticate(req, res, next) {
   const access_token = req.body.access_token;
   const database = req.app.conduit.database.getDbAdapter();
+  const config = req.app.conduit.config.get('authentication');
 
     const facebookOptions = {
       method: 'GET',
@@ -31,7 +32,7 @@ async function authenticate(req, res, next) {
 
     if (!isNil(user)) {
       if (!user.active) return res.status(403).json({error: 'Inactive user'});
-      if (process.env.facebookAccountLinking === 'false') {
+      if (!config.facebook.accountLinking) {
         return res.status(401).json({error: 'User with this email already exists'});
       }
       if (isNil(user.facebook)) {
@@ -53,14 +54,16 @@ async function authenticate(req, res, next) {
 
     const accessToken = await accessTokenModel.create({
       userId: user._id,
-      token: authHelper.encode({id: user._id}),
-      expiresOn: moment().add(Number(process.env.tokenInvalidationPeriod)).format()
+      clientId: req.headers.clientid,
+      token: authHelper.encode({id: user._id}, { jwtSecret: config.jwtSecret, tokenInvalidationPeriod: config.tokenInvalidationPeriod }),
+      expiresOn: moment().add(config.tokenInvalidationPeriod).format()
     });
 
     const refreshToken = await refreshTokenModel.create({
       userId: user._id,
+      clientId: req.headers.clientid,
       token: authHelper.generate(),
-      expiresOn: moment().add(Number(process.env.refreshTokenInvalidationPeriod)).format()
+      expiresOn: moment().add(config.refreshTokenInvalidationPeriod).format()
     });
 
     return res.json({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token});

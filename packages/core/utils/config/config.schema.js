@@ -20,6 +20,35 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    hostUrl: {
+        doc: 'The base host url',
+        format: 'String',
+        default: 'http://localhost:3000'
+    },
+    admin: {
+        auth: {
+            tokenSecret: {
+                doc: 'The secret to be used to sing the admin tokens',
+                format: 'String',
+                default: 'fjeinqgwenf'
+            },
+            hashRounds: {
+                doc: 'The hash rounds to be used for bcrypt when hashing admin password',
+                format: 'Number',
+                default: 11
+            },
+            tokenExpirationTime: {
+                doc: 'Milliseconds after which the admin tokens expire',
+                format: 'Number',
+                default: 21600
+            },
+            masterkey: {
+                doc: 'The key that admin users need to have to interact with the admin service',
+                format: 'String',
+                default: 'M4ST3RK3Y'
+            }
+        }
+    },
     email: {
         doc: 'The options for the conduit email provider',
         transport: {
@@ -37,6 +66,11 @@ module.exports = {
                 doc: 'The domain for the emails',
                 format: 'String',
                 default: '***REMOVED***'
+            },
+            host: {
+                doc: 'The host for email service',
+                format: 'String',
+                default: undefined
             },
             proxy: {
                 doc: 'The email proxy',
@@ -123,6 +157,26 @@ module.exports = {
             doc: 'The secret to use when generating an access token',
             format: 'String',
             default: 'S3CR3T'
+        }
+    },
+    pushNotifications: {
+        providerName: {
+          format: 'String',
+          default: 'firebase'
+        },
+        firebase: {
+            projectId: {
+                format: 'String',
+                default: 'project-id'
+            },
+            privateKey: {
+                format: 'String',
+                default: 'private-key'
+            },
+            clientEmail: {
+                format: 'String',
+                default: 'client-email'
+            }
         }
     }
 };

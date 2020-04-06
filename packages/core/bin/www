@@ -8,6 +8,7 @@ var app = require('../app');
 var debug = require('debug')('conduit:server');
 var http = require('http');
 
+
 /**
  * Get port from environment and store in Express.
  */
@@ -88,3 +89,5 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
+
+module.exports = server; // for testing
