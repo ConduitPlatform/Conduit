@@ -17,7 +17,7 @@ export class GoogleCloudStorage implements IStorageProvider {
      * Used to create a new bucket
      * @param name For the bucket
      */
-    async createBucket(name: string): Promise<boolean | Error> {
+    async createFolder(name: string): Promise<boolean | Error> {
         // Creates the new bucket
         await this._storage.createBucket(name);
         this._activeBucket = name;
@@ -29,7 +29,7 @@ export class GoogleCloudStorage implements IStorageProvider {
      * Ex. storage.bucket('photos').file('test')
      * @param name For the bucket
      */
-    bucket(name: string): GoogleCloudStorage {
+    folder(name: string): IStorageProvider {
         this._activeBucket = name;
         return this;
     }
@@ -73,14 +73,14 @@ export class GoogleCloudStorage implements IStorageProvider {
         return true;
     }
 
-    async moveToBucket(filename: string, newBucket: string): Promise<boolean | Error> {
-        let newBucketFile = this._storage.bucket(newBucket).file(filename)
+    async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
+        let newBucketFile = this._storage.bucket(newFolder).file(filename)
         await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
         return true;
     }
 
-    async moveToBucketAndRename(currentFilename: string, newFilename: string, newBucket: string): Promise<boolean | Error> {
-        let newBucketFile = this._storage.bucket(newBucket).file(newFilename)
+    async moveToFolderAndRename(currentFilename: string, newFilename: string, newFolder: string): Promise<boolean | Error> {
+        let newBucketFile = this._storage.bucket(newFolder).file(newFilename)
         await this._storage.bucket(this._activeBucket).file(currentFilename).move(newBucketFile);
         return true;
     }

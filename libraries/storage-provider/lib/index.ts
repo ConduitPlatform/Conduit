@@ -1,29 +1,13 @@
-import {IStorageProvider} from "./interfaces/IStorageProvider";
-import {GoogleCloudStorage} from "./providers/google";
-import {StorageConfig} from "./interfaces/StorageConfig";
-import {LocalStorage} from "./providers/local";
+import { IStorageProvider } from "./interfaces/IStorageProvider";
+import { GoogleCloudStorage } from "./providers/google";
+import { StorageConfig } from "./interfaces/StorageConfig";
+import { LocalStorage } from "./providers/local";
 
 
-export class StorageProvider {
-
-    _storageProvider?: IStorageProvider;
-    _transportName?: string;
-
-    constructor(provider: string, options: StorageConfig) {
-        if (provider === 'google') {
-            this._storageProvider = new GoogleCloudStorage(options);
-        } else {
-            this._storageProvider = new LocalStorage();
-        }
+export function createStorageProvider(provider: string, options: StorageConfig): IStorageProvider {
+    if (provider === 'google') {
+        return new GoogleCloudStorage(options);
+    } else {
+        return new LocalStorage();
     }
-
-    get(): IStorageProvider {
-        if (!this._storageProvider) throw new Error("Storage provider not initialized");
-        return this._storageProvider;
-    }
-
-
 }
-
-
-
