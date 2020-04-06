@@ -23,9 +23,6 @@ async function init(app) {
     app.use(security.adminMiddleware);
     app.use(security.middleware);
 
-    await admin.init(app);
-    registerAdminRoutes(app.conduit.admin);
-
     if (await email.initialize(app)) {
         app.conduit.email = email;
     }
