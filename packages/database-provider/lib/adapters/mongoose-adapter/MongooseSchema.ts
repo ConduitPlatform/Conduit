@@ -32,4 +32,18 @@ export class MongooseSchema implements SchemaAdapter {
     findOne(query: any, select?: string): Promise<any> {
         return this.model.findOne(query, select).exec();
     }
+
+    findPaginated(query: any, skip: number, limit: number) {
+        return this.model.find(query)
+          .sort({createdAt: -1})
+          .skip(skip)
+          .limit(limit)
+          .exec();
+    }
+
+    countDocuments(query: any) {
+        return this.model.find(query)
+          .countDocuments()
+          .exec();
+    }
 }

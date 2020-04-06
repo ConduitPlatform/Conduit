@@ -31,4 +31,8 @@ export interface SchemaAdapter {
 
     findByIdAndUpdate(document: any): Promise<any>;
 
+    findPaginated(query: any, skip: number, limit: number): Promise<any>;
+
+    countDocuments(query: any): Promise<number>;
+
 }
