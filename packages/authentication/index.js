@@ -76,16 +76,15 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  if (config.facebook) {
+  if (config.facebook.active) {
     app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
     initialized = true;
   }
 
-  if (config.google) {
+  if (config.google.active) {
     app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
     initialized = true;
   }
-
 }
 
 function registerSchemas() {
