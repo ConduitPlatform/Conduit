@@ -3,14 +3,11 @@ import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
 import { isNil } from 'lodash';
 import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, Application } from 'express';
 
-class Application {
-}
+class PushNotificationsModule {
 
-export class PushNotifications {
-
-  private static _instance: PushNotifications;
+  private static _instance: PushNotificationsModule;
   _provider: IPushNotifications;
   pushNotificationModel: any;
 
@@ -25,7 +22,7 @@ export class PushNotifications {
 
     const databaseAdapter = database.getDbAdapter();
 
-    databaseAdapter.registerSchemas(NotificationTokenModel);
+    databaseAdapter.createSchemaFromAdapter(NotificationTokenModel);
 
     this.pushNotificationModel = databaseAdapter.getSchema('NotificationToken');
 
@@ -57,7 +54,7 @@ export class PushNotifications {
 
   public static getInstance(app?: Application, name?: string, settings?: IFirebaseSettings) {
     if (!this._instance && name && settings && app) {
-      this._instance = new PushNotifications(app, name, settings);
+      this._instance = new PushNotificationsModule(app, name, settings);
     } else if (this._instance) {
       return this._instance;
     } else {
@@ -92,3 +89,5 @@ export class PushNotifications {
     return res.json({ tokenDocument });
   }
 }
+
+export = PushNotificationsModule;

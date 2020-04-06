@@ -4,6 +4,7 @@ const email = require('@conduit/email');
 const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const AdminModule = require('@conduit/admin');
+const PushNotificationsModule = require('@conduit/push-notifications');
 const cms = require('@conduit/cms').CMS;
 const usersRouter = require('./routes/users');
 const { getConfig, editConfig } = require('./admin/config');
@@ -23,8 +24,16 @@ async function init(app) {
     app.use(security.adminMiddleware);
     app.use(security.middleware);
 
-    await admin.init(app);
+    // await admin.init(app);
     registerAdminRoutes(app.conduit.admin);
+
+    // How will the settings be passed on that?
+    const firebaseSettings = {
+        projectId: '',
+        privateKey: '',
+        clientEmail: ''
+    };
+    const pushNotifications = await PushNotificationsModule.getInstance(app, 'firebase', firebaseSettings);
 
     if (await email.initialize(app)) {
         app.conduit.email = email;
