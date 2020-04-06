@@ -26,8 +26,11 @@ async function init(app) {
 
     registerAdminRoutes(app.conduit.admin);
 
-    // TODO Get name and settings from config
-    const pushNotifications = await PushNotificationsModule.getInstance(app, 'firebase', {});
+    const pushNotificationsProviderName = config.get('pushNotifications.providerName');
+    const pushNotifications = await PushNotificationsModule.getInstance(
+      app,
+      pushNotificationsProviderName,
+      config.get(`${pushNotificationsProviderName}`));
 
     if (await email.initialize(app)) {
         app.conduit.email = email;

@@ -158,5 +158,25 @@ module.exports = {
             format: 'String',
             default: 'S3CR3T'
         }
+    },
+    pushNotifications: {
+        providerName: {
+          format: 'String',
+          default: 'firebase'
+        },
+        firebase: {
+            projectId: {
+                format: 'String',
+                default: 'project-id'
+            },
+            privateKey: {
+                format: 'String',
+                default: 'private-key'
+            },
+            clientEmail: {
+                format: 'String',
+                default: 'client-email'
+            }
+        }
     }
 };
