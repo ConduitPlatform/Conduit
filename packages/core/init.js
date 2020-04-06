@@ -26,11 +26,11 @@ async function init(app) {
 
     registerAdminRoutes(app.conduit.admin);
 
-    const pushNotificationsProviderName = config.get('pushNotifications.providerName');
+    const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
     const pushNotifications = await PushNotificationsModule.getInstance(
       app,
       pushNotificationsProviderName,
-      config.get(`${pushNotificationsProviderName}`));
+      app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`));
 
     if (await email.initialize(app)) {
         app.conduit.email = email;
