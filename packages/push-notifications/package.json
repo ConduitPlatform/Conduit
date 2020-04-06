@@ -1,0 +1,14 @@
+{
+  "name": "@conduit/push-notifications",
+  "version": "1.0.0",
+  "description": "Handles sending push notifications to users",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc",
+    "publish": "npm publish"
+  },
+  "author": "",
+  "license": "ISC"
+}
