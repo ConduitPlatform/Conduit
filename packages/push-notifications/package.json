@@ -10,5 +10,13 @@
     "publish": "npm publish"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "firebase-admin": "^8.10.0",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.4",
+    "@types/lodash": "^4.14.149"
+  }
 }
