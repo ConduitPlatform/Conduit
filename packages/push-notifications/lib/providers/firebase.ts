@@ -1,11 +1,10 @@
-import { IPushNotifications } from '../interfaces/IPushNotifications';
+import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
 import { IFirebaseSettings } from '../interfaces/IFirebaseSettings';
 import * as firebase from 'firebase-admin';
 import { ISendNotification, ISendNotificationToManyDevices } from '../interfaces/ISendNotification';
-import { NextFunction, Request, Response } from 'express';
-import { isNil, keyBy, isEmpty } from 'lodash';
+import { isNil, keyBy } from 'lodash';
 
-export class FirebaseProvider implements IPushNotifications {
+export class FirebaseProvider implements IPushNotificationsProvider {
 
   private readonly fcm: firebase.messaging.Messaging;
 
@@ -22,25 +21,16 @@ export class FirebaseProvider implements IPushNotifications {
     this.fcm = firebase.initializeApp(firebaseOptions).messaging();
   }
 
-  async sendToDevice(req: Request, res: Response, next: NextFunction, databaseAdapter: any): Promise<any> {
-    const params: ISendNotification = req.body;
-    if (isNil(params)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
-    }
+  // TODO check for disabled notifications for users
+
+  async sendToDevice(params: ISendNotification, databaseAdapter: any): Promise<any> {
 
     const { userId, type } = params;
-    if (!isNil(type)) {
-      // const user = await databaseAdapter.getSchema('User').findOne({ _id: userId });
+    if (isNil(userId)) return;
 
-      // TODO Do we need an option for disabled notifications in the user?
-      // const disabled = user?.disabledNotifications?.find(notification => notification === type);
-      // if (!isNil(disabled)) {
-      //   return;
-      // }
-    }
     const notificationToken = await databaseAdapter.getSchema('NotificationToken').findOne({ userId });
     if (isNil(notificationToken)) {
-      return res.status(404).json({ error: 'Notification token not found' });
+      return;
     }
     const { title, body, data } = params;
     const message: firebase.messaging.Message = {
@@ -54,36 +44,15 @@ export class FirebaseProvider implements IPushNotifications {
         type: type ?? ''
       }
     };
-    await this.fcm.send(message);
-    return res.json({ message: 'Notification sent' });
+    return this.fcm.send(message);
   }
 
-  async sendMany(req: Request, res: Response, next: NextFunction, databaseAdapter: any): Promise<any> {
-    const params: ISendNotification[] = req.body;
-    if (isNil(params)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
-    }
+  async sendMany(params: ISendNotification[], databaseAdapter: any): Promise<any> {
 
     const userIds = params.map(param => param.userId);
     const notificationsObj = keyBy(params, param => param.userId);
 
-    // const users = await databaseAdapter.getSchema('User').find({ _id: { $in: userIds } });
-
-    // const allowed = users.reduce<string[]>((filtered: any, user: any) => {
-    //   const notificationType = notificationsObj[user._id.toString()].type;
-    //
-    //   if (_.isNil(notificationType)) {
-    //     filtered.push(user._id.toString());
-    //     return filtered;
-    //   }
-    //
-    //   const ignored = user.disabledNotifications.find((notification: any) => notificationType === notification);
-    //   if (_.isNil(ignored)) filtered.push(user._id.toString());
-    //
-    //   return filtered;
-    // }, []);
-
-    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: userIds } }); // or allowed
+    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: userIds } });
 
     const promises = notificationTokens.map(async (token: any) => {
       const id = token.userId.toString();
@@ -103,33 +72,12 @@ export class FirebaseProvider implements IPushNotifications {
 
       await this.fcm.send(message).catch(console.error);
     });
-    await Promise.all(promises);
-    return res.json({ message: 'Notifications sent' });
+    return Promise.all(promises);
   }
 
-  async sendToManyDevices(req: Request, res: Response, next: NextFunction, databaseAdapter: any): Promise<any> {
-    const params: ISendNotificationToManyDevices = req.body;
-    if (isNil(params)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
-    }
+  async sendToManyDevices(params: ISendNotificationToManyDevices, databaseAdapter: any): Promise<any> {
 
-
-    // let enabledIds = params.userIds;
-    // if (!isNil(params.type)) {
-    //   const users = await databaseAdapter.getSchema('User').find({ _id: { $in: params.userIds } });
-    //
-    //   enabledIds = [];
-    //
-    //   users.forEach((user: any) => {
-    //     const disabled = user?.disabledNotifications?.find((notification: string) => notification === params.type);
-    //     if (isNil(disabled)) {
-    //       enabledIds.push(user._id.toString());
-    //     }
-    //   });
-    // }
-    //
-    // if (isEmpty(enabledIds)) return;
-    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: params.userIds } }); // or enabled ids
+    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: params.userIds } });
     if (notificationTokens.length === 0) return;
 
     const promises = notificationTokens.map(async (notToken: any) => {
@@ -146,7 +94,6 @@ export class FirebaseProvider implements IPushNotifications {
       };
       await this.fcm.send(message);
     });
-    await Promise.all(promises);
-    return res.json({ message: 'Notifications sent' });
+    return Promise.all(promises);
   }
 }

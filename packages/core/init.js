@@ -24,16 +24,10 @@ async function init(app) {
     app.use(security.adminMiddleware);
     app.use(security.middleware);
 
-    // await admin.init(app);
     registerAdminRoutes(app.conduit.admin);
 
-    // How will the settings be passed on that?
-    const firebaseSettings = {
-        projectId: '',
-        privateKey: '',
-        clientEmail: ''
-    };
-    const pushNotifications = await PushNotificationsModule.getInstance(app, 'firebase', firebaseSettings);
+    // TODO Get name and settings from config
+    const pushNotifications = await PushNotificationsModule.getInstance(app, 'firebase', {});
 
     if (await email.initialize(app)) {
         app.conduit.email = email;

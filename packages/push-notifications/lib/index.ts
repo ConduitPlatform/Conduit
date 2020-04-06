@@ -1,14 +1,15 @@
-import { IPushNotifications } from './interfaces/IPushNotifications';
+import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
 import { isNil } from 'lodash';
 import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
 import { Request, Response, NextFunction, Application } from 'express';
+import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
 
 class PushNotificationsModule {
 
   private static _instance: PushNotificationsModule;
-  _provider: IPushNotifications;
+  _provider: IPushNotificationsProvider;
   pushNotificationModel: any;
 
   private constructor(app: Application, name: string, settings: any) {
@@ -33,21 +34,35 @@ class PushNotificationsModule {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
 
-    conduit.admin.registerRoute('POST', '/set-notification-token',
+    conduit.admin.registerRoute('POST', '/notification-token',
       (req: Request, res: Response, next: NextFunction) => this.setNotificationToken(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('GET', '/get-notification-token',
+    conduit.admin.registerRoute('GET', '/notification-token/:userId',
       (req: Request, res: Response, next: NextFunction) => this.getNotificationToken(req, res, next).catch(next));
 
-    // Is the usage of the databaseAdapter below right???
-    conduit.admin.registerRoute('POST', '/send-notification-to-device',
-      (req: Request, res: Response, next: NextFunction) => this._provider.sendToDevice(req, res, next, databaseAdapter).catch(next));
+    conduit.admin.registerRoute('POST', '/notifications/send',
+      async (req: Request, res: Response, next: NextFunction) => {
+      const params: ISendNotification = req.body;
+      if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
+      await this._provider.sendToDevice(params, databaseAdapter).catch(next);
+      return res.json('ok');
+    });
 
-    conduit.admin.registerRoute('POST', '/send-many-notifications',
-      (req: Request, res: Response, next: NextFunction) => this._provider.sendMany(req, res, next, databaseAdapter).catch(next));
+    conduit.admin.registerRoute('POST', '/notifications/send-many',
+      async (req: Request, res: Response, next: NextFunction) => {
+        const params: ISendNotification[] = req.body;
+        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
+        await this._provider.sendMany(params, databaseAdapter).catch(next);
+        return res.json('ok');
+      });
 
-    conduit.admin.registerRoute('POST', '/send-notification-to-many-devices',
-      (req: Request, res: Response, next: NextFunction) => this._provider.sendToManyDevices(req, res, next, databaseAdapter).catch(next));
+    conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
+      async (req: Request, res: Response, next: NextFunction) => {
+        const params: ISendNotificationToManyDevices = req.body;
+        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
+        await this._provider.sendToManyDevices(params, databaseAdapter).catch(next);
+        return res.json('ok');
+      });
 
     conduit.pushNotifications = this;
   }
@@ -79,9 +94,9 @@ class PushNotificationsModule {
   }
 
   private async getNotificationToken(req: Request, res: Response, next: NextFunction) {
-    const userId = req.body.userId;
+    const userId = req.params.userId;
     if (isNil(userId)) {
-      return res.status(401).json({ error: 'Required field, userId, is missing' });
+      return res.status(401).json({ error: 'User id parameter was not provided' });
     }
 
     const tokenDocument = await this.pushNotificationModel.findOne({ userId });
