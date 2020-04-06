@@ -25,7 +25,8 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   async sendToDevice(params: ISendNotification, databaseAdapter: any): Promise<any> {
 
-    const { userId, type } = params;
+    const { sendTo, type } = params;
+    const userId = sendTo;
     if (isNil(userId)) return;
 
     const notificationToken = await databaseAdapter.getSchema('NotificationToken').findOne({ userId });
@@ -49,8 +50,8 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   async sendMany(params: ISendNotification[], databaseAdapter: any): Promise<any> {
 
-    const userIds = params.map(param => param.userId);
-    const notificationsObj = keyBy(params, param => param.userId);
+    const userIds = params.map(param => param.sendTo);
+    const notificationsObj = keyBy(params, param => param.sendTo);
 
     const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: userIds } });
 
@@ -77,7 +78,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   async sendToManyDevices(params: ISendNotificationToManyDevices, databaseAdapter: any): Promise<any> {
 
-    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: params.userIds } });
+    const notificationTokens = await databaseAdapter.getSchema('NotificationToken').find({ userId: { $in: params.sendTo } });
     if (notificationTokens.length === 0) return;
 
     const promises = notificationTokens.map(async (notToken: any) => {

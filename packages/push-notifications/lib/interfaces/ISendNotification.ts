@@ -1,6 +1,6 @@
 export interface ISendNotification {
 
-  userId: string;
+  sendTo: string;
   title: string;
   type?: string;
   body?: string;
@@ -9,7 +9,7 @@ export interface ISendNotification {
 
 export interface ISendNotificationToManyDevices {
 
-  userIds: string[];
+  sendTo: string[]; // this can be userIds, segments etc for different notification service providers
   type?: string;
   title: string;
   body?: string;
