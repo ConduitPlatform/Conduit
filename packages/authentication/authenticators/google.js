@@ -10,6 +10,10 @@ async function authenticate(req, res, next) {
   const database = req.app.conduit.database.getDbAdapter();
   const config = req.app.conduit.config.get('authentication');
 
+  if (!config.google.active) {
+    res.status(403).json({ error: 'Google authentication is disabled' });
+  }
+
   const ticket = await client.verifyIdToken({
     idToken: id_token,
     audience: config.google.clientId
