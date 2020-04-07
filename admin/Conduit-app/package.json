@@ -12,11 +12,17 @@
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.44",
     "@material-ui/styles": "latest",
+    "axios": "^0.19.2",
     "clsx": "^1.1.0",
     "formik": "^2.1.4",
     "next": "9.3.2",
+    "next-redux-wrapper": "^5.0.0",
     "react": "16.12.0",
     "react-dom": "16.12.0",
+    "react-redux": "^7.2.0",
+    "redux": "^4.0.5",
+    "redux-devtools-extension": "^2.13.8",
+    "redux-thunk": "^2.3.0",
     "swr": "^0.1.18"
   }
 }
