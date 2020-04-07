@@ -1,6 +1,7 @@
-let facebook = require('./authenticators/facebook');
-let google = require('./authenticators/google');
-let local = require('./authenticators/local');
+let facebook = require('./handlers/authenticators/facebook');
+let google = require('./handlers/authenticators/google');
+let local = require('./handlers/authenticators/local');
+const admin = require('./handlers/admin/admin');
 const {isNil} = require('lodash');
 const authHelper = require('./helpers/authHelper');
 const registerEmailTemplates = require('./templates/registerEmailTemplates');
@@ -86,15 +87,11 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  app.conduit.admin.registerRoute('GET', '/users/:skip&:limit', async (req, res, next) => {
-    const {skip, limit} = req.params;
-    if (isNil(skip) || isNil(limit)) {
-      return res.status(401).json({error: 'Pagination parameters are missing'});
-    }
-    const users = await database.getSchema('User').findPaginated(null, Number(skip), Number(limit)).catch(next);
-    const totalCount = await database.getSchema('User').countDocuments(null);
-    return res.json({users, totalCount});
-  });
+  app.conduit.admin.registerRoute('GET', '/users/:skip&:limit',
+    (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
+
+  app.conduit.admin.registerRoute('PUT', '/config/auth',
+    (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
 }
 
 function registerSchemas() {

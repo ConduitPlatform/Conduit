@@ -1,7 +1,7 @@
 const {OAuth2Client} = require('google-auth-library');
 const isNil = require('lodash/isNil');
 const moment = require('moment');
-const authHelper = require('../helpers/authHelper');
+const authHelper = require('../../helpers/authHelper');
 
 const client = new OAuth2Client();
 

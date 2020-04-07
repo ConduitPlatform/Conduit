@@ -17,7 +17,6 @@ async function init(app) {
     await dbConfig.configureFromDatabase(app);
 
     const admin = AdminModule.getInstance(app);
-    registerAdminRoutes(admin);
 
     if (!security.initialize(app)) {
         process.exit(9);
@@ -25,10 +24,11 @@ async function init(app) {
     app.use(security.adminMiddleware);
     app.use(security.middleware);
 
-    registerAdminRoutes(app.conduit.admin);
+    admin.registerBaseRoutes(app);
+    registerAdminRoutes(admin);
 
     const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
-    const pushNotifications = await PushNotificationsModule.getInstance(
+    PushNotificationsModule.getInstance(
       app,
       pushNotificationsProviderName,
       app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`));

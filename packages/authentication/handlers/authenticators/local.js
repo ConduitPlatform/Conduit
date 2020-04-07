@@ -1,9 +1,9 @@
 const isNil = require('lodash/isNil');
-const authHelper = require('../helpers/authHelper');
+const authHelper = require('../../helpers/authHelper');
 const moment = require('moment');
 const emailProvider = require('@conduit/email');
 const uuid = require('uuid/v4');
-const TOKEN_TYPE = require('../constants/TokenType').TOKEN_TYPE;
+const TOKEN_TYPE = require('../../constants/TokenType').TOKEN_TYPE;
 
 async function register(req, res, next) {
   const {email, password} = req.body;
