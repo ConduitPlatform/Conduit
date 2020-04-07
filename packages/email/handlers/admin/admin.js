@@ -1,7 +1,7 @@
 const {isNil} = require('lodash');
 
 async function getTemplates(req, res, next) {
-  let { skip, limit } = req.params;
+  let {skip, limit} = req.params;
   if (isNil(skip)) skip = 0;
   if (isNil(limit)) limit = 25;
 
@@ -13,8 +13,8 @@ async function getTemplates(req, res, next) {
 }
 
 async function createTemplate(req, res, next) {
-  const { name, subject, body, variables } = req.body;
-  if ( isNil(name) || isNil(subject) || isNil(body) || isNil(variables) ) {
+  const {name, subject, body, variables} = req.body;
+  if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
     return res.status(401).json({error: 'Required fields are missing'});
   }
 
@@ -30,7 +30,28 @@ async function createTemplate(req, res, next) {
 }
 
 async function editTemplate(req, res, next) {
+  const id = req.params.id;
+  const params = req.body;
 
+  Object.keys(params).forEach(key => {
+    if (key !== 'name' && key !== 'subject' && key !== 'body' && key !== 'variables') {
+      return res.status(401).json({error: 'Invalid parameters are given'});
+    }
+  });
+
+  const emailModel = req.app.conduit.database.getDbAdapter().getSchema('EmailTemplate');
+  const templateDocument = await emailModel.findOne({_id: id.toString()});
+  if (isNil(templateDocument)) {
+    return res.status(404).json({error: 'Template not found'});
+  }
+
+  Object.keys(params).forEach(key => {
+    templateDocument[key] = params[key];
+  });
+
+  const updatedTemplateDoc = await templateDocument.save();
+
+  return res.json({updatedTemplate: updatedTemplateDoc});
 }
 
 module.exports = {

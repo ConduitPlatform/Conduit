@@ -156,6 +156,9 @@ async function initialize(app) {
     admin.registerRoute('POST', '/email-templates',
       (req, res, next) => adminHandler.createTemplate(req, res, next).catch(next));
 
+    admin.registerRoute('PUT', '/email-templates/:id',
+      (req, res, next) => adminHandler.editTemplate(req, res, next).catch(next));
+
     return true;
 }
 
