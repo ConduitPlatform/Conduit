@@ -10,6 +10,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^4.7.0"
   },
   "directories": {
     "lib": "lib"
