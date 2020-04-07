@@ -1,14 +1,24 @@
 import {Application} from "express";
-import {ConduitSchema} from "./models/ConduitSchema";
-import {TYPE} from "./interaces/Model";
+import {IConduitRouter} from "./modules/Router/interfaces";
 
 export class ConduitSDK {
 
     private static _instance: ConduitSDK;
     private _app: Application;
+    private _router?: IConduitRouter;
 
     private constructor(app: Application) {
         this._app = app;
+    }
+
+    registerRouter(router: IConduitRouter) {
+        if (this._router) throw new Error("Cannot register a second router!")
+        this._router = router;
+    }
+
+    getRouter(): IConduitRouter {
+        if (this._router) return this._router;
+        throw new Error("Router not assigned yet!");
     }
 
     static getInstance(app: Application) {
@@ -21,7 +31,8 @@ export class ConduitSDK {
 
 }
 
-export * from  "./models/ConduitSchema";
-export * from  "./interaces/Model";
+export * from "./models";
+export * from "./interaces";
+export * from "./modules";
 
 

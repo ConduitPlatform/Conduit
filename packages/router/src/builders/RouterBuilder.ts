@@ -1,14 +1,15 @@
-import {RouteOptions} from "../interaces/RouteOptions";
 import {IRoute, Router} from "express";
 import {RouteBuilder} from "./RouteBuilder";
+import {ConduitRouteOptions, ConduitRouterBuilder} from "@conduit/sdk";
 
-export class RouterBuilder {
+export class RouterBuilder extends ConduitRouterBuilder {
 
     private _path: string;
     private _middleware?: any[];
     private _router: Router;
 
     constructor(routePath: string, middleware?: any[]) {
+        super(routePath, middleware)
         this._path = routePath;
         this._router = Router();
         if (middleware) {
@@ -17,21 +18,21 @@ export class RouterBuilder {
 
     }
 
-    get(path: string, options: RouteOptions, middleware: []): void {
+    get(path: string, options: ConduitRouteOptions, middleware: []): void {
         this._router.get(path, middleware);
     }
 
-    post(path: string, options: RouteOptions, middleware: []): void {
+    post(path: string, options: ConduitRouteOptions, middleware: []): void {
         this._router.post(path, middleware);
 
     }
 
-    put(path: string, options: RouteOptions, middleware: []): void {
+    put(path: string, options: ConduitRouteOptions, middleware: []): void {
         this._router.put(path, middleware);
 
     }
 
-    delete(path: string, options: RouteOptions, middleware: []): void {
+    delete(path: string, options: ConduitRouteOptions, middleware: []): void {
         this._router.delete(path, middleware);
     }
 

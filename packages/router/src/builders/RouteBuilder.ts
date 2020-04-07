@@ -1,7 +1,7 @@
-import {RouteOptions} from "../interaces/RouteOptions";
-import {IRoute, Router} from "express";
+import {Router} from "express";
+import {ConduitRouteBuilder, ConduitRouteOptions} from "@conduit/sdk";
 
-export class RouteBuilder {
+export class RouteBuilder extends ConduitRouteBuilder {
 
     private _path: string;
     private _routes: {
@@ -12,6 +12,7 @@ export class RouteBuilder {
     };
 
     constructor(routePath: string) {
+        super(routePath);
         this._path = routePath;
         this._routes = {
             get: null,
@@ -21,22 +22,22 @@ export class RouteBuilder {
         };
     }
 
-    get(options: RouteOptions, middleware: []): RouteBuilder {
+    get(options: ConduitRouteOptions, middleware: []): RouteBuilder {
         this._routes.get = middleware;
         return this;
     }
 
-    post(options: RouteOptions, middleware: []): RouteBuilder {
+    post(options: ConduitRouteOptions, middleware: []): RouteBuilder {
         this._routes.post = middleware;
         return this;
     }
 
-    put(options: RouteOptions, middleware: []): RouteBuilder {
+    put(options: ConduitRouteOptions, middleware: []): RouteBuilder {
         this._routes.put = middleware;
         return this;
     }
 
-    delete(options: RouteOptions, middleware: []): RouteBuilder {
+    delete(options: ConduitRouteOptions, middleware: []): RouteBuilder {
         this._routes.delete = middleware;
         return this;
     }

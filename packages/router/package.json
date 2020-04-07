@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/lodash": "^4.14.149",
     "apollo-server-express": "^2.11.0",
+    "@conduit/sdk": "1.0.0",
     "graphql": "^15.0.0",
     "graphql-parse-resolve-info": "^4.5.0",
     "graphql-tools": "^4.0.7",

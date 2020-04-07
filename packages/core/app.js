@@ -5,8 +5,7 @@ const cookieParser = require('cookie-parser');
 const config = require('./utils/config/config.js');
 const logger = require('./utils/logging/logger.js');
 const database = require('@conduit/database-provider');
-const conduitRouter = require('@conduit/router').ConduitRouter;
-const conduitRouterBuilder = require('@conduit/router').router;
+const conduitRouter = require('@conduit/router').ConduitDefaultRouter;
 const init = require('./init');
 const indexRouter = require('./routes/index');
 
@@ -17,7 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Obejct to contain all modules
 app.conduit = {};
 app.conduit.config = config;
-app.conduit.router = conduitRouter.getInstance(app);
+app.conduit.router = new conduitRouter(app);
 const router = app.conduit.router;
 router.registerGlobalMiddleware('logger', logger.logger());
 router.registerGlobalMiddleware('jsonParser', express.json());
@@ -38,7 +37,10 @@ router.registerDirectRouter('/health', (req, res, next) => {
     }
 });
 
-init(app);
+init(app).then(r=>{
+    router.initGraphQL();
+});
+
 router.registerGlobalMiddleware('errorLogger', logger.errorLogger());
 router.registerGlobalMiddleware('errorCatch', (error, req, res, next) => {
     let status = error.status;

@@ -1,5 +1,4 @@
-export interface RouteOptions {
-
+export interface ConduitRouteOptions {
     queryParams?: any[];
     bodyParams?: any[];
     returns?: any[];
