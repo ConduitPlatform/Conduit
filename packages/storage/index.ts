@@ -1,7 +1,7 @@
 import { isNil } from 'lodash';
 import { Application, NextFunction, Request, Response } from 'express';
 import { createStorageProvider, IStorageProvider } from '@conduit/storage-provider';
-import { editConfig } from './handlers/config';
+import { editConfig } from './admin/config';
 
 class StorageModule {
   private static instance: StorageModule | null = null;
