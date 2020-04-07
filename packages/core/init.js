@@ -3,6 +3,7 @@ const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
 const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
+const StorageModule = require('@conduit/storage');
 const AdminModule = require('@conduit/admin');
 const PushNotificationsModule = require('@conduit/push-notifications');
 const cms = require('@conduit/cms').CMS;
@@ -42,6 +43,8 @@ async function init(app) {
 
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
     app.conduit.cms = new cms(app.conduit.database, app);
+
+    StorageModule.getInstance(app);
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;
