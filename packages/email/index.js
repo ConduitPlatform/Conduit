@@ -3,6 +3,7 @@ const {isNil} = require('lodash');
 const templateModel = require('./models/EmailTemplate');
 const SMTPServer = require('smtp-server').SMTPServer;
 const {createTestAccount} = require('nodemailer');
+const adminHandler = require('./handlers/admin/admin');
 
 let emailer;
 let database;
@@ -147,6 +148,16 @@ async function initialize(app) {
 
     database = app.conduit.database.getDbAdapter();
     database.createSchemaFromAdapter(templateModel);
+
+    const admin = app.conduit.admin;
+    admin.registerRoute('GET', '/email-templates/:skip?/:limit?',
+      (req, res, next) => adminHandler.getTemplates(req, res, next).catch(next));
+
+    admin.registerRoute('POST', '/email-templates',
+      (req, res, next) => adminHandler.createTemplate(req, res, next).catch(next));
+
+    admin.registerRoute('PUT', '/email-templates/:id',
+      (req, res, next) => adminHandler.editTemplate(req, res, next).catch(next));
 
     return true;
 }
