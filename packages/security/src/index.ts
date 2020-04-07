@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction, Application } from 'express';
 import { ClientModel } from './models/Client';
 import { isNil } from 'lodash';
+import { PlatformTypesEnum } from './PlatformTypesEnum';
 
 let initialized = false;
 let database: any;
@@ -11,6 +12,23 @@ export const initialize = (app: Application | any) => {
   }
   database = app.conduit.database.getDbAdapter();
   database.createSchemaFromAdapter(ClientModel);
+
+  app.conduit.admin.registerRoute('POST', '/client',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { clientId, clientSecret, platform } = req.body;
+
+      if (!Object.values(PlatformTypesEnum).includes(platform)) {
+        return res.status(401).json({error: 'Invalid platform'});
+      }
+
+      await database.getSchema('Client').create({
+        clientId,
+        clientSecret,
+        platform
+      });
+
+      return res.json({message: 'Client created'});
+    });
 
   return initialized = true;
 };
