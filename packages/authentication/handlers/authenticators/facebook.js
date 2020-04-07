@@ -1,5 +1,5 @@
 const request = require('request-promise');
-const authHelper = require('../helpers/authHelper');
+const authHelper = require('../../helpers/authHelper');
 const moment = require('moment');
 const isNil = require('lodash/isNil');
 
