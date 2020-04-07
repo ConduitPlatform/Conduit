@@ -78,6 +78,26 @@ module.exports = {
           default: 'S3CR3T'
         }
       },
+      storage: {
+        provider: {
+          type: String,
+          default: 'local'
+        },
+        storagePath: {
+          type: String,
+          default: '/var/tmp'
+        },
+        google: {
+          serviceAccountKeyPath: {
+            type: String,
+            default: '~/google_storage_service_account.json'
+          },
+          bucketName: {
+            type: String,
+            default: 'conduit'
+          }
+        }
+      },
       admin: {
         auth: {
           tokenSecret: {
