@@ -13,7 +13,7 @@ if (typeof localStorage !== "undefined") {
 	const authCookie = getCookie('JWT');
 	if (authCookie) {
 		initialState = {
-			token: JSON.parse(decodeURIComponent(authCookie)),
+			token: authCookie,
 			loading: false,
 			error: null
 		};
@@ -53,7 +53,7 @@ const authenticationReducer = (state = initialState, action) => {
 		case STOP_AUTHENTICATION_LOADING:
 			return {
 				...state,
-				error: false
+				loading: false
 			};
 		default:
 			return state;

@@ -12,7 +12,7 @@ export const login = (username, password) => {
 		loginRequest(username, password)
 			.then(res => {
 				dispatch(stopAuthenticationLoading());
-				dispatch(setAuthenticationToken(res.token));
+				dispatch(setAuthenticationToken(res.data.token));
 				dispatch(setAuthenticationError(null));
 			})
 			.catch(err => {

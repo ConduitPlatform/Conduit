@@ -14,6 +14,8 @@ import {Layout} from "../components/Layout";
 import {LockOutlined} from "@material-ui/icons";
 import {useDispatch, useSelector} from "react-redux";
 import {login} from "../redux/thunks/authenticationThunks";
+import Backdrop from "@material-ui/core/Backdrop";
+import CircularProgress from "@material-ui/core/CircularProgress";
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -33,6 +35,9 @@ const useStyles = makeStyles(theme => ({
 	submit: {
 		margin: theme.spacing(3, 0, 2),
 	},
+	backdrop: {
+		zIndex: theme.zIndex.drawer + 1,
+	},
 }));
 
 export default function Login() {
@@ -42,7 +47,9 @@ export default function Login() {
 	const [snackbarOpen, setSnackbarOpen] = useState(false);
 	
 	useEffect(() => {
-		setSnackbarOpen(true)
+		if (authState.error) {
+			setSnackbarOpen(true);
+		}
 	}, [authState.error]);
 	
 	const handleLogin = (values) => {
@@ -147,6 +154,9 @@ export default function Login() {
 					          anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}>
 						{snackbarAlert()}
 					</Snackbar>
+					<Backdrop open={authState.loading} className={classes.backdrop}>
+						<CircularProgress color="secondary"/>
+					</Backdrop>
 				</div>
 			</Container>
 		</Layout>
