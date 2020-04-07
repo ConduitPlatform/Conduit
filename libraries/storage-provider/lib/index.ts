@@ -11,3 +11,5 @@ export function createStorageProvider(provider: string, options: StorageConfig):
         return new LocalStorage();
     }
 }
+
+export * from './interfaces';
