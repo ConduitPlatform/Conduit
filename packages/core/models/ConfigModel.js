@@ -112,6 +112,26 @@ module.exports = {
           proxy: String,
           host: String
         }
+      },
+      pushNotifications: {
+        providerName: {
+          type: String,
+          default: 'firebase'
+        },
+        firebase: {
+          projectId: {
+            type: String,
+            default: 'project-id'
+          },
+          privateKey: {
+            type: String,
+            default: 'private-key'
+          },
+          clientEmail: {
+            type: String,
+            default: 'client-email'
+          }
+        }
       }
     }
   },

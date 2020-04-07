@@ -4,6 +4,7 @@ const email = require('@conduit/email');
 const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const AdminModule = require('@conduit/admin');
+const PushNotificationsModule = require('@conduit/push-notifications');
 const cms = require('@conduit/cms').CMS;
 const usersRouter = require('./routes/users');
 const { getConfig, editConfig } = require('./admin/config');
@@ -22,6 +23,14 @@ async function init(app) {
     }
     app.use(security.adminMiddleware);
     app.use(security.middleware);
+
+    registerAdminRoutes(app.conduit.admin);
+
+    const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
+    const pushNotifications = await PushNotificationsModule.getInstance(
+      app,
+      pushNotificationsProviderName,
+      app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`));
 
     if (await email.initialize(app)) {
         app.conduit.email = email;

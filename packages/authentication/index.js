@@ -63,7 +63,7 @@ async function authentication(app, config) {
   }
   database = app.conduit.database.getDbAdapter();
   registerSchemas();
-    await registerEmailTemplates();
+  await registerEmailTemplates();
 
   if (config.local) {
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
@@ -85,6 +85,16 @@ async function authentication(app, config) {
     app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
     initialized = true;
   }
+
+  app.conduit.admin.registerRoute('GET', '/users/:skip&:limit', async (req, res, next) => {
+    const {skip, limit} = req.params;
+    if (isNil(skip) || isNil(limit)) {
+      return res.status(401).json({error: 'Pagination parameters are missing'});
+    }
+    const users = await database.getSchema('User').findPaginated(null, Number(skip), Number(limit)).catch(next);
+    const totalCount = await database.getSchema('User').countDocuments(null);
+    return res.json({users, totalCount});
+  });
 }
 
 function registerSchemas() {
