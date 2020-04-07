@@ -1,3 +1,5 @@
+import { PlatformTypesEnum } from '../../../security/src/PlatformTypesEnum';
+
 export const NotificationTokenModel = {
   name: 'NotificationToken',
   modelSchema: {
@@ -10,7 +12,10 @@ export const NotificationTokenModel = {
       required: true
     },
     platform: {
-      type: String
+      type: String,
+      // TODO this is temporarily imported from the security module
+      enum: Object.values(PlatformTypesEnum),
+      required: true
     }
   },
   modelOptions: {
