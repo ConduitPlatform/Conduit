@@ -40,6 +40,10 @@ module.exports = {
           accountLinking: {
             type: Boolean,
             default: true
+          },
+          active: {
+            type: Boolean,
+            default: false
           }
         },
         facebook: {
@@ -47,6 +51,10 @@ module.exports = {
           accountLinking: {
             type: Boolean,
             default: true
+          },
+          active: {
+            type: Boolean,
+            default: false
           }
         },
         generateRefreshToken: {
