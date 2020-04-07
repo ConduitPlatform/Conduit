@@ -1,5 +1,12 @@
 import axios from "axios";
 
-const COVID_API_BASE = 'https://covid-api.quintessential.gr';
+const CONDUIT_API = 'http://13.95.17.12';
+const config = {
+	masterkey: 'M4ST3RK3Y'
+};
 
-export const getAuthUsersDataReq = () => axios.get(`${COVID_API_BASE}/data/country/Greece`);
+export const getAuthUsersDataReq = (skip, limit) => axios.get(`${CONDUIT_API}/admin/users/${skip}&${limit}`);
+export const loginRequest = (username, password) => axios.post(`${CONDUIT_API}/admin/login`, {
+	username,
+	password
+}, {headers: config});

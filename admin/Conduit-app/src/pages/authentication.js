@@ -1,11 +1,9 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import AuthAccordion from "../components/AuthAccordion";
 import Box from "@material-ui/core/Box";
 import Typography from "@material-ui/core/Typography";
 import {Layout} from "../components/Layout";
 import CustomTabs from "../components/CustomTabs";
-import {useDispatch, useSelector} from "react-redux";
-import {getAuthUsersData} from "../redux/thunks/authenticationData";
 
 let dummyData = {
 	email: {
@@ -49,11 +47,11 @@ const dummyHandleData = (type, data) => {
 const tabs = ['Users', 'Sign-In Method'];
 
 export default function Authentication() {
-	const users = useSelector(state => state.authUsersData);
-	const dispatch = useDispatch();
-	useEffect(() => {
-		dispatch(getAuthUsersData())
-	}, []);
+	// const users = useSelector(state => state.authUsersData);
+	// const dispatch = useDispatch();
+	// useEffect(() => {
+	// 	dispatch(getAuthUsersData())
+	// }, []);
 	
 	
 	const [selected, setSelected] = useState(0);

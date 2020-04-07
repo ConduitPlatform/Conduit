@@ -1,4 +1,5 @@
 import {combineReducers} from 'redux';
-import authUsersData from './authUsersData'
+import authUsersReducer from './authUsersReducer'
+import authenticationReducer from "./authenticationReducer";
 
-export default combineReducers({authUsersData})
+export default combineReducers({authUsersReducer, authenticationReducer})

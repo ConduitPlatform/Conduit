@@ -11,7 +11,7 @@ const initialState = {
 	error: null
 };
 
-const authUsersData = (state = initialState, action) => {
+const authUsersReducer = (state = initialState, action) => {
 	switch (action.type) {
 		case ADD_AUTH_USERS:
 			return {
@@ -38,4 +38,4 @@ const authUsersData = (state = initialState, action) => {
 	}
 };
 
-export default authUsersData
+export default authUsersReducer
