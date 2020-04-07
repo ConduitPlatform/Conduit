@@ -12,6 +12,29 @@ async function getTemplates(req, res, next) {
   return res.json({templateDocuments, totalCount});
 }
 
+async function createTemplate(req, res, next) {
+  const { name, subject, body, variables } = req.body;
+  if ( isNil(name) || isNil(subject) || isNil(body) || isNil(variables) ) {
+    return res.status(401).json({error: 'Required fields are missing'});
+  }
+
+  const emailModel = req.app.conduit.database.getDbAdapter().getSchema('EmailTemplate');
+  const newTemplate = await emailModel.create({
+    name,
+    subject,
+    body,
+    variables
+  });
+
+  return res.json({template: newTemplate});
+}
+
+async function editTemplate(req, res, next) {
+
+}
+
 module.exports = {
-  getTemplates
+  getTemplates,
+  createTemplate,
+  editTemplate
 };

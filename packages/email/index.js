@@ -153,6 +153,9 @@ async function initialize(app) {
     admin.registerRoute('GET', '/email-templates/:skip?/:limit?',
       (req, res, next) => adminHandler.getTemplates(req, res, next).catch(next));
 
+    admin.registerRoute('POST', '/email-templates',
+      (req, res, next) => adminHandler.createTemplate(req, res, next).catch(next));
+
     return true;
 }
 
