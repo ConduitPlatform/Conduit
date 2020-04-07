@@ -43,10 +43,12 @@ class AdminModule {
       })
       .catch(console.log);
 
+    conduit.admin = this;
+  }
+
+  registerBaseRoutes(app: Application) {
     app.post('/admin/login', (req, res, next) => loginAdmin(req, res, next).catch(next));
     app.use('/admin', this.authMiddleware, this.router);
-
-    conduit.admin = this;
   }
 
   static getInstance(app?: Application) {
