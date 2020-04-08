@@ -150,7 +150,7 @@ async function initialize(app) {
     database.createSchemaFromAdapter(templateModel);
 
     const admin = app.conduit.admin;
-    admin.registerRoute('GET', '/email-templates/:skip?/:limit?',
+    admin.registerRoute('GET', '/email-templates',
       (req, res, next) => adminHandler.getTemplates(req, res, next).catch(next));
 
     admin.registerRoute('POST', '/email-templates',
