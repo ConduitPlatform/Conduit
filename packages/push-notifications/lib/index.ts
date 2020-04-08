@@ -6,6 +6,7 @@ import { FirebaseProvider } from './providers/firebase';
 import { Request, Response, NextFunction, Application } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
 import { getNotificationToken, setNotificationToken } from './handlers/notification-tokens/notification-tokens';
+import { sendManyNotifications, sendNotification, sendToManyDevices } from './handlers/admin/admin';
 
 class PushNotificationsModule {
 
@@ -42,28 +43,13 @@ class PushNotificationsModule {
       (req: Request, res: Response, next: NextFunction) => getNotificationToken(req, res, next, this.pushNotificationModel).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send',
-      async (req: Request, res: Response, next: NextFunction) => {
-      const params: ISendNotification = req.body;
-      if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-      await this._provider.sendToDevice(params, databaseAdapter).catch(next);
-      return res.json('ok');
-    });
+      (req: Request, res: Response, next: NextFunction) => sendNotification(req, res, next, this._provider, databaseAdapter).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-many',
-      async (req: Request, res: Response, next: NextFunction) => {
-        const params: ISendNotification[] = req.body;
-        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-        await this._provider.sendMany(params, databaseAdapter).catch(next);
-        return res.json('ok');
-      });
+      (req: Request, res: Response, next: NextFunction) => sendManyNotifications(req, res, next, this._provider, databaseAdapter).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
-      async (req: Request, res: Response, next: NextFunction) => {
-        const params: ISendNotificationToManyDevices = req.body;
-        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-        await this._provider.sendToManyDevices(params, databaseAdapter).catch(next);
-        return res.json('ok');
-      });
+      (req: Request, res: Response, next: NextFunction) => sendToManyDevices(req, res, next, this._provider, databaseAdapter).catch(next));
 
     conduit.pushNotifications = this;
   }
