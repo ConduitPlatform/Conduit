@@ -34,9 +34,6 @@ class InMemoryStore implements StorageProvider {
         conduit.admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
 
-        conduit.admin.registerRoute('GET', '/in-memory-store',
-          (req: Request, res: Response, next: NextFunction) => this.adminGet(req, res, next).catch(next));
-
         (app as any).conduit.inMemoryStore = this;
     }
 
@@ -78,21 +75,6 @@ class InMemoryStore implements StorageProvider {
         return res.json({stored});
     }
 
-    private async adminGet(req: Request, res: Response, next: NextFunction) {
-        const {skip, limit} = req.query;
-        let skipNumber = 0, limitNumber = 25;
-
-        if (!isNil(skip)) {
-            skipNumber = Number.parseInt(skip);
-        }
-        if (!isNil(limit)) {
-            limitNumber = Number.parseInt(limit);
-        }
-
-        // TODO missing logic and interface method
-
-        return ;
-    }
 }
 
 export = InMemoryStore;
