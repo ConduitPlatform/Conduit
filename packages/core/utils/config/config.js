@@ -14,7 +14,7 @@ config.validate({allowed: 'strict'});
 if (process.env.DATABASE_TYPE) {
     process.env.databaseType = process.env.DATABASE_TYPE;
 } else {
-    process.env.DATABASE_TYPE = config.get('database').type;
+    process.env.databaseType = config.get('database').type;
 }
 
 if (process.env.DATABASE_URL) {
