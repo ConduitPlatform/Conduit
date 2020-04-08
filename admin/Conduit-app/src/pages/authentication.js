@@ -4,6 +4,8 @@ import Box from "@material-ui/core/Box";
 import Typography from "@material-ui/core/Typography";
 import {Layout} from "../components/Layout";
 import CustomTabs from "../components/CustomTabs";
+import {privateRoute} from "../components/utils/privateRoute";
+import AuthUsers from "../components/AuthUsers";
 
 let dummyData = {
 	email: {
@@ -23,6 +25,8 @@ let dummyData = {
 		secret: ''
 	}
 };
+
+const dummyUsers = [];
 
 const dummyHandleData = (type, data) => {
 	//TODO API Request
@@ -46,7 +50,7 @@ const dummyHandleData = (type, data) => {
 
 const tabs = ['Users', 'Sign-In Method'];
 
-export default function Authentication() {
+const Authentication = () => {
 	// const users = useSelector(state => state.authUsersData);
 	// const dispatch = useDispatch();
 	// useEffect(() => {
@@ -66,6 +70,7 @@ export default function Authentication() {
 				<Typography variant={"h4"}>Authentication</Typography>
 				<CustomTabs tabs={tabs} selected={selected} handleChange={handleChange}/>
 				<Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
+					<AuthUsers/>
 				</Box>
 				<Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
 					<AuthAccordion data={dummyData} handleData={dummyHandleData}/>
@@ -74,3 +79,5 @@ export default function Authentication() {
 		</Layout>
 	);
 }
+
+export default privateRoute(Authentication)
