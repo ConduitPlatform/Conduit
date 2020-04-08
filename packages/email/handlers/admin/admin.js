@@ -1,4 +1,5 @@
 const {isNil} = require('lodash');
+const emailLogic = require('../../logic/email');
 
 async function getTemplates(req, res, next) {
   let {skip, limit} = req.params;
@@ -54,8 +55,19 @@ async function editTemplate(req, res, next) {
   return res.json({updatedTemplate: updatedTemplateDoc});
 }
 
+async function sendEmail(req, res, next) {
+  const {
+    templateName,
+    email,
+    variables,
+    sender } = req.body;
+  await emailLogic.sendMail(templateName, {email, variables, sender});
+  return res.json({message: 'Email sent'});
+}
+
 module.exports = {
   getTemplates,
   createTemplate,
-  editTemplate
+  editTemplate,
+  sendEmail
 };
