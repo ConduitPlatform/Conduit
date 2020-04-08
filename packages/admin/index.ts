@@ -20,9 +20,9 @@ class AdminModule {
       return;
     }
 
-    const { database, config } = conduit;
+    const { config } = conduit;
 
-    const databaseAdapter = database.getDbAdapter();
+    const databaseAdapter = conduit.getDatabase();
 
     this.registerSchemas(databaseAdapter);
 

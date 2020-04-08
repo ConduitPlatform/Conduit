@@ -1,10 +1,12 @@
+const ConduitSDK = require("@conduit/sdk").ConduitSDK;
+
 require('./utils/monitoring/index').monitoring();
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const config = require('./utils/config/config.js');
 const logger = require('./utils/logging/logger.js');
-const database = require('@conduit/database-provider');
+const database = require('@conduit/database-provider').ConduitDefaultDatabase;
 const conduitRouter = require('@conduit/router').ConduitDefaultRouter;
 const init = require('./init');
 const indexRouter = require('./routes/index');
@@ -14,18 +16,17 @@ let app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Obejct to contain all modules
-app.conduit = {};
+app.conduit = new ConduitSDK.getInstance(app);
 app.conduit.config = config;
-app.conduit.router = new conduitRouter(app);
-const router = app.conduit.router;
+app.conduit.registerRouter(new conduitRouter(app));
+const router = app.conduit.getRouter();
 router.registerGlobalMiddleware('logger', logger.logger());
 router.registerGlobalMiddleware('jsonParser', express.json());
 router.registerGlobalMiddleware('urlEncoding', express.urlencoded({extended: false}));
 router.registerGlobalMiddleware('cookieParser', cookieParser());
 router.registerGlobalMiddleware('staticResources', express.static(path.join(__dirname, 'public')));
 
-
-app.conduit.database = database;
+app.conduit.registerDatabase(new database(process.env.databaseType, process.env.databaseURL));
 app.initialized = false;
 router.registerExpressRouter('/', indexRouter);
 
@@ -37,7 +38,7 @@ router.registerDirectRouter('/health', (req, res, next) => {
     }
 });
 
-init(app).then(r=>{
+init(app).then(r => {
     router.initGraphQL();
 });
 

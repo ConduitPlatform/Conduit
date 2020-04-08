@@ -1,5 +1,5 @@
-import {SchemaAdapter} from "../../interfaces/SchemaAdapter";
 import {Model} from "mongoose";
+import {SchemaAdapter} from "@conduit/sdk";
 
 export class MongooseSchema implements SchemaAdapter {
 

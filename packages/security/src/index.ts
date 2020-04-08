@@ -9,7 +9,7 @@ export const initialize = (app: Application | any) => {
     if (!app) {
         throw new Error("No app provided")
     }
-    database = app.conduit.database.getDbAdapter();
+    database = app.conduit.getDatabase();
     database.createSchemaFromAdapter(ClientModel);
 
     return initialized = true;

@@ -1,4 +1,4 @@
-import {ConduitModel, ConduitModelOptions} from "../interaces/Model";
+import {ConduitModel, ConduitModelOptions} from "../interaces";
 
 export class ConduitSchema {
 

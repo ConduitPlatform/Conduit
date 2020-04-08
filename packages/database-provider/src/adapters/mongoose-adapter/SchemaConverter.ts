@@ -1,5 +1,5 @@
-import {SchemaInterface} from "../../interfaces/SchemaInterface";
 import {Schema} from "mongoose";
+import {SchemaInterface} from "@conduit/sdk";
 
 
 /**

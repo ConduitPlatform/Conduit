@@ -9,7 +9,7 @@ export class CMS {
     constructor(databaseAdapter: any, router: any) {
         this._schemas = [];
         this._router = router;
-        this._adapter = databaseAdapter.getDbAdapter();
+        this._adapter = databaseAdapter;
         this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
         this.constructRouter();

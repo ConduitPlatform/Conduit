@@ -6,13 +6,13 @@ const authentication = require('@conduit/authentication');
 const AdminModule = require('@conduit/admin');
 const cms = require('@conduit/cms').CMS;
 const usersRouter = require('./routes/users');
-const { getConfig, editConfig } = require('./admin/config');
+const {getConfig, editConfig} = require('./admin/config');
 
 async function init(app) {
-    await app.conduit.database.connectToDB(process.env.databaseType, process.env.databaseURL);
-    registerSchemas(app.conduit.database);
 
-    await dbConfig.configureFromDatabase(app);
+    registerSchemas(app.conduit.getDatabase());
+
+    await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
     const admin = AdminModule.getInstance(app);
     registerAdminRoutes(admin);
@@ -34,7 +34,7 @@ async function init(app) {
     }
 
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
-    app.conduit.cms = new cms(app.conduit.database, app);
+    app.conduit.cms = new cms(app.conduit.getDatabase(), app);
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;
@@ -42,13 +42,12 @@ async function init(app) {
 }
 
 function registerSchemas(database) {
-    const db = database.getDbAdapter();
-    db.createSchemaFromAdapter(configModel);
+    database.createSchemaFromAdapter(configModel);
 }
 
 function registerAdminRoutes(admin) {
-  admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
-  admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
+    admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
+    admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
 }
 
 module.exports = init;

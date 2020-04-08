@@ -1,11 +1,13 @@
 import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
+import {IConduitDatabase} from "./modules/Database/interfaces/Database";
 
 export class ConduitSDK {
 
     private static _instance: ConduitSDK;
     private _app: Application;
     private _router?: IConduitRouter;
+    private _database?: IConduitDatabase;
 
     private constructor(app: Application) {
         this._app = app;
@@ -19,6 +21,16 @@ export class ConduitSDK {
     getRouter(): IConduitRouter {
         if (this._router) return this._router;
         throw new Error("Router not assigned yet!");
+    }
+
+    registerDatabase(database: IConduitDatabase) {
+        if (this._database) throw new Error("Cannot register a second database!")
+        this._database = database;
+    }
+
+    getDatabase(): IConduitDatabase {
+        if (this._database) return this._database;
+        throw new Error("Database not assigned yet!");
     }
 
     static getInstance(app: Application) {

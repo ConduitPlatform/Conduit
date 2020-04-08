@@ -41,7 +41,7 @@ async function sendMail(templateName, params) {
     }
 
     const template = await database.getSchema('EmailTemplate').findOne({name: templateName});
-    if (isNil(template)){
+    if (isNil(template)) {
         throw new Error('Template with given name not found');
     }
 
@@ -131,12 +131,13 @@ async function initialize(app) {
                 if (auth.username !== testAccount.user || auth.password !== testAccount.pass) {
                     return callback(new Error("Invalid username or password"));
                 }
-                callback(null, { user: 123 }); // where 123 is the user id or similar property
+                callback(null, {user: 123}); // where 123 is the user id or similar property
             },
             onData(stream, session, callback) {
                 stream.pipe(process.stdout); // print message to console
                 stream.on("end", callback);
-            }});
+            }
+        });
         smtpServer.listen(25);
         transport = 'smtp';
         transportSettings = {
@@ -145,7 +146,7 @@ async function initialize(app) {
     }
     emailer = new emailProvider.EmailProvider(transport, transportSettings, testAccount);
 
-    database = app.conduit.database.getDbAdapter();
+    database = app.conduit.getDatabase();
     database.createSchemaFromAdapter(templateModel);
 
     return true;
