@@ -53,7 +53,7 @@ async function initialize(app) {
     }
     emailer = new emailProvider.EmailProvider(transport, transportSettings, testAccount);
 
-    database = app.conduit.database.getDbAdapter();
+    database = app.conduit.getDatabase();
     database.createSchemaFromAdapter(templateModel);
 
     emailLogic.init(emailer, database);

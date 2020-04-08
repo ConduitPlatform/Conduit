@@ -62,7 +62,7 @@ async function authentication(app, config) {
   if (!app) {
     throw new Error("No app provided")
   }
-  database = app.conduit.database.getDbAdapter();
+  database = app.conduit.getDatabase();
   registerSchemas();
   await registerEmailTemplates(app.conduit.email);
 

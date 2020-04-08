@@ -2,8 +2,8 @@
   "name": "@conduit/push-notifications",
   "version": "1.0.0",
   "description": "Handles sending push notifications to users",
-  "main": "dist/push-notifications/lib/index.js",
-  "types": "dist/push-notifications/lib/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
@@ -11,7 +11,14 @@
   },
   "author": "",
   "license": "ISC",
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
   "dependencies": {
+    "@conduit/security": "1.0.0",
     "firebase-admin": "^8.10.0",
     "lodash": "^4.17.15",
     "rimraf": "^3.0.2"

@@ -51,6 +51,22 @@ module.exports = {
         format: 'String',
         default: 'http://localhost:3000'
     },
+    transports: {
+        rest: {
+            enabled: {
+                doc: 'If the REST API should be enabled -this does not affect admin endpoints',
+                format: 'Boolean',
+                default: true
+            }
+        },
+        graphql: {
+            enabled: {
+                doc: 'If the GraphQL API should be enabled -this does not affect admin endpoints',
+                format: 'Boolean',
+                default: true
+            }
+        }
+    },
     admin: {
         auth: {
             tokenSecret: {
@@ -136,7 +152,7 @@ module.exports = {
             }
         },
         google: {
-            clientId:{
+            clientId: {
                 doc: 'The client id that is provided by google developer console for a specific app',
                 format: 'String',
                 default: '407408718192.apps.googleusercontent.com'
@@ -148,7 +164,7 @@ module.exports = {
             }
         },
         facebook: {
-            clientId:{
+            clientId: {
                 doc: 'Facebook client id',
                 format: 'String',
                 default: ''

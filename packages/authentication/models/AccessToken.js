@@ -1,22 +1,22 @@
-module.exports = {
-    name: 'AccessToken',
-    modelSchema: {
+const {ConduitSchema, TYPE} = require("@conduit/sdk");
+
+module.exports = new ConduitSchema('AccessToken',
+    {
         userId: {
-            type: 'Relation',
+            type: TYPE.Relation,
             model: 'User'
         },
         clientId: {
-          type: String,
-          required: true
+            type: TYPE.String,
+            required: true
         },
         token: {
-            type: String
+            type: TYPE.String
         },
         expiresOn: {
-            type: Date
+            type: TYPE.Date
         }
     },
-    modelOptions: {
+    {
         timestamps: true
-    }
-};
+    });

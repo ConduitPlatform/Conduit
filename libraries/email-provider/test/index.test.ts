@@ -1,5 +1,5 @@
 import * as nodemailer from "nodemailer";
-import {EmailProvider} from "../lib";
+import {EmailProvider} from "../src";
 import {expect} from "chai";
 
 let testAccount: any;

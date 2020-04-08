@@ -11,13 +11,14 @@
   "license": "ISC",
   "dependencies": {
     "@types/mongoose": "^5.5.43",
+    "@conduit/sdk": "1.0.0",
     "mongoose": "latest"
   },
   "directories": {
-    "lib": "lib"
+    "lib": "src"
   },
   "files": [
-    "lib"
+    "src"
   ],
   "publishConfig": {
     "registry": "http://registry.quintessential.gr/"
