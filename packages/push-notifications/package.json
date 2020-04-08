@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.4",
-    "@types/lodash": "^4.14.149"
+    "@types/lodash": "^4.14.149",
+    "typescript": "^3.8.3"
   }
 }
