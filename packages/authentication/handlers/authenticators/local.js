@@ -1,7 +1,6 @@
 const isNil = require('lodash/isNil');
 const authHelper = require('../../helpers/authHelper');
 const moment = require('moment');
-const emailProvider = require('@conduit/email');
 const uuid = require('uuid/v4');
 const TOKEN_TYPE = require('../../constants/TokenType').TOKEN_TYPE;
 
@@ -33,7 +32,7 @@ async function register(req, res, next) {
     });
 
     const link = `${req.app.conduit.config.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
-    await emailProvider.sendMail('EmailVerification', {
+    await req.app.conduit.email.sendMail('EmailVerification', {
       email: user.email,
       sender: 'conduit@gmail.com',
       variables: {
@@ -118,7 +117,7 @@ async function forgotPassword(req, res, next) {
   });
 
   const link = `${req.app.conduit.config.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-  await emailProvider.sendMail('ForgotPassword', {
+  await req.app.conduit.email.sendMail('ForgotPassword', {
     email: user.email,
     sender: 'conduit@gmail.com',
     variables: {

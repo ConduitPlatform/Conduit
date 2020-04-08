@@ -64,7 +64,7 @@ async function authentication(app, config) {
   }
   database = app.conduit.database.getDbAdapter();
   registerSchemas();
-  await registerEmailTemplates();
+  await registerEmailTemplates(app.conduit.email);
 
   if (config.local) {
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
@@ -90,8 +90,11 @@ async function authentication(app, config) {
   app.conduit.admin.registerRoute('GET', '/users',
     (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
 
-  app.conduit.admin.registerRoute('PUT', '/config/auth',
+  app.conduit.admin.registerRoute('PUT', '/authentication/config',
     (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
+
+  app.conduit.admin.registerRoute('GET', '/authentication/config',
+      (req, res, next) => admin.getAuthConfig(req, res).catch(next));
 }
 
 function registerSchemas() {

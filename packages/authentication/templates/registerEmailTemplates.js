@@ -1,6 +1,4 @@
-const emailProvider = require('@conduit/email');
-
-async function registerEmailTemplates() {
+async function registerEmailTemplates(emailProvider) {
   await emailProvider.registerTemplate(
     'ForgotPassword',
     '{{applicationName}} - Forgot Password',

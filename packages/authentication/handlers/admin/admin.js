@@ -1,7 +1,6 @@
 const { isNil, merge } = require('lodash');
 
 async function getUsersPaginated(req, res, next) {
-
   const {skip, limit} = req.query;
   let skipNumber = 0, limitNumber = 25;
 
@@ -19,7 +18,6 @@ async function getUsersPaginated(req, res, next) {
 }
 
 async function editAuthConfig(req, res, next) {
-
   const { conduit } = req.app;
   const { config: appConfig, database } = conduit;
   const databaseAdapter = database.getDbAdapter();
@@ -43,7 +41,17 @@ async function editAuthConfig(req, res, next) {
   return res.json(saved.config.authentication);
 }
 
+async function getAuthConfig(req, res) {
+  const { conduit } = req.app;
+  const { config } = conduit;
+
+  const authConfig = config.get('authentication');
+
+  return res.json(authConfig);
+}
+
 module.exports = {
   getUsersPaginated,
-  editAuthConfig
+  editAuthConfig,
+  getAuthConfig
 };
