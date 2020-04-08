@@ -5,8 +5,19 @@ import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
 import { Request, Response, NextFunction, Application } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
-import { getNotificationToken, setNotificationToken } from './handlers/notification-tokens/notification-tokens';
-import { sendManyNotifications, sendNotification, sendToManyDevices } from './handlers/admin/admin';
+import {
+  configureNotificationTokenVars,
+  getNotificationToken,
+  setNotificationToken
+} from './handlers/notification-tokens/notification-tokens';
+import {
+  configureAdminVars,
+  editNotificationsConfig,
+  getNotificationsConfig,
+  sendManyNotifications,
+  sendNotification,
+  sendToManyDevices
+} from './handlers/admin/admin';
 
 class PushNotificationsModule {
 
@@ -36,20 +47,30 @@ class PushNotificationsModule {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
 
+    configureNotificationTokenVars(this.pushNotificationModel);
+    configureAdminVars(this._provider, databaseAdapter);
+
     conduit.admin.registerRoute('POST', '/notification-token',
-      (req: Request, res: Response, next: NextFunction) => setNotificationToken(req, res, next, this.pushNotificationModel).catch(next));
+      (req: Request, res: Response, next: NextFunction) => setNotificationToken(req, res, next).catch(next));
 
     conduit.admin.registerRoute('GET', '/notification-token/:userId',
-      (req: Request, res: Response, next: NextFunction) => getNotificationToken(req, res, next, this.pushNotificationModel).catch(next));
+      (req: Request, res: Response, next: NextFunction) => getNotificationToken(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send',
-      (req: Request, res: Response, next: NextFunction) => sendNotification(req, res, next, this._provider, databaseAdapter).catch(next));
+      (req: Request, res: Response, next: NextFunction) => sendNotification(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-many',
-      (req: Request, res: Response, next: NextFunction) => sendManyNotifications(req, res, next, this._provider, databaseAdapter).catch(next));
+      (req: Request, res: Response, next: NextFunction) => sendManyNotifications(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
-      (req: Request, res: Response, next: NextFunction) => sendToManyDevices(req, res, next, this._provider, databaseAdapter).catch(next));
+      (req: Request, res: Response, next: NextFunction) => sendToManyDevices(req, res, next).catch(next));
+
+    conduit.admin.registerRoute('GET', '/config/notifications',
+      (req: Request, res: Response, next: NextFunction) => getNotificationsConfig(req, res, next).catch(next));
+
+    conduit.admin.registerRoute('PUT', '/config/notifications',
+      (req: Request, res: Response, next: NextFunction) => editNotificationsConfig(req, res, next).catch(next));
+
 
     conduit.pushNotifications = this;
   }

@@ -1,7 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 
-export async function setNotificationToken(req: Request, res: Response, next: NextFunction, pushNotificationModel: any) {
+let pushNotificationModel: any;
+
+export function configureNotificationTokenVars(model: any) {
+  pushNotificationModel = model;
+}
+
+export async function setNotificationToken(req: Request, res: Response, next: NextFunction) {
   const { userId, token, platform } = req.body;
   if (isNil(userId) || isNil(token) || isNil(platform)) {
     return res.status(401).json({ error: 'Required fields are missing' });
@@ -16,7 +22,7 @@ export async function setNotificationToken(req: Request, res: Response, next: Ne
   return res.json({ message: 'Push notification token created', newTokenDocument });
 }
 
-export async function getNotificationToken(req: Request, res: Response, next: NextFunction, pushNotificationModel: any) {
+export async function getNotificationToken(req: Request, res: Response, next: NextFunction) {
   const userId = req.params.userId;
   if (isNil(userId)) {
     return res.status(401).json({ error: 'User id parameter was not provided' });
