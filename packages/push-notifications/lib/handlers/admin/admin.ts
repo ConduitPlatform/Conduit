@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash';
 
 let provider: any;
 let databaseAdapter: any;
@@ -32,9 +32,36 @@ export async function sendToManyDevices(req: Request, res: Response, next: NextF
 }
 
 export async function getNotificationsConfig(req: Request, res: Response, next: NextFunction) {
+  const { conduit } = (req.app as any);
+  const { config: appConfig } = conduit;
 
+  const Config = databaseAdapter.getSchema('Config');
+  const dbConfig = await Config.findOne({});
+  if (isNil(dbConfig)) {
+    return res.status(404).json({ error: 'Config not set' });
+  }
+  return res.json(dbConfig.config.pushNotifications);
 }
 
 export async function editNotificationsConfig(req: Request, res: Response, next: NextFunction) {
+  const { conduit } = (req.app as any);
+  const { config: appConfig } = conduit;
 
+  const Config = databaseAdapter.getSchema('Config');
+
+  const newNotificationsConfig = req.body;
+
+  const dbConfig = await Config.findOne({});
+  if (isNil(dbConfig)) {
+    return res.status(404).json({ error: 'Config not set' });
+  }
+
+  const currentNotificationsConfig = dbConfig.config.pushNotifications;
+  const final = merge(currentNotificationsConfig, newNotificationsConfig);
+
+  dbConfig.config.pushNotifications = final;
+  const saved = await dbConfig.save();
+  await appConfig.load(saved.config);
+
+  return res.json(saved.config.pushNotifications);
 }
