@@ -1,11 +1,10 @@
-const ConduitSDK = require("@conduit/sdk").ConduitSDK;
-
 require('./utils/monitoring/index').monitoring();
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const config = require('./utils/config/config.js');
 const logger = require('./utils/logging/logger.js');
+const ConduitSDK = require("@conduit/sdk").ConduitSDK;
 const database = require('@conduit/database-provider').ConduitDefaultDatabase;
 const conduitRouter = require('@conduit/router').ConduitDefaultRouter;
 const init = require('./init');
@@ -13,12 +12,11 @@ const indexRouter = require('./routes/index');
 
 let app = express();
 
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Obejct to contain all modules
+// Object to contain all modules
 app.conduit = new ConduitSDK.getInstance(app);
 app.conduit.config = config;
 app.conduit.registerRouter(new conduitRouter(app));
+
 const router = app.conduit.getRouter();
 router.registerGlobalMiddleware('logger', logger.logger());
 router.registerGlobalMiddleware('jsonParser', express.json());
@@ -38,9 +36,10 @@ router.registerDirectRouter('/health', (req, res, next) => {
     }
 });
 
-init(app).then(r => {
-    router.initGraphQL();
-});
+init(app)
+    .then(r => {
+        router.initGraphQL();
+    });
 
 router.registerGlobalMiddleware('errorLogger', logger.errorLogger());
 router.registerGlobalMiddleware('errorCatch', (error, req, res, next) => {

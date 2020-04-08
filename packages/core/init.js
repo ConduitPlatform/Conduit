@@ -14,8 +14,8 @@ async function init(app) {
 
     await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
-    const admin = AdminModule.getInstance(app);
-    registerAdminRoutes(admin);
+    app.conduit.registerAdmin(new AdminModule(app.conduit));
+    registerAdminRoutes(app.conduit.getAdmin());
 
     if (!security.initialize(app)) {
         process.exit(9);
@@ -23,7 +23,7 @@ async function init(app) {
     app.use(security.adminMiddleware);
     app.use(security.middleware);
 
-    registerAdminRoutes(app.conduit.admin);
+    registerAdminRoutes(app.conduit.getAdmin());
 
     if (await email.initialize(app)) {
         app.conduit.email = email;

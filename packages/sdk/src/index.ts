@@ -1,6 +1,7 @@
 import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
 import {IConduitDatabase} from "./modules/Database/interfaces/Database";
+import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
 
 export class ConduitSDK {
 
@@ -8,6 +9,7 @@ export class ConduitSDK {
     private _app: Application;
     private _router?: IConduitRouter;
     private _database?: IConduitDatabase;
+    private _admin?: IConduitAdmin;
 
     private constructor(app: Application) {
         this._app = app;
@@ -31,6 +33,16 @@ export class ConduitSDK {
     getDatabase(): IConduitDatabase {
         if (this._database) return this._database;
         throw new Error("Database not assigned yet!");
+    }
+
+    registerAdmin(admin: IConduitAdmin) {
+        if (this._admin) throw new Error("Cannot register a second admin!")
+        this._admin = admin;
+    }
+
+    getAdmin(): IConduitAdmin {
+        if (this._admin) return this._admin;
+        throw new Error("Admin not assigned yet!");
     }
 
     static getInstance(app: Application) {
