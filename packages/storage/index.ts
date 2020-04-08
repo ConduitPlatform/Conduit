@@ -1,7 +1,7 @@
 import { isNil } from 'lodash';
 import { Application, NextFunction, Request, Response } from 'express';
 import { createStorageProvider, IStorageProvider } from '@conduit/storage-provider';
-import { editConfig } from './admin/config';
+import { editConfig, getConfig } from './admin/config';
 
 class StorageModule {
   private static instance: StorageModule | null = null;
@@ -24,6 +24,7 @@ class StorageModule {
 
   private registerAdminRoutes(admin: any) {
     admin.registerRoute('PUT', '/storage/config', (req: Request, res: Response, next: NextFunction) => editConfig(req, res).catch(next));
+    admin.registerRoute('GET', '/storage/config', (req: Request, res: Response, next: NextFunction) => getConfig(req, res).catch(console.log));
   }
 
   static getInstance(app?: Application) {
