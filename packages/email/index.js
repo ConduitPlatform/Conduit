@@ -71,6 +71,12 @@ async function initialize(app) {
     admin.registerRoute('POST', '/email/send',
       (req, res, next) => adminHandler.sendEmail(req, res, next).catch(next));
 
+    admin.registerRoute('GET', '/email/config',
+      (req, res, next) => adminHandler.getEmailConfig(req, res, next).catch(next));
+
+    admin.registerRoute('PUT', '/email/config',
+      (req, res, next) => adminHandler.editEmailConfig(req, res, next).catch(next));
+
     return true;
 }
 

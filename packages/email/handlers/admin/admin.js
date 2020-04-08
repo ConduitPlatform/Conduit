@@ -1,4 +1,4 @@
-const {isNil} = require('lodash');
+const {isNil, merge} = require('lodash');
 const emailLogic = require('../../logic/email');
 
 async function getTemplates(req, res, next) {
@@ -65,9 +65,46 @@ async function sendEmail(req, res, next) {
   return res.json({message: 'Email sent'});
 }
 
+async function getEmailConfig(req, res, next) {
+  const databaseAdapter = req.app.conduit.database.getDbAdapter();
+
+  const Config = databaseAdapter.getSchema('Config');
+  const dbConfig = await Config.findOne({});
+  if (isNil(dbConfig)) {
+    return res.status(404).json({ error: 'Config not set' });
+  }
+  return res.json(dbConfig.config.email);
+}
+
+async function editEmailConfig(req, res, next) {
+  const { conduit } = req.app;
+  const { config: appConfig, database } = conduit;
+  const databaseAdapter = database.getDbAdapter();
+
+  const Config = databaseAdapter.getSchema('Config');
+
+  const newEmailConfig = req.body;
+
+  const dbConfig = await Config.findOne({});
+  if (isNil(dbConfig)) {
+    return res.status(404).json({ error: 'Config not set' });
+  }
+
+  const currentEmailConfig = dbConfig.config.email;
+  const final = merge(currentEmailConfig, newEmailConfig);
+
+  dbConfig.config.email = final;
+  const saved = await dbConfig.save();
+  await appConfig.load(saved.config);
+
+  return res.json(saved.config.email);
+}
+
 module.exports = {
   getTemplates,
   createTemplate,
   editTemplate,
-  sendEmail
+  sendEmail,
+  getEmailConfig,
+  editEmailConfig
 };
