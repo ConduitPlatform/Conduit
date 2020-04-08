@@ -92,6 +92,9 @@ async function authentication(app, config) {
 
   app.conduit.admin.registerRoute('PUT', '/config/auth',
     (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
+
+  app.conduit.admin.registerRoute('GET', '/config/auth',
+      (req, res, next) => admin.getAuthConfig(req, res).catch(next));
 }
 
 function registerSchemas() {
