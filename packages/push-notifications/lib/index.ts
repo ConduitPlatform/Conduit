@@ -5,6 +5,7 @@ import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
 import { Request, Response, NextFunction, Application } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
+import { getNotificationToken, setNotificationToken } from './handlers/notification-tokens';
 
 class PushNotificationsModule {
 
@@ -35,10 +36,10 @@ class PushNotificationsModule {
     }
 
     conduit.admin.registerRoute('POST', '/notification-token',
-      (req: Request, res: Response, next: NextFunction) => this.setNotificationToken(req, res, next).catch(next));
+      (req: Request, res: Response, next: NextFunction) => setNotificationToken(req, res, next, this.pushNotificationModel).catch(next));
 
     conduit.admin.registerRoute('GET', '/notification-token/:userId',
-      (req: Request, res: Response, next: NextFunction) => this.getNotificationToken(req, res, next).catch(next));
+      (req: Request, res: Response, next: NextFunction) => getNotificationToken(req, res, next, this.pushNotificationModel).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send',
       async (req: Request, res: Response, next: NextFunction) => {
@@ -78,31 +79,7 @@ class PushNotificationsModule {
   }
 
 
-  private async setNotificationToken(req: Request, res: Response, next: NextFunction) {
-    const { userId, token, platform } = req.body;
-    if (isNil(userId) || isNil(token) || isNil(platform)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
-    }
 
-    const newTokenDocument = await this.pushNotificationModel.create({
-      userId,
-      token,
-      platform
-    });
-
-    return res.json({ message: 'Push notification token created', newTokenDocument });
-  }
-
-  private async getNotificationToken(req: Request, res: Response, next: NextFunction) {
-    const userId = req.params.userId;
-    if (isNil(userId)) {
-      return res.status(401).json({ error: 'User id parameter was not provided' });
-    }
-
-    const tokenDocument = await this.pushNotificationModel.findOne({ userId });
-
-    return res.json({ tokenDocument });
-  }
 }
 
 export = PushNotificationsModule;
