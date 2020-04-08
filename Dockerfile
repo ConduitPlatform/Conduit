@@ -6,7 +6,7 @@ COPY . /app
 
 WORKDIR /app
 
-RUN npm install && npx lerna bootstrap
+RUN npm install && npx lerna bootstrap && npx lerna run build
 
 WORKDIR /app/packages/core
 
