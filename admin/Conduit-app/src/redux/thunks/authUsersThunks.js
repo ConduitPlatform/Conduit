@@ -7,9 +7,10 @@ import {
 import {getAuthUsersDataReq} from '../../http/requests'
 
 export const getAuthUsersData = () => {
-	return (dispatch) => {
+	return (dispatch, getState) => {
+		const {token} = getState().authenticationReducer;
 		dispatch(startAuthUsersLoading());
-		getAuthUsersDataReq(0, 100)
+		getAuthUsersDataReq(token, 0, 100)
 			.then(res => {
 				dispatch(stopAuthUsersLoading());
 				dispatch(setAuthUsersError(null));
