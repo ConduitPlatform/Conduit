@@ -87,7 +87,7 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  app.conduit.admin.registerRoute('GET', '/users/:skip&:limit',
+  app.conduit.admin.registerRoute('GET', '/users',
     (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
 
   app.conduit.admin.registerRoute('PUT', '/authentication/config',
