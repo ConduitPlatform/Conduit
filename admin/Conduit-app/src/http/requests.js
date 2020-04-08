@@ -5,7 +5,15 @@ const config = {
 	masterkey: 'M4ST3RK3Y'
 };
 
-export const getAuthUsersDataReq = (skip, limit) => axios.get(`${CONDUIT_API}/admin/users/${skip}&${limit}`);
+const JWT_CONFIG = (token) => ({
+	...config,
+	'Authorization': `JWT ${token}`
+});
+
+export const getAuthUsersDataReq = (token, skip, limit) => axios.get(`${CONDUIT_API}/admin/users/${skip}&${limit}`, {
+	headers: JWT_CONFIG(token)
+});
+
 export const loginRequest = (username, password) => axios.post(`${CONDUIT_API}/admin/login`, {
 	username,
 	password

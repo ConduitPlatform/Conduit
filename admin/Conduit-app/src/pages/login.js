@@ -16,6 +16,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {login} from "../redux/thunks/authenticationThunks";
 import Backdrop from "@material-ui/core/Backdrop";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Router from 'next/router'
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -40,8 +41,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-export default function Login() {
-	
+const Login = () => {
 	const authState = useSelector(state => state.authenticationReducer);
 	const dispatch = useDispatch();
 	const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -51,6 +51,12 @@ export default function Login() {
 			setSnackbarOpen(true);
 		}
 	}, [authState.error]);
+	
+	useEffect(() => {
+		if (authState.token) {
+			Router.replace('/')
+		}
+	}, [authState.token]);
 	
 	const handleLogin = (values) => {
 		dispatch(login(values.username, values.password))
@@ -162,3 +168,5 @@ export default function Login() {
 		</Layout>
 	);
 }
+
+export default Login;
