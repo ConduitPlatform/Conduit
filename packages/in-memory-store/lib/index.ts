@@ -5,13 +5,14 @@ import {RedisProvider} from "./providers/redis";
 import {Localprovider} from "./providers/local";
 import {MemcachedProvider} from "./providers/memcached";
 import {StorageProvider} from "./interaces/StorageProvider";
+import { Application } from 'express';
 
-export class InMemoryStore implements StorageProvider {
+class InMemoryStore implements StorageProvider {
 
     private static _instance: InMemoryStore;
     _provider: StorageProvider;
 
-    private constructor(name: string, storageSettings: LocalSettings | RedisSettings | MemcachedSettings) {
+    private constructor(app: Application, name: string, storageSettings: LocalSettings | RedisSettings | MemcachedSettings) {
         if (name === 'redis') {
             this._provider = new RedisProvider(storageSettings as RedisSettings);
         } else if (name === 'memcache') {
@@ -21,9 +22,9 @@ export class InMemoryStore implements StorageProvider {
         }
     }
 
-    public static getInstance(name?: string, storageSettings?: LocalSettings | RedisSettings | MemcachedSettings) {
-        if (!this._instance && name && storageSettings) {
-            this._instance = new InMemoryStore(name, storageSettings);
+    public static getInstance(app?: Application, name?: string, storageSettings?: LocalSettings | RedisSettings | MemcachedSettings) {
+        if (!this._instance && name && storageSettings && app) {
+            this._instance = new InMemoryStore(app, name, storageSettings);
         } else if (this._instance) {
             return this._instance
         } else {
@@ -40,5 +41,5 @@ export class InMemoryStore implements StorageProvider {
     }
 }
 
-
+export = InMemoryStore;
 
