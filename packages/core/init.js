@@ -46,7 +46,12 @@ async function init(app) {
     app.conduit.cms = new cms(app.conduit.database, app);
 
     StorageModule.getInstance(app);
-    // InMemoryStoreModule.getInstance(app, null, null);
+
+    const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
+    InMemoryStoreModule.getInstance(
+      app,
+      inMemoryStoreProviderName,
+      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`));
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;

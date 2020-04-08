@@ -1,8 +1,10 @@
 const path = require('path');
 var convict = require('convict');
 let schema = require('./config.schema');
+const inMemoryStoreSchema = require('./in-memory-store-config.schema');
 
 // Define a schema
+schema = Object.assign(schema, inMemoryStoreSchema);
 const config = convict(schema);
 
 // Load environment dependent configuration
