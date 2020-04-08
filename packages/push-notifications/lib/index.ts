@@ -65,10 +65,10 @@ class PushNotificationsModule {
     conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
       (req: Request, res: Response, next: NextFunction) => sendToManyDevices(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('GET', '/config/notifications',
+    conduit.admin.registerRoute('GET', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => getNotificationsConfig(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('PUT', '/config/notifications',
+    conduit.admin.registerRoute('PUT', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => editNotificationsConfig(req, res, next).catch(next));
 
 
