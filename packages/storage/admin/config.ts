@@ -24,3 +24,12 @@ export async function editConfig(req: Request, res: Response) {
 
   return res.json(saved.config.storage);
 }
+
+export async function getConfig(req: Request, res: Response) {
+  const { conduit } = req.app as any;
+  const { config } = conduit;
+
+  const storageConfig = config.get('storage');
+
+  return res.json(storageConfig);
+}
