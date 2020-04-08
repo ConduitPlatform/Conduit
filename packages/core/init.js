@@ -5,6 +5,7 @@ const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const StorageModule = require('@conduit/storage');
 const AdminModule = require('@conduit/admin');
+const InMemoryStoreModule = require('@conduit/in-memory-store');
 const PushNotificationsModule = require('@conduit/push-notifications');
 const cms = require('@conduit/cms').CMS;
 const usersRouter = require('./routes/users');
@@ -45,6 +46,12 @@ async function init(app) {
     app.conduit.cms = new cms(app.conduit.database, app);
 
     StorageModule.getInstance(app);
+
+    const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
+    InMemoryStoreModule.getInstance(
+      app,
+      inMemoryStoreProviderName,
+      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`));
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;

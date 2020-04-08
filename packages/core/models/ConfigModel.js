@@ -2,6 +2,32 @@ module.exports = {
   name: 'Config',
   modelSchema: {
     config: {
+      inMemoryStore: {
+        providerName: {
+          type: String,
+          default: 'redis'
+        },
+        settings: {
+          redis: {
+            host: {
+              type: String,
+              default: '127.0.0.1'
+            },
+            port: {
+              type: Number,
+              default: 6379
+            },
+            password: {
+              type: String,
+              default: 'password'
+            },
+            url: {
+              type: String
+            },
+            path: String
+          }
+        }
+      },
       hostUrl: {
         type: String,
         default: 'http://localhost:3000'

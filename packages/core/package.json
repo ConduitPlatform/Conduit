@@ -16,6 +16,7 @@
     "@conduit/database-provider": "1.0.0",
     "@conduit/email": "1.0.0",
     "@conduit/storage": "1.0.0",
+    "@conduit/in-memory-store": "1.0.0",
     "@conduit/push-notifications": "1.0.0",
     "@conduit/security": "1.0.0",
     "appmetrics-dash": "^5.3.0",

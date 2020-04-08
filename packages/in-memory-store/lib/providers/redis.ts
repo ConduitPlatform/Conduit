@@ -1,5 +1,6 @@
 import {StorageProvider} from "../interaces/StorageProvider";
 import {RedisSettings} from "../interaces/RedisSettings";
+import { RedisClient } from 'redis';
 
 const redis = require("redis");
 const {promisify} = require("util");
@@ -7,7 +8,7 @@ const {promisify} = require("util");
 
 export class RedisProvider implements StorageProvider {
 
-    _client: any;
+    _client: RedisClient;
 
     constructor(settings: RedisSettings) {
         this._client = redis.createClient(settings);
