@@ -5,7 +5,7 @@ import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
 import { Request, Response, NextFunction, Application } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
-import { getNotificationToken, setNotificationToken } from './handlers/notification-tokens';
+import { getNotificationToken, setNotificationToken } from './handlers/notification-tokens/notification-tokens';
 
 class PushNotificationsModule {
 
