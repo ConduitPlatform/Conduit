@@ -1,6 +1,7 @@
-let facebook = require('./authenticators/facebook');
-let google = require('./authenticators/google');
-let local = require('./authenticators/local');
+let facebook = require('./handlers/authenticators/facebook');
+let google = require('./handlers/authenticators/google');
+let local = require('./handlers/authenticators/local');
+const admin = require('./handlers/admin/admin');
 const {isNil} = require('lodash');
 const authHelper = require('./helpers/authHelper');
 const registerEmailTemplates = require('./templates/registerEmailTemplates');
@@ -63,7 +64,7 @@ async function authentication(app, config) {
   }
   database = app.conduit.getDatabase();
   registerSchemas();
-    await registerEmailTemplates();
+  await registerEmailTemplates(app.conduit.email);
 
   if (config.local) {
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
@@ -76,16 +77,24 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  if (config.facebook) {
+  if (config.facebook.active) {
     app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
     initialized = true;
   }
 
-  if (config.google) {
+  if (config.google.active) {
     app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
     initialized = true;
   }
 
+  app.conduit.admin.registerRoute('GET', '/users',
+    (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
+
+  app.conduit.admin.registerRoute('PUT', '/authentication/config',
+    (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
+
+  app.conduit.admin.registerRoute('GET', '/authentication/config',
+      (req, res, next) => admin.getAuthConfig(req, res).catch(next));
 }
 
 function registerSchemas() {

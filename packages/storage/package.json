@@ -1,0 +1,26 @@
+{
+  "name": "@conduit/storage",
+  "version": "1.0.0",
+  "description": "This will provide a consistent storage mechanism",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/express": "^4.16.1",
+    "@types/lodash": "^4.14.149",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "@conduit/storage-provider": "1.0.0"
+  },
+  "peerDependencies": {
+    "express": "~4.16.1"
+  }
+}

@@ -1,7 +1,7 @@
 const {OAuth2Client} = require('google-auth-library');
 const isNil = require('lodash/isNil');
 const moment = require('moment');
-const authHelper = require('../helpers/authHelper');
+const authHelper = require('../../helpers/authHelper');
 
 const client = new OAuth2Client();
 
@@ -9,6 +9,10 @@ async function authenticate(req, res, next) {
   const {id_token, access_token, refresh_token, expires_in} = req.body;
   const database = req.app.conduit.database.getDbAdapter();
   const config = req.app.conduit.config.get('authentication');
+
+  if (!config.google.active) {
+    res.status(403).json({ error: 'Google authentication is disabled' });
+  }
 
   const ticket = await client.verifyIdToken({
     idToken: id_token,

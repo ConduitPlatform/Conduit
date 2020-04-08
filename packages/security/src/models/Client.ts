@@ -1,3 +1,5 @@
+import { PlatformTypesEnum } from '../PlatformTypesEnum';
+
 export const ClientModel = {
   name: 'Client',
   modelSchema: {
@@ -8,6 +10,11 @@ export const ClientModel = {
     },
     clientSecret: {
       type: String,
+      required: true
+    },
+    platform: {
+      type: String,
+      enum: Object.values(PlatformTypesEnum),
       required: true
     }
   },

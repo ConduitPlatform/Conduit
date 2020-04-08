@@ -1,0 +1,20 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy conduit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and push
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry: ${{ secrets.REGISTRY }}
+          repository: conduit
+          tags: latest

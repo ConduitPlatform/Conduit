@@ -20,6 +20,32 @@ module.exports = {
             default: 'mongodb://localhost:27017/conduit'
         }
     },
+    storage: {
+        doc: 'The config of the storage module',
+        provider: {
+            doc: 'The provider to use for storage',
+            format: 'String',
+            default: 'local'
+        },
+        storagePath: {
+            doc: 'The path used for local storage',
+            format: 'String',
+            default: '/var/tmp'
+        },
+        google: {
+            doc: 'The config for the google storage provider',
+            serviceAccountKeyPath: {
+                doc: 'The path to the service account key',
+                format: 'String',
+                default: '~/google_storage_service_account.json'
+            },
+            bucketName: {
+                doc: 'The name of the storage bucket',
+                format: 'String',
+                default: 'conduit'
+            }
+        }
+    },
     hostUrl: {
         doc: 'The base host url',
         format: 'String',
@@ -173,6 +199,26 @@ module.exports = {
             doc: 'The secret to use when generating an access token',
             format: 'String',
             default: 'S3CR3T'
+        }
+    },
+    pushNotifications: {
+        providerName: {
+          format: 'String',
+          default: 'firebase'
+        },
+        firebase: {
+            projectId: {
+                format: 'String',
+                default: 'project-id'
+            },
+            privateKey: {
+                format: 'String',
+                default: 'private-key'
+            },
+            clientEmail: {
+                format: 'String',
+                default: 'client-email'
+            }
         }
     }
 };

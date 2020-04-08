@@ -1,5 +1,5 @@
 const request = require('request-promise');
-const authHelper = require('../helpers/authHelper');
+const authHelper = require('../../helpers/authHelper');
 const moment = require('moment');
 const isNil = require('lodash/isNil');
 
@@ -7,6 +7,10 @@ async function authenticate(req, res, next) {
   const access_token = req.body.access_token;
   const database = req.app.conduit.database.getDbAdapter();
   const config = req.app.conduit.config.get('authentication');
+
+  if (!config.facebook.active) {
+    return res.status(403).json({ error: 'Facebook authentication is disabled' });
+  }
 
     const facebookOptions = {
       method: 'GET',

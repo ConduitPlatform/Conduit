@@ -9,6 +9,7 @@ const database = require('@conduit/database-provider').ConduitDefaultDatabase;
 const conduitRouter = require('@conduit/router').ConduitDefaultRouter;
 const init = require('./init');
 const indexRouter = require('./routes/index');
+const cors = require('cors');
 
 let app = express();
 
@@ -18,6 +19,7 @@ app.conduit.config = config;
 app.conduit.registerRouter(new conduitRouter(app));
 
 const router = app.conduit.getRouter();
+router.registerGlobalMiddleware('cors', cors());
 router.registerGlobalMiddleware('logger', logger.logger());
 router.registerGlobalMiddleware('jsonParser', express.json());
 router.registerGlobalMiddleware('urlEncoding', express.urlencoded({extended: false}));
