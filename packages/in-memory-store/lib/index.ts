@@ -30,6 +30,14 @@ class InMemoryStore implements StorageProvider {
 
         conduit.admin.registerRoute('POST', '/in-memory-store',
           (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
+
+        conduit.admin.registerRoute('GET', '/in-memory-store/:key',
+          (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
+
+        conduit.admin.registerRoute('GET', '/in-memory-store',
+          (req: Request, res: Response, next: NextFunction) => this.adminGet(req, res, next).catch(next));
+
+        (app as any).conduit.inMemoryStore = this;
     }
 
     public static getInstance(app?: Application, name?: string, storageSettings?: LocalSettings | RedisSettings | MemcachedSettings) {
@@ -58,6 +66,32 @@ class InMemoryStore implements StorageProvider {
 
         const stored = await this.store(key, value);
         return res.json({stored});
+    }
+
+    private async adminGetByKey(req: Request, res: Response, next: NextFunction) {
+        const key = req.params.key;
+        if (isNil(key)) {
+            return res.status(401).json({error: 'Required parameter "key" is missing'});
+        }
+
+        const stored = await this.get(key);
+        return res.json({stored});
+    }
+
+    private async adminGet(req: Request, res: Response, next: NextFunction) {
+        const {skip, limit} = req.query;
+        let skipNumber = 0, limitNumber = 25;
+
+        if (!isNil(skip)) {
+            skipNumber = Number.parseInt(skip);
+        }
+        if (!isNil(limit)) {
+            limitNumber = Number.parseInt(limit);
+        }
+
+        // TODO missing logic and interface method
+
+        return ;
     }
 }
 
