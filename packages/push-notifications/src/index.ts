@@ -20,9 +20,8 @@ class PushNotificationsModule {
       throw new Error('Conduit not initialized');
     }
 
-    const { database } = conduit;
 
-    const databaseAdapter = database.getDbAdapter();
+    const databaseAdapter = conduit.getDatabase();
 
     databaseAdapter.createSchemaFromAdapter(NotificationTokenModel);
 
@@ -38,25 +37,25 @@ class PushNotificationsModule {
     const notificationTokensHandler = new NotificationTokensHandler(this.pushNotificationModel);
     const adminHandler = new AdminHandler(this._provider, databaseAdapter);
 
-    conduit.admin.registerRoute('POST', '/notification-token',
+    conduit.getAdmin().registerRoute('POST', '/notification-token',
       (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('GET', '/notification-token/:userId',
+    conduit.getAdmin().registerRoute('GET', '/notification-token/:userId',
       (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.getNotificationToken(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('POST', '/notifications/send',
+    conduit.getAdmin().registerRoute('POST', '/notifications/send',
       (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('POST', '/notifications/send-many',
+    conduit.getAdmin().registerRoute('POST', '/notifications/send-many',
       (req: Request, res: Response, next: NextFunction) => adminHandler.sendManyNotifications(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
+    conduit.getAdmin().registerRoute('POST', '/notifications/send-to-many-devices',
       (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('GET', '/notifications/config',
+    conduit.getAdmin().registerRoute('GET', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationsConfig(req, res, next).catch(next));
 
-    conduit.admin.registerRoute('PUT', '/notifications/config',
+    conduit.getAdmin().registerRoute('PUT', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
 
 
