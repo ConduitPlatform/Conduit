@@ -1,13 +1,18 @@
 const { isNil, merge } = require('lodash');
 
 async function getUsersPaginated(req, res, next) {
-  const {skip, limit} = req.params;
-  if (isNil(skip) || isNil(limit)) {
-    return res.status(401).json({error: 'Pagination parameters are missing'});
+  const {skip, limit} = req.query;
+  let skipNumber = 0, limitNumber = 25;
+
+  if (!isNil(skip)) {
+    skipNumber = Number.parseInt(skip);
+  }
+  if (!isNil(limit)) {
+    limitNumber = Number.parseInt(limit);
   }
 
   const database = req.app.conduit.database.getDbAdapter();
-  const users = await database.getSchema('User').findPaginated(null, Number(skip), Number(limit));
+  const users = await database.getSchema('User').findPaginated(null, skipNumber, limitNumber);
   const totalCount = await database.getSchema('User').countDocuments(null);
   return res.json({users, totalCount});
 }

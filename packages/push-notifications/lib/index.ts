@@ -3,8 +3,9 @@ import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
 import { isNil } from 'lodash';
 import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
-import { Request, Response, NextFunction, Application } from 'express';
-import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/ISendNotification';
+import { Application, NextFunction, Request, Response } from 'express';
+import { NotificationTokensHandler } from './handlers/notification-tokens/notification-tokens';
+import { AdminHandler } from './handlers/admin/admin';
 
 class PushNotificationsModule {
 
@@ -34,35 +35,30 @@ class PushNotificationsModule {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
 
+    const notificationTokensHandler = new NotificationTokensHandler(this.pushNotificationModel);
+    const adminHandler = new AdminHandler(this._provider, databaseAdapter);
+
     conduit.admin.registerRoute('POST', '/notification-token',
-      (req: Request, res: Response, next: NextFunction) => this.setNotificationToken(req, res, next).catch(next));
+      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
 
     conduit.admin.registerRoute('GET', '/notification-token/:userId',
-      (req: Request, res: Response, next: NextFunction) => this.getNotificationToken(req, res, next).catch(next));
+      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.getNotificationToken(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send',
-      async (req: Request, res: Response, next: NextFunction) => {
-      const params: ISendNotification = req.body;
-      if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-      await this._provider.sendToDevice(params, databaseAdapter).catch(next);
-      return res.json('ok');
-    });
+      (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-many',
-      async (req: Request, res: Response, next: NextFunction) => {
-        const params: ISendNotification[] = req.body;
-        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-        await this._provider.sendMany(params, databaseAdapter).catch(next);
-        return res.json('ok');
-      });
+      (req: Request, res: Response, next: NextFunction) => adminHandler.sendManyNotifications(req, res, next).catch(next));
 
     conduit.admin.registerRoute('POST', '/notifications/send-to-many-devices',
-      async (req: Request, res: Response, next: NextFunction) => {
-        const params: ISendNotificationToManyDevices = req.body;
-        if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
-        await this._provider.sendToManyDevices(params, databaseAdapter).catch(next);
-        return res.json('ok');
-      });
+      (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
+
+    conduit.admin.registerRoute('GET', '/notifications/config',
+      (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationsConfig(req, res, next).catch(next));
+
+    conduit.admin.registerRoute('PUT', '/notifications/config',
+      (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
+
 
     conduit.pushNotifications = this;
   }
@@ -78,31 +74,7 @@ class PushNotificationsModule {
   }
 
 
-  private async setNotificationToken(req: Request, res: Response, next: NextFunction) {
-    const { userId, token, platform } = req.body;
-    if (isNil(userId) || isNil(token) || isNil(platform)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
-    }
 
-    const newTokenDocument = await this.pushNotificationModel.create({
-      userId,
-      token,
-      platform
-    });
-
-    return res.json({ message: 'Push notification token created', newTokenDocument });
-  }
-
-  private async getNotificationToken(req: Request, res: Response, next: NextFunction) {
-    const userId = req.params.userId;
-    if (isNil(userId)) {
-      return res.status(401).json({ error: 'User id parameter was not provided' });
-    }
-
-    const tokenDocument = await this.pushNotificationModel.findOne({ userId });
-
-    return res.json({ tokenDocument });
-  }
 }
 
 export = PushNotificationsModule;
