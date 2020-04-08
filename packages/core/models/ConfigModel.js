@@ -23,7 +23,8 @@ module.exports = {
             },
             url: {
               type: String
-            }
+            },
+            path: String
           }
         }
       },
