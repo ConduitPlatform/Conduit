@@ -1,34 +1,36 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 
-let pushNotificationModel: any;
+export class NotificationTokensHandler {
+  private readonly pushNotificationModel: any;
 
-export function configureNotificationTokenVars(model: any) {
-  pushNotificationModel = model;
-}
-
-export async function setNotificationToken(req: Request, res: Response, next: NextFunction) {
-  const { userId, token, platform } = req.body;
-  if (isNil(userId) || isNil(token) || isNil(platform)) {
-    return res.status(401).json({ error: 'Required fields are missing' });
+  constructor(pushNotificationModel: any) {
+    this.pushNotificationModel = pushNotificationModel;
   }
 
-  const newTokenDocument = await pushNotificationModel.create({
-    userId,
-    token,
-    platform
-  });
+  async setNotificationToken(req: Request, res: Response, next: NextFunction) {
+    const { userId, token, platform } = req.body;
+    if (isNil(userId) || isNil(token) || isNil(platform)) {
+      return res.status(401).json({ error: 'Required fields are missing' });
+    }
 
-  return res.json({ message: 'Push notification token created', newTokenDocument });
-}
+    const newTokenDocument = await this.pushNotificationModel.create({
+      userId,
+      token,
+      platform
+    });
 
-export async function getNotificationToken(req: Request, res: Response, next: NextFunction) {
-  const userId = req.params.userId;
-  if (isNil(userId)) {
-    return res.status(401).json({ error: 'User id parameter was not provided' });
+    return res.json({ message: 'Push notification token created', newTokenDocument });
   }
 
-  const tokenDocument = await pushNotificationModel.findOne({ userId });
+  async getNotificationToken(req: Request, res: Response, next: NextFunction) {
+    const userId = req.params.userId;
+    if (isNil(userId)) {
+      return res.status(401).json({ error: 'User id parameter was not provided' });
+    }
 
-  return res.json({ tokenDocument });
+    const tokenDocument = await this.pushNotificationModel.findOne({ userId });
+
+    return res.json({ tokenDocument });
+  }
 }
