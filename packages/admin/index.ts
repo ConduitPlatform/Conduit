@@ -41,7 +41,7 @@ class AdminModule extends IConduitAdmin {
 
         conduit.getRouter().registerDirectRouter('/admin/login',
           (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
-        this.router.use(this.authMiddleware);
+        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
     }
 
