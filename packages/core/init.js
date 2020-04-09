@@ -1,7 +1,7 @@
+const SecurityModule = require('@conduit/security');
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
 const email = require('@conduit/email');
-const security = require('@conduit/security');
 const authentication = require('@conduit/authentication');
 const StorageModule = require('@conduit/storage');
 const AdminModule = require('@conduit/admin');
@@ -20,11 +20,10 @@ async function init(app) {
     app.conduit.registerAdmin(new AdminModule(app.conduit));
     registerAdminRoutes(app.conduit.getAdmin());
 
-    if (!security.initialize(app)) {
-        process.exit(9);
-    }
+    app.conduit.registerSecurity(new SecurityModule(app.conduit));
+    const security = app.conduit.getSecurity();
     app.use(security.adminMiddleware);
-    app.use(security.middleware);
+    app.use(security.authMiddleware);
 
     registerAdminRoutes(app.conduit.getAdmin());
 

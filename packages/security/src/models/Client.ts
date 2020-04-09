@@ -1,4 +1,4 @@
-import { PlatformTypesEnum } from '../../../sdk/src/constants/enums/PlatformTypesEnum';
+import { PlatformTypesEnum } from '@conduit/sdk';
 
 export const ClientModel = {
   name: 'Client',
