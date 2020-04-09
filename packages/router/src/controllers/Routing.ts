@@ -1,16 +1,19 @@
 // todo create the controller that should construct both REST & GraphQL routes
 import {Application, NextFunction, Request, Response, Router} from "express";
+import {RestController} from "./Rest";
+import {GraphQLController} from "./GraphQL";
+import {ConduitRoute} from "@conduit/sdk";
 
 export class ConduitRoutingController {
 
-    private _router: Router
+    private _restRouter: RestController
+    private _graphQLRouter?: GraphQLController
+    private _app: Application
     private _middlewareRouter: Router;
 
     constructor(app: Application) {
-        this._router = Router();
-        this._router.use((req: Request, res: Response, next: NextFunction) => {
-            next();
-        });
+        this._app = app;
+        this._restRouter = new RestController();
         this._middlewareRouter = Router();
         this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
             next();
@@ -24,12 +27,12 @@ export class ConduitRoutingController {
 
         app.use((req, res, next) => {
             // this needs to be a function to hook on whatever the current router is
-            if (self._router) {
-                self._router(req, res, next)
-            } else {
-                next()
-            }
+            self._restRouter.handleRequest(req, res, next)
         })
+    }
+
+    initGraphQL() {
+        this._graphQLRouter = new GraphQLController(this._app);
     }
 
     registerMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
@@ -37,7 +40,12 @@ export class ConduitRoutingController {
     }
 
     registerRoute(path: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
-        this._router.use(path, router);
+        this._restRouter.registerRoute(path, router);
+    }
+
+    registerConduitRoute(route: ConduitRoute) {
+        this._graphQLRouter?.registerConduitRoute(route);
+        this._restRouter.registerConduitRoute(route);
     }
 
 
