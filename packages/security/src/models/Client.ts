@@ -1,24 +1,22 @@
-import { PlatformTypesEnum } from '@conduit/sdk';
+import { ConduitSchema, PlatformTypesEnum, TYPE } from '@conduit/sdk';
 
-export const ClientModel = {
-  name: 'Client',
-  modelSchema: {
+module.exports = new ConduitSchema('Client',
+  {
     clientId: {
-      type: String,
+      type: TYPE.String,
       unique: true,
       required: true
     },
     clientSecret: {
-      type: String,
+      type: TYPE.String,
       required: true
     },
     platform: {
-      type: String,
+      type: TYPE.String,
       enum: Object.values(PlatformTypesEnum),
       required: true
     }
   },
-  modelOptions: {
+  {
     timestamps: true
-  }
-};
+  });
