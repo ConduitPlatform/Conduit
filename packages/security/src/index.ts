@@ -6,10 +6,12 @@ import { ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum } fro
 class SecurityModule extends IConduitSecurity {
 
   private readonly database: IConduitDatabase;
+  conduit: ConduitSDK;
 
   constructor(conduit: ConduitSDK) {
     super(conduit);
 
+    this.conduit = conduit;
     this.database = conduit.getDatabase();
     this.database.createSchemaFromAdapter(ClientModel);
 
@@ -65,7 +67,7 @@ class SecurityModule extends IConduitSecurity {
     }
 
     const masterkey = req.headers.masterkey;
-    if (isNil(masterkey) || masterkey !== (req.app as any).conduit.config.get('admin.auth.masterkey'))
+    if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
       return res.status(401).json({ error: 'Unauthorized' });
 
     return next();
