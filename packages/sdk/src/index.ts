@@ -4,6 +4,7 @@ import {IConduitDatabase} from "./modules/Database/interfaces/Database";
 import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
 import { IConduitPushNotifications } from './modules/PushNotifications';
 import { IConduitInMemoryStore } from './modules/InMemoryStore';
+import { IConduitStorage } from './modules/Storage';
 
 export class ConduitSDK {
 
@@ -14,6 +15,7 @@ export class ConduitSDK {
     private _admin?: IConduitAdmin;
     private _pushNotifications?: IConduitPushNotifications;
     private _inMemoryStore?: IConduitInMemoryStore;
+    private _storage?: IConduitStorage;
 
     private constructor(app: Application) {
         this._app = app;
@@ -68,6 +70,16 @@ export class ConduitSDK {
     getInMemoryStore(): IConduitInMemoryStore {
         if (this._inMemoryStore) return this._inMemoryStore;
         throw new Error('In-memory-store module not assigned yet');
+    }
+
+    registerStorage(storage: IConduitStorage) {
+        if (this._storage) throw new Error('Cannot register a second storage module');
+        this._storage = storage;
+    }
+
+    getStorage(): IConduitStorage {
+        if (this._storage) return this._storage;
+        throw new Error('Storage module not assigned yet');
     }
 
     static getInstance(app: Application) {

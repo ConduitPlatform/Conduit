@@ -3,3 +3,4 @@ export * from './Database';
 export * from './Admin';
 export * from './PushNotifications';
 export * from './InMemoryStore';
+export * from './Storage';

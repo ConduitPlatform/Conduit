@@ -45,7 +45,7 @@ async function init(app) {
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
     app.conduit.cms = new cms(app.conduit.getDatabase(), app);
 
-    StorageModule.getInstance(app);
+    app.conduit.registerStorage(new StorageModule(app.conduit));
 
     const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
     app.conduit.registerInMemoryStore(new InMemoryStoreModule(

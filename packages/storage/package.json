@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.15",
+    "@conduit/sdk": "1.0.0",
     "@conduit/storage-provider": "1.0.0"
   },
   "peerDependencies": {

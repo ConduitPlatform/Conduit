@@ -1,35 +1,43 @@
 import { Request, Response } from 'express';
 import { isNil, merge } from 'lodash';
+import { ConduitSDK } from '@conduit/sdk';
 
-export async function editConfig(req: Request, res: Response) {
-  const database = (req.app as any).conduit.database;
-  const appConfig = (req.app as any).conduit.config;
-  const databaseAdapter = database.getDbAdapter();
+export class AdminConfigHandlers {
 
-  const Config = databaseAdapter.getSchema('Config');
+  private readonly conduit: ConduitSDK;
 
-  const newConfig = req.body;
-  const dbConfig = await Config.findOne({});
-  if (isNil(dbConfig)) {
-    return res.status(404).json({ error: 'Config not set' });
+  constructor(conduit: ConduitSDK) {
+    this.conduit = conduit;
   }
 
-  const currentConfig = dbConfig.config.storage;
+  async editConfig(req: Request, res: Response) {
+    const appConfig = (this.conduit as any).config;
+    const databaseAdapter = this.conduit.getDatabase();
 
-  const final = merge(currentConfig, newConfig);
-  dbConfig.config.storage = final;
-  const saved = await dbConfig.save();
+    const Config = databaseAdapter.getSchema('Config');
 
-  appConfig.load(saved.config);
+    const newConfig = req.body;
+    const dbConfig = await Config.findOne({});
+    if (isNil(dbConfig)) {
+      return res.status(404).json({ error: 'Config not set' });
+    }
 
-  return res.json(saved.config.storage);
-}
+    const currentConfig = dbConfig.config.storage;
 
-export async function getConfig(req: Request, res: Response) {
-  const { conduit } = req.app as any;
-  const { config } = conduit;
+    const final = merge(currentConfig, newConfig);
+    dbConfig.config.storage = final;
+    const saved = await dbConfig.save();
 
-  const storageConfig = config.get('storage');
+    appConfig.load(saved.config);
 
-  return res.json(storageConfig);
+    return res.json(saved.config.storage);
+  }
+
+  async getConfig(req: Request, res: Response) {
+    const { config } = this.conduit as any;
+
+    const storageConfig = config.get('storage');
+
+    return res.json(storageConfig);
+  }
 }
