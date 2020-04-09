@@ -80,18 +80,18 @@ module.exports = {
         },
         rename_commands: {
           doc: 'Passing an object with renamed commands to use instead of the original functions. For example, if you renamed the command KEYS to "DO-NOT-USE" then the rename_commands object would be: { KEYS : "DO-NOT-USE" } . See the Redis security topics for more info.',
-          format: 'any'
+          format: '*'
         },
         tls: {
           doc: 'An object containing options to pass to tls.connect to set up a TLS connection to Redis (if, for example, it is set up to be accessible via a tunnel).',
-          format: 'any'
+          format: '*'
         },
         prefix: {
           doc: 'A string used to prefix all used keys (e.g. namespace:test). Please be aware that the keys command will not be prefixed. The keys command has a "pattern" as argument and no key and it would be impossible to determine the existing keys in Redis if this would be prefixed.',
           format: 'String'
         },
         retry_strategy: {
-          format: 'any'
+          format: '*'
         }
       },
       memcache: {
@@ -99,7 +99,7 @@ module.exports = {
           format: 'String'
         },
         options: {
-          format: 'any'
+          format: '*'
         }
       },
       local: {}
