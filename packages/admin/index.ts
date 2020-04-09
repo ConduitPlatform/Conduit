@@ -1,7 +1,7 @@
 import {isNil} from 'lodash';
 import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
-import {loginAdmin} from './handlers/auth';
+import {AuthHandlers} from './handlers/auth';
 import AdminSchema from './models/Admin';
 import {ConduitSDK, IConduitAdmin} from "@conduit/sdk";
 
@@ -35,7 +35,10 @@ class AdminModule extends IConduitAdmin {
             })
             .catch(console.log);
 
-        conduit.getRouter().registerDirectRouter('/admin/login', (req: Request, res: Response, next: NextFunction) => loginAdmin(req, res, next).catch(next));
+        const adminHandlers = new AuthHandlers(conduit);
+
+        conduit.getRouter().registerDirectRouter('/admin/login',
+          (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
         this.router.use(this.authMiddleware);
         conduit.getRouter().registerExpressRouter('/admin', this.router);
     }
