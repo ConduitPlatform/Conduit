@@ -52,6 +52,7 @@ export class ConduitSDK {
         this._pushNotifications = pushNotifications;
     }
 
+    // TODO is this needed?
     getPushNotifications(): IConduitPushNotifications {
         if (this._pushNotifications) return this._pushNotifications;
         throw new Error("Push notifications not assigned yet!");
