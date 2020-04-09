@@ -8,7 +8,7 @@ async function configureFromDatabase(database, appConfig) {
     let dbConfig = await db.getSchema('Config').findOne({});
 
     if (isNil(dbConfig)) {
-        return db.getSchema('Config').create({config: config.get().config});
+        return db.getSchema('Config').create({config: config.get()});
     }
 
     config.load(dbConfig.config);

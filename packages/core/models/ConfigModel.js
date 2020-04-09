@@ -156,6 +156,14 @@ module.exports = {
             default: '***REMOVED***'
           },
           proxy: String,
+          smtp: {
+            port: Number,
+            auth: {
+              username: String,
+              password: String,
+              method: String
+            }
+          },
           host: String
         }
       },

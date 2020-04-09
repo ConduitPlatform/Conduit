@@ -2,6 +2,7 @@ import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
 import {IConduitDatabase} from "./modules/Database/interfaces/Database";
 import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
+import { IConduitEmail } from './modules/Email';
 import { IConduitPushNotifications } from './modules/PushNotifications';
 import { IConduitInMemoryStore } from './modules/InMemoryStore';
 import { IConduitStorage } from './modules/Storage';
@@ -13,6 +14,7 @@ export class ConduitSDK {
     private _router?: IConduitRouter;
     private _database?: IConduitDatabase;
     private _admin?: IConduitAdmin;
+    private _email?: IConduitEmail;
     private _pushNotifications?: IConduitPushNotifications;
     private _inMemoryStore?: IConduitInMemoryStore;
     private _storage?: IConduitStorage;
@@ -49,6 +51,15 @@ export class ConduitSDK {
     getAdmin(): IConduitAdmin {
         if (this._admin) return this._admin;
         throw new Error("Admin not assigned yet!");
+    }
+
+    registerEmail(email: IConduitEmail) {
+        this._email = email;
+    }
+
+    getEmail() {
+        if (this._email) return this._email;
+        throw new Error('Email module not assigned yet!');
     }
 
     registerPushNotifications(pushNotifications: IConduitPushNotifications) {
