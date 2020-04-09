@@ -16,10 +16,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
     super(conduit);
 
     const databaseAdapter = conduit.getDatabase();
-
     databaseAdapter.createSchemaFromAdapter(NotificationTokenModel);
-
-    this.pushNotificationModel = databaseAdapter.getSchema('NotificationToken');
 
     if (name === 'firebase') {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
@@ -28,7 +25,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
 
-    const notificationTokensHandler = new NotificationTokensHandler(this.pushNotificationModel);
+    const notificationTokensHandler = new NotificationTokensHandler(conduit);
     const adminHandler = new AdminHandler(conduit, this._provider);
 
     conduit.getAdmin().registerRoute('POST', '/notification-token',
