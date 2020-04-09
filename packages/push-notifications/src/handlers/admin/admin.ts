@@ -10,7 +10,7 @@ export class AdminHandler {
   private readonly databaseAdapter: IConduitDatabase;
   private readonly conduit: ConduitSDK;
 
-  constructor(conduit: ConduitSDK, provider: any) {
+  constructor(conduit: ConduitSDK, provider: IPushNotificationsProvider) {
     this.conduit = conduit;
     this.provider = provider;
     this.databaseAdapter = conduit.getDatabase();
