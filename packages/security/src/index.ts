@@ -1,7 +1,7 @@
 import {Request, Response, NextFunction, Application} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {PlatformTypesEnum} from './PlatformTypesEnum';
+import {PlatformTypesEnum} from '../../sdk/src/constants/enums/PlatformTypesEnum';
 
 let initialized = false;
 let database: any;
@@ -77,4 +77,4 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
     return next();
 };
 
-export * from './PlatformTypesEnum';
+export * from '../../sdk/src/constants/enums/PlatformTypesEnum';

@@ -5,6 +5,7 @@ import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
 import { IConduitPushNotifications } from './modules/PushNotifications';
 import { IConduitInMemoryStore } from './modules/InMemoryStore';
 import { IConduitStorage } from './modules/Storage';
+import { IConduitSecurity } from './modules/Security';
 
 export class ConduitSDK {
 
@@ -16,6 +17,7 @@ export class ConduitSDK {
     private _pushNotifications?: IConduitPushNotifications;
     private _inMemoryStore?: IConduitInMemoryStore;
     private _storage?: IConduitStorage;
+    private _security?: IConduitSecurity;
 
     private constructor(app: Application) {
         this._app = app;
@@ -82,6 +84,16 @@ export class ConduitSDK {
         throw new Error('Storage module not assigned yet');
     }
 
+    registerSecurity(security: IConduitSecurity) {
+        if (this._security) throw new Error('Cannot register a second security module');
+        this._security = security;
+    }
+
+    getSecurity(): IConduitSecurity {
+        if (this._security) return this._security;
+        throw new Error('Security module not assigned yet');
+    }
+
     static getInstance(app: Application) {
         if (!this._instance && !app) throw new Error("No settings provided to initialize");
         if (!this._instance) {
@@ -95,5 +107,6 @@ export class ConduitSDK {
 export * from "./models";
 export * from "./interaces";
 export * from "./modules";
+export * from './constants';
 
 
