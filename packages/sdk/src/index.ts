@@ -2,6 +2,7 @@ import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
 import {IConduitDatabase} from "./modules/Database/interfaces/Database";
 import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
+import { IConduitPushNotifications } from './modules/PushNotifications';
 
 export class ConduitSDK {
 
@@ -10,6 +11,7 @@ export class ConduitSDK {
     private _router?: IConduitRouter;
     private _database?: IConduitDatabase;
     private _admin?: IConduitAdmin;
+    private _pushNotifications?: IConduitPushNotifications;
 
     private constructor(app: Application) {
         this._app = app;
@@ -43,6 +45,16 @@ export class ConduitSDK {
     getAdmin(): IConduitAdmin {
         if (this._admin) return this._admin;
         throw new Error("Admin not assigned yet!");
+    }
+
+    registerPushNotifications(pushNotifications: IConduitPushNotifications) {
+        if (this._pushNotifications) throw new Error('Cannot register a second push notifications module');
+        this._pushNotifications = pushNotifications;
+    }
+
+    getPushNotifications(): IConduitPushNotifications {
+        if (this._pushNotifications) return this._pushNotifications;
+        throw new Error("Push notifications not assigned yet!");
     }
 
     static getInstance(app: Application) {

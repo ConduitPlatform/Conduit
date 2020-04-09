@@ -1,25 +1,19 @@
 import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { isNil } from 'lodash';
 import { NotificationTokenModel } from './models/NotificationToken';
 import { FirebaseProvider } from './providers/firebase';
-import { Application, NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { NotificationTokensHandler } from './handlers/notification-tokens/notification-tokens';
 import { AdminHandler } from './handlers/admin/admin';
+import { ConduitSDK, IConduitPushNotifications } from '@conduit/sdk';
 
-class PushNotificationsModule {
+class PushNotificationsModule extends IConduitPushNotifications {
 
-  private static _instance: PushNotificationsModule;
-  _provider: IPushNotificationsProvider;
+  private readonly _provider: IPushNotificationsProvider;
   pushNotificationModel: any;
 
-  private constructor(app: Application, name: string, settings: any) {
-    const { conduit } = app as any;
-
-    if (isNil(conduit)) {
-      throw new Error('Conduit not initialized');
-    }
-
+  constructor(conduit: ConduitSDK, name: string, settings: any) {
+    super(conduit);
 
     const databaseAdapter = conduit.getDatabase();
 
@@ -58,22 +52,7 @@ class PushNotificationsModule {
     conduit.getAdmin().registerRoute('PUT', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
 
-
-    conduit.pushNotifications = this;
   }
-
-  public static getInstance(app?: Application, name?: string, settings?: IFirebaseSettings) {
-    if (!this._instance && name && settings && app) {
-      this._instance = new PushNotificationsModule(app, name, settings);
-    } else if (this._instance) {
-      return this._instance;
-    } else {
-      throw new Error('No settings provided to initialize');
-    }
-  }
-
-
-
 }
 
 export = PushNotificationsModule;
