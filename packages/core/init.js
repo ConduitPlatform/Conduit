@@ -22,8 +22,8 @@ async function init(app) {
 
     app.conduit.registerSecurity(new SecurityModule(app.conduit));
     const security = app.conduit.getSecurity();
-    app.use(security.adminMiddleware);
-    app.use(security.authMiddleware);
+    app.use((req, res, next) => security.adminMiddleware(req, res, next));
+    app.use((req, res, next) => security.authMiddleware(req, res, next));
 
     registerAdminRoutes(app.conduit.getAdmin());
 
