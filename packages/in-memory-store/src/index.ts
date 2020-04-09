@@ -28,10 +28,12 @@ class InMemoryStore implements StorageProvider {
             this._provider = new Localprovider(storageSettings as LocalSettings);
         }
 
-        conduit.admin.registerRoute('POST', '/in-memory-store',
+        const admin = conduit.getAdmin();
+
+        admin.registerRoute('POST', '/in-memory-store',
           (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
 
-        conduit.admin.registerRoute('GET', '/in-memory-store/:key',
+        admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
 
         (app as any).conduit.inMemoryStore = this;

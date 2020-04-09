@@ -58,7 +58,7 @@ async function initialize(app) {
 
     emailLogic.init(emailer, database);
 
-    const admin = app.conduit.admin;
+    const admin = app.conduit.getAdmin();
     admin.registerRoute('GET', '/email-templates',
       (req, res, next) => adminHandler.getTemplates(req, res, next).catch(next));
 
