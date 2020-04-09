@@ -5,3 +5,4 @@ export * from './Email';
 export * from './PushNotifications';
 export * from './InMemoryStore';
 export * from './Storage';
+export * from './Security';

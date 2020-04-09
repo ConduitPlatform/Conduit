@@ -12,6 +12,7 @@ export type Array = any[];
 
 export type ConduitModelField = {
     type?: TYPE | Array | ConduitModelField;
+    enum?: any
     default?: any
     model?: string
     unique?: boolean
