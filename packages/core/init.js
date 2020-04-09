@@ -1,7 +1,7 @@
 const SecurityModule = require('@conduit/security');
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
-const email = require('@conduit/email');
+const EmailModule = require('@conduit/email');
 const authentication = require('@conduit/authentication');
 const StorageModule = require('@conduit/storage');
 const AdminModule = require('@conduit/admin');
@@ -33,9 +33,8 @@ async function init(app) {
         pushNotificationsProviderName,
         app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`)));
 
-    if (await email.initialize(app)) {
-        app.conduit.email = email;
-    }
+    const emailModule = new EmailModule(app.conduit);
+    app.conduit.registerEmail(emailModule);
     // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
     if (app.conduit.config.get('authentication')) {
         await authentication.initialize(app, app.conduit.config.get('authentication'));

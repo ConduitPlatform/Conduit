@@ -64,7 +64,8 @@ async function authentication(app, config) {
   }
   database = app.conduit.getDatabase();
   registerSchemas();
-  await registerEmailTemplates(app.conduit.email);
+  const email = app.conduit.getEmail();
+  await registerEmailTemplates(email);
 
   if (config.local) {
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));

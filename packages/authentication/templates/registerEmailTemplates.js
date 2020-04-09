@@ -1,16 +1,19 @@
 async function registerEmailTemplates(emailProvider) {
   await emailProvider.registerTemplate(
-    'ForgotPassword',
-    '{{applicationName}} - Forgot Password',
-    'Click <a href="{{link}}">here</a> to reset your password',
-    ['applicationName', 'link']);
+      {
+        name: 'ForgotPassword',
+        subject: '{{applicationName}} - Forgot Password',
+        body: 'Click <a href="{{link}}">here</a> to reset your password',
+        variables: ['applicationName', 'link']
+      });
 
   await emailProvider.registerTemplate(
-    'EmailVerification',
-    '{{applicationName}} - Verify your email',
-    'Click <a href="{{link}}">here</a> to verify your email',
-    ['applicationName', 'link']
-  );
+      {
+        name: 'EmailVerification',
+        subject: '{{applicationName}} - Verify your email',
+        body: 'Click <a href="{{link}}">here</a> to verify your email',
+        variables: ['applicationName', 'link']
+      });
 }
 
 module.exports = registerEmailTemplates;

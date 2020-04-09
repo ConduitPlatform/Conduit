@@ -13,7 +13,7 @@ export class EmailProvider {
     _transport?: Mail;
     _transportName?: string;
 
-    constructor(transport: string, transportSettings: any, testAccount?: any) {
+    constructor(transport: string, transportSettings: any) {
         if (transport === 'mailgun') {
             this._transportName = 'mailgun';
 
@@ -30,18 +30,14 @@ export class EmailProvider {
 
             this._transport = createTransport(initializeMailgun(mailgunSettings));
         } else if (transport === 'smtp') {
-            if (!testAccount) {
-                throw new Error("Test account not provided!");
-            }
             this._transportName = 'smtp';
+
+            const { smtp } = transportSettings;
 
             this._transport = createTransport({
                 ...transportSettings,
                 secure: false,
-                auth: {
-                    user: testAccount.user, // generated ethereal user
-                    pass: testAccount.pass // generated ethereal password
-                },
+                ...smtp,
                 tls: {
                     rejectUnauthorized: false
                 }

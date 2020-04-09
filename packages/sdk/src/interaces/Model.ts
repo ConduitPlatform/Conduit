@@ -8,7 +8,7 @@ export enum TYPE {
     Relation = 'Relation'
 }
 
-export type Array = [];
+export type Array = any[];
 
 export type ConduitModelField = {
     type?: TYPE | Array | ConduitModelField;

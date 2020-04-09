@@ -1,16 +1,28 @@
 {
   "name": "@conduit/email",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "start": "node index.js"
+    "build": "tsc",
+    "prepare": "npm run build"
   },
   "license": "ISC",
   "dependencies": {
     "@conduit/email-provider": "1.0.0",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "@conduit/sdk": "1.0.0"
   },
   "devDependencies": {
-    "smtp-server": "^3.6.0"
+    "@types/express": "^4.16.1",
+    "@types/lodash": "^4.14.149",
+    "@types/nodemailer": "^6.4.0",
+    "@types/smtp-server": "^3.5.4",
+    "express": "~4.16.1",
+    "smtp-server": "^3.6.0",
+    "typescript": "^3.8.3"
+  },
+  "peerDependencies": {
+    "express": "~4.16.1"
   }
 }

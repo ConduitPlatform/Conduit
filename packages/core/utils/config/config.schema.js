@@ -95,7 +95,7 @@ module.exports = {
         doc: 'The options for the conduit email provider',
         transport: {
             format: 'String',
-            default: 'mailgun'
+            default: 'smtp'
         },
         transportSettings: {
             doc: 'The settings for the transport',
@@ -118,6 +118,34 @@ module.exports = {
                 doc: 'The email proxy',
                 format: 'String',
                 default: undefined
+            },
+            smtp: {
+                doc: 'The SMTP transport settings',
+                port: {
+                    doc: 'The port the SMTP server is listening on',
+                    format: 'Number',
+                    default: undefined
+                },
+                host: {
+                    doc: 'The SMTP server address',
+                    format: 'String',
+                    default: undefined
+                },
+                auth: {
+                    doc: 'The SMTP server auth details',
+                    username: {
+                        format: 'String',
+                        default: undefined
+                    },
+                    password: {
+                        format: 'String',
+                        default: undefined
+                    },
+                    method: {
+                        format: 'String',
+                        default: undefined
+                    }
+                }
             }
         }
     },
