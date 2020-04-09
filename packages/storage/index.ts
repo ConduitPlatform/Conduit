@@ -15,7 +15,7 @@ class StorageModule {
 
     this.storageProvider = createStorageProvider(provider, { storagePath, google });
 
-    const admin = (app as any).conduit.admin;
+    const admin = (app as any).conduit.getAdmin();
 
     this.registerAdminRoutes(admin);
 

@@ -87,13 +87,15 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  app.conduit.admin.registerRoute('GET', '/users',
+  const admin = app.conduit.getAdmin();
+
+  admin.registerRoute('GET', '/users',
     (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
 
-  app.conduit.admin.registerRoute('PUT', '/authentication/config',
+  admin.registerRoute('PUT', '/authentication/config',
     (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
 
-  app.conduit.admin.registerRoute('GET', '/authentication/config',
+  admin.registerRoute('GET', '/authentication/config',
       (req, res, next) => admin.getAuthConfig(req, res).catch(next));
 }
 

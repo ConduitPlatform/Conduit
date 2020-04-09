@@ -11,7 +11,7 @@ async function configureFromDatabase(database, appConfig) {
         return db.getSchema('Config').create({config: config.get().config});
     }
 
-    config.load(dbConfig);
+    config.load(dbConfig.config);
 }
 
 module.exports.configureFromDatabase = configureFromDatabase;
