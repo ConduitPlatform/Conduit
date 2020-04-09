@@ -1,13 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
 import { isNil, merge } from 'lodash';
+import { ConduitSDK } from '@conduit/sdk';
 
 export class AdminHandler {
 
   private readonly provider: any;
   private readonly databaseAdapter: any;
+  private readonly conduit: ConduitSDK;
 
-  constructor(provider: any, databaseAdapter: any) {
+  constructor(conduit: ConduitSDK, provider: any, databaseAdapter: any) {
+    this.conduit = conduit;
     this.provider = provider;
     this.databaseAdapter = databaseAdapter;
   }
@@ -34,8 +37,7 @@ export class AdminHandler {
   }
 
   async getNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { conduit } = (req.app as any);
-    const { config: appConfig } = conduit;
+    const { config: appConfig } = this.conduit as any;
 
     const Config = this.databaseAdapter.getSchema('Config');
     const dbConfig = await Config.findOne({});
@@ -46,8 +48,7 @@ export class AdminHandler {
   }
 
   async editNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { conduit } = (req.app as any);
-    const { config: appConfig } = conduit;
+    const { config: appConfig } = this.conduit as any;
 
     const Config = this.databaseAdapter.getSchema('Config');
 
