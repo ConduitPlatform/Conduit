@@ -1,18 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
 import { isNil, merge } from 'lodash';
-import { ConduitSDK } from '@conduit/sdk';
+import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 
 export class AdminHandler {
 
   private readonly provider: any;
-  private readonly databaseAdapter: any;
+  private readonly databaseAdapter: IConduitDatabase;
   private readonly conduit: ConduitSDK;
 
-  constructor(conduit: ConduitSDK, provider: any, databaseAdapter: any) {
+  constructor(conduit: ConduitSDK, provider: any) {
     this.conduit = conduit;
     this.provider = provider;
-    this.databaseAdapter = databaseAdapter;
+    this.databaseAdapter = conduit.getDatabase();
   }
 
   async sendNotification(req: Request, res: Response, next: NextFunction) {

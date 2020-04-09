@@ -29,7 +29,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
     }
 
     const notificationTokensHandler = new NotificationTokensHandler(this.pushNotificationModel);
-    const adminHandler = new AdminHandler(conduit, this._provider, databaseAdapter);
+    const adminHandler = new AdminHandler(conduit, this._provider);
 
     conduit.getAdmin().registerRoute('POST', '/notification-token',
       (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
