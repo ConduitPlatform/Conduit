@@ -1,11 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
+import { ConduitSDK } from '@conduit/sdk';
 
 export class NotificationTokensHandler {
   private readonly pushNotificationModel: any;
 
-  constructor(pushNotificationModel: any) {
-    this.pushNotificationModel = pushNotificationModel;
+  constructor(conduit: ConduitSDK) {
+    const databaseAdapter = conduit.getDatabase();
+    this.pushNotificationModel = databaseAdapter.getSchema('NotificationToken');
   }
 
   async setNotificationToken(req: Request, res: Response, next: NextFunction) {

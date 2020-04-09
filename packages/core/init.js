@@ -27,11 +27,13 @@ async function init(app) {
     app.use(security.middleware);
 
     registerAdminRoutes(app.conduit.getAdmin());
+
     const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
-    PushNotificationsModule.getInstance(
-        app,
+    app.conduit.registerPushNotifications(new PushNotificationsModule(
+        app.conduit,
         pushNotificationsProviderName,
-        app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`));
+        app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`)));
+
     if (await email.initialize(app)) {
         app.conduit.email = email;
     }
@@ -43,13 +45,13 @@ async function init(app) {
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
     app.conduit.cms = new cms(app.conduit.getDatabase(), app);
 
-    StorageModule.getInstance(app);
+    app.conduit.registerStorage(new StorageModule(app.conduit));
 
     const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
-    InMemoryStoreModule.getInstance(
-      app,
+    app.conduit.registerInMemoryStore(new InMemoryStoreModule(
+      app.conduit,
       inMemoryStoreProviderName,
-      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`));
+      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;

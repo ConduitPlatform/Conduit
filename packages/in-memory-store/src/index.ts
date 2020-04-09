@@ -5,16 +5,16 @@ import {RedisProvider} from "./providers/redis";
 import {Localprovider} from "./providers/local";
 import {MemcachedProvider} from "./providers/memcached";
 import {StorageProvider} from "./interaces/StorageProvider";
-import { Application, Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {isNil} from 'lodash';
+import { ConduitSDK, IConduitInMemoryStore } from '@conduit/sdk';
 
-class InMemoryStore implements StorageProvider {
+class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
-    private static _instance: InMemoryStore;
-    _provider: StorageProvider;
+    private readonly _provider: StorageProvider;
 
-    private constructor(app: Application, name: string, storageSettings: LocalSettings | RedisSettings | MemcachedSettings) {
-        const { conduit } = app as any;
+    constructor(conduit: ConduitSDK, name: string, storageSettings: LocalSettings | RedisSettings | MemcachedSettings) {
+        super(conduit);
 
         if (isNil(conduit)) {
             throw new Error('Conduit not initialized');
@@ -35,18 +35,6 @@ class InMemoryStore implements StorageProvider {
 
         admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
-
-        (app as any).conduit.inMemoryStore = this;
-    }
-
-    public static getInstance(app?: Application, name?: string, storageSettings?: LocalSettings | RedisSettings | MemcachedSettings) {
-        if (!this._instance && name && storageSettings && app) {
-            this._instance = new InMemoryStore(app, name, storageSettings);
-        } else if (this._instance) {
-            return this._instance
-        } else {
-            throw new Error("No settings provided to initialize");
-        }
     }
 
     get(key: string): Promise<any> {

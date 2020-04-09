@@ -1,15 +1,19 @@
 import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
 import { isNil, merge } from 'lodash';
+import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { IPushNotificationsProvider } from '../../interfaces/IPushNotificationsProvider';
 
 export class AdminHandler {
 
-  private readonly provider: any;
-  private readonly databaseAdapter: any;
+  private readonly provider: IPushNotificationsProvider;
+  private readonly databaseAdapter: IConduitDatabase;
+  private readonly conduit: ConduitSDK;
 
-  constructor(provider: any, databaseAdapter: any) {
+  constructor(conduit: ConduitSDK, provider: IPushNotificationsProvider) {
+    this.conduit = conduit;
     this.provider = provider;
-    this.databaseAdapter = databaseAdapter;
+    this.databaseAdapter = conduit.getDatabase();
   }
 
   async sendNotification(req: Request, res: Response, next: NextFunction) {
@@ -34,8 +38,7 @@ export class AdminHandler {
   }
 
   async getNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { conduit } = (req.app as any);
-    const { config: appConfig } = conduit;
+    const { config: appConfig } = this.conduit as any;
 
     const Config = this.databaseAdapter.getSchema('Config');
     const dbConfig = await Config.findOne({});
@@ -46,8 +49,7 @@ export class AdminHandler {
   }
 
   async editNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { conduit } = (req.app as any);
-    const { config: appConfig } = conduit;
+    const { config: appConfig } = this.conduit as any;
 
     const Config = this.databaseAdapter.getSchema('Config');
 
