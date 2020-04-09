@@ -1,6 +1,6 @@
 import { ConduitSchema, PlatformTypesEnum, TYPE } from '@conduit/sdk';
 
-module.exports = new ConduitSchema('Client',
+export const ClientModel = new ConduitSchema('Client',
   {
     clientId: {
       type: TYPE.String,
