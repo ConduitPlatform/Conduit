@@ -2,10 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
 import { isNil, merge } from 'lodash';
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { IPushNotificationsProvider } from '../../interfaces/IPushNotificationsProvider';
 
 export class AdminHandler {
 
-  private readonly provider: any;
+  private readonly provider: IPushNotificationsProvider;
   private readonly databaseAdapter: IConduitDatabase;
   private readonly conduit: ConduitSDK;
 
