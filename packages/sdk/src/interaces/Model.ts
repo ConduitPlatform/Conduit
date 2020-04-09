@@ -20,7 +20,7 @@ export type ConduitModelField = {
 }
 
 export interface ConduitModel {
-    [field: string]: ConduitModelField | ConduitModel | TYPE
+    [field: string]: ConduitModelField | ConduitModelField[] | ConduitModel | TYPE | TYPE[] | any[]
 }
 
 export interface ConduitModelOptions {

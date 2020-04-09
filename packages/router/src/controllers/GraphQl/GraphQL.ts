@@ -1,6 +1,7 @@
 // todo Create the controller that creates GraphQL-specific endpoints
 import {Application, Request} from "express";
-import {ConduitRoute, ConduitRouteActions, ConduitRouteOption, ConduitRouteOptions} from "@conduit/sdk";
+import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOption, ConduitRouteOptions} from "@conduit/sdk";
+import {extractTypes} from "./TypeUtils";
 
 const {
     parseResolveInfo,
@@ -87,11 +88,6 @@ const {ApolloServer, gql} = require('apollo-server-express');
 //         author: (post: any) => find(authors, {id: post.authorId}),
 //     },
 // };
-function extractContext(req: Request) {
-    return (req as any).conduit;
-
-}
-
 export class GraphQLController {
 
     typeDefs: string;
@@ -131,20 +127,11 @@ export class GraphQLController {
         this.apollo = server.getMiddleware();
     }
 
-    generateType(name: string, fields: ConduitRouteOption | string) {
+    generateType(name: string, fields: ConduitModel | string) {
         if (this.typeDefs.includes(name)) {
             return;
         }
-        let typeString = `type ${name} {`;
-        if (typeof fields === 'string') {
-            typeString += 'result: ' + fields + '!';
-        } else {
-            // for (let type in returnType.fields) {
-            //
-            // }
-        }
-        typeString += '}';
-        this.types += typeString;
+        this.types += extractTypes(name, fields);
     }
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
@@ -152,9 +139,8 @@ export class GraphQLController {
         pathName = pathName[pathName.length - 1];
         pathName = pathName.slice(0, 1).toUpperCase() + pathName.slice(1);
         let name = input.action.toLowerCase() + pathName
-        // todo
-        let params = '';
 
+        let params = '';
         if (input.bodyParams || input.queryParams || input.urlParams) {
             if (input.bodyParams) {
                 for (let k in input.bodyParams) {
@@ -217,11 +203,7 @@ export class GraphQLController {
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 route.executeRequest({context: context, params: args}).then(r => {
-                    if (typeof route.returnTypeFields === 'string') {
-                        return {result: r}
-                    } else {
-                        return r;
-                    }
+                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                 })
             }
         } else {
@@ -230,11 +212,7 @@ export class GraphQLController {
             }
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 route.executeRequest({context: context, params: args}).then(r => {
-                    if (typeof route.returnTypeFields === 'string') {
-                        return {result: r}
-                    } else {
-                        return r;
-                    }
+                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                 })
             }
         }

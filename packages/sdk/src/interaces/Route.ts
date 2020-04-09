@@ -1,3 +1,5 @@
+import {ConduitModel} from "./Model";
+
 export interface ConduitRouteParameters {
     params?: { name: string, value: any }[];
     path?: string;
@@ -30,12 +32,52 @@ export interface ConduitRouteOptions {
     description?: string;
 }
 
+/**
+ * Supports:
+ * {
+ *     name: 'String',
+ *     age: 'Number
+ *     ....
+ * }
+ *
+ * or
+ *
+ * {
+ *     name: {
+ *         type: 'String',
+ *         required: true
+ *     },
+ *     age: 'Number'
+ * }
+ *
+ * or
+ *
+ * {
+ *     user: {
+ *         username: 'String',
+ *         age: {
+ *             type: 'Number',
+ *             required: true
+ *         }
+ *     }
+ * }
+ *
+ * or
+ *
+ * {
+ *     user:{
+ *         friends: ['String'],
+ *         post: [{type: 'String', required:trues}]
+ *     }
+ * }
+ *
+ */
 export class ConduitRouteReturnDefinition {
 
     private _name: string;
-    private _fields: ConduitRouteOption | string;
+    private _fields: ConduitModel | string;
 
-    constructor(name: string, fields: ConduitRouteOption | string) {
+    constructor(name: string, fields: ConduitModel | string) {
         this._name = name;
         this._fields = fields;
     }
@@ -44,7 +86,7 @@ export class ConduitRouteReturnDefinition {
         return this._name;
     }
 
-    get fields(): ConduitRouteOption | string {
+    get fields(): ConduitModel | string {
         return this._fields;
     }
 
@@ -70,7 +112,7 @@ export class ConduitRoute {
         return this._input;
     }
 
-    get returnTypeFields(): ConduitRouteOption | string {
+    get returnTypeFields(): ConduitModel | string {
         return this._returnType.fields;
     }
 
