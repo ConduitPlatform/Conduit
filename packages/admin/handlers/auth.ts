@@ -3,7 +3,7 @@ import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
 import { ConduitSDK } from '@conduit/sdk';
 
-export class AdminHandlers {
+export class AuthHandlers {
 
   private readonly conduit: ConduitSDK;
 
@@ -12,9 +12,10 @@ export class AdminHandlers {
   }
 
   async loginAdmin(req: Request, res: Response, next: NextFunction) {
-    const { database, config } = this.conduit as any;
-    const databaseAdapter = database.getDbAdapter();
-    const AdminModel = databaseAdapter.getSchema('Admin');
+    const { config } = this.conduit as any;
+    const database = this.conduit.getDatabase();
+
+    const AdminModel = database.getSchema('Admin');
 
     const { username, password } = req.body;
     if (isNil(username) || isNil(password)) {
