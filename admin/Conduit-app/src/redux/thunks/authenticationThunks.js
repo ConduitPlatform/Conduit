@@ -2,7 +2,8 @@ import {
 	setAuthenticationError,
 	setAuthenticationToken,
 	startAuthenticationLoading,
-	stopAuthenticationLoading
+	stopAuthenticationLoading,
+	clearAuthenticationToken,
 } from "../actions";
 import {loginRequest} from "../../http/requests";
 
@@ -17,7 +18,7 @@ export const login = (username, password) => {
 			})
 			.catch(err => {
 				dispatch(stopAuthenticationLoading());
-				dispatch(setAuthenticationToken(null));
+				dispatch(clearAuthenticationToken());
 				dispatch(setAuthenticationError(err));
 			})
 	}
