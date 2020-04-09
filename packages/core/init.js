@@ -48,10 +48,10 @@ async function init(app) {
     StorageModule.getInstance(app);
 
     const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
-    InMemoryStoreModule.getInstance(
-      app,
+    app.conduit.registerInMemoryStore(new InMemoryStoreModule(
+      app.conduit,
       inMemoryStoreProviderName,
-      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`));
+      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;
