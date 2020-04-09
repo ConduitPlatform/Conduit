@@ -1,4 +1,4 @@
-import {PlatformTypesEnum} from "@conduit/security";
+import {PlatformTypesEnum} from "@conduit/sdk";
 
 export const NotificationTokenModel = {
     name: 'NotificationToken',
