@@ -1,0 +1,5 @@
+class AuthenticationModule {
+
+}
+
+export = AuthenticationModule;
