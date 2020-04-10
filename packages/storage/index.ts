@@ -20,6 +20,7 @@ class StorageModule extends IConduitStorage{
     const adminHandlers = new AdminConfigHandlers(conduit);
 
     this.registerAdminRoutes(admin, adminHandlers);
+
   }
 
   private registerAdminRoutes(admin: IConduitAdmin, adminHandlers: AdminConfigHandlers) {

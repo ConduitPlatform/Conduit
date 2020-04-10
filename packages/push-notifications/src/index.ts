@@ -12,11 +12,14 @@ class PushNotificationsModule extends IConduitPushNotifications {
   private readonly _provider: IPushNotificationsProvider;
   pushNotificationModel: any;
 
-  constructor(conduit: ConduitSDK, name: string, settings: any) {
+  constructor(conduit: ConduitSDK) {
     super(conduit);
 
     const databaseAdapter = conduit.getDatabase();
     databaseAdapter.createSchemaFromAdapter(NotificationTokenModel);
+
+    const name = (conduit as any).config.get('pushNotifications.providerName');
+    const settings = (conduit as any).config.get(`pushNotifications.${name}`);
 
     if (name === 'firebase') {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
@@ -26,6 +29,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
     }
 
     const notificationTokensHandler = new NotificationTokensHandler(conduit);
+
     const adminHandler = new AdminHandler(conduit, this._provider);
 
     conduit.getAdmin().registerRoute('POST', '/notification-token',
@@ -48,6 +52,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
     conduit.getAdmin().registerRoute('PUT', '/notifications/config',
       (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
+
 
   }
 }

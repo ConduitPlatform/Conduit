@@ -31,6 +31,7 @@ class SecurityModule extends IConduitSecurity {
 
         return res.json({ message: 'Client created' });
       });
+
   }
 
   authMiddleware(req: Request, res: Response, next: NextFunction) {
