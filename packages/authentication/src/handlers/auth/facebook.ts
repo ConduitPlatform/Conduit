@@ -1,6 +1,6 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import * as request from 'request-promise';
+import request from 'request-promise';
 import { OptionsWithUrl } from 'request-promise';
 import { isNil } from 'lodash';
 import moment = require('moment');
