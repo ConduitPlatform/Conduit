@@ -7,6 +7,7 @@ import { IConduitPushNotifications } from './modules/PushNotifications';
 import { IConduitInMemoryStore } from './modules/InMemoryStore';
 import { IConduitStorage } from './modules/Storage';
 import { IConduitSecurity } from './modules/Security';
+import { IConduitAuthentication } from './modules/Authentication';
 
 export class ConduitSDK {
 
@@ -20,6 +21,7 @@ export class ConduitSDK {
     private _inMemoryStore?: IConduitInMemoryStore;
     private _storage?: IConduitStorage;
     private _security?: IConduitSecurity;
+    private _authentication?: IConduitAuthentication;
 
     private constructor(app: Application) {
         this._app = app;
@@ -103,6 +105,16 @@ export class ConduitSDK {
     getSecurity(): IConduitSecurity {
         if (this._security) return this._security;
         throw new Error('Security module not assigned yet');
+    }
+
+    registerAuthentication(authentication: IConduitAuthentication) {
+        if (this._authentication) throw new Error('Cannot register a second authentication module');
+        this._authentication = authentication;
+    }
+
+    getAuthentication(): IConduitAuthentication {
+        if (this._authentication) return this._authentication;
+        throw new Error('Authentication module not assigned yet');
     }
 
     static getInstance(app: Application) {
