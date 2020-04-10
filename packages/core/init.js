@@ -26,10 +26,12 @@ async function init(app) {
 
     app.conduit.registerSecurity(new SecurityModule(app.conduit));
     const security = app.conduit.getSecurity();
-    app.use((req, res, next) => security.adminMiddleware(req, res, next));
 
-    if (config.get('admin.active')) {
+    if (config.get('authentication.active')) {
         app.use((req, res, next) => security.authMiddleware(req, res, next));
+    }
+    if (config.get('admin.active')) {
+        app.use((req, res, next) => security.adminMiddleware(req, res, next));
         registerAdminRoutes(app.conduit.getAdmin());
     }
 
@@ -46,7 +48,7 @@ async function init(app) {
     }
 
     // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
-    if (app.conduit.config.get('authentication')) {
+    if (config.get('authentication.active')) {
         await authentication.initialize(app, app.conduit.config.get('authentication'));
     }
 
@@ -65,7 +67,9 @@ async function init(app) {
           app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
     }
 
-    app.use('/users', authentication.authenticate, usersRouter);
+    if (config.get('authentication.active')) {
+        app.use('/users', authentication.authenticate, usersRouter);
+    }
     app.initialized = true;
     return app;
 }

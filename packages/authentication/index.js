@@ -70,7 +70,7 @@ async function authentication(app, config) {
     await registerEmailTemplates(email);
   }
 
-  if (config.local) {
+  if (config.local.enabled) {
     if (!app.conduit.config.get('email.active')) {
       throw new Error('Cannot use local authentication without email module being enabled');
     }
@@ -84,12 +84,12 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  if (config.facebook.active) {
+  if (config.facebook.enabled) {
     app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
     initialized = true;
   }
 
-  if (config.google.active) {
+  if (config.google.enabled) {
     app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
     initialized = true;
   }
