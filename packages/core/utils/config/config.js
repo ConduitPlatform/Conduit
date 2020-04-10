@@ -1,10 +1,20 @@
 const path = require('path');
 var convict = require('convict');
 let schema = require('./config.schema');
+const adminSchema = require('./admin-config.schema');
+const authenticationSchema = require('./authentication-config.schema');
 const inMemoryStoreSchema = require('./in-memory-store-config.schema');
+const storageSchema = require('./storage-config.schema');
+const pushNotificationsSchema = require('./push-notifications-config.schema');
+const emailSchema = require('./email-config.schema');
 
 // Define a schema
-schema = Object.assign(schema, inMemoryStoreSchema);
+Object.assign(schema, adminSchema);
+Object.assign(schema, authenticationSchema);
+Object.assign(schema, emailSchema);
+Object.assign(schema, storageSchema);
+Object.assign(schema, inMemoryStoreSchema);
+Object.assign(schema, pushNotificationsSchema);
 const config = convict(schema);
 
 // Load environment dependent configuration

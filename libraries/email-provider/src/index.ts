@@ -6,6 +6,7 @@ import {EmailBuilder} from "./interfaces/EmailBuilder";
 import {createTransport, SentMessageInfo} from 'nodemailer';
 import {MailgunConfig} from './transports/mailgun/mailgun.config';
 import {EmailOptions} from "./interfaces/EmailOptions";
+import { isNil } from "lodash";
 
 
 export class EmailProvider {
@@ -19,6 +20,9 @@ export class EmailProvider {
 
             const {apiKey, domain, proxy, host} = transportSettings;
 
+            if (isNil(apiKey) || isNil(domain) || isNil(host)) {
+                throw new Error('Mailgun transport settings are missing');
+            }
             const mailgunSettings: MailgunConfig = {
                 auth: {
                     api_key: apiKey,

@@ -64,10 +64,16 @@ async function authentication(app, config) {
   }
   database = app.conduit.getDatabase();
   registerSchemas();
-  const email = app.conduit.getEmail();
-  await registerEmailTemplates(email);
 
-  if (config.local) {
+  if (app.conduit.config.get('email.active')) {
+    const email = app.conduit.getEmail();
+    await registerEmailTemplates(email);
+  }
+
+  if (config.local.enabled) {
+    if (!app.conduit.config.get('email.active')) {
+      throw new Error('Cannot use local authentication without email module being enabled');
+    }
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
     app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
     app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));
@@ -78,12 +84,12 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  if (config.facebook.active) {
+  if (config.facebook.enabled) {
     app.post('/authentication/facebook', (req, res, next) => facebook.authenticate(req, res, next).catch(next));
     initialized = true;
   }
 
-  if (config.google.active) {
+  if (config.google.enabled) {
     app.post('/authentication/google', (req, res, next) => google.authenticate(req, res, next).catch(next));
     initialized = true;
   }
@@ -97,7 +103,8 @@ async function authentication(app, config) {
     (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
 
   admin.registerRoute('GET', '/authentication/config',
-      (req, res, next) => admin.getAuthConfig(req, res).catch(next));
+    (req, res, next) => admin.getAuthConfig(req, res).catch(next));
+
 }
 
 function registerSchemas() {

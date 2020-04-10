@@ -5,7 +5,7 @@ module.exports = {
       inMemoryStore: {
         providerName: {
           type: String,
-          default: 'redis'
+          default: 'local'
         },
         settings: {
           redis: {

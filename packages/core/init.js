@@ -13,56 +13,61 @@ const {getConfig, editConfig} = require('./admin/config');
 
 async function init(app) {
 
-    registerSchemas(app.conduit.getDatabase());
+  registerSchemas(app.conduit.getDatabase());
 
-    await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
+  await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
-    app.conduit.registerAdmin(new AdminModule(app.conduit));
-    registerAdminRoutes(app.conduit.getAdmin());
+  const config = app.conduit.config;
 
-    app.conduit.registerSecurity(new SecurityModule(app.conduit));
-    const security = app.conduit.getSecurity();
-    app.use((req, res, next) => security.adminMiddleware(req, res, next));
+  app.conduit.registerAdmin(new AdminModule(app.conduit));
+
+  app.conduit.registerSecurity(new SecurityModule(app.conduit));
+  const security = app.conduit.getSecurity();
+
+  if (config.get('authentication.active')) {
     app.use((req, res, next) => security.authMiddleware(req, res, next));
+  }
+  app.use((req, res, next) => security.adminMiddleware(req, res, next));
+  registerAdminRoutes(app.conduit.getAdmin());
 
-    registerAdminRoutes(app.conduit.getAdmin());
+  if (config.get('pushNotifications.active')) {
+    app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
+  }
 
-    const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
-    app.conduit.registerPushNotifications(new PushNotificationsModule(
-        app.conduit,
-        pushNotificationsProviderName,
-        app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`)));
+  if (config.get('email.active')) {
+    app.conduit.registerEmail(new EmailModule(app.conduit));
+  }
 
-    const emailModule = new EmailModule(app.conduit);
-    app.conduit.registerEmail(emailModule);
-    // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
-    if (app.conduit.config.get('authentication')) {
-        await authentication.initialize(app, app.conduit.config.get('authentication'));
-    }
+  // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
+  if (config.get('authentication.active')) {
+    await authentication.initialize(app, app.conduit.config.get('authentication'));
+  }
 
-    // initialize plugin AFTER the authentication so that we may provide access control to the plugins
-    app.conduit.cms = new cms(app.conduit.getDatabase(), app);
+  // initialize plugin AFTER the authentication so that we may provide access control to the plugins
+  app.conduit.cms = new cms(app.conduit.getDatabase(), app);
 
+  if (config.get('storage.active')) {
     app.conduit.registerStorage(new StorageModule(app.conduit));
+  }
 
-    const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
-    app.conduit.registerInMemoryStore(new InMemoryStoreModule(
-      app.conduit,
-      inMemoryStoreProviderName,
-      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
+  if (config.get('inMemoryStore.active')) {
+    app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
+  }
 
+  if (config.get('authentication.active')) {
     app.use('/users', authentication.authenticate, usersRouter);
-    app.initialized = true;
-    return app;
+  }
+  app.initialized = true;
+  return app;
 }
 
 function registerSchemas(database) {
-    database.createSchemaFromAdapter(configModel);
+  database.createSchemaFromAdapter(configModel);
 }
 
 function registerAdminRoutes(admin) {
-    admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
-    admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
+  admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
+  admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
 }
 
 module.exports = init;

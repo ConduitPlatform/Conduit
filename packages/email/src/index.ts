@@ -15,8 +15,11 @@ class EmailModule implements IConduitEmail {
     this.registerModels();
     this.initEmailProvider();
     this.emailService = new EmailService(this.emailProvider, sdk);
+
+
     this.adminHandlers = new AdminHandlers(sdk, this.emailService);
     this.initAdminRoutes();
+
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
