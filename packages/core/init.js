@@ -2,7 +2,7 @@ const SecurityModule = require('@conduit/security');
 const configModel = require('./models/ConfigModel');
 const dbConfig = require('./utils/config/db-config');
 const EmailModule = require('@conduit/email');
-const authentication = require('@conduit/authentication');
+const Authentication = require('@conduit/authentication');
 const StorageModule = require('@conduit/storage');
 const AdminModule = require('@conduit/admin');
 const InMemoryStoreModule = require('@conduit/in-memory-store');
@@ -40,7 +40,7 @@ async function init(app) {
 
   // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
   if (config.get('authentication.active')) {
-    await authentication.initialize(app, app.conduit.config.get('authentication'));
+      app.conduit.registerAuthentication(new Authentication(app.conduit));
   }
 
   // initialize plugin AFTER the authentication so that we may provide access control to the plugins
@@ -55,7 +55,7 @@ async function init(app) {
   }
 
   if (config.get('authentication.active')) {
-    app.use('/users', authentication.authenticate, usersRouter);
+    app.use('/users', app.conduit.getAuthentication().middleware, usersRouter);
   }
   app.initialized = true;
   return app;
