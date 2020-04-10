@@ -8,6 +8,7 @@ import { FacebookHandlers } from './handlers/auth/facebook';
 import { GoogleHandlers } from './handlers/auth/google';
 import { AuthMiddleware } from './middleware/auth';
 import { AdminHandlers } from './handlers/admin';
+import { CommonHandlers } from './handlers/auth/common';
 
 class AuthenticationModule {
   private readonly database: IConduitDatabase;
@@ -19,6 +20,7 @@ class AuthenticationModule {
   private readonly facebookHandlers: FacebookHandlers;
   private readonly googleHandlers: GoogleHandlers;
   private readonly adminHandlers: AdminHandlers;
+  private readonly commonHandlers: CommonHandlers;
   private readonly authRouter: Router;
   private readonly hookRouter: Router;
   private readonly authMiddleware: AuthMiddleware;
@@ -36,6 +38,7 @@ class AuthenticationModule {
     this.googleHandlers = new GoogleHandlers(sdk, this.authService);
     this.adminHandlers = new AdminHandlers(sdk);
     this.authMiddleware = new AuthMiddleware(sdk, this.authService);
+    this.commonHandlers = new CommonHandlers(sdk, this.authService);
     this.authRouter = Router();
     this.hookRouter = Router();
     this.init();
@@ -60,24 +63,36 @@ class AuthenticationModule {
 
   private registerAuthRoutes(config: any) {
     const { config: appConfig } = this.sdk as any;
+
+    let enabled = false;
+
+    const authMiddleware = this.authMiddleware.middleware.bind(this.authMiddleware);
+
     if (config.local.enabled) {
       if (!appConfig.get('email.active')) {
         throw new Error('Cannot use local authentication without email module being enabled');
       }
+
       this.authRouter.post('/local', (req: Request, res: Response, next: NextFunction) => this.localHandlers.authenticate(req, res).catch(next));
       this.authRouter.post('/local/new', (req, res, next) => this.localHandlers.register(req, res).catch(next));
       this.authRouter.post('/forgot-password', (req, res, next) => this.localHandlers.forgotPassword(req, res).catch(next));
       this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
-      this.authRouter.post('/renew', (req, res, next) => this.localHandlers.renewAuth(req, res).catch(next));
-      this.authRouter.post('/logout', this.authMiddleware.middleware.bind(this), (req, res, next) => this.localHandlers.logOut(req, res).catch(next));
+      enabled = true;
     }
 
     if (config.facebook.enabled) {
       this.authRouter.post('/facebook', (req, res, next) => this.facebookHandlers.authenticate(req, res).catch(next));
+      enabled = true;
     }
 
     if (config.google.enabled) {
       this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
+      enabled = true;
+    }
+
+    if (enabled) {
+      this.authRouter.post('/renew', (req, res, next) => this.commonHandlers.renewAuth(req, res).catch(next));
+      this.authRouter.post('/logout', authMiddleware, (req, res, next) => this.commonHandlers.logOut(req, res).catch(next));
     }
 
     this.hookRouter.get('/verify-email/:verificationToken', (req, res, next) => this.localHandlers.verifyEmail(req, res).catch(next));
