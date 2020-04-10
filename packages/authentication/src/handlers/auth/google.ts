@@ -33,6 +33,9 @@ export class GoogleHandlers {
     });
 
     const payload = ticket.getPayload();
+    if (isNil(payload)) {
+      return res.status(401).json({ error: 'Received invalid response from the Google API' });
+    }
     if (!payload.email_verified) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
