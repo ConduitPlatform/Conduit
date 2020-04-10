@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepare": "npm run build",
-    "build": "rimraf dist && tsc"
+    "build": "tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -30,7 +30,6 @@
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
     "express": "~4.16.1",
-    "rimraf": "^3.0.2",
     "typescript": "^3.8.3"
   },
   "peerDependencies": {
