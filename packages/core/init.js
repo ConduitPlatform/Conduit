@@ -17,6 +17,8 @@ async function init(app) {
 
     await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
+    const config = app.conduit.config;
+
     app.conduit.registerAdmin(new AdminModule(app.conduit));
     registerAdminRoutes(app.conduit.getAdmin());
 
@@ -45,11 +47,13 @@ async function init(app) {
 
     app.conduit.registerStorage(new StorageModule(app.conduit));
 
-    const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
-    app.conduit.registerInMemoryStore(new InMemoryStoreModule(
-      app.conduit,
-      inMemoryStoreProviderName,
-      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
+    if(config.get('inMemoryStore.active')){
+        const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
+        app.conduit.registerInMemoryStore(new InMemoryStoreModule(
+          app.conduit,
+          inMemoryStoreProviderName,
+          app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
+    }
 
     app.use('/users', authentication.authenticate, usersRouter);
     app.initialized = true;
