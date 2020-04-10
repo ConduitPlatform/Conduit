@@ -32,11 +32,7 @@ async function init(app) {
   registerAdminRoutes(app.conduit.getAdmin());
 
   if (config.get('pushNotifications.active')) {
-    const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');
-    app.conduit.registerPushNotifications(new PushNotificationsModule(
-      app.conduit,
-      pushNotificationsProviderName,
-      app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`)));
+    app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
   }
 
   if (config.get('email.active')) {
@@ -56,11 +52,7 @@ async function init(app) {
   }
 
   if (config.get('inMemoryStore.active')) {
-    const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
-    app.conduit.registerInMemoryStore(new InMemoryStoreModule(
-      app.conduit,
-      inMemoryStoreProviderName,
-      app.conduit.config.get(`inMemoryStore.settings.${inMemoryStoreProviderName}`)));
+    app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
   }
 
   if (config.get('authentication.active')) {

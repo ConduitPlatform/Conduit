@@ -13,12 +13,15 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
     private readonly _provider: StorageProvider;
 
-    constructor(conduit: ConduitSDK, name: string, storageSettings: LocalSettings | RedisSettings | MemcachedSettings) {
+    constructor(conduit: ConduitSDK) {
         super(conduit);
 
         if (isNil(conduit)) {
             throw new Error('Conduit not initialized');
         }
+
+        const name = (conduit as any).config.get('inMemoryStore.providerName');
+        const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = (conduit as any).config.get(`inMemoryStore.settings.${name}`);
 
         if (name === 'redis') {
             this._provider = new RedisProvider(storageSettings as RedisSettings);
