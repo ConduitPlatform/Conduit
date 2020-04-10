@@ -29,7 +29,7 @@ module.exports = {
     google: {
       enabled: {
         format: 'Boolean',
-        default: true
+        default: false
       },
       clientId: {
         doc: 'The client id that is provided by google developer console for a specific app',
@@ -45,7 +45,7 @@ module.exports = {
     facebook: {
       enabled: {
         format: 'Boolean',
-        default: true
+        default: false
       },
       clientId: {
         doc: 'Facebook client id',
