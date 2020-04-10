@@ -41,8 +41,10 @@ async function init(app) {
           app.conduit.config.get(`pushNotifications.${pushNotificationsProviderName}`)));
     }
 
-    const emailModule = new EmailModule(app.conduit);
-    app.conduit.registerEmail(emailModule);
+    if (config.get('email.active')) {
+        app.conduit.registerEmail(new EmailModule(app.conduit));
+    }
+
     // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
     if (app.conduit.config.get('authentication')) {
         await authentication.initialize(app, app.conduit.config.get('authentication'));

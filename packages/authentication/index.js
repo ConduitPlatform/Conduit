@@ -64,10 +64,16 @@ async function authentication(app, config) {
   }
   database = app.conduit.getDatabase();
   registerSchemas();
-  const email = app.conduit.getEmail();
-  await registerEmailTemplates(email);
+
+  if (app.conduit.config.get('email.active')) {
+    const email = app.conduit.getEmail();
+    await registerEmailTemplates(email);
+  }
 
   if (config.local) {
+    if (!app.conduit.config.get('email.active')) {
+      throw new Error('Cannot use local authentication without email module being enabled');
+    }
     app.post('/authentication/local', (req, res, next) => local.authenticate(req, res, next).catch(next));
     app.post('/authentication/local/new', (req, res, next) => local.register(req, res, next).catch(next));
     app.post('/authentication/forgot-password', (req, res, next) => local.forgotPassword(req, res, next).catch(next));

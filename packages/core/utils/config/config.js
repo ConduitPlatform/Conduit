@@ -5,9 +5,11 @@ const adminSchema = require('./admin-config.schema');
 const inMemoryStoreSchema = require('./in-memory-store-config.schema');
 const storageSchema = require('./storage-config.schema');
 const pushNotificationsSchema = require('./push-notifications-config.schema');
+const emailSchema = require('./email-config.schema');
 
 // Define a schema
 schema = Object.assign(schema, adminSchema);
+schema = Object.assign(schema, emailSchema);
 schema = Object.assign(schema, storageSchema);
 schema = Object.assign(schema, inMemoryStoreSchema);
 schema = Object.assign(schema, pushNotificationsSchema);
