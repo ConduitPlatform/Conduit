@@ -9,12 +9,12 @@ const pushNotificationsSchema = require('./push-notifications-config.schema');
 const emailSchema = require('./email-config.schema');
 
 // Define a schema
-schema = Object.assign(schema, adminSchema);
-schema = Object.assign(schema, authenticationSchema);
-schema = Object.assign(schema, emailSchema);
-schema = Object.assign(schema, storageSchema);
-schema = Object.assign(schema, inMemoryStoreSchema);
-schema = Object.assign(schema, pushNotificationsSchema);
+Object.assign(schema, adminSchema);
+Object.assign(schema, authenticationSchema);
+Object.assign(schema, emailSchema);
+Object.assign(schema, storageSchema);
+Object.assign(schema, inMemoryStoreSchema);
+Object.assign(schema, pushNotificationsSchema);
 const config = convict(schema);
 
 // Load environment dependent configuration
