@@ -18,5 +18,17 @@
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
     "uuid": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^3.0.0",
+    "@types/express": "~4.16.1",
+    "@types/jsonwebtoken": "^8.3.9",
+    "@types/lodash": "^4.14.149",
+    "@types/request-promise": "^4.1.46",
+    "@types/uuid": "^7.0.2",
+    "typescript": "^3.8.3"
+  },
+  "peerDependencies": {
+    "express": "~4.16.1"
   }
 }
