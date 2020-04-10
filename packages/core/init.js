@@ -15,8 +15,7 @@ async function init(app) {
 
   registerSchemas(app.conduit.getDatabase());
 
-  // TODO commented this out so it doesnt interfere with convict values right now
-  // await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
+  await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
   const config = app.conduit.config;
 
