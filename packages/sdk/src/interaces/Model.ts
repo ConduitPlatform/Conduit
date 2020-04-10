@@ -8,10 +8,11 @@ export enum TYPE {
     Relation = 'Relation'
 }
 
-export type Array = [];
+export type Array = any[];
 
 export interface ConduitModelField {
     type?: TYPE | Array | ConduitModel | ConduitModelField;
+    enum?: any
     default?: any
     model?: string
     unique?: boolean

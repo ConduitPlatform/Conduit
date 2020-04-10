@@ -6,6 +6,7 @@ import {EmailBuilder} from "./interfaces/EmailBuilder";
 import {createTransport, SentMessageInfo} from 'nodemailer';
 import {MailgunConfig} from './transports/mailgun/mailgun.config';
 import {EmailOptions} from "./interfaces/EmailOptions";
+import { isNil } from "lodash";
 
 
 export class EmailProvider {
@@ -13,12 +14,15 @@ export class EmailProvider {
     _transport?: Mail;
     _transportName?: string;
 
-    constructor(transport: string, transportSettings: any, testAccount?: any) {
+    constructor(transport: string, transportSettings: any) {
         if (transport === 'mailgun') {
             this._transportName = 'mailgun';
 
             const {apiKey, domain, proxy, host} = transportSettings;
 
+            if (isNil(apiKey) || isNil(domain) || isNil(host)) {
+                throw new Error('Mailgun transport settings are missing');
+            }
             const mailgunSettings: MailgunConfig = {
                 auth: {
                     api_key: apiKey,
@@ -30,18 +34,14 @@ export class EmailProvider {
 
             this._transport = createTransport(initializeMailgun(mailgunSettings));
         } else if (transport === 'smtp') {
-            if (!testAccount) {
-                throw new Error("Test account not provided!");
-            }
             this._transportName = 'smtp';
+
+            const { smtp } = transportSettings;
 
             this._transport = createTransport({
                 ...transportSettings,
                 secure: false,
-                auth: {
-                    user: testAccount.user, // generated ethereal user
-                    pass: testAccount.pass // generated ethereal password
-                },
+                ...smtp,
                 tls: {
                     rejectUnauthorized: false
                 }

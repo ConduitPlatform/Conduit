@@ -7,11 +7,13 @@ import {ConduitSDK, IConduitAdmin} from "@conduit/sdk";
 
 class AdminModule extends IConduitAdmin {
     private readonly router: Router;
+    conduit: ConduitSDK;
 
     constructor(conduit: ConduitSDK) {
-        super(conduit)
+        super(conduit);
         this.router = Router();
 
+        this.conduit = conduit;
         const {config} = conduit as any;
 
         const databaseAdapter = conduit.getDatabase();
@@ -39,7 +41,7 @@ class AdminModule extends IConduitAdmin {
 
         conduit.getRouter().registerDirectRouter('/admin/login',
           (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
-        this.router.use(this.authMiddleware);
+        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
     }
 
@@ -67,12 +69,11 @@ class AdminModule extends IConduitAdmin {
     }
 
     authMiddleware(req: Request, res: Response, next: NextFunction) {
-        const {conduit} = req.app as any;
-        const {database, config} = conduit;
+        const { config } = this.conduit as any;
 
         const adminConfig = config.get('admin');
 
-        const databaseAdapter = database.getDbAdapter();
+        const databaseAdapter = this.conduit.getDatabase();
 
         const AdminModel = databaseAdapter.getSchema('Admin');
 

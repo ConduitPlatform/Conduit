@@ -19,7 +19,6 @@
   ],
   "dependencies": {
     "@conduit/sdk": "1.0.0",
-    "@conduit/security": "1.0.0",
     "firebase-admin": "^8.10.0",
     "lodash": "^4.17.15",
     "rimraf": "^3.0.2"

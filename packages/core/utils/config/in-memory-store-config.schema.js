@@ -1,9 +1,13 @@
 module.exports = {
   inMemoryStore: {
+    active: {
+      format: 'Boolean',
+      default: false
+    },
     providerName: {
       doc: 'The name for the storage provider to use',
       format: 'String',
-      default: 'redis'
+      default: 'local'
     },
     settings: {
       redis: {
@@ -17,15 +21,18 @@ module.exports = {
         },
         path: {
           doc: 'The UNIX socket string of the Redis server',
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         url: {
           doc: 'The URL of the Redis server. Format: [redis[s]:]//[[user][:password@]][host][:port][/db-number][?db=db-number[&password=bar[&option=value]]]',
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         string_numbers: {
           doc: 'Set to true, Node Redis will return Redis number values as Strings instead of javascript Numbers. Useful if you need to handle big numbers (above Number.MAX_SAFE_INTEGER === 2^53). Hiredis is incapable of this behavior, so setting this option to true will result in the built-in javascript parser being used no matter the value of the parser option.',
-          format: 'Boolean'
+          format: 'Boolean',
+          default: undefined
         },
         return_buffers: {
           doc: 'If set to true, then all replies will be sent to callbacks as Buffers instead of Strings.',
@@ -63,10 +70,12 @@ module.exports = {
           default: false
         },
         password: {
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         db: {
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         family: {
           doc: 'You can force using IPv6 if you set the family to \'IPv6\'. See Node.js net or dns modules on how to use the family type.',
@@ -80,29 +89,39 @@ module.exports = {
         },
         rename_commands: {
           doc: 'Passing an object with renamed commands to use instead of the original functions. For example, if you renamed the command KEYS to "DO-NOT-USE" then the rename_commands object would be: { KEYS : "DO-NOT-USE" } . See the Redis security topics for more info.',
-          format: 'any'
+          format: '*',
+          default: undefined
         },
         tls: {
           doc: 'An object containing options to pass to tls.connect to set up a TLS connection to Redis (if, for example, it is set up to be accessible via a tunnel).',
-          format: 'any'
+          format: '*',
+          default: undefined
         },
         prefix: {
           doc: 'A string used to prefix all used keys (e.g. namespace:test). Please be aware that the keys command will not be prefixed. The keys command has a "pattern" as argument and no key and it would be impossible to determine the existing keys in Redis if this would be prefixed.',
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         retry_strategy: {
-          format: 'any'
+          format: '*',
+          default: undefined
         }
       },
       memcache: {
         server: {
-          format: 'String'
+          format: 'String',
+          default: undefined
         },
         options: {
-          format: 'any'
-        }
+          format: '*',
+          default: undefined
+        },
+
       },
-      local: {}
+      local: {
+        format: 'Object',
+        default: undefined
+      }
     }
   }
 };
