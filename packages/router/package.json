@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",
@@ -31,6 +31,7 @@
     "@types/express": "^4.17.4",
     "@types/node": "^13.9.8",
     "express": "~4.16.1",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "rimraf": "^3.0.2"
   }
 }
