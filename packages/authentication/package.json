@@ -4,7 +4,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "prepublish": "npm run build",
+    "build": "rimraf dist && tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -28,8 +29,9 @@
     "@types/lodash": "^4.14.149",
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
-    "typescript": "^3.8.3",
-    "express": "~4.16.1"
+    "express": "~4.16.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.8.3"
   },
   "peerDependencies": {
     "express": "~4.16.1"
