@@ -59,7 +59,11 @@ class AuthenticationModule {
   }
 
   private registerAuthRoutes(config: any) {
-    if (config.local.active) {
+    const { config: appConfig } = this.sdk as any;
+    if (config.local.enabled) {
+      if (!appConfig.get('email.active')) {
+        throw new Error('Cannot use local authentication without email module being enabled');
+      }
       this.authRouter.post('/local', (req: Request, res: Response, next: NextFunction) => this.localHandlers.authenticate(req, res).catch(next));
       this.authRouter.post('/local/new', (req, res, next) => this.localHandlers.register(req, res).catch(next));
       this.authRouter.post('/forgot-password', (req, res, next) => this.localHandlers.forgotPassword(req, res).catch(next));
@@ -68,11 +72,11 @@ class AuthenticationModule {
       this.authRouter.post('/logout', this.authMiddleware.middleware.bind(this), (req, res, next) => this.localHandlers.logOut(req, res).catch(next));
     }
 
-    if (config.facebook.active) {
+    if (config.facebook.enabled) {
       this.authRouter.post('/facebook', (req, res, next) => this.facebookHandlers.authenticate(req, res).catch(next));
     }
 
-    if (config.google.active) {
+    if (config.google.enabled) {
       this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
     }
 
