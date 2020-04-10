@@ -17,7 +17,7 @@ export class AuthService {
     return jwt.sign(data, secret, { expiresIn });
   }
 
-  verify(token: string, secret: string) {
+  verify(token: string, secret: string): any {
     try {
       return jwt.verify(token, secret);
     } catch (error) {
