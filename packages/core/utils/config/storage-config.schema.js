@@ -3,7 +3,7 @@ module.exports = {
     doc: 'The config of the storage module',
     active: {
       format: 'Boolean',
-      default: false
+      default: true
     },
     provider: {
       doc: 'The provider to use for storage',
