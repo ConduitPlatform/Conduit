@@ -1,5 +1,18 @@
 import {ConduitModel, TYPE} from "@conduit/sdk";
 
+
+export interface ParseResult {
+    types: string[];
+    nestedTypes: string[];
+    relationTypes: string[];
+    typeString: string;
+    parentResolve: { parentName: string, resolver: (parent: any) => Promise<any> }[]
+}
+
+function constructName(parent: string, child: string) {
+    return parent + child.slice(0, 1).toUpperCase() + child.slice(1)
+}
+
 export function extractTypes(name: string, fields: ConduitModel | string): string {
     let finalString = '';
     let typeString = ` type ${name} {`;
@@ -24,16 +37,16 @@ export function extractTypes(name: string, fields: ConduitModel | string): strin
                     }
                     // if the array has "type" but is an object
                     else {
-                        let nestedName = field.slice(0, 1).toUpperCase() + field.slice(1);
-                        typeString += field + ': [' + (name + nestedName) + ']' + ' ' + ((fields[field] as Array<any>)[0].required ? '!' : '') + ' ';
-                        finalString += ' ' + extractTypes((name + nestedName), (fields[field] as Array<any>)[0].type) + ' '
+                        let nestedName = constructName(name, field);
+                        typeString += field + ': [' + nestedName + ']' + ' ' + ((fields[field] as Array<any>)[0].required ? '!' : '') + ' ';
+                        finalString += ' ' + extractTypes(nestedName, (fields[field] as Array<any>)[0].type) + ' '
                     }
                 }
                 // if array contains an object
                 else {
-                    let nestedName = field.slice(0, 1).toUpperCase() + field.slice(1);
-                    typeString += field + ': [' + (name + nestedName) + ']' + ' ';
-                    finalString += ' ' + extractTypes((name + nestedName), (fields[field] as Array<any>)[0]) + ' '
+                    let nestedName = constructName(name, field);
+                    typeString += field + ': [' + nestedName + ']' + ' ';
+                    finalString += ' ' + extractTypes(nestedName, (fields[field] as Array<any>)[0]) + ' '
                 }
             } else if (typeof fields[field] === 'object') {
                 // if it has "type" as a property we assume that the value is a string
@@ -48,28 +61,30 @@ export function extractTypes(name: string, fields: ConduitModel | string): strin
                     }
                     // if type is an array
                     else if (Array.isArray((fields[field] as any).type)) {
+                        let actualField: any = fields[field];
+                        let type: Array<any> = actualField.type;
                         // if the array includes a simple type
-                        if (typeof ((fields[field] as any).type as Array<any>)[0] === 'string') {
-                            typeString += field + ': [' + (fields[field] as Array<any>)[0] + ']' + ((fields[field] as any).required ? '!' : '') + ' ';
+                        if (typeof type[0] === 'string') {
+                            typeString += `${field}: [${type[0]}]${(actualField.required ? '!' : '')} `;
                         }
                         // if the array contains an object
                         else {
-                            let nestedName = field.slice(0, 1).toUpperCase() + field.slice(1);
-                            typeString += field + ': [' + (name + nestedName) + ']' + ((fields[field] as any).required ? '!' : '') + ' ';
-                            finalString += ' ' + extractTypes((name + nestedName), ((fields[field] as any).type as Array<any>)[0]) + ' '
+                            let nestedName = constructName(name, field);
+                            typeString += `${field}: [${nestedName}] ${(actualField.required ? '!' : '')} `;
+                            finalString += ' ' + extractTypes(nestedName, type[0]) + ' '
                         }
                     } else {
                         // object of some kind
-                        let nestedName = field.slice(0, 1).toUpperCase() + field.slice(1);
-                        typeString += field + ': [' + (name + nestedName) + ']' + ((fields[field] as any).required ? '!' : '') + ' ';
-                        finalString += ' ' + extractTypes((name + nestedName), (fields[field] as any).type) + ' '
+                        let nestedName = constructName(name, field);
+                        typeString += field + ': [' + nestedName + ']' + ((fields[field] as any).required ? '!' : '') + ' ';
+                        finalString += ' ' + extractTypes(nestedName, (fields[field] as any).type) + ' '
                     }
 
                 } else {
                     // object of some kind
-                    let nestedName = field.slice(0, 1).toUpperCase() + field.slice(1);
-                    typeString += field + ': ' + (name + nestedName) + ' ';
-                    finalString += ' ' + extractTypes((name + nestedName), (fields[field] as any)) + ' '
+                    let nestedName = constructName(name, field);
+                    typeString += field + ': ' + nestedName + ' ';
+                    finalString += ' ' + extractTypes(nestedName, (fields[field] as any)) + ' '
                 }
             }
         }
@@ -80,12 +95,12 @@ export function extractTypes(name: string, fields: ConduitModel | string): strin
 }
 
 //test
-// let result = extractTypes('User', {
-//     name: {
-//         type: TYPE.String,
-//         required: false
-//     },
-//     friends: [{username: TYPE.String, age: TYPE.Number, posts: {type: 'Relation', model:'Posts'}}]
-// })
-//
-// console.log(result)
+let result = extractTypes('User', {
+    name: {
+        type: TYPE.String,
+        required: false
+    },
+    friends: [{username: TYPE.String, age: TYPE.Number, posts: {type: 'Relation', model:'Posts'}}]
+})
+
+console.log(result)

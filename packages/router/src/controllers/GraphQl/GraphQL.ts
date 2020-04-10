@@ -192,7 +192,6 @@ export class GraphQLController {
         this.typeDefs = this.types + ' ' + this.generateQuerySchema() + ' ' + this.generateMutationSchema();
     }
 
-
     registerConduitRoute(route: ConduitRoute) {
         this.generateType(route.returnTypeName, route.returnTypeFields);
         let actionName = this.generateAction(route.input, route.returnTypeName);
@@ -202,7 +201,7 @@ export class GraphQLController {
                 this.resolvers['Query'] = {};
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
-                route.executeRequest({context: context, params: args}).then(r => {
+                return route.executeRequest({context: context, params: args}).then(r => {
                     return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                 })
             }
@@ -211,7 +210,7 @@ export class GraphQLController {
                 this.resolvers['Mutation'] = {};
             }
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
-                route.executeRequest({context: context, params: args}).then(r => {
+                return route.executeRequest({context: context, params: args}).then(r => {
                     return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                 })
             }
