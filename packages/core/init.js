@@ -20,15 +20,18 @@ async function init(app) {
 
     const config = app.conduit.config;
 
-    app.conduit.registerAdmin(new AdminModule(app.conduit));
-    registerAdminRoutes(app.conduit.getAdmin());
+    if (config.get('admin.active')) {
+        app.conduit.registerAdmin(new AdminModule(app.conduit));
+    }
 
     app.conduit.registerSecurity(new SecurityModule(app.conduit));
     const security = app.conduit.getSecurity();
     app.use((req, res, next) => security.adminMiddleware(req, res, next));
-    app.use((req, res, next) => security.authMiddleware(req, res, next));
 
-    registerAdminRoutes(app.conduit.getAdmin());
+    if (config.get('admin.active')) {
+        app.use((req, res, next) => security.authMiddleware(req, res, next));
+        registerAdminRoutes(app.conduit.getAdmin());
+    }
 
     if (config.get('pushNotifications.active')) {
         const pushNotificationsProviderName = app.conduit.config.get('pushNotifications.providerName');

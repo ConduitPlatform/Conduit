@@ -26,28 +26,32 @@ class PushNotificationsModule extends IConduitPushNotifications {
     }
 
     const notificationTokensHandler = new NotificationTokensHandler(conduit);
-    const adminHandler = new AdminHandler(conduit, this._provider);
 
-    conduit.getAdmin().registerRoute('POST', '/notification-token',
-      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
+    if ((conduit as any).config.get('admin.active')) {
+      const adminHandler = new AdminHandler(conduit, this._provider);
 
-    conduit.getAdmin().registerRoute('GET', '/notification-token/:userId',
-      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.getNotificationToken(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('POST', '/notification-token',
+        (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
 
-    conduit.getAdmin().registerRoute('POST', '/notifications/send',
-      (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('GET', '/notification-token/:userId',
+        (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.getNotificationToken(req, res, next).catch(next));
 
-    conduit.getAdmin().registerRoute('POST', '/notifications/send-many',
-      (req: Request, res: Response, next: NextFunction) => adminHandler.sendManyNotifications(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('POST', '/notifications/send',
+        (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
 
-    conduit.getAdmin().registerRoute('POST', '/notifications/send-to-many-devices',
-      (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('POST', '/notifications/send-many',
+        (req: Request, res: Response, next: NextFunction) => adminHandler.sendManyNotifications(req, res, next).catch(next));
 
-    conduit.getAdmin().registerRoute('GET', '/notifications/config',
-      (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationsConfig(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('POST', '/notifications/send-to-many-devices',
+        (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
 
-    conduit.getAdmin().registerRoute('PUT', '/notifications/config',
-      (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
+      conduit.getAdmin().registerRoute('GET', '/notifications/config',
+        (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationsConfig(req, res, next).catch(next));
+
+      conduit.getAdmin().registerRoute('PUT', '/notifications/config',
+        (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
+
+    }
 
   }
 }
