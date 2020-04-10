@@ -15,7 +15,8 @@ async function init(app) {
 
     registerSchemas(app.conduit.getDatabase());
 
-    await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
+    // TODO commented this out so it doesnt interfere with convict values right now
+    // await dbConfig.configureFromDatabase(app.conduit.getDatabase(), app.conduit.config);
 
     const config = app.conduit.config;
 
@@ -45,9 +46,11 @@ async function init(app) {
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
     app.conduit.cms = new cms(app.conduit.getDatabase(), app);
 
-    app.conduit.registerStorage(new StorageModule(app.conduit));
+    if (config.get('storage.active')) {
+        app.conduit.registerStorage(new StorageModule(app.conduit));
+    }
 
-    if(config.get('inMemoryStore.active')){
+    if (config.get('inMemoryStore.active')){
         const inMemoryStoreProviderName = app.conduit.config.get('inMemoryStore.providerName');
         app.conduit.registerInMemoryStore(new InMemoryStoreModule(
           app.conduit,
