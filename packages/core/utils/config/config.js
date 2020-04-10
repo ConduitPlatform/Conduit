@@ -17,8 +17,6 @@ schema = Object.assign(schema, inMemoryStoreSchema);
 schema = Object.assign(schema, pushNotificationsSchema);
 const config = convict(schema);
 
-console.log(config);
-
 // Load environment dependent configuration
 config.loadFile(path.join(__dirname,'../../config/env.json'));
 
