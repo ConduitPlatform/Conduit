@@ -15,24 +15,22 @@ class SecurityModule extends IConduitSecurity {
     this.database = conduit.getDatabase();
     this.database.createSchemaFromAdapter(ClientModel);
 
-    if ((conduit as any).config.get('admin.active')) {
-      conduit.getAdmin().registerRoute('POST', '/client',
-        async (req: Request, res: Response, next: NextFunction) => {
-          const { clientId, clientSecret, platform } = req.body;
+    conduit.getAdmin().registerRoute('POST', '/client',
+      async (req: Request, res: Response, next: NextFunction) => {
+        const { clientId, clientSecret, platform } = req.body;
 
-          if (!Object.values(PlatformTypesEnum).includes(platform)) {
-            return res.status(401).json({ error: 'Invalid platform' });
-          }
+        if (!Object.values(PlatformTypesEnum).includes(platform)) {
+          return res.status(401).json({ error: 'Invalid platform' });
+        }
 
-          await this.database.getSchema('Client').create({
-            clientId,
-            clientSecret,
-            platform
-          });
-
-          return res.json({ message: 'Client created' });
+        await this.database.getSchema('Client').create({
+          clientId,
+          clientSecret,
+          platform
         });
-    }
+
+        return res.json({ message: 'Client created' });
+      });
 
   }
 

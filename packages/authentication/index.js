@@ -94,18 +94,16 @@ async function authentication(app, config) {
     initialized = true;
   }
 
-  if (app.conduit.config.get('admin.active')) {
-    const admin = app.conduit.getAdmin();
+  const admin = app.conduit.getAdmin();
 
-    admin.registerRoute('GET', '/users',
-      (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
+  admin.registerRoute('GET', '/users',
+    (req, res, next) => admin.getUsersPaginated(req, res, next).catch(next));
 
-    admin.registerRoute('PUT', '/authentication/config',
-      (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
+  admin.registerRoute('PUT', '/authentication/config',
+    (req, res, next) => admin.editAuthConfig(req, res, next).catch(next));
 
-    admin.registerRoute('GET', '/authentication/config',
-      (req, res, next) => admin.getAuthConfig(req, res).catch(next));
-  }
+  admin.registerRoute('GET', '/authentication/config',
+    (req, res, next) => admin.getAuthConfig(req, res).catch(next));
 
 }
 

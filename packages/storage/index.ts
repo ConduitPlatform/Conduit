@@ -16,12 +16,10 @@ class StorageModule extends IConduitStorage{
 
     this.storageProvider = createStorageProvider(provider, { storagePath, google });
 
-    if ((conduit as any).config.get('admin.active')) {
-      const admin = conduit.getAdmin();
-      const adminHandlers = new AdminConfigHandlers(conduit);
+    const admin = conduit.getAdmin();
+    const adminHandlers = new AdminConfigHandlers(conduit);
 
-      this.registerAdminRoutes(admin, adminHandlers);
-    }
+    this.registerAdminRoutes(admin, adminHandlers);
 
   }
 

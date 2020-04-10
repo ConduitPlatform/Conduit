@@ -1,9 +1,5 @@
 module.exports = {
   admin: {
-    active: {
-      format: 'Boolean',
-      default: true
-    },
     auth: {
       tokenSecret: {
         doc: 'The secret to be used to sing the admin tokens',

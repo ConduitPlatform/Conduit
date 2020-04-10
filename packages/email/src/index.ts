@@ -16,10 +16,9 @@ class EmailModule implements IConduitEmail {
     this.initEmailProvider();
     this.emailService = new EmailService(this.emailProvider, sdk);
 
-    if ((sdk as any).config.get('admin.active')) {
-      this.adminHandlers = new AdminHandlers(sdk, this.emailService);
-      this.initAdminRoutes();
-    }
+
+    this.adminHandlers = new AdminHandlers(sdk, this.emailService);
+    this.initAdminRoutes();
 
   }
 
