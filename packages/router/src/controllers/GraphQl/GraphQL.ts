@@ -1,7 +1,7 @@
 // todo Create the controller that creates GraphQL-specific endpoints
 import {Application, Request} from "express";
 import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOption, ConduitRouteOptions} from "@conduit/sdk";
-import {extractTypes} from "./TypeUtils";
+import {extractTypes, ParseResult} from "./TypeUtils";
 
 const {
     parseResolveInfo,
@@ -95,7 +95,8 @@ export class GraphQLController {
     queries: string;
     mutations: string;
     resolvers: any;
-    private apollo?: any;
+    private _apollo?: any;
+    private _relationTypes: string[] = [];
 
     constructor(app: Application) {
         this.resolvers = {};
@@ -105,8 +106,8 @@ export class GraphQLController {
         this.mutations = '';
         const self = this;
         app.use('/', (req, res, next) => {
-            if (self.apollo) {
-                self.apollo(req, res, next)
+            if (self._apollo) {
+                self._apollo(req, res, next)
             } else {
                 next();
             }
@@ -124,14 +125,35 @@ export class GraphQLController {
             },
         });
 
-        this.apollo = server.getMiddleware();
+        this._apollo = server.getMiddleware();
     }
 
     generateType(name: string, fields: ConduitModel | string) {
         if (this.typeDefs.includes(name)) {
             return;
         }
-        this.types += extractTypes(name, fields);
+        const self = this;
+        let parseResult: ParseResult = extractTypes(name, fields);
+        this.types += parseResult.typeString;
+        parseResult.relationTypes.forEach((type: string) => {
+            if (self._relationTypes.indexOf(type) === -1) {
+                self._relationTypes.push(type);
+            }
+        });
+
+        for (let resolveGroup in parseResult.parentResolve) {
+            if (!parseResult.parentResolve.hasOwnProperty(resolveGroup)) continue;
+            if (!self.resolvers[resolveGroup]) {
+                self.resolvers[resolveGroup] = {};
+            }
+            for (let resolverFunction in parseResult.parentResolve[resolveGroup]) {
+                if (!parseResult.parentResolve[resolveGroup].hasOwnProperty(resolverFunction)) continue;
+                if (!self.resolvers[resolveGroup][resolverFunction]) {
+                    self.resolvers[resolveGroup][resolverFunction] = parseResult.parentResolve[resolveGroup][resolverFunction];
+                }
+            }
+
+        }
     }
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
@@ -174,9 +196,8 @@ export class GraphQLController {
     generateQuerySchema() {
         if (this.queries.length > 1) {
             return 'type Query { ' + this.queries + ' }'
-        } else {
-            return '';
         }
+        return '';
     }
 
     generateMutationSchema() {
