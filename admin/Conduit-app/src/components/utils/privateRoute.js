@@ -12,11 +12,10 @@ export function privateRoute(WrappedComponent) {
 		}
 		
 		componentDidMount() {
-			console.log(this.state);
 			const {auth} = this.props;
 			
 			if (!auth) {
-				// Router.replace('/login')
+				Router.replace('/login')
 			}
 		}
 		

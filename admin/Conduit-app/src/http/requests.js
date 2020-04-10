@@ -23,9 +23,8 @@ axios.interceptors.request.use((config) => {
 	return Promise.reject(error);
 });
 
-export const getAuthUsersDataReq = (token, skip, limit) => axios.get(`${CONDUIT_API}/admin/users/${skip}&${limit}`, {
-	headers: JWT_CONFIG(token)
-});
+//Requests
+export const getAuthUsersDataReq = (skip, limit) => axios.get(`${CONDUIT_API}/admin/users/${skip}&${limit}`);
 
 export const loginRequest = (username, password) => axios.post(`${CONDUIT_API}/admin/login`, {
 	username,

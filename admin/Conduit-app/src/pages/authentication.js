@@ -78,6 +78,6 @@ const Authentication = () => {
 			</Box>
 		</Layout>
 	);
-}
+};
 
 export default privateRoute(Authentication)

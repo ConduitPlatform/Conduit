@@ -7,9 +7,11 @@ import theme from '../utils/theme';
 import {Provider} from "react-redux";
 import withRedux from 'next-redux-wrapper';
 import {initStore} from "../redux/store";
+import initialize from "../utils/initialize";
 
-class MyApp extends App {
+class ConduitApp extends App {
 	static async getInitialProps({Component, ctx}) {
+		initialize(ctx);
 		return {
 			pageProps: {
 				...(Component.getInitialProps
@@ -48,4 +50,4 @@ class MyApp extends App {
 	}
 }
 
-export default withRedux(initStore, {debug: false})(MyApp)
+export default withRedux(initStore, {debug: false})(ConduitApp)

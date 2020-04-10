@@ -167,6 +167,6 @@ const Login = () => {
 			</Container>
 		</Layout>
 	);
-}
+};
 
 export default Login;
