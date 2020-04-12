@@ -1,5 +1,6 @@
-import {ConduitModel, TYPE} from "@conduit/sdk";
-import {type} from "os";
+import {ConduitModel} from "@conduit/sdk";
+
+const deepdash = require('deepdash/standalone')
 
 export interface ResolverDefinition {
     [key: string]: {
@@ -14,9 +15,48 @@ export interface ParseResult {
     parentResolve: ResolverDefinition;
 }
 
+
+export function findPopulation(fields: any, relations: string[]): string[] | undefined {
+    if (relations.length === 0) return undefined;
+    let keys = Object.keys(fields);
+    let result: string[] = [];
+    deepdash.eachDeep(fields, (value: any, key: any, parent: any, context: any) => {
+        if (relations.indexOf(key) !== -1) {
+            if (!parent[key]) {
+                if (result.indexOf(key) === -1) {
+                    result.push(key);
+                }
+            }
+        }
+    });
+
+    return result;
+
+}
+
 function constructName(parent: string, child: string) {
     let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1)
     return parentName + child.slice(0, 1).toUpperCase() + child.slice(1)
+}
+
+function getGraphQLType(conduitType: any) {
+    switch (conduitType) {
+        case 'String':
+            return conduitType;
+        case 'Number':
+            return 'Int';
+        case 'Boolean':
+            return conduitType;
+        case  'Date':
+            return conduitType;
+        case 'ObjectId':
+            return 'ID';
+        case  'JSON':
+            return 'JsonObject';
+        default:
+            return conduitType;
+    }
+
 }
 
 
@@ -68,7 +108,7 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
         let finalString = ''
         // if array contains simply a type
         if (typeof value[0] === 'string') {
-            typeString += field + ': [' + value[0] + ']' + ' ';
+            typeString += field + ': [' + getGraphQLType(value[0]) + ']' + ' ';
         } else if (value[0].type) {
             // if array contains a model
             if (value[0].type === 'Relation') {
@@ -76,7 +116,7 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
                 constructResolver(name, field, true);
                 typeString += field + ': ' + value[0].model + (value[0].required ? '!' : '') + ' ';
             } else if (typeof value[0].type == 'string') {
-                typeString += field + ': [' + value[0].type + (value[0].required ? '!' : '') + '] ';
+                typeString += field + ': [' + getGraphQLType(value[0].type) + (value[0].required ? '!' : '') + '] ';
             } else if (Array.isArray(value[0].type)) {
                 let parseResult = arrayHandler(name, field, value[0].type as Array<any>);
                 typeString += parseResult.typeString.slice(0, parseResult.typeString.length - 1) + (value[0].required ? '!' : '') + ' ';
@@ -104,13 +144,13 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
         let finalString = '';
         let typeString = ` type ${name} {`;
         if (typeof fields === 'string') {
-            typeString += 'result: ' + fields + '!';
+            typeString += 'result: ' + getGraphQLType(fields) + '!';
         } else {
             for (let field in fields) {
                 if (!fields.hasOwnProperty(field)) continue;
                 // if field is simply a type
                 if (typeof fields[field] === 'string') {
-                    typeString += field + ': ' + fields[field] + ' ';
+                    typeString += field + ': ' + getGraphQLType(fields[field]) + ' ';
                 }
                 // if field is an array
                 else if (Array.isArray(fields[field])) {

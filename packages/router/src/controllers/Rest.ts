@@ -17,6 +17,13 @@ function extractRequestData(req: Request) {
     if (req.params) {
         Object.assign(params, req.params);
     }
+    if (params.populate) {
+        if (params.populate.includes(',')) {
+            params.populate = params.populate.split(',');
+        } else {
+            params.populate = [params.populate];
+        }
+    }
     let path = req.path;
     return {context, params, path}
 

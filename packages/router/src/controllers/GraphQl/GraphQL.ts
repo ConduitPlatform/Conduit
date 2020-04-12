@@ -1,93 +1,14 @@
 // todo Create the controller that creates GraphQL-specific endpoints
-import {Application, Request} from "express";
-import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOption, ConduitRouteOptions} from "@conduit/sdk";
-import {extractTypes, ParseResult} from "./TypeUtils";
+import {Application} from "express";
+import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOptions} from "@conduit/sdk";
+import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
+import {GraphQLJSONObject} from "graphql-type-json";
 
 const {
     parseResolveInfo,
 } = require('graphql-parse-resolve-info');
-const {ApolloServer, gql} = require('apollo-server-express');
+const {ApolloServer} = require('apollo-server-express');
 
-// const typeDefs = `
-//   type Author {
-//     id: Int!
-//     firstName: String
-//     lastName: String
-//     """
-//     the list of Posts by this author
-//     """
-//     posts: [Post]
-//   }
-//
-//   type Post {
-//     id: Int!
-//     title: String
-//     author: Author
-//     votes: Int
-//   }
-//
-//   # the schema allows the following query:
-//   type Query {
-//     posts: [Post]
-//     author(id: Int!): Author
-//   }
-//
-//   # this schema allows the following mutation:
-//   type Mutation {
-//     upvotePost (
-//       postId: Int!
-//     ): Post
-//   }
-// `;
-// example data
-// const authors = [
-//     {id: 1, firstName: 'Tom', lastName: 'Coleman'},
-//     {id: 2, firstName: 'Sashko', lastName: 'Stubailo'},
-//     {id: 3, firstName: 'Mikhail', lastName: 'Novikov'},
-// ];
-//
-// const posts = [
-//     {id: 1, authorId: 1, title: 'Introduction to GraphQL', votes: 2},
-//     {id: 2, authorId: 2, title: 'Welcome to Meteor', votes: 3},
-//     {id: 3, authorId: 2, title: 'Advanced GraphQL', votes: 1},
-//     {id: 4, authorId: 3, title: 'Launchpad is Cool', votes: 7},
-// ];
-//
-// const resolvers = {
-//     Query: {
-//         posts: () => posts,
-//         author: (_: any, {id}: any) => find(authors, {id}),
-//     },
-//
-//     Mutation: {
-//         upvotePost: (_: any, {postId}: any) => {
-//             const post = find(posts, {id: postId});
-//             if (!post) {
-//                 throw new Error(`Couldn't find post with id ${postId}`);
-//             }
-//             post.votes += 1;
-//             return post;
-//         },
-//     },
-//
-//     Author: {
-//         posts: (author: any, args: any, context: any, info: any) => {
-//             console.log(parseResolveInfo(info));
-//             let resolveInfo = parseResolveInfo(info);
-//             let keys = Object.keys(resolveInfo.fieldsByTypeName['Post']);
-//             if (keys.length === 1 && keys[0] === 'id') {
-//                 console.log("Would return id only");
-//             } else {
-//                 console.log("Would return full object")
-//             }
-//             return filter(posts, {authorId: author.id})
-//         },
-//     },
-//
-//     Post: {
-//         author: (post: any) => find(authors, {id: post.authorId}),
-//     },
-// };
 export class GraphQLController {
 
     typeDefs: string;
@@ -100,7 +21,7 @@ export class GraphQLController {
 
     constructor(app: Application) {
         this.resolvers = {};
-        this.typeDefs = ``;
+        this.typeDefs = ` `;
         this.types = '';
         this.queries = '';
         this.mutations = '';
@@ -140,6 +61,12 @@ export class GraphQLController {
                 self._relationTypes.push(type);
             }
         });
+
+        if (this.types.includes('JSONObject') && this.types.indexOf('scalar JSONObject') === -1) {
+            this.types += '\n scalar JSONObject \n';
+            this.resolvers['JSONObject'] = GraphQLJSONObject;
+
+        }
 
         for (let resolveGroup in parseResult.parentResolve) {
             if (!parseResult.parentResolve.hasOwnProperty(resolveGroup)) continue;
@@ -206,22 +133,32 @@ export class GraphQLController {
         } else {
             return '';
         }
-
     }
 
     generateSchema() {
         this.typeDefs = this.types + ' ' + this.generateQuerySchema() + ' ' + this.generateMutationSchema();
     }
 
+    shouldPopulate(args: any, info: any) {
+        let resolveInfo = parseResolveInfo(info);
+        let result = findPopulation(resolveInfo.fieldsByTypeName, this._relationTypes);
+        if (result) {
+            args['populate'] = result;
+        }
+        return args;
+    }
+
     registerConduitRoute(route: ConduitRoute) {
         this.generateType(route.returnTypeName, route.returnTypeFields);
         let actionName = this.generateAction(route.input, route.returnTypeName);
         this.generateSchema();
+        const self = this;
         if (route.input.action === ConduitRouteActions.GET) {
             if (!this.resolvers['Query']) {
                 this.resolvers['Query'] = {};
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
+                args = self.shouldPopulate(args, info);
                 return route.executeRequest({context: context, params: args}).then(r => {
                     return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                 })
