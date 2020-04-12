@@ -21,11 +21,10 @@ export function findPopulation(fields: any, relations: string[]): string[] | und
     let keys = Object.keys(fields);
     let result: string[] = [];
     deepdash.eachDeep(fields, (value: any, key: any, parent: any, context: any) => {
-        if (relations.indexOf(key) !== -1) {
-            if (!parent[key]) {
-                if (result.indexOf(key) === -1) {
-                    result.push(key);
-                }
+        if (value.fieldsByTypeName) {
+            let keys = value.fieldsByTypeName.keys();
+            if (keys.length > 0 && relations.indexOf(keys[0]) !== -1 && result.indexOf(key) === -1) {
+                result.push(key);
             }
         }
     });
