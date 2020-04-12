@@ -1,5 +1,6 @@
 import {NextFunction, Router, Request, Response} from "express";
 import {ConduitRouterBuilder} from "../classes";
+import {ConduitRoute} from "../../../interaces";
 
 export interface IConduitRouter {
 
@@ -10,6 +11,8 @@ export interface IConduitRouter {
     hasGlobalMiddleware(name: string): boolean
 
     registerRouter(routerBuilder: ConduitRouterBuilder): void
+
+    registerRoute(route: ConduitRoute): void
 
     registerExpressRouter(name: string, router: Router): void
 

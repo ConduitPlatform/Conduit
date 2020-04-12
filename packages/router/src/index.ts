@@ -1,14 +1,13 @@
 import {Application, NextFunction, Router, Request, Response} from "express";
 import {RouterBuilder} from "./builders";
-import {IConduitRouter} from "@conduit/sdk";
-import {ConduitRoutingController, GraphQLController} from "./controllers";
+import {ConduitRoutingController} from "./controllers/Routing";
+import {ConduitRoute, IConduitRouter} from "@conduit/sdk";
 
 
 export class ConduitDefaultRouter implements IConduitRouter {
 
     private _app: Application;
     private _internalRouter: ConduitRoutingController;
-    private _graphQL?: GraphQLController;
     private _globalMiddlewares: string[];
     private _routes: any[];
 
@@ -20,7 +19,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     }
 
     initGraphQL() {
-        this._graphQL = new GraphQLController(this._app);
+        this._internalRouter.initGraphQL();
     }
 
     registerGlobalMiddleware(name: string, middleware: any) {
@@ -54,6 +53,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
     getRegisteredRoutes() {
         return this._routes;
+    }
+
+    registerRoute(route: ConduitRoute): void {
+        this._internalRouter.registerConduitRoute(route);
     }
 
 }

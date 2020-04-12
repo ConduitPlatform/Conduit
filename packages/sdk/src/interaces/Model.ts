@@ -10,8 +10,8 @@ export enum TYPE {
 
 export type Array = any[];
 
-export type ConduitModelField = {
-    type?: TYPE | Array | ConduitModelField;
+export interface ConduitModelField {
+    type?: TYPE | Array | ConduitModel | ConduitModelField;
     enum?: any
     default?: any
     model?: string
@@ -21,7 +21,7 @@ export type ConduitModelField = {
 }
 
 export interface ConduitModel {
-    [field: string]: ConduitModelField | ConduitModel | TYPE
+    [field: string]: ConduitModelField | ConduitModelField[] | ConduitModel | TYPE | TYPE[] | any[]
 }
 
 export interface ConduitModelOptions {
