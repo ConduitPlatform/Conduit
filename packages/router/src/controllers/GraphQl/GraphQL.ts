@@ -3,6 +3,7 @@ import {Application} from "express";
 import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOptions} from "@conduit/sdk";
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
+import {GraphQLScalarType, Kind} from "graphql";
 
 const {
     parseResolveInfo,
@@ -20,8 +21,25 @@ export class GraphQLController {
     private _relationTypes: string[] = [];
 
     constructor(app: Application) {
-        this.resolvers = {};
-        this.typeDefs = ` `;
+        this.resolvers = {
+            Date: new GraphQLScalarType({
+                name: 'Date',
+                description: 'Date custom scalar type',
+                parseValue(value) {
+                    return new Date(value); // value from the client
+                },
+                serialize(value) {
+                    return value.getTime(); // value sent to the client
+                },
+                parseLiteral(ast) {
+                    if (ast.kind === Kind.INT) {
+                        return new Date(ast.value) // ast value is always in string format
+                    }
+                    return null;
+                },
+            })
+        };
+        this.typeDefs = ` scalar Date\n `;
         this.types = '';
         this.queries = '';
         this.mutations = '';

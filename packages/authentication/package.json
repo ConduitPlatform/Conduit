@@ -4,9 +4,20 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "prepublish": "npm run build",
+    "build": "rimraf dist && tsc",
+    "publish": "npm publish"
   },
   "license": "ISC",
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
   "dependencies": {
     "@conduit/sdk": "1.0.0",
     "bcrypt": "^3.0.7",
@@ -28,6 +39,7 @@
     "@types/lodash": "^4.14.149",
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
+    "rimraf": "^3.0.2",
     "typescript": "^3.8.3",
     "express": "~4.16.1"
   },
