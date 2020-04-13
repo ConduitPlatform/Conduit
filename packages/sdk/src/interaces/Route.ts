@@ -1,9 +1,9 @@
 import {ConduitModel} from "./Model";
 
 export interface ConduitRouteParameters {
-    params?: { name: string, value: any }[];
+    params?: { [field: string]: any };
     path?: string;
-    context?: any;
+    context?: { [field: string]: any };
 }
 
 export interface ConduitRouteOptionExtended {
@@ -29,6 +29,7 @@ export interface ConduitRouteOptions {
     urlParams?: ConduitRouteOption;
     action: ConduitRouteActions
     path: string;
+    name?: string;
     description?: string;
 }
 

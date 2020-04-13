@@ -24,7 +24,7 @@ function extractRequestData(req: Request) {
             params.populate = [params.populate];
         }
     }
-    let path = req.path;
+    let path = req.baseUrl + req.path;
     return {context, params, path}
 
 }
