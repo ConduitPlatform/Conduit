@@ -7,6 +7,4 @@ export abstract class IConduitSecurity {
   }
 
   abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;
-
-  abstract adminMiddleware(req: Request, res: Response, next: NextFunction): void;
 }
