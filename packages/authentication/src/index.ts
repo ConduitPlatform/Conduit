@@ -138,7 +138,17 @@ class AuthenticationModule {
     }
 
     if (config.facebook.enabled) {
-      this.authRouter.post('/facebook', (req, res, next) => this.facebookHandlers.authenticate(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/facebook',
+          action: Actions.POST,
+          queryParams: {
+            access_token: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('FacebookResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.facebookHandlers.authenticate(params)
+      ));
       enabled = true;
     }
 
