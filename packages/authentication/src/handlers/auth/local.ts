@@ -147,11 +147,11 @@ export class LocalHandlers {
     return 'Ok';
   }
 
-  async resetPassword(req: Request, res: Response) {
-    const passwordResetTokenParam = req.body.passwordResetToken;
-    const newPassword = req.body.password;
+  async resetPassword(params: ConduitRouteParameters) {
+    const { passwordResetToken: passwordResetTokenParam, password: newPassword } = params.params as any;
+
     if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
+      throw new Error('Required fields are missing');
     }
 
     const User = this.database.getSchema('User');
@@ -163,13 +163,13 @@ export class LocalHandlers {
       type: TokenType.PASSWORD_RESET_TOKEN,
       token: passwordResetTokenParam
     });
-    if (isNil(passwordResetTokenDoc)) return res.status(401).json({ error: 'Invalid parameters' });
+    if (isNil(passwordResetTokenDoc)) throw new Error('Invalid parameters');
 
     const user = await User.findOne({ _id: passwordResetTokenDoc.userId }, '+hashedPassword');
-    if (isNil(user)) return res.status(404).json({ error: 'User not found' });
+    if (isNil(user)) throw new Error('User not found');
 
     const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
-    if (passwordsMatch) return res.status(401).json({ error: 'Password can\'t be the same as the old one' });
+    if (passwordsMatch) throw new Error('Password can\'t be the same as the old one');
 
     user.hashedPassword = await this.authService.hashPassword(newPassword);
     await user.save();
@@ -177,7 +177,7 @@ export class LocalHandlers {
     await AccessToken.deleteMany({ userId: user._id });
     await RefreshToken.deleteMany({ userId: user._id });
 
-    return res.json({ message: 'Password reset successful' });
+    return 'Password reset successful';
   }
 
   async verifyEmail(req: Request, res: Response) {

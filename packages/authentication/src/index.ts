@@ -121,7 +121,19 @@ class AuthenticationModule {
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
         (params: ConduitRouteParameters) => this.localHandlers.forgotPassword(params)
       ));
-      this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
+      // this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/reset-password',
+          action: Actions.POST,
+          queryParams: {
+            passwordResetToken: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+        (params: ConduitRouteParameters) => this.localHandlers.resetPassword(params)
+      ));
       enabled = true;
     }
 
