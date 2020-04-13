@@ -103,7 +103,11 @@ export class GraphQLController {
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
         let pathName: string[] = input.path.split('/');
-        pathName = pathName.slice(0, pathName.length - 1);
+        if (pathName[pathName.length - 1].length === 0 || pathName[pathName.length - 1] === '') {
+            pathName = pathName.slice(0, pathName.length - 1);
+        } else {
+            pathName = pathName.slice(0, pathName.length);
+        }
         let uniqueName: string = ''
         pathName.forEach(r => {
             uniqueName += r.slice(0, 1).toUpperCase() + r.slice(1)
