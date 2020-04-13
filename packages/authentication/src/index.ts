@@ -121,7 +121,7 @@ class AuthenticationModule {
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
         (params: ConduitRouteParameters) => this.localHandlers.forgotPassword(params)
       ));
-      // this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
+      // Reset-password endpoint
       this.conduitRouter.registerRoute(new ConduitRoute(
         {
           path: '/authentication/reset-password',
