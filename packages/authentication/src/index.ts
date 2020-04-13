@@ -186,7 +186,7 @@ class AuthenticationModule {
           path: '/authentication/logout',
           action: Actions.POST
         },
-        new ConduitRouteReturnDefinition('Logout response', 'String'),
+        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
         (params: ConduitRouteParameters) => this.commonHandlers.logOut(params)
       ));
     }
