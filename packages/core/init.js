@@ -24,10 +24,6 @@ async function init(app) {
   app.conduit.registerSecurity(new SecurityModule(app.conduit));
   const security = app.conduit.getSecurity();
 
-  if (config.get('authentication.active')) {
-    app.use((req, res, next) => security.authMiddleware(req, res, next));
-  }
-  app.use((req, res, next) => security.adminMiddleware(req, res, next));
   registerAdminRoutes(app.conduit.getAdmin());
 
   if (config.get('pushNotifications.active')) {
