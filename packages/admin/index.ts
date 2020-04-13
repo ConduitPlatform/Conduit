@@ -3,7 +3,7 @@ import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import AdminSchema from './models/Admin';
-import {ConduitSDK, IConduitAdmin} from "@conduit/sdk";
+import {ConduitRouteParameters, ConduitSDK, IConduitAdmin} from "@conduit/sdk";
 
 class AdminModule extends IConduitAdmin {
     private readonly router: Router;
@@ -41,6 +41,7 @@ class AdminModule extends IConduitAdmin {
 
         conduit.getRouter().registerDirectRouter('/admin/login',
           (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
+        conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
         this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
     }
@@ -107,6 +108,17 @@ class AdminModule extends IConduitAdmin {
                 console.log(error);
                 res.status(500).json({error: 'Something went wrong'});
             });
+    }
+
+    adminMiddleware(context: ConduitRouteParameters) {
+        return new Promise((resolve, reject) => {
+            const masterkey = context.headers.masterkey;
+            if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
+                // todo find a way to bring this back
+                //res.status(401).json({error: 'Unauthorized'});
+                throw new Error("Unauthorized")
+            resolve("ok");
+        })
     }
 
 }

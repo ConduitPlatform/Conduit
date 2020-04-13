@@ -1,7 +1,7 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitRouteParameters, ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum} from '@conduit/sdk';
+import {ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum} from '@conduit/sdk';
 
 class SecurityModule extends IConduitSecurity {
 
@@ -35,8 +35,6 @@ class SecurityModule extends IConduitSecurity {
         const router = conduit.getRouter();
 
         router.registerGlobalMiddleware('authMiddleware', (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
-
-        router.registerRouteMiddleware('/admin', this.adminMiddleware);
     }
 
     authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -65,17 +63,6 @@ class SecurityModule extends IConduitSecurity {
             .catch(next);
     }
 
-
-    adminMiddleware(context: ConduitRouteParameters) {
-        return new Promise((resolve, reject) => {
-            const masterkey = context.headers.masterkey;
-            if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
-                // todo find a way to bring this back
-                //res.status(401).json({error: 'Unauthorized'});
-                throw new Error("Unauthorized")
-            resolve("ok");
-        })
-    }
 }
 
 export = SecurityModule;
