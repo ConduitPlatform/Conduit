@@ -68,10 +68,11 @@ export class CommonHandlers {
     };
   }
 
-  async logOut(req: Request, res: Response) {
-    const clientId = req.headers.clientid;
+  async logOut(params: ConduitRouteParameters) {
+    if (isNil(params.context)) throw new Error('No headers provided');
+    const clientId = params.context.clientId;
 
-    const user = (req as any).user;
+    const user = params.context.user;
 
     const AccessToken = this.database.getSchema('AccessToken');
     const RefreshToken = this.database.getSchema('RefreshToken');
@@ -79,6 +80,6 @@ export class CommonHandlers {
     await AccessToken.deleteOne({userId: user._id, clientId});
     await RefreshToken.deleteOne({userId: user._id, clientId});
 
-    return res.json({message: 'Logged out'});
+    return 'Logged out';
   }
 }

@@ -182,7 +182,15 @@ class AuthenticationModule {
         new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {accessToken: TYPE.String, refreshToken: TYPE.String}),
         (params: ConduitRouteParameters) => this.commonHandlers.renewAuth(params)
       ));
-      this.authRouter.post('/logout', authMiddleware, (req, res, next) => this.commonHandlers.logOut(req, res).catch(next));
+      // TODO authMiddleware needs to be bind in the below endpoint. It doesn't work as it is cause it needs the user in the context
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/logout',
+          action: Actions.POST
+        },
+        new ConduitRouteReturnDefinition('Logout response', 'String'),
+        (params: ConduitRouteParameters) => this.commonHandlers.logOut(params)
+      ));
     }
 
     this.hookRouter.get('/verify-email/:verificationToken', (req, res, next) => this.localHandlers.verifyEmail(req, res).catch(next));
