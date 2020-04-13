@@ -9,11 +9,12 @@ import {
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
 import {GraphQLScalarType, Kind} from "graphql";
+import {ConduitError} from "@conduit/sdk";
 
 const {
     parseResolveInfo,
 } = require('graphql-parse-resolve-info');
-const {ApolloServer} = require('apollo-server-express');
+const {ApolloServer, ApolloError} = require('apollo-server-express');
 
 export class GraphQLController {
 
@@ -227,6 +228,13 @@ export class GraphQLController {
                     .then((r: any) => {
                         return typeof route.returnTypeFields === 'string' ? {result: r} : r;
                     })
+                    .catch((err: Error | ConduitError) => {
+                        if (err.hasOwnProperty("status")) {
+                            throw new ApolloError(err.message, (err as ConduitError).status);
+                        } else {
+                            throw new ApolloError(err.message);
+                        }
+                    })
             }
         } else {
             if (!this.resolvers['Mutation']) {
@@ -238,7 +246,14 @@ export class GraphQLController {
                     .then((r: any) => route.executeRequest({...context, params: args}))
                     .then(r => {
                         return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                    });
+                    })
+                    .catch((err: Error | ConduitError) => {
+                        if (err.hasOwnProperty("status")) {
+                            throw new ApolloError(err.message, (err as ConduitError).status);
+                        } else {
+                            throw new ApolloError(err.message, 500);
+                        }
+                    })
             }
         }
         this.refreshGQLServer();

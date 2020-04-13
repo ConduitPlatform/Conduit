@@ -1,6 +1,7 @@
 // todo Create the controller that creates REST-specific endpoints
 import {NextFunction, Request, Response, Router} from "express";
 import {ConduitRoute, ConduitRouteParameters} from "@conduit/sdk";
+import {ConduitError} from "@conduit/sdk";
 
 function extractRequestData(req: Request) {
 
@@ -57,8 +58,13 @@ export class RestController {
             self.checkMiddlewares(route.input.path, context)
                 .then(r => route.executeRequest(context))
                 .then((r: any) => res.status(200).json(r))
-                .catch((err: any) => {
-                    res.status(500).json({err});
+                .catch((err: Error | ConduitError) => {
+                    if (err.hasOwnProperty("status")) {
+                        res.status((err as ConduitError).status).json({err});
+                    } else {
+                        res.status(500).json({err});
+                    }
+
                 })
         })
     }
