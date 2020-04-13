@@ -1,6 +1,11 @@
-// todo Create the controller that creates GraphQL-specific endpoints
-import {Application} from "express";
-import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOptions} from "@conduit/sdk";
+import {Application, NextFunction, Request, Response} from "express";
+import {
+    ConduitModel,
+    ConduitRoute,
+    ConduitRouteActions,
+    ConduitRouteOptions,
+    ConduitRouteParameters
+} from "@conduit/sdk";
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
 import {GraphQLScalarType, Kind} from "graphql";
@@ -19,6 +24,7 @@ export class GraphQLController {
     resolvers: any;
     private _apollo?: any;
     private _relationTypes: string[] = [];
+    private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
 
     constructor(app: Application) {
         this.resolvers = {
@@ -59,8 +65,9 @@ export class GraphQLController {
             typeDefs: this.typeDefs,
             resolvers: this.resolvers,
             context: ({req}: any) => {
-                // get the user token from the headers
-                return req.conduit;
+                const context = (req as any).conduit;
+                let headers: any = req.headers;
+                return {context, headers}
             },
         });
 
@@ -173,6 +180,34 @@ export class GraphQLController {
         return args;
     }
 
+    registerMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+        if (!this._middlewares) {
+            this._middlewares = {};
+        }
+        if (!this._middlewares[path]) {
+            this._middlewares[path] = [];
+        }
+        this._middlewares[path].push(middleware);
+    }
+
+    checkMiddlewares(path: string, params: ConduitRouteParameters): Promise<any> {
+        let primaryPromise = new Promise((resolve, reject) => {
+            resolve();
+        })
+        if (this._middlewares) {
+            for (let k in this._middlewares) {
+                if (!this._middlewares.hasOwnProperty(k)) continue;
+                if (path.indexOf(k) === 0) {
+                    this._middlewares[k].forEach(m => {
+                        primaryPromise = primaryPromise.then(r => m(params));
+                    })
+                }
+            }
+        }
+
+        return primaryPromise
+    }
+
     registerConduitRoute(route: ConduitRoute) {
         this.generateType(route.returnTypeName, route.returnTypeFields);
         let actionName = this.generateAction(route.input, route.returnTypeName);
@@ -184,18 +219,26 @@ export class GraphQLController {
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
-                return route.executeRequest({context: context, params: args}).then(r => {
-                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                })
+                return self.checkMiddlewares(route.input.path, context)
+                    .then((r: any) => route.executeRequest({
+                        ...context,
+                        params: args
+                    }))
+                    .then((r: any) => {
+                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                    })
             }
         } else {
             if (!this.resolvers['Mutation']) {
                 this.resolvers['Mutation'] = {};
             }
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
-                return route.executeRequest({context: context, params: args}).then(r => {
-                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                })
+                args = self.shouldPopulate(args, info);
+                return self.checkMiddlewares(route.input.path, context)
+                    .then((r: any) => route.executeRequest({...context, params: args}))
+                    .then(r => {
+                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                    });
             }
         }
         this.refreshGQLServer();

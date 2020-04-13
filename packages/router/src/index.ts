@@ -1,7 +1,7 @@
 import {Application, NextFunction, Router, Request, Response} from "express";
 import {RouterBuilder} from "./builders";
 import {ConduitRoutingController} from "./controllers/Routing";
-import {ConduitRoute, IConduitRouter} from "@conduit/sdk";
+import {ConduitRoute, IConduitRouter, ConduitRouteParameters} from "@conduit/sdk";
 
 
 export class ConduitDefaultRouter implements IConduitRouter {
@@ -57,6 +57,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
     registerRoute(route: ConduitRoute): void {
         this._internalRouter.registerConduitRoute(route);
+    }
+
+    registerRouteMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>): void {
+        this._internalRouter.registerRouteMiddleware(path, middleware);
     }
 
 }

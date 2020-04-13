@@ -1,7 +1,7 @@
 // todo create the controller that should construct both REST & GraphQL routes
 import {Application, NextFunction, Request, Response, Router} from "express";
 import {RestController} from "./Rest";
-import {ConduitRoute} from "@conduit/sdk";
+import {ConduitRoute, ConduitRouteParameters} from "@conduit/sdk";
 import {GraphQLController} from "./GraphQl/GraphQL";
 
 export class ConduitRoutingController {
@@ -37,6 +37,11 @@ export class ConduitRoutingController {
 
     registerMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
         this._middlewareRouter.use(middleware);
+    }
+
+    registerRouteMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+        this._restRouter.registerMiddleware(path, middleware);
+        this._graphQLRouter?.registerMiddleware(path, middleware);
     }
 
     registerRoute(path: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {

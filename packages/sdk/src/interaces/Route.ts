@@ -1,8 +1,10 @@
 import {ConduitModel} from "./Model";
+import {IncomingHttpHeaders} from "http";
 
 export interface ConduitRouteParameters {
     params?: { [field: string]: any };
     path?: string;
+    headers: IncomingHttpHeaders;
     context?: { [field: string]: any };
 }
 

@@ -1,7 +1,7 @@
 import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
-import {IConduitDatabase} from "./modules/Database/interfaces/Database";
-import {IConduitAdmin} from "./modules/Admin/ConduitAdmin";
+import {IConduitDatabase} from "./modules/Database/interfaces";
+import {IConduitAdmin} from "./modules/Admin";
 import { IConduitEmail } from './modules/Email';
 import { IConduitPushNotifications } from './modules/PushNotifications';
 import { IConduitInMemoryStore } from './modules/InMemoryStore';
