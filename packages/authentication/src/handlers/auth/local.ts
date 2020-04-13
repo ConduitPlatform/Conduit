@@ -65,6 +65,7 @@ export class LocalHandlers {
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
+    if (isNil(params.context)) throw new Error('No headers provided');
     const clientId = params.context.clientId;
 
     if (!config.local.active) throw new Error('Local authentication is disabled');
@@ -109,12 +110,12 @@ export class LocalHandlers {
     return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
   }
 
-  async forgotPassword(req: Request, res: Response) {
-    const email = req.body.email;
+  async forgotPassword(params: ConduitRouteParameters) {
+    const email = (params.params as any).email;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (isNil(email)) res.status(401).json({ error: 'Email field required' });
+    if (isNil(email)) throw new Error('Email field required');
 
     const User = this.database.getSchema('User');
     const Token = this.database.getSchema('Token');
@@ -122,7 +123,7 @@ export class LocalHandlers {
     const user = await User.findOne({ email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return res.json({ message: 'Ok' });
+      return 'Ok';
 
     const oldToken = await Token.findOne({ type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id });
     if (!isNil(oldToken)) await oldToken.remove();
@@ -143,7 +144,7 @@ export class LocalHandlers {
       }
     });
 
-    return res.json({ message: 'Ok' });
+    return 'Ok';
   }
 
   async resetPassword(req: Request, res: Response) {
