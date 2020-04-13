@@ -153,7 +153,6 @@ class AuthenticationModule {
     }
 
     if (config.google.enabled) {
-      // this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
       this.conduitRouter.registerRoute(new ConduitRoute(
         {
           path: '/authentication/google',
