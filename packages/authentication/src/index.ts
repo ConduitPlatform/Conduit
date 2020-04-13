@@ -153,7 +153,21 @@ class AuthenticationModule {
     }
 
     if (config.google.enabled) {
-      this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
+      // this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/google',
+          action: Actions.POST,
+          queryParams: {
+            id_token: 'String',
+            access_token: 'String',
+            refresh_token: 'String',
+            expires_in: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('GoogleResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.googleHandlers.authenticate(params)
+      ));
       enabled = true;
     }
 

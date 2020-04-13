@@ -1,10 +1,9 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { OAuth2Client } from 'google-auth-library';
-import { Request, Response } from 'express';
 import { isNil } from 'lodash';
-import moment = require('moment');
 import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
 import { AuthService } from '../../services/auth';
+import moment = require('moment');
 
 export class GoogleHandlers {
   private readonly client: OAuth2Client;
@@ -18,14 +17,16 @@ export class GoogleHandlers {
     this.database = sdk.getDatabase();
   }
 
-  async authenticate(req: Request, res: Response) {
-    const { id_token, access_token, refresh_token, expires_in } = req.body;
+  async authenticate(params: ConduitRouteParameters) {
+    const { id_token, access_token, refresh_token, expires_in } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (!config.google.active) {
-      res.status(403).json({ error: 'Google authentication is disabled' });
+    if (!config.google.enabled) {
+      throw new Error('Google authentication is disabled');
     }
+
+    if (isNil(params.context)) throw new Error('No headers provided');
 
     const ticket = await this.client.verifyIdToken({
       idToken: id_token,
@@ -34,10 +35,10 @@ export class GoogleHandlers {
 
     const payload = ticket.getPayload();
     if (isNil(payload)) {
-      return res.status(401).json({ error: 'Received invalid response from the Google API' });
+      throw new Error('Received invalid response from the Google API');
     }
     if (!payload.email_verified) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      throw new Error('Unauthorized');
     }
 
     const User = this.database.getSchema('User');
@@ -47,9 +48,9 @@ export class GoogleHandlers {
     let user = await User.findOne({ email: payload.email });
 
     if (!isNil(user)) {
-      if (!user.active) return res.status(403).json({ error: 'Inactive user' });
+      if (!user.active) throw new Error('Inactive user');
       if (!config.google.accountLinking) {
-        return res.status(401).json({ error: 'User with this email already exists' });
+        throw Error('User with this email already exists');
       }
       if (isNil(user.google)) {
         user.google = {
@@ -81,18 +82,18 @@ export class GoogleHandlers {
 
     const accessToken = await AccessToken.create({
       userId: user._id,
-      clientId: req.headers.clientid,
+      clientId: params.context.clientId,
       token: this.authService.signToken({ id: user._id }, signTokenOptions),
       expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate()
     });
 
     const refreshToken = await RefreshToken.create({
       userId: user._id,
-      clientId: req.headers.clientid,
+      clientId: params.context.clientId,
       token: this.authService.randomToken(),
       expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
     });
 
-    return res.json({ userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token });
+    return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
   }
 }
