@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ConduitSDK, IConduitDatabase, IConduitEmail } from '@conduit/sdk';
+import { ConduitRouteParameters, ConduitSDK, IConduitDatabase, IConduitEmail } from '@conduit/sdk';
 import { isNil } from 'lodash';
 import { AuthService } from '../../services/auth';
 import { TokenType } from '../../constants/TokenType';
@@ -19,19 +19,19 @@ export class LocalHandlers {
     this.emailModule = sdk.getEmail();
   }
 
-  async register(req: Request, res: Response) {
-    const { email, password } = req.body;
+  async register(params: ConduitRouteParameters) {
+    const { email, password } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (!config.local.active) return res.status(403).json({ error: 'Local authentication is disabled' });
-    if (isNil(email) || isNil(password)) return res.status(403).json({ error: 'Email and password required' });
+    if (!config.local.active) throw new Error('Local authentication is disabled');
+    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
     const User = this.database.getSchema('User');
     const Token = this.database.getSchema('Token');
 
     let user = await User.findOne({ email });
-    if (!isNil(user)) return res.status(403).json({ error: 'User already exists' });
+    if (!isNil(user)) throw new Error('User already exists');
 
     const hashedPassword = await this.authService.hashPassword(password);
     user = await User.create({
@@ -57,32 +57,33 @@ export class LocalHandlers {
       });
     }
 
-    return res.json({ message: 'Registration was successful' });
+    return 'Registration was successful';
   }
 
-  async authenticate(req: Request, res: Response) {
-    const { email, password } = req.body;
+  async authenticate(params: ConduitRouteParameters) {
+    console.log(params)
+    const { email, password } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    const clientId = req.headers.clientid;
+    const clientId = params.context.clientId;
 
-    if (!config.local.active) return res.status(403).json({ error: 'Local authentication is disabled' });
-    if (isNil(email) || isNil(password)) return res.status(403).json({ error: 'Email and password required' });
+    if (!config.local.active) throw new Error('Local authentication is disabled');
+    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
     const User = this.database.getSchema('User');
     const AccessToken = this.database.getSchema('AccessToken');
     const RefreshToken = this.database.getSchema('RefreshToken');
 
     const user = await User.findOne({ email }, '+hashedPassword');
-    if (isNil(user)) return res.status(401).json({ error: 'Invalid login credentials' });
-    if (!user.active) return res.status(403).json({ error: 'Inactive user' });
+    if (isNil(user)) throw new Error('Invalid login credentials');
+    if (!user.active) throw new Error('Inactive user');
 
     if (config.local.verificationRequired && !user.isVerified)
-      return res.status(403).json({ error: 'You must verify your account to login' });
+      throw new Error('You must verify your account to login');
 
     const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch) return res.status(401).json({ error: 'Invalid login credentials' });
+    if (!passwordsMatch) throw new Error('Invalid login credentials');
 
     await AccessToken.deleteMany({ userId: user._id, clientId });
     await RefreshToken.deleteMany({ userId: user._id, clientId });
@@ -106,7 +107,7 @@ export class LocalHandlers {
       expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
     });
 
-    return res.json({ userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token });
+    return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
   }
 
   async forgotPassword(req: Request, res: Response) {

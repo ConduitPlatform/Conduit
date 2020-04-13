@@ -1,7 +1,17 @@
-import { ConduitSDK, IConduitAdmin, IConduitDatabase, IConduitEmail, IConduitRouter } from '@conduit/sdk';
+import {
+  ConduitRoute,
+  ConduitRouteActions as Actions, ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
+  ConduitSDK,
+  IConduitAdmin,
+  IConduitDatabase,
+  IConduitEmail,
+  IConduitRouter,
+  TYPE
+} from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
-import { NextFunction, Request, Response, Router } from 'express';
+import { Router } from 'express';
 import { LocalHandlers } from './handlers/auth/local';
 import { AuthService } from './services/auth';
 import { FacebookHandlers } from './handlers/auth/facebook';
@@ -73,8 +83,32 @@ class AuthenticationModule {
         throw new Error('Cannot use local authentication without email module being enabled');
       }
 
-      this.authRouter.post('/local', (req: Request, res: Response, next: NextFunction) => this.localHandlers.authenticate(req, res).catch(next));
-      this.authRouter.post('/local/new', (req, res, next) => this.localHandlers.register(req, res).catch(next));
+      // Login Endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/local',
+          action: Actions.POST,
+          queryParams: {
+            email: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('LoginResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.localHandlers.authenticate(params)
+      ));
+      // Register endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/local/new',
+          action: Actions.POST,
+          queryParams: {
+            email: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('RegisterResponse', 'String'),
+        (params: ConduitRouteParameters) => this.localHandlers.register(params)
+      ));
       this.authRouter.post('/forgot-password', (req, res, next) => this.localHandlers.forgotPassword(req, res).catch(next));
       this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
       enabled = true;
