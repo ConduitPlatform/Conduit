@@ -171,7 +171,17 @@ class AuthenticationModule {
     }
 
     if (enabled) {
-      this.authRouter.post('/renew', (req, res, next) => this.commonHandlers.renewAuth(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/renew',
+          action: Actions.POST,
+          queryParams: {
+            refreshToken: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.commonHandlers.renewAuth(params)
+      ));
       this.authRouter.post('/logout', authMiddleware, (req, res, next) => this.commonHandlers.logOut(req, res).catch(next));
     }
 
