@@ -31,7 +31,6 @@ class AuthenticationModule {
   private readonly googleHandlers: GoogleHandlers;
   private readonly adminHandlers: AdminHandlers;
   private readonly commonHandlers: CommonHandlers;
-  private readonly authRouter: Router;
   private readonly hookRouter: Router;
   private readonly authMiddleware: AuthMiddleware;
 
@@ -49,7 +48,6 @@ class AuthenticationModule {
     this.adminHandlers = new AdminHandlers(sdk);
     this.authMiddleware = new AuthMiddleware(sdk, this.authService);
     this.commonHandlers = new CommonHandlers(sdk, this.authService);
-    this.authRouter = Router();
     this.hookRouter = Router();
     this.init();
   }
@@ -195,7 +193,6 @@ class AuthenticationModule {
 
     this.hookRouter.get('/verify-email/:verificationToken', (req, res, next) => this.localHandlers.verifyEmail(req, res).catch(next));
 
-    this.conduitRouter.registerExpressRouter('/authentication', this.authRouter);
     this.conduitRouter.registerExpressRouter('/hook', this.hookRouter);
   }
 
