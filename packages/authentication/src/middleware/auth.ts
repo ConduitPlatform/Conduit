@@ -53,7 +53,7 @@ export class AuthMiddleware {
             if (isNil(user)) {
               return res.status(404).json({ error: 'User not found' });
             }
-            (req as any).user = user;
+            (req as any).conduit = {user};
             next();
           });
       })
