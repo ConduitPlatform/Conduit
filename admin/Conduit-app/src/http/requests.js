@@ -13,14 +13,23 @@ const JWT_CONFIG = (token) => ({
 
 //Interceptors
 axios.interceptors.request.use((config) => {
-	if (!store) {return config}
+	if (!store) {
+		return config
+	}
 	const token = store().getState().authenticationReducer.token;
 	if (token) {
 		config.headers = JWT_CONFIG(token);
 	}
 	return config
 }, (error) => {
-	return Promise.reject(error);
+	return Promise.reject(error.response);
+});
+
+axios.interceptors.response.use((config) => {
+	return config;
+}, (error) => {
+	//TODO handle unauthenticated TOKEN
+	return Promise.reject(error.response);
 });
 
 //Requests

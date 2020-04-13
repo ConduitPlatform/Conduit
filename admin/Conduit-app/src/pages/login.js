@@ -66,7 +66,7 @@ const Login = () => {
 		if (authState.error) {
 			return (
 				<Alert variant={'filled'} onClose={handleClose} severity="error">
-					'Something went wrong, please try again.'
+					{authState.error.data.error}
 				</Alert>
 			)
 		} else {

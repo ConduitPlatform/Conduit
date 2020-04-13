@@ -6,7 +6,7 @@ import ListItem from "@material-ui/core/ListItem";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import makeStyles from "@material-ui/styles/makeStyles";
-import {Home, People} from '@material-ui/icons'
+import {Home, People, Email} from '@material-ui/icons'
 import clsx from "clsx";
 import Link from "next/link";
 
@@ -140,6 +140,15 @@ function CustomDrawer(props) {
                 <People color={'inherit'}/>
               </ListItemIcon>
               <ListItemText primary={"Authentication"} classes={{primary: classes.listItemText}}/>
+            </ListItem>
+          </Link>
+          <Link href='/emails'>
+            <ListItem button key={"Emails"} className={classes.listItem} style={itemStyle}
+                      selected={itemSelected === 2}>
+              <ListItemIcon className={classes.listItemIcon}>
+                <Email color={'inherit'}/>
+              </ListItemIcon>
+              <ListItemText primary={"Emails"} classes={{primary: classes.listItemText}}/>
             </ListItem>
           </Link>
         </List>
