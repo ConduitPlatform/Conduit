@@ -61,7 +61,6 @@ export class LocalHandlers {
   }
 
   async authenticate(params: ConduitRouteParameters) {
-    console.log(params)
     const { email, password } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
