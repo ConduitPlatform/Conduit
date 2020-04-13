@@ -39,8 +39,8 @@ export class GraphQLController {
                 },
             })
         };
-        this.typeDefs = ` scalar Date\n `;
-        this.types = '';
+        this.typeDefs = ` `;
+        this.types = 'scalar Date\n';
         this.queries = '';
         this.mutations = '';
         const self = this;
