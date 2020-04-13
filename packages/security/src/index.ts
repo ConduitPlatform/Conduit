@@ -33,9 +33,9 @@ class SecurityModule extends IConduitSecurity {
       });
 
     const router = conduit.getRouter();
-    if ((conduit as any).config.get('authentication.active')) {
-      router.registerGlobalMiddleware('authMiddleware', (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
-    }
+
+    router.registerGlobalMiddleware('authMiddleware', (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
+
     router.registerGlobalMiddleware('adminMiddleware', (req: Request, res: Response, next: NextFunction) => this.adminMiddleware(req, res, next));
   }
 
