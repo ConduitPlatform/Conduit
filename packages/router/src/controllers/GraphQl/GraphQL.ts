@@ -102,10 +102,13 @@ export class GraphQLController {
     }
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
-        let pathName: any = input.path.split('/');
-        pathName = pathName[pathName.length - 1];
-        pathName = pathName.slice(0, 1).toUpperCase() + pathName.slice(1);
-        let name = input.action.toLowerCase() + pathName
+        let pathName: string[] = input.path.split('/');
+        pathName = pathName.slice(0, pathName.length - 1);
+        let uniqueName: string = ''
+        pathName.forEach(r => {
+            uniqueName += r.slice(0, 1).toUpperCase() + r.slice(1)
+        })
+        let name = input.name ? input.name : (input.action.toLowerCase() + uniqueName);
 
         let params = '';
         if (input.bodyParams || input.queryParams || input.urlParams) {
