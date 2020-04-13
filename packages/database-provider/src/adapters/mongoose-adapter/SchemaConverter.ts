@@ -1,6 +1,6 @@
 import {Schema} from "mongoose";
 import {SchemaInterface} from "@conduit/sdk";
-
+import * as _ from "lodash";
 
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent
@@ -8,7 +8,8 @@ import {SchemaInterface} from "@conduit/sdk";
  */
 export function schemaConverter(jsonSchema: SchemaInterface) {
 
-    let actual = jsonSchema.modelSchema;
+    let copy = _.cloneDeep(jsonSchema)
+    let actual = copy.modelSchema;
 
     // converts relations to mongoose relations
     for (const key in actual) {
@@ -24,5 +25,5 @@ export function schemaConverter(jsonSchema: SchemaInterface) {
     }
     // just to be sure
     // jsonSchema.modelSchema = actual;
-    return jsonSchema;
+    return copy;
 }

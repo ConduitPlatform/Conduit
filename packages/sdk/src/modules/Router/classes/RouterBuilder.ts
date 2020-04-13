@@ -1,5 +1,5 @@
-import {ConduitRouteOptions} from "../interfaces";
 import {ConduitRouteBuilder} from "./RouteBuilder";
+import {ConduitRouteOptions} from "../../../interaces";
 
 export abstract class ConduitRouterBuilder {
 

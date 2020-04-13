@@ -5,9 +5,19 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepare": "npm run build",
-    "build": "tsc"
+    "build": "tsc",
+    "publish": "npm publish"
   },
   "license": "ISC",
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
   "dependencies": {
     "@conduit/sdk": "1.0.0",
     "bcrypt": "^3.0.7",
@@ -29,8 +39,8 @@
     "@types/lodash": "^4.14.149",
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
-    "express": "~4.16.1",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "express": "~4.16.1"
   },
   "peerDependencies": {
     "express": "~4.16.1"

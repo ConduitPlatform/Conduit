@@ -5,6 +5,9 @@ const cookieParser = require('cookie-parser');
 const config = require('./utils/config/config.js');
 const logger = require('./utils/logging/logger.js');
 const ConduitSDK = require("@conduit/sdk").ConduitSDK;
+const ConduitRoute = require("@conduit/sdk").ConduitRoute;
+const Actions = require("@conduit/sdk").ConduitRouteActions;
+const ReturnDefinition = require("@conduit/sdk").ConduitRouteReturnDefinition;
 const database = require('@conduit/database-provider').ConduitDefaultDatabase;
 const conduitRouter = require('@conduit/router').ConduitDefaultRouter;
 const init = require('./init');
@@ -30,18 +33,24 @@ app.conduit.registerDatabase(new database(process.env.databaseType, process.env.
 app.initialized = false;
 router.registerExpressRouter('/', indexRouter);
 
-router.registerDirectRouter('/health', (req, res, next) => {
-    if (app.initialized) {
-        res.status(200).send('Conduit is online!');
-    } else {
-        res.status(500).send('Conduit is not active yet!');
+router.initGraphQL();
+router.registerRoute(new ConduitRoute({
+    path: '/health',
+    action: Actions.GET,
+    queryParams: {
+        shouldCheck: 'String'
     }
-});
+}, new ReturnDefinition('HealthResult', 'String'), (params) => {
+    return new Promise(((resolve, reject) => {
+        if (app.initialized) {
+            resolve('Conduit is online!')
+        } else {
+            throw new Error('Conduit is not active yet!');
+        }
+    }))
+}));
 
-init(app)
-    .then(r => {
-        router.initGraphQL();
-    });
+init(app);
 
 router.registerGlobalMiddleware('errorLogger', logger.errorLogger());
 router.registerGlobalMiddleware('errorCatch', (error, req, res, next) => {
