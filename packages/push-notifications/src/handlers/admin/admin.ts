@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
-import { isNil, merge, isEmpty } from 'lodash';
+import { isEmpty, isNil, merge } from 'lodash';
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { IPushNotificationsProvider } from '../../interfaces/IPushNotificationsProvider';
 
@@ -91,6 +90,19 @@ export class AdminHandler {
     await appConfig.load(saved.config);
 
     return res.json(saved.config.pushNotifications);
+  }
+
+  async getNotificationToken(req: Request, res: Response, next: NextFunction) {
+    const userId = req.params.userId;
+    if (isNil(userId)) {
+      return res.status(401).json({ error: 'User id parameter was not provided' });
+    }
+
+    const pushNotificationModel = this.databaseAdapter.getSchema('NotificationToken');
+
+    const tokenDocuments = await pushNotificationModel.findMany({ userId });
+
+    return res.json({ tokenDocuments });
   }
 }
 
