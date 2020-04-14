@@ -8,7 +8,6 @@ const AdminModule = require('@conduit/admin');
 const InMemoryStoreModule = require('@conduit/in-memory-store');
 const PushNotificationsModule = require('@conduit/push-notifications');
 const cms = require('@conduit/cms').CMS;
-const usersRouter = require('./routes/users');
 const {getConfig, editConfig} = require('./admin/config');
 
 async function init(app) {
@@ -50,9 +49,6 @@ async function init(app) {
     app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
   }
 
-  if (config.get('authentication.active')) {
-    app.use('/users', app.conduit.getAuthentication().middleware, usersRouter);
-  }
   app.initialized = true;
   return app;
 }
