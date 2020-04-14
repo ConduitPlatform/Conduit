@@ -86,7 +86,7 @@ class AuthenticationModule {
         {
           path: '/authentication/local',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             email: 'String',
             password: 'String'
           }
@@ -99,7 +99,7 @@ class AuthenticationModule {
         {
           path: '/authentication/local/new',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             email: 'String',
             password: 'String'
           }
@@ -112,7 +112,7 @@ class AuthenticationModule {
         {
           path: '/authentication/forgot-password',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             email: 'String'
           }
         },
@@ -124,7 +124,7 @@ class AuthenticationModule {
         {
           path: '/authentication/reset-password',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             passwordResetToken: 'String',
             password: 'String'
           }
@@ -140,7 +140,7 @@ class AuthenticationModule {
         {
           path: '/authentication/facebook',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             access_token: 'String'
           }
         },
@@ -155,7 +155,7 @@ class AuthenticationModule {
         {
           path: '/authentication/google',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             id_token: 'String',
             access_token: 'String',
             refresh_token: 'String',
@@ -173,7 +173,7 @@ class AuthenticationModule {
         {
           path: '/authentication/renew',
           action: Actions.POST,
-          queryParams: {
+          bodyParams: {
             refreshToken: 'String'
           }
         },
