@@ -27,11 +27,13 @@ export class ConduitRoutingController {
         })
 
         app.use((req, res, next) => {
-            if (this._graphQLRouting) {
+            if (req.url === '/graphql' && this._graphQLRouting) {
                 this._graphQLRouting(req, res, next);
+            } else if (req.url !== '/graphql') {
+                // this needs to be a function to hook on whatever the current router is
+                self._restRouter.handleRequest(req, res, next)
             }
-            // this needs to be a function to hook on whatever the current router is
-            self._restRouter.handleRequest(req, res, next)
+
         })
     }
 
