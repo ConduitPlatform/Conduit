@@ -51,18 +51,33 @@ class SecurityModule extends IConduitSecurity {
             return res.status(401).json({error: 'Unauthorized'});
         }
 
-        this.database.getSchema('Client')
-            .findOne({clientId: clientid, clientSecret: clientsecret})
-            .then(async (client: any) => {
-                if (isNil(client)) {
-                    return res.status(401).json({error: 'Unauthorized'});
-                }
-                delete req.headers.clientsecret;
-                next();
-            })
-            .catch(next);
+    this.database.getSchema('Client')
+      .findOne({ clientId: clientid, clientSecret: clientsecret })
+      .then(async (client: any) => {
+        if (isNil(client)) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        delete req.headers.clientsecret;
+        if (isNil((req as any).conduit)) (req as any).conduit = {};
+        (req as any).conduit.clientId = clientid;
+        next();
+      })
+      .catch(next);
+  }
+
+
+  adminMiddleware(req: Request, res: Response, next: NextFunction) {
+
+    if (req.path.indexOf('/admin/') !== 0) {
+      return next();
     }
 
+    const masterkey = req.headers.masterkey;
+    if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
+      return res.status(401).json({ error: 'Unauthorized' });
+
+    return next();
+  }
 }
 
 export = SecurityModule;

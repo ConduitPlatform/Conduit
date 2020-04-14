@@ -1,7 +1,17 @@
-import { ConduitSDK, IConduitAdmin, IConduitDatabase, IConduitEmail, IConduitRouter } from '@conduit/sdk';
+import {
+  ConduitRoute,
+  ConduitRouteActions as Actions, ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
+  ConduitSDK,
+  IConduitAdmin,
+  IConduitDatabase,
+  IConduitEmail,
+  IConduitRouter,
+  TYPE
+} from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
-import { NextFunction, Request, Response, Router } from 'express';
+import { Router } from 'express';
 import { LocalHandlers } from './handlers/auth/local';
 import { AuthService } from './services/auth';
 import { FacebookHandlers } from './handlers/auth/facebook';
@@ -21,7 +31,6 @@ class AuthenticationModule {
   private readonly googleHandlers: GoogleHandlers;
   private readonly adminHandlers: AdminHandlers;
   private readonly commonHandlers: CommonHandlers;
-  private readonly authRouter: Router;
   private readonly hookRouter: Router;
   private readonly authMiddleware: AuthMiddleware;
 
@@ -39,7 +48,6 @@ class AuthenticationModule {
     this.adminHandlers = new AdminHandlers(sdk);
     this.authMiddleware = new AuthMiddleware(sdk, this.authService);
     this.commonHandlers = new CommonHandlers(sdk, this.authService);
-    this.authRouter = Router();
     this.hookRouter = Router();
     this.init();
   }
@@ -73,31 +81,118 @@ class AuthenticationModule {
         throw new Error('Cannot use local authentication without email module being enabled');
       }
 
-      this.authRouter.post('/local', (req: Request, res: Response, next: NextFunction) => this.localHandlers.authenticate(req, res).catch(next));
-      this.authRouter.post('/local/new', (req, res, next) => this.localHandlers.register(req, res).catch(next));
-      this.authRouter.post('/forgot-password', (req, res, next) => this.localHandlers.forgotPassword(req, res).catch(next));
-      this.authRouter.post('/reset-password', (req, res, next) => this.localHandlers.resetPassword(req, res).catch(next));
+      // Login Endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/local',
+          action: Actions.POST,
+          bodyParams: {
+            email: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('LoginResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.localHandlers.authenticate(params)
+      ));
+      // Register endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/local/new',
+          action: Actions.POST,
+          bodyParams: {
+            email: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('RegisterResponse', 'String'),
+        (params: ConduitRouteParameters) => this.localHandlers.register(params)
+      ));
+      // Forgot-password endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/forgot-password',
+          action: Actions.POST,
+          bodyParams: {
+            email: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
+        (params: ConduitRouteParameters) => this.localHandlers.forgotPassword(params)
+      ));
+      // Reset-password endpoint
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/reset-password',
+          action: Actions.POST,
+          bodyParams: {
+            passwordResetToken: 'String',
+            password: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+        (params: ConduitRouteParameters) => this.localHandlers.resetPassword(params)
+      ));
       enabled = true;
     }
 
     if (config.facebook.enabled) {
-      this.authRouter.post('/facebook', (req, res, next) => this.facebookHandlers.authenticate(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/facebook',
+          action: Actions.POST,
+          bodyParams: {
+            access_token: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('FacebookResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.facebookHandlers.authenticate(params)
+      ));
       enabled = true;
     }
 
     if (config.google.enabled) {
-      this.authRouter.post('/google', (req, res, next) => this.googleHandlers.authenticate(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/google',
+          action: Actions.POST,
+          bodyParams: {
+            id_token: 'String',
+            access_token: 'String',
+            refresh_token: 'String',
+            expires_in: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('GoogleResponse', {userId: TYPE.String, accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.googleHandlers.authenticate(params)
+      ));
       enabled = true;
     }
 
     if (enabled) {
-      this.authRouter.post('/renew', (req, res, next) => this.commonHandlers.renewAuth(req, res).catch(next));
-      this.authRouter.post('/logout', authMiddleware, (req, res, next) => this.commonHandlers.logOut(req, res).catch(next));
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/renew',
+          action: Actions.POST,
+          bodyParams: {
+            refreshToken: 'String'
+          }
+        },
+        new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {accessToken: TYPE.String, refreshToken: TYPE.String}),
+        (params: ConduitRouteParameters) => this.commonHandlers.renewAuth(params)
+      ));
+      // TODO authMiddleware needs to be bind in the below endpoint. It doesn't work as it is cause it needs the user in the context
+      this.conduitRouter.registerRoute(new ConduitRoute(
+        {
+          path: '/authentication/logout',
+          action: Actions.POST
+        },
+        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+        (params: ConduitRouteParameters) => this.commonHandlers.logOut(params)
+      ));
     }
 
     this.hookRouter.get('/verify-email/:verificationToken', (req, res, next) => this.localHandlers.verifyEmail(req, res).catch(next));
 
-    this.conduitRouter.registerExpressRouter('/authentication', this.authRouter);
     this.conduitRouter.registerExpressRouter('/hook', this.hookRouter);
   }
 

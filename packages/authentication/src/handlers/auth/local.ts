@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ConduitSDK, IConduitDatabase, IConduitEmail } from '@conduit/sdk';
+import { ConduitRouteParameters, ConduitSDK, IConduitDatabase, IConduitEmail } from '@conduit/sdk';
 import { isNil } from 'lodash';
 import { AuthService } from '../../services/auth';
 import { TokenType } from '../../constants/TokenType';
@@ -19,19 +19,19 @@ export class LocalHandlers {
     this.emailModule = sdk.getEmail();
   }
 
-  async register(req: Request, res: Response) {
-    const { email, password } = req.body;
+  async register(params: ConduitRouteParameters) {
+    const { email, password } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (!config.local.active) return res.status(403).json({ error: 'Local authentication is disabled' });
-    if (isNil(email) || isNil(password)) return res.status(403).json({ error: 'Email and password required' });
+    if (!config.local.active) throw new Error('Local authentication is disabled');
+    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
     const User = this.database.getSchema('User');
     const Token = this.database.getSchema('Token');
 
     let user = await User.findOne({ email });
-    if (!isNil(user)) return res.status(403).json({ error: 'User already exists' });
+    if (!isNil(user)) throw new Error('User already exists');
 
     const hashedPassword = await this.authService.hashPassword(password);
     user = await User.create({
@@ -57,32 +57,33 @@ export class LocalHandlers {
       });
     }
 
-    return res.json({ message: 'Registration was successful' });
+    return 'Registration was successful';
   }
 
-  async authenticate(req: Request, res: Response) {
-    const { email, password } = req.body;
+  async authenticate(params: ConduitRouteParameters) {
+    const { email, password } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    const clientId = req.headers.clientid;
+    if (isNil(params.context)) throw new Error('No headers provided');
+    const clientId = params.context.clientId;
 
-    if (!config.local.active) return res.status(403).json({ error: 'Local authentication is disabled' });
-    if (isNil(email) || isNil(password)) return res.status(403).json({ error: 'Email and password required' });
+    if (!config.local.active) throw new Error('Local authentication is disabled');
+    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
     const User = this.database.getSchema('User');
     const AccessToken = this.database.getSchema('AccessToken');
     const RefreshToken = this.database.getSchema('RefreshToken');
 
     const user = await User.findOne({ email }, '+hashedPassword');
-    if (isNil(user)) return res.status(401).json({ error: 'Invalid login credentials' });
-    if (!user.active) return res.status(403).json({ error: 'Inactive user' });
+    if (isNil(user)) throw new Error('Invalid login credentials');
+    if (!user.active) throw new Error('Inactive user');
 
     if (config.local.verificationRequired && !user.isVerified)
-      return res.status(403).json({ error: 'You must verify your account to login' });
+      throw new Error('You must verify your account to login');
 
     const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch) return res.status(401).json({ error: 'Invalid login credentials' });
+    if (!passwordsMatch) throw new Error('Invalid login credentials');
 
     await AccessToken.deleteMany({ userId: user._id, clientId });
     await RefreshToken.deleteMany({ userId: user._id, clientId });
@@ -106,15 +107,15 @@ export class LocalHandlers {
       expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
     });
 
-    return res.json({ userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token });
+    return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
   }
 
-  async forgotPassword(req: Request, res: Response) {
-    const email = req.body.email;
+  async forgotPassword(params: ConduitRouteParameters) {
+    const email = (params.params as any).email;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (isNil(email)) res.status(401).json({ error: 'Email field required' });
+    if (isNil(email)) throw new Error('Email field required');
 
     const User = this.database.getSchema('User');
     const Token = this.database.getSchema('Token');
@@ -122,7 +123,7 @@ export class LocalHandlers {
     const user = await User.findOne({ email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return res.json({ message: 'Ok' });
+      return 'Ok';
 
     const oldToken = await Token.findOne({ type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id });
     if (!isNil(oldToken)) await oldToken.remove();
@@ -143,14 +144,14 @@ export class LocalHandlers {
       }
     });
 
-    return res.json({ message: 'Ok' });
+    return 'Ok';
   }
 
-  async resetPassword(req: Request, res: Response) {
-    const passwordResetTokenParam = req.body.passwordResetToken;
-    const newPassword = req.body.password;
+  async resetPassword(params: ConduitRouteParameters) {
+    const { passwordResetToken: passwordResetTokenParam, password: newPassword } = params.params as any;
+
     if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-      return res.status(401).json({ error: 'Required fields are missing' });
+      throw new Error('Required fields are missing');
     }
 
     const User = this.database.getSchema('User');
@@ -162,13 +163,13 @@ export class LocalHandlers {
       type: TokenType.PASSWORD_RESET_TOKEN,
       token: passwordResetTokenParam
     });
-    if (isNil(passwordResetTokenDoc)) return res.status(401).json({ error: 'Invalid parameters' });
+    if (isNil(passwordResetTokenDoc)) throw new Error('Invalid parameters');
 
     const user = await User.findOne({ _id: passwordResetTokenDoc.userId }, '+hashedPassword');
-    if (isNil(user)) return res.status(404).json({ error: 'User not found' });
+    if (isNil(user)) throw new Error('User not found');
 
     const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
-    if (passwordsMatch) return res.status(401).json({ error: 'Password can\'t be the same as the old one' });
+    if (passwordsMatch) throw new Error('Password can\'t be the same as the old one');
 
     user.hashedPassword = await this.authService.hashPassword(newPassword);
     await user.save();
@@ -176,7 +177,7 @@ export class LocalHandlers {
     await AccessToken.deleteMany({ userId: user._id });
     await RefreshToken.deleteMany({ userId: user._id });
 
-    return res.json({ message: 'Password reset successful' });
+    return 'Password reset successful';
   }
 
   async verifyEmail(req: Request, res: Response) {

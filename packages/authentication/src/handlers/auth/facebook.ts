@@ -1,11 +1,9 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
-import { Request, Response } from 'express';
-import request from 'request-promise';
-import { OptionsWithUrl } from 'request-promise';
+import { ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import request, { OptionsWithUrl } from 'request-promise';
 import { isNil } from 'lodash';
-import moment = require('moment');
 import { AuthService } from '../../services/auth';
 import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import moment = require('moment');
 
 export class FacebookHandlers {
   private readonly database: IConduitDatabase;
@@ -17,14 +15,16 @@ export class FacebookHandlers {
     this.database = sdk.getDatabase();
   }
 
-  async authenticate(req: Request, res: Response) {
-    const { access_token } = req.body;
+  async authenticate(params: ConduitRouteParameters) {
+    const { access_token } = params.params as any;
     const { config: appConfig } = this.sdk as any;
     const config = appConfig.get('authentication');
 
-    if (!config.facebook.active) {
-      return res.status(403).json({ error: 'Facebook authentication is disabled' });
+    if (!config.facebook.enabled) {
+      throw new Error('Facebook authentication is disabled');
     }
+
+    if (isNil(params.context)) throw new Error('No headers provided');
 
     const facebookOptions: OptionsWithUrl = {
       method: 'GET',
@@ -39,7 +39,7 @@ export class FacebookHandlers {
     const facebookResponse = await request(facebookOptions);
 
     if (isNil(facebookResponse.email) || isNil(facebookResponse.id)) {
-      return res.status(401).json({ error: 'Authentication with facebook failed' });
+      throw new Error('Authentication with facebook failed');
     }
 
     const User = this.database.getSchema('User');
@@ -49,9 +49,9 @@ export class FacebookHandlers {
     let user = await User.findOne({ email: facebookResponse.email });
 
     if (!isNil(user)) {
-      if (!user.active) return res.status(403).json({ error: 'Inactive user' });
+      if (!user.active) throw new Error('Inactive user');
       if (!config.facebook.accountLinking) {
-        return res.status(401).json({ error: 'User with this email already exists' });
+        throw new Error('User with this email already exists');
       }
       if (isNil(user.facebook)) {
         user.facebook = {
@@ -78,18 +78,18 @@ export class FacebookHandlers {
 
     const accessToken = await AccessToken.create({
       userId: user._id,
-      clientId: req.headers.clientid,
+      clientId: params.context.clientId,
       token: this.authService.signToken({ id: user._id }, signTokenOptions),
       expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
     });
 
     const refreshToken = await RefreshToken.create({
       userId: user._id,
-      clientId: req.headers.clientid,
+      clientId: params.context.clientId,
       token: this.authService.randomToken(),
       expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
     });
 
-    return res.json({ userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token });
+    return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
   }
 }

@@ -1,4 +1,4 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
@@ -15,12 +15,13 @@ export class CommonHandlers {
     this.database = sdk.getDatabase();
   }
 
-  async renewAuth(req: Request, res: Response) {
-    const clientId = req.headers.clientid;
+  async renewAuth(params: ConduitRouteParameters) {
+    if (isNil(params.context)) throw new Error('No headers provided');
+    const clientId = params.context.clientId;
 
-    const refreshToken = req.body.refreshToken;
+    const {refreshToken} = params.params as any;
     if (isNil(refreshToken)) {
-      return res.status(401).json({ error: 'Invalid parameters' });
+      throw new Error('Invalid parameters');
     }
 
     const { config: appConfig } = this.sdk as any;
@@ -31,12 +32,12 @@ export class CommonHandlers {
 
     const oldRefreshToken = await RefreshToken.findOne({ token: refreshToken, clientId });
     if (isNil(oldRefreshToken)) {
-      return res.status(401).json({ error: 'Invalid parameters' });
+      throw new Error('Invalid parameters');
     }
 
     const oldAccessToken = await AccessToken.findOne({ clientId });
     if (isNil(oldAccessToken)) {
-      return res.status(401).json({ error: 'No access token found' });
+      throw new Error('No access token found');
     }
 
     const signTokenOptions: ISignTokenOptions = {
@@ -61,16 +62,17 @@ export class CommonHandlers {
     await oldAccessToken.remove();
     await oldRefreshToken.remove();
 
-    return res.json({
+    return {
       accessToken: newAccessToken.token,
       refreshToken: newRefreshToken.token
-    });
+    };
   }
 
-  async logOut(req: Request, res: Response) {
-    const clientId = req.headers.clientid;
+  async logOut(params: ConduitRouteParameters) {
+    if (isNil(params.context)) throw new Error('No headers provided');
+    const clientId = params.context.clientId;
 
-    const user = (req as any).user;
+    const user = params.context.user;
 
     const AccessToken = this.database.getSchema('AccessToken');
     const RefreshToken = this.database.getSchema('RefreshToken');
@@ -78,6 +80,6 @@ export class CommonHandlers {
     await AccessToken.deleteOne({userId: user._id, clientId});
     await RefreshToken.deleteOne({userId: user._id, clientId});
 
-    return res.json({message: 'Logged out'});
+    return 'Logged out';
   }
 }
