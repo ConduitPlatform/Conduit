@@ -1,4 +1,4 @@
-import {Application, NextFunction, Request, Response} from "express";
+import {Application, NextFunction, Request, Response, Router} from "express";
 import {
     ConduitModel,
     ConduitRoute,
@@ -23,6 +23,7 @@ export class GraphQLController {
     queries: string;
     mutations: string;
     resolvers: any;
+    private _internalRoute: any;
     private _apollo?: any;
     private _relationTypes: string[] = [];
     private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
@@ -51,7 +52,8 @@ export class GraphQLController {
         this.queries = '';
         this.mutations = '';
         const self = this;
-        app.use('/', (req, res, next) => {
+        this._internalRoute = Router();
+        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
             if (self._apollo) {
                 self._apollo(req, res, next)
             } else {
@@ -59,6 +61,10 @@ export class GraphQLController {
             }
 
         });
+    }
+
+    getInternalRoute() {
+        return this._internalRoute;
     }
 
     refreshGQLServer() {
