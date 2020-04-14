@@ -3,7 +3,7 @@ import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import AdminSchema from './models/Admin';
-import {ConduitRouteParameters, ConduitSDK, IConduitAdmin} from "@conduit/sdk";
+import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin } from '@conduit/sdk';
 
 class AdminModule extends IConduitAdmin {
     private readonly router: Router;
@@ -114,9 +114,7 @@ class AdminModule extends IConduitAdmin {
         return new Promise((resolve, reject) => {
             const masterkey = context.headers.masterkey;
             if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
-                // todo find a way to bring this back
-                //res.status(401).json({error: 'Unauthorized'});
-                throw new Error("Unauthorized")
+                throw new ConduitError('UNAUTHORIZED', 401, 'Unauthrorized');
             resolve("ok");
         })
     }
