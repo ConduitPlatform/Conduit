@@ -25,17 +25,17 @@ async function init(app) {
 
   registerAdminRoutes(app.conduit.getAdmin());
 
-  if (config.get('pushNotifications.active')) {
-    app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-  }
-
   if (config.get('email.active')) {
     app.conduit.registerEmail(new EmailModule(app.conduit));
   }
 
   // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
   if (config.get('authentication.active')) {
-      app.conduit.registerAuthentication(new Authentication(app.conduit));
+    app.conduit.registerAuthentication(new Authentication(app.conduit));
+  }
+
+  if (config.get('pushNotifications.active')) {
+    app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
   }
 
   // initialize plugin AFTER the authentication so that we may provide access control to the plugins
