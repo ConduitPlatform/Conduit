@@ -107,10 +107,10 @@ export class GoogleHandlers {
                 path: '/authentication/google',
                 action: Actions.POST,
                 bodyParams: {
-                    id_token: 'String',
-                    access_token: 'String',
-                    refresh_token: 'String',
-                    expires_in: 'String'
+                    id_token: TYPE.String,
+                    access_token: TYPE.String,
+                    refresh_token: TYPE.String,
+                    expires_in: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('GoogleResponse', {

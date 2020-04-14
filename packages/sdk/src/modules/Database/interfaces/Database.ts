@@ -1,4 +1,5 @@
 import {SchemaAdapter} from "./SchemaAdapter";
+import {ConduitSchema} from "../../../models";
 
 export abstract class IConduitDatabase {
 
@@ -9,7 +10,7 @@ export abstract class IConduitDatabase {
      * Should accept a JSON schema and output a .ts interface for the adapter
      * @param schema
      */
-    abstract createSchemaFromAdapter(schema: any): SchemaAdapter;
+    abstract createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter;
 
     /**
      * Given a schema name, returns the schema adapter assigned

@@ -103,7 +103,7 @@ export class FacebookHandlers {
                 path: '/authentication/facebook',
                 action: Actions.POST,
                 bodyParams: {
-                    access_token: 'String'
+                    access_token: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('FacebookResponse', {

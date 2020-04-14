@@ -92,7 +92,7 @@ export class CommonHandlers {
                 path: '/authentication/renew',
                 action: Actions.POST,
                 bodyParams: {
-                    refreshToken: 'String'
+                    refreshToken: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {

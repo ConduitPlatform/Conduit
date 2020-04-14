@@ -50,8 +50,8 @@ class PushNotificationsModule extends IConduitPushNotifications {
                 path: '/notification-token',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                    token: 'String',
-                    platform: 'String'
+                    token: TYPE.String,
+                    platform: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {

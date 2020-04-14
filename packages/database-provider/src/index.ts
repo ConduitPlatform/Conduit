@@ -1,5 +1,6 @@
 import {MongooseAdapter} from "./adapters/mongoose-adapter";
 import {DatabaseAdapter, IConduitDatabase, SchemaAdapter} from "@conduit/sdk";
+import {ConduitSchema} from "@conduit/sdk";
 
 
 export class ConduitDefaultDatabase extends IConduitDatabase {
@@ -19,7 +20,7 @@ export class ConduitDefaultDatabase extends IConduitDatabase {
      * Should accept a JSON schema and output a .ts interface for the adapter
      * @param schema
      */
-    createSchemaFromAdapter(schema: any): SchemaAdapter {
+    createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter {
         return this._activeAdapter.createSchemaFromAdapter(schema);
     }
 

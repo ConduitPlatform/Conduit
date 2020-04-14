@@ -2,12 +2,13 @@ import {Application} from "express";
 import {IConduitRouter} from "./modules/Router/interfaces";
 import {IConduitDatabase} from "./modules/Database/interfaces";
 import {IConduitAdmin} from "./modules/Admin";
-import { IConduitEmail } from './modules/Email';
-import { IConduitPushNotifications } from './modules/PushNotifications';
-import { IConduitInMemoryStore } from './modules/InMemoryStore';
-import { IConduitStorage } from './modules/Storage';
-import { IConduitSecurity } from './modules/Security';
-import { IConduitAuthentication } from './modules/Authentication';
+import {IConduitEmail} from './modules/Email';
+import {IConduitPushNotifications} from './modules/PushNotifications';
+import {IConduitInMemoryStore} from './modules/InMemoryStore';
+import {IConduitStorage} from './modules/Storage';
+import {IConduitSecurity} from './modules/Security';
+import {IConduitAuthentication} from './modules/Authentication';
+import {IConduitCMS} from "./modules/Cms";
 
 export class ConduitSDK {
 
@@ -22,6 +23,7 @@ export class ConduitSDK {
     private _storage?: IConduitStorage;
     private _security?: IConduitSecurity;
     private _authentication?: IConduitAuthentication;
+    private _cms?: IConduitCMS;
 
     private constructor(app: Application) {
         this._app = app;
@@ -45,6 +47,16 @@ export class ConduitSDK {
     getDatabase(): IConduitDatabase {
         if (this._database) return this._database;
         throw new Error("Database not assigned yet!");
+    }
+
+    registerCMS(cms: IConduitCMS) {
+        if (this._cms) throw new Error("Cannot register a second CMS!")
+        this._cms = cms;
+    }
+
+    getCMS(): IConduitCMS {
+        if (this._cms) return this._cms;
+        throw new Error("CMS not assigned yet!");
     }
 
     registerAdmin(admin: IConduitAdmin) {

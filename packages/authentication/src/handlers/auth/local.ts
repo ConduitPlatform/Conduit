@@ -215,8 +215,8 @@ export class LocalHandlers {
                 path: '/authentication/local',
                 action: Actions.POST,
                 bodyParams: {
-                    email: 'String',
-                    password: 'String'
+                    email: TYPE.String,
+                    password: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('LoginResponse', {
@@ -230,8 +230,8 @@ export class LocalHandlers {
                 path: '/authentication/local/new',
                 action: Actions.POST,
                 bodyParams: {
-                    email: 'String',
-                    password: 'String'
+                    email: TYPE.String,
+                    password: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register));
@@ -241,7 +241,7 @@ export class LocalHandlers {
                 path: '/authentication/forgot-password',
                 action: Actions.POST,
                 bodyParams: {
-                    email: 'String'
+                    email: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'), this.forgotPassword));
@@ -251,8 +251,8 @@ export class LocalHandlers {
                 path: '/authentication/reset-password',
                 action: Actions.POST,
                 bodyParams: {
-                    passwordResetToken: 'String',
-                    password: 'String'
+                    passwordResetToken: TYPE.String,
+                    password: TYPE.String
                 }
             },
             new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'), this.resetPassword));

@@ -1,18 +1,27 @@
 import schema from "./interfaces/schema";
+import {
+    ConduitRoute,
+    ConduitRouteActions as Actions, ConduitRouteParameters,
+    ConduitRouteReturnDefinition, ConduitSchema, ConduitSDK, IConduitCMS, IConduitDatabase,
+    SchemaAdapter,
+    TYPE
+} from "@conduit/sdk";
 
-export class CMS {
+export class CMS extends IConduitCMS {
 
-    _adapter: any;
-    _schemas: any;
-    _router: any;
+    private readonly _adapter: IConduitDatabase;
+    private readonly _schemas: { [name: string]: SchemaAdapter };
+    private readonly _router: any;
+    private readonly sdk: ConduitSDK;
 
-    constructor(databaseAdapter: any, router: any) {
-        this._schemas = [];
-        this._router = router;
-        this._adapter = databaseAdapter;
+
+    constructor(conduit: ConduitSDK) {
+        super(conduit);
+        this._schemas = {};
+        this.sdk = conduit;
+        this._adapter = this.sdk.getDatabase();
         this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
-        this.constructRouter();
     }
 
     private loadExistingSchemas() {
@@ -22,6 +31,7 @@ export class CMS {
                 if (r) {
                     r.forEach((r: any) => {
                         this._schemas[r.name] = this._adapter.createSchemaFromAdapter(r)
+                        this.constructSchemaRoutes(this._schemas[r.name]);
                     })
                 }
 
@@ -32,48 +42,54 @@ export class CMS {
             })
     }
 
-    createSchema(name: string, properties: any) {
-        let schema: any = {};
-        schema['name'] = name;
-        schema['schema'] = properties;
-        this._schemas[name] = this._adapter.createSchemaFromAdapter(schema);
+    createSchema(schema: ConduitSchema): void {
+        this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
+        this.constructSchemaRoutes(this._schemas[schema.name]);
     }
 
-    constructRouter() {
-        // should support query params for multiple filters, finding by id and paging
-        this._router.get('/content/:name', (req: any, res: any, next: any) => {
-            //todo change to more robust mechanism
-            this._schemas[req.params.name].model
-                .find({})
-                .then((r: any) => {
-                    if (r) {
-                        res.status(200).json(r);
-                    } else {
-                        res.status(404).json({message: "Not found"});
-                    }
-                })
-                .catch((err: Error) => {
-                    res.status(500).json({message: "Something went wrong, view logs for details"});
-                    console.error(err);
-                })
+    //todo add support for paginantion
+    //todo add support for filtering
+    constructSchemaRoutes(schema: SchemaAdapter) {
 
-        });
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/content/' + schema.originalSchema.name,
+                action: Actions.GET
+            },
+            new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
+            (params: ConduitRouteParameters) => {
+                return schema.findMany({});
+            }));
 
-        // should support body for creating models
-        this._router.post('/content/:name', (req: any, res: any, next: any) => {
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/content/' + schema.originalSchema.name,
+                action: Actions.POST,
+                bodyParams: schema.originalSchema.fields
+            },
+            new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
+            (params: ConduitRouteParameters) => {
+                let body = params.params;
+                let context = params.context;
+                // todo check if this is correct. Context was added here in case the create method needs the user for example
+                return schema.create({...body, ...context});
+            }));
+        // todo PUT should be identical to POST but all fields should be made optional
+        // this.sdk.getRouter().registerRoute(new ConduitRoute(
+        //     {
+        //         path: '/content/' + schema.originalSchema.name,
+        //         action: Actions.POST,
+        //         bodyParams: schema.originalSchema.fields
+        //     },
+        //     new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
+        //     (params: ConduitRouteParameters) => {
+        //         let body = params.params;
+        //         let context = params.context;
+        //         // todo check if this is correct. Context was added here in case the create method needs the user for example
+        //         return schema.create({body, ...context});
+        //     }));
 
-        });
 
-
-        // should support body for updating models, query params for finding them or optional id
-        this._router.put('/content/:name', (req: any, res: any, next: any) => {
-
-        });
-
-        // should support query params for filtering them or optional id
-        this._router.delete('/content/:name/', (req: any, res: any, next: any) => {
-
-        });
     }
 
 }
