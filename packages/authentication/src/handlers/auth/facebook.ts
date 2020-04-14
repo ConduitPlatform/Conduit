@@ -2,7 +2,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase, TYPE
 } from '@conduit/sdk';
 import request, {OptionsWithUrl} from 'request-promise';
@@ -96,14 +96,13 @@ export class FacebookHandlers {
 
         return {userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token};
     }
-
     registerRoutes() {
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/authentication/facebook',
                 action: Actions.POST,
                 bodyParams: {
-                    access_token: TYPE.String
+                    access_token: ConduitString()
                 }
             },
             new ConduitRouteReturnDefinition('FacebookResponse', {
