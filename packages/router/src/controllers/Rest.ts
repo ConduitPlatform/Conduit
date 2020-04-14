@@ -62,6 +62,8 @@ export class RestController {
                     if (err.hasOwnProperty("status")) {
                         res.status((err as ConduitError).status).json({err});
                     } else {
+                        // TODO This is temporary until we fix rest error response
+                        console.log(err);
                         res.status(500).json({err});
                     }
 

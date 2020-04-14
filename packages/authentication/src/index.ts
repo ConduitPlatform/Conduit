@@ -180,7 +180,7 @@ class AuthenticationModule {
         new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {accessToken: TYPE.String, refreshToken: TYPE.String}),
         (params: ConduitRouteParameters) => this.commonHandlers.renewAuth(params)
       ));
-      // TODO authMiddleware needs to be bind in the below endpoint. It doesn't work as it is cause it needs the user in the context
+      this.conduitRouter.registerRouteMiddleware('/authentication/logout', authMiddleware);
       this.conduitRouter.registerRoute(new ConduitRoute(
         {
           path: '/authentication/logout',

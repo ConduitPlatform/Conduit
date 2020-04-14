@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { AuthService } from '../services/auth';
 
 export class AuthMiddleware {
@@ -13,51 +12,53 @@ export class AuthMiddleware {
     this.database = sdk.getDatabase();
   }
 
-  middleware(req: Request, res: Response, next: NextFunction) {
-    const header = (req.headers['Authorization'] || req.headers['authorization']) as string;
-    if (isNil(header)) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const args = header.split(' ');
+  middleware(request: ConduitRouteParameters): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const header = (request.headers['Authorization'] || request.headers['authorization']) as string;
+      if (isNil(header)) {
+        throw new ConduitError('UNAUTHORIZED', 401, 'Unauthorized');
+      }
+      const args = header.split(' ');
 
-    const prefix = args[0];
-    if (prefix !== 'Bearer') {
-      return res.status(401).json({ error: 'The auth header must begin with Bearer' });
-    }
+      const prefix = args[0];
+      if (prefix !== 'Bearer') {
+        throw new ConduitError('UNAUTHORIZED', 401, 'The auth header must begin with Bearer');
+      }
 
-    const token = args[1];
-    if (isNil(token)) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
+      const token = args[1];
+      if (isNil(token)) {
+        throw new ConduitError('UNAUTHORIZED', 401, 'No token provided');
+      }
 
-    const AccessToken = this.database.getSchema('AccessToken');
-    const User = this.database.getSchema('User');
+      const AccessToken = this.database.getSchema('AccessToken');
+      const User = this.database.getSchema('User');
 
-    AccessToken
-      .findOne({ token, clientId: req.headers.clientid })
-      .then(accessTokenDoc => {
-        if (isNil(accessTokenDoc)) {
-          return res.status(401).json({ error: 'Invalid token' });
-        }
+      AccessToken
+        .findOne({ token, clientId: (request as any).context.clientId })
+        .then(accessTokenDoc => {
+          if (isNil(accessTokenDoc)) {
+            throw new ConduitError('UNAUTHORIZED', 401, 'Invalid token');
+          }
 
-        const { config } = this.sdk as any;
+          const { config } = this.sdk as any;
 
-        const decoded = this.authService.verify(token, config.get('authentication.jwtSecret'));
-        if (isNil(decoded)) return res.status(401).json({ error: 'Invalid token' });
+          const decoded = this.authService.verify(token, config.get('authentication.jwtSecret'));
+          if (isNil(decoded)) {
+            throw new ConduitError('UNAUTHORIZED', 401, 'Invalid token');
+          }
 
-        const userId = decoded.id;
+          const userId = decoded.id;
+          User
+            .findOne({ _id: userId })
+            .then(user => {
+              if (isNil(user)) {
+                throw new ConduitError('NOT_FOUND', 404, 'User not found');
+              }
+              (request as any).context.user = user;
+            });
+        });
+      resolve("ok");
+    });
 
-        User
-          .findOne({ _id: userId })
-          .then(user => {
-            if (isNil(user)) {
-              return res.status(404).json({ error: 'User not found' });
-            }
-            if (isNil((req as any).conduit)) (req as any).conduit = {};
-            (req as any).conduit.user = user;
-            next();
-          });
-      })
-      .catch(next);
   }
 }
