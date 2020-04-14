@@ -8,6 +8,7 @@ export class ConduitRoutingController {
 
     private _restRouter: RestController
     private _graphQLRouter?: GraphQLController
+    private _graphQLRouting?: Router;
     private _app: Application
     private _middlewareRouter: Router;
 
@@ -26,6 +27,9 @@ export class ConduitRoutingController {
         })
 
         app.use((req, res, next) => {
+            if (this._graphQLRouting) {
+                this._graphQLRouting(req, res, next);
+            }
             // this needs to be a function to hook on whatever the current router is
             self._restRouter.handleRequest(req, res, next)
         })
@@ -33,6 +37,7 @@ export class ConduitRoutingController {
 
     initGraphQL() {
         this._graphQLRouter = new GraphQLController(this._app);
+        this._graphQLRouting = this._graphQLRouter?.getInternalRoute();
     }
 
     registerMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
