@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ISendNotification, ISendNotificationToManyDevices } from '../../interfaces/ISendNotification';
-import { isNil, merge } from 'lodash';
+import { isNil, merge, isEmpty } from 'lodash';
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { IPushNotificationsProvider } from '../../interfaces/IPushNotificationsProvider';
 
@@ -17,21 +17,44 @@ export class AdminHandler {
   }
 
   async sendNotification(req: Request, res: Response, next: NextFunction) {
-    const params: ISendNotification = req.body;
+    const { title, body, data, userId } = req.body;
+    if (isNil(title) || isNil(userId)) return res.status(401).json({error: 'Required fields are missing'});
+    const params = {
+      title,
+      body,
+      data,
+      sendTo: userId
+    };
     if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
     await this.provider.sendToDevice(params, this.databaseAdapter);
     return res.json('ok');
   }
 
   async sendManyNotifications(req: Request, res: Response, next: NextFunction) {
-    const params: ISendNotification[] = req.body;
+    let requestParams = req.body;
+    const params = requestParams.map((param: any) => {
+      if (isNil(param.title) || isNil(param.userId)) return res.status(401).json({error: 'Required fields are missing'});
+      return {
+        sendTo: param.userId,
+        title: param.title,
+        body: param.body,
+        data: param.data
+      }
+    });
     if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
     await this.provider.sendMany(params, this.databaseAdapter);
     return res.json('ok');
   }
 
   async sendToManyDevices(req: Request, res: Response, next: NextFunction) {
-    const params: ISendNotificationToManyDevices = req.body;
+    const { userIds, title, body, data } = req.body;
+    if (isNil(title) || isNil(userIds) || isEmpty(userIds)) return res.status(401).json({error: 'Required fields are missing'});
+    const params = {
+      sendTo: userIds,
+      title,
+      body,
+      data
+    };
     if (isNil(params)) return res.status(401).json({error: 'Required fields are missing'});
     await this.provider.sendToManyDevices(params, this.databaseAdapter);
     return res.json('ok');
