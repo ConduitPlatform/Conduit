@@ -17,7 +17,7 @@ export interface SchemaAdapter {
      * Should find Many
      * @param query
      */
-    findMany(query: string): Promise<any>;
+    findMany(query: any): Promise<any>;
 
     /**
      * Should create

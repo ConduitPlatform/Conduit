@@ -5,7 +5,14 @@ import { FirebaseProvider } from './providers/firebase';
 import { NextFunction, Request, Response } from 'express';
 import { NotificationTokensHandler } from './handlers/notification-tokens/notification-tokens';
 import { AdminHandler } from './handlers/admin/admin';
-import { ConduitSDK, IConduitPushNotifications } from '@conduit/sdk';
+import {
+  ConduitRoute,
+  ConduitRouteActions, ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
+  ConduitSDK,
+  IConduitPushNotifications,
+  TYPE
+} from '@conduit/sdk';
 
 class PushNotificationsModule extends IConduitPushNotifications {
 
@@ -30,13 +37,33 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
     const notificationTokensHandler = new NotificationTokensHandler(conduit);
 
+    const router = conduit.getRouter();
     const adminHandler = new AdminHandler(conduit, this._provider);
 
-    conduit.getAdmin().registerRoute('POST', '/notification-token',
-      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.setNotificationToken(req, res, next).catch(next));
+    const authMiddleware = conduit.getAuthentication().middleware;
+    router.registerRouteMiddleware('/notification-token', authMiddleware);
+
+    router.registerRoute(new ConduitRoute(
+      {
+        path: '/notification-token',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
+          token: 'String',
+          platform: 'String'
+        }
+      },
+        new ConduitRouteReturnDefinition('SetNotificationTokenResponse', { message: TYPE.String, newTokenDocument: {
+            _id: TYPE.ObjectId,
+            userId: TYPE.ObjectId,
+            token: TYPE.String,
+            createdAt: TYPE.Date,
+            updatedAt: TYPE.Date
+          }}),
+      (params: ConduitRouteParameters) => notificationTokensHandler.setNotificationToken(params)
+    ));
 
     conduit.getAdmin().registerRoute('GET', '/notification-token/:userId',
-      (req: Request, res: Response, next: NextFunction) => notificationTokensHandler.getNotificationToken(req, res, next).catch(next));
+      (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationToken(req, res, next).catch(next));
 
     conduit.getAdmin().registerRoute('POST', '/notifications/send',
       (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
