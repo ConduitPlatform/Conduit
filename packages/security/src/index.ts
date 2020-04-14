@@ -60,7 +60,8 @@ class SecurityModule extends IConduitSecurity {
           return res.status(401).json({ error: 'Unauthorized' });
         }
         delete req.headers.clientsecret;
-        (req as any).conduit = {clientId: clientid};
+        if (isNil((req as any).conduit)) (req as any).conduit = {};
+        (req as any).conduit.clientId = clientid;
         next();
       })
       .catch(next);
