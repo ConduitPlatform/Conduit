@@ -114,7 +114,7 @@ class AdminModule extends IConduitAdmin {
         return new Promise((resolve, reject) => {
             const masterkey = context.headers.masterkey;
             if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
-                throw new ConduitError('UNAUTHORIZED', 401, 'Unauthrorized');
+                throw new ConduitError('UNAUTHORIZED', 401, 'Unauthorized');
             resolve("ok");
         })
     }
