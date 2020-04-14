@@ -1,205 +1,260 @@
-import { Request, Response } from 'express';
-import { ConduitRouteParameters, ConduitSDK, IConduitDatabase, IConduitEmail } from '@conduit/sdk';
-import { isNil } from 'lodash';
-import { AuthService } from '../../services/auth';
-import { TokenType } from '../../constants/TokenType';
-import { v4 as uuid } from 'uuid';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import {Request, Response} from 'express';
+import {
+    ConduitRoute,
+    ConduitRouteActions as Actions,
+    ConduitRouteParameters, ConduitRouteReturnDefinition,
+    ConduitSDK,
+    IConduitDatabase,
+    IConduitEmail, TYPE
+} from '@conduit/sdk';
+import {isNil} from 'lodash';
+import {AuthService} from '../../services/auth';
+import {TokenType} from '../../constants/TokenType';
+import {v4 as uuid} from 'uuid';
+import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
 
 export class LocalHandlers {
-  private readonly database: IConduitDatabase;
-  private readonly emailModule: IConduitEmail;
+    private readonly database: IConduitDatabase;
+    private readonly emailModule: IConduitEmail;
 
-  constructor(
-    private readonly sdk: ConduitSDK,
-    private readonly authService: AuthService
-  ) {
-    this.database = sdk.getDatabase();
-    this.emailModule = sdk.getEmail();
-  }
+    constructor(private readonly sdk: ConduitSDK, private readonly authService: AuthService) {
+        this.database = sdk.getDatabase();
+        this.emailModule = sdk.getEmail();
+        this.registerRoutes();
+    }
 
-  async register(params: ConduitRouteParameters) {
-    const { email, password } = params.params as any;
-    const { config: appConfig } = this.sdk as any;
-    const config = appConfig.get('authentication');
+    async register(params: ConduitRouteParameters) {
+        const {email, password} = params.params as any;
+        const {config: appConfig} = this.sdk as any;
+        const config = appConfig.get('authentication');
 
-    if (!config.local.active) throw new Error('Local authentication is disabled');
-    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
+        if (!config.local.active) throw new Error('Local authentication is disabled');
+        if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
-    const User = this.database.getSchema('User');
-    const Token = this.database.getSchema('Token');
+        const User = this.database.getSchema('User');
+        const Token = this.database.getSchema('Token');
 
-    let user = await User.findOne({ email });
-    if (!isNil(user)) throw new Error('User already exists');
+        let user = await User.findOne({email});
+        if (!isNil(user)) throw new Error('User already exists');
 
-    const hashedPassword = await this.authService.hashPassword(password);
-    user = await User.create({
-      email,
-      hashedPassword
-    });
+        const hashedPassword = await this.authService.hashPassword(password);
+        user = await User.create({
+            email,
+            hashedPassword
+        });
 
-    if (config.local.sendVerificationEmail) {
-      const verificationTokenDoc = await Token.create({
-        type: TokenType.VERIFICATION_TOKEN,
-        userId: user._id,
-        token: uuid()
-      });
+        if (config.local.sendVerificationEmail) {
+            const verificationTokenDoc = await Token.create({
+                type: TokenType.VERIFICATION_TOKEN,
+                userId: user._id,
+                token: uuid()
+            });
 
-      const link = `${appConfig.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
-      await this.emailModule.sendEmail('EmailVerification', {
-        email: user.email,
-        sender: 'conduit@gmail.com',
-        variables: {
-          applicationName: 'Conduit',
-          link
+            const link = `${appConfig.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
+            await this.emailModule.sendEmail('EmailVerification', {
+                email: user.email,
+                sender: 'conduit@gmail.com',
+                variables: {
+                    applicationName: 'Conduit',
+                    link
+                }
+            });
         }
-      });
+
+        return 'Registration was successful';
     }
 
-    return 'Registration was successful';
-  }
+    async authenticate(params: ConduitRouteParameters) {
+        const {email, password} = params.params as any;
+        const {config: appConfig} = this.sdk as any;
+        const config = appConfig.get('authentication');
 
-  async authenticate(params: ConduitRouteParameters) {
-    const { email, password } = params.params as any;
-    const { config: appConfig } = this.sdk as any;
-    const config = appConfig.get('authentication');
+        if (isNil(params.context)) throw new Error('No headers provided');
+        const clientId = params.context.clientId;
 
-    if (isNil(params.context)) throw new Error('No headers provided');
-    const clientId = params.context.clientId;
+        if (!config.local.active) throw new Error('Local authentication is disabled');
+        if (isNil(email) || isNil(password)) throw new Error('Email and password required');
 
-    if (!config.local.active) throw new Error('Local authentication is disabled');
-    if (isNil(email) || isNil(password)) throw new Error('Email and password required');
+        const User = this.database.getSchema('User');
+        const AccessToken = this.database.getSchema('AccessToken');
+        const RefreshToken = this.database.getSchema('RefreshToken');
 
-    const User = this.database.getSchema('User');
-    const AccessToken = this.database.getSchema('AccessToken');
-    const RefreshToken = this.database.getSchema('RefreshToken');
+        const user = await User.findOne({email}, '+hashedPassword');
+        if (isNil(user)) throw new Error('Invalid login credentials');
+        if (!user.active) throw new Error('Inactive user');
 
-    const user = await User.findOne({ email }, '+hashedPassword');
-    if (isNil(user)) throw new Error('Invalid login credentials');
-    if (!user.active) throw new Error('Inactive user');
+        if (config.local.verificationRequired && !user.isVerified)
+            throw new Error('You must verify your account to login');
 
-    if (config.local.verificationRequired && !user.isVerified)
-      throw new Error('You must verify your account to login');
+        const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
+        if (!passwordsMatch) throw new Error('Invalid login credentials');
 
-    const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch) throw new Error('Invalid login credentials');
+        await AccessToken.deleteMany({userId: user._id, clientId});
+        await RefreshToken.deleteMany({userId: user._id, clientId});
 
-    await AccessToken.deleteMany({ userId: user._id, clientId });
-    await RefreshToken.deleteMany({ userId: user._id, clientId });
+        const signTokenOptions: ISignTokenOptions = {
+            secret: config.jwtSecret,
+            expiresIn: config.tokenInvalidationPeriod
+        };
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod
-    };
+        const accessToken = await AccessToken.create({
+            userId: user._id,
+            clientId,
+            token: this.authService.signToken({id: user._id}, signTokenOptions),
+            expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
+        });
 
-    const accessToken = await AccessToken.create({
-      userId: user._id,
-      clientId,
-      token: this.authService.signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
-    });
+        const refreshToken = await RefreshToken.create({
+            userId: user._id,
+            clientId,
+            token: this.authService.randomToken(),
+            expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
+        });
 
-    const refreshToken = await RefreshToken.create({
-      userId: user._id,
-      clientId,
-      token: this.authService.randomToken(),
-      expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
-    });
-
-    return { userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token };
-  }
-
-  async forgotPassword(params: ConduitRouteParameters) {
-    const email = (params.params as any).email;
-    const { config: appConfig } = this.sdk as any;
-    const config = appConfig.get('authentication');
-
-    if (isNil(email)) throw new Error('Email field required');
-
-    const User = this.database.getSchema('User');
-    const Token = this.database.getSchema('Token');
-
-    const user = await User.findOne({ email });
-
-    if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return 'Ok';
-
-    const oldToken = await Token.findOne({ type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id });
-    if (!isNil(oldToken)) await oldToken.remove();
-
-    const passwordResetTokenDoc = await Token.create({
-      type: TokenType.PASSWORD_RESET_TOKEN,
-      userId: user._id,
-      token: uuid()
-    });
-
-    const link = `${appConfig.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-    await this.emailModule.sendEmail('ForgotPassword', {
-      email: user.email,
-      sender: 'conduit@gmail.com',
-      variables: {
-        applicationName: 'Conduit',
-        link
-      }
-    });
-
-    return 'Ok';
-  }
-
-  async resetPassword(params: ConduitRouteParameters) {
-    const { passwordResetToken: passwordResetTokenParam, password: newPassword } = params.params as any;
-
-    if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-      throw new Error('Required fields are missing');
+        return {userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token};
     }
 
-    const User = this.database.getSchema('User');
-    const Token = this.database.getSchema('Token');
-    const AccessToken = this.database.getSchema('AccessToken');
-    const RefreshToken = this.database.getSchema('RefreshToken');
+    async forgotPassword(params: ConduitRouteParameters) {
+        const email = (params.params as any).email;
+        const {config: appConfig} = this.sdk as any;
+        const config = appConfig.get('authentication');
 
-    const passwordResetTokenDoc = await Token.findOne({
-      type: TokenType.PASSWORD_RESET_TOKEN,
-      token: passwordResetTokenParam
-    });
-    if (isNil(passwordResetTokenDoc)) throw new Error('Invalid parameters');
+        if (isNil(email)) throw new Error('Email field required');
 
-    const user = await User.findOne({ _id: passwordResetTokenDoc.userId }, '+hashedPassword');
-    if (isNil(user)) throw new Error('User not found');
+        const User = this.database.getSchema('User');
+        const Token = this.database.getSchema('Token');
 
-    const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
-    if (passwordsMatch) throw new Error('Password can\'t be the same as the old one');
+        const user = await User.findOne({email});
 
-    user.hashedPassword = await this.authService.hashPassword(newPassword);
-    await user.save();
-    await passwordResetTokenDoc.remove();
-    await AccessToken.deleteMany({ userId: user._id });
-    await RefreshToken.deleteMany({ userId: user._id });
+        if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
+            return 'Ok';
 
-    return 'Password reset successful';
-  }
+        const oldToken = await Token.findOne({type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id});
+        if (!isNil(oldToken)) await oldToken.remove();
 
-  async verifyEmail(req: Request, res: Response) {
-    const verificationTokenParam = req.params.verificationToken;
-    if (isNil(verificationTokenParam)) return res.status(401).json({ error: 'Invalid parameters' });
+        const passwordResetTokenDoc = await Token.create({
+            type: TokenType.PASSWORD_RESET_TOKEN,
+            userId: user._id,
+            token: uuid()
+        });
 
-    const User = this.database.getSchema('User');
-    const Token = this.database.getSchema('Token');
+        const link = `${appConfig.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
+        await this.emailModule.sendEmail('ForgotPassword', {
+            email: user.email,
+            sender: 'conduit@gmail.com',
+            variables: {
+                applicationName: 'Conduit',
+                link
+            }
+        });
 
-    const verificationTokenDoc = await Token.findOne({
-      type: TokenType.VERIFICATION_TOKEN,
-      token: verificationTokenParam
-    });
-    if (isNil(verificationTokenDoc)) return res.status(401).json({ error: 'Invalid parameters' });
+        return 'Ok';
+    }
 
-    const user = await User.findOne({ _id: verificationTokenDoc.userId });
-    if (isNil(user)) return res.status(404).json({ error: 'User not found' });
+    async resetPassword(params: ConduitRouteParameters) {
+        const {passwordResetToken: passwordResetTokenParam, password: newPassword} = params.params as any;
 
-    user.isVerified = true;
-    await user.save();
-    await verificationTokenDoc.remove();
+        if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
+            throw new Error('Required fields are missing');
+        }
 
-    return res.json({ message: 'Email verified' });
-  }
+        const User = this.database.getSchema('User');
+        const Token = this.database.getSchema('Token');
+        const AccessToken = this.database.getSchema('AccessToken');
+        const RefreshToken = this.database.getSchema('RefreshToken');
+
+        const passwordResetTokenDoc = await Token.findOne({
+            type: TokenType.PASSWORD_RESET_TOKEN,
+            token: passwordResetTokenParam
+        });
+        if (isNil(passwordResetTokenDoc)) throw new Error('Invalid parameters');
+
+        const user = await User.findOne({_id: passwordResetTokenDoc.userId}, '+hashedPassword');
+        if (isNil(user)) throw new Error('User not found');
+
+        const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
+        if (passwordsMatch) throw new Error('Password can\'t be the same as the old one');
+
+        user.hashedPassword = await this.authService.hashPassword(newPassword);
+        await user.save();
+        await passwordResetTokenDoc.remove();
+        await AccessToken.deleteMany({userId: user._id});
+        await RefreshToken.deleteMany({userId: user._id});
+
+        return 'Password reset successful';
+    }
+
+    async verifyEmail(req: Request, res: Response) {
+        const verificationTokenParam = req.params.verificationToken;
+        if (isNil(verificationTokenParam)) return res.status(401).json({error: 'Invalid parameters'});
+
+        const User = this.database.getSchema('User');
+        const Token = this.database.getSchema('Token');
+
+        const verificationTokenDoc = await Token.findOne({
+            type: TokenType.VERIFICATION_TOKEN,
+            token: verificationTokenParam
+        });
+        if (isNil(verificationTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
+
+        const user = await User.findOne({_id: verificationTokenDoc.userId});
+        if (isNil(user)) return res.status(404).json({error: 'User not found'});
+
+        user.isVerified = true;
+        await user.save();
+        await verificationTokenDoc.remove();
+
+        return res.json({message: 'Email verified'});
+    }
+
+    registerRoutes() {
+        // Login Endpoint
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/authentication/local',
+                action: Actions.POST,
+                bodyParams: {
+                    email: 'String',
+                    password: 'String'
+                }
+            },
+            new ConduitRouteReturnDefinition('LoginResponse', {
+                userId: TYPE.String,
+                accessToken: TYPE.String,
+                refreshToken: TYPE.String
+            }), this.authenticate));
+        // Register endpoint
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/authentication/local/new',
+                action: Actions.POST,
+                bodyParams: {
+                    email: 'String',
+                    password: 'String'
+                }
+            },
+            new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register));
+        // Forgot-password endpoint
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/authentication/forgot-password',
+                action: Actions.POST,
+                bodyParams: {
+                    email: 'String'
+                }
+            },
+            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'), this.forgotPassword));
+        // Reset-password endpoint
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+            {
+                path: '/authentication/reset-password',
+                action: Actions.POST,
+                bodyParams: {
+                    passwordResetToken: 'String',
+                    password: 'String'
+                }
+            },
+            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'), this.resetPassword));
+    }
 }

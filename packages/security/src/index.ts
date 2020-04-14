@@ -34,7 +34,8 @@ class SecurityModule extends IConduitSecurity {
 
         const router = conduit.getRouter();
 
-        router.registerGlobalMiddleware('authMiddleware', (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
+        router.registerGlobalMiddleware('authMiddleware',
+            (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
     }
 
     authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -51,19 +52,19 @@ class SecurityModule extends IConduitSecurity {
             return res.status(401).json({error: 'Unauthorized'});
         }
 
-    this.database.getSchema('Client')
-      .findOne({ clientId: clientid, clientSecret: clientsecret })
-      .then(async (client: any) => {
-        if (isNil(client)) {
-          return res.status(401).json({ error: 'Unauthorized' });
-        }
-        delete req.headers.clientsecret;
-        if (isNil((req as any).conduit)) (req as any).conduit = {};
-        (req as any).conduit.clientId = clientid;
-        next();
-      })
-      .catch(next);
-  }
+        this.database.getSchema('Client')
+            .findOne({clientId: clientid, clientSecret: clientsecret})
+            .then((client: any) => {
+                if (isNil(client)) {
+                    return res.status(401).json({error: 'Unauthorized'});
+                }
+                delete req.headers.clientsecret;
+                if (isNil((req as any).conduit)) (req as any).conduit = {};
+                (req as any).conduit.clientId = clientid;
+                next();
+            })
+            .catch(next);
+    }
 
 }
 
