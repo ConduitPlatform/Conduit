@@ -65,19 +65,6 @@ class SecurityModule extends IConduitSecurity {
       .catch(next);
   }
 
-
-  adminMiddleware(req: Request, res: Response, next: NextFunction) {
-
-    if (req.path.indexOf('/admin/') !== 0) {
-      return next();
-    }
-
-    const masterkey = req.headers.masterkey;
-    if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
-      return res.status(401).json({ error: 'Unauthorized' });
-
-    return next();
-  }
 }
 
 export = SecurityModule;
