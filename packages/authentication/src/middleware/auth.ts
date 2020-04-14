@@ -55,9 +55,9 @@ export class AuthMiddleware {
                 throw new ConduitError('NOT_FOUND', 404, 'User not found');
               }
               (request as any).context.user = user;
+              resolve("ok");
             });
         });
-      resolve("ok");
     });
 
   }
