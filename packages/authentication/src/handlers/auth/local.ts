@@ -2,10 +2,15 @@ import {Request, Response} from 'express';
 import {
     ConduitRoute,
     ConduitRouteActions as Actions,
-    ConduitRouteParameters, ConduitRouteReturnDefinition,
+    ConduitRouteParameters,
+    ConduitRouteReturnDefinition,
     ConduitSDK,
+    ForbiddenError,
     IConduitDatabase,
-    IConduitEmail, TYPE
+    IConduitEmail, NotFoundError,
+    TYPE,
+    UnauthorizedError,
+    UserInputError
 } from '@conduit/sdk';
 import {isNil} from 'lodash';
 import {AuthService} from '../../services/auth';
@@ -29,14 +34,14 @@ export class LocalHandlers {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
-        if (!config.local.active) throw new Error('Local authentication is disabled');
-        if (isNil(email) || isNil(password)) throw new Error('Email and password required');
+        if (!config.local.active) throw new ForbiddenError('Local authentication is disabled');
+        if (isNil(email) || isNil(password)) throw new UserInputError('Email and password required');
 
         const User = this.database.getSchema('User');
         const Token = this.database.getSchema('Token');
 
         let user = await User.findOne({email});
-        if (!isNil(user)) throw new Error('User already exists');
+        if (!isNil(user)) throw new ForbiddenError('User already exists');
 
         const hashedPassword = await this.authService.hashPassword(password);
         user = await User.create({
@@ -70,25 +75,25 @@ export class LocalHandlers {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
-        if (isNil(params.context)) throw new Error('No headers provided');
+        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
         const clientId = params.context.clientId;
 
-        if (!config.local.active) throw new Error('Local authentication is disabled');
-        if (isNil(email) || isNil(password)) throw new Error('Email and password required');
+        if (!config.local.active) throw new ForbiddenError('Local authentication is disabled');
+        if (isNil(email) || isNil(password)) throw new UserInputError('Email and password required');
 
         const User = this.database.getSchema('User');
         const AccessToken = this.database.getSchema('AccessToken');
         const RefreshToken = this.database.getSchema('RefreshToken');
 
         const user = await User.findOne({email}, '+hashedPassword');
-        if (isNil(user)) throw new Error('Invalid login credentials');
-        if (!user.active) throw new Error('Inactive user');
-
-        if (config.local.verificationRequired && !user.isVerified)
-            throw new Error('You must verify your account to login');
+        if (isNil(user)) throw new UnauthorizedError('Invalid login credentials');
+        if (!user.active) throw new ForbiddenError('Inactive user');
 
         const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
-        if (!passwordsMatch) throw new Error('Invalid login credentials');
+        if (!passwordsMatch) throw new UnauthorizedError('Invalid login credentials');
+
+        if (config.local.verificationRequired && !user.isVerified)
+            throw new ForbiddenError('You must verify your account to login');
 
         await AccessToken.deleteMany({userId: user._id, clientId});
         await RefreshToken.deleteMany({userId: user._id, clientId});
@@ -120,7 +125,7 @@ export class LocalHandlers {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
-        if (isNil(email)) throw new Error('Email field required');
+        if (isNil(email)) throw new UserInputError('Email field required');
 
         const User = this.database.getSchema('User');
         const Token = this.database.getSchema('Token');
@@ -156,7 +161,7 @@ export class LocalHandlers {
         const {passwordResetToken: passwordResetTokenParam, password: newPassword} = params.params as any;
 
         if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-            throw new Error('Required fields are missing');
+            throw new UserInputError('Required fields are missing');
         }
 
         const User = this.database.getSchema('User');
@@ -168,13 +173,13 @@ export class LocalHandlers {
             type: TokenType.PASSWORD_RESET_TOKEN,
             token: passwordResetTokenParam
         });
-        if (isNil(passwordResetTokenDoc)) throw new Error('Invalid parameters');
+        if (isNil(passwordResetTokenDoc)) throw new ForbiddenError('Invalid parameters');
 
         const user = await User.findOne({_id: passwordResetTokenDoc.userId}, '+hashedPassword');
-        if (isNil(user)) throw new Error('User not found');
+        if (isNil(user)) throw new NotFoundError('User not found');
 
         const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
-        if (passwordsMatch) throw new Error('Password can\'t be the same as the old one');
+        if (passwordsMatch) throw new ForbiddenError('Password can\'t be the same as the old one');
 
         user.hashedPassword = await this.authService.hashPassword(newPassword);
         await user.save();
