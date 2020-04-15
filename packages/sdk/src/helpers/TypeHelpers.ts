@@ -1,80 +1,120 @@
-import {TYPE} from "../interaces";
+import {ConduitModelField, TYPE} from "../interaces";
 
-function ConduitStringConstructor(): any
-function ConduitStringConstructor(required: boolean): any
-function ConduitStringConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.String, required: required}
-    } else {
-        return TYPE.String;
+class ConduitStringConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.String
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.Number, required: true}
     }
 }
 
 
-function ConduitNumberConstructor(): any
-function ConduitNumberConstructor(required: boolean): any
-function ConduitNumberConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.Number, required: required}
-    } else {
-        return TYPE.Number;
+export let ConduitString = ConduitStringConstructor;
+
+class ConduitNumberConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.Number
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.Number, required: true}
     }
 }
 
-function ConduitBooleanConstructor(): any
-function ConduitBooleanConstructor(required: boolean): any
-function ConduitBooleanConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.Boolean, required: required}
-    } else {
-        return TYPE.Boolean;
-    }
-}
-
-function ConduitDateConstructor(): any
-function ConduitDateConstructor(required: boolean): any
-function ConduitDateConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.Date, required: required}
-    } else {
-        return TYPE.Date;
-    }
-}
-
-function ConduitObjectIdConstructor(): any
-function ConduitObjectIdConstructor(required: boolean): any
-function ConduitObjectIdConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.ObjectId, required: required}
-    } else {
-        return TYPE.ObjectId;
-    }
-}
-
-function ConduitJSONConstructor(): any
-function ConduitJSONConstructor(required: boolean): any
-function ConduitJSONConstructor(required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.JSON, required: required}
-    } else {
-        return TYPE.JSON;
-    }
-}
-
-function ConduitRelationConstructor(model: string,): any
-function ConduitRelationConstructor(model: string, required: boolean): any
-function ConduitRelationConstructor(model: string, required?: boolean): any {
-    if (required !== null && require !== undefined) {
-        return {type: TYPE.Relation, model: model, required: required}
-    } else {
-        return {type: TYPE.Relation, model: model};
-    }
-}
 
 export let ConduitNumber = ConduitNumberConstructor;
-export let ConduitString = ConduitStringConstructor;
+
+class ConduitBooleanConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.Boolean
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.Boolean, required: true}
+    }
+}
+
+
 export let ConduitBoolean = ConduitBooleanConstructor;
+
+class ConduitDateConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.Date
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.Date, required: true}
+    }
+}
+
+
 export let ConduitDate = ConduitDateConstructor;
-export let ConduitRelation = ConduitRelationConstructor;
-export let ConduitJson = ConduitJSONConstructor;
+
+class ConduitObjectIdConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.ObjectId
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.ObjectId, required: true}
+    }
+}
+
+
 export let ConduitObjectId = ConduitObjectIdConstructor;
+
+class ConduitJSONConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static get Optional() {
+        return TYPE.JSON
+    }
+
+    static get Required(): ConduitModelField {
+        return {type: TYPE.JSON, required: true}
+    }
+}
+
+
+export let ConduitJson = ConduitJSONConstructor;
+
+
+class ConduitRelationConstructor {
+    // private to disallow creating other instances of this type
+    private constructor() {
+    }
+
+    static Optional(model: string): ConduitModelField {
+        return {type: TYPE.Relation, model, required: false}
+    }
+
+    static Required(model: string): ConduitModelField {
+        return {type: TYPE.Relation, model, required: true}
+    }
+}
+
+export let ConduitRelation = ConduitRelationConstructor;

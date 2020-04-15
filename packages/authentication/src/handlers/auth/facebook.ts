@@ -96,19 +96,21 @@ export class FacebookHandlers {
 
         return {userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token};
     }
+
     registerRoutes() {
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/authentication/facebook',
                 action: Actions.POST,
                 bodyParams: {
-                    access_token: ConduitString()
+                    // todo switch to required when the parsing is added
+                    access_token: ConduitString.Optional
                 }
             },
             new ConduitRouteReturnDefinition('FacebookResponse', {
-                userId: TYPE.String,
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                userId: ConduitString.Optional,
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Optional
             }), this.authenticate));
     }
 }
