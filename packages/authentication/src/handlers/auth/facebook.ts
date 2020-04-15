@@ -2,8 +2,8 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK, ConduitString,
-    IConduitDatabase, TYPE
+    ConduitSDK, ConduitString, ForbiddenError,
+    IConduitDatabase, TYPE, UnauthorizedError
 } from '@conduit/sdk';
 import request, {OptionsWithUrl} from 'request-promise';
 import {isNil} from 'lodash';
@@ -25,10 +25,10 @@ export class FacebookHandlers {
         const config = appConfig.get('authentication');
 
         if (!config.facebook.enabled) {
-            throw new Error('Facebook authentication is disabled');
+            throw new ForbiddenError('Facebook authentication is disabled');
         }
 
-        if (isNil(params.context)) throw new Error('No headers provided');
+        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
 
         const facebookOptions: OptionsWithUrl = {
             method: 'GET',
@@ -43,7 +43,7 @@ export class FacebookHandlers {
         const facebookResponse = await request(facebookOptions);
 
         if (isNil(facebookResponse.email) || isNil(facebookResponse.id)) {
-            throw new Error('Authentication with facebook failed');
+            throw new UnauthorizedError('Authentication with facebook failed');
         }
 
         const User = this.database.getSchema('User');
@@ -53,9 +53,9 @@ export class FacebookHandlers {
         let user = await User.findOne({email: facebookResponse.email});
 
         if (!isNil(user)) {
-            if (!user.active) throw new Error('Inactive user');
+            if (!user.active) throw new ForbiddenError('Inactive user');
             if (!config.facebook.accountLinking) {
-                throw new Error('User with this email already exists');
+                throw new ForbiddenError('User with this email already exists');
             }
             if (isNil(user.facebook)) {
                 user.facebook = {
@@ -109,6 +109,6 @@ export class FacebookHandlers {
                 userId: TYPE.String,
                 accessToken: TYPE.String,
                 refreshToken: TYPE.String
-            }), this.authenticate));
+            }), this.authenticate.bind(this)));
     }
 }
