@@ -32,6 +32,6 @@ export class ForbiddenError extends ConduitError {
 
 export class UserInputError extends ConduitError {
     constructor(message: string = 'Request data are invalid') {
-        super('USER_INPUT_ERROR', 422, message);
+        super('USER_INPUT_ERROR', 400, message);
     }
 }
