@@ -209,6 +209,17 @@ export class LocalHandlers {
     }
 
     registerRoutes() {
+        // Register endpoint
+        this.sdk.getRouter().registerRoute(new ConduitRoute(
+          {
+              path: '/authentication/local/new',
+              action: Actions.POST,
+              bodyParams: {
+                  email: TYPE.String,
+                  password: TYPE.String
+              }
+          },
+          new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register.bind(this)));
         // Login Endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
@@ -223,18 +234,7 @@ export class LocalHandlers {
                 userId: TYPE.String,
                 accessToken: TYPE.String,
                 refreshToken: TYPE.String
-            }), this.authenticate));
-        // Register endpoint
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/local/new',
-                action: Actions.POST,
-                bodyParams: {
-                    email: TYPE.String,
-                    password: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register));
+            }), this.authenticate.bind(this)));
         // Forgot-password endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
@@ -244,7 +244,7 @@ export class LocalHandlers {
                     email: TYPE.String
                 }
             },
-            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'), this.forgotPassword));
+            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'), this.forgotPassword.bind(this)));
         // Reset-password endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
@@ -255,6 +255,6 @@ export class LocalHandlers {
                     password: TYPE.String
                 }
             },
-            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'), this.resetPassword));
+            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'), this.resetPassword.bind(this)));
     }
 }
