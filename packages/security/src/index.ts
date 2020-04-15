@@ -1,7 +1,7 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum} from '@conduit/sdk';
+import { ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum, UnauthorizedError } from '@conduit/sdk';
 
 class SecurityModule extends IConduitSecurity {
 
@@ -49,14 +49,14 @@ class SecurityModule extends IConduitSecurity {
 
         const {clientid, clientsecret} = req.headers;
         if (isNil(clientid) || isNil(clientsecret)) {
-            return res.status(401).json({error: 'Unauthorized'});
+            throw new UnauthorizedError;
         }
 
         this.database.getSchema('Client')
             .findOne({clientId: clientid, clientSecret: clientsecret})
             .then((client: any) => {
                 if (isNil(client)) {
-                    return res.status(401).json({error: 'Unauthorized'});
+                    throw new UnauthorizedError();
                 }
                 delete req.headers.clientsecret;
                 if (isNil((req as any).conduit)) (req as any).conduit = {};
