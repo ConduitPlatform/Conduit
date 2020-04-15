@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import { ConduitError, ConduitRouteParameters, ConduitSDK } from '@conduit/sdk';
+import { ConduitRouteParameters, ConduitSDK, UserInputError } from '@conduit/sdk';
 
 export class NotificationTokensHandler {
   private readonly pushNotificationModel: any;
@@ -12,7 +12,7 @@ export class NotificationTokensHandler {
   async setNotificationToken(params: ConduitRouteParameters) {
     const { token, platform } = params.params as any;
     if (isNil(token) || isNil(platform)) {
-      throw new ConduitError('UNAUTHORIZED', 401, 'Required fields are missing');
+      throw new UserInputError('Required fields are missing');
     }
     const userId = (params.context as any).user._id;
 
