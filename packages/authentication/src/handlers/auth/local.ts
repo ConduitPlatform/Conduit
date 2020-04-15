@@ -5,7 +5,7 @@ import {
     ConduitRouteActions as Actions,
     ConduitRouteParameters,
     ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase,
     IConduitEmail,
     TYPE,
@@ -233,9 +233,9 @@ export class LocalHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('LoginResponse', {
-                userId: TYPE.String,
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                userId: ConduitString.Required,
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
             }), this.authenticate.bind(this)));
         // Forgot-password endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(

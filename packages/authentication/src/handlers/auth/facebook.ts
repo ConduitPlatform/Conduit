@@ -105,9 +105,9 @@ export class FacebookHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('FacebookResponse', {
-                userId: ConduitString.Optional,
+                userId: ConduitString.Required,
                 accessToken: ConduitString.Required,
-                refreshToken: ConduitString.Optional
+                refreshToken: ConduitString.Required
             }), this.authenticate));
     }
 }

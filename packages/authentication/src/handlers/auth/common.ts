@@ -4,7 +4,7 @@ import {
     ConduitRouteActions as Actions,
     ConduitRouteParameters,
     ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase,
     TYPE
 } from '@conduit/sdk';
@@ -99,8 +99,8 @@ export class CommonHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
             }), this.renewAuth.bind(this)));
 
         this.sdk.getRouter().registerRoute(new ConduitRoute(

@@ -2,7 +2,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase, TYPE,
     ConduitError
 } from '@conduit/sdk';
@@ -111,9 +111,9 @@ export class GoogleHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('GoogleResponse', {
-                userId: TYPE.String,
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                userId: ConduitString.Required,
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
             }), this.authenticate.bind(this)));
     }
 }
