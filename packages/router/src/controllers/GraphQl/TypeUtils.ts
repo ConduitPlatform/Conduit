@@ -166,7 +166,7 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
                                 constructResolver(name, field, true);
                                 typeString += field + ': ' + (fields[field] as any).model + ((fields[field] as any).required ? '!' : '') + ' ';
                             } else {
-                                typeString += field + ': ' + (fields[field] as any).type + ((fields[field] as any).required ? '!' : '') + ' ';
+                                typeString += field + ': ' + getGraphQLType((fields[field] as any).type) + ((fields[field] as any).required ? '!' : '') + ' ';
                             }
                         }
                         // if type is an array
@@ -201,12 +201,9 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
     return result;
 }
 
-// //test
+//test
 // let result = extractTypes('User', {
-//     name: {
-//         type: TYPE.String,
-//         required: false
-//     },
+//     name: ConduitNumber.Required,
 //     testArray: [{type: 'Relation', model: 'User', required: true}],
 //     testArray2: [{type: 'Relation', model: 'User', required: false}],
 //     testArray3: [{type: [{type: TYPE.String, required: true}], required: true}],
