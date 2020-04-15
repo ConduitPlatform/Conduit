@@ -10,7 +10,7 @@ class ConduitStringConstructor {
     }
 
     static get Required(): ConduitModelField {
-        return {type: TYPE.Number, required: true}
+        return {type: TYPE.String, required: true}
     }
 }
 

@@ -2,7 +2,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase, TYPE
 } from '@conduit/sdk';
 import {OAuth2Client} from 'google-auth-library';
@@ -114,9 +114,9 @@ export class GoogleHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('GoogleResponse', {
-                userId: TYPE.String,
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                userId: ConduitString.Required,
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
             }), this.authenticate));
     }
 }

@@ -3,7 +3,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase,
     IConduitEmail, TYPE
 } from '@conduit/sdk';
@@ -220,10 +220,10 @@ export class LocalHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('LoginResponse', {
-                userId: TYPE.String,
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
-            }), this.authenticate));
+                userId: ConduitString.Required,
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
+            }), this.authenticate.bind(this)));
         // Register endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {

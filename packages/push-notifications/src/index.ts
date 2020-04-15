@@ -6,10 +6,12 @@ import {NextFunction, Request, Response} from 'express';
 import {NotificationTokensHandler} from './handlers/notification-tokens/notification-tokens';
 import {AdminHandler} from './handlers/admin/admin';
 import {
+    ConduitDate,
+    ConduitObjectId,
     ConduitRoute,
     ConduitRouteActions, ConduitRouteParameters,
     ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitPushNotifications,
     TYPE
 } from '@conduit/sdk';
@@ -56,11 +58,11 @@ class PushNotificationsModule extends IConduitPushNotifications {
             },
             new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
                 message: TYPE.String, newTokenDocument: {
-                    _id: TYPE.ObjectId,
-                    userId: TYPE.ObjectId,
-                    token: TYPE.String,
-                    createdAt: TYPE.Date,
-                    updatedAt: TYPE.Date
+                    _id: ConduitObjectId.Required,
+                    userId: ConduitObjectId.Required,
+                    token: ConduitString.Required,
+                    createdAt: ConduitDate.Required,
+                    updatedAt: ConduitDate.Required
                 }
             }),
             (params: ConduitRouteParameters) => notificationTokensHandler.setNotificationToken(params)

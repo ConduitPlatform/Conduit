@@ -2,7 +2,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, ConduitString,
     IConduitDatabase, TYPE
 } from '@conduit/sdk';
 import {isNil} from 'lodash';
@@ -96,8 +96,8 @@ export class CommonHandlers {
                 }
             },
             new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-                accessToken: TYPE.String,
-                refreshToken: TYPE.String
+                accessToken: ConduitString.Required,
+                refreshToken: ConduitString.Required
             }), this.renewAuth));
 
         this.sdk.getRouter().registerRoute(new ConduitRoute(
