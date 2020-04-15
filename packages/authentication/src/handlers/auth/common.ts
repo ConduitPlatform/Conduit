@@ -1,12 +1,12 @@
 import {
+    ConduitError,
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters,
     ConduitRouteReturnDefinition,
-    ConduitSDK, ForbiddenError,
+    ConduitSDK,
     IConduitDatabase,
-    NotFoundError, TYPE,
-    UnauthorizedError, UserInputError
+    TYPE
 } from '@conduit/sdk';
 import {isNil} from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
@@ -22,12 +22,12 @@ export class CommonHandlers {
     }
 
     async renewAuth(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
+        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
         const clientId = params.context.clientId;
 
         const {refreshToken} = params.params as any;
         if (isNil(refreshToken)) {
-            throw new UserInputError('Invalid parameters');
+            throw ConduitError.userInput('Invalid parameters');
         }
 
         const {config: appConfig} = this.sdk as any;
@@ -38,12 +38,12 @@ export class CommonHandlers {
 
         const oldRefreshToken = await RefreshToken.findOne({token: refreshToken, clientId});
         if (isNil(oldRefreshToken)) {
-            throw new ForbiddenError('Invalid parameters');
+            throw ConduitError.forbidden('Invalid parameters');
         }
 
         const oldAccessToken = await AccessToken.findOne({clientId});
         if (isNil(oldAccessToken)) {
-            throw new NotFoundError('No access token found');
+            throw ConduitError.notFound('No access token found');
         }
 
         const signTokenOptions: ISignTokenOptions = {
@@ -75,7 +75,7 @@ export class CommonHandlers {
     }
 
     async logOut(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
+        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
         const clientId = params.context.clientId;
 
         const user = params.context.user;

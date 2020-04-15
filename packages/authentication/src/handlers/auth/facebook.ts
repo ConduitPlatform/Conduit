@@ -3,9 +3,8 @@ import {
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
     ConduitSDK, ConduitString,
-    ForbiddenError,
     IConduitDatabase,
-    UnauthorizedError
+    ConduitError
 } from '@conduit/sdk';
 import request, {OptionsWithUrl} from 'request-promise';
 import {isNil} from 'lodash';
@@ -26,11 +25,7 @@ export class FacebookHandlers {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
-        if (!config.facebook.enabled) {
-            throw new ForbiddenError('Facebook authentication is disabled');
-        }
-
-        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
+        if (isNil(params.context)) throw ConduitError.unauthorized('No headers provided');
 
         const facebookOptions: OptionsWithUrl = {
             method: 'GET',
@@ -45,7 +40,7 @@ export class FacebookHandlers {
         const facebookResponse = await request(facebookOptions);
 
         if (isNil(facebookResponse.email) || isNil(facebookResponse.id)) {
-            throw new UnauthorizedError('Authentication with facebook failed');
+            throw ConduitError.unauthorized('Authentication with facebook failed');
         }
 
         const User = this.database.getSchema('User');
@@ -55,9 +50,9 @@ export class FacebookHandlers {
         let user = await User.findOne({email: facebookResponse.email});
 
         if (!isNil(user)) {
-            if (!user.active) throw new ForbiddenError('Inactive user');
+            if (!user.active) throw ConduitError.forbidden('Inactive user');
             if (!config.facebook.accountLinking) {
-                throw new ForbiddenError('User with this email already exists');
+                throw ConduitError.forbidden('User with this email already exists');
             }
             if (isNil(user.facebook)) {
                 user.facebook = {

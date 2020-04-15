@@ -2,8 +2,9 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK, ForbiddenError,
-    IConduitDatabase, TYPE, UnauthorizedError
+    ConduitSDK,
+    IConduitDatabase, TYPE,
+    ConduitError
 } from '@conduit/sdk';
 import {OAuth2Client} from 'google-auth-library';
 import {isNil} from 'lodash';
@@ -26,11 +27,7 @@ export class GoogleHandlers {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
-        if (!config.google.enabled) {
-            throw new ForbiddenError('Google authentication is disabled');
-        }
-
-        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
+        if (isNil(params.context)) throw ConduitError.unauthorized('No headers provided');
 
         const ticket = await this.client.verifyIdToken({
             idToken: id_token,
@@ -39,10 +36,10 @@ export class GoogleHandlers {
 
         const payload = ticket.getPayload();
         if (isNil(payload)) {
-            throw new UnauthorizedError('Received invalid response from the Google API');
+            throw ConduitError.unauthorized('Received invalid response from the Google API');
         }
         if (!payload.email_verified) {
-            throw new UnauthorizedError();
+            throw ConduitError.unauthorized();
         }
 
         const User = this.database.getSchema('User');
@@ -52,9 +49,9 @@ export class GoogleHandlers {
         let user = await User.findOne({email: payload.email});
 
         if (!isNil(user)) {
-            if (!user.active) throw new ForbiddenError('Inactive user');
+            if (!user.active) throw ConduitError.forbidden('Inactive user');
             if (!config.google.accountLinking) {
-                throw new ForbiddenError('User with this email already exists');
+                throw ConduitError.forbidden('User with this email already exists');
             }
             if (isNil(user.google)) {
                 user.google = {
