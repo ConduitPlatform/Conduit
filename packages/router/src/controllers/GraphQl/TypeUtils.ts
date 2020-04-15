@@ -18,7 +18,6 @@ export interface ParseResult {
 
 export function findPopulation(fields: any, relations: string[]): string[] | undefined {
     if (relations.length === 0) return undefined;
-    let keys = Object.keys(fields);
     let result: string[] = [];
     deepdash.eachDeep(fields, (value: any, key: any, parent: any, context: any) => {
         if (value.fieldsByTypeName) {

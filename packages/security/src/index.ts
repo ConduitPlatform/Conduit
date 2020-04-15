@@ -34,8 +34,7 @@ class SecurityModule extends IConduitSecurity {
 
         const router = conduit.getRouter();
 
-        router.registerGlobalMiddleware('clientMiddleware',
-            (req: Request, res: Response, next: NextFunction) => this.clientMiddleware(req, res, next));
+        router.registerGlobalMiddleware('clientMiddleware', this.clientMiddleware.bind(this));
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {

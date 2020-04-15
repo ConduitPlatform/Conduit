@@ -250,9 +250,9 @@ export class GraphQLController {
                     })
                     .catch((err: Error | ConduitError) => {
                         if (err.hasOwnProperty("status")) {
-                            throw new ApolloError(err.message, (err as ConduitError).status);
+                            throw new ApolloError(err.message, (err as ConduitError).status, err);
                         } else {
-                            throw new ApolloError(err.message);
+                            throw new ApolloError(err.message, 500, err);
                         }
                     })
             }
@@ -269,9 +269,9 @@ export class GraphQLController {
                     })
                     .catch((err: Error | ConduitError) => {
                         if (err.hasOwnProperty("status")) {
-                            throw new ApolloError(err.message, (err as ConduitError).status);
+                            throw new ApolloError(err.message, (err as ConduitError).status, err);
                         } else {
-                            throw new ApolloError(err.message, 500);
+                            throw new ApolloError(err.message, 500, err);
                         }
                     })
             }
