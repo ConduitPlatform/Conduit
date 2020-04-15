@@ -2,8 +2,8 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK,
-    IConduitDatabase, TYPE
+    ConduitSDK, ForbiddenError,
+    IConduitDatabase, TYPE, UnauthorizedError
 } from '@conduit/sdk';
 import {OAuth2Client} from 'google-auth-library';
 import {isNil} from 'lodash';
@@ -27,10 +27,10 @@ export class GoogleHandlers {
         const config = appConfig.get('authentication');
 
         if (!config.google.enabled) {
-            throw new Error('Google authentication is disabled');
+            throw new ForbiddenError('Google authentication is disabled');
         }
 
-        if (isNil(params.context)) throw new Error('No headers provided');
+        if (isNil(params.context)) throw new UnauthorizedError('No headers provided');
 
         const ticket = await this.client.verifyIdToken({
             idToken: id_token,
@@ -39,10 +39,10 @@ export class GoogleHandlers {
 
         const payload = ticket.getPayload();
         if (isNil(payload)) {
-            throw new Error('Received invalid response from the Google API');
+            throw new UnauthorizedError('Received invalid response from the Google API');
         }
         if (!payload.email_verified) {
-            throw new Error('Unauthorized');
+            throw new UnauthorizedError();
         }
 
         const User = this.database.getSchema('User');
@@ -52,9 +52,9 @@ export class GoogleHandlers {
         let user = await User.findOne({email: payload.email});
 
         if (!isNil(user)) {
-            if (!user.active) throw new Error('Inactive user');
+            if (!user.active) throw new ForbiddenError('Inactive user');
             if (!config.google.accountLinking) {
-                throw Error('User with this email already exists');
+                throw new ForbiddenError('User with this email already exists');
             }
             if (isNil(user.google)) {
                 user.google = {
@@ -117,6 +117,6 @@ export class GoogleHandlers {
                 userId: TYPE.String,
                 accessToken: TYPE.String,
                 refreshToken: TYPE.String
-            }), this.authenticate));
+            }), this.authenticate.bind(this)));
     }
 }
