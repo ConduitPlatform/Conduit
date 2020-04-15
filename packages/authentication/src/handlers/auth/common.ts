@@ -1,9 +1,12 @@
 import {
+    ConduitError,
     ConduitRoute,
     ConduitRouteActions as Actions,
-    ConduitRouteParameters, ConduitRouteReturnDefinition,
+    ConduitRouteParameters,
+    ConduitRouteReturnDefinition,
     ConduitSDK,
-    IConduitDatabase, TYPE
+    IConduitDatabase,
+    TYPE
 } from '@conduit/sdk';
 import {isNil} from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
@@ -19,12 +22,12 @@ export class CommonHandlers {
     }
 
     async renewAuth(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw new Error('No headers provided');
+        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
         const clientId = params.context.clientId;
 
         const {refreshToken} = params.params as any;
         if (isNil(refreshToken)) {
-            throw new Error('Invalid parameters');
+            throw ConduitError.userInput('Invalid parameters');
         }
 
         const {config: appConfig} = this.sdk as any;
@@ -35,12 +38,12 @@ export class CommonHandlers {
 
         const oldRefreshToken = await RefreshToken.findOne({token: refreshToken, clientId});
         if (isNil(oldRefreshToken)) {
-            throw new Error('Invalid parameters');
+            throw ConduitError.forbidden('Invalid parameters');
         }
 
         const oldAccessToken = await AccessToken.findOne({clientId});
         if (isNil(oldAccessToken)) {
-            throw new Error('No access token found');
+            throw ConduitError.notFound('No access token found');
         }
 
         const signTokenOptions: ISignTokenOptions = {
@@ -72,7 +75,7 @@ export class CommonHandlers {
     }
 
     async logOut(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw new Error('No headers provided');
+        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
         const clientId = params.context.clientId;
 
         const user = params.context.user;
@@ -98,13 +101,13 @@ export class CommonHandlers {
             new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
                 accessToken: TYPE.String,
                 refreshToken: TYPE.String
-            }), this.renewAuth));
+            }), this.renewAuth.bind(this)));
 
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/authentication/logout',
                 action: Actions.POST
             },
-            new ConduitRouteReturnDefinition('LogoutResponse', 'String'), this.logOut));
+            new ConduitRouteReturnDefinition('LogoutResponse', 'String'), this.logOut.bind(this)));
     }
 }
