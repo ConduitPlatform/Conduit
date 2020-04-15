@@ -32,10 +32,17 @@
     "winston": "^3.2.1"
   },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
+    "@types/cookie-parser": "^1.4.2",
+    "@types/cors": "^2.8.6",
+    "@types/express": "~4.16.1",
+    "@types/lodash": "^4.14.149",
+    "@types/node": "^13.11.1",
     "chai": "^4.2.0",
     "chai-http": "*",
     "mocha": "^7.1.1",
     "nodemon": "^1.12.1",
-    "nyc": "^15.0.0"
+    "nyc": "^15.0.0",
+    "typescript": "^3.8.3"
   }
 }
