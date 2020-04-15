@@ -132,7 +132,14 @@ export class GraphQLController {
         if (input.bodyParams || input.queryParams || input.urlParams) {
             if (input.bodyParams) {
                 for (let k in input.bodyParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.bodyParams[k];
+                    if (!input.bodyParams.hasOwnProperty(k)) continue;
+                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    if (typeof input.bodyParams[k] === 'string') {
+                        params += input.bodyParams[k]
+                    } else {
+                        params += ((input.bodyParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.bodyParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
 
