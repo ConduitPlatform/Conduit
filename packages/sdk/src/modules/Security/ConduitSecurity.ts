@@ -6,5 +6,5 @@ export abstract class IConduitSecurity {
   constructor(conduit: ConduitSDK) {
   }
 
-  abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;
+  abstract clientMiddleware(req: Request, res: Response, next: NextFunction): void;
 }
