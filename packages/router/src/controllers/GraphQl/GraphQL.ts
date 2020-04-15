@@ -2,7 +2,7 @@ import {Application, NextFunction, Request, Response, Router} from "express";
 import {
     ConduitModel,
     ConduitRoute,
-    ConduitRouteActions,
+    ConduitRouteActions, ConduitRouteOptionExtended,
     ConduitRouteOptions,
     ConduitRouteParameters
 } from "@conduit/sdk";
@@ -138,13 +138,27 @@ export class GraphQLController {
 
             if (input.queryParams) {
                 for (let k in input.queryParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.queryParams[k];
+                    if (!input.queryParams.hasOwnProperty(k)) continue;
+                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    if (typeof input.queryParams[k] === 'string') {
+                        params += input.queryParams[k]
+                    } else {
+                        params += ((input.queryParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.queryParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
 
             if (input.urlParams) {
                 for (let k in input.urlParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.urlParams[k];
+                    if (!input.hasOwnProperty(k)) continue;
+                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    if (typeof input.urlParams[k] === 'string') {
+                        params += input.urlParams[k]
+                    } else {
+                        params += ((input.urlParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
             params = '(' + params + ')';

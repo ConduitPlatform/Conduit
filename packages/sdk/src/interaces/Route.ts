@@ -8,8 +8,16 @@ export interface ConduitRouteParameters {
     context?: { [field: string]: any };
 }
 
+export enum RouteOptionType {
+    String = 'String',
+    Number = 'Number',
+    Boolean = 'Boolean',
+    Date = 'Date',
+    ObjectId = 'ObjectId'
+}
+
 export interface ConduitRouteOptionExtended {
-    type: string;
+    type: RouteOptionType;
     required: boolean;
 }
 
