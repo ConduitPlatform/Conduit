@@ -223,7 +223,7 @@ export class LocalHandlers {
                 userId: ConduitString.Required,
                 accessToken: ConduitString.Required,
                 refreshToken: ConduitString.Required
-            }), this.authenticate.bind(this)));
+            }), this.authenticate));
         // Register endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
