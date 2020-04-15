@@ -26,27 +26,3 @@ export class ConduitError extends Error {
         return new ConduitError('USER_INPUT_ERROR', 400, message);
     }
 }
-
-export class UnauthorizedError extends ConduitError {
-    constructor(message: string = 'Unauthorized') {
-        super('UNAUTHORIZED', 401, message);
-    }
-}
-
-export class NotFoundError extends ConduitError {
-    constructor(message: string = 'Resource not found') {
-        super('NOT_FOUND', 404, message);
-    }
-}
-
-export class ForbiddenError extends ConduitError {
-    constructor(message: string = 'Forbidden') {
-        super('FORBIDDEN', 403, message);
-    }
-}
-
-export class UserInputError extends ConduitError {
-    constructor(message: string = 'Request data are invalid') {
-        super('USER_INPUT_ERROR', 400, message);
-    }
-}
