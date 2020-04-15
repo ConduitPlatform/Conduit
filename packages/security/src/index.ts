@@ -1,7 +1,7 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum} from '@conduit/sdk';
+import { ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum, ConduitError } from '@conduit/sdk';
 
 class SecurityModule extends IConduitSecurity {
 
@@ -34,11 +34,11 @@ class SecurityModule extends IConduitSecurity {
 
         const router = conduit.getRouter();
 
-        router.registerGlobalMiddleware('authMiddleware',
-            (req: Request, res: Response, next: NextFunction) => this.authMiddleware(req, res, next));
+        router.registerGlobalMiddleware('clientMiddleware',
+            (req: Request, res: Response, next: NextFunction) => this.clientMiddleware(req, res, next));
     }
 
-    authMiddleware(req: Request, res: Response, next: NextFunction) {
+    clientMiddleware(req: Request, res: Response, next: NextFunction) {
         if (req.path.indexOf('/hook/') === 0 || req.path.indexOf('/admin') === 0) {
             return next();
         }
@@ -49,14 +49,14 @@ class SecurityModule extends IConduitSecurity {
 
         const {clientid, clientsecret} = req.headers;
         if (isNil(clientid) || isNil(clientsecret)) {
-            return res.status(401).json({error: 'Unauthorized'});
+            throw ConduitError.unauthorized();
         }
 
         this.database.getSchema('Client')
             .findOne({clientId: clientid, clientSecret: clientsecret})
             .then((client: any) => {
                 if (isNil(client)) {
-                    return res.status(401).json({error: 'Unauthorized'});
+                    throw ConduitError.unauthorized();
                 }
                 delete req.headers.clientsecret;
                 if (isNil((req as any).conduit)) (req as any).conduit = {};

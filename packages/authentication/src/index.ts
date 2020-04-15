@@ -3,6 +3,7 @@ import {
     IConduitDatabase,
     IConduitEmail,
     IConduitRouter,
+    ConduitError
 } from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
@@ -69,7 +70,7 @@ class AuthenticationModule {
 
         if (config.local.enabled) {
             if (!appConfig.get('email.active')) {
-                throw new Error('Cannot use local authentication without email module being enabled');
+                throw ConduitError.forbidden('Cannot use local authentication without email module being enabled');
             }
             this.localHandlers = new LocalHandlers(this.sdk, this.authService);
             enabled = true;

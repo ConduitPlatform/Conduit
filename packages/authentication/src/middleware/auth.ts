@@ -1,5 +1,10 @@
 import { isNil } from 'lodash';
-import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import {
+  ConduitRouteParameters,
+  ConduitSDK,
+  IConduitDatabase,
+  ConduitError
+} from '@conduit/sdk';
 import { AuthService } from '../services/auth';
 
 export class AuthMiddleware {
@@ -16,18 +21,18 @@ export class AuthMiddleware {
     return new Promise((resolve, reject) => {
       const header = (request.headers['Authorization'] || request.headers['authorization']) as string;
       if (isNil(header)) {
-        throw new ConduitError('UNAUTHORIZED', 401, 'Unauthorized');
+        throw ConduitError.unauthorized();
       }
       const args = header.split(' ');
 
       const prefix = args[0];
       if (prefix !== 'Bearer') {
-        throw new ConduitError('UNAUTHORIZED', 401, 'The auth header must begin with Bearer');
+        throw ConduitError.unauthorized();
       }
 
       const token = args[1];
       if (isNil(token)) {
-        throw new ConduitError('UNAUTHORIZED', 401, 'No token provided');
+        throw ConduitError.unauthorized();
       }
 
       const AccessToken = this.database.getSchema('AccessToken');
@@ -37,14 +42,14 @@ export class AuthMiddleware {
         .findOne({ token, clientId: (request as any).context.clientId })
         .then(accessTokenDoc => {
           if (isNil(accessTokenDoc)) {
-            throw new ConduitError('UNAUTHORIZED', 401, 'Invalid token');
+            throw ConduitError.unauthorized();
           }
 
           const { config } = this.sdk as any;
 
           const decoded = this.authService.verify(token, config.get('authentication.jwtSecret'));
           if (isNil(decoded)) {
-            throw new ConduitError('UNAUTHORIZED', 401, 'Invalid token');
+            throw ConduitError.unauthorized();
           }
 
           const userId = decoded.id;
@@ -52,7 +57,7 @@ export class AuthMiddleware {
             .findOne({ _id: userId })
             .then(user => {
               if (isNil(user)) {
-                throw new ConduitError('NOT_FOUND', 404, 'User not found');
+                throw ConduitError.notFound('User not found');
               }
               (request as any).context.user = user;
               resolve("ok");

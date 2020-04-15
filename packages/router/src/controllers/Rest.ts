@@ -60,11 +60,19 @@ export class RestController {
                 .then((r: any) => res.status(200).json(r))
                 .catch((err: Error | ConduitError) => {
                     if (err.hasOwnProperty("status")) {
-                        res.status((err as ConduitError).status).json({err});
-                    } else {
-                        // TODO This is temporary until we fix rest error response
                         console.log(err);
-                        res.status(500).json({err});
+                        res.status((err as ConduitError).status).json({
+                            name: err.name,
+                            status: (err as ConduitError).status,
+                            message: err.message,
+                        });
+                    } else {
+                        console.log(err);
+                        res.status(500).json({
+                            name: 'INTERNAL_SERVER_ERROR',
+                            status: 500,
+                            message: 'Something went wrong'
+                        });
                     }
 
                 })
