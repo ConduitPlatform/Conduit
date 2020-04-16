@@ -38,7 +38,7 @@ class SecurityModule extends IConduitSecurity {
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {
-        if (req.path.indexOf('/hook/') === 0 || req.path.indexOf('/admin') === 0) {
+        if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
             return next();
         }
 
