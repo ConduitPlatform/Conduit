@@ -25,7 +25,7 @@
     "registry": "http://registry.quintessential.gr/"
   },
   "devDependencies": {
-    "@types/express": "^4.17.4",
+    "@types/express": "~4.16.1",
     "@types/lodash": "^4.14.149",
     "@types/memjs": "^1.2.1",
     "@types/redis": "^2.8.17",
