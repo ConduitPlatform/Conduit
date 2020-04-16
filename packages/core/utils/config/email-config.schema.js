@@ -3,7 +3,7 @@ module.exports = {
     doc: 'The options for the conduit email provider',
     active: {
       format: 'Boolean',
-      default: false
+      default: true
     },
     transport: {
       format: 'String',
