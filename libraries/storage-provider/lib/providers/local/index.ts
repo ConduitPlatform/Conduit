@@ -13,7 +13,7 @@ export class LocalStorage implements IStorageProvider {
         this._storagePath = this._rootStoragePath
     }
 
-    get(fileName: string): Promise<any | Error> {
+    get(fileName: string): Promise<Buffer | Error> {
         if (!existsSync(resolve(this._storagePath, fileName))) {
             return new Promise(function (res, reject) {
                 reject(new Error("File does not exist"));
@@ -21,9 +21,9 @@ export class LocalStorage implements IStorageProvider {
         }
         const self = this;
         return new Promise(function (res, reject) {
-            readFile(resolve(self._storagePath, fileName), function (err) {
+            readFile(resolve(self._storagePath, fileName), function (err, data) {
                 if (err) reject(err);
-                else res(true);
+                else res(data);
             });
         });
 
