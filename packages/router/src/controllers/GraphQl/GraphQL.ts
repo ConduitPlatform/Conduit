@@ -133,7 +133,7 @@ export class GraphQLController {
             if (input.bodyParams) {
                 for (let k in input.bodyParams) {
                     if (!input.bodyParams.hasOwnProperty(k)) continue;
-                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    params += (params.length > 1 ? ',' : '') + k + ':';
                     if (typeof input.bodyParams[k] === 'string') {
                         params += input.bodyParams[k]
                     } else {
@@ -146,7 +146,7 @@ export class GraphQLController {
             if (input.queryParams) {
                 for (let k in input.queryParams) {
                     if (!input.queryParams.hasOwnProperty(k)) continue;
-                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    params += (params.length > 1 ? ',' : '') + k + ':';
                     if (typeof input.queryParams[k] === 'string') {
                         params += input.queryParams[k]
                     } else {
@@ -158,8 +158,8 @@ export class GraphQLController {
 
             if (input.urlParams) {
                 for (let k in input.urlParams) {
-                    if (!input.hasOwnProperty(k)) continue;
-                    params += params.length > 1 ? ',' : '' + k.toString() + ':';
+                    if (!input.urlParams.hasOwnProperty(k)) continue;
+                    params += (params.length > 1 ? ',' : '') + k + ':';
                     if (typeof input.urlParams[k] === 'string') {
                         params += input.urlParams[k]
                     } else {
