@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const UserSchema = new ConduitSchema('User',
   {
+    _id: TYPE.ObjectId,
     email: {
       type: TYPE.String,
       unique: true,
@@ -49,7 +50,18 @@ export const UserSchema = new ConduitSchema('User',
       type: TYPE.Boolean,
       default: true
     },
-    isVerified: {type: TYPE.Boolean, default: false},
+    isVerified: {
+      type: TYPE.Boolean,
+      default: false
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
+      required: true
+    }
   },
   {
     timestamps: true

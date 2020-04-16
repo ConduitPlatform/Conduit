@@ -12,10 +12,13 @@ export class MongooseSchema implements SchemaAdapter {
     }
 
     create(query: any): Promise<any> {
+        query.createdAt = new Date();
+        query.updatedAt = new Date();
         return this.model.create(query).then(r => r.toObject());
     }
 
     findByIdAndUpdate(document: any): Promise<any> {
+        document.updatedAt = new Date();
         return this.model.findByIdAndUpdate(document._id, document, {new: true}).lean().exec();
     }
 

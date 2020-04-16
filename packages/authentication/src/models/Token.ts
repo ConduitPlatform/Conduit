@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const Token = new ConduitSchema('Token',
   {
+    _id: TYPE.ObjectId,
     type: {
       type: TYPE.String,
     },
@@ -14,6 +15,14 @@ export const Token = new ConduitSchema('Token',
     },
     data: {
       type: TYPE.JSON
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
+      required: true
     }
   },
   {

@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
   {
+    _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
       model: 'User'
@@ -19,6 +20,14 @@ export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
     securityDetails: {
       macAddress: TYPE.String,
       userAgent: TYPE.String
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
+      required: true
     }
   },
   {
