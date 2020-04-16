@@ -11,13 +11,13 @@ import AuthenticationModule from '@conduit/authentication';
 import { CMS } from '@conduit/cms';
 import StorageModule from '@conduit/storage';
 import InMemoryStoreModule from '@conduit/in-memory-store';
+import { ConfigAdminHandlers } from './handlers/admin/config';
+import { ConduitSDK } from '@conduit/sdk';
 
-export class ConduitBootstrapper {
+export class CoreBootstrapper {
   static bootstrap() {
     const app = new App().get();
-
-
-
+    CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
     return app;
   }
 
@@ -26,15 +26,15 @@ export class ConduitBootstrapper {
     database.createSchemaFromAdapter(ConfigModel);
   }
 
-  private static registerAdminRoutes(app: ConduitApp) {
-    const admin = app.conduit.getAdmin();
+  private static registerAdminRoutes(sdk: ConduitSDK) {
+    const configHandlers = new ConfigAdminHandlers(sdk);
+    const adminModule = sdk.getAdmin();
 
-    admin.registerRoute('GET', '/config', (req, res, next) => getConfig(req, res, next).catch(next));
-    admin.registerRoute('PUT', '/config', (req, res, next) => editConfig(req, res, next).catch(next));
-  }
+    adminModule.registerRoute('GET', '/config', configHandlers.getConfig.bind(configHandlers));
+    adminModule.registerRoute('PUT', '/config', configHandlers.setConfig.bind(configHandlers));  }
 
   private static async bootstrapSdkComponents(app: ConduitApp) {
-    ConduitBootstrapper.registerSchemas(app);
+    CoreBootstrapper.registerSchemas(app);
 
     const database = app.conduit.getDatabase();
     const appConfig: Config<any> = (app.conduit as any).config;
@@ -46,9 +46,8 @@ export class ConduitBootstrapper {
     app.conduit.registerAdmin(new AdminModule(app.conduit));
 
     app.conduit.registerSecurity(new SecurityModule(app.conduit));
-    const security = app.conduit.getSecurity();
 
-    registerAdminRoutes(app.conduit.getAdmin());
+    CoreBootstrapper.registerAdminRoutes(app.conduit);
 
     if (appConfig.get('pushNotifications.active')) {
       app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
@@ -62,7 +61,6 @@ export class ConduitBootstrapper {
     if (appConfig.get('authentication.active')) {
       const authenticationModule = new AuthenticationModule(app.conduit);
       app.conduit.registerAuthentication(authenticationModule);
-      app.use('/users', authenticationModule.middleware, usersRouter);
     }
 
     // initialize plugin AFTER the authentication so that we may provide access control to the plugins
