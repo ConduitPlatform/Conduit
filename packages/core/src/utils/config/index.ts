@@ -44,7 +44,7 @@ export class AppConfig {
   }
 
   private loadConfig() {
-    this.convictConfig.loadFile(path.join(__dirname, '../../config/env.json'));
+    this.convictConfig.loadFile(path.join(__dirname, '../../../config/env.json'));
   }
 
   private validateConfig() {
