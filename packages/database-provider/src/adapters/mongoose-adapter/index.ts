@@ -12,7 +12,8 @@ export class MongooseAdapter implements DatabaseAdapter {
         keepAlive: true,
         connectTimeoutMS: 30000,
         useNewUrlParser: true,
-        useCreateIndex: true
+        useCreateIndex: true,
+        useFindAndModify: false
     };
     models?: { [name: string]: MongooseSchema };
 
