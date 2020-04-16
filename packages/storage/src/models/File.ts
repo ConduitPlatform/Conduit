@@ -13,6 +13,10 @@ export default new ConduitSchema(
       required: true,
       unique: true
     },
+    folder: {
+      type: TYPE.String,
+      required: true
+    },
     mimeType: TYPE.String
   },
   {
