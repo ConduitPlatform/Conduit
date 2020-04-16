@@ -30,7 +30,7 @@
     "registry": "http://registry.quintessential.gr/"
   },
   "devDependencies": {
-    "@types/express": "^4.17.4",
+    "@types/express": "~4.16.1",
     "@types/graphql-type-json": "^0.3.2",
     "@types/node": "^13.9.8",
     "express": "~4.16.1",
