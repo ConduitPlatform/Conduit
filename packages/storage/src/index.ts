@@ -3,6 +3,7 @@ import { createStorageProvider, IStorageProvider } from '@conduit/storage-provid
 import { AdminConfigHandlers } from './admin/config';
 import { ConduitSDK, IConduitAdmin, IConduitStorage } from '@conduit/sdk';
 import { FileRoutes } from './routes/file';
+import File from './models/File';
 
 class StorageModule extends IConduitStorage{
   private readonly storageProvider: IStorageProvider;
@@ -23,6 +24,7 @@ class StorageModule extends IConduitStorage{
     const adminHandlers = new AdminConfigHandlers(conduit);
 
     this.registerAdminRoutes(admin, adminHandlers);
+    this.registerModels();
     this.registerRoutes();
   }
 
@@ -31,8 +33,13 @@ class StorageModule extends IConduitStorage{
     admin.registerRoute('GET', '/storage/config', (req: Request, res: Response, next: NextFunction) => adminHandlers.getConfig(req, res).catch(next));
   }
 
+  private registerModels() {
+    const database = this.conduit.getDatabase();
+    database.createSchemaFromAdapter(File);
+  }
+
   private registerRoutes() {
-    new FileRoutes(this.conduit);
+    new FileRoutes(this.conduit, this.storageProvider);
   }
 }
 
