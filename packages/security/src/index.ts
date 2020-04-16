@@ -48,7 +48,7 @@ class SecurityModule extends IConduitSecurity {
 
         const {clientid, clientsecret} = req.headers;
         if (isNil(clientid) || isNil(clientsecret)) {
-            throw ConduitError.unauthorized();
+            return next(ConduitError.unauthorized());
         }
 
         this.database.getSchema('Client')

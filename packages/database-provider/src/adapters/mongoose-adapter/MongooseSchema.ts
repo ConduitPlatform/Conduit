@@ -16,7 +16,7 @@ export class MongooseSchema implements SchemaAdapter {
     }
 
     findByIdAndUpdate(document: any): Promise<any> {
-        return this.model.findByIdAndUpdate(document._id, document).exec();
+        return this.model.findByIdAndUpdate(document._id, document, {new: true}).lean().exec();
     }
 
     deleteOne(query: any): Promise<any> {

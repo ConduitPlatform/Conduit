@@ -17,7 +17,7 @@ export class NotificationTokensHandler {
     const userId = (params.context as any).user._id;
 
     const oldToken = await this.pushNotificationModel.findOne({userId, platform});
-    if (!isNil(oldToken)) await oldToken.remove();
+    if (!isNil(oldToken)) await this.pushNotificationModel.deleteOne(oldToken);
 
     const newTokenDocument = await this.pushNotificationModel.create({
       userId,
