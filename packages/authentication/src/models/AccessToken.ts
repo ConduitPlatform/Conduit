@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const AccessTokenSchema = new ConduitSchema('AccessToken',
   {
+    _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
       model: 'User'
@@ -15,6 +16,14 @@ export const AccessTokenSchema = new ConduitSchema('AccessToken',
     },
     expiresOn: {
       type: TYPE.Date
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
+      required: true
     }
   },
   {

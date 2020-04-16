@@ -2,7 +2,7 @@ import {isNil} from 'lodash';
 import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
-import AdminSchema from './models/Admin';
+import {AdminSchema} from './models/Admin';
 import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin } from '@conduit/sdk';
 
 class AdminModule extends IConduitAdmin {
