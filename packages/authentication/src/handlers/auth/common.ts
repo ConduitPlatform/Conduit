@@ -65,8 +65,8 @@ export class CommonHandlers {
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
         });
 
-        await oldAccessToken.remove();
-        await oldRefreshToken.remove();
+        await AccessToken.deleteOne(oldAccessToken);
+        await RefreshToken.deleteOne(oldRefreshToken);
 
         return {
             accessToken: newAccessToken.token,

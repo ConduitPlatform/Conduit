@@ -133,7 +133,7 @@ export class LocalHandlers {
             return 'Ok';
 
         const oldToken = await Token.findOne({type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id});
-        if (!isNil(oldToken)) await oldToken.remove();
+        if (!isNil(oldToken)) await Token.deleteOne(oldToken);
 
         const passwordResetTokenDoc = await Token.create({
             type: TokenType.PASSWORD_RESET_TOKEN,
@@ -179,8 +179,8 @@ export class LocalHandlers {
         if (passwordsMatch) throw ConduitError.forbidden('Password can\'t be the same as the old one');
 
         user.hashedPassword = await this.authService.hashPassword(newPassword);
-        await user.save();
-        await passwordResetTokenDoc.remove();
+        await User.findByIdAndUpdate(user);
+        await Token.deleteOne(passwordResetTokenDoc);
         await AccessToken.deleteMany({userId: user._id});
         await RefreshToken.deleteMany({userId: user._id});
 
@@ -204,8 +204,8 @@ export class LocalHandlers {
         if (isNil(user)) return res.status(404).json({error: 'User not found'});
 
         user.isVerified = true;
-        await user.save();
-        await verificationTokenDoc.remove();
+        await User.findByIdAndUpdate(user);
+        await Token.deleteOne(verificationTokenDoc);
 
         return res.json({message: 'Email verified'});
     }

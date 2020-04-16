@@ -45,7 +45,7 @@ export class AdminHandlers {
         const final = merge(currentAuthConfig, newAuthConfig);
 
         dbConfig.config.authentication = final;
-        const saved = await dbConfig.save();
+        const saved = await Config.findByIdAndUpdate(dbConfig);
         appConfig.load(saved.config);
 
         return res.json(saved.config.authentication);
