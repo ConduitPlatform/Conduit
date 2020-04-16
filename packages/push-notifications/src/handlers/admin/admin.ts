@@ -86,7 +86,7 @@ export class AdminHandler {
     const final = merge(currentNotificationsConfig, newNotificationsConfig);
 
     dbConfig.config.pushNotifications = final;
-    const saved = await dbConfig.save();
+    const saved = await Config.findByIdAndUpdate(dbConfig);
     await appConfig.load(saved.config);
 
     return res.json(saved.config.pushNotifications);
