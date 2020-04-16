@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   email: {
     doc: 'The options for the conduit email provider',
     active: {

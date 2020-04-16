@@ -1,10 +1,9 @@
-const describe = require("mocha").describe;
-const chai = require('chai');
+import { describe } from 'mocha';
+import chai from 'chai';
 process.env.NODE_ENV = 'test';
-const chaiHttp = require('chai-http');
+import chaiHttp from 'chai-http';
+import server from '../bin/www';
 const should = chai.should();
-
-const server = require('../bin/www');
 
 chai.use(chaiHttp);
 
