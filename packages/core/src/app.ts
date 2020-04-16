@@ -24,6 +24,8 @@ export class App {
     this.appConfig = AppConfig.getInstance();
     this.logger = new ConduitLogger();
     this.initializeSdk();
+    this.registerGlobalMiddleware();
+    this.registerRoutes();
   }
 
   get() {
@@ -60,7 +62,14 @@ export class App {
     });
   }
 
-  private registerHealthEndpoint() {
+  private registerRoutes() {
+    this.conduitRouter.registerRoute(new ConduitRoute({
+      path: '/',
+      action: Actions.GET
+    }, new ReturnDefinition('HelloResult', 'String'), async params => {
+      return 'Hello there!';
+    }));
+
     this.conduitRouter.registerRoute(new ConduitRoute({
       path: '/health',
       action: Actions.GET,
