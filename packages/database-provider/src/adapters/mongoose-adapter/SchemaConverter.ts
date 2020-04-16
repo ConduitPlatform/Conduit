@@ -14,6 +14,10 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     // converts relations to mongoose relations
     for (const key in actual as any) {
         if (!actual.hasOwnProperty(key)) continue;
+        if (key === '_id') {
+            delete actual[key];
+            continue;
+        }
         if (actual[key].type && actual[key].type === 'Relation') {
             actual[key].type = Schema.Types.ObjectId;
             actual[key].ref = actual[key].model;
