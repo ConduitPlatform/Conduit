@@ -1,7 +1,8 @@
 {
   "name": "@conduit/core",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/bin/www.js",
+  "types": "dist/bin/www.d.ts",
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
