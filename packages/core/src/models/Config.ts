@@ -1,7 +1,7 @@
 import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const ConfigModel = new ConduitSchema(
-  'name',
+  'Config',
   {
     config: {
       inMemoryStore: {
