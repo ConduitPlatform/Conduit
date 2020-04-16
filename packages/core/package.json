@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
-    "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan test/**",
-    "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit test/**",
+    "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan src/test/**",
+    "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
     "build": "rimraf dist && tsc"
   },
   "license": "ISC",

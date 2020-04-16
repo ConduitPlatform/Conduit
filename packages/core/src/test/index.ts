@@ -2,7 +2,7 @@ import { describe } from 'mocha';
 import chai from 'chai';
 process.env.NODE_ENV = 'test';
 import chaiHttp from 'chai-http';
-import server from '../src/bin/www';
+import server from '../bin/www';
 const should = chai.should();
 
 chai.use(chaiHttp);
