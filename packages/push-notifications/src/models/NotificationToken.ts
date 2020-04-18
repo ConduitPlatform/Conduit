@@ -2,7 +2,7 @@ import { ConduitSchema, PlatformTypesEnum, TYPE } from '@conduit/sdk';
 
 export const NotificationTokenModel = new ConduitSchema('NotificationToken',
   {
-
+        _id: TYPE.ObjectId,
         userId: {
             type: TYPE.Relation,
             model: 'User'
@@ -15,6 +15,14 @@ export const NotificationTokenModel = new ConduitSchema('NotificationToken',
             type: TYPE.String,
             enum: Object.values(PlatformTypesEnum),
             required: true
+        },
+        createdAt: {
+          type: TYPE.Date,
+          required: true
+        },
+        updatedAt: {
+          type: TYPE.Date,
+          required: true
         }
     },
   {

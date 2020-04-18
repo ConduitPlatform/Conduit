@@ -1,13 +1,23 @@
 import {ConduitModel} from "./Model";
+import {IncomingHttpHeaders} from "http";
 
 export interface ConduitRouteParameters {
     params?: { [field: string]: any };
     path?: string;
+    headers: IncomingHttpHeaders;
     context?: { [field: string]: any };
 }
 
+export enum RouteOptionType {
+    String = 'String',
+    Number = 'Number',
+    Boolean = 'Boolean',
+    Date = 'Date',
+    ObjectId = 'ObjectId'
+}
+
 export interface ConduitRouteOptionExtended {
-    type: string;
+    type: RouteOptionType;
     required: boolean;
 }
 
@@ -25,7 +35,7 @@ export enum ConduitRouteActions {
 
 export interface ConduitRouteOptions {
     queryParams?: ConduitRouteOption;
-    bodyParams?: ConduitRouteOption;
+    bodyParams?: ConduitModel;
     urlParams?: ConduitRouteOption;
     action: ConduitRouteActions
     path: string;

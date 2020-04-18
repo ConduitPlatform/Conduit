@@ -44,6 +44,7 @@ export class App {
     };
     this.app = Object.assign(expressApp, conduitExtras);
     this.conduitRouter = new ConduitDefaultRouter(this.app);
+    this.conduitRouter.initGraphQL();
     this.app.conduit.registerRouter(this.conduitRouter);
     this.app.conduit.registerDatabase(new ConduitDefaultDatabase(process.env.databaseType!, process.env.databaseURL));
   }

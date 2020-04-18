@@ -26,7 +26,7 @@ export class AdminConfigHandlers {
 
     const final = merge(currentConfig, newConfig);
     dbConfig.config.storage = final;
-    const saved = await dbConfig.save();
+    const saved = await Config.findByIdAndUpdate(dbConfig);
 
     appConfig.load(saved.config);
 

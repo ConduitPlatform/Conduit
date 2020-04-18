@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
   {
+    _id: TYPE.ObjectId,
     name: {
       type: TYPE.String,
       unique: true,
@@ -16,6 +17,14 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
     },
     variables: {
       type: [String]
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
+      required: true
     }
   },
   {

@@ -1,9 +1,15 @@
+import {ConduitSchema} from "../../../models";
+
 export interface SchemaAdapter {
 
     /**
      * The actual underlying model
      */
     model: any;
+    /**
+     * The original model used to generate this
+     */
+    originalSchema: ConduitSchema;
 
     /**
      * Should find one
@@ -17,7 +23,7 @@ export interface SchemaAdapter {
      * Should find Many
      * @param query
      */
-    findMany(query: string): Promise<any>;
+    findMany(query: any): Promise<any>;
 
     /**
      * Should create

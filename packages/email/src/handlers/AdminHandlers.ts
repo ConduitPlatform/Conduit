@@ -58,15 +58,16 @@ export class AdminHandlers {
 
     const allowedFields = ['name', 'subject', 'body', 'variables'];
 
-    Object.keys(params).forEach(key => {
+    const flag = Object.keys(params).some(key => {
       if (!allowedFields.includes(key)) {
-        return res.status(401).json({ error: 'Invalid parameters are given' });
+        return true;
       }
     });
+    if (flag) return res.status(403).json({ error: 'Invalid parameters are given' });
 
     const EmailTemplate = this.database.getSchema('EmailTemplate');
 
-    const templateDocument = await EmailTemplate.findOne({ _id: id.toString() });
+    const templateDocument = await EmailTemplate.findOne({ _id: id });
     if (isNil(templateDocument)) {
       return res.status(404).json({ error: 'Template not found' });
     }
@@ -75,7 +76,7 @@ export class AdminHandlers {
       templateDocument[key] = params[key];
     });
 
-    const updatedTemplate = await templateDocument.save();
+    const updatedTemplate = await EmailTemplate.findByIdAndUpdate(templateDocument);
 
     return res.json({ updatedTemplate });
   }
@@ -120,7 +121,7 @@ export class AdminHandlers {
     const final = merge(currentEmailConfig, newEmailConfig);
 
     dbConfig.config.email = final;
-    const saved = await dbConfig.save();
+    const saved = await Config.findByIdAndUpdate(dbConfig);
     await appConfig.load(saved.config);
 
     return res.json(saved.config.email);

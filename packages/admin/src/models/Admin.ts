@@ -1,20 +1,15 @@
 import { ConduitSchema, TYPE } from '@conduit/sdk';
 
-export const Token = new ConduitSchema('Token',
+export const AdminSchema = new ConduitSchema('Admin',
   {
     _id: TYPE.ObjectId,
-    type: {
+    username: {
       type: TYPE.String,
+      required: true
     },
-    userId: {
-      type: TYPE.Relation,
-      model: 'User'
-    },
-    token: {
-      type: TYPE.String
-    },
-    data: {
-      type: TYPE.JSON
+    password: {
+      type: TYPE.String,
+      required: true
     },
     createdAt: {
       type: TYPE.Date,
@@ -24,7 +19,4 @@ export const Token = new ConduitSchema('Token',
       type: TYPE.Date,
       required: true
     }
-  },
-  {
-    timestamps: true
-  });
+  },{timestamps: true});

@@ -2,6 +2,7 @@ import { ConduitSchema, PlatformTypesEnum, TYPE } from '@conduit/sdk';
 
 export const ClientModel = new ConduitSchema('Client',
   {
+    _id: TYPE.ObjectId,
     clientId: {
       type: TYPE.String,
       unique: true,
@@ -14,6 +15,14 @@ export const ClientModel = new ConduitSchema('Client',
     platform: {
       type: TYPE.String,
       enum: Object.values(PlatformTypesEnum),
+      required: true
+    },
+    createdAt: {
+      type: TYPE.Date,
+      required: true
+    },
+    updatedAt: {
+      type: TYPE.Date,
       required: true
     }
   },

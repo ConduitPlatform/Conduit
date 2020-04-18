@@ -10,4 +10,5 @@ export abstract class IConduitAdmin {
 
     abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;
 
+    abstract adminMiddleware(req: Request, res: Response, next: NextFunction): void;
 }

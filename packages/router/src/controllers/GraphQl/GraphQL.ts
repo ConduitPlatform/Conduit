@@ -1,14 +1,20 @@
-// todo Create the controller that creates GraphQL-specific endpoints
-import {Application} from "express";
-import {ConduitModel, ConduitRoute, ConduitRouteActions, ConduitRouteOptions} from "@conduit/sdk";
+import {Application, NextFunction, Request, Response, Router} from "express";
+import {
+    ConduitModel,
+    ConduitRoute,
+    ConduitRouteActions, ConduitRouteOptionExtended,
+    ConduitRouteOptions,
+    ConduitRouteParameters
+} from "@conduit/sdk";
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
 import {GraphQLScalarType, Kind} from "graphql";
+import {ConduitError} from "@conduit/sdk";
 
 const {
     parseResolveInfo,
 } = require('graphql-parse-resolve-info');
-const {ApolloServer} = require('apollo-server-express');
+const {ApolloServer, ApolloError} = require('apollo-server-express');
 
 export class GraphQLController {
 
@@ -17,8 +23,10 @@ export class GraphQLController {
     queries: string;
     mutations: string;
     resolvers: any;
+    private _internalRoute: any;
     private _apollo?: any;
     private _relationTypes: string[] = [];
+    private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
 
     constructor(app: Application) {
         this.resolvers = {
@@ -44,7 +52,8 @@ export class GraphQLController {
         this.queries = '';
         this.mutations = '';
         const self = this;
-        app.use('/', (req, res, next) => {
+        this._internalRoute = Router();
+        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
             if (self._apollo) {
                 self._apollo(req, res, next)
             } else {
@@ -54,13 +63,18 @@ export class GraphQLController {
         });
     }
 
+    getInternalRoute() {
+        return this._internalRoute;
+    }
+
     refreshGQLServer() {
         const server = new ApolloServer({
             typeDefs: this.typeDefs,
             resolvers: this.resolvers,
             context: ({req}: any) => {
-                // get the user token from the headers
-                return req.conduit;
+                const context = (req as any).conduit;
+                let headers: any = req.headers;
+                return {context, headers}
             },
         });
 
@@ -118,19 +132,40 @@ export class GraphQLController {
         if (input.bodyParams || input.queryParams || input.urlParams) {
             if (input.bodyParams) {
                 for (let k in input.bodyParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.bodyParams[k];
+                    if (!input.bodyParams.hasOwnProperty(k)) continue;
+                    params += (params.length > 1 ? ',' : '') + k + ':';
+                    if (typeof input.bodyParams[k] === 'string') {
+                        params += input.bodyParams[k]
+                    } else {
+                        params += ((input.bodyParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.bodyParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
 
             if (input.queryParams) {
                 for (let k in input.queryParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.queryParams[k];
+                    if (!input.queryParams.hasOwnProperty(k)) continue;
+                    params += (params.length > 1 ? ',' : '') + k + ':';
+                    if (typeof input.queryParams[k] === 'string') {
+                        params += input.queryParams[k]
+                    } else {
+                        params += ((input.queryParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.queryParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
 
             if (input.urlParams) {
                 for (let k in input.urlParams) {
-                    params += (params.length > 1 ? ',' : '') + k.toString() + ':' + input.urlParams[k];
+                    if (!input.urlParams.hasOwnProperty(k)) continue;
+                    params += (params.length > 1 ? ',' : '') + k + ':';
+                    if (typeof input.urlParams[k] === 'string') {
+                        params += input.urlParams[k]
+                    } else {
+                        params += ((input.urlParams[k] as ConduitRouteOptionExtended).type +
+                            ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                    }
                 }
             }
             params = '(' + params + ')';
@@ -173,6 +208,34 @@ export class GraphQLController {
         return args;
     }
 
+    registerMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+        if (!this._middlewares) {
+            this._middlewares = {};
+        }
+        if (!this._middlewares[path]) {
+            this._middlewares[path] = [];
+        }
+        this._middlewares[path].push(middleware);
+    }
+
+    checkMiddlewares(path: string, params: ConduitRouteParameters): Promise<any> {
+        let primaryPromise = new Promise((resolve, reject) => {
+            resolve();
+        })
+        if (this._middlewares) {
+            for (let k in this._middlewares) {
+                if (!this._middlewares.hasOwnProperty(k)) continue;
+                if (path.indexOf(k) === 0) {
+                    this._middlewares[k].forEach(m => {
+                        primaryPromise = primaryPromise.then(r => m(params));
+                    })
+                }
+            }
+        }
+
+        return primaryPromise
+    }
+
     registerConduitRoute(route: ConduitRoute) {
         this.generateType(route.returnTypeName, route.returnTypeFields);
         let actionName = this.generateAction(route.input, route.returnTypeName);
@@ -184,18 +247,40 @@ export class GraphQLController {
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
-                return route.executeRequest({context: context, params: args}).then(r => {
-                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                })
+                return self.checkMiddlewares(route.input.path, context)
+                    .then((r: any) => route.executeRequest({
+                        ...context,
+                        params: args
+                    }))
+                    .then((r: any) => {
+                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                    })
+                    .catch((err: Error | ConduitError) => {
+                        if (err.hasOwnProperty("status")) {
+                            throw new ApolloError(err.message, (err as ConduitError).status, err);
+                        } else {
+                            throw new ApolloError(err.message, 500, err);
+                        }
+                    })
             }
         } else {
             if (!this.resolvers['Mutation']) {
                 this.resolvers['Mutation'] = {};
             }
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
-                return route.executeRequest({context: context, params: args}).then(r => {
-                    return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                })
+                args = self.shouldPopulate(args, info);
+                return self.checkMiddlewares(route.input.path, context)
+                    .then((r: any) => route.executeRequest({...context, params: args}))
+                    .then(r => {
+                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                    })
+                    .catch((err: Error | ConduitError) => {
+                        if (err.hasOwnProperty("status")) {
+                            throw new ApolloError(err.message, (err as ConduitError).status, err);
+                        } else {
+                            throw new ApolloError(err.message, 500, err);
+                        }
+                    })
             }
         }
         this.refreshGQLServer();
