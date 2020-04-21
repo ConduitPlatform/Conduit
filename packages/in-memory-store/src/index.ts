@@ -8,6 +8,7 @@ import {StorageProvider} from "./interaces/StorageProvider";
 import { Request, Response, NextFunction } from 'express';
 import {isNil} from 'lodash';
 import { ConduitSDK, IConduitInMemoryStore } from '@conduit/sdk';
+import InMemoryStoreConfigSchema from './config/in-memory-store';
 
 class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
@@ -39,6 +40,10 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
         admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
 
+    }
+
+    static get config() {
+        return InMemoryStoreConfigSchema;
     }
 
     get(key: string): Promise<any> {

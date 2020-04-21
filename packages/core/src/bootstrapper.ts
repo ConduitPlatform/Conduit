@@ -1,6 +1,6 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
-import {ConfigModel} from './models/Config';
+import { ConfigModelGenerator } from './models/Config';
 import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
 import AdminModule from '@conduit/admin';
@@ -23,7 +23,7 @@ export class CoreBootstrapper {
 
     private static registerSchemas(app: ConduitApp) {
         const database = app.conduit.getDatabase();
-        database.createSchemaFromAdapter(ConfigModel);
+        database.createSchemaFromAdapter(new ConfigModelGenerator(app).configModel);
     }
 
     private static registerAdminRoutes(sdk: ConduitSDK) {
