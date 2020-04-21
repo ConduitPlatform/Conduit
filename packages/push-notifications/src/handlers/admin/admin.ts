@@ -67,7 +67,7 @@ export class AdminHandler {
     if (isNil(dbConfig)) {
       return res.status(404).json({ error: 'Config not set' });
     }
-    return res.json(dbConfig.config.pushNotifications);
+    return res.json(dbConfig.pushNotifications);
   }
 
   async editNotificationsConfig(req: Request, res: Response, next: NextFunction) {
@@ -82,14 +82,19 @@ export class AdminHandler {
       return res.status(404).json({ error: 'Config not set' });
     }
 
-    const currentNotificationsConfig = dbConfig.config.pushNotifications;
+    const currentNotificationsConfig = dbConfig.pushNotifications;
     const final = merge(currentNotificationsConfig, newNotificationsConfig);
 
-    dbConfig.config.pushNotifications = final;
+    dbConfig.pushNotifications = final;
     const saved = await Config.findByIdAndUpdate(dbConfig);
-    await appConfig.load(saved.config);
+    delete saved._id;
+    delete saved.createdAt;
+    delete saved.updatedAt;
+    delete saved.__v;
 
-    return res.json(saved.config.pushNotifications);
+    await appConfig.load(saved);
+
+    return res.json(saved.pushNotifications);
   }
 
   async getNotificationToken(req: Request, res: Response, next: NextFunction) {
