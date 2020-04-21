@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   pushNotifications: {
     active: {
       format: 'Boolean',

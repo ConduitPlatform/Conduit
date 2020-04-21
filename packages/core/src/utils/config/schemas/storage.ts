@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   storage: {
     doc: 'The config of the storage module',
     active: {

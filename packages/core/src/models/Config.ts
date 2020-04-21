@@ -1,125 +1,127 @@
-module.exports = {
-  name: 'Config',
-  modelSchema: {
+import { ConduitSchema, TYPE } from '@conduit/sdk';
+
+export const ConfigModel = new ConduitSchema(
+  'Config',
+  {
     config: {
       inMemoryStore: {
         providerName: {
-          type: String,
+          type: TYPE.String,
           default: 'local'
         },
         settings: {
           redis: {
             host: {
-              type: String,
+              type: TYPE.String,
               default: '127.0.0.1'
             },
             port: {
-              type: Number,
+              type: TYPE.Number,
               default: 6379
             },
             password: {
-              type: String,
+              type: TYPE.String,
               default: 'password'
             },
             url: {
-              type: String
+              type: TYPE.String
             },
-            path: String
+            path: TYPE.String
           }
         }
       },
       hostUrl: {
-        type: String,
+        type: TYPE.String,
         default: 'http://localhost:3000'
       },
       authentication: {
         local: {
           identifier: {
-            type: String,
+            type: TYPE.String,
             default: 'email',
           },
           active: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
           },
           sendVerificationEmail: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
           },
           verificationRequired: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
           },
           passwordResetHost: {
-            type: String,
+            type: TYPE.String,
             default: 'http://localhost:3000/authentication/reset-password/'
           },
           verifyEmailHost: {
-            type: String,
+            type: TYPE.String,
             default: 'http://localhost:3000/hook/verify-email/'
           }
         },
         google: {
           clientId: {
-            type: String
+            type: TYPE.String
           },
           accountLinking: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
           },
           active: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: false
           }
         },
         facebook: {
-          clientId: String,
+          clientId: TYPE.String,
           accountLinking: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: true
           },
           active: {
-            type: Boolean,
+            type: TYPE.Boolean,
             default: false
           }
         },
         generateRefreshToken: {
-          type: Boolean,
+          type: TYPE.Boolean,
           default: false
         },
         rateLimit: {
-          type: Number,
+          type: TYPE.Number,
           default: 3
         },
         tokenInvalidationPeriod: {
-          type: Number,
+          type: TYPE.Number,
           default: 86400000
         },
         refreshTokenInvalidationPeriod: {
-          type: Number,
+          type: TYPE.Number,
           default: 86400000 * 7
         },
         jwtSecret: {
-          type: String,
+          type: TYPE.String,
           default: 'S3CR3T'
         }
       },
       storage: {
         provider: {
-          type: String,
+          type: TYPE.String,
           default: 'local'
         },
         storagePath: {
-          type: String,
+          type: TYPE.String,
           default: '/var/tmp'
         },
         google: {
           serviceAccountKeyPath: {
-            type: String,
+            type: TYPE.String,
             default: '~/google_storage_service_account.json'
           },
           bucketName: {
-            type: String,
+            type: TYPE.String,
             default: 'conduit'
           }
         }
@@ -127,69 +129,69 @@ module.exports = {
       admin: {
         auth: {
           tokenSecret: {
-            type: String,
+            type: TYPE.String,
             default: 'bsvhiuvseh'
           },
           hashRounds: {
-            type: Number,
+            type: TYPE.Number,
             default: 11
           },
           tokenExpirationTime: {
-            type: Number,
+            type: TYPE.Number,
             default: 21600
           },
           masterkey: {
-            type: String,
+            type: TYPE.String,
             default: 'M4ST3RK3Y'
           }
         }
       },
       email: {
-        transport: String,
+        transport: TYPE.String,
         transportSettings: {
           apiKey: {
-            type: String,
+            type: TYPE.String,
             default: 'nadda'
           },
           domain: {
-            type: String,
+            type: TYPE.String,
             default: '***REMOVED***'
           },
-          proxy: String,
+          proxy: TYPE.String,
           smtp: {
-            port: Number,
+            port: TYPE.Number,
             auth: {
-              username: String,
-              password: String,
-              method: String
+              username: TYPE.String,
+              password: TYPE.String,
+              method: TYPE.String
             }
           },
-          host: String
+          host: TYPE.String
         }
       },
       pushNotifications: {
         providerName: {
-          type: String,
+          type: TYPE.String,
           default: 'firebase'
         },
         firebase: {
           projectId: {
-            type: String,
+            type: TYPE.String,
             default: 'project-id'
           },
           privateKey: {
-            type: String,
+            type: TYPE.String,
             default: 'private-key'
           },
           clientEmail: {
-            type: String,
+            type: TYPE.String,
             default: 'client-email'
           }
         }
       }
     }
   },
-  modelOptions: {
+  {
     timestamps: true
   }
-};
+);

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   admin: {
     auth: {
       tokenSecret: {

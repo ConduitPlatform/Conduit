@@ -1,7 +1,7 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import { ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum, ConduitError } from '@conduit/sdk';
+import {ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@conduit/sdk';
 
 class SecurityModule extends IConduitSecurity {
 
@@ -38,11 +38,11 @@ class SecurityModule extends IConduitSecurity {
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {
-        if (req.path.indexOf('/hook/') === 0 || req.path.indexOf('/admin') === 0) {
+        if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
             return next();
         }
 
-        if (req.path.indexOf('/graphql') === 0 && req.method === 'GET') {
+        if (req.url === '/graphql' && req.method === 'GET') {
             return next();
         }
 

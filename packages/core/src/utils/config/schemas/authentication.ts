@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   authentication: {
     active: {
       format: 'Boolean',

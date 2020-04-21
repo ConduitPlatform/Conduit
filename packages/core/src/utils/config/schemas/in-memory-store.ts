@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   inMemoryStore: {
     active: {
       format: 'Boolean',
