@@ -1,7 +1,6 @@
 // todo Create the controller that creates REST-specific endpoints
-import {NextFunction, Request, Response, Router} from "express";
-import {ConduitRoute, ConduitRouteParameters} from "@conduit/sdk";
-import {ConduitError} from "@conduit/sdk";
+import { IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
+import { ConduitError, ConduitRoute, ConduitRouteActions, ConduitRouteParameters } from '@conduit/sdk';
 
 function extractRequestData(req: Request) {
 
@@ -53,7 +52,32 @@ export class RestController {
 
     registerConduitRoute(route: ConduitRoute) {
         const self = this;
-        this._router.use(route.input.path, (req, res, next) => {
+
+        let routerMethod: IRouterMatcher<Router>;
+
+        switch(route.input.action) {
+            case ConduitRouteActions.GET: {
+                routerMethod = this._router.get.bind(this._router);
+                break;
+            }
+            case ConduitRouteActions.POST: {
+                routerMethod = this._router.post.bind(this._router);
+                break;
+            }
+            case ConduitRouteActions.DELETE: {
+                routerMethod = this._router.delete.bind(this._router);
+                break;
+            }
+            case ConduitRouteActions.UPDATE: {
+                routerMethod = this._router.put.bind(this._router);
+                break;
+            }
+            default: {
+                routerMethod = this._router.get.bind(this._router);
+            }
+        }
+
+        routerMethod(route.input.path, (req, res, next) => {
             let context = extractRequestData(req)
             self.checkMiddlewares(route.input.path, context)
                 .then(r => route.executeRequest(context))
