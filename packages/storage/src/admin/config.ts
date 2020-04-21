@@ -37,10 +37,12 @@ export class AdminConfigHandlers {
   }
 
   async getConfig(req: Request, res: Response) {
-    const { config } = this.conduit as any;
-
-    const storageConfig = config.get('storage');
-
-    return res.json(storageConfig);
+    const databaseAdapter = this.conduit.getDatabase();
+    const Config = databaseAdapter.getSchema('Config');
+    const dbConfig = await Config.findOne({});
+    if (isNil(dbConfig)) {
+      return res.status(404).json({ error: 'Config not set' });
+    }
+    return res.json(dbConfig.storage);
   }
 }
