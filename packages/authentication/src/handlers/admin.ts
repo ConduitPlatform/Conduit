@@ -40,23 +40,28 @@ export class AdminHandlers {
         if (isNil(dbConfig)) {
             return res.status(404).json({error: 'Config not set'});
         }
-
-        const currentAuthConfig = dbConfig.config.authentication;
+        const currentAuthConfig = dbConfig.authentication;
         const final = merge(currentAuthConfig, newAuthConfig);
 
-        dbConfig.config.authentication = final;
+        dbConfig.authentication = final;
         const saved = await Config.findByIdAndUpdate(dbConfig);
-        appConfig.load(saved.config);
+        delete saved._id;
+        delete saved.createdAt;
+        delete saved.updatedAt;
+        delete saved.__v;
+        appConfig.load(saved);
 
-        return res.json(saved.config.authentication);
+        return res.json(saved.authentication);
     }
 
     async getAuthConfig(req: Request, res: Response) {
-        const {config} = this.sdk as any;
+        const Config = this.database.getSchema('Config');
+        const dbConfig = await Config.findOne({});
+        if (isNil(dbConfig)) {
+            return res.status(404).json({error: 'Config not set'});
+        }
 
-        const authConfig = config.get('authentication');
-
-        return res.json(authConfig);
+        return res.json(dbConfig.authentication);
     }
 
     registerRoutes() {

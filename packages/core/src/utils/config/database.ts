@@ -13,7 +13,13 @@ export class DatabaseConfigUtility {
     let dbConfig = await this.database.getSchema('Config').findOne({});
 
     if (isNil(dbConfig)) {
-      dbConfig = this.database.getSchema('Config').create(this.appConfig.get());
+      const appConfig = this.appConfig.get();
+      const configToCreate: { [key: string]: any } = {};
+      Object.keys(appConfig).forEach(key => {
+        if (appConfig[key].active === false) return;
+        configToCreate[key] = appConfig[key];
+      });
+      dbConfig = this.database.getSchema('Config').create(configToCreate);
     }
 
     delete dbConfig._id;

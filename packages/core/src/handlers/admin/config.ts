@@ -16,7 +16,7 @@ export class ConfigAdminHandlers {
       return res.json({});
     }
 
-    return res.json(appConfig.config);
+    return res.json(appConfig);
   }
 
   async setConfig(req: Request, res: Response) {
@@ -34,11 +34,15 @@ export class ConfigAdminHandlers {
     const currentConfig = appConfig.get();
     const final = merge(currentConfig, newConfig);
 
-    dbConfig.config = final;
+    Object.assign(dbConfig, final);
     const saved = await Config.findByIdAndUpdate(dbConfig);
+    delete saved._id;
+    delete saved.createdAt;
+    delete saved.updatedAt;
+    delete saved.__v;
 
-    appConfig.load(saved.config);
+    appConfig.load(saved);
 
-    return res.json(saved.config);
+    return res.json(saved);
   }
 }

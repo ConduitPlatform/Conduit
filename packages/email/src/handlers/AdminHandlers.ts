@@ -102,7 +102,7 @@ export class AdminHandlers {
       return res.status(403).json({ error: 'Config not set' });
     }
 
-    return res.json(dbConfig.config.email);
+    return res.json(dbConfig.email);
   }
 
   async editEmailConfig(req: Request, res: Response) {
@@ -117,13 +117,17 @@ export class AdminHandlers {
       return res.status(404).json({ error: 'Config not set' });
     }
 
-    const currentEmailConfig = dbConfig.config.email;
+    const currentEmailConfig = dbConfig.email;
     const final = merge(currentEmailConfig, newEmailConfig);
 
-    dbConfig.config.email = final;
+    dbConfig.email = final;
     const saved = await Config.findByIdAndUpdate(dbConfig);
-    await appConfig.load(saved.config);
+    delete saved._id;
+    delete saved.createdAt;
+    delete saved.updatedAt;
+    delete saved.__v;
+    await appConfig.load(saved);
 
-    return res.json(saved.config.email);
+    return res.json(saved.email);
   }
 }
