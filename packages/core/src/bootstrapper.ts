@@ -23,7 +23,8 @@ export class CoreBootstrapper {
 
     private static registerSchemas(app: ConduitApp) {
         const database = app.conduit.getDatabase();
-        database.createSchemaFromAdapter(new ConfigModelGenerator(app).configModel);
+        const ConfigModel = new ConfigModelGenerator(app).configModel;
+        database.createSchemaFromAdapter(ConfigModel);
     }
 
     private static registerAdminRoutes(sdk: ConduitSDK) {

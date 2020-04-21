@@ -1,7 +1,6 @@
 import { ConduitModel, ConduitSchema, TYPE } from '@conduit/sdk';
 import { ConduitApp } from '../interfaces/ConduitApp';
 import { Config } from 'convict';
-import { isEmpty } from 'lodash';
 
 export class ConfigModelGenerator {
   private appConfig: Config<any>;
@@ -10,18 +9,14 @@ export class ConfigModelGenerator {
     this.appConfig = (app.conduit as any).config;
   }
 
-  private getConfigFields(parentObject: any): ConduitModel {
+  private getConfigFields(parentObject: any, disabledModuleFlag: boolean = false): ConduitModel {
     const childObject: { [key: string]: any } = {};
-    let disabledModuleFlag = false;
     Object.keys(parentObject).forEach(key => {
       if (typeof parentObject[key] === 'object') {
-        const child = this.getConfigFields(parentObject[key]);
-        if (isEmpty(child)) return;
-        childObject[key] = child;
+        childObject[key] = this.getConfigFields(parentObject[key], disabledModuleFlag);
       } else {
         if (key === 'active' && parentObject[key] === false) {
           disabledModuleFlag = true;
-          return;
         }
         if (key === 'doc') return;
 
@@ -40,16 +35,16 @@ export class ConfigModelGenerator {
             type = TYPE.String;
         }
 
+        const defaultValue = disabledModuleFlag ? undefined : parentObject[key];
         const partialSchema: { [key: string]: any } = {};
         partialSchema[key] = {
           type,
-          default: parentObject[key]
+          default: defaultValue
         };
 
         Object.assign(childObject, partialSchema);
       }
     });
-    if (disabledModuleFlag) return {};
     return childObject;
   }
 
