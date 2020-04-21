@@ -60,7 +60,6 @@ export class AdminHandler {
   }
 
   async getNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { config: appConfig } = this.conduit as any;
 
     const Config = this.databaseAdapter.getSchema('Config');
     const dbConfig = await Config.findOne({});
