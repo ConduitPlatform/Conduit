@@ -10,13 +10,17 @@ export class DatabaseConfigUtility {
   }
 
   async configureFromDatabase() {
-    // TODO figure out a scalable way to generate the mongoose schema
     let dbConfig = await this.database.getSchema('Config').findOne({});
 
     if (isNil(dbConfig)) {
-      return this.database.getSchema('Config').create({config: this.appConfig.get()});
+      dbConfig = this.database.getSchema('Config').create(this.appConfig.get());
     }
 
-    this.appConfig.load(dbConfig.config);
+    delete dbConfig._id;
+    delete dbConfig.createdAt;
+    delete dbConfig.updatedAt;
+    delete dbConfig.__v;
+
+    this.appConfig.load(dbConfig);
   }
 }
