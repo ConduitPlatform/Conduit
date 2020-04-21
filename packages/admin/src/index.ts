@@ -97,8 +97,12 @@ class AdminModule extends IConduitAdmin {
         if (prefix !== 'JWT') {
             return res.status(401).json({error: 'The authorization header must begin with JWT'});
         }
-
-        const decoded = verifyToken(token, adminConfig.auth.tokenSecret);
+        let decoded;
+        try {
+            decoded = verifyToken(token, adminConfig.auth.tokenSecret);
+        } catch (error) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
         const {id} = decoded;
 
         AdminModel.findOne({_id: id})

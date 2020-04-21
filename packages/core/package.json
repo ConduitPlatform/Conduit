@@ -4,7 +4,7 @@
   "main": "dist/bin/www.js",
   "types": "dist/bin/www.d.ts",
   "scripts": {
-    "start": "npm run build && node dist/bin/www.js",
+    "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
     "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan src/test/**",
     "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
