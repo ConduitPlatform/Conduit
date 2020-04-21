@@ -37,7 +37,7 @@ export class CMS extends IConduitCMS {
 
             })
             .catch((err: Error) => {
-                console.error("Something went wrong when loading schemas for cms");
+                console.error("Something went wrong when loading schema for cms");
                 console.error(err);
             })
     }

@@ -4,6 +4,7 @@ import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import {AdminSchema} from './models/Admin';
 import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin } from '@conduit/sdk';
+import AdminConfigSchema from './config/admin';
 
 class AdminModule extends IConduitAdmin {
     private readonly router: Router;
@@ -44,6 +45,10 @@ class AdminModule extends IConduitAdmin {
         conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
         this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
+    }
+
+    static get config() {
+        return AdminConfigSchema;
     }
 
     private registerSchemas(adapter: any) {

@@ -4,8 +4,9 @@ import { AdminConfigHandlers } from './admin/config';
 import { ConduitSDK, IConduitAdmin, IConduitStorage } from '@conduit/sdk';
 import { FileRoutes } from './routes/file';
 import File from './models/File';
+import StorageConfigSchema from './config/storage';
 
-class StorageModule extends IConduitStorage{
+class StorageModule extends IConduitStorage {
   private readonly storageProvider: IStorageProvider;
 
   constructor(
@@ -28,7 +29,9 @@ class StorageModule extends IConduitStorage{
     this.registerRoutes();
   }
 
-  private registerAdminRoutes(admin: IConduitAdmin, adminHandlers: AdminConfigHandlers) {
+  static get config() {
+        return StorageConfigSchema;
+    }private registerAdminRoutes(admin: IConduitAdmin, adminHandlers: AdminConfigHandlers) {
     admin.registerRoute('PUT', '/storage/config', (req: Request, res: Response, next: NextFunction) => adminHandlers.editConfig(req, res).catch(next));
     admin.registerRoute('GET', '/storage/config', (req: Request, res: Response, next: NextFunction) => adminHandlers.getConfig(req, res).catch(next));
   }

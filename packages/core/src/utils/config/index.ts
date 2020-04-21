@@ -1,13 +1,13 @@
 import path from 'path';
 import convict, { Config } from 'convict';
-import AppConfigSchema from './schemas/app';
-import AdminConfigSchema from './schemas/admin';
-import AuthenticationConfigSchema from './schemas/authentication';
-import InMemoryStoreSchema from './schemas/in-memory-store';
-import StorageConfigSchema from './schemas/storage';
-import PushNotificationsConfigSchema from './schemas/push-notifications';
-import EmailConfigSchema from './schemas/email';
+import AppConfigSchema from './schema/app';
 import { isNil } from 'lodash';
+import AuthenticationModule from '@conduit/authentication';
+import AdminModule from '@conduit/admin';
+import EmailModule from '@conduit/email';
+import StorageModule from '@conduit/storage';
+import InMemoryStore from '@conduit/in-memory-store';
+import PushNotificationsModule from '@conduit/push-notifications';
 
 export class AppConfig {
   private static instance: AppConfig;
@@ -31,15 +31,17 @@ export class AppConfig {
     this.injectEnvironmentVariables();
   }
 
+  // const AuthenticationConfigSchema = AuthenticationModule.config;
+
   private mergeSchemas() {
     return {
       ...AppConfigSchema,
-      ...AuthenticationConfigSchema,
-      ...EmailConfigSchema,
-      ...StorageConfigSchema,
-      ...InMemoryStoreSchema,
-      ...PushNotificationsConfigSchema,
-      ...AdminConfigSchema
+      ...AuthenticationModule.config,
+      ...EmailModule.config,
+      ...StorageModule.config,
+      ...InMemoryStore.config,
+      ...PushNotificationsModule.config,
+      ...AdminModule.config
     };
   }
 
