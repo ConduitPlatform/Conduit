@@ -34,14 +34,10 @@ export class ConfigAdminHandlers {
     const currentConfig = appConfig.get();
     const final = merge(currentConfig, newConfig);
 
-    dbConfig.config = final;
+    Object.assign(dbConfig, final);
     const saved = await Config.findByIdAndUpdate(dbConfig);
 
     appConfig.load(saved);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
 
     return res.json(saved);
   }
