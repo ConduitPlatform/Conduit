@@ -1,5 +1,5 @@
-import { isEmpty, isNil } from 'lodash';
-import { ConduitModel, IConduitDatabase, TYPE } from '@conduit/sdk';
+import { isNil } from 'lodash';
+import { IConduitDatabase } from '@conduit/sdk';
 import { Config } from 'convict';
 
 export class DatabaseConfigUtility {
