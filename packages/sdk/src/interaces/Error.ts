@@ -25,4 +25,8 @@ export class ConduitError extends Error {
     static userInput(message: string = 'Request data are invalid') {
         return new ConduitError('USER_INPUT_ERROR', 400, message);
     }
+
+    static internalServerError(message = 'Something went wrong') {
+        throw new ConduitError('INTERNAL_SERVER_ERROR', 500, message);
+    }
 }
