@@ -37,8 +37,12 @@ export class ConfigAdminHandlers {
     dbConfig.config = final;
     const saved = await Config.findByIdAndUpdate(dbConfig);
 
-    appConfig.load(saved.config);
+    appConfig.load(saved);
+    delete saved._id;
+    delete saved.createdAt;
+    delete saved.updatedAt;
+    delete saved.__v;
 
-    return res.json(saved.config);
+    return res.json(saved);
   }
 }
