@@ -36,7 +36,7 @@ export class FileRoutes {
     }, new ConduitRouteReturnDefinition('File', {
         _id: TYPE.String,
         name: TYPE.String,
-        user: TYPE.ObjectId, // Hack because we don't have endpoints that return a user so the model is not defined
+        user: TYPE.ObjectId, // Hack because we don't have endpoints that return a user so the model is not defined TODO replace with relation
         mimeType: TYPE.String,
         folder: TYPE.String,
         createdAt: TYPE.String,
@@ -61,6 +61,38 @@ export class FileRoutes {
         data: TYPE.String
       }),
       this.fileHandlers.getFile.bind(this.fileHandlers)));
+
+    router.registerRoute(new ConduitRoute({
+      queryParams: {
+        id: TYPE.String
+      },
+      action: ConduitRouteActions.DELETE,
+      path: '/storage/file'
+    }, new ConduitRouteReturnDefinition('FileDeleteResponse', {
+      success: TYPE.Boolean
+    }), this.fileHandlers.deleteFile.bind(this.fileHandlers)));
+
+    router.registerRoute(new ConduitRoute({
+      queryParams: {
+        id: TYPE.String
+      },
+      bodyParams: {
+        name: TYPE.String,
+        mimeType: TYPE.String,
+        data: TYPE.String,
+        folder: TYPE.String
+      },
+      action: ConduitRouteActions.UPDATE,
+      path: '/storage/file'
+    }, new ConduitRouteReturnDefinition('FileUpdateResponse', {
+      _id: TYPE.String,
+      name: TYPE.String,
+      user: TYPE.ObjectId,
+      mimeType: TYPE.String,
+      folder: TYPE.String,
+      createdAt: TYPE.String,
+      updatedAt: TYPE.String
+    }), this.fileHandlers.updateFile.bind(this.fileHandlers)));
   }
 
 }
