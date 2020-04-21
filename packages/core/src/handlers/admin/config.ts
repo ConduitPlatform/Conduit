@@ -16,7 +16,7 @@ export class ConfigAdminHandlers {
       return res.json({});
     }
 
-    return res.json(appConfig.config);
+    return res.json(appConfig);
   }
 
   async setConfig(req: Request, res: Response) {
