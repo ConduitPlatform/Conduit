@@ -3,6 +3,7 @@ import { emailTemplateSchema } from './models/EmailTemplate';
 import { EmailProvider } from '@conduit/email-provider';
 import { EmailService } from './services/email.service';
 import { AdminHandlers } from './handlers/AdminHandlers';
+import EmailConfigSchema from './config/email';
 
 class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
@@ -20,6 +21,10 @@ class EmailModule implements IConduitEmail {
     this.adminHandlers = new AdminHandlers(sdk, this.emailService);
     this.initAdminRoutes();
 
+  }
+
+  static get config() {
+    return EmailConfigSchema;
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {

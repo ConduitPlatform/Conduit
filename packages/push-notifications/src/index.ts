@@ -5,6 +5,7 @@ import {FirebaseProvider} from './providers/firebase';
 import {NextFunction, Request, Response} from 'express';
 import {NotificationTokensHandler} from './handlers/notification-tokens/notification-tokens';
 import {AdminHandler} from './handlers/admin/admin';
+import PushNotificationsConfigSchema from './config/push-notifications';
 import {
     ConduitDate,
     ConduitObjectId,
@@ -43,6 +44,10 @@ class PushNotificationsModule extends IConduitPushNotifications {
             .registerRouteMiddleware('/notification-token', conduit.getAuthentication().middleware);
         this.registerConsumerRoutes();
         this.registerAdminRoutes();
+    }
+
+    static get config() {
+        return PushNotificationsConfigSchema;
     }
 
     registerConsumerRoutes() {

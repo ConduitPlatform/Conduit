@@ -2,6 +2,7 @@ import {NextFunction, Request, Response} from 'express';
 import {createStorageProvider, IStorageProvider} from '@conduit/storage-provider';
 import {ConduitSDK, IConduitAdmin, IConduitStorage} from '@conduit/sdk';
 import {AdminConfigHandlers} from "./admin/config";
+import StorageConfigSchema from './config/storage';
 
 class StorageModule extends IConduitStorage {
     private readonly storageProvider: IStorageProvider;
@@ -21,6 +22,10 @@ class StorageModule extends IConduitStorage {
 
         this.registerAdminRoutes(admin, adminHandlers);
 
+    }
+
+    static get config() {
+        return StorageConfigSchema;
     }
 
     private registerAdminRoutes(admin: IConduitAdmin, adminHandlers: AdminConfigHandlers) {

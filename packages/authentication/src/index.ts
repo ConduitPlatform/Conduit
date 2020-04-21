@@ -15,6 +15,7 @@ import {GoogleHandlers} from './handlers/auth/google';
 import {AuthMiddleware} from './middleware/auth';
 import {AdminHandlers} from './handlers/admin';
 import {CommonHandlers} from './handlers/auth/common';
+import AuthenticationConfigSchema from './config/authentication';
 
 class AuthenticationModule {
     private readonly database: IConduitDatabase;
@@ -46,6 +47,10 @@ class AuthenticationModule {
 
     get middleware() {
         return this.authMiddleware.middleware.bind(this.authMiddleware);
+    }
+
+    static get config() {
+        return AuthenticationConfigSchema;
     }
 
     private registerSchemas() {
