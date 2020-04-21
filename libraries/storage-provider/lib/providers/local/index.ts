@@ -65,9 +65,9 @@ export class LocalStorage implements IStorageProvider {
     }
     exists(fileName: string): Promise<boolean | Error> {
         const self = this;
-        return new Promise(function (res, reject) {
+        return new Promise(function (res) {
             if (!existsSync(resolve(self._storagePath, fileName))) {
-                reject(new Error("File does not exist"));
+                res(false);
             } else {
                 res(true);
             }
