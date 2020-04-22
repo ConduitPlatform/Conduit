@@ -31,8 +31,8 @@ export class CoreBootstrapper {
         const configHandlers = new ConfigAdminHandlers(sdk);
         const adminModule = sdk.getAdmin();
 
-        adminModule.registerRoute('GET', '/config', configHandlers.getConfig.bind(configHandlers));
-        adminModule.registerRoute('PUT', '/config', configHandlers.setConfig.bind(configHandlers));
+        adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
+        // adminModule.registerRoute('PUT', '/config/:module', configHandlers.setConfig.bind(configHandlers));
     }
 
     private static async bootstrapSdkComponents(app: ConduitApp) {
@@ -49,7 +49,6 @@ export class CoreBootstrapper {
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
 
         if (appConfig.get('pushNotifications.active')) {
             app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
@@ -72,9 +71,10 @@ export class CoreBootstrapper {
             app.conduit.registerStorage(new StorageModule(app.conduit));
         }
 
-        if (appConfig.get('inMemoryStore.active')) {
-            app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
-        }
+
+        app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
+
+        CoreBootstrapper.registerAdminRoutes(app.conduit);
 
         app.initialized = true;
     }
