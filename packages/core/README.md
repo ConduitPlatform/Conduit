@@ -1,3 +1,9 @@
+---
+name: Core
+route: /core
+menu: Modules
+---
+
 # Conduit Core
 This is the core package of Conduit, which contains the server and common functionality
 

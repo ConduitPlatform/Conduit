@@ -1,3 +1,9 @@
+---
+name: Router
+route: /router
+menu: Modules
+---
+
 # Router module
 This module should provide a way to generate routes both for REST and GraphQL APIs,
 along with documentation.

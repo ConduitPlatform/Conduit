@@ -1,3 +1,9 @@
+---
+name: Security
+route: /security
+menu: Modules
+---
+
 # Security Module
 This will be added as a required middleware, configurable on how strict is should be
 

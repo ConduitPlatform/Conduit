@@ -1,3 +1,8 @@
+---
+name: In-memory Store
+route: /in-memory
+menu: Modules
+---
 # In memory storage module
 This module should work with the system's memory, reserving a configurable amount of RAM to use,
 along with an eviction policy. It should also connect to in-memory stores like Redis & Memcache.d

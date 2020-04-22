@@ -5,6 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "docz:dev": "docz dev",
+    "docz:build": "docz build",
+    "docz:serve": "docz build && docz serve",
     "build:bootstrap": "lerna run build",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit .",
     "push:docker": "docker push quintessential.azurecr.io/conduit",
@@ -15,5 +18,10 @@
   "license": "ISC",
   "devDependencies": {
     "lerna": "^3.13.1"
+  },
+  "dependencies": {
+    "docz": "^2.3.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
   }
 }

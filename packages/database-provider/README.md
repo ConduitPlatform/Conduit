@@ -1,3 +1,8 @@
+---
+name: Database
+route: /database
+menu: Modules
+---
 # Database Adapter module
 
 This module should allow for basic functionality on both SQL DBs

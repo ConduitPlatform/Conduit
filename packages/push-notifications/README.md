@@ -1,3 +1,8 @@
+---
+name: Push Notifications
+route: /push
+menu: Modules
+---
 # Push Notifications module
 Handles sending push notifications to users
 

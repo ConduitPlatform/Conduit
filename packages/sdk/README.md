@@ -1,3 +1,9 @@
+---
+name: SDK
+route: /sdk
+menu: Development
+---
+
 # Conduit SDK module
 This module provides a framework to bind all conduit modules in a safe way. 
 It is also used to register and replace modules. In future this can be used
