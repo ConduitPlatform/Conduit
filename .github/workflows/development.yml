@@ -33,6 +33,7 @@ jobs:
             key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
             restore-keys: |
                   ${{ runner.os }}-node-
+        - run: npm ci
         - run: npm run docz:build
         - name: Deploy
           uses: peaceiris/actions-gh-pages@v3
