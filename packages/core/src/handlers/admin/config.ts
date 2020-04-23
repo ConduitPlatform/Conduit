@@ -69,6 +69,11 @@ export class ConfigAdminHandlers {
       case undefined:
         currentConfig = dbConfig;
         break;
+      case 'authentication':
+        currentConfig = dbConfig.authentication;
+        module = this.sdk.getAuthentication();
+        configProperty = 'authentication';
+        break;
       case 'email':
         currentConfig = dbConfig.email;
         module = this.sdk.getEmail();

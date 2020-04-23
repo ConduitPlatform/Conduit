@@ -54,12 +54,7 @@ export class CoreBootstrapper {
 
         app.conduit.registerEmail(new EmailModule(app.conduit));
 
-
-        // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
-        if (appConfig.get('authentication.active')) {
-            const authenticationModule = new AuthenticationModule(app.conduit);
-            app.conduit.registerAuthentication(authenticationModule);
-        }
+        app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
 
         // initialize plugin AFTER the authentication so that we may provide access control to the plugins
         app.conduit.registerCMS(new CMS(app.conduit));
