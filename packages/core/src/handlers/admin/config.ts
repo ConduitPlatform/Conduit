@@ -130,8 +130,12 @@ export class ConfigAdminHandlers {
     appConfig.load(saved);
 
     // Enable module here
-    if (module && ! await module.initModule()) {
-      return res.status(403).json({ error: 'Invalid configuration settings' });
+
+    if (module) {
+      const initiated = await module.initModule();
+      if (!initiated.result) {
+        return res.status(403).json({ message: 'Invalid configuration settings', error: initiated.error.message });
+      }
     }
 
     if (isNil(module)) return res.json(saved);
