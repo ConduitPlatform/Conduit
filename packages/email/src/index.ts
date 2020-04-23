@@ -9,6 +9,7 @@ class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
+  private isRunning: boolean = false;
 
   constructor(
     private readonly sdk: ConduitSDK
@@ -25,6 +26,7 @@ class EmailModule implements IConduitEmail {
   async initModule() {
     try {
       if ((this.sdk as any).config.get('email.active')) {
+        if (this.isRunning) return {result: true};
         await this.enableModule();
         return {result: true};
       }
@@ -43,6 +45,8 @@ class EmailModule implements IConduitEmail {
 
     this.adminHandlers = new AdminHandlers(this.sdk, this.emailService);
     this.initAdminRoutes();
+
+    this.isRunning = true;
 
   }
 

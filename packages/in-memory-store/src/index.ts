@@ -13,6 +13,7 @@ import InMemoryStoreConfigSchema from './config/in-memory-store';
 class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
     private _provider: StorageProvider | null = null;
+    private isRunning: boolean = false;
 
     constructor(private readonly conduit: ConduitSDK) {
         super(conduit);
@@ -24,6 +25,7 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
     async initModule() {
         try {
             if ((this.conduit as any).config.get('inMemoryStore.active')) {
+                if (this.isRunning) return {result: true};
                 await this.enableModule();
                 return {result: true};
             }
@@ -55,6 +57,8 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
         admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
+
+        this.isRunning = true;
     }
 
     static get config() {

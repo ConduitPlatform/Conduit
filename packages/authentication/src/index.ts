@@ -23,6 +23,7 @@ class AuthenticationModule {
     private localHandlers: LocalHandlers;
     private facebookHandlers: FacebookHandlers;
     private googleHandlers: GoogleHandlers;
+    private isRunning: boolean = false;
 
     constructor(private readonly sdk: ConduitSDK) {
        if ((sdk as any).config.get('authentication.active')) {
@@ -33,6 +34,7 @@ class AuthenticationModule {
     async initModule() {
         try {
             if ((this.sdk as any).config.get('authentication.active')) {
+                if (this.isRunning) return {result: true};
                 await this.enableModule();
                 return {result: true};
             }
@@ -55,6 +57,9 @@ class AuthenticationModule {
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
         this.registerAuthRoutes(config);
+
+        this.isRunning = true;
+
     }
 
     get middleware() {

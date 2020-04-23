@@ -22,6 +22,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
     private _provider: IPushNotificationsProvider | undefined;
     private readonly sdk: ConduitSDK;
+    private isRunning: boolean = false;
 
     constructor(conduit: ConduitSDK) {
         super(conduit);
@@ -39,6 +40,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
     async initModule() {
         try {
             if ((this.sdk as any).config.get('pushNotifications.active')) {
+                if (this.isRunning) return {result: true};
                 await this.enableModule();
                 return {result: true};
             }
@@ -64,6 +66,9 @@ class PushNotificationsModule extends IConduitPushNotifications {
           .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
         this.registerConsumerRoutes();
         this.registerAdminRoutes();
+
+        this.isRunning = true;
+
     }
 
     registerConsumerRoutes() {

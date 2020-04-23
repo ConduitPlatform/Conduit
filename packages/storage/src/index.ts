@@ -6,6 +6,7 @@ import StorageConfigSchema from './config/storage';
 
 class StorageModule extends IConduitStorage {
   private storageProvider: IStorageProvider;
+  private isRunning: boolean = false;
 
   constructor(
     private readonly conduit: ConduitSDK
@@ -23,7 +24,8 @@ class StorageModule extends IConduitStorage {
   async initModule() {
     try {
       if ((this.conduit as any).config.get('storage.active')) {
-        await this.enableModule(); // TODO in which case does this throw?
+        if (this.isRunning) return {result: true};
+        await this.enableModule();
         return {result: true};
       }
       throw new Error('Module is not active');
@@ -43,6 +45,9 @@ class StorageModule extends IConduitStorage {
 
     this.registerModels();
     this.registerRoutes();
+
+    this.isRunning = true;
+
   }
 
   private registerModels() {
