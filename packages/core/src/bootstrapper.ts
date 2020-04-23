@@ -54,9 +54,9 @@ export class CoreBootstrapper {
             app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
         }
 
-        if (appConfig.get('email.active')) {
-            app.conduit.registerEmail(new EmailModule(app.conduit));
-        }
+
+        app.conduit.registerEmail(new EmailModule(app.conduit));
+
 
         // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
         if (appConfig.get('authentication.active')) {

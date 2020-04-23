@@ -69,6 +69,11 @@ export class ConfigAdminHandlers {
       case undefined:
         currentConfig = dbConfig;
         break;
+      case 'email':
+        currentConfig = dbConfig.email;
+        module = this.sdk.getEmail();
+        configProperty = 'email';
+        break;
       case 'in-memory-store':
         currentConfig = dbConfig.inMemoryStore;
         module = this.sdk.getInMemoryStore();
@@ -78,14 +83,14 @@ export class ConfigAdminHandlers {
         currentConfig = dbConfig.storage;
         module = this.sdk.getStorage();
         configProperty = 'storage';
-        break;
+        break;``
       default:
         return res.status(403).json({ error: 'Invalid module name' });
     }
 
     // Validate here
     if (!isNil(module) && !module.validateConfig(newConfig)) { // General config doesn't get validated
-      return res.status(403).json({ error: 'Invalid configuration structure' });
+      return res.status(403).json({ error: 'Invalid configuration values' });
     }
 
     if (isNil(currentConfig)) currentConfig = {};
@@ -105,7 +110,7 @@ export class ConfigAdminHandlers {
 
     // Enable module here
     if (module && ! await module.initModule()) {
-      return res.status(403).json({ error: 'Invalid configuration values' });
+      return res.status(403).json({ error: 'Invalid configuration settings' });
     }
 
     if (isNil(module)) return res.json(saved);

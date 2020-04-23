@@ -4,27 +4,65 @@ import { EmailProvider } from '@conduit/email-provider';
 import { EmailService } from './services/email.service';
 import { AdminHandlers } from './handlers/AdminHandlers';
 import EmailConfigSchema from './config/email';
+import { isNil, isPlainObject } from 'lodash';
 
 class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
-  private readonly emailService: EmailService;
-  private readonly adminHandlers: AdminHandlers;
+  private emailService: EmailService;
+  private adminHandlers: AdminHandlers;
 
   constructor(
     private readonly sdk: ConduitSDK
   ) {
-    this.registerModels();
-    this.initEmailProvider();
-    this.emailService = new EmailService(this.emailProvider, sdk);
-
-
-    this.adminHandlers = new AdminHandlers(sdk, this.emailService);
-    this.initAdminRoutes();
-
+    if ((this.sdk as any).config.get('email.active')) {
+      this.enableModule();
+    }
   }
 
   static get config() {
     return EmailConfigSchema;
+  }
+
+  validateConfig(configInput: any, configSchema: any = EmailConfigSchema.email): boolean {
+    if (isNil(configInput)) return false;
+
+    return Object.keys(configInput).every(key => {
+      if (configSchema.hasOwnProperty(key)) {
+        if (isPlainObject(configInput[key])) {
+          return this.validateConfig(configInput[key], configSchema[key])
+        } else if (configSchema[key].hasOwnProperty('format')) {
+          const format = configSchema[key].format.toLowerCase();
+          if (typeof configInput[key] === format) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+  }
+
+  async initModule() {
+    try {
+      if ((this.sdk as any).config.get('email.active')) {
+        await this.enableModule();
+        return true;
+      }
+      throw new Error('Module is not active');
+    } catch (e) {
+      console.log(e);
+      return false;
+    }
+  }
+
+  private enableModule() {
+    this.registerModels();
+    this.initEmailProvider();
+    this.emailService = new EmailService(this.emailProvider, this.sdk);
+
+
+    this.adminHandlers = new AdminHandlers(this.sdk, this.emailService);
+    this.initAdminRoutes();
+
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
@@ -64,11 +102,6 @@ class EmailModule implements IConduitEmail {
     admin.registerRoute('POST', '/email/send',
       (req, res, next) => this.adminHandlers.sendEmail(req, res).catch(next));
 
-    admin.registerRoute('GET', '/email/config',
-      (req, res, next) => this.adminHandlers.getEmailConfig(req, res).catch(next));
-
-    admin.registerRoute('PUT', '/email/config',
-      (req, res, next) => this.adminHandlers.editEmailConfig(req, res).catch(next));
   }
 }
 
