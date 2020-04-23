@@ -40,12 +40,12 @@ class PushNotificationsModule extends IConduitPushNotifications {
         try {
             if ((this.sdk as any).config.get('pushNotifications.active')) {
                 await this.enableModule();
-                return true;
+                return {result: true};
             }
             throw new Error('Module is not active');
         } catch (e) {
             console.log(e);
-            return false;
+            return {result: false, error: e};
         }
     }
 
