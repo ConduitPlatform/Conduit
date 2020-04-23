@@ -33,7 +33,7 @@ class AuthenticationModule {
 
     constructor(private readonly sdk: ConduitSDK) {
        if ((sdk as any).config.get('authentication.active')) {
-           this.enableModule();
+           this.enableModule().catch(console.log);
        }
     }
 
@@ -68,7 +68,7 @@ class AuthenticationModule {
         }
     }
 
-    private enableModule() {
+    private async enableModule() {
         this.database = this.sdk.getDatabase();
         this.emailModule = this.sdk.getEmail();
         this.conduitRouter = this.sdk.getRouter();

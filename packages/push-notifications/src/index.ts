@@ -27,7 +27,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
         this.sdk = conduit;
 
         if ((conduit as any).config.get('pushNotifications.active')) {
-            this.enableModule();
+            this.enableModule().catch(console.log);
         }
     }
 

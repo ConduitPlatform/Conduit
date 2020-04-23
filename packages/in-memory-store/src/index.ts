@@ -17,7 +17,11 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
     constructor(private readonly conduit: ConduitSDK) {
         super(conduit);
+        if ((this.conduit as any).config.get('inMemoryStore.active')) {
+            this.enableModule().catch(console.log);
+        }
     }
+
 
     validateConfig(configInput: any, configSchema: any = inMemoryStoreConfigSchema.inMemoryStore): boolean {
         if (isNil(configInput)) return false;

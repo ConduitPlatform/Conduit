@@ -15,7 +15,7 @@ class EmailModule implements IConduitEmail {
     private readonly sdk: ConduitSDK
   ) {
     if ((this.sdk as any).config.get('email.active')) {
-      this.enableModule();
+      this.enableModule().catch(console.log);
     }
   }
 
@@ -54,7 +54,7 @@ class EmailModule implements IConduitEmail {
     }
   }
 
-  private enableModule() {
+  private async enableModule() {
     this.registerModels();
     this.initEmailProvider();
     this.emailService = new EmailService(this.emailProvider, this.sdk);

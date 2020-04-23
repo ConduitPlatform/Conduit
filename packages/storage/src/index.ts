@@ -12,7 +12,9 @@ class StorageModule extends IConduitStorage {
     private readonly conduit: ConduitSDK
 ) {
     super(conduit);
-
+    if ((this.conduit as any).config.get('storage.active')) {
+      this.enableModule().catch(console.log);
+    }
   }
 
   static get config() {
