@@ -39,8 +39,11 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
     async initModule() {
         try {
-            await this.enableModule();
-            return true;
+            if ((this.conduit as any).config.get('inMemoryStore.active')) {
+                await this.enableModule();
+                return true;
+            }
+            throw new Error('Module is not active');
         } catch (e){
             console.log(e);
             return false;
