@@ -3,7 +3,6 @@ import { ConduitSDK, IConduitStorage } from '@conduit/sdk';
 import { FileRoutes } from './routes/file';
 import File from './models/File';
 import StorageConfigSchema from './config/storage';
-import { isNil, isPlainObject } from 'lodash';
 
 class StorageModule extends IConduitStorage {
   private storageProvider: IStorageProvider;
@@ -19,24 +18,6 @@ class StorageModule extends IConduitStorage {
 
   static get config() {
     return StorageConfigSchema;
-  }
-
-  validateConfig(configInput: any, configSchema: any = StorageConfigSchema.storage): boolean {
-    if (isNil(configInput)) return false;
-
-    return Object.keys(configInput).every(key => {
-      if (configSchema.hasOwnProperty(key)) {
-        if (isPlainObject(configInput[key])) {
-          return this.validateConfig(configInput[key], configSchema[key])
-        } else if (configSchema[key].hasOwnProperty('format')) {
-          const format = configSchema[key].format.toLowerCase();
-          if (typeof configInput[key] === format) {
-            return true;
-          }
-        }
-      }
-      return false;
-    });
   }
 
   async initModule() {

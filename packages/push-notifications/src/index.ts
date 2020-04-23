@@ -1,21 +1,22 @@
-import {IPushNotificationsProvider} from './interfaces/IPushNotificationsProvider';
-import {IFirebaseSettings} from './interfaces/IFirebaseSettings';
-import {FirebaseProvider} from './providers/firebase';
-import {NextFunction, Request, Response} from 'express';
-import {NotificationTokensHandler} from './handlers/notification-tokens/notification-tokens';
-import {AdminHandler} from './handlers/admin/admin';
+import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
+import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
+import { FirebaseProvider } from './providers/firebase';
+import { NextFunction, Request, Response } from 'express';
+import { NotificationTokensHandler } from './handlers/notification-tokens/notification-tokens';
+import { AdminHandler } from './handlers/admin/admin';
 import PushNotificationsConfigSchema from './config/push-notifications';
 import {
     ConduitDate,
     ConduitObjectId,
     ConduitRoute,
-    ConduitRouteActions, ConduitRouteParameters,
+    ConduitRouteActions,
+    ConduitRouteParameters,
     ConduitRouteReturnDefinition,
-    ConduitSDK, ConduitString,
+    ConduitSDK,
+    ConduitString,
     IConduitPushNotifications,
     TYPE
 } from '@conduit/sdk';
-import { isNil, isPlainObject } from 'lodash';
 
 class PushNotificationsModule extends IConduitPushNotifications {
 
@@ -33,24 +34,6 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
     static get config() {
         return PushNotificationsConfigSchema;
-    }
-
-    validateConfig(configInput: any, configSchema: any = PushNotificationsConfigSchema.pushNotifications): boolean {
-        if (isNil(configInput)) return false;
-
-        return Object.keys(configInput).every(key => {
-            if (configSchema.hasOwnProperty(key)) {
-                if (isPlainObject(configInput[key])) {
-                    return this.validateConfig(configInput[key], configSchema[key])
-                } else if (configSchema[key].hasOwnProperty('format')) {
-                    const format = configSchema[key].format.toLowerCase();
-                    if (typeof configInput[key] === format) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        });
     }
 
     async initModule() {

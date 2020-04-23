@@ -1,22 +1,15 @@
-import {
-    ConduitSDK,
-    IConduitDatabase,
-    IConduitEmail,
-    IConduitRouter,
-    ConduitError
-} from '@conduit/sdk';
+import { ConduitError, ConduitSDK, IConduitDatabase, IConduitEmail, IConduitRouter } from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
-import {Router} from 'express';
-import {LocalHandlers} from './handlers/auth/local';
-import {AuthService} from './services/auth';
-import {FacebookHandlers} from './handlers/auth/facebook';
-import {GoogleHandlers} from './handlers/auth/google';
-import {AuthMiddleware} from './middleware/auth';
-import {AdminHandlers} from './handlers/admin';
-import {CommonHandlers} from './handlers/auth/common';
+import { Router } from 'express';
+import { LocalHandlers } from './handlers/auth/local';
+import { AuthService } from './services/auth';
+import { FacebookHandlers } from './handlers/auth/facebook';
+import { GoogleHandlers } from './handlers/auth/google';
+import { AuthMiddleware } from './middleware/auth';
+import { AdminHandlers } from './handlers/admin';
+import { CommonHandlers } from './handlers/auth/common';
 import AuthenticationConfigSchema from './config/authentication';
-import { isNil, isPlainObject } from 'lodash';
 
 class AuthenticationModule {
     private database: IConduitDatabase;
@@ -35,24 +28,6 @@ class AuthenticationModule {
        if ((sdk as any).config.get('authentication.active')) {
            this.enableModule().catch(console.log);
        }
-    }
-
-    validateConfig(configInput: any, configSchema: any = AuthenticationConfigSchema.authentication): boolean {
-        if (isNil(configInput)) return false;
-
-        return Object.keys(configInput).every(key => {
-            if (configSchema.hasOwnProperty(key)) {
-                if (isPlainObject(configInput[key])) {
-                    return this.validateConfig(configInput[key], configSchema[key])
-                } else if (configSchema[key].hasOwnProperty('format')) {
-                    const format = configSchema[key].format.toLowerCase();
-                    if (typeof configInput[key] === format) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        });
     }
 
     async initModule() {
@@ -77,7 +52,6 @@ class AuthenticationModule {
         this.authMiddleware = new AuthMiddleware(this.sdk, this.authService);
         this.hookRouter = Router();
         this.registerSchemas();
-        this.registerTemplates();
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
         this.registerAuthRoutes(config);
@@ -115,6 +89,7 @@ class AuthenticationModule {
             if (!appConfig.get('email.active')) {
                 throw ConduitError.forbidden('Cannot use local authentication without email module being enabled');
             }
+            this.registerTemplates();
             this.localHandlers = new LocalHandlers(this.sdk, this.authService);
             enabled = true;
         }

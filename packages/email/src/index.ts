@@ -4,7 +4,6 @@ import { EmailProvider } from '@conduit/email-provider';
 import { EmailService } from './services/email.service';
 import { AdminHandlers } from './handlers/AdminHandlers';
 import EmailConfigSchema from './config/email';
-import { isNil, isPlainObject } from 'lodash';
 
 class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
@@ -21,24 +20,6 @@ class EmailModule implements IConduitEmail {
 
   static get config() {
     return EmailConfigSchema;
-  }
-
-  validateConfig(configInput: any, configSchema: any = EmailConfigSchema.email): boolean {
-    if (isNil(configInput)) return false;
-
-    return Object.keys(configInput).every(key => {
-      if (configSchema.hasOwnProperty(key)) {
-        if (isPlainObject(configInput[key])) {
-          return this.validateConfig(configInput[key], configSchema[key])
-        } else if (configSchema[key].hasOwnProperty('format')) {
-          const format = configSchema[key].format.toLowerCase();
-          if (typeof configInput[key] === format) {
-            return true;
-          }
-        }
-      }
-      return false;
-    });
   }
 
   async initModule() {
