@@ -6,40 +6,68 @@ import {Localprovider} from "./providers/local";
 import {MemcachedProvider} from "./providers/memcached";
 import {StorageProvider} from "./interaces/StorageProvider";
 import { Request, Response, NextFunction } from 'express';
-import {isNil} from 'lodash';
+import {isNil, isPlainObject } from 'lodash';
 import { ConduitSDK, IConduitInMemoryStore } from '@conduit/sdk';
 import InMemoryStoreConfigSchema from './config/in-memory-store';
+import inMemoryStoreConfigSchema from './config/in-memory-store';
 
 class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
-    private readonly _provider: StorageProvider;
+    private _provider: StorageProvider | null = null;
 
-    constructor(conduit: ConduitSDK) {
+    constructor(private readonly conduit: ConduitSDK) {
         super(conduit);
+    }
 
-        if (isNil(conduit)) {
-            throw new Error('Conduit not initialized');
+    validateConfig(configInput: any, configSchema: any = inMemoryStoreConfigSchema.inMemoryStore): boolean {
+        if (isNil(configInput)) return false;
+
+        return Object.keys(configInput).every(key => {
+            if (configSchema.hasOwnProperty(key)) {
+                if (isPlainObject(configInput[key])) {
+                    return this.validateConfig(configInput[key], configSchema[key])
+                } else if (configSchema[key].hasOwnProperty('format')) {
+                    const format = configSchema[key].format.toLowerCase();
+                    if (typeof configInput[key] === format) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+    }
+
+    async initModule() {
+        try {
+            await this.enableModule();
+            return true;
+        } catch (e){
+            console.log(e);
+            return false;
         }
+    }
 
-        const name = (conduit as any).config.get('inMemoryStore.providerName');
-        const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = (conduit as any).config.get(`inMemoryStore.settings.${name}`);
+    private async enableModule() {
+        const name = (this.conduit as any).config.get('inMemoryStore.providerName');
+        const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = (this.conduit as any).config.get(`inMemoryStore.settings.${name}`);
 
         if (name === 'redis') {
             this._provider = new RedisProvider(storageSettings as RedisSettings);
+            const isReady = await (this._provider as RedisProvider).isReady();
+            if (!isReady) throw new Error('Redis failed to connect');
         } else if (name === 'memcache') {
             this._provider = new MemcachedProvider(storageSettings as MemcachedSettings);
         } else {
             this._provider = new Localprovider(storageSettings as LocalSettings);
         }
 
-        const admin = conduit.getAdmin();
+        const admin = this.conduit.getAdmin();
 
         admin.registerRoute('POST', '/in-memory-store',
           (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
 
         admin.registerRoute('GET', '/in-memory-store/:key',
           (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
-
     }
 
     static get config() {
@@ -47,11 +75,11 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
     }
 
     get(key: string): Promise<any> {
-        return this._provider.get(key);
+        return this._provider!.get(key);
     }
 
     store(key: string, value: any): Promise<any> {
-        return this._provider.store(key, value);
+        return this._provider!.store(key, value);
     }
 
     private async adminStore(req: Request, res: Response, next: NextFunction) {

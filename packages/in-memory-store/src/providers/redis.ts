@@ -26,6 +26,24 @@ export class RedisProvider implements StorageProvider {
         });
     }
 
+    isReady() {
+        const promiseWithTimeout = (timeoutMs: number, promise: () => Promise<any>) => {
+            return Promise.race([
+                promise(),
+                new Promise((resolve) => setTimeout(() => {
+                    this._client.end(true);
+                    resolve(false)
+                }, timeoutMs)),
+            ]);
+        };
+        return promiseWithTimeout(5000, () => {
+            return new Promise(resolve => {
+                this._client.once('ready', () => resolve(true));
+            });
+        });
+    }
+
+
     get(key: string): Promise<any> {
         return promisify(this._client.get(key)).bind(this._client);
     }

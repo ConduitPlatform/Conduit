@@ -7,7 +7,7 @@ export abstract class IConduitInMemoryStore {
 
   abstract validateConfig(config: any): boolean;
 
-  abstract initModule(): boolean;
+  abstract initModule(): Promise<boolean>;
 
   abstract get(key: string): Promise<any>;
 
