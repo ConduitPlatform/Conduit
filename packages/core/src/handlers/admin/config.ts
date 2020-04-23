@@ -74,6 +74,11 @@ export class ConfigAdminHandlers {
         module = this.sdk.getInMemoryStore();
         configProperty = 'inMemoryStore';
         break;
+      case 'storage':
+        currentConfig = dbConfig.storage;
+        module = this.sdk.getStorage();
+        configProperty = 'storage';
+        break;
       default:
         return res.status(403).json({ error: 'Invalid module name' });
     }

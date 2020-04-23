@@ -67,9 +67,8 @@ export class CoreBootstrapper {
         // initialize plugin AFTER the authentication so that we may provide access control to the plugins
         app.conduit.registerCMS(new CMS(app.conduit));
 
-        if (appConfig.get('storage.active')) {
-            app.conduit.registerStorage(new StorageModule(app.conduit));
-        }
+        app.conduit.registerStorage(new StorageModule(app.conduit));
+
 
 
         app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
