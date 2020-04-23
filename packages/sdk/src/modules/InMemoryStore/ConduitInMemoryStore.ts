@@ -5,6 +5,10 @@ export abstract class IConduitInMemoryStore {
   constructor(conduit: ConduitSDK) {
   }
 
+  abstract validateConfig(config: any): boolean;
+
+  abstract initModule(): boolean;
+
   abstract get(key: string): Promise<any>;
 
   abstract store(key: string, value: any): Promise<any>;
