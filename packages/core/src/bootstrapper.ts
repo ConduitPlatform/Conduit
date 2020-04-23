@@ -32,7 +32,7 @@ export class CoreBootstrapper {
         const adminModule = sdk.getAdmin();
 
         adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
-        // adminModule.registerRoute('PUT', '/config/:module', configHandlers.setConfig.bind(configHandlers));
+        adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
     }
 
     private static async bootstrapSdkComponents(app: ConduitApp) {
