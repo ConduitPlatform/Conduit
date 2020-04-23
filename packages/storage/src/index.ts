@@ -24,12 +24,12 @@ class StorageModule extends IConduitStorage {
     try {
       if ((this.conduit as any).config.get('storage.active')) {
         await this.enableModule(); // TODO in which case does this throw?
-        return true;
+        return {result: true};
       }
       throw new Error('Module is not active');
     } catch (e) {
       console.log(e);
-      return false;
+      return {result: false, error: e};
     }
   }
 
