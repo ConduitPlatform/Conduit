@@ -5,6 +5,6 @@ export abstract class IConduitStorage {
   constructor(conduit: ConduitSDK) {
   }
 
-  abstract initModule(): Promise<boolean>;
+  abstract initModule(): Promise<{result: boolean, error?: any}>;
 
 }
