@@ -7,6 +7,8 @@ import EmailModule from '@conduit/email';
 import InMemoryStore from '@conduit/in-memory-store';
 import PushNotificationsModule from '@conduit/push-notifications';
 import StorageModule from '@conduit/storage';
+import validator from 'validator';
+import isNaturalNumber from 'is-natural-number';
 
 export class ConfigAdminHandlers {
   private readonly database: IConduitDatabase;
@@ -143,6 +145,7 @@ export class ConfigAdminHandlers {
     return res.json(saved[configProperty!]);
   }
 
+  // this validator doesn't support custom convict types
   private validateConfig(configInput: any, configSchema: any): Boolean {
     if (isNil(configInput)) return false;
 
@@ -151,10 +154,17 @@ export class ConfigAdminHandlers {
         if (isPlainObject(configInput[key])) {
           return this.validateConfig(configInput[key], configSchema[key])
         } else if (configSchema[key].hasOwnProperty('format')) {
+
           const format = configSchema[key].format.toLowerCase();
-          if (typeof configInput[key] === format) {
-            return true;
-          }
+          if (typeof configInput[key] === format || format === '*') return true;
+          if (format === 'int' && validator.isInt(configInput[key])) return true;
+          if (format === 'port' && validator.isPort(configInput[key])) return true;
+          if (format === 'url' && validator.isURL(configInput[key])) return true;
+          if (format === 'email' && validator.isEmail(configInput[key])) return true;
+          if (format === 'ipaddress' && validator.isIP(configInput[key])) return true;
+          if (format === 'timestamp' && ((new Date(configInput[key])).getTime() > 0)) return true;
+          if (format === 'nat' && isNaturalNumber(configInput[key])) return true;
+          if (format === 'duration' && isNaturalNumber(configInput[key])) return true;
         }
       }
       return false;
