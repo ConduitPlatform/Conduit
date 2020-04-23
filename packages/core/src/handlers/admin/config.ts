@@ -110,6 +110,7 @@ export class ConfigAdminHandlers {
     }
 
     // Validate here
+    if (newConfig.active === false) return res.status(403).json({error: 'Modules cannot be deactivated'});
     if (!isNil(module) && !this.validateConfig(newConfig, configSchema)) { // General config doesn't get validated
       return res.status(403).json({ error: 'Invalid configuration values' });
     }
