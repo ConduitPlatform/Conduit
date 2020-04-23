@@ -50,10 +50,7 @@ export class CoreBootstrapper {
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
 
-        if (appConfig.get('pushNotifications.active')) {
-            app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-        }
-
+        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
 
         app.conduit.registerEmail(new EmailModule(app.conduit));
 

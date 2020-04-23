@@ -59,43 +59,6 @@ export class AdminHandler {
     return res.json('ok');
   }
 
-  async getNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-
-    const Config = this.databaseAdapter.getSchema('Config');
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      return res.status(404).json({ error: 'Config not set' });
-    }
-    return res.json(dbConfig.pushNotifications);
-  }
-
-  async editNotificationsConfig(req: Request, res: Response, next: NextFunction) {
-    const { config: appConfig } = this.conduit as any;
-
-    const Config = this.databaseAdapter.getSchema('Config');
-
-    const newNotificationsConfig = req.body;
-
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      return res.status(404).json({ error: 'Config not set' });
-    }
-
-    const currentNotificationsConfig = dbConfig.pushNotifications;
-    const final = merge(currentNotificationsConfig, newNotificationsConfig);
-
-    dbConfig.pushNotifications = final;
-    const saved = await Config.findByIdAndUpdate(dbConfig);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
-
-    await appConfig.load(saved);
-
-    return res.json(saved.pushNotifications);
-  }
-
   async getNotificationToken(req: Request, res: Response, next: NextFunction) {
     const userId = req.params.userId;
     if (isNil(userId)) {

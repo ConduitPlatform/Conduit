@@ -1,6 +1,5 @@
 import {IPushNotificationsProvider} from './interfaces/IPushNotificationsProvider';
 import {IFirebaseSettings} from './interfaces/IFirebaseSettings';
-import {NotificationTokenModel} from './models/NotificationToken';
 import {FirebaseProvider} from './providers/firebase';
 import {NextFunction, Request, Response} from 'express';
 import {NotificationTokensHandler} from './handlers/notification-tokens/notification-tokens';
@@ -16,22 +15,60 @@ import {
     IConduitPushNotifications,
     TYPE
 } from '@conduit/sdk';
+import { isNil, isPlainObject } from 'lodash';
 
 class PushNotificationsModule extends IConduitPushNotifications {
 
-    private readonly _provider: IPushNotificationsProvider;
-    private readonly sdk: ConduitSDK
-    pushNotificationModel: any;
+    private _provider: IPushNotificationsProvider | undefined;
+    private readonly sdk: ConduitSDK;
 
     constructor(conduit: ConduitSDK) {
         super(conduit);
         this.sdk = conduit;
 
-        const databaseAdapter = conduit.getDatabase();
-        databaseAdapter.createSchemaFromAdapter(NotificationTokenModel);
+        if ((conduit as any).config.get('pushNotifications.active')) {
+            this.enableModule();
+        }
+    }
 
-        const name = (conduit as any).config.get('pushNotifications.providerName');
-        const settings = (conduit as any).config.get(`pushNotifications.${name}`);
+    static get config() {
+        return PushNotificationsConfigSchema;
+    }
+
+    validateConfig(configInput: any, configSchema: any = PushNotificationsConfigSchema.pushNotifications): boolean {
+        if (isNil(configInput)) return false;
+
+        return Object.keys(configInput).every(key => {
+            if (configSchema.hasOwnProperty(key)) {
+                if (isPlainObject(configInput[key])) {
+                    return this.validateConfig(configInput[key], configSchema[key])
+                } else if (configSchema[key].hasOwnProperty('format')) {
+                    const format = configSchema[key].format.toLowerCase();
+                    if (typeof configInput[key] === format) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+    }
+
+    async initModule() {
+        try {
+            if ((this.sdk as any).config.get('pushNotifications.active')) {
+                await this.enableModule();
+                return true;
+            }
+            throw new Error('Module is not active');
+        } catch (e) {
+            console.log(e);
+            return false;
+        }
+    }
+
+    private async enableModule() {
+        const name = (this.sdk as any).config.get('pushNotifications.providerName');
+        const settings = (this.sdk as any).config.get(`pushNotifications.${name}`);
 
         if (name === 'firebase') {
             this._provider = new FirebaseProvider(settings as IFirebaseSettings);
@@ -40,14 +77,10 @@ class PushNotificationsModule extends IConduitPushNotifications {
             this._provider = new FirebaseProvider(settings as IFirebaseSettings);
         }
 
-        conduit.getRouter()
-            .registerRouteMiddleware('/notification-token', conduit.getAuthentication().middleware);
+        this.sdk.getRouter()
+          .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
         this.registerConsumerRoutes();
         this.registerAdminRoutes();
-    }
-
-    static get config() {
-        return PushNotificationsConfigSchema;
     }
 
     registerConsumerRoutes() {
@@ -76,7 +109,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
 
     registerAdminRoutes() {
-        const adminHandler = new AdminHandler(this.sdk, this._provider);
+        const adminHandler = new AdminHandler(this.sdk, this._provider!);
         this.sdk.getAdmin().registerRoute('GET', '/notification-token/:userId',
             (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationToken(req, res, next).catch(next));
 
@@ -89,11 +122,6 @@ class PushNotificationsModule extends IConduitPushNotifications {
         this.sdk.getAdmin().registerRoute('POST', '/notifications/send-to-many-devices',
             (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
 
-        this.sdk.getAdmin().registerRoute('GET', '/notifications/config',
-            (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationsConfig(req, res, next).catch(next));
-
-        this.sdk.getAdmin().registerRoute('PUT', '/notifications/config',
-            (req: Request, res: Response, next: NextFunction) => adminHandler.editNotificationsConfig(req, res, next).catch(next));
     }
 }
 
