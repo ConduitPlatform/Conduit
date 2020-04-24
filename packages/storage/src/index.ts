@@ -1,10 +1,11 @@
 import { createStorageProvider, IStorageProvider } from '@conduit/storage-provider';
-import { ConduitSDK, IConduitStorage } from '@conduit/sdk';
+import { ConduitSDK, IConduitModule, IConduitStorage } from '@conduit/sdk';
 import { FileRoutes } from './routes/file';
 import File from './models/File';
 import StorageConfigSchema from './config/storage';
+import { isNil } from 'lodash';
 
-class StorageModule extends IConduitStorage {
+class StorageModule extends IConduitStorage implements IConduitModule{
   private storageProvider: IStorageProvider;
   private isRunning: boolean = false;
 
@@ -21,33 +22,43 @@ class StorageModule extends IConduitStorage {
     return StorageConfigSchema;
   }
 
-  async initModule() {
-    try {
-      if ((this.conduit as any).config.get('storage.active')) {
-        if (this.isRunning) return {result: true};
-        await this.enableModule();
-        return {result: true};
-      }
-      throw new Error('Module is not active');
-    } catch (e) {
-      console.log(e);
-      return {result: false, error: e};
+  async setConfig(newConfig: any) {
+    if (!ConduitSDK.validateConfig(newConfig, StorageConfigSchema.storage)) {
+      throw new Error('Invalid configuration values');
     }
+
+    let errorMessage: string | null = null;
+    const updateResult = await this.conduit.updateConfig(newConfig, 'storage').catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    if ((this.conduit as any).config.get('storage.active')) {
+      await this.enableModule().catch((e: Error) => errorMessage = e.message);
+    } else {
+      throw new Error('Module is not active');
+    }
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    return updateResult;
   }
 
   private async enableModule() {
     const config = (this.conduit as any).config;
-    const storageConfig = config.get('storage');
-
-    const { provider, storagePath, google } = storageConfig;
-
-    this.storageProvider = createStorageProvider(provider, { storagePath, google });
-
-    this.registerModels();
-    this.registerRoutes();
-
-    this.isRunning = true;
-
+    if (!this.isRunning) {
+      const storageConfig = config.get('storage');
+      const { provider, storagePath, google } = storageConfig;
+      this.storageProvider = createStorageProvider(provider, { storagePath, google });
+      this.registerModels();
+      this.registerRoutes();
+      this.isRunning = true;
+    } else {
+      const storageConfig = config.get('storage');
+      const { provider, storagePath, google } = storageConfig;
+      this.storageProvider = createStorageProvider(provider, { storagePath, google });
+    }
   }
 
   private registerModels() {
