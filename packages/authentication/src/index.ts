@@ -1,4 +1,11 @@
-import { ConduitError, ConduitSDK, IConduitDatabase, IConduitEmail, IConduitRouter } from '@conduit/sdk';
+import {
+    ConduitError,
+    ConduitSDK,
+    IConduitAuthentication,
+    IConduitDatabase,
+    IConduitEmail,
+    IConduitRouter
+} from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
 import { Router } from 'express';
@@ -10,8 +17,9 @@ import { AuthMiddleware } from './middleware/auth';
 import { AdminHandlers } from './handlers/admin';
 import { CommonHandlers } from './handlers/auth/common';
 import AuthenticationConfigSchema from './config/authentication';
+import { isNil } from 'lodash';
 
-class AuthenticationModule {
+class AuthenticationModule implements IConduitAuthentication {
     private database: IConduitDatabase;
     private emailModule: IConduitEmail;
     private conduitRouter: IConduitRouter;
@@ -31,35 +39,46 @@ class AuthenticationModule {
        }
     }
 
-    async initModule() {
-        try {
-            if ((this.sdk as any).config.get('authentication.active')) {
-                if (this.isRunning) return {result: true};
-                await this.enableModule();
-                return {result: true};
-            }
-            throw new Error('Module is not active');
-        } catch (e) {
-            console.log(e);
-            return {result: false, error: e};
+    async setConfig(newConfig: any) {
+        if (!ConduitSDK.validateConfig(newConfig, AuthenticationConfigSchema.authentication)) {
+            throw new Error('Invalid configuration values');
         }
+
+        let errorMessage: string | null = null;
+        const updateResult = await this.sdk.updateConfig(newConfig, 'authentication').catch((e: Error) => errorMessage = e.message);
+        if (!isNil(errorMessage)) {
+            throw new Error(errorMessage);
+        }
+
+        if ((this.sdk as any).config.get('authentication.active')) {
+            await this.enableModule().catch((e: Error) => errorMessage = e.message);
+        } else {
+            throw new Error('Module is not active');
+        }
+        if (!isNil(errorMessage)) {
+            throw new Error(errorMessage);
+        }
+
+        return updateResult;
     }
 
     private async enableModule() {
-        this.database = this.sdk.getDatabase();
-        this.emailModule = this.sdk.getEmail();
-        this.conduitRouter = this.sdk.getRouter();
-        this.authService = new AuthService();
-        this.adminHandlers = new AdminHandlers(this.sdk);
-        this.authMiddleware = new AuthMiddleware(this.sdk, this.authService);
-        this.hookRouter = Router();
-        this.registerSchemas();
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
-        this.registerAuthRoutes(config);
-
-        this.isRunning = true;
-
+        if (!this.isRunning) {
+            this.database = this.sdk.getDatabase();
+            this.emailModule = this.sdk.getEmail();
+            this.conduitRouter = this.sdk.getRouter();
+            this.authService = new AuthService();
+            this.adminHandlers = new AdminHandlers(this.sdk);
+            this.authMiddleware = new AuthMiddleware(this.sdk, this.authService);
+            this.hookRouter = Router();
+            this.registerSchemas();
+            const {config: appConfig} = this.sdk as any;
+            const config = appConfig.get('authentication');
+            this.registerAuthRoutes(config);
+            this.isRunning = true;
+        } else {
+            // TODO For now an update on the config will not influence the routes(providers) that should influence
+        }
     }
 
     get middleware() {
