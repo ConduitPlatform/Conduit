@@ -7,7 +7,7 @@ import EmailModule from '@conduit/email';
 import InMemoryStore from '@conduit/in-memory-store';
 import PushNotificationsModule from '@conduit/push-notifications';
 import StorageModule from '@conduit/storage';
-import validator from 'validator';
+import validator, { isEmpty } from 'validator';
 import isNaturalNumber from 'is-natural-number';
 
 export class ConfigAdminHandlers {
@@ -55,6 +55,7 @@ export class ConfigAdminHandlers {
         return res.status(403).json({ error: 'Invalid module name' });
     }
 
+    if (isEmpty(finalConfig)) return res.json({active: false});
     return res.json(finalConfig);
   }
 
