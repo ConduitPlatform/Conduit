@@ -1,12 +1,7 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import { isNil, merge, isEmpty } from 'lodash';
-import { Config as ConvictConfig } from 'convict';
-import AuthenticationModule from '@conduit/authentication';
-import EmailModule from '@conduit/email';
-import InMemoryStore from '@conduit/in-memory-store';
-import PushNotificationsModule from '@conduit/push-notifications';
-import StorageModule from '@conduit/storage';
+import { isNil, isEmpty } from 'lodash';
+import { AppConfig } from '../../utils/config';
 
 export class ConfigAdminHandlers {
   private readonly database: IConduitDatabase;
@@ -63,86 +58,45 @@ export class ConfigAdminHandlers {
     if (isNil(dbConfig)) {
       return res.status(404).json({ error: 'Config not set' });
     }
-    const appConfig = (this.sdk as any).config as ConvictConfig<any>;
 
     const newConfig = req.body;
     const moduleName = req.params.module;
-    let module: any;
-    let currentConfig: any;
-    let configProperty: string;
-    let configSchema: any;
-
     let errorMessage: string | null = null;
+    let updatedConfig: any;
 
     if (newConfig.active === false) return res.status(403).json({error: 'Modules cannot be deactivated'});
 
     switch (moduleName) {
       case undefined:
-        currentConfig = dbConfig;
+        // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
+        if (!ConduitSDK.validateConfig(newConfig, AppConfig.getInstance().mergeSchemas())) {
+          errorMessage = 'Invalid configuration values';
+          break;
+        }
+        updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'authentication':
-        currentConfig = dbConfig.authentication;
-        module = this.sdk.getAuthentication();
-        configProperty = 'authentication';
-        configSchema = AuthenticationModule.config.authentication;
+        updatedConfig = await this.sdk.getAuthentication().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'email':
-        const updatedConfig = await this.sdk.getEmail().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return res.status(403).json({error: errorMessage});
-        return res.json(updatedConfig);
+        updatedConfig = await this.sdk.getEmail().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
+        break;
       case 'in-memory-store':
-        currentConfig = dbConfig.inMemoryStore;
-        module = this.sdk.getInMemoryStore();
-        configProperty = 'inMemoryStore';
-        configSchema = InMemoryStore.config.inMemoryStore;
+        updatedConfig = await this.sdk.getInMemoryStore().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'push-notifications':
-        currentConfig = dbConfig.pushNotifications;
-        module = this.sdk.getPushNotifications();
-        configProperty = 'pushNotifications';
-        configSchema = PushNotificationsModule.config.pushNotifications;
+        updatedConfig = await this.sdk.getPushNotifications().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'storage':
-        currentConfig = dbConfig.storage;
-        module = this.sdk.getStorage();
-        configProperty = 'storage';
-        configSchema = StorageModule.config.storage;
+        updatedConfig = await this.sdk.getStorage().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       default:
         return res.status(403).json({ error: 'Invalid module name' });
     }
 
-    // Validate here
-    if (!isNil(module) && !ConduitSDK.validateConfig(newConfig, configSchema)) { // General config doesn't get validated
-      return res.status(403).json({ error: 'Invalid configuration values' });
-    }
+    if (!isNil(errorMessage)) return res.status(403).json({error: errorMessage});
+    return res.json(updatedConfig);
 
-    if (isNil(currentConfig)) currentConfig = {};
-    const final = merge(currentConfig, newConfig);
-    if (isNil(module)){
-      Object.assign(dbConfig, final);
-    } else {
-      if (isNil(dbConfig[configProperty!])) dbConfig[configProperty!] = {};
-      Object.assign(dbConfig[configProperty!], final);
-    }
-    const saved = await Config.findByIdAndUpdate(dbConfig);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
-    appConfig.load(saved);
-
-    // Enable module here
-
-    if (module) {
-      const initiated = await module.initModule();
-      if (!initiated.result) {
-        return res.status(403).json({ message: 'Invalid configuration settings', error: initiated.error.message });
-      }
-    }
-
-    if (isNil(module)) return res.json(saved);
-    return res.json(saved[configProperty!]);
   }
 
 
