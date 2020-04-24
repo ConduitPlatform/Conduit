@@ -69,7 +69,7 @@ export class ConfigAdminHandlers {
     switch (moduleName) {
       case undefined:
         // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
-        if (!ConduitSDK.validateConfig(newConfig, AppConfig.getInstance().mergeSchemas())) {
+        if (!ConduitSDK.validateConfig(newConfig, AppConfig.getInstance().configSchema)) {
           errorMessage = 'Invalid configuration values';
           break;
         }

@@ -12,6 +12,7 @@ import PushNotificationsModule from '@conduit/push-notifications';
 export class AppConfig {
   private static instance: AppConfig;
   private readonly convictConfig: Config<any>;
+  private completeConfigSchema: any;
 
   static getInstance() {
     if (isNil(AppConfig.instance)) {
@@ -24,8 +25,13 @@ export class AppConfig {
     return this.convictConfig;
   }
 
+  get configSchema() {
+    return this.completeConfigSchema;
+  }
+
   private constructor() {
-    this.convictConfig = convict(this.mergeSchemas());
+    this.completeConfigSchema = this.mergeSchemas();
+    this.convictConfig = convict(this.completeConfigSchema);
     this.loadConfig();
     this.validateConfig();
     this.injectEnvironmentVariables();
@@ -33,7 +39,7 @@ export class AppConfig {
 
   // const AuthenticationConfigSchema = AuthenticationModule.config;
 
-  mergeSchemas() {
+  private mergeSchemas() {
     return {
       ...AppConfigSchema,
       ...AuthenticationModule.config,
