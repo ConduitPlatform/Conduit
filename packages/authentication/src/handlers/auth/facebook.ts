@@ -108,6 +108,6 @@ export class FacebookHandlers {
                 userId: ConduitString.Required,
                 accessToken: ConduitString.Required,
                 refreshToken: ConduitString.Required
-            }), this.authenticate));
+            }), this.authenticate.bind(this)));
     }
 }
