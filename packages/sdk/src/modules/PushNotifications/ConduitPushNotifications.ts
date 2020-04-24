@@ -4,7 +4,4 @@ export abstract class IConduitPushNotifications {
 
   constructor(conduit: ConduitSDK) {
   }
-
-  abstract initModule(): Promise<{result: boolean, error?: any}>;
-
 }
