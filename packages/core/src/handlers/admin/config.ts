@@ -45,7 +45,7 @@ export class ConfigAdminHandlers {
         finalConfig = dbConfig.inMemoryStore;
         break;
       default:
-        return res.status(403).json({ error: 'Invalid module name' });
+        return res.status(404).json({ error: 'Page not found' });
     }
 
     if (isEmpty(finalConfig)) return res.json({active: false});
@@ -91,7 +91,7 @@ export class ConfigAdminHandlers {
         updatedConfig = await this.sdk.getStorage().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       default:
-        return res.status(403).json({ error: 'Invalid module name' });
+        return res.status(404).json({ error: 'Page not found' });
     }
 
     if (!isNil(errorMessage)) return res.status(403).json({error: errorMessage});
