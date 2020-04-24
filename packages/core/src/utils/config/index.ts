@@ -33,7 +33,7 @@ export class AppConfig {
 
   // const AuthenticationConfigSchema = AuthenticationModule.config;
 
-  private mergeSchemas() {
+  mergeSchemas() {
     return {
       ...AppConfigSchema,
       ...AuthenticationModule.config,
