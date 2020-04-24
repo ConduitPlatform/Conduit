@@ -21,12 +21,6 @@ export const UserSchema = new ConduitSchema('User',
       },
       tokenExpires: {
         type: TYPE.String
-      },
-      refreshToken: {
-        type: TYPE.String
-      },
-      refreshTokenExpires: {
-        type: TYPE.String
       }
     },
     facebook: {
@@ -37,12 +31,6 @@ export const UserSchema = new ConduitSchema('User',
         type: TYPE.String
       },
       tokenExpires: {
-        type: TYPE.String
-      },
-      refreshToken: {
-        type: TYPE.String
-      },
-      refreshTokenExpires: {
         type: TYPE.String
       }
     },

@@ -23,7 +23,7 @@ export class GoogleHandlers {
     }
 
     async authenticate(params: ConduitRouteParameters) {
-        const {id_token, access_token, refresh_token, expires_in} = params.params as any;
+        const {id_token, access_token, expires_in} = params.params as any;
         const {config: appConfig} = this.sdk as any;
         const config = appConfig.get('authentication');
 
@@ -57,8 +57,7 @@ export class GoogleHandlers {
                 user.google = {
                     id: payload.sub,
                     token: access_token,
-                    tokenExpires: moment().add(expires_in as number, 'milliseconds'),
-                    refreshToken: refresh_token
+                    tokenExpires: moment().add(expires_in as number, 'milliseconds')
                 };
                 if (!user.isVerified) user.isVerified = true;
                 user = await User.findByIdAndUpdate(user);
@@ -69,8 +68,7 @@ export class GoogleHandlers {
                 google: {
                     id: payload.sub,
                     token: access_token,
-                    tokenExpires: moment().add(expires_in).format(),
-                    refreshToken: refresh_token
+                    tokenExpires: moment().add(expires_in).format()
                 },
                 isVerified: true
             });
