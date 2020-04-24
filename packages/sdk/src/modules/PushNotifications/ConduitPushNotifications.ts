@@ -1,7 +1,10 @@
-import { ConduitSDK } from '../../index';
+import { ConduitSDK, IConduitModule } from '../../index';
 
-export abstract class IConduitPushNotifications {
+export abstract class IConduitPushNotifications implements IConduitModule{
 
   constructor(conduit: ConduitSDK) {
   }
+
+  abstract setConfig(newConfig: any): Promise<any>;
+
 }
