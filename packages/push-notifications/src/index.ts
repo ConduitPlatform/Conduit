@@ -17,6 +17,7 @@ import {
     IConduitPushNotifications,
     TYPE
 } from '@conduit/sdk';
+import { isNil } from 'lodash';
 
 class PushNotificationsModule extends IConduitPushNotifications {
 
@@ -37,21 +38,44 @@ class PushNotificationsModule extends IConduitPushNotifications {
         return PushNotificationsConfigSchema;
     }
 
-    async initModule() {
-        try {
-            if ((this.sdk as any).config.get('pushNotifications.active')) {
-                if (this.isRunning) return {result: true};
-                await this.enableModule();
-                return {result: true};
-            }
-            throw new Error('Module is not active');
-        } catch (e) {
-            console.log(e);
-            return {result: false, error: e};
+    async setConfig(newConfig: any) {
+        if (!ConduitSDK.validateConfig(newConfig, PushNotificationsConfigSchema.pushNotifications)) {
+            throw new Error('Invalid configuration values');
         }
+
+        let errorMessage: string | null = null;
+        const updateResult = await this.sdk.updateConfig(newConfig, 'pushNotifications').catch((e: Error) => errorMessage = e.message);
+        if (!isNil(errorMessage)) {
+            throw new Error(errorMessage);
+        }
+
+        if ((this.sdk as any).config.get('pushNotifications.active')) {
+            await this.enableModule().catch((e: Error) => errorMessage = e.message);
+        } else {
+            throw new Error('Module is not active');
+        }
+        if (!isNil(errorMessage)) {
+            throw new Error(errorMessage);
+        }
+
+        return updateResult;
     }
 
     private async enableModule() {
+        if (!this.isRunning) {
+            this.initProvider();
+            this.sdk.getRouter()
+              .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
+            this.registerConsumerRoutes();
+            this.registerAdminRoutes();
+            this.isRunning = true;
+
+        } else {
+            this.initProvider();
+        }
+    }
+
+    private initProvider() {
         const name = (this.sdk as any).config.get('pushNotifications.providerName');
         const settings = (this.sdk as any).config.get(`pushNotifications.${name}`);
 
@@ -61,14 +85,6 @@ class PushNotificationsModule extends IConduitPushNotifications {
             // this was done just for now so that we surely initialize the _provider variable
             this._provider = new FirebaseProvider(settings as IFirebaseSettings);
         }
-
-        this.sdk.getRouter()
-          .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
-        this.registerConsumerRoutes();
-        this.registerAdminRoutes();
-
-        this.isRunning = true;
-
     }
 
     registerConsumerRoutes() {
