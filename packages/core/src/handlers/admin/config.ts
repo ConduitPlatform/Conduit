@@ -72,6 +72,10 @@ export class ConfigAdminHandlers {
     let configProperty: string;
     let configSchema: any;
 
+    let errorMessage: string | null = null;
+
+    if (newConfig.active === false) return res.status(403).json({error: 'Modules cannot be deactivated'});
+
     switch (moduleName) {
       case undefined:
         currentConfig = dbConfig;
@@ -83,11 +87,9 @@ export class ConfigAdminHandlers {
         configSchema = AuthenticationModule.config.authentication;
         break;
       case 'email':
-        currentConfig = dbConfig.email;
-        module = this.sdk.getEmail();
-        configProperty = 'email';
-        configSchema = EmailModule.config.email;
-        break;
+        const updatedConfig = await this.sdk.getEmail().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return res.status(403).json({error: errorMessage});
+        return res.json(updatedConfig);
       case 'in-memory-store':
         currentConfig = dbConfig.inMemoryStore;
         module = this.sdk.getInMemoryStore();
@@ -111,7 +113,6 @@ export class ConfigAdminHandlers {
     }
 
     // Validate here
-    if (newConfig.active === false) return res.status(403).json({error: 'Modules cannot be deactivated'});
     if (!isNil(module) && !ConduitSDK.validateConfig(newConfig, configSchema)) { // General config doesn't get validated
       return res.status(403).json({ error: 'Invalid configuration values' });
     }

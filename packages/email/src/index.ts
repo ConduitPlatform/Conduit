@@ -4,6 +4,7 @@ import { EmailProvider } from '@conduit/email-provider';
 import { EmailService } from './services/email.service';
 import { AdminHandlers } from './handlers/AdminHandlers';
 import EmailConfigSchema from './config/email';
+import { isNil } from 'lodash';
 
 class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
@@ -23,31 +24,41 @@ class EmailModule implements IConduitEmail {
     return EmailConfigSchema;
   }
 
-  async initModule() {
-    try {
-      if ((this.sdk as any).config.get('email.active')) {
-        if (this.isRunning) return {result: true};
-        await this.enableModule();
-        return {result: true};
-      }
-      throw new Error('Module is not active');
-    } catch (e) {
-      console.log(e);
-      return {result: false, error: e};
+  async setConfig(newConfig: any) {
+    if (!ConduitSDK.validateConfig(newConfig, EmailConfigSchema.email)) {
+      throw new Error('Invalid configuration values');
     }
+
+    let errorMessage: string | null = null;
+    const updateResult = await this.sdk.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    if ((this.sdk as any).config.get('email.active')) {
+      await this.enableModule().catch((e: Error) => errorMessage = e.message);
+    } else {
+      throw new Error('Module is not active');
+    }
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    return updateResult;
   }
 
   private async enableModule() {
-    this.registerModels();
-    this.initEmailProvider();
-    this.emailService = new EmailService(this.emailProvider, this.sdk);
-
-
-    this.adminHandlers = new AdminHandlers(this.sdk, this.emailService);
-    this.initAdminRoutes();
-
-    this.isRunning = true;
-
+    if (!this.isRunning) {
+      this.registerModels();
+      this.initEmailProvider();
+      this.emailService = new EmailService(this.emailProvider, this.sdk);
+      this.adminHandlers = new AdminHandlers(this.sdk, this.emailService);
+      this.initAdminRoutes();
+      this.isRunning = true;
+    } else {
+      this.initEmailProvider();
+      this.emailService = new EmailService(this.emailProvider, this.sdk);
+    }
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
