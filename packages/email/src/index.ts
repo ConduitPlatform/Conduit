@@ -1,4 +1,4 @@
-import { ConduitSDK, IConduitEmail, IRegisterTemplateParams, ISendEmailParams, IConduitModule } from '@conduit/sdk';
+import { ConduitSDK, IConduitEmail, IRegisterTemplateParams, ISendEmailParams } from '@conduit/sdk';
 import { emailTemplateSchema } from './models/EmailTemplate';
 import { EmailProvider } from '@conduit/email-provider';
 import { EmailService } from './services/email.service';
@@ -6,7 +6,7 @@ import { AdminHandlers } from './handlers/AdminHandlers';
 import EmailConfigSchema from './config/email';
 import { isNil } from 'lodash';
 
-class EmailModule implements IConduitEmail, IConduitModule {
+class EmailModule implements IConduitEmail {
   private emailProvider: EmailProvider;
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
