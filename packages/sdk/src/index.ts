@@ -9,6 +9,9 @@ import {IConduitStorage} from './modules/Storage';
 import {IConduitSecurity} from './modules/Security';
 import {IConduitAuthentication} from './modules/Authentication';
 import {IConduitCMS} from "./modules/Cms";
+import { isNil, isPlainObject } from "lodash";
+import validator from 'validator';
+import isNaturalNumber from 'is-natural-number';
 
 export class ConduitSDK {
 
@@ -135,6 +138,32 @@ export class ConduitSDK {
             this._instance = new ConduitSDK(app);
         }
         return this._instance;
+    }
+
+    // this validator doesn't support custom convict types
+    static validateConfig(configInput: any, configSchema: any): Boolean {
+        if (isNil(configInput)) return false;
+
+        return Object.keys(configInput).every(key => {
+            if (configSchema.hasOwnProperty(key)) {
+                if (isPlainObject(configInput[key])) {
+                    return this.validateConfig(configInput[key], configSchema[key])
+                } else if (configSchema[key].hasOwnProperty('format')) {
+
+                    const format = configSchema[key].format.toLowerCase();
+                    if (typeof configInput[key] === format || format === '*') return true;
+                    if (format === 'int' && validator.isInt(configInput[key])) return true;
+                    if (format === 'port' && validator.isPort(configInput[key])) return true;
+                    if (format === 'url' && validator.isURL(configInput[key])) return true;
+                    if (format === 'email' && validator.isEmail(configInput[key])) return true;
+                    if (format === 'ipaddress' && validator.isIP(configInput[key])) return true;
+                    if (format === 'timestamp' && ((new Date(configInput[key])).getTime() > 0)) return true;
+                    if (format === 'nat' && isNaturalNumber(configInput[key])) return true;
+                    if (format === 'duration' && isNaturalNumber(configInput[key])) return true;
+                }
+            }
+            return false;
+        });
     }
 
 }

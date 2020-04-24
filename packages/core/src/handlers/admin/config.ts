@@ -1,14 +1,12 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import { isNil, merge, isPlainObject } from 'lodash';
+import { isNil, merge, isEmpty } from 'lodash';
 import { Config as ConvictConfig } from 'convict';
 import AuthenticationModule from '@conduit/authentication';
 import EmailModule from '@conduit/email';
 import InMemoryStore from '@conduit/in-memory-store';
 import PushNotificationsModule from '@conduit/push-notifications';
 import StorageModule from '@conduit/storage';
-import validator, { isEmpty } from 'validator';
-import isNaturalNumber from 'is-natural-number';
 
 export class ConfigAdminHandlers {
   private readonly database: IConduitDatabase;
@@ -114,7 +112,7 @@ export class ConfigAdminHandlers {
 
     // Validate here
     if (newConfig.active === false) return res.status(403).json({error: 'Modules cannot be deactivated'});
-    if (!isNil(module) && !this.validateConfig(newConfig, configSchema)) { // General config doesn't get validated
+    if (!isNil(module) && !ConduitSDK.validateConfig(newConfig, configSchema)) { // General config doesn't get validated
       return res.status(403).json({ error: 'Invalid configuration values' });
     }
 
@@ -146,29 +144,5 @@ export class ConfigAdminHandlers {
     return res.json(saved[configProperty!]);
   }
 
-  // this validator doesn't support custom convict types
-  private validateConfig(configInput: any, configSchema: any): Boolean {
-    if (isNil(configInput)) return false;
 
-    return Object.keys(configInput).every(key => {
-      if (configSchema.hasOwnProperty(key)) {
-        if (isPlainObject(configInput[key])) {
-          return this.validateConfig(configInput[key], configSchema[key])
-        } else if (configSchema[key].hasOwnProperty('format')) {
-
-          const format = configSchema[key].format.toLowerCase();
-          if (typeof configInput[key] === format || format === '*') return true;
-          if (format === 'int' && validator.isInt(configInput[key])) return true;
-          if (format === 'port' && validator.isPort(configInput[key])) return true;
-          if (format === 'url' && validator.isURL(configInput[key])) return true;
-          if (format === 'email' && validator.isEmail(configInput[key])) return true;
-          if (format === 'ipaddress' && validator.isIP(configInput[key])) return true;
-          if (format === 'timestamp' && ((new Date(configInput[key])).getTime() > 0)) return true;
-          if (format === 'nat' && isNaturalNumber(configInput[key])) return true;
-          if (format === 'duration' && isNaturalNumber(configInput[key])) return true;
-        }
-      }
-      return false;
-    });
-  }
 }
