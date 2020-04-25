@@ -61,8 +61,6 @@ export class CoreBootstrapper {
 
         app.conduit.registerStorage(new StorageModule(app.conduit));
 
-
-
         app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
         CoreBootstrapper.registerAdminRoutes(app.conduit);

@@ -3,10 +3,10 @@ import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import {AdminSchema} from './models/Admin';
-import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin } from '@conduit/sdk';
+import {ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin} from '@conduit/sdk';
 import AdminConfigSchema from './config/admin';
 
-class AdminModule extends IConduitAdmin {
+export default class AdminModule extends IConduitAdmin {
     private readonly router: Router;
     conduit: ConduitSDK;
 
@@ -41,7 +41,7 @@ class AdminModule extends IConduitAdmin {
         const adminHandlers = new AuthHandlers(conduit);
 
         conduit.getRouter().registerDirectRouter('/admin/login',
-          (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
+            (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
         conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
         this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
@@ -75,7 +75,7 @@ class AdminModule extends IConduitAdmin {
     }
 
     authMiddleware(req: Request, res: Response, next: NextFunction) {
-        const { config } = this.conduit as any;
+        const {config} = this.conduit as any;
 
         const adminConfig = config.get('admin');
 
@@ -101,7 +101,7 @@ class AdminModule extends IConduitAdmin {
         try {
             decoded = verifyToken(token, adminConfig.auth.tokenSecret);
         } catch (error) {
-            return res.status(401).json({ error: 'Invalid token' });
+            return res.status(401).json({error: 'Invalid token'});
         }
         const {id} = decoded;
 
@@ -129,5 +129,3 @@ class AdminModule extends IConduitAdmin {
     }
 
 }
-
-export = AdminModule;

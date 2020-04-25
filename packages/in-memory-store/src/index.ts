@@ -1,16 +1,16 @@
-import { LocalSettings } from './interaces/LocalSettings';
-import { RedisSettings } from './interaces/RedisSettings';
-import { MemcachedSettings } from './interaces/MemcachedSettings';
-import { RedisProvider } from './providers/redis';
-import { Localprovider } from './providers/local';
-import { MemcachedProvider } from './providers/memcached';
-import { StorageProvider } from './interaces/StorageProvider';
-import { NextFunction, Request, Response } from 'express';
-import { isNil } from 'lodash';
-import { ConduitSDK, IConduitInMemoryStore } from '@conduit/sdk';
+import {LocalSettings} from './interaces/LocalSettings';
+import {RedisSettings} from './interaces/RedisSettings';
+import {MemcachedSettings} from './interaces/MemcachedSettings';
+import {RedisProvider} from './providers/redis';
+import {Localprovider} from './providers/local';
+import {MemcachedProvider} from './providers/memcached';
+import {StorageProvider} from './interaces/StorageProvider';
+import {NextFunction, Request, Response} from 'express';
+import {isNil} from 'lodash';
+import {ConduitSDK, IConduitInMemoryStore} from '@conduit/sdk';
 import InMemoryStoreConfigSchema from './config/in-memory-store';
 
-class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
+export default class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
 
     private _provider: StorageProvider | null = null;
     private isRunning: boolean = false;
@@ -51,9 +51,9 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
             await this.initProvider();
             const admin = this.conduit.getAdmin();
             admin.registerRoute('POST', '/in-memory-store',
-              (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
+                (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
             admin.registerRoute('GET', '/in-memory-store/:key',
-              (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
+                (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
             this.isRunning = true;
         } else {
             await this.initProvider();
@@ -107,6 +107,3 @@ class InMemoryStore extends IConduitInMemoryStore implements StorageProvider {
     }
 
 }
-
-export = InMemoryStore;
-

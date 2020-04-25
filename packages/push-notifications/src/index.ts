@@ -1,9 +1,9 @@
-import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
-import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { FirebaseProvider } from './providers/firebase';
-import { NextFunction, Request, Response } from 'express';
-import { NotificationTokensHandler } from './handlers/notification-tokens/notification-tokens';
-import { AdminHandler } from './handlers/admin/admin';
+import {IPushNotificationsProvider} from './interfaces/IPushNotificationsProvider';
+import {IFirebaseSettings} from './interfaces/IFirebaseSettings';
+import {FirebaseProvider} from './providers/firebase';
+import {NextFunction, Request, Response} from 'express';
+import {NotificationTokensHandler} from './handlers/notification-tokens/notification-tokens';
+import {AdminHandler} from './handlers/admin/admin';
 import PushNotificationsConfigSchema from './config/push-notifications';
 import {
     ConduitDate,
@@ -17,9 +17,9 @@ import {
     IConduitPushNotifications,
     TYPE
 } from '@conduit/sdk';
-import { isNil } from 'lodash';
+import {isNil} from 'lodash';
 
-class PushNotificationsModule extends IConduitPushNotifications {
+export default class PushNotificationsModule extends IConduitPushNotifications {
 
     private _provider: IPushNotificationsProvider | undefined;
     private readonly sdk: ConduitSDK;
@@ -65,7 +65,7 @@ class PushNotificationsModule extends IConduitPushNotifications {
         if (!this.isRunning) {
             this.initProvider();
             this.sdk.getRouter()
-              .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
+                .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
             this.registerConsumerRoutes();
             this.registerAdminRoutes();
             this.isRunning = true;
@@ -128,5 +128,3 @@ class PushNotificationsModule extends IConduitPushNotifications {
 
     }
 }
-
-export = PushNotificationsModule;

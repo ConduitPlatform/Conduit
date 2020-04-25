@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",
@@ -29,6 +29,7 @@
     "@types/lodash": "^4.14.149",
     "@types/memjs": "^1.2.1",
     "@types/redis": "^2.8.17",
+    "rimraf": "^3.0.2",
     "typescript": "^3.7.5"
   }
 }

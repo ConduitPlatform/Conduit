@@ -3,8 +3,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions, ConduitRouteParameters,
     ConduitRouteReturnDefinition, ConduitSchema, ConduitSDK, IConduitCMS, IConduitDatabase,
-    SchemaAdapter,
-    TYPE
+    SchemaAdapter
 } from "@conduit/sdk";
 
 export class CMS extends IConduitCMS {

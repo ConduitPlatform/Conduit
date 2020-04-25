@@ -4,9 +4,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "prepare": "npm run build"
   },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
   "license": "ISC",
   "dependencies": {
     "@conduit/email-provider": "1.0.0",
@@ -19,6 +25,7 @@
     "@types/nodemailer": "^6.4.0",
     "@types/smtp-server": "^3.5.4",
     "express": "~4.16.1",
+    "rimraf": "^3.0.2",
     "smtp-server": "^3.6.0",
     "typescript": "^3.8.3"
   },

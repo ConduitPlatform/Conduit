@@ -8,18 +8,18 @@ import {
 } from '@conduit/sdk';
 import * as models from './models';
 import * as templates from './templates';
-import { Router } from 'express';
-import { LocalHandlers } from './handlers/auth/local';
-import { AuthService } from './services/auth';
-import { FacebookHandlers } from './handlers/auth/facebook';
-import { GoogleHandlers } from './handlers/auth/google';
-import { AuthMiddleware } from './middleware/auth';
-import { AdminHandlers } from './handlers/admin';
-import { CommonHandlers } from './handlers/auth/common';
+import {Router} from 'express';
+import {LocalHandlers} from './handlers/auth/local';
+import {AuthService} from './services/auth';
+import {FacebookHandlers} from './handlers/auth/facebook';
+import {GoogleHandlers} from './handlers/auth/google';
+import {AuthMiddleware} from './middleware/auth';
+import {AdminHandlers} from './handlers/admin';
+import {CommonHandlers} from './handlers/auth/common';
 import AuthenticationConfigSchema from './config/authentication';
-import { isNil } from 'lodash';
+import {isNil} from 'lodash';
 
-class AuthenticationModule implements IConduitAuthentication {
+export default class AuthenticationModule implements IConduitAuthentication {
     private database: IConduitDatabase;
     private emailModule: IConduitEmail;
     private conduitRouter: IConduitRouter;
@@ -34,9 +34,9 @@ class AuthenticationModule implements IConduitAuthentication {
     private isRunning: boolean = false;
 
     constructor(private readonly sdk: ConduitSDK) {
-       if ((sdk as any).config.get('authentication.active')) {
-           this.enableModule().catch(console.log);
-       }
+        if ((sdk as any).config.get('authentication.active')) {
+            this.enableModule().catch(console.log);
+        }
     }
 
     async setConfig(newConfig: any) {
@@ -138,5 +138,3 @@ class AuthenticationModule implements IConduitAuthentication {
         this.conduitRouter.registerExpressRouter('/hook', this.hookRouter);
     }
 }
-
-export = AuthenticationModule;
