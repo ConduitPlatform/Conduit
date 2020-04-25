@@ -1,10 +1,12 @@
-import { ConduitSDK } from '../../index';
-import { ISendEmailParams, IRegisterTemplateParams } from './interfaces';
+import {IConduitModule} from '../../index';
+import {ISendEmailParams, IRegisterTemplateParams} from './interfaces';
 
-export abstract class IConduitEmail {
-  constructor(conduit: ConduitSDK) {
-  }
+export interface IConduitEmail extends IConduitModule {
 
-  abstract sendEmail(template: string, params: ISendEmailParams): Promise<any>;
-  abstract registerTemplate(params: IRegisterTemplateParams): Promise<any>;
+    sendEmail(template: string, params: ISendEmailParams): Promise<any>;
+
+    registerTemplate(params: IRegisterTemplateParams): Promise<any>;
+
+    setConfig(newConfig: any): Promise<any>;
+
 }

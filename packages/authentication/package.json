@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepare": "npm run build",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",
@@ -39,6 +39,7 @@
     "@types/lodash": "^4.14.149",
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
+    "rimraf": "^3.0.2",
     "typescript": "^3.8.3",
     "express": "~4.16.1"
   },

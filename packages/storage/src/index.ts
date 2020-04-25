@@ -1,39 +1,64 @@
-import { NextFunction, Request, Response } from 'express';
 import { createStorageProvider, IStorageProvider } from '@conduit/storage-provider';
-import { AdminConfigHandlers } from './admin/config';
-import { ConduitSDK, IConduitAdmin, IConduitStorage } from '@conduit/sdk';
+import { ConduitSDK, IConduitModule, IConduitStorage } from '@conduit/sdk';
 import { FileRoutes } from './routes/file';
 import File from './models/File';
 import StorageConfigSchema from './config/storage';
+import { isNil } from 'lodash';
 
-class StorageModule extends IConduitStorage {
-  private readonly storageProvider: IStorageProvider;
+class StorageModule extends IConduitStorage implements IConduitModule{
+  private storageProvider: IStorageProvider;
+  private isRunning: boolean = false;
 
   constructor(
     private readonly conduit: ConduitSDK
 ) {
     super(conduit);
-
-    const config = (conduit as any).config;
-    const storageConfig = config.get('storage');
-
-    const { provider, storagePath, google } = storageConfig;
-
-    this.storageProvider = createStorageProvider(provider, { storagePath, google });
-
-    const admin = conduit.getAdmin();
-    const adminHandlers = new AdminConfigHandlers(conduit);
-
-    this.registerAdminRoutes(admin, adminHandlers);
-    this.registerModels();
-    this.registerRoutes();
+    if ((this.conduit as any).config.get('storage.active')) {
+      this.enableModule().catch(console.log);
+    }
   }
 
   static get config() {
-        return StorageConfigSchema;
-    }private registerAdminRoutes(admin: IConduitAdmin, adminHandlers: AdminConfigHandlers) {
-    admin.registerRoute('PUT', '/storage/config', (req: Request, res: Response, next: NextFunction) => adminHandlers.editConfig(req, res).catch(next));
-    admin.registerRoute('GET', '/storage/config', (req: Request, res: Response, next: NextFunction) => adminHandlers.getConfig(req, res).catch(next));
+    return StorageConfigSchema;
+  }
+
+  async setConfig(newConfig: any) {
+    if (!ConduitSDK.validateConfig(newConfig, StorageConfigSchema.storage)) {
+      throw new Error('Invalid configuration values');
+    }
+
+    let errorMessage: string | null = null;
+    const updateResult = await this.conduit.updateConfig(newConfig, 'storage').catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    if ((this.conduit as any).config.get('storage.active')) {
+      await this.enableModule().catch((e: Error) => errorMessage = e.message);
+    } else {
+      throw new Error('Module is not active');
+    }
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    return updateResult;
+  }
+
+  private async enableModule() {
+    const config = (this.conduit as any).config;
+    if (!this.isRunning) {
+      const storageConfig = config.get('storage');
+      const { provider, storagePath, google } = storageConfig;
+      this.storageProvider = createStorageProvider(provider, { storagePath, google });
+      this.registerModels();
+      this.registerRoutes();
+      this.isRunning = true;
+    } else {
+      const storageConfig = config.get('storage');
+      const { provider, storagePath, google } = storageConfig;
+      this.storageProvider = createStorageProvider(provider, { storagePath, google });
+    }
   }
 
   private registerModels() {

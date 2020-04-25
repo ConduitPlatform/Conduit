@@ -9,7 +9,12 @@
     "publish": "npm publish"
   },
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "convict": "^5.2.0",
+    "is-natural-number": "^4.0.1",
+    "lodash": "^4.17.15",
+    "validator": "^13.0.0"
+  },
   "directories": {
     "lib": "src"
   },
@@ -20,10 +25,14 @@
     "registry": "http://registry.quintessential.gr/"
   },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
     "@types/express": "~4.16.1",
+    "@types/is-natural-number": "^4.0.0",
+    "@types/lodash": "^4.14.150",
     "@types/node": "^13.9.8",
+    "@types/validator": "^13.0.0",
     "express": "~4.16.1",
-    "typescript": "^3.7.5",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5"
   }
 }

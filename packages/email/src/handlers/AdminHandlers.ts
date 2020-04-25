@@ -1,6 +1,6 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import { isNil, merge } from 'lodash';
+import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
 
 export class AdminHandlers {
@@ -94,40 +94,4 @@ export class AdminHandlers {
     return res.json({message: 'Email sent'});
   }
 
-  async getEmailConfig(req: Request, res: Response) {
-    const Config = this.database.getSchema('Config');
-
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      return res.status(403).json({ error: 'Config not set' });
-    }
-
-    return res.json(dbConfig.email);
-  }
-
-  async editEmailConfig(req: Request, res: Response) {
-    const Config = this.database.getSchema('Config');
-
-    const { config: appConfig } = this.sdk as any;
-
-    const newEmailConfig = req.body;
-
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      return res.status(404).json({ error: 'Config not set' });
-    }
-
-    const currentEmailConfig = dbConfig.email;
-    const final = merge(currentEmailConfig, newEmailConfig);
-
-    dbConfig.email = final;
-    const saved = await Config.findByIdAndUpdate(dbConfig);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
-    await appConfig.load(saved);
-
-    return res.json(saved.email);
-  }
 }

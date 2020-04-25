@@ -43,7 +43,7 @@ export default {
   },
   port: {
     doc: 'The port to bind.',
-    format: 'port',
+    format: 'Number',
     default: 8080,
     env: 'PORT',
     arg: 'port'

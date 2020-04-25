@@ -31,8 +31,8 @@ export class CoreBootstrapper {
         const configHandlers = new ConfigAdminHandlers(sdk);
         const adminModule = sdk.getAdmin();
 
-        adminModule.registerRoute('GET', '/config', configHandlers.getConfig.bind(configHandlers));
-        adminModule.registerRoute('PUT', '/config', configHandlers.setConfig.bind(configHandlers));
+        adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
+        adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
     }
 
     private static async bootstrapSdkComponents(app: ConduitApp) {
@@ -49,32 +49,21 @@ export class CoreBootstrapper {
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
 
-        if (appConfig.get('pushNotifications.active')) {
-            app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-        }
+        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
 
-        if (appConfig.get('email.active')) {
-            app.conduit.registerEmail(new EmailModule(app.conduit));
-        }
+        app.conduit.registerEmail(new EmailModule(app.conduit));
 
-        // authentication is always required, but adding this here as an example of how a module should be conditionally initialized
-        if (appConfig.get('authentication.active')) {
-            const authenticationModule = new AuthenticationModule(app.conduit);
-            app.conduit.registerAuthentication(authenticationModule);
-        }
+        app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
 
         // initialize plugin AFTER the authentication so that we may provide access control to the plugins
         app.conduit.registerCMS(new CMS(app.conduit));
 
-        if (appConfig.get('storage.active')) {
-            app.conduit.registerStorage(new StorageModule(app.conduit));
-        }
+        app.conduit.registerStorage(new StorageModule(app.conduit));
 
-        if (appConfig.get('inMemoryStore.active')) {
-            app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
-        }
+        app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
+
+        CoreBootstrapper.registerAdminRoutes(app.conduit);
 
         app.initialized = true;
     }

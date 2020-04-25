@@ -9,6 +9,10 @@ import {IConduitStorage} from './modules/Storage';
 import {IConduitSecurity} from './modules/Security';
 import {IConduitAuthentication} from './modules/Authentication';
 import {IConduitCMS} from "./modules/Cms";
+import { isNil, isPlainObject, merge } from "lodash";
+import validator from 'validator';
+import isNaturalNumber from 'is-natural-number';
+import { Config as ConvictConfig } from 'convict';
 
 export class ConduitSDK {
 
@@ -135,6 +139,68 @@ export class ConduitSDK {
             this._instance = new ConduitSDK(app);
         }
         return this._instance;
+    }
+
+    async updateConfig(newConfig: any, moduleName?: string) {
+        const Config = this.getDatabase().getSchema('Config');
+        const dbConfig = await Config.findOne({});
+        if (isNil(dbConfig)) {
+            throw new Error('Config not set');
+        }
+        const appConfig = (this as any).config as ConvictConfig<any>;
+        let currentConfig: any;
+        if (isNil(moduleName)) {
+            currentConfig = dbConfig;
+        } else {
+            currentConfig = dbConfig[moduleName];
+        }
+
+        if (isNil(currentConfig)) currentConfig = {};
+        const final = merge(currentConfig, newConfig);
+        if (isNil(moduleName)){
+            Object.assign(dbConfig, final);
+        } else {
+            if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
+            Object.assign(dbConfig[moduleName], final);
+        }
+        const saved = await Config.findByIdAndUpdate(dbConfig);
+        delete saved._id;
+        delete saved.createdAt;
+        delete saved.updatedAt;
+        delete saved.__v;
+        appConfig.load(saved);
+
+        if (isNil(moduleName)) {
+            return saved;
+        } else {
+            return saved[moduleName];
+        }
+    }
+
+    // this validator doesn't support custom convict types
+    static validateConfig(configInput: any, configSchema: any): Boolean {
+        if (isNil(configInput)) return false;
+
+        return Object.keys(configInput).every(key => {
+            if (configSchema.hasOwnProperty(key)) {
+                if (isPlainObject(configInput[key])) {
+                    return this.validateConfig(configInput[key], configSchema[key])
+                } else if (configSchema[key].hasOwnProperty('format')) {
+
+                    const format = configSchema[key].format.toLowerCase();
+                    if (typeof configInput[key] === format || format === '*') return true;
+                    if (format === 'int' && validator.isInt(configInput[key])) return true;
+                    if (format === 'port' && validator.isPort(configInput[key])) return true;
+                    if (format === 'url' && validator.isURL(configInput[key])) return true;
+                    if (format === 'email' && validator.isEmail(configInput[key])) return true;
+                    if (format === 'ipaddress' && validator.isIP(configInput[key])) return true;
+                    if (format === 'timestamp' && ((new Date(configInput[key])).getTime() > 0)) return true;
+                    if (format === 'nat' && isNaturalNumber(configInput[key])) return true;
+                    if (format === 'duration' && isNaturalNumber(configInput[key])) return true;
+                }
+            }
+            return false;
+        });
     }
 
 }
