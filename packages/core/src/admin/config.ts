@@ -1,7 +1,7 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
-import { AppConfig } from '../../utils/config';
+import { AppConfig } from '../utils/config';
 
 export class ConfigAdminHandlers {
   private readonly database: IConduitDatabase;

@@ -11,7 +11,7 @@ import AuthenticationModule from '@conduit/authentication';
 import {CMS} from '@conduit/cms';
 import StorageModule from '@conduit/storage';
 import InMemoryStoreModule from '@conduit/in-memory-store';
-import {ConfigAdminHandlers} from './handlers/admin/config';
+import {ConfigAdminHandlers} from './admin/config';
 import {ConduitSDK} from '@conduit/sdk';
 
 export class CoreBootstrapper {
