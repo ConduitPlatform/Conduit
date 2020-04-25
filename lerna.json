@@ -2,7 +2,8 @@
   "packages": [
     "packages/*",
     "libraries/*",
-    "admin/*"
+    "admin/*",
+    "modules/*"
   ],
   "version": "independent"
 }
