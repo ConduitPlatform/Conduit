@@ -1,7 +1,7 @@
 ---
-name: Core
+name: Conduit
 route: /core
-menu: Modules
+menu: Core
 ---
 
 # Conduit Core

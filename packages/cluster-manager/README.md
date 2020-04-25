@@ -1,3 +1,9 @@
+---
+name: Cluster Manager
+route: /cluster-manager
+menu: Core
+---
+
 # Cluster manager package
 The cluster manager will use terraform to automatically spin-up new
 pods in the kubernetes cluster, along with appropriate istio sidecars.

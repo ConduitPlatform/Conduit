@@ -1,10 +1,10 @@
 ---
 name: Security
 route: /security
-menu: Modules
+menu: Core
 ---
 
-# Security Module
+# Security Package
 This will be added as a required middleware, configurable on how strict is should be
 
 ##Features
