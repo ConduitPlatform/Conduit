@@ -1,0 +1,35 @@
+{
+  "name": "@conduit/in-memory-store",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "rimraf dist && tsc",
+    "publish": "npm publish"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@conduit/sdk": "1.0.0",
+    "lodash": "^4.17.15",
+    "memjs": "^1.2.2",
+    "redis": "^3.0.2"
+  },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
+  "devDependencies": {
+    "@types/express": "~4.16.1",
+    "@types/lodash": "^4.14.149",
+    "@types/memjs": "^1.2.1",
+    "@types/redis": "^2.8.17",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5"
+  }
+}
