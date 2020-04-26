@@ -1,12 +1,26 @@
-package conduit.inmemorystore;
+syntax = "proto3";
+package inmemorystore;
 import "google/protobuf/any.proto";
 
-service InMemoryStore{
-    rpc Store(StoreRequest) returns (bool) {}
-    rpc Get(string) returns (google.protobuf.Any) {}
+message StoreRequest {
+    string key = 1;
+    google.protobuf.Any data = 2;
 }
 
-message StoreRequest {
-    required string key = 1;
-    required google.protobuf.Any data = 2;
+message StoreResponse {
+    bool result = 1;
+}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    google.protobuf.Any data = 1;
+}
+
+service InMemoryStore{
+    rpc Get(GetRequest) returns (GetResponse);
+    rpc Store(StoreRequest) returns (StoreResponse);
+
 }

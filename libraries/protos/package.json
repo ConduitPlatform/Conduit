@@ -1,0 +1,20 @@
+{
+  "name": "@conduit/protos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "sh proto.sh",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/google-protobuf": "^3.2.7",
+    "google-protobuf": "^3.8.0-rc.1"
+  },
+  "devDependencies": {
+    "grpc-tools": "^1.8.1",
+    "ts-protoc-gen": "^0.12.0"
+  }
+}

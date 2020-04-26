@@ -1,0 +1,24 @@
+syntax = "proto3";
+package config;
+import "google/protobuf/any.proto";
+
+service Config{
+    rpc Get(GetRequest) returns (GetResponse);
+    rpc UpdateConfig(UpdateRequest) returns (UpdateResponse);
+
+}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    google.protobuf.Any data = 1;
+}
+message UpdateRequest {
+    google.protobuf.Any config = 1;
+    string moduleName = 2;
+}
+message UpdateResponse {
+    google.protobuf.Any result = 1;
+}
