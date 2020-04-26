@@ -1,0 +1,12 @@
+package conduit.inmemorystore;
+import "google/protobuf/any.proto";
+
+service InMemoryStore{
+    rpc Store(StoreRequest) returns (bool) {}
+    rpc Get(string) returns (google.protobuf.Any) {}
+}
+
+message StoreRequest {
+    required string key = 1;
+    required google.protobuf.Any data = 2;
+}
