@@ -1,0 +1,28 @@
+{
+  "name": "@conduit/cms",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "rimraf dist && tsc",
+    "publish": "npm publish"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@conduit/sdk": "1.0.0"
+  },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "http://registry.quintessential.gr/"
+  },
+  "devDependencies": {
+    "typescript": "^3.7.5",
+    "rimraf": "^3.0.2"
+  }
+}
