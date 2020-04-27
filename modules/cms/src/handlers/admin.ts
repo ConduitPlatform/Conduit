@@ -1,14 +1,14 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitSchema, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil } from 'lodash';
 
 export class AdminHandlers {
-  private readonly _adapter: IConduitDatabase;
-  private readonly _createSchema: any;
+  private readonly schemaDefinitionsModel: any;
+  // private readonly _createSchema: (schema: ConduitSchema) => void;
 
-  constructor(sdk: ConduitSDK, createSchema: any) {
-    this._adapter = sdk.getDatabase();
-    this._createSchema = createSchema;
+  constructor(sdk: ConduitSDK) {
+    this.schemaDefinitionsModel = sdk.getDatabase().getSchema('SchemaDefinitions');
+    // this._createSchema = createSchema;
   }
 
   async getAllSchemas(req: Request, res: Response) {
@@ -22,16 +22,23 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const schemas = await this._adapter.getSchema('SchemaDefinitions')
-      .findPaginated({}, skipNumber, limitNumber);
+    const schemas = await this.schemaDefinitionsModel.findPaginated({}, skipNumber, limitNumber);
 
-    const documentsCount = await this._adapter.getSchema('SchemaDefinitions').countDocuments({});
+    const documentsCount = await this.schemaDefinitionsModel.countDocuments({});
 
     return res.json({results: schemas, documentsCount});
   }
 
-  async createSchema() {
+  async createSchema(req: Request, res: Response) {
+    const { name, fields, modelOptions, enabled } = req.body;
 
+    if (isNil(name) || isNil(fields)) {
+      return res.status(403).json({error: 'Required fields are missing'});
+    }
+
+    const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions, enabled});
+
+    return res.json(newSchema);
   }
 
 }

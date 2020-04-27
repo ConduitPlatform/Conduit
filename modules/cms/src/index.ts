@@ -49,7 +49,6 @@ export class CMS extends IConduitCMS {
     }
 
     createSchema(schema: ConduitSchema): void {
-        console.log('test')
         this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
         this.constructSchemaRoutes(this._schemas[schema.name]);
     }
@@ -57,7 +56,6 @@ export class CMS extends IConduitCMS {
     //todo add support for paginantion
     //todo add support for filtering
     constructSchemaRoutes(schema: SchemaAdapter) {
-
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/content/' + schema.originalSchema.name,
@@ -100,9 +98,13 @@ export class CMS extends IConduitCMS {
     }
 
     constructAdminRoutes() {
-        const adminHandlers = new AdminHandlers(this.sdk, this.createSchema);
+        const adminHandlers = new AdminHandlers(this.sdk);
+
         this.sdk.getAdmin().registerRoute('GET', '/content/schemas',
           (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('POST', '/content/schemas',
+          (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
     }
 }
 
