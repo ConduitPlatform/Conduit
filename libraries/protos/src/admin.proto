@@ -1,0 +1,16 @@
+syntax = "proto3";
+package admin;
+import "google/protobuf/any.proto";
+
+service Admin {
+    rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+}
+
+message RegisterAdminRouteRequest {
+    string methodType = 1;
+    string routePath = 2;
+    string protoFile = 3;
+}
+
+message Empty {
+}

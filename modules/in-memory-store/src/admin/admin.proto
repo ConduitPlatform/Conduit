@@ -1,0 +1,25 @@
+syntax = "proto3";
+package inmemorystore.admin;
+import "google/protobuf/any.proto";
+
+service InMemoryStoreAdmin {
+    rpc AdminGet (AdminGetRequest) returns (AdminGetResponse);
+    rpc AdminStore (AdminStoreRequest) returns (AdminStoreResponse);
+}
+
+message AdminGetRequest {
+    string key = 1;
+}
+
+message AdminGetResponse {
+    string data = 1;
+}
+
+message AdminStoreRequest {
+    string key = 1;
+    string data = 2;
+}
+
+message AdminStoreResponse {
+    bool result = 1;
+}

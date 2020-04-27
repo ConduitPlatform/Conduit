@@ -2,10 +2,18 @@ syntax = "proto3";
 package config;
 import "google/protobuf/any.proto";
 
-service Config{
-    rpc Get(GetRequest) returns (GetResponse);
-    rpc UpdateConfig(UpdateRequest) returns (UpdateResponse);
+service Config {
+    rpc Get (GetRequest) returns (GetResponse);
+    rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
+    rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+}
 
+message ModuleExistsRequest {
+    string moduleName = 1;
+}
+
+message ModuleExistsResponse {
+    string url = 1;
 }
 
 message GetRequest {

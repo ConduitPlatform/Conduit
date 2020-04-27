@@ -1,4 +1,3 @@
-import * as grpc from 'grpc';
 import Config from "./config";
 
 
@@ -16,6 +15,10 @@ export default class ConduitGrpcSdk {
     }
 
     get config() {
+        return this._config;
+    }
+
+    get admin() {
         return this._config;
     }
 

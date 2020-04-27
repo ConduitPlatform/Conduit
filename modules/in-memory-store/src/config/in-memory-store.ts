@@ -1,9 +1,5 @@
 export default {
   inMemoryStore: {
-    active: {
-      format: 'Boolean',
-      default: false
-    },
     providerName: {
       doc: 'The name for the storage provider to use',
       format: 'String',
