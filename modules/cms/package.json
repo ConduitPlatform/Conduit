@@ -10,7 +10,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/sdk": "1.0.0"
+    "@conduit/sdk": "1.0.0",
+    "lodash": "^4.17.15"
   },
   "directories": {
     "lib": "src"
@@ -22,7 +23,9 @@
     "registry": "http://registry.quintessential.gr/"
   },
   "devDependencies": {
-    "typescript": "^3.7.5",
-    "rimraf": "^3.0.2"
+    "@types/express": "^4.17.6",
+    "@types/lodash": "^4.14.150",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5"
   }
 }

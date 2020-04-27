@@ -1,10 +1,16 @@
-import schema from "./interfaces/schema";
+import schema from './interfaces/schema';
 import {
     ConduitRoute,
-    ConduitRouteActions as Actions, ConduitRouteParameters,
-    ConduitRouteReturnDefinition, ConduitSchema, ConduitSDK, IConduitCMS, IConduitDatabase,
+    ConduitRouteActions as Actions,
+    ConduitRouteParameters,
+    ConduitRouteReturnDefinition,
+    ConduitSchema,
+    ConduitSDK,
+    IConduitCMS,
+    IConduitDatabase,
     SchemaAdapter
-} from "@conduit/sdk";
+} from '@conduit/sdk';
+import { AdminHandlers } from './handlers/admin';
 
 export class CMS extends IConduitCMS {
 
@@ -21,6 +27,7 @@ export class CMS extends IConduitCMS {
         this._adapter = this.sdk.getDatabase();
         this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
+        this.constructAdminRoutes();
     }
 
     private loadExistingSchemas() {
@@ -42,6 +49,7 @@ export class CMS extends IConduitCMS {
     }
 
     createSchema(schema: ConduitSchema): void {
+        console.log('test')
         this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
         this.constructSchemaRoutes(this._schemas[schema.name]);
     }
@@ -91,6 +99,11 @@ export class CMS extends IConduitCMS {
 
     }
 
+    constructAdminRoutes() {
+        const adminHandlers = new AdminHandlers(this.sdk, this.createSchema);
+        this.sdk.getAdmin().registerRoute('GET', '/content/schemas',
+          (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
+    }
 }
 
 
