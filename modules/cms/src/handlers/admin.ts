@@ -33,6 +33,17 @@ export class AdminHandlers {
     return res.json({results: schemas, documentsCount});
   }
 
+  async getById(req: Request, res: Response) {
+    const id = req.params.id;
+    if (isNil(id)) {
+      return res.status(403).json('Path parameter "id" is missing');
+    }
+
+    const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
+
+    return res.json(requestedSchema);
+  }
+
   async createSchema(req: Request, res: Response, cmsCreateSchema: (schema: ConduitSchema) => void) {
     const { name, fields, modelOptions, enabled } = req.body;
 
