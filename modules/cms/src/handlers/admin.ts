@@ -67,7 +67,9 @@ export class AdminHandlers {
 
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
     if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
-    this._createSchema.call(this.cmsInstance, new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
+    if (newSchema.enabled) {
+      this._createSchema.call(this.cmsInstance, new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
+    }
 
     return res.json(newSchema);
   }
@@ -117,7 +119,9 @@ export class AdminHandlers {
     if (!isNil(updatedSchema.modelOptions)) updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
 
     // TODO reinitialise routes?
-    this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+    if (updatedSchema.enabled) {
+      this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+    }
     // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
     return res.json(updatedSchema);
