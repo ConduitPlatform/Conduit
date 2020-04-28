@@ -34,7 +34,7 @@ export class AdminHandlers {
   async getById(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
-      return res.status(403).json('Path parameter "id" is missing');
+      return res.status(400).json('Path parameter "id" is missing');
     }
 
     const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
@@ -50,7 +50,7 @@ export class AdminHandlers {
     const { name, fields, modelOptions, enabled } = req.body;
 
     if (isNil(name) || isNil(fields)) {
-      return res.status(403).json({error: 'Required fields are missing'});
+      return res.status(400).json({error: 'Required fields are missing'});
     }
 
     Object.assign(fields, {
@@ -79,7 +79,7 @@ export class AdminHandlers {
   async setEnable(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
-      return res.status(403).json('Path parameter "id" is missing');
+      return res.status(400).json('Path parameter "id" is missing');
     }
     const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
 
@@ -103,7 +103,7 @@ export class AdminHandlers {
   async editSchema(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
-      return res.status(403).json('Path parameter "id" is missing');
+      return res.status(400).json('Path parameter "id" is missing');
     }
     const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
 
@@ -132,7 +132,7 @@ export class AdminHandlers {
   async deleteSchema(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
-      return res.status(403).json('Path parameter "id" is missing');
+      return res.status(400).json('Path parameter "id" is missing');
     }
 
     const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
@@ -143,7 +143,7 @@ export class AdminHandlers {
     await this.schemaDefinitionsModel.deleteOne(requestedSchema);
 
     // TODO disable routes
-    return res.json('Schema succesfully deleted');
+    return res.json('Schema successfully deleted');
   }
 
 }
