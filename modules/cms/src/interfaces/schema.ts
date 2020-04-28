@@ -8,7 +8,6 @@ const schema = new ConduitSchema('SchemaDefinitions', {
             unique: true,
             required: true
         },
-        //todo The properties in JSON, replace adequetly
         fields: {
             type: TYPE.JSON,
             required: true
