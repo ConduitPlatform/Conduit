@@ -107,7 +107,9 @@ export class AdminHandlers {
     const { name, fields, modelOptions } = req.body;
     requestedSchema.name = name ? name : requestedSchema.name;
     merge(requestedSchema.fields, fields);
-    // merge(requestedSchema.modelOptions, modelOptions); TODO handle this case correctly
+    const schemasModelOptions = JSON.parse(requestedSchema.modelOptions);
+    merge(schemasModelOptions, modelOptions);
+    requestedSchema.modelOptions = JSON.stringify(schemasModelOptions);
 
     const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
 
