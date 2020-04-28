@@ -8,9 +8,10 @@ import {
     ConduitSDK,
     IConduitCMS,
     IConduitDatabase,
-    SchemaAdapter
+    SchemaAdapter, TYPE
 } from '@conduit/sdk';
 import { AdminHandlers } from './handlers/admin';
+import { isNil } from 'lodash';
 
 export class CMS extends IConduitCMS {
 
@@ -57,17 +58,33 @@ export class CMS extends IConduitCMS {
         this.constructSchemaRoutes(this._schemas[schema.name]);
     }
 
-    //todo add support for paginantion
     //todo add support for filtering
     constructSchemaRoutes(schema: SchemaAdapter) {
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/content/' + schema.originalSchema.name,
-                action: Actions.GET
+                action: Actions.GET,
+                queryParams: {
+                    // this is string cause Number still throws an error in graphql as unknown type number
+                    skip: TYPE.String,
+                    limit: TYPE.String
+                }
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-            (params: ConduitRouteParameters) => {
-                return schema.findMany({});
+            async (params: ConduitRouteParameters) => {
+                const { skip, limit } = params.params as any;
+                let skipNumber = 0, limitNumber = 25;
+
+                if (!isNil(skip)) {
+                    skipNumber = Number.parseInt(skip as string);
+                }
+                if (!isNil(limit)) {
+                    limitNumber = Number.parseInt(limit as string);
+                }
+                const schemas = await schema.findPaginated({}, skipNumber, limitNumber);
+                const documentCount = await schema.countDocuments({});
+
+                return {schemas, documentCount};
             }));
 
         this.sdk.getRouter().registerRoute(new ConduitRoute(
