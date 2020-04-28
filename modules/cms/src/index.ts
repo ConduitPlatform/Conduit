@@ -36,7 +36,11 @@ export class CMS extends IConduitCMS {
             .then((r: any) => {
                 if (r) {
                     r.forEach((r: any) => {
-                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(r)
+                        if (typeof r.modelOptions === 'string') {
+                            r.modelOptions = JSON.parse(r.modelOptions);
+                        }
+                        const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
+                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(schema);
                         this.constructSchemaRoutes(this._schemas[r.name]);
                     })
                 }
@@ -74,14 +78,10 @@ export class CMS extends IConduitCMS {
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
             (params: ConduitRouteParameters) => {
-                // console.log(params);
                 let body = params.params;
-                // console.log(body)
                 let context = params.context;
-                // // todo check if this is correct. Context was added here in case the create method needs the user for example
                 const createdAt = new Date();
                 const updatedAt = new Date();
-                // console.log(schema)
                 return schema.create({...body, createdAt, updatedAt, ...context});
             }));
         // todo PUT should be identical to POST but all fields should be made optional
@@ -103,7 +103,7 @@ export class CMS extends IConduitCMS {
     }
 
     constructAdminRoutes() {
-        const adminHandlers = new AdminHandlers(this.sdk, this);
+        const adminHandlers = new AdminHandlers(this.sdk, this, this.createSchema);
 
         this.sdk.getAdmin().registerRoute('GET', '/cms/schemas',
           (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
@@ -112,10 +112,10 @@ export class CMS extends IConduitCMS {
           (req, res, next) => adminHandlers.getById(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('POST', '/cms/schemas',
-          (req, res, next) => adminHandlers.createSchema(req, res, this.createSchema).catch(next));
+          (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/enable/:id',
-          (req, res, next) => adminHandlers.setEnable(req, res, this.createSchema).catch(next));
+          (req, res, next) => adminHandlers.setEnable(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/:id',
           (req, res, next) => adminHandlers.editSchema(req, res).catch(next));

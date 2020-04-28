@@ -6,13 +6,13 @@ import { CMS } from '../index';
 export class AdminHandlers {
   private readonly schemaDefinitionsModel: any;
   private readonly cmsInstance: CMS;
-  // private readonly _createSchema: (schema: ConduitSchema) => void;
+  private readonly _createSchema: (schema: ConduitSchema) => void;
 
-  constructor(sdk: ConduitSDK, cmsInstance: CMS) {
+  constructor(sdk: ConduitSDK, cmsInstance: CMS, createSchema: (schema: ConduitSchema) => void) {
     this.schemaDefinitionsModel = sdk.getDatabase().getSchema('SchemaDefinitions');
     this.cmsInstance = cmsInstance;
+    this._createSchema = createSchema;
 
-    // this._createSchema = createSchema;
   }
 
   async getAllSchemas(req: Request, res: Response) {
@@ -44,7 +44,7 @@ export class AdminHandlers {
     return res.json(requestedSchema);
   }
 
-  async createSchema(req: Request, res: Response, cmsCreateSchema: (schema: ConduitSchema) => void) {
+  async createSchema(req: Request, res: Response) {
     const { name, fields, modelOptions, enabled } = req.body;
 
     if (isNil(name) || isNil(fields)) {
@@ -64,12 +64,13 @@ export class AdminHandlers {
     });
     const options = JSON.stringify(modelOptions);
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
-    cmsCreateSchema.call(this.cmsInstance, newSchema);
+    newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
+    this._createSchema.call(this.cmsInstance, new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
 
     return res.json(newSchema);
   }
 
-  async setEnable(req: Request, res: Response, cmsCreateSchema: (schema: ConduitSchema) => void) {
+  async setEnable(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
       return res.status(403).json('Path parameter "id" is missing');
@@ -85,7 +86,7 @@ export class AdminHandlers {
       // TODO disable routes
     } else {
       requestedSchema.enabled = true;
-      cmsCreateSchema.call(this.cmsInstance, requestedSchema);
+      this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
     }
 
     const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
