@@ -2,6 +2,7 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 
 
 const schema = new ConduitSchema('SchemaDefinitions', {
+        _id: TYPE.ObjectId,
         name: {
             type: TYPE.String,
             unique: true,
@@ -17,6 +18,14 @@ const schema = new ConduitSchema('SchemaDefinitions', {
         enabled: {
           type: TYPE.Boolean,
           default: true
+        },
+        createdAt: {
+          type: TYPE.Date,
+          required: true
+        },
+        updatedAt: {
+          type: TYPE.Date,
+          required: true
         }
     }, {
         timestamps: true
