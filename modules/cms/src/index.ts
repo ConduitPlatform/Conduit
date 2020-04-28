@@ -75,9 +75,9 @@ export class CMS extends IConduitCMS {
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
             (params: ConduitRouteParameters) => {
                 // console.log(params);
-                // let body = params.params;
+                let body = params.params;
                 // console.log(body)
-                // let context = params.context;
+                let context = params.context;
                 // // todo check if this is correct. Context was added here in case the create method needs the user for example
                 const createdAt = new Date();
                 const updatedAt = new Date();
@@ -116,6 +116,9 @@ export class CMS extends IConduitCMS {
 
         this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/enable/:id',
           (req, res, next) => adminHandlers.setEnable(req, res, this.createSchema).catch(next));
+
+        this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/:id',
+          (req, res, next) => adminHandlers.editSchema(req, res).catch(next));
 
     }
 }

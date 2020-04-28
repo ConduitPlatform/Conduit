@@ -1,6 +1,6 @@
 import { ConduitSchema, ConduitSDK, IConduitDatabase, TYPE } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash';
 import { CMS } from '../index';
 
 export class AdminHandlers {
@@ -91,5 +91,28 @@ export class AdminHandlers {
 
     return res.json({name: updatedSchema.name, enabled: updatedSchema.enabled});
   }
+
+  async editSchema(req: Request, res: Response) {
+    const id = req.params.id;
+    if (isNil(id)) {
+      return res.status(403).json('Path parameter "id" is missing');
+    }
+    const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
+
+    if (isNil(requestedSchema)) {
+      return res.status(404).json({error: 'Requested schema not found'});
+    }
+
+    const { name, fields, modelOptions } = req.body;
+    requestedSchema.name = name ? name : requestedSchema.name;
+    merge(requestedSchema.fields, fields);
+    // merge(requestedSchema.modelOptions, modelOptions); TODO handle this case correctly
+
+    const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
+
+    // TODO reinitialise routes?
+    return res.json(updatedSchema);
+  }
+
 
 }
