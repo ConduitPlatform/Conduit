@@ -52,7 +52,7 @@ export class AdminHandlers {
     }
 
     Object.assign(fields, {
-      _id: TYPE.String,
+      _id: TYPE.ObjectId,
       createdAt: {
         type: TYPE.Date,
         required: true
@@ -62,9 +62,11 @@ export class AdminHandlers {
         required: true
       }
     });
-    const options = JSON.stringify(modelOptions);
+    let options = undefined;
+    if (!isNil(modelOptions)) options = JSON.stringify(modelOptions);
+
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
-    newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
+    if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
     this._createSchema.call(this.cmsInstance, new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
 
     return res.json(newSchema);
@@ -106,15 +108,18 @@ export class AdminHandlers {
     }
 
     const { name, fields, modelOptions } = req.body;
+
     requestedSchema.name = name ? name : requestedSchema.name;
-    merge(requestedSchema.fields, fields);
-    const schemasModelOptions = JSON.parse(requestedSchema.modelOptions);
-    merge(schemasModelOptions, modelOptions);
-    requestedSchema.modelOptions = JSON.stringify(schemasModelOptions);
+    requestedSchema.fields = fields ? fields : requestedSchema.fields;
+    requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
 
     const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
+    if (!isNil(updatedSchema.modelOptions)) updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
 
     // TODO reinitialise routes?
+    this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+    // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
+
     return res.json(updatedSchema);
   }
 
