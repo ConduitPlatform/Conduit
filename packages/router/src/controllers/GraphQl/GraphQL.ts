@@ -161,10 +161,21 @@ export class GraphQLController {
                     if (!input.urlParams.hasOwnProperty(k)) continue;
                     params += (params.length > 1 ? ',' : '') + k + ':';
                     if (typeof input.urlParams[k] === 'string') {
-                        params += input.urlParams[k]
+                        if (input.urlParams[k] === 'Number') {
+                            params += 'Int'
+                        } else {
+                            params += input.urlParams[k]
+                        }
+
                     } else {
-                        params += ((input.urlParams[k] as ConduitRouteOptionExtended).type +
-                            ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                        if ((input.urlParams[k] as ConduitRouteOptionExtended).type === 'Number') {
+                            params += ('Int' +
+                                ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                        } else {
+                            params += ((input.urlParams[k] as ConduitRouteOptionExtended).type +
+                                ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                        }
+
                     }
                 }
             }
