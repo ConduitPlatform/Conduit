@@ -58,13 +58,14 @@ function getGraphQLType(conduitType: any) {
 }
 
 
-export function extractTypes(name: string, fields: ConduitModel | string): ParseResult {
+export function extractTypes(name: string, fields: ConduitModel | string, _input?: boolean): ParseResult {
 
     let result: ParseResult = {
         relationTypes: [],
         typeString: '',
         parentResolve: {}
     }
+    let input = !!_input;
 
     function addToRelation(name: string) {
         if (result.relationTypes.indexOf(name) === -1) {
@@ -140,7 +141,7 @@ export function extractTypes(name: string, fields: ConduitModel | string): Parse
 
     function extractTypesInternal(name: string, fields: ConduitModel | string): string {
         let finalString = '';
-        let typeString = ` type ${name} {`;
+        let typeString = ` ${input ? 'input' : 'type'} ${name} {`;
         if (typeof fields === 'string') {
             typeString += 'result: ' + getGraphQLType(fields) + '!';
         } else {
