@@ -31,8 +31,8 @@ export class CMS extends IConduitCMS {
     }
 
     private loadExistingSchemas() {
-        this._adapter.getSchema('SchemaDefinitions').model
-            .find({})
+        this._adapter.getSchema('SchemaDefinitions')
+            .findMany({enabled: true})
             .then((r: any) => {
                 if (r) {
                     r.forEach((r: any) => {
@@ -98,13 +98,13 @@ export class CMS extends IConduitCMS {
     }
 
     constructAdminRoutes() {
-        const adminHandlers = new AdminHandlers(this.sdk);
+        const adminHandlers = new AdminHandlers(this.sdk, this);
 
-        this.sdk.getAdmin().registerRoute('GET', '/content/schemas',
+        this.sdk.getAdmin().registerRoute('GET', '/cms/schemas',
           (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
 
-        this.sdk.getAdmin().registerRoute('POST', '/content/schemas',
-          (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
+        this.sdk.getAdmin().registerRoute('POST', '/cms/schemas',
+          (req, res, next) => adminHandlers.createSchema(req, res, this.createSchema).catch(next));
     }
 }
 

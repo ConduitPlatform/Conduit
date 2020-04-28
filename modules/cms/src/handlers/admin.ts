@@ -1,13 +1,17 @@
 import { ConduitSchema, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil } from 'lodash';
+import { CMS } from '../index';
 
 export class AdminHandlers {
   private readonly schemaDefinitionsModel: any;
+  private readonly cmsInstance: CMS;
   // private readonly _createSchema: (schema: ConduitSchema) => void;
 
-  constructor(sdk: ConduitSDK) {
+  constructor(sdk: ConduitSDK, cmsInstance: CMS) {
     this.schemaDefinitionsModel = sdk.getDatabase().getSchema('SchemaDefinitions');
+    this.cmsInstance = cmsInstance;
+
     // this._createSchema = createSchema;
   }
 
@@ -29,7 +33,7 @@ export class AdminHandlers {
     return res.json({results: schemas, documentsCount});
   }
 
-  async createSchema(req: Request, res: Response) {
+  async createSchema(req: Request, res: Response, cmsCreateSchema: (schema: ConduitSchema) => void) {
     const { name, fields, modelOptions, enabled } = req.body;
 
     if (isNil(name) || isNil(fields)) {
@@ -37,6 +41,7 @@ export class AdminHandlers {
     }
 
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions, enabled});
+    cmsCreateSchema.call(this.cmsInstance, newSchema);
 
     return res.json(newSchema);
   }
