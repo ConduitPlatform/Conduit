@@ -51,10 +51,34 @@ export class AdminHandlers {
       return res.status(403).json({error: 'Required fields are missing'});
     }
 
-    const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions, enabled});
+    const options = JSON.stringify(modelOptions);
+    const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
     cmsCreateSchema.call(this.cmsInstance, newSchema);
 
     return res.json(newSchema);
+  }
+
+  async setEnable(req: Request, res: Response, cmsCreateSchema: (schema: ConduitSchema) => void) {
+    const id = req.params.id;
+    if (isNil(id)) {
+      return res.status(403).json('Path parameter "id" is missing');
+    }
+    const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
+
+    if (isNil(requestedSchema)) {
+      return res.status(404).json({error: 'Requested schema not found'});
+    }
+
+    if (requestedSchema.enabled) {
+      requestedSchema.enabled = false;
+    } else {
+      requestedSchema.enabled = true;
+      cmsCreateSchema.call(this.cmsInstance, requestedSchema);
+    }
+
+    const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
+
+    return res.json({name: updatedSchema.name, enabled: updatedSchema.enabled});
   }
 
 }

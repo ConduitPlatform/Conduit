@@ -108,6 +108,10 @@ export class CMS extends IConduitCMS {
 
         this.sdk.getAdmin().registerRoute('POST', '/cms/schemas',
           (req, res, next) => adminHandlers.createSchema(req, res, this.createSchema).catch(next));
+
+        this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/enable/:id',
+          (req, res, next) => adminHandlers.setEnable(req, res, this.createSchema).catch(next));
+
     }
 }
 
