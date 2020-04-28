@@ -118,7 +118,7 @@ export class CMS extends IConduitCMS {
     }
 
     constructAdminRoutes() {
-        const adminHandlers = new AdminHandlers(this.sdk, this, this.createSchema);
+        const adminHandlers = new AdminHandlers(this.sdk, this.createSchema.bind(this));
 
         this.sdk.getAdmin().registerRoute('GET', '/cms/schemas',
           (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));

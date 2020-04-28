@@ -5,12 +5,10 @@ import { CMS } from '../index';
 
 export class AdminHandlers {
   private readonly schemaDefinitionsModel: any;
-  private readonly cmsInstance: CMS;
   private readonly _createSchema: (schema: ConduitSchema) => void;
 
-  constructor(sdk: ConduitSDK, cmsInstance: CMS, createSchema: (schema: ConduitSchema) => void) {
+  constructor(sdk: ConduitSDK, createSchema: (schema: ConduitSchema) => void) {
     this.schemaDefinitionsModel = sdk.getDatabase().getSchema('SchemaDefinitions');
-    this.cmsInstance = cmsInstance;
     this._createSchema = createSchema;
 
   }
@@ -72,7 +70,7 @@ export class AdminHandlers {
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
     if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
     if (newSchema.enabled) {
-      this._createSchema.call(this.cmsInstance, new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
+      this._createSchema(new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
     }
 
     return res.json(newSchema);
@@ -94,7 +92,7 @@ export class AdminHandlers {
       // TODO disable routes
     } else {
       requestedSchema.enabled = true;
-      this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+      this._createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
     }
 
     const updatedSchema = await this.schemaDefinitionsModel.findByIdAndUpdate(requestedSchema);
@@ -124,7 +122,7 @@ export class AdminHandlers {
 
     // TODO reinitialise routes?
     if (updatedSchema.enabled) {
-      this._createSchema.call(this.cmsInstance, new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+      this._createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
     }
     // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
