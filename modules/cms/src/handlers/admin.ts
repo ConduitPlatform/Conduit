@@ -82,6 +82,7 @@ export class AdminHandlers {
 
     if (requestedSchema.enabled) {
       requestedSchema.enabled = false;
+      // TODO disable routes
     } else {
       requestedSchema.enabled = true;
       cmsCreateSchema.call(this.cmsInstance, requestedSchema);
@@ -114,5 +115,21 @@ export class AdminHandlers {
     return res.json(updatedSchema);
   }
 
+  async deleteSchema(req: Request, res: Response) {
+    const id = req.params.id;
+    if (isNil(id)) {
+      return res.status(403).json('Path parameter "id" is missing');
+    }
+
+    const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
+    if (isNil(requestedSchema)) {
+      return res.status(404).json({error: 'Requested schema not found'});
+    }
+
+    await this.schemaDefinitionsModel.deleteOne(requestedSchema);
+
+    // TODO disable routes
+    return res.json('Schema succesfully deleted');
+  }
 
 }
