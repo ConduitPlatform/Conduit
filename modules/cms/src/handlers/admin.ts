@@ -24,10 +24,10 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const schemas = await this.schemaDefinitionsModel.findPaginated({}, skipNumber, limitNumber);
+    const schemasPromise = this.schemaDefinitionsModel.findPaginated({}, skipNumber, limitNumber);
+    const documentsCountPromise = this.schemaDefinitionsModel.countDocuments({});
 
-    const documentsCount = await this.schemaDefinitionsModel.countDocuments({});
-
+    const [schemas, documentsCount] = await Promise.all([schemasPromise, documentsCountPromise]);
     return res.json({results: schemas, documentsCount});
   }
 

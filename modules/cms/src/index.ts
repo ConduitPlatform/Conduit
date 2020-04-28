@@ -81,8 +81,10 @@ export class CMS extends IConduitCMS {
                 if (!isNil(limit)) {
                     limitNumber = Number.parseInt(limit as string);
                 }
-                const schemas = await schema.findPaginated({}, skipNumber, limitNumber);
-                const documentCount = await schema.countDocuments({});
+                const schemasPromise = schema.findPaginated({}, skipNumber, limitNumber);
+                const documentCountPromise = schema.countDocuments({});
+
+                const [schemas, documentCount] = await Promise.all([schemasPromise, documentCountPromise]);
 
                 return {schemas, documentCount};
             }));
