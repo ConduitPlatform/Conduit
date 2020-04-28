@@ -41,6 +41,10 @@ export class AdminHandlers {
 
     const requestedSchema = await this.schemaDefinitionsModel.findOne({_id: id});
 
+    if (isNil(requestedSchema)) {
+      return res.status(404).json('Requested resource not found');
+    }
+
     return res.json(requestedSchema);
   }
 
