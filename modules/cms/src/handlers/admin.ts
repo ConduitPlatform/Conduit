@@ -1,4 +1,4 @@
-import { ConduitSchema, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitSchema, ConduitSDK, IConduitDatabase, TYPE } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { CMS } from '../index';
@@ -51,6 +51,17 @@ export class AdminHandlers {
       return res.status(403).json({error: 'Required fields are missing'});
     }
 
+    Object.assign(fields, {
+      _id: TYPE.String,
+      createdAt: {
+        type: TYPE.Date,
+        required: true
+      },
+      updatedAt: {
+        type: TYPE.Date,
+        required: true
+      }
+    });
     const options = JSON.stringify(modelOptions);
     const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
     cmsCreateSchema.call(this.cmsInstance, newSchema);

@@ -74,10 +74,15 @@ export class CMS extends IConduitCMS {
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
             (params: ConduitRouteParameters) => {
-                let body = params.params;
-                let context = params.context;
-                // todo check if this is correct. Context was added here in case the create method needs the user for example
-                return schema.create({...body, ...context});
+                // console.log(params);
+                // let body = params.params;
+                // console.log(body)
+                // let context = params.context;
+                // // todo check if this is correct. Context was added here in case the create method needs the user for example
+                const createdAt = new Date();
+                const updatedAt = new Date();
+                // console.log(schema)
+                return schema.create({...body, createdAt, updatedAt, ...context});
             }));
         // todo PUT should be identical to POST but all fields should be made optional
         // this.sdk.getRouter().registerRoute(new ConduitRoute(
