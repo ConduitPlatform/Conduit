@@ -49,12 +49,11 @@ export class CoreBootstrapper {
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
-
-        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-
         app.conduit.registerEmail(new EmailModule(app.conduit));
 
         app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
+
+        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
 
         // initialize plugin AFTER the authentication so that we may provide access control to the plugins
         app.conduit.registerCMS(new CMS(app.conduit));
