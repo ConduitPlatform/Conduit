@@ -116,7 +116,7 @@ export class AdminHandlers {
 
     // TODO reinitialise routes?
     if (updatedSchema.enabled) {
-      this._createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+      this._createSchema(new ConduitSchema(updatedSchema.name, updatedSchema.fields, updatedSchema.modelOptions));
     }
     // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
