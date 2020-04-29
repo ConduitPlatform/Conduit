@@ -12,11 +12,13 @@ import InMemoryStoreConfigSchema from './config/in-memory-store';
 import {InMemoryStoreService} from "@conduit/protos/dist/src/in-memory-store_grpc_pb";
 import * as grpc from "grpc";
 import {GetResponse, StoreResponse} from "@conduit/protos/dist/src/in-memory-store_pb";
+import {AdminHandler} from "./admin";
 
 export class InMemoryStore {
 
     private _provider: StorageProvider | null = null;
     private isRunning: boolean = false;
+    private _admin: AdminHandler;
 
     constructor(private readonly conduit: ConduitGrpcSdk) {
         var server = new grpc.Server();
@@ -24,22 +26,15 @@ export class InMemoryStore {
             get: this.get,
             store: this.store
         });
+        this._admin = new AdminHandler(server, this._provider);
         server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
         server.start();
         this.enableModule().catch(console.log);
 
     }
 
-    private _get(key: string): Promise<any> {
-        return this._provider!.get(key);
-    }
-
-    private _store(key: string, value: any): Promise<any> {
-        return this._provider!.store(key, value)
-    }
-
     get(call: any, callback: any) {
-        this._get(call.request.key)
+        this._provider!.get(call.request.key)
             .then(r => {
                 let response = new GetResponse()
                 response.setData(r.toString());
@@ -52,7 +47,7 @@ export class InMemoryStore {
     }
 
     store(call: any, callback: any) {
-        this._store(call.request.key, call.request.value)
+        this._provider!.store(call.request.key, call.request.value)
             .then(r => {
                 let response = new StoreResponse()
                 response.setResult(true);
@@ -89,16 +84,10 @@ export class InMemoryStore {
 
     private async enableModule() {
         if (!this.isRunning) {
-            await this.initProvider();
-            const admin = this.conduit.admin;
-            // admin.registerRoute('POST', '/in-memory-store',
-            //     (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
-            // admin.registerRoute('GET', '/in-memory-store/:key',
-            //     (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
             this.isRunning = true;
-        } else {
-            await this.initProvider();
         }
+        await this.initProvider();
+        this._admin.updateProvider(this._provider);
     }
 
     static get config() {
@@ -120,24 +109,5 @@ export class InMemoryStore {
         }
     }
 
-    private async adminStore(req: Request, res: Response, next: NextFunction) {
-        const {key, value} = req.body;
-        if (isNil(key) || isNil(value)) {
-            return res.status(401).json({error: 'Required fields are missing'});
-        }
-
-        const stored = await this._store(key, value);
-        return res.json({stored});
-    }
-
-    private async adminGetByKey(req: Request, res: Response, next: NextFunction) {
-        const key = req.params.key;
-        if (isNil(key)) {
-            return res.status(401).json({error: 'Required parameter "key" is missing'});
-        }
-
-        const stored = await this._get(key);
-        return res.json({stored});
-    }
 
 }

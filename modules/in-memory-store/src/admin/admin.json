@@ -1,8 +1,14 @@
 {
   "functions": [
     {
-      "path": "/taf",
-      "protoName": "tafFuntion"
+      "path": "/in-memory-store",
+      "method": "GET",
+      "protoName": "get"
+    },
+    {
+      "path": "/in-memory-store/:key",
+      "method": "POST",
+      "protoName": "store"
     }
   ]
 }

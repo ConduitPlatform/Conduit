@@ -3,8 +3,8 @@ package inmemorystore.admin;
 import "google/protobuf/any.proto";
 
 service InMemoryStoreAdmin {
-    rpc AdminGet (AdminGetRequest) returns (AdminGetResponse);
-    rpc AdminStore (AdminStoreRequest) returns (AdminStoreResponse);
+    rpc get (AdminGetRequest) returns (AdminGetResponse);
+    rpc store (AdminStoreRequest) returns (AdminStoreResponse);
 }
 
 message AdminGetRequest {
@@ -12,12 +12,12 @@ message AdminGetRequest {
 }
 
 message AdminGetResponse {
-    string data = 1;
+    string value = 1;
 }
 
 message AdminStoreRequest {
     string key = 1;
-    string data = 2;
+    string value = 2;
 }
 
 message AdminStoreResponse {
