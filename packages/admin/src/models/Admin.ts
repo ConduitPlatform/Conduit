@@ -11,12 +11,6 @@ export const AdminSchema = new ConduitSchema('Admin',
       type: TYPE.String,
       required: true
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },{timestamps: true});

@@ -17,14 +17,8 @@ export const AccessTokenSchema = new ConduitSchema('AccessToken',
     expiresOn: {
       type: TYPE.Date
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
     timestamps: true

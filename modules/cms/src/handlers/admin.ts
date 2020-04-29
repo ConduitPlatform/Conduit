@@ -55,14 +55,8 @@ export class AdminHandlers {
 
     Object.assign(fields, {
       _id: TYPE.ObjectId,
-      createdAt: {
-        type: TYPE.Date,
-        required: true
-      },
-      updatedAt: {
-        type: TYPE.Date,
-        required: true
-      }
+      createdAt: TYPE.Date,
+      updatedAt: TYPE.Date
     });
     let options = undefined;
     if (!isNil(modelOptions)) options = JSON.stringify(modelOptions);

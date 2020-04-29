@@ -18,14 +18,8 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
     variables: {
       type: [String]
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
     timestamps: true

@@ -18,14 +18,8 @@ const schema = new ConduitSchema('SchemaDefinitions', {
           type: TYPE.Boolean,
           default: true
         },
-        createdAt: {
-          type: TYPE.Date,
-          required: true
-        },
-        updatedAt: {
-          type: TYPE.Date,
-          required: true
-        }
+        createdAt: TYPE.Date,
+        updatedAt: TYPE.Date
     }, {
         timestamps: true
     }
