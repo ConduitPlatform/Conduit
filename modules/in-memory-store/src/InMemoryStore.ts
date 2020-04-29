@@ -91,10 +91,10 @@ export class InMemoryStore {
         if (!this.isRunning) {
             await this.initProvider();
             const admin = this.conduit.admin;
-            admin.registerRoute('POST', '/in-memory-store',
-                (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
-            admin.registerRoute('GET', '/in-memory-store/:key',
-                (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
+            // admin.registerRoute('POST', '/in-memory-store',
+            //     (req: Request, res: Response, next: NextFunction) => this.adminStore(req, res, next).catch(next));
+            // admin.registerRoute('GET', '/in-memory-store/:key',
+            //     (req: Request, res: Response, next: NextFunction) => this.adminGetByKey(req, res, next).catch(next));
             this.isRunning = true;
         } else {
             await this.initProvider();

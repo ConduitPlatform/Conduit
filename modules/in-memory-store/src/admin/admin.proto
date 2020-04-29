@@ -7,11 +7,6 @@ service InMemoryStoreAdmin {
     rpc AdminStore (AdminStoreRequest) returns (AdminStoreResponse);
 }
 
-service InMemoryStoreConsumer {
-    rpc AdminGet (AdminGetRequest) returns (AdminGetResponse);
-    rpc AdminStore (AdminStoreRequest) returns (AdminStoreResponse);
-}
-
 message AdminGetRequest {
     string key = 1;
 }

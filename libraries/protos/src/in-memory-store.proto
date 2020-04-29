@@ -1,6 +1,5 @@
 syntax = "proto3";
 package inmemorystore;
-import "google/protobuf/any.proto";
 
 message StoreRequest {
     string key = 1;
