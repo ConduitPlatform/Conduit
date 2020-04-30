@@ -7,9 +7,8 @@ import {
 
 export const setNotificationConfig = (config) => ({
   type: SET_NOTIFICATION_CONFIG,
-  payload: config
+  payload: config,
 });
-
 
 export const startNotificationLoading = () => ({
   type: START_NOTIFICATION_LOADING,
@@ -19,7 +18,7 @@ export const stopNotificationLoading = () => ({
   type: STOP_NOTIFICATION_LOADING,
 });
 
-export const setNotificationError = error => ({
+export const setNotificationError = (error) => ({
   type: SET_NOTIFICATION_ERROR,
-  payload: { error }
+  payload: { error },
 });
