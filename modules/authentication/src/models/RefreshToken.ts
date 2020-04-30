@@ -21,14 +21,8 @@ export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
       macAddress: TYPE.String,
       userAgent: TYPE.String
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
     timestamps: true

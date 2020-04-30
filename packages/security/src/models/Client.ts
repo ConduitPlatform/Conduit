@@ -17,14 +17,8 @@ export const ClientModel = new ConduitSchema('Client',
       enum: Object.values(PlatformTypesEnum),
       required: true
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
     timestamps: true

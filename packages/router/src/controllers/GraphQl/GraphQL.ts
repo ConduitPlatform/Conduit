@@ -90,6 +90,31 @@ export class GraphQLController {
         }
     }
 
+    processParams(paramObj: any, sourceParams: string) {
+        let params = sourceParams;
+        for (let k in paramObj) {
+            if (!paramObj.hasOwnProperty(k)) continue;
+            params += (params.length > 1 ? ',' : '') + k + ':';
+            if (typeof paramObj[k] === 'string') {
+                if (paramObj[k] === 'Number') {
+                    params += 'Int'
+                } else {
+                    params += paramObj[k]
+                }
+            } else {
+                if ((paramObj[k] as ConduitRouteOptionExtended).type === 'Number') {
+                    params += ('Int' +
+                        ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                } else {
+                    params += ((paramObj[k] as ConduitRouteOptionExtended).type +
+                        ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : ''));
+                }
+            }
+        }
+        return params;
+
+    }
+
     generateAction(input: ConduitRouteOptions, returnType: string) {
         let pathName: string[] = input.path.replace('-', '').split('/');
         if (pathName[pathName.length - 1].length === 0 || pathName[pathName.length - 1] === '') {
@@ -106,42 +131,19 @@ export class GraphQLController {
         let params = '';
         if (input.bodyParams || input.queryParams || input.urlParams) {
             if (input.bodyParams) {
-                for (let k in input.bodyParams) {
-                    if (!input.bodyParams.hasOwnProperty(k)) continue;
-                    params += (params.length > 1 ? ',' : '') + k + ':';
-                    if (typeof input.bodyParams[k] === 'string') {
-                        params += input.bodyParams[k]
-                    } else {
-                        params += ((input.bodyParams[k] as ConduitRouteOptionExtended).type +
-                            ((input.bodyParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
-                    }
-                }
+                let parseResult: ParseResult = extractTypes(name + 'Request', input.bodyParams, true);
+                this.types += parseResult.typeString;
+                params += (params.length > 1 ? ',' : '') + ('params') + ':';
+                params += name + 'Request';
+
             }
 
             if (input.queryParams) {
-                for (let k in input.queryParams) {
-                    if (!input.queryParams.hasOwnProperty(k)) continue;
-                    params += (params.length > 1 ? ',' : '') + k + ':';
-                    if (typeof input.queryParams[k] === 'string') {
-                        params += input.queryParams[k]
-                    } else {
-                        params += ((input.queryParams[k] as ConduitRouteOptionExtended).type +
-                            ((input.queryParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
-                    }
-                }
+                params = this.processParams(input.queryParams, params);
             }
 
             if (input.urlParams) {
-                for (let k in input.urlParams) {
-                    if (!input.urlParams.hasOwnProperty(k)) continue;
-                    params += (params.length > 1 ? ',' : '') + k + ':';
-                    if (typeof input.urlParams[k] === 'string') {
-                        params += input.urlParams[k]
-                    } else {
-                        params += ((input.urlParams[k] as ConduitRouteOptionExtended).type +
-                            ((input.urlParams[k] as ConduitRouteOptionExtended).required ? '!' : ''));
-                    }
-                }
+                params = this.processParams(input.urlParams, params);
             }
             params = '(' + params + ')';
         }
