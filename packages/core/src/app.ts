@@ -89,21 +89,5 @@ export class App {
         }
       }));
     }));
-
-    this.conduitRouter.registerRoute(new ConduitRoute({
-      path: '/health',
-      action: Actions.GET,
-      queryParams: {
-        shouldCheck: 'String'
-      }
-    }, new ReturnDefinition('HealthResult', { result: TYPE.String, extra: TYPE.Date }), (params) => {
-      return new Promise(((resolve, reject) => {
-        if (this.app.initialized) {
-          resolve({ result: 'Overwritten!', extra: new Date() });
-        } else {
-          throw new Error('Conduit is not active yet!');
-        }
-      }));
-    }));
   }
 }
