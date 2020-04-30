@@ -18,53 +18,28 @@ const {ApolloServer, ApolloError} = require('apollo-server-express');
 
 export class GraphQLController {
 
-    typeDefs: string;
-    types: string;
-    queries: string;
-    mutations: string;
+    typeDefs!: string;
+    types!: string;
+    queries!: string;
+    mutations!: string;
     resolvers: any;
     private _internalRoute: any;
     private _apollo?: any;
     private _relationTypes: string[] = [];
     private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
+    private _registeredRoutes!: Map<string, ConduitRoute>;
 
     constructor(app: Application) {
-        this.resolvers = {
-            Date: new GraphQLScalarType({
-                name: 'Date',
-                description: 'Date custom scalar type',
-                parseValue(value) {
-                    return new Date(value); // value from the client
-                },
-                serialize(value) {
-                    return value.getTime(); // value sent to the client
-                },
-                parseLiteral(ast) {
-                    if (ast.kind === Kind.INT) {
-                        return new Date(ast.value) // ast value is always in string format
-                    }
-                    return null;
-                },
-            })
-        };
-        this.typeDefs = ` `;
-        this.types = 'scalar Date\n';
-        this.queries = '';
-        this.mutations = '';
-        const self = this;
-        this._internalRoute = Router();
-        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
-            if (self._apollo) {
-                self._apollo(req, res, next)
-            } else {
-                next();
-            }
-
-        });
+        this._registeredRoutes = new Map();
+        this.initialize();
     }
 
     getInternalRoute() {
         return this._internalRoute;
+    }
+
+    handleRequest(req: Request, res: Response, next: NextFunction) {
+        this._internalRoute(req, res, next);
     }
 
     refreshGQLServer() {
@@ -237,6 +212,51 @@ export class GraphQLController {
     }
 
     registerConduitRoute(route: ConduitRoute) {
+        const key = `${route.input.action}-${route.input.path}`;
+        const registered = this._registeredRoutes.has(key);
+        this._registeredRoutes.set(key, route);
+        if (registered) {
+            this.refreshRoutes();
+        } else {
+            this.addConduitRoute(route);
+        }
+    }
+
+    private initialize() {
+        this.resolvers = {
+            Date: new GraphQLScalarType({
+                name: 'Date',
+                description: 'Date custom scalar type',
+                parseValue(value) {
+                    return new Date(value); // value from the client
+                },
+                serialize(value) {
+                    return value.getTime(); // value sent to the client
+                },
+                parseLiteral(ast) {
+                    if (ast.kind === Kind.INT) {
+                        return new Date(ast.value) // ast value is always in string format
+                    }
+                    return null;
+                },
+            })
+        };
+        this.typeDefs = ` `;
+        this.types = 'scalar Date\n';
+        this.queries = '';
+        this.mutations = '';
+        const self = this;
+        this._internalRoute = Router();
+        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
+            if (self._apollo) {
+                self._apollo(req, res, next)
+            } else {
+                next();
+            }
+        });
+    }
+
+    private addConduitRoute(route: ConduitRoute) {
         this.generateType(route.returnTypeName, route.returnTypeFields);
         let actionName = this.generateAction(route.input, route.returnTypeName);
         this.generateSchema();
@@ -248,20 +268,20 @@ export class GraphQLController {
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
                 return self.checkMiddlewares(route.input.path, context)
-                    .then((r: any) => route.executeRequest({
-                        ...context,
-                        params: args
-                    }))
-                    .then((r: any) => {
-                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                    })
-                    .catch((err: Error | ConduitError) => {
-                        if (err.hasOwnProperty("status")) {
-                            throw new ApolloError(err.message, (err as ConduitError).status, err);
-                        } else {
-                            throw new ApolloError(err.message, 500, err);
-                        }
-                    })
+                  .then((r: any) => route.executeRequest({
+                      ...context,
+                      params: args
+                  }))
+                  .then((r: any) => {
+                      return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                  })
+                  .catch((err: Error | ConduitError) => {
+                      if (err.hasOwnProperty("status")) {
+                          throw new ApolloError(err.message, (err as ConduitError).status, err);
+                      } else {
+                          throw new ApolloError(err.message, 500, err);
+                      }
+                  })
             }
         } else {
             if (!this.resolvers['Mutation']) {
@@ -270,21 +290,29 @@ export class GraphQLController {
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
                 return self.checkMiddlewares(route.input.path, context)
-                    .then((r: any) => route.executeRequest({...context, params: args}))
-                    .then(r => {
-                        return typeof route.returnTypeFields === 'string' ? {result: r} : r;
-                    })
-                    .catch((err: Error | ConduitError) => {
-                        if (err.hasOwnProperty("status")) {
-                            throw new ApolloError(err.message, (err as ConduitError).status, err);
-                        } else {
-                            throw new ApolloError(err.message, 500, err);
-                        }
-                    })
+                  .then((r: any) => route.executeRequest({...context, params: args}))
+                  .then(r => {
+                      return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                  })
+                  .catch((err: Error | ConduitError) => {
+                      if (err.hasOwnProperty("status")) {
+                          throw new ApolloError(err.message, (err as ConduitError).status, err);
+                      } else {
+                          throw new ApolloError(err.message, 500, err);
+                      }
+                  })
             }
         }
-        this.refreshGQLServer();
     }
 
-
+    private refreshRoutes() {
+        this.initialize();
+        this._registeredRoutes.forEach(route => {
+            // we should probably implement some kind of caching for this
+            // so it does not recalculate the types for the routes that have not changed
+            // but it needs to be done carefully
+            this.addConduitRoute(route);
+        });
+        this.refreshGQLServer();
+    }
 }

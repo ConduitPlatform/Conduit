@@ -2,9 +2,10 @@ import express, { NextFunction, Request, Response } from 'express';
 import { ConduitApp } from './interfaces/ConduitApp';
 import {
   ConduitRoute,
-  ConduitSDK,
   ConduitRouteActions as Actions,
-  ConduitRouteReturnDefinition as ReturnDefinition
+  ConduitRouteReturnDefinition as ReturnDefinition,
+  ConduitSDK,
+  TYPE
 } from '@conduit/sdk';
 import { ConduitDefaultRouter } from '@conduit/router';
 import path from 'path';
