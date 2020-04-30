@@ -5,6 +5,7 @@ import CustomTabs from '../components/CustomTabs';
 import React, { useState } from 'react';
 import { privateRoute } from '../components/utils/privateRoute';
 import StorageFiles from '../components/StorageFiles';
+import StorageSettings from "../components/StorageSettings";
 
 const tabs = [{ title: 'Files' }, { title: 'Settings' }];
 
@@ -14,16 +15,21 @@ const Storage = () => {
   const handleChange = (event, newValue) => {
     setSelected(newValue);
   };
+
   return (
-    <Layout itemSelected={5}>
-      <Box p={2}>
-        <Typography variant={'h4'}>Storage</Typography>
-        <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
-        <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-          <StorageFiles />
+      <Layout itemSelected={ 5 }>
+        <Box p={ 2 }>
+          <Typography variant={ 'h4' }>Storage</Typography>
+          <CustomTabs tabs={ tabs } selected={ selected } handleChange={ handleChange }/>
+          <Box role="tabpanel" hidden={ selected !== 0 } id={ `tabpanel-0` }>
+            <StorageFiles/>
+          </Box>
+          <Box role="tabpanel" hidden={ selected !== 1 } id={ `tabpanel-1` }>
+            {/*  todo call component storageSettings*/ }
+            <StorageSettings/>
+          </Box>
         </Box>
-      </Box>
-    </Layout>
+      </Layout>
   );
 };
 
