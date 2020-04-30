@@ -70,7 +70,7 @@ export class AdminHandlers {
     return res.json(newSchema);
   }
 
-  async setEnable(req: Request, res: Response) {
+  async toggle(req: Request, res: Response) {
     const id = req.params.id;
     if (isNil(id)) {
       return res.status(400).json('Path parameter "id" is missing');
