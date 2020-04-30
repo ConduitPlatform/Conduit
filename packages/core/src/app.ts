@@ -2,9 +2,10 @@ import express, { NextFunction, Request, Response } from 'express';
 import { ConduitApp } from './interfaces/ConduitApp';
 import {
   ConduitRoute,
-  ConduitSDK,
   ConduitRouteActions as Actions,
-  ConduitRouteReturnDefinition as ReturnDefinition
+  ConduitRouteReturnDefinition as ReturnDefinition,
+  ConduitSDK,
+  TYPE
 } from '@conduit/sdk';
 import { ConduitDefaultRouter } from '@conduit/router';
 import path from 'path';
@@ -83,6 +84,22 @@ export class App {
       return new Promise(((resolve, reject) => {
         if (this.app.initialized) {
           resolve('Conduit is online!');
+        } else {
+          throw new Error('Conduit is not active yet!');
+        }
+      }));
+    }));
+
+    this.conduitRouter.registerRoute(new ConduitRoute({
+      path: '/health',
+      action: Actions.GET,
+      queryParams: {
+        shouldCheck: 'String'
+      }
+    }, new ReturnDefinition('HealthResult', { result: TYPE.String, extra: TYPE.Date }), (params) => {
+      return new Promise(((resolve, reject) => {
+        if (this.app.initialized) {
+          resolve({ result: 'Overwritten!', extra: new Date() });
         } else {
           throw new Error('Conduit is not active yet!');
         }
