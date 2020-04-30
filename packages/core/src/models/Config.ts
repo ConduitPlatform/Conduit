@@ -53,6 +53,6 @@ export class ConfigModelGenerator {
     const configFieldsObject = this.getConfigFields(config);
     return new ConduitSchema('Config',
       configFieldsObject,
-      {timestamps: true});
+      {timestamps: true, systemRequired: true});
   }
 }

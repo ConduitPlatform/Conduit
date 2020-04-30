@@ -21,7 +21,8 @@ const schema = new ConduitSchema('SchemaDefinitions', {
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     }, {
-        timestamps: true
+        timestamps: true,
+        systemRequired: true
     }
 );
 export default schema;

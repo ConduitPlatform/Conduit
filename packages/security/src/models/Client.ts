@@ -21,5 +21,6 @@ export const ClientModel = new ConduitSchema('Client',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

@@ -46,5 +46,6 @@ export const UserSchema = new ConduitSchema('User',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

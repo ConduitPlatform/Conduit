@@ -25,5 +25,6 @@ export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

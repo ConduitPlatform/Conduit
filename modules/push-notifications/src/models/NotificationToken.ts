@@ -20,5 +20,6 @@ export const NotificationTokenModel = new ConduitSchema('NotificationToken',
         updatedAt: TYPE.Date
     },
   {
-      timestamps: true
+      timestamps: true,
+      systemRequired: true
   });

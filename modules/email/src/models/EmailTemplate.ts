@@ -22,5 +22,6 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

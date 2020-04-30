@@ -20,5 +20,6 @@ export const Token = new ConduitSchema('Token',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

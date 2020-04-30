@@ -22,6 +22,7 @@ export default new ConduitSchema(
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   }
 );

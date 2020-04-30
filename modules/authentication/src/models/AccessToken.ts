@@ -21,5 +21,6 @@ export const AccessTokenSchema = new ConduitSchema('AccessToken',
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });
