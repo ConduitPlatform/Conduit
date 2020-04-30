@@ -17,67 +17,67 @@ const drawerWidth = 200;
 const drawerWidthClosed = 52;
 
 const useStyles = makeStyles((theme) => ({
-	drawerOpen: {
-		width: drawerWidth,
-		transition: theme.transitions.create('width', {
-			easing: theme.transitions.easing.sharp,
-			duration: theme.transitions.duration.enteringScreen,
-		}),
-	},
-	drawerClose: {
-		transition: theme.transitions.create('width', {
-			easing: theme.transitions.easing.sharp,
-			duration: theme.transitions.duration.leavingScreen,
-		}),
-		overflowX: 'hidden',
-		width: drawerWidthClosed,
-	},
-	toolbar: theme.mixins.toolbar,
-	listItem: {
-		color: theme.palette.primary.main,
-		borderWidth: '1px',
-		borderStyle: 'solid',
-		borderColor: theme.palette.primary.main,
-		paddingLeft: 4,
-		paddingRight: 4,
-		'&:hover': {
-			borderWidth: '1px',
-			borderStyle: 'solid',
-			borderColor: theme.palette.primary.main,
-		},
-		'&:focus': {
-			borderWidth: '1px',
-			borderStyle: 'solid',
-			borderColor: theme.palette.primary.main,
-		},
-		'&.Mui-selected': {
-			color: theme.palette.common.white,
-			background: theme.palette.primary.main,
-			borderWidth: '1px',
-			borderStyle: 'solid',
-			borderColor: theme.palette.primary.main,
-			'&:hover': {
-				background: theme.palette.primary.dark,
-				borderWidth: '1px',
-				borderStyle: 'solid',
-				borderColor: theme.palette.primary.dark,
-			},
-			'&:focus': {
-				background: theme.palette.primary.dark,
-				borderWidth: '1px',
-				borderStyle: 'solid',
-				borderColor: theme.palette.primary.dark,
-			},
-		},
-	},
-	listItemText: {
-		fontWeight: 'bold',
-	},
-	listItemIcon: {
-		minWidth: 36,
-		marginRight: theme.spacing(1),
-		color: 'inherit',
-	},
+  drawerOpen: {
+    width: drawerWidth,
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  drawerClose: {
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    overflowX: 'hidden',
+    width: drawerWidthClosed,
+  },
+  toolbar: theme.mixins.toolbar,
+  listItem: {
+    color: theme.palette.primary.main,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: theme.palette.primary.main,
+    paddingLeft: 4,
+    paddingRight: 4,
+    '&:hover': {
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.palette.primary.main,
+    },
+    '&:focus': {
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-selected': {
+      color: theme.palette.common.white,
+      background: theme.palette.primary.main,
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.palette.primary.main,
+      '&:hover': {
+        background: theme.palette.primary.dark,
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: theme.palette.primary.dark,
+      },
+      '&:focus': {
+        background: theme.palette.primary.dark,
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: theme.palette.primary.dark,
+      },
+    },
+  },
+  listItemText: {
+    fontWeight: 'bold',
+  },
+  listItemIcon: {
+    minWidth: 36,
+    marginRight: theme.spacing(1),
+    color: 'inherit',
+  },
 }));
 
 function CustomDrawer(props) {
@@ -171,17 +171,16 @@ function CustomDrawer(props) {
               <ListItemText primary={'CMS'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href='/storage'>
-            <ListItem button key={"Storage"} className={classes.listItem} style={itemStyle}
-                      selected={itemSelected === 4}>
+          <Link href="/storage">
+            <ListItem button key={'Storage'} className={classes.listItem} style={itemStyle} selected={itemSelected === 5}>
               <ListItemIcon className={classes.listItemIcon}>
-                <Cloud color={'inherit'}/>
+                <Cloud color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={"Storage"} classes={{primary: classes.listItemText}}/>
+              <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/settings">
-            <ListItem button key={'Settings'} className={classes.listItem} style={itemStyle} selected={itemSelected === 5}>
+            <ListItem button key={'Settings'} className={classes.listItem} style={itemStyle} selected={itemSelected === 6}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Settings color={'inherit'} />
               </ListItemIcon>
