@@ -75,7 +75,6 @@ export class LocalHandlers {
         if (isNil(params.context)) throw ConduitError.unauthorized('No headers provided');
         const clientId = params.context.clientId;
 
-        if (!config.local.active) throw ConduitError.forbidden('Local authentication is disabled');
         if (isNil(email) || isNil(password)) throw ConduitError.userInput('Email and password required');
 
         const User = this.database.getSchema('User');

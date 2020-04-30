@@ -6,10 +6,9 @@ import {GraphQLController} from "./GraphQl/GraphQL";
 
 export class ConduitRoutingController {
 
-    private _restRouter: RestController
-    private _graphQLRouter?: GraphQLController
-    private _graphQLRouting?: Router;
-    private _app: Application
+    private _restRouter: RestController;
+    private _graphQLRouter?: GraphQLController;
+    private _app: Application;
     private _middlewareRouter: Router;
 
     constructor(app: Application) {
@@ -24,22 +23,20 @@ export class ConduitRoutingController {
         // this should be the only thing on your app
         app.use((req, res, next) => {
             self._middlewareRouter(req, res, next)
-        })
+        });
 
         app.use((req, res, next) => {
-            if (req.url === '/graphql' && this._graphQLRouting) {
-                this._graphQLRouting(req, res, next);
+            if (req.url === '/graphql' && this._graphQLRouter) {
+                this._graphQLRouter.handleRequest(req, res, next);
             } else if (req.url !== '/graphql') {
                 // this needs to be a function to hook on whatever the current router is
                 self._restRouter.handleRequest(req, res, next)
             }
-
-        })
+        });
     }
 
     initGraphQL() {
         this._graphQLRouter = new GraphQLController(this._app);
-        this._graphQLRouting = this._graphQLRouter?.getInternalRoute();
     }
 
     registerMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
