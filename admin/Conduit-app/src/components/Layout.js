@@ -1,11 +1,11 @@
-import React, {useState} from "react";
-import {CustomAppBar} from './Header'
-import makeStyles from "@material-ui/styles/makeStyles";
-import CustomDrawer from './Drawer'
-import CssBaseline from "@material-ui/core/CssBaseline";
-import {useRouter} from "next/router";
+import React, { useState } from 'react';
+import { CustomAppBar } from './Header';
+import makeStyles from '@material-ui/styles/makeStyles';
+import CustomDrawer from './Drawer';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import { useRouter } from 'next/router';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
   },
@@ -22,10 +22,9 @@ const useStyles = makeStyles(theme => ({
   toolbar: theme.mixins.toolbar,
 }));
 
-
 export function Layout(props) {
   const classes = useStyles();
-  const {menuDisabled, itemSelected, ...rest} = props;
+  const { menuDisabled, itemSelected, ...rest } = props;
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -38,39 +37,37 @@ export function Layout(props) {
   }
 
   function menuClick() {
-    open ? handleDrawerClose() : handleDrawerOpen()
+    open ? handleDrawerClose() : handleDrawerOpen();
   }
 
   function logoClick() {
-    router.push('/')
+    router.push('/');
   }
 
-  const drawerDisabled = (() => {
-      if (menuDisabled === null || menuDisabled === undefined) {
-        return false;
-      }
-      return menuDisabled;
+  const drawerDisabled = () => {
+    if (menuDisabled === null || menuDisabled === undefined) {
+      return false;
     }
-  );
+    return menuDisabled;
+  };
 
   let appBar, drawer;
   if (!drawerDisabled()) {
-    appBar = <CustomAppBar className={classes.appBar} onMenuClick={() => menuClick()} onLogoClick={() => logoClick()}/>;
-    drawer = <CustomDrawer itemSelected={itemSelected} open={open}/>;
+    appBar = <CustomAppBar className={classes.appBar} onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />;
+    drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
   } else {
-    appBar = <CustomAppBar className={classes.appBar} showMenuButton={false} onMenuClick={() => menuClick()}/>;
+    appBar = <CustomAppBar className={classes.appBar} showMenuButton={false} onMenuClick={() => menuClick()} />;
   }
 
   return (
     <div className={classes.root} {...rest}>
-      <CssBaseline/>
+      <CssBaseline />
       {appBar}
       {drawer}
       <main className={classes.content}>
-        <div className={classes.toolbar}/>
+        <div className={classes.toolbar} />
         {rest.children}
       </main>
     </div>
   );
 }
-
