@@ -2,12 +2,13 @@ import path from 'path';
 import convict, { Config } from 'convict';
 import AppConfigSchema from './schema/app';
 import { isNil } from 'lodash';
-import AuthenticationModule from '@conduit/authentication';
-import AdminModule from '@conduit/admin';
-import EmailModule from '@conduit/email';
-import StorageModule from '@conduit/storage';
-import InMemoryStore from '@conduit/in-memory-store';
-import PushNotificationsModule from '@conduit/push-notifications';
+//  config import needs to be changed
+// import AuthenticationModule from '@conduit/authentication';
+// import AdminModule from '@conduit/admin';
+// import EmailModule from '@conduit/email';
+// import StorageModule from '@conduit/storage';
+// import InMemoryStore from '@conduit/in-memory-store';
+// import PushNotificationsModule from '@conduit/push-notifications';
 
 export class AppConfig {
   private static instance: AppConfig;
@@ -42,12 +43,13 @@ export class AppConfig {
   private mergeSchemas() {
     return {
       ...AppConfigSchema,
-      ...AuthenticationModule.config,
-      ...EmailModule.config,
-      ...StorageModule.config,
-      ...InMemoryStore.config,
-      ...PushNotificationsModule.config,
-      ...AdminModule.config
+      // config import needs to be changed
+      // ...AuthenticationModule.config,
+      // ...EmailModule.config,
+      // ...StorageModule.config,
+      // ...InMemoryStore.config,
+      // ...PushNotificationsModule.config,
+      // ...AdminModule.config
     };
   }
 
@@ -56,7 +58,8 @@ export class AppConfig {
   }
 
   private validateConfig() {
-    this.convictConfig.validate({ allowed: 'strict' });
+    // todo maybe change  back to strict but i think strict might not be possible
+    this.convictConfig.validate({ allowed: 'warn' });
   }
 
   private injectEnvironmentVariables() {

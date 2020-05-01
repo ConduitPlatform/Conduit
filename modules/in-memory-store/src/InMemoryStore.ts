@@ -19,6 +19,7 @@ export class InMemoryStore {
     private _provider: StorageProvider | null = null;
     private isRunning: boolean = false;
     private _admin: AdminHandler;
+    private _url: string;
 
     constructor(private readonly conduit: ConduitGrpcSdk) {
         var server = new grpc.Server();
@@ -27,10 +28,16 @@ export class InMemoryStore {
             store: this.store
         });
         this._admin = new AdminHandler(server, this._provider);
-        server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
+        this._url = process.env.SERVICE_URL || '0.0.0.0:0';
+        let result = server.bind(this._url, grpc.ServerCredentials.createInsecure());
+        this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
+        console.log("bound on:", this._url);
         server.start();
-        this.enableModule().catch(console.log);
+        this.enableModule().catch(console.log)
+    }
 
+    get url(): string {
+        return this._url;
     }
 
     get(call: any, callback: any) {

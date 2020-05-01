@@ -1,7 +1,7 @@
 import * as grpc from 'grpc';
-import {AdminClient} from "@conduit/protos/dist/src/admin_grpc_pb";
-import {RegisterAdminRouteRequest} from "@conduit/protos/dist/src/admin_pb";
+import {RegisterAdminRouteRequest} from "@conduit/protos/dist/src/core_pb";
 import PathDefinition = RegisterAdminRouteRequest.PathDefinition;
+import {AdminClient} from "@conduit/protos/dist/src/core_grpc_pb";
 
 export default class Admin {
     private readonly client: AdminClient;

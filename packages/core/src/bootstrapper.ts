@@ -1,23 +1,28 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
-import { ConfigModelGenerator } from './models/Config';
+import {ConfigModelGenerator} from './models/Config';
 import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
 import AdminModule from '@conduit/admin';
 import SecurityModule from '@conduit/security';
-import PushNotificationsModule from '@conduit/push-notifications';
-import EmailModule from '@conduit/email';
-import AuthenticationModule from '@conduit/authentication';
-import {CMS} from '@conduit/cms';
-import StorageModule from '@conduit/storage';
-import InMemoryStoreModule from '@conduit/in-memory-store';
 import {ConfigAdminHandlers} from './admin/config';
 import {ConduitSDK} from '@conduit/sdk';
+import * as grpc from "grpc";
+import ConfigManager from "@conduit/config";
 
 export class CoreBootstrapper {
     static bootstrap() {
-        const app = new App().get();
-        CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
+        let primary = new App();
+        const app = primary.get();
+        var server = new grpc.Server();
+        let manager = new ConfigManager(server, (url: string) => {
+            primary.initialize();
+            CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
+        });
+        let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
+        server.bind(_url, grpc.ServerCredentials.createInsecure());
+        server.start();
+        console.log("grpc server listening on:", _url);
         return app;
     }
 
@@ -49,18 +54,19 @@ export class CoreBootstrapper {
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
-        app.conduit.registerEmail(new EmailModule(app.conduit));
-
-        app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
-
-        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-
-        // initialize plugin AFTER the authentication so that we may provide access control to the plugins
-        app.conduit.registerCMS(new CMS(app.conduit));
-
-        app.conduit.registerStorage(new StorageModule(app.conduit));
-
-        app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
+        //
+        // app.conduit.registerEmail(new EmailModule(app.conduit));
+        //
+        // app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
+        //
+        // app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
+        //
+        // // initialize plugin AFTER the authentication so that we may provide access control to the plugins
+        // app.conduit.registerCMS(new CMS(app.conduit));
+        //
+        // app.conduit.registerStorage(new StorageModule(app.conduit));
+        //
+        // app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
         CoreBootstrapper.registerAdminRoutes(app.conduit);
 

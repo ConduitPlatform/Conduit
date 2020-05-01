@@ -1,6 +1,6 @@
 import * as grpc from 'grpc';
-import {ConfigClient} from '@conduit/protos/dist/src/config_grpc_pb';
-import {GetRequest, ModuleExistsRequest, UpdateRequest} from "@conduit/protos/dist/src/config_pb";
+import {ConfigClient} from "@conduit/protos/dist/src/core_grpc_pb";
+import {GetRequest, ModuleExistsRequest, RegisterModuleRequest, UpdateRequest} from "@conduit/protos/dist/src/core_pb";
 
 export default class Config {
     private readonly client: ConfigClient;
@@ -15,7 +15,7 @@ export default class Config {
         return new Promise((resolve, reject) => {
             this.client.get(request, (err, res) => {
                 if (err || !res || !res.hasData()) {
-                    reject(err);
+                    reject(err || 'Something went wrong');
                 } else {
                     resolve(res.getData());
                 }
@@ -30,7 +30,7 @@ export default class Config {
         return new Promise((resolve, reject) => {
             this.client.updateConfig(request, (err, res) => {
                 if (err || !res || !res.hasResult()) {
-                    reject(err);
+                    reject(err || 'Something went wrong');
                 } else {
                     resolve(res.getResult());
                 }
@@ -44,9 +44,24 @@ export default class Config {
         return new Promise((resolve, reject) => {
             this.client.moduleExists(request, (err, res) => {
                 if (err || !res) {
-                    reject(err);
+                    reject(err || 'Something went wrong');
                 } else {
                     resolve(res.getUrl());
+                }
+            })
+        });
+    }
+
+    registerModule(name: string, url: string): Promise<any> {
+        let request = new RegisterModuleRequest();
+        request.setModulename(name);
+        request.setUrl(url);
+        return new Promise((resolve, reject) => {
+            this.client.registerModule(request, (err, res) => {
+                if (err || !res || !res.getResult()) {
+                    reject(err || 'Module was not registered');
+                } else {
+                    resolve(res.getResult());
                 }
             })
         });

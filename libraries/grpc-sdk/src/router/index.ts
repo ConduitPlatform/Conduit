@@ -1,6 +1,6 @@
 import * as grpc from 'grpc';
-import {RouterClient} from "@conduit/protos/dist/src/router_grpc_pb";
-import {RegisterConduitRouteRequest} from "@conduit/protos/dist/src/router_pb";
+import {RouterClient} from "@conduit/protos/dist/src/core_grpc_pb";
+import {RegisterConduitRouteRequest} from "@conduit/protos/dist/src/core_pb";
 import PathDefinition = RegisterConduitRouteRequest.PathDefinition;
 
 export default class Router {

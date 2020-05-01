@@ -4,7 +4,7 @@ import {isNil} from "lodash";
 import {StorageProvider} from "../interaces/StorageProvider";
 
 var protoLoader = require('@grpc/proto-loader');
-var PROTO_PATH = __dirname + './admin.proto';
+var PROTO_PATH = __dirname + '/admin.proto';
 
 export class AdminHandler {
 
@@ -25,7 +25,7 @@ export class AdminHandler {
         // The protoDescriptor object has the full package hierarchy
         // @ts-ignore
         var admin = protoDescriptor.inmemorystore.admin;
-        server.addService(admin.RouteGuide.InMemoryStoreAdmin, {
+        server.addService(admin.InMemoryStoreAdmin.service, {
             get: this.get,
             store: this.store
         });
