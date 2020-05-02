@@ -1,6 +1,11 @@
 import * as grpc from 'grpc';
-import {ConfigClient} from "@conduit/protos/dist/src/core_grpc_pb";
-import {GetRequest, ModuleExistsRequest, RegisterModuleRequest, UpdateRequest} from "@conduit/protos/dist/src/core_pb";
+import {ConfigClient} from "../generated/core_grpc_pb";
+import {
+    GetRequest,
+    ModuleExistsRequest,
+    RegisterModuleRequest,
+    UpdateRequest
+} from "../generated/core_pb";
 
 export default class Config {
     private readonly client: ConfigClient;
@@ -53,7 +58,7 @@ export default class Config {
     }
 
     registerModule(name: string, url: string): Promise<any> {
-        let request = new RegisterModuleRequest();
+        let request:RegisterModuleRequest = new RegisterModuleRequest();
         request.setModulename(name);
         request.setUrl(url);
         return new Promise((resolve, reject) => {

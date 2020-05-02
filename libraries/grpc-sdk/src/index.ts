@@ -1,6 +1,7 @@
 import Config from "./config";
 import Admin from "./admin";
 import Router from "./router";
+import * as grpc from "grpc";
 
 
 export default class ConduitGrpcSdk {
@@ -30,3 +31,4 @@ export default class ConduitGrpcSdk {
     }
 
 }
+export let grpcModule: any = grpc;

@@ -1,6 +1,5 @@
 import * as grpc from "grpc";
-import {ConfigService} from "@conduit/protos/dist/src/core_grpc_pb";
-import {GetResponse} from "@conduit/protos/dist/src/in-memory-store_pb";
+import {ConfigService} from "@conduit/grpc-sdk/dist/generated/core_grpc_pb";
 
 export default class ConfigManager {
 

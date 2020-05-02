@@ -6,13 +6,12 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/**/*.proto src/**/*.json ./dist/",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "publish": "npm publish"
   },
   "license": "ISC",
   "dependencies": {
     "@conduit/grpc-sdk": "1.0.0",
-    "@conduit/protos": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15",

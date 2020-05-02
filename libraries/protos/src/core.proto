@@ -1,0 +1,75 @@
+syntax = "proto3";
+package conduit.core;
+import "google/protobuf/any.proto";
+
+service Config {
+    rpc Get (GetRequest) returns (GetResponse);
+    rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
+    rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+    rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+}
+
+service Admin {
+    rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+}
+
+service Router {
+    rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+}
+
+message RegisterAdminRouteRequest {
+
+    repeated PathDefinition routes = 1;
+    string protoFile = 2;
+    message PathDefinition {
+        string path = 1;
+        string method = 2;
+        string grpcFunction = 3;
+    }
+}
+message RegisterConduitRouteRequest {
+
+    repeated PathDefinition routes = 1;
+    string protoFile = 2;
+    message PathDefinition {
+        string path = 1;
+        string method = 2;
+        //  The json definition for the inputs
+        string inputs = 3;
+        string grpcFunction = 4;
+    }
+}
+
+message Empty {
+}
+message RegisterModuleRequest {
+    string moduleName = 1;
+    string url = 2;
+}
+
+message RegisterModuleResponse {
+    bool result = 1;
+}
+
+message ModuleExistsRequest {
+    string moduleName = 1;
+}
+
+message ModuleExistsResponse {
+    string url = 1;
+}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    google.protobuf.Any data = 1;
+}
+message UpdateRequest {
+    google.protobuf.Any config = 1;
+    string moduleName = 2;
+}
+message UpdateResponse {
+    google.protobuf.Any result = 1;
+}

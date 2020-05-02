@@ -4,15 +4,14 @@ import {MemcachedSettings} from './interaces/MemcachedSettings';
 import {RedisProvider} from './providers/redis';
 import {Localprovider} from './providers/local';
 import {MemcachedProvider} from './providers/memcached';
-import {StorageProvider} from './interaces/StorageProvider';
-import {NextFunction, Request, Response} from 'express';
+import {StorageProvider} from './interaces/StorageProvider'
 import {isNil} from 'lodash';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {grpcModule} from '@conduit/grpc-sdk';
 import InMemoryStoreConfigSchema from './config/in-memory-store';
-import {InMemoryStoreService} from "@conduit/protos/dist/src/in-memory-store_grpc_pb";
-import * as grpc from "grpc";
-import {GetResponse, StoreResponse} from "@conduit/protos/dist/src/in-memory-store_pb";
 import {AdminHandler} from "./admin";
+
+let protoLoader = require('@grpc/proto-loader');
 
 export class InMemoryStore {
 
@@ -22,14 +21,27 @@ export class InMemoryStore {
     private _url: string;
 
     constructor(private readonly conduit: ConduitGrpcSdk) {
-        var server = new grpc.Server();
-        server.addService(InMemoryStoreService, {
+        var packageDefinition = protoLoader.loadSync(
+            './in-memory-store.proto',
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        var protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
+
+        var memoryStore = protoDescriptor.inmemorystore.InMemoryStore;
+        var server = new grpcModule.Server();
+
+        server.addService(memoryStore.service, {
             get: this.get,
             store: this.store
         });
         this._admin = new AdminHandler(server, this._provider);
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = server.bind(this._url, grpc.ServerCredentials.createInsecure());
+        let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
         server.start();
@@ -43,9 +55,7 @@ export class InMemoryStore {
     get(call: any, callback: any) {
         this._provider!.get(call.request.key)
             .then(r => {
-                let response = new GetResponse()
-                response.setData(r.toString());
-                callback(null, response);
+                callback(null, {data: r.toString()});
             })
             .catch(err => {
                 callback(err);
@@ -56,9 +66,7 @@ export class InMemoryStore {
     store(call: any, callback: any) {
         this._provider!.store(call.request.key, call.request.value)
             .then(r => {
-                let response = new StoreResponse()
-                response.setResult(true);
-                callback(null, response);
+                callback(null, {result: true});
             })
             .catch(err => {
                 callback(err, null);
