@@ -14,6 +14,9 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     let actual: any = copy.modelSchema;
 
     // converts relations to mongoose relations
+    if (actual.hasOwnProperty('_id')) {
+        delete actual['_id'];
+    }
     deepdash.eachDeep(actual, convert);
 
     // just to be sure
@@ -26,18 +29,15 @@ function convert(value: any, key: any, parentValue: any, context: any) {
     if (!parentValue?.hasOwnProperty(key)) {
         return true;
     }
-    if (key === '_id') {
-        delete parentValue[key];
-        return true;
-    }
-    if (parentValue[key]?.type && parentValue[key].type === 'Relation') {
+
+    if (parentValue[key]?.type === 'Relation') {
         const current = parentValue[key];
         current.type = Schema.Types.ObjectId;
         current.ref = parentValue[key].model
         delete current.model;
     }
 
-    if (parentValue[key]?.type && parentValue[key].type === 'JSON') {
+    if (parentValue[key]?.type === 'JSON') {
         parentValue[key].type = Schema.Types.Mixed;
     }
 }
