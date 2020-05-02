@@ -5,6 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
+    "postinstall": "cd ../protos && sh build.sh",
     "build": "rimraf dist && tsc",
     "publish": "npm publish"
   },
