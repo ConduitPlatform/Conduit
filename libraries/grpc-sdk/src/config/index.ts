@@ -29,10 +29,10 @@ export default class Config {
         };
         return new Promise((resolve, reject) => {
             this.client.get(request, (err: any, res: any) => {
-                if (err || !res || !res.hasData()) {
+                if (err || !res || !res.data) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.getData());
+                    resolve(res.data);
                 }
             })
         });
@@ -45,10 +45,10 @@ export default class Config {
         };
         return new Promise((resolve, reject) => {
             this.client.updateConfig(request, (err: any, res: any) => {
-                if (err || !res || !res.hasResult()) {
+                if (err || !res || !res.result) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.getResult());
+                    resolve(res.result);
                 }
             })
         });
@@ -63,7 +63,7 @@ export default class Config {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.getUrl());
+                    resolve(res.url);
                 }
             })
         });
@@ -76,10 +76,10 @@ export default class Config {
         };
         return new Promise((resolve, reject) => {
             this.client.registerModule(request, (err: any, res: any) => {
-                if (err || !res || !res.getResult()) {
+                if (err || !res || !res.result) {
                     reject(err || 'Module was not registered');
                 } else {
-                    resolve(res.getResult());
+                    resolve(res.result);
                 }
             })
         });

@@ -38,6 +38,7 @@ export default class ConfigManager {
         if (call.request.moduleName === 'database') {
             this.databaseCallback();
         }
+        callback(null, {result: true});
     }
 
 
