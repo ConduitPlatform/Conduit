@@ -26,8 +26,8 @@ export class AdminHandler {
         // @ts-ignore
         var admin = protoDescriptor.inmemorystore.admin;
         server.addService(admin.InMemoryStoreAdmin.service, {
-            get: this.get,
-            store: this.store
+            get: this.get.bind(this),
+            store: this.store.bind(this)
         });
     }
 

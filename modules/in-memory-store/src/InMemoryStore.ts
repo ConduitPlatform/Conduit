@@ -36,8 +36,8 @@ export class InMemoryStore {
         var server = new grpcModule.Server();
 
         server.addService(memoryStore.service, {
-            get: this.get,
-            store: this.store
+            get: this.get.bind(this),
+            store: this.store.bind(this)
         });
         this._admin = new AdminHandler(server, this._provider);
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';

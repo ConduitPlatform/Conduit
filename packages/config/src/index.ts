@@ -13,9 +13,9 @@ export default class ConfigManager {
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
             get: this.get,
-            updateConfig: this.updateConfig,
-            moduleExists: this.moduleExists,
-            registerModule: this.registerModule,
+            updateConfig: this.updateConfig.bind(this),
+            moduleExists: this.moduleExists.bind(this),
+            registerModule: this.registerModule.bind(this),
         })
         this.databaseCallback = databaseCallback;
     }
