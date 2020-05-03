@@ -9,13 +9,24 @@ import {ConfigAdminHandlers} from './admin/config';
 import {ConduitSDK} from '@conduit/sdk';
 import * as grpc from "grpc";
 import ConfigManager from "@conduit/config";
+import path from 'path';
+let protoLoader = require('@grpc/proto-loader');
 
 export class CoreBootstrapper {
     static bootstrap() {
         let primary = new App();
         const app = primary.get();
         var server = new grpc.Server();
-        let manager = new ConfigManager(server, (url: string) => {
+        var packageDefinition = protoLoader.loadSync(
+            path.resolve(__dirname, './core.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        let manager = new ConfigManager(server, packageDefinition, (url: string) => {
             primary.initialize();
             CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
         });

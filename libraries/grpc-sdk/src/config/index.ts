@@ -1,24 +1,34 @@
 import * as grpc from 'grpc';
-import {ConfigClient} from "../generated/core_grpc_pb";
-import {
-    GetRequest,
-    ModuleExistsRequest,
-    RegisterModuleRequest,
-    UpdateRequest
-} from "../generated/core_pb";
+import path from "path";
+
+let protoLoader = require('@grpc/proto-loader');
+
 
 export default class Config {
-    private readonly client: ConfigClient;
+    private readonly client: grpc.Client | any;
 
     constructor(url: string) {
-        this.client = new ConfigClient(url, grpc.credentials.createInsecure());
+        var packageDefinition = protoLoader.loadSync(
+            path.resolve(__dirname, '../proto/core.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        // @ts-ignore
+        var config = protoDescriptor.conduit.core.Config;
+        this.client = new config(url, grpc.credentials.createInsecure());
     }
 
     get(name: string): Promise<any> {
-        let request = new GetRequest();
-        request.setKey(name);
+        let request = {
+            key: name
+        };
         return new Promise((resolve, reject) => {
-            this.client.get(request, (err, res) => {
+            this.client.get(request, (err: any, res: any) => {
                 if (err || !res || !res.hasData()) {
                     reject(err || 'Something went wrong');
                 } else {
@@ -29,11 +39,12 @@ export default class Config {
     }
 
     updateConfig(config: any, name: string): Promise<any> {
-        let request = new UpdateRequest();
-        request.setConfig(config);
-        request.setModulename(name);
+        let request = {
+            config: config,
+            moduleName: name
+        };
         return new Promise((resolve, reject) => {
-            this.client.updateConfig(request, (err, res) => {
+            this.client.updateConfig(request, (err: any, res: any) => {
                 if (err || !res || !res.hasResult()) {
                     reject(err || 'Something went wrong');
                 } else {
@@ -44,10 +55,11 @@ export default class Config {
     }
 
     moduleExists(name: string): Promise<any> {
-        let request = new ModuleExistsRequest();
-        request.setModulename(name);
+        let request = {
+            moduleName: name
+        };
         return new Promise((resolve, reject) => {
-            this.client.moduleExists(request, (err, res) => {
+            this.client.moduleExists(request, (err: any, res: any) => {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
@@ -58,11 +70,12 @@ export default class Config {
     }
 
     registerModule(name: string, url: string): Promise<any> {
-        let request:RegisterModuleRequest = new RegisterModuleRequest();
-        request.setModulename(name);
-        request.setUrl(url);
+        let request = {
+            moduleName: name.toString(),
+            url: url.toString()
+        };
         return new Promise((resolve, reject) => {
-            this.client.registerModule(request, (err, res) => {
+            this.client.registerModule(request, (err: any, res: any) => {
                 if (err || !res || !res.getResult()) {
                     reject(err || 'Module was not registered');
                 } else {

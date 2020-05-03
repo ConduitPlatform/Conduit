@@ -1,13 +1,17 @@
 import * as grpc from "grpc";
-import {ConfigService} from "@conduit/grpc-sdk/dist/generated/core_grpc_pb";
+
 
 export default class ConfigManager {
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
 
-    constructor(server: grpc.Server, databaseCallback: any) {
-        server.addService(ConfigService, {
+    constructor(server: grpc.Server, packageDefinition: any, databaseCallback: any) {
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+
+        // @ts-ignore
+        var config = protoDescriptor.conduit.core.Config;
+        server.addService(config.service, {
             get: this.get,
             updateConfig: this.updateConfig,
             moduleExists: this.moduleExists,

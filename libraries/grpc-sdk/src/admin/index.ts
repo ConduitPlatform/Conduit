@@ -1,29 +1,45 @@
 import * as grpc from 'grpc';
-import {RegisterAdminRouteRequest} from "../generated/core_pb";
-import {AdminClient} from "../generated/core_grpc_pb";
-import PathDefinition = RegisterAdminRouteRequest.PathDefinition;
+import path from 'path';
+
+let protoLoader = require('@grpc/proto-loader');
+
 
 export default class Admin {
-    private readonly client: AdminClient;
+    private readonly client: any;
 
     constructor(url: string) {
-        this.client = new AdminClient(url, grpc.credentials.createInsecure());
+        var packageDefinition = protoLoader.loadSync(
+            path.resolve(__dirname, '../proto/core.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        // @ts-ignore
+        var admin = protoDescriptor.conduit.core.Admin;
+        this.client = new admin(url, grpc.credentials.createInsecure());
     }
 
     register(paths: any[], protoFile: string): Promise<any> {
-        let request = new RegisterAdminRouteRequest();
-        let grpcPathArray: PathDefinition[] = [];
+
+        let grpcPathArray: any[] = [];
         paths.forEach(r => {
-            let obj = new PathDefinition();
-            obj.setPath(r.path);
-            obj.setMethod(r.method);
-            obj.setGrpcfunction(r.protoName);
+            let obj = {
+                path: r.path,
+                method: r.method,
+                grpcFunction: r.protoName
+            };
             grpcPathArray.push(obj);
         })
-        request.setRoutesList(grpcPathArray);
-        request.setProtofile(protoFile);
+        let request = {
+            routesList: grpcPathArray,
+            protoFile: protoFile
+        };
         return new Promise((resolve, reject) => {
-            this.client.registerAdminRoute(request, (err, res) => {
+            this.client.registerAdminRoute(request, (err: any, res: any) => {
                 if (err) {
                     reject(err);
                 } else {

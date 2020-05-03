@@ -4,7 +4,7 @@ import fs from "fs";
 
 let paths = require("./admin/admin.json")
 
-if (process.env.CONDUIT_SERVER) {
+// if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
     let store = new InMemoryStore(grpcSdk);
     grpcSdk.config.registerModule('in-memory-store', store.url).catch(err => {
@@ -16,8 +16,8 @@ if (process.env.CONDUIT_SERVER) {
         console.log("Failed to register admin routes for in-memory store module!")
         console.error(err);
     });
-} else {
-    throw new Error("Conduit server URL not provided");
-}
+// } else {
+//     throw new Error("Conduit server URL not provided");
+// }
 
 

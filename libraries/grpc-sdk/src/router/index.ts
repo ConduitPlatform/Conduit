@@ -1,30 +1,46 @@
 import * as grpc from 'grpc';
-import {RegisterConduitRouteRequest} from "../generated/core_pb";
-import {RouterClient} from "../generated/core_grpc_pb";
-import PathDefinition = RegisterConduitRouteRequest.PathDefinition;
+import path from "path";
+
+let protoLoader = require('@grpc/proto-loader');
 
 export default class Router {
-    private readonly client: RouterClient;
+    private readonly client: any;
 
     constructor(url: string) {
-        this.client = new RouterClient(url, grpc.credentials.createInsecure());
+
+        var packageDefinition = protoLoader.loadSync(
+            path.resolve(__dirname, '../proto/core.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        // @ts-ignore
+        var router = protoDescriptor.conduit.core.Router;
+        this.client = new router(url, grpc.credentials.createInsecure());
     }
 
     register(paths: any[], protoFile: string): Promise<any> {
-        let request = new RegisterConduitRouteRequest();
-        let grpcPathArray: PathDefinition[] = [];
+
+        let grpcPathArray: any[] = [];
         paths.forEach(r => {
-            let obj = new PathDefinition();
-            obj.setPath(r.path);
-            obj.setMethod(r.method);
-            obj.setInputs(JSON.stringify(r.inputs));
-            obj.setGrpcfunction(r.protoName);
+            let obj = {
+                path: r.path,
+                method: r.method,
+                inputs: JSON.stringify(r.inputs),
+                grpcFunction: r.protoName
+            };
             grpcPathArray.push(obj);
         })
-        request.setRoutesList(grpcPathArray);
-        request.setProtofile(protoFile);
+        let request = {
+            routesList: grpcPathArray,
+            protoFile: protoFile
+        }
         return new Promise((resolve, reject) => {
-            this.client.registerConduitRoute(request, (err, res) => {
+            this.client.registerConduitRoute(request, (err: any, res: any) => {
                 if (err) {
                     reject(err);
                 } else {

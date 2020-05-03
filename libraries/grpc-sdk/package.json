@@ -6,7 +6,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -f ./src/generated/* ./dist/generated/",
+    "postbuild": "copyfiles -f src/proto/* ./dist/proto/",
     "publish": "npm publish"
   },
   "license": "ISC",
