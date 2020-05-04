@@ -5,16 +5,19 @@ export const NotificationTokenModel = new ConduitSchema('NotificationToken',
         _id: TYPE.ObjectId,
         userId: {
             type: TYPE.Relation,
-            model: 'User'
+            model: 'User',
+            systemRequired: true
         },
         token: {
             type: TYPE.String,
-            required: true
+            required: true,
+            systemRequired: true
         },
         platform: {
             type: TYPE.String,
             enum: Object.values(PlatformTypesEnum),
-            required: true
+            required: true,
+            systemRequired: true
         },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date

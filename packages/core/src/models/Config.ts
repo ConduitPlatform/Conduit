@@ -39,6 +39,7 @@ export class ConfigModelGenerator {
         const partialSchema: { [key: string]: any } = {};
         partialSchema[key] = {
           type,
+          systemRequired: true,
           default: defaultValue
         };
 

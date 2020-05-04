@@ -5,21 +5,25 @@ export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
     _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
-      model: 'User'
+      model: 'User',
+      systemRequired: true
     },
     clientId: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
     token: {
-      type: TYPE.String
+      type: TYPE.String,
+      systemRequired: true
     },
     expiresOn: {
-      type: TYPE.Date
+      type: TYPE.Date,
+      systemRequired: true
     },
     securityDetails: {
-      macAddress: TYPE.String,
-      userAgent: TYPE.String
+      macAddress: { type: TYPE.String, systemRequired: true },
+      userAgent: { type: TYPE.String, systemRequired: true }
     },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
