@@ -6,17 +6,20 @@ const schema = new ConduitSchema('SchemaDefinitions', {
         name: {
             type: TYPE.String,
             unique: true,
-            required: true
+            required: true,
+            systemRequired: true
         },
         fields: {
             type: TYPE.JSON,
-            required: true
+            required: true,
+            systemRequired: true
         },
         //todo The properties in JSON, replace adequetly
-        modelOptions: TYPE.String,
+        modelOptions: { type: TYPE.String, systemRequired: true },
         enabled: {
           type: TYPE.Boolean,
-          default: true
+          default: true,
+          systemRequired: true
         },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
