@@ -1,25 +1,17 @@
 syntax = "proto3";
 package inmemorystore.admin;
-import "google/protobuf/any.proto";
 
 service InMemoryStoreAdmin {
-    rpc get (AdminGetRequest) returns (AdminGetResponse);
-    rpc store (AdminStoreRequest) returns (AdminStoreResponse);
+    rpc get (AdminRequest) returns (AdminResponse);
+    rpc store (AdminRequest) returns (AdminResponse);
 }
-
-message AdminGetRequest {
-    string key = 1;
+// all admin requests accept the params,headers and context objects as stringified json
+message AdminRequest {
+    string params = 1;
+    string headers = 2;
+    string context = 3;
 }
-
-message AdminGetResponse {
-    string value = 1;
-}
-
-message AdminStoreRequest {
-    string key = 1;
-    string value = 2;
-}
-
-message AdminStoreResponse {
-    bool result = 1;
+// all admin responses return their results as stringified json
+message AdminResponse {
+    string result = 1;
 }

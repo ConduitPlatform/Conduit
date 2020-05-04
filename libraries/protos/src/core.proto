@@ -3,7 +3,7 @@ package conduit.core;
 import "google/protobuf/any.proto";
 
 service Config {
-    rpc Get (GetRequest) returns (GetResponse);
+    rpc Get (GetConfigRequest) returns (GetConfigResponse);
     rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
     rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);

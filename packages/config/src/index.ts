@@ -29,7 +29,11 @@ export default class ConfigManager {
     }
 
     moduleExists(call: any, callback: any) {
-        // todo implement
+        if (this.registeredModules.has(call.moduleName)) {
+            callback(null, this.registeredModules.get(call.moduleName));
+        } else {
+            callback(new Error("Module does not exist"));
+        }
     }
 
     registerModule(call: any, callback: any) {
