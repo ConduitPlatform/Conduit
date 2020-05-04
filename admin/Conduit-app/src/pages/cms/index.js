@@ -9,6 +9,7 @@ import SchemasTable from '../../components/cms/SchemasTable';
 import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
+import SchemaData from '../../components/cms/SchemaData';
 
 const Types = () => {
   const [openDisable, setOpenDisable] = useState(false);
@@ -18,6 +19,174 @@ const Types = () => {
   const router = useRouter();
 
   const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Settings' }];
+
+  const schemaData = [
+    {
+      schemaTitle: 'user-schemas',
+      schemaDocs: [
+        {
+          title: 'user - 1',
+          treeData: [
+            {
+              id: 'firstname',
+              firstName: 'Dimitris',
+            },
+            {
+              id: 'surname',
+              surName: 'Vasileias',
+            },
+            {
+              id: 'address',
+              address: '',
+              children: [
+                {
+                  id: 'primary',
+                  addressName: 'Address 1, st.',
+                },
+                {
+                  id: 'postCode',
+                  postCode: '123 45',
+                },
+              ],
+            },
+            {
+              id: 'phone',
+              phone: '2100038453',
+            },
+          ],
+        },
+        {
+          title: 'user - 2',
+          treeData: [
+            {
+              id: 'firstname',
+              firstName: 'John',
+            },
+            {
+              id: 'surname',
+              surName: 'Chantzigoulas',
+            },
+            {
+              id: 'address',
+              address: '',
+              children: [
+                {
+                  id: 'primary',
+                  addressName: 'Address 1, st.',
+                },
+                {
+                  id: 'postCode',
+                  postCode: '123 45',
+                },
+              ],
+            },
+            {
+              id: 'phone',
+              phone: '2100038453',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      schemaTitle: 'admin-schemas',
+      schemaDocs: [
+        {
+          title: 'admin - 1',
+          treeData: [
+            {
+              id: 'firstname',
+              firstName: 'Dimitris',
+            },
+            {
+              id: 'surname',
+              surName: 'Vasileias',
+            },
+            {
+              id: 'address',
+              address: '',
+              children: [
+                {
+                  id: 'primary',
+                  addressName: 'Address 1, st.',
+                },
+                {
+                  id: 'postCode',
+                  postCode: '123 45',
+                },
+              ],
+            },
+            {
+              id: 'phone',
+              phone: '2100038453',
+            },
+          ],
+        },
+        {
+          title: 'admin - 2',
+          treeData: [
+            {
+              id: 'firstname',
+              firstName: 'John',
+            },
+            {
+              id: 'surname',
+              surName: 'Chantzigoulas',
+            },
+            {
+              id: 'address',
+              address: '',
+              children: [
+                {
+                  id: 'primary',
+                  addressName: 'Address 1, st.',
+                },
+                {
+                  id: 'postCode',
+                  postCode: '123 45',
+                },
+              ],
+            },
+            {
+              id: 'phone',
+              phone: '2100038453',
+            },
+          ],
+        },
+        {
+          title: 'admin - 3',
+          treeData: [
+            {
+              id: 'firstname',
+              firstName: 'John',
+            },
+            {
+              id: 'surname',
+              surName: 'Chantzigoulas',
+            },
+            {
+              id: 'address',
+              address: '',
+              children: [
+                {
+                  id: 'primary',
+                  addressName: 'Address 1, st.',
+                },
+                {
+                  id: 'postCode',
+                  postCode: '123 45',
+                },
+              ],
+            },
+            {
+              id: 'phone',
+              phone: '2100038453',
+            },
+          ],
+        },
+      ],
+    },
+  ];
 
   const handleChange = (event, newValue) => {
     setSelected(newValue);
@@ -89,7 +258,7 @@ const Types = () => {
           />
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          {/*TODO DATA VIEW*/}
+          <SchemaData data={schemaData} />
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
