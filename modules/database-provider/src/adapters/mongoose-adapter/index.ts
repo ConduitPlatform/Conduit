@@ -60,6 +60,7 @@ export class MongooseAdapter implements DatabaseAdapter {
             this.models = {};
         }
         if (this.models[schema.name]) {
+            // this.systemRequiredValidator(this.models[schema.name], schema);
             delete this.mongoose.connection.models[schema.name];
         }
         let newSchema = schemaConverter(schema);
@@ -73,5 +74,29 @@ export class MongooseAdapter implements DatabaseAdapter {
         }
         throw new ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
     }
+
+    deleteSchema(schemaName: string) {
+        if (!this.models?.[schemaName]) throw ConduitError.notFound('Requested schema not found');
+        if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
+            throw ConduitError.forbidden("Can't delete system required schema");
+        }
+        delete this.models![schemaName];
+        delete this.mongoose.connection.models[schemaName];
+    }
+    //
+    // private systemRequiredValidator(oldSchema: MongooseSchema, newSchema: ConduitSchema): boolean {
+    //     console.log('old', oldSchema)
+    //     console.log('new', newSchema)
+    //     if (!oldSchema.originalSchema.modelOptions.systemRequired) return true;
+    //
+    //     Object.keys(newSchema.fields).forEach(fieldKey => {
+    //         if (!oldSchema.originalSchema.fields.hasOwnProperty(fieldKey)) {
+    //             throw ConduitError.forbidden('Fields are missing on system required schema');
+    //         }
+    //         // if ()
+    //     });
+    //     console.log(oldSchema);
+    //     return true;
+    // }
 
 }

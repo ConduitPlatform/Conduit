@@ -31,5 +31,9 @@ export class ConduitDefaultDatabase extends IConduitDatabase {
     getSchema(schemaName: string): SchemaAdapter {
         return this._activeAdapter.getSchema(schemaName);
     }
+
+    deleteSchema(schemaName: string): void {
+        this._activeAdapter.deleteSchema(schemaName);
+    }
 }
 

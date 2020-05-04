@@ -17,4 +17,7 @@ export abstract class IConduitDatabase {
      * @param schemaName
      */
     abstract getSchema(schemaName: string): SchemaAdapter
+
+    abstract deleteSchema(schemaName: string): void;
+
 }
