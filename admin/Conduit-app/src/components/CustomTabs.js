@@ -22,7 +22,7 @@ export default function CustomTabs({ tabs, selected, handleChange, ...rest }) {
       <Tabs indicatorColor={'primary'} textColor={'primary'} value={selected} onChange={handleChange}>
         {tabs &&
           tabs.map((tab, index) => (
-            <Tab key={`tab-${index}`} label={tab.title} className={classes.tab} disabled={tab.isDisabled} />
+            <Tab key={`tab-${index}`} label={tab.title} className={classes.tab} disabled={tab.isDisabled} href={tab.href}/>
           ))}
       </Tabs>
       <Divider className={classes.divider} />
