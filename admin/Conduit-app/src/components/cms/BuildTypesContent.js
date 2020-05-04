@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import Content from '@material-ui/icons/PermMedia';
@@ -8,10 +8,11 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import SettingsIcon from '@material-ui/icons/Settings';
 import DragHandleIcon from '@material-ui/icons/DragHandle';
 import SimpleType from './types/SimpleType/SimpleType';
-import ColorType from './types/ColorType/ColorType';
 import BooleanType from './types/BooleanType/BooleanType';
-import SelectType from './types/SelectType/SelectType';
 import GroupType from './types/GroupType/GroupType';
+import EnumType from './types/EnumType/EnumType';
+import ObjectIdType from './types/ObjectIdType/ObjectIdType';
+import RelationType from './types/RelationType/RelationType';
 
 const useStyles = makeStyles((theme) => ({
   list: {
@@ -48,7 +49,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function BuildTypesContent(props) {
+const BuildTypesContent = (props) => {
   const {
     dataKey,
     data,
@@ -65,17 +66,17 @@ export default function BuildTypesContent(props) {
   const handleItemContent = (item, index) => {
     switch (item.type) {
       case 'Text':
-        return <SimpleType item={item} />;
+        return item.isEnum ? <EnumType item={item} /> : <SimpleType item={item} />;
       case 'Number':
-        return <SimpleType item={item} />;
+        return item.isEnum ? <EnumType item={item} /> : <SimpleType item={item} />;
       case 'Date':
         return <SimpleType item={item} />;
-      case 'Color':
-        return <ColorType item={item} />;
+      case 'ObjectId':
+        return <ObjectIdType item={item} />;
       case 'Boolean':
         return <BooleanType item={item} />;
-      case 'Select':
-        return <SelectType item={item} />;
+      case 'Relation':
+        return <RelationType item={item} />;
       case 'Group':
         return (
           <GroupType
@@ -99,7 +100,7 @@ export default function BuildTypesContent(props) {
           <Box className={classes.list} ref={provided.innerRef}>
             {data && Array.isArray(data[dataKey]) && data[dataKey].length > 0 ? (
               data[dataKey].map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
+                <Draggable key={item.name} draggableId={item.name} index={index}>
                   {(provided) => (
                     <Box className={classes.item} ref={provided.innerRef} {...provided.draggableProps}>
                       <Box width={'99%'}>{handleItemContent(item, index)}</Box>
@@ -107,9 +108,8 @@ export default function BuildTypesContent(props) {
                         <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
                           <Box display={'flex'}>
                             <Typography variant={'body2'} style={{ marginRight: 8 }}>
-                              {item.name}
+                              Field name: <strong>{item.name}</strong>
                             </Typography>
-                            <Typography variant={'body2'}>API ID: {item.id}</Typography>
                           </Box>
                           <Box display={'flex'}>
                             <DeleteIcon className={classes.icon} onClick={() => handleDelete(index)} />
@@ -139,4 +139,6 @@ export default function BuildTypesContent(props) {
       </Droppable>
     </Box>
   );
-}
+};
+
+export default BuildTypesContent;

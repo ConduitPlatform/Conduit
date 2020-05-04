@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import Input from '@material-ui/core/Input';
@@ -28,10 +25,12 @@ const useStyles = makeStyles((theme) => ({
   },
   input: {
     height: theme.spacing(5),
+    padding: theme.spacing(1),
     '&:hover': {
       border: '1px solid',
       borderColor: 'rgba(255,255,255,0.5)',
     },
+    borderBottom: '1px solid rgba(255,255,255,0.5)',
   },
   backIconContainer: {
     height: theme.spacing(8),
@@ -39,7 +38,6 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#003F9E',
     marginRight: theme.spacing(3),
     cursor: 'pointer',
   },
@@ -63,24 +61,22 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function Header(props) {
+const Header = (props) => {
   const { name, handleSave, ...rest } = props;
   const classes = useStyles();
 
-  const [type, setType] = useState('Singleton type');
+  const [schemaName, setSchemaName] = useState(name);
 
-  const [dataName, setDataName] = useState(name);
+  useEffect(() => {
+    setSchemaName(name);
+  }, [name]);
 
   const handleDataName = (event) => {
-    setDataName(event.target.value);
-  };
-
-  const handleChange = (event) => {
-    setType(event.target.value);
+    setSchemaName(event.target.value);
   };
 
   const handleData = () => {
-    handleSave(type, dataName);
+    handleSave(schemaName);
   };
 
   return (
@@ -95,34 +91,14 @@ export default function Header(props) {
         </Link>
         <Input
           className={clsx(classes.input, classes.colorWhite)}
-          id="data name"
+          id="data-name"
+          placeholder={'Schema name'}
           onChange={handleDataName}
           disableUnderline
-          value={dataName}
+          value={schemaName}
         />
       </Box>
       <Box display={'flex'} alignItems={'center'}>
-        <FormControl>
-          <Select
-            labelId="select-type"
-            id="select-type"
-            value={type}
-            classes={{ icon: clsx(classes.selectIcon, classes.colorWhite) }}
-            className={classes.colorWhite}
-            disableUnderline
-            onChange={handleChange}
-            MenuProps={{
-              classes: { paper: clsx(classes.selectMenu, classes.colorWhite) },
-              getContentAnchorEl: null,
-              anchorOrigin: {
-                vertical: 'bottom',
-                horizontal: 'left',
-              },
-            }}>
-            <MenuItem value="Singleton type">Singleton type</MenuItem>
-            <MenuItem value="Repeatable type">Repeatable type</MenuItem>
-          </Select>
-        </FormControl>
         <Button className={clsx(classes.saveButton, classes.colorWhite)} onClick={() => handleData()}>
           <SaveIcon className={classes.saveIcon} />
           <Typography>Save</Typography>
@@ -130,4 +106,6 @@ export default function Header(props) {
       </Box>
     </Box>
   );
-}
+};
+
+export default Header;

@@ -8,6 +8,12 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
+import FormHelperText from '@material-ui/core/FormHelperText';
+import FormControl from '@material-ui/core/FormControl';
+import ListItemText from '@material-ui/core/ListItemText';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -26,37 +32,39 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(3),
     opacity: '0.5',
   },
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 120,
+    maxWidth: 300,
+  },
 }));
 
-export default function SimpleForm(props) {
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+export default function RelationForm(props) {
   const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    default: selectedItem ? selectedItem.default : '',
     type: '',
-    unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
+    relation: selectedItem ? selectedItem.relation : [],
   });
-
-  // useEffect(() => {
-  //   const slug = slugify(simpleData.name);
-  //   setSimpleData({ ...simpleData, id: slug });
-  // }, [simpleData.name]);
 
   const handleFieldName = (event) => {
     setSimpleData({ ...simpleData, name: event.target.value });
-  };
-
-  const handleFieldDefault = (event) => {
-    setSimpleData({ ...simpleData, default: event.target.value });
-  };
-
-  const handleFieldUnique = () => {
-    setSimpleData({ ...simpleData, unique: !simpleData.unique });
   };
 
   const handleFieldRequired = () => {
@@ -69,6 +77,10 @@ export default function SimpleForm(props) {
 
   const handleFieldIsArray = () => {
     setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
+  };
+
+  const handleFieldRelation = (event) => {
+    setSimpleData({ ...simpleData, relation: event.target.value });
   };
 
   const handleSubmit = (event) => {
@@ -93,36 +105,7 @@ export default function SimpleForm(props) {
         required
         helperText={'It will appear in the entry editor'}
       />
-      <TextField
-        id="field-default-value"
-        label="Field default value"
-        onChange={handleFieldDefault}
-        value={simpleData.default}
-        variant="outlined"
-        className={classes.textField}
-        fullWidth
-        helperText={'Default value of this field'}
-      />
       <Box width={'100%'}>
-        <Grid container>
-          <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
-              <Typography variant={'button'} style={{ width: '100%' }}>
-                Unique field
-              </Typography>
-              <FormControlLabel
-                control={<Switch checked={simpleData.unique} onChange={handleFieldUnique} color="primary" />}
-                label=""
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'subtitle1'} className={classes.info}>
-              If active, this field's value must be unique
-            </Typography>
-          </Grid>
-        </Grid>
-
         <Grid container>
           <Grid item xs={12}>
             <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
@@ -180,6 +163,26 @@ export default function SimpleForm(props) {
           </Grid>
         </Grid>
       </Box>
+      <FormControl className={classes.formControl} variant={'outlined'} fullWidth>
+        <InputLabel id="field-type">Relation</InputLabel>
+        <Select
+          labelId="field-relation"
+          id="field relation"
+          label={'Relation'}
+          multiple
+          value={simpleData.relation}
+          onChange={handleFieldRelation}
+          renderValue={(selected) => selected.join(', ')}
+          MenuProps={MenuProps}>
+          {['Value1', 'Value2', 'Value3'].map((name) => (
+            <MenuItem key={name} value={name}>
+              <Checkbox checked={simpleData.relation.indexOf(name) > -1} color={'primary'}/>
+              <ListItemText primary={name} />
+            </MenuItem>
+          ))}
+        </Select>
+        <FormHelperText>Select the Relation type</FormHelperText>
+      </FormControl>
 
       <Box display={'flex'} width={'100%'}>
         <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>

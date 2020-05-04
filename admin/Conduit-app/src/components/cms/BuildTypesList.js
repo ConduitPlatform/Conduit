@@ -6,12 +6,13 @@ import Box from '@material-ui/core/Box';
 import DragHandleIcon from '@material-ui/icons/DragHandle';
 import Card from '@material-ui/core/Card';
 import TextIcon from '@material-ui/icons/Title';
-import ColorIcon from '@material-ui/icons/ColorLens';
+import CodeIcon from '@material-ui/icons/Code';
+import DeviceHubIcon from '@material-ui/icons/DeviceHub';
 import NumberIcon from '@material-ui/icons/Filter7';
 import SelectIcon from '@material-ui/icons/FormatListBulleted';
 import BooleanIcon from '@material-ui/icons/ToggleOn';
 import DateIcon from '@material-ui/icons/DateRange';
-import GroupIcon from '@material-ui/icons/PlaylistAdd';
+import SettingsEthernetIcon from '@material-ui/icons/SettingsEthernet';
 
 const useStyles = makeStyles((theme) => ({
   item: {
@@ -32,7 +33,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function BuildTypesList(props) {
+const BuildTypesList = (props) => {
   const { item, index, ...rest } = props;
   const classes = useStyles();
 
@@ -42,16 +43,18 @@ export default function BuildTypesList(props) {
         return <TextIcon />;
       case 'Number':
         return <NumberIcon />;
-      case 'Boolean':
-        return <BooleanIcon />;
-      case 'Select':
-        return <SelectIcon />;
-      case 'Color':
-        return <ColorIcon />;
       case 'Date':
         return <DateIcon />;
+      case 'Boolean':
+        return <BooleanIcon />;
+      case 'Enum':
+        return <SelectIcon />;
+      case 'ObjectId':
+        return <CodeIcon />;
       case 'Group':
-        return <GroupIcon />;
+        return <SettingsEthernetIcon />;
+      case 'Relation':
+        return <DeviceHubIcon />;
       default:
         return <TextIcon />;
     }
@@ -81,4 +84,6 @@ export default function BuildTypesList(props) {
       )}
     </Draggable>
   );
-}
+};
+
+export default BuildTypesList;

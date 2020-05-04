@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, resetServerContext } from 'react-beautiful-dnd';
 import { renderToString } from 'react-dom/server';
 import { makeStyles } from '@material-ui/core/styles';
@@ -18,8 +18,10 @@ import {
   reorderItems,
   deleteItem,
 } from '../../utils/type-functions';
+import { useRouter } from 'next/router';
+import { privateRoute } from '../../components/utils/privateRoute';
 
-const items = ['Text', 'Number', 'Date', 'Boolean', 'Select', 'Color', 'Group'];
+const items = ['Text', 'Number', 'Date', 'Boolean', 'Enum', 'ObjectId', 'Group', 'Relation'];
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -57,20 +59,27 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function BuildTypes(props) {
-  const { clientName = 'Home Page', clientId = 'home_page' } = props;
-  const classes = useStyles();
-
+const BuildTypes = () => {
   resetServerContext();
   renderToString(BuildTypes);
 
-  const [data, setData] = useState({ [clientId]: [] });
+  const classes = useStyles();
+  const router = useRouter();
 
-  const [drawerData, setDrawerData] = useState({ open: false, type: '', destination: {} });
-
+  const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
+  const [schemaName, setSchemaName] = useState('');
+  const [drawerData, setDrawerData] = useState({ open: false, type: '', destination: null });
   const [duplicateId, setDuplicateId] = useState(false);
-
   const [selectedProps, setSelectedProps] = useState({ item: undefined, index: undefined, type: 'standard' });
+
+  useEffect(() => {
+    if (router.query.name) {
+      setSchemaName(router.query.name);
+    }
+    if (router.query.schema) {
+      console.log(JSON.parse(router.query.schemaId));
+    }
+  }, []);
 
   const onDragEnd = (result) => {
     const { source, destination, draggableId } = result;
@@ -80,8 +89,8 @@ export default function BuildTypes(props) {
     }
 
     if (source.droppableId === destination.droppableId) {
-      setData({
-        [clientId]: reorderItems(data[source.droppableId], source.index, destination.index),
+      setSchemaFields({
+        newTypeFields: reorderItems(schemaFields[source.droppableId], source.index, destination.index),
       });
     }
 
@@ -104,28 +113,32 @@ export default function BuildTypes(props) {
   };
 
   const handleSubmit = (event, typeData) => {
-    const array = data[clientId];
-
+    const array = schemaFields.newTypeFields;
     if (!Array.isArray(array)) {
       return;
     }
-
     const hasDuplicate = array.some((item) => {
       if (selectedProps.item) {
-        if (selectedProps.item.id === item.id) {
+        if (selectedProps.item.name === item.name) {
           return false;
         }
       }
       if (item.content) {
         let flag = false;
-        item.content.some((item2) => {
-          if (item2.id === typeData.id) {
+        item.content.forEach((item2) => {
+          if (selectedProps.item) {
+            if (selectedProps.item.name === typeData.name) {
+              flag = false;
+            } else if (item2.name === typeData.name) {
+              flag = true;
+            }
+          } else if (item2.name === typeData.name) {
             flag = true;
           }
           if (item2.content) {
             let flag2 = false;
             item2.content.some((item3) => {
-              if (item3.id === typeData.id) {
+              if (item3.name === typeData.name) {
                 flag2 = true;
               }
             });
@@ -134,8 +147,8 @@ export default function BuildTypes(props) {
         });
         if (flag) return true;
       }
-      return item.id === typeData.id;
-    }); //sad times
+      return item.name === typeData.name;
+    });
 
     if (hasDuplicate) {
       setDuplicateId(true);
@@ -150,33 +163,33 @@ export default function BuildTypes(props) {
 
     if (selectedProps.item) {
       if (selectedProps.type === 'standard') {
-        setData({
-          [clientId]: updateItem(data[clientId], typeData, selectedProps.index),
+        setSchemaFields({
+          newTypeFields: updateItem(schemaFields.newTypeFields, typeData, selectedProps.index),
         });
       }
 
       if (selectedProps.type === 'group') {
-        setData({
-          [clientId]: updateGroupItem(data[clientId], groupId, typeData, selectedProps.index),
+        setSchemaFields({
+          newTypeFields: updateGroupItem(schemaFields.newTypeFields, groupId, typeData, selectedProps.index),
         });
       }
 
       if (selectedProps.type === 'group-child') {
-        setData({
-          [clientId]: updateGroupChildItem(data[clientId], groupId, typeData, selectedProps.index),
+        setSchemaFields({
+          newTypeFields: updateGroupChildItem(schemaFields.newTypeFields, groupId, typeData, selectedProps.index),
         });
       }
     } else if (isGroup === 'group') {
-      setData({
-        [clientId]: addToGroup(data[clientId], groupId, typeData, drawerData.destination),
+      setSchemaFields({
+        newTypeFields: addToGroup(schemaFields.newTypeFields, groupId, typeData, drawerData.destination),
       });
     } else if (isGroup === 'child') {
-      setData({
-        [clientId]: addToChildGroup(data[clientId], groupId, typeData, drawerData.destination),
+      setSchemaFields({
+        newTypeFields: addToChildGroup(schemaFields.newTypeFields, groupId, typeData, drawerData.destination),
       });
     } else {
-      setData({
-        [clientId]: cloneItem(data[clientId], typeData, drawerData.destination),
+      setSchemaFields({
+        newTypeFields: cloneItem(schemaFields.newTypeFields, typeData, drawerData.destination),
       });
     }
 
@@ -186,58 +199,83 @@ export default function BuildTypes(props) {
 
   const handleDrawer = (item, index) => {
     setSelectedProps({ item: item, index: index, type: 'standard' });
-    setDrawerData({ ...drawerData, open: true, type: data[clientId][index].type });
+    setDrawerData({
+      ...drawerData,
+      open: true,
+      type: schemaFields.newTypeFields[index].isEnum ? 'Enum' : schemaFields.newTypeFields[index].type,
+    });
   };
 
   const handleDelete = (index) => {
-    setData({
-      [clientId]: deleteItem(data[clientId], index),
+    setSchemaFields({
+      newTypeFields: deleteItem(schemaFields.newTypeFields, index),
     });
   };
 
   const handleGroupDrawer = (item, index, groupIndex) => {
     setSelectedProps({ item: item, index: index, type: 'group' });
-    setDrawerData({ ...drawerData, open: true, type: data[clientId][groupIndex].content[index].type });
+    setDrawerData({
+      ...drawerData,
+      open: true,
+      type: schemaFields.newTypeFields[groupIndex].content[index].isEnum
+        ? 'Enum'
+        : schemaFields.newTypeFields[groupIndex].content[index].type,
+      destination: {
+        ...drawerData.destination,
+        droppableId: `group-${schemaFields.newTypeFields[groupIndex].name}`,
+      },
+    });
   };
 
   const handleGroupDelete = (index, groupIndex) => {
-    const deleted = Array.from(data[clientId]);
+    const deleted = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content.splice(index, 1);
-    setData({
-      [clientId]: deleted,
+    setSchemaFields({
+      newTypeFields: deleted,
     });
   };
 
   const handleGroupInGroupDrawer = (item, index, groupIndex, itemIndex) => {
     setSelectedProps({ item: item, index: index, type: 'group-child' });
-    setDrawerData({ ...drawerData, open: true, type: data[clientId][groupIndex].content[itemIndex].content[index].type });
-  };
-
-  const handleGroupInGroupDelete = (index, groupIndex, itemIndex) => {
-    const deleted = Array.from(data[clientId]);
-    deleted[groupIndex].content[itemIndex].content.splice(index, 1);
-    setData({
-      [clientId]: deleted,
+    setDrawerData({
+      ...drawerData,
+      open: true,
+      type: schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].isEnum
+        ? 'Enum'
+        : schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].type,
+      destination: {
+        ...drawerData.destination,
+        droppableId: `group-${schemaFields.newTypeFields[groupIndex].content[itemIndex].name}`,
+      },
     });
   };
 
-  const handleSave = (name, type) => {
+  const handleGroupInGroupDelete = (index, groupIndex, itemIndex) => {
+    const deleted = Array.from(schemaFields.newTypeFields);
+    deleted[groupIndex].content[itemIndex].content.splice(index, 1);
+    setSchemaFields({
+      newTypeFields: deleted,
+    });
+  };
+
+  const handleSave = (name) => {
     console.log('name', name);
-    console.log('type', type);
-    setData({ [clientId]: [] });
+    console.log(schemaFields.newTypeFields);
+    //todo create new schema with api request
+    // setData({ [newTypeFields]: [] });
   };
 
   return (
     <Box className={classes.root}>
-      <Header name={clientName} handleSave={handleSave} />
+      <Header name={schemaName} handleSave={handleSave} />
       <Box className={classes.cmsContainer}>
         <DragDropContext onDragEnd={onDragEnd}>
           <Box className={classes.contentContainer}>
-            {data &&
-              Object.keys(data).map((dataKey) => (
+            {schemaFields &&
+              Object.keys(schemaFields).map((dataKey) => (
                 <BuildTypesContent
                   dataKey={dataKey}
-                  data={data}
+                  data={schemaFields}
                   handleDelete={handleDelete}
                   handleDrawer={handleDrawer}
                   handleGroupDelete={handleGroupDelete}
@@ -272,4 +310,6 @@ export default function BuildTypes(props) {
       />
     </Box>
   );
-}
+};
+
+export default privateRoute(BuildTypes);

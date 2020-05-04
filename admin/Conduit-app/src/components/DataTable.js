@@ -69,7 +69,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
   };
 
   const getValue = (value) => {
-    if (!isNaN(Date.parse(value))) {
+    if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
       return moment(value).format('DD/MM/YYYY');
     }
     return value.toString();

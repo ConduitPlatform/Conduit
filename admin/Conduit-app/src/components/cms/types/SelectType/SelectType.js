@@ -1,21 +1,21 @@
-import React, {useState} from 'react';
-import Box from "@material-ui/core/Box";
-import FormControl from "@material-ui/core/FormControl";
-import Select from "@material-ui/core/Select";
-import MenuItem from "@material-ui/core/MenuItem";
+import React, { useState } from 'react';
+import Box from '@material-ui/core/Box';
+import FormControl from '@material-ui/core/FormControl';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 
 export default function SelectType(props) {
-  const {item, ...rest} = props;
+  const { item, ...rest } = props;
 
   const [select, setSelect] = useState('');
 
-  const handleChange = event => {
+  const handleChange = (event) => {
     setSelect(event.target.value);
   };
 
   return (
     <Box {...rest}>
-      <FormControl style={{width: 'fit-content'}}>
+      <FormControl style={{ width: 'fit-content' }}>
         <Select
           labelId="select-type"
           id="select-type"
@@ -25,17 +25,19 @@ export default function SelectType(props) {
           MenuProps={{
             getContentAnchorEl: null,
             anchorOrigin: {
-              vertical: "bottom",
-              horizontal: 'left'
-            }
+              vertical: 'bottom',
+              horizontal: 'left',
+            },
           }}>
           <MenuItem value="" disabled>
             {item.placeholder}
           </MenuItem>
           {item.menuItems.split('\n').map((item, index) => {
             return (
-              <MenuItem value={item} key={index}>{item}</MenuItem>
-            )
+              <MenuItem value={item} key={index}>
+                {item}
+              </MenuItem>
+            );
           })}
         </Select>
       </FormControl>
@@ -44,17 +46,17 @@ export default function SelectType(props) {
 }
 
 export function SelectGroupType(props) {
-  const {item, ...rest} = props;
+  const { item, ...rest } = props;
 
   const [select, setSelect] = useState('');
 
-  const handleChange = event => {
+  const handleChange = (event) => {
     setSelect(event.target.value);
   };
 
   return (
     <Box {...rest}>
-      <FormControl style={{width: 'fit-content'}}>
+      <FormControl style={{ width: 'fit-content' }}>
         <Select
           labelId="select-type"
           id="select-type"
@@ -64,17 +66,19 @@ export function SelectGroupType(props) {
           MenuProps={{
             getContentAnchorEl: null,
             anchorOrigin: {
-              vertical: "bottom",
-              horizontal: 'left'
-            }
+              vertical: 'bottom',
+              horizontal: 'left',
+            },
           }}>
           <MenuItem value="" disabled>
             {item.placeholder}
           </MenuItem>
           {item.menuItems.split('\n').map((item, index) => {
             return (
-              <MenuItem value={item} key={index}>{item}</MenuItem>
-            )
+              <MenuItem value={item} key={index}>
+                {item}
+              </MenuItem>
+            );
           })}
         </Select>
       </FormControl>

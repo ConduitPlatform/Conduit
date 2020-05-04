@@ -6,8 +6,12 @@ import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
-import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
+import FormControl from '@material-ui/core/FormControl';
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
+import FormHelperText from '@material-ui/core/FormHelperText';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -26,37 +30,31 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(3),
     opacity: '0.5',
   },
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 120,
+  },
 }));
 
-export default function SimpleForm(props) {
+export default function EnumForm(props) {
   const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    default: selectedItem ? selectedItem.default : '',
-    type: '',
-    unique: selectedItem ? selectedItem.unique : false,
+    type: selectedItem ? selectedItem.type : '',
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
-    isArray: selectedItem ? selectedItem.isArray : false,
+    enumValues: selectedItem ? selectedItem.enumValues : '',
+    isEnum: selectedItem ? selectedItem.isEnum : true,
   });
-
-  // useEffect(() => {
-  //   const slug = slugify(simpleData.name);
-  //   setSimpleData({ ...simpleData, id: slug });
-  // }, [simpleData.name]);
 
   const handleFieldName = (event) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
-  const handleFieldDefault = (event) => {
-    setSimpleData({ ...simpleData, default: event.target.value });
-  };
-
-  const handleFieldUnique = () => {
-    setSimpleData({ ...simpleData, unique: !simpleData.unique });
+  const handleFieldType = (event) => {
+    setSimpleData({ ...simpleData, type: event.target.value });
   };
 
   const handleFieldRequired = () => {
@@ -67,8 +65,8 @@ export default function SimpleForm(props) {
     setSimpleData({ ...simpleData, select: !simpleData.select });
   };
 
-  const handleFieldIsArray = () => {
-    setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
+  const handleOptions = (event) => {
+    setSimpleData({ ...simpleData, enumValues: event.target.value });
   };
 
   const handleSubmit = (event) => {
@@ -77,8 +75,15 @@ export default function SimpleForm(props) {
   };
 
   useEffect(() => {
-    setSimpleData({ ...simpleData, type: drawerData.type });
+    setSimpleData({ ...simpleData, type: selectType() });
   }, [drawerData.open]);
+
+  const selectType = () => {
+    if (selectedItem) {
+      return selectedItem.type ? selectedItem.type : '';
+    }
+    return '';
+  };
 
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
@@ -93,36 +98,32 @@ export default function SimpleForm(props) {
         required
         helperText={'It will appear in the entry editor'}
       />
+      <FormControl className={classes.formControl} variant={'outlined'} fullWidth required>
+        <InputLabel id="field-type">Type</InputLabel>
+        <Select labelId="field-type" id="field type" label={'Type'} value={simpleData.type} onChange={handleFieldType}>
+          <MenuItem value="">
+            <em>None</em>
+          </MenuItem>
+          <MenuItem value={'Text'}>Text</MenuItem>
+          <MenuItem value={'Number'}>Number</MenuItem>
+        </Select>
+        <FormHelperText>Select the type of enum values</FormHelperText>
+      </FormControl>
       <TextField
-        id="field-default-value"
-        label="Field default value"
-        onChange={handleFieldDefault}
-        value={simpleData.default}
+        id="Options"
+        label="Options"
+        multiline
+        rows="4"
+        onChange={handleOptions}
+        value={simpleData.enumValues}
         variant="outlined"
         className={classes.textField}
         fullWidth
-        helperText={'Default value of this field'}
+        required
+        helperText={'(Define one option per line)'}
       />
-      <Box width={'100%'}>
-        <Grid container>
-          <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
-              <Typography variant={'button'} style={{ width: '100%' }}>
-                Unique field
-              </Typography>
-              <FormControlLabel
-                control={<Switch checked={simpleData.unique} onChange={handleFieldUnique} color="primary" />}
-                label=""
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'subtitle1'} className={classes.info}>
-              If active, this field's value must be unique
-            </Typography>
-          </Grid>
-        </Grid>
 
+      <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
             <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
@@ -157,25 +158,6 @@ export default function SimpleForm(props) {
           <Grid item xs={12}>
             <Typography variant={'body2'} className={classes.info}>
               This option defines if the field you be returned from the database
-            </Typography>
-          </Grid>
-        </Grid>
-
-        <Grid container>
-          <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
-              <Typography variant={'button'} style={{ width: '100%' }}>
-                Array
-              </Typography>
-              <FormControlLabel
-                control={<Checkbox checked={simpleData.isArray} onChange={handleFieldIsArray} color="primary" />}
-                label=""
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'body2'} className={classes.info}>
-              Activate this option if you want your field to be of type Array
             </Typography>
           </Grid>
         </Grid>

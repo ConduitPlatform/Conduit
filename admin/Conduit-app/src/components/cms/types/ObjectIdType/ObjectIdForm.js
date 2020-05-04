@@ -6,7 +6,6 @@ import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
-import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
 
 const useStyles = makeStyles((theme) => ({
@@ -28,31 +27,20 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SimpleForm(props) {
+export default function ObjectIdForm(props) {
   const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    default: selectedItem ? selectedItem.default : '',
     type: '',
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
-    isArray: selectedItem ? selectedItem.isArray : false,
   });
-
-  // useEffect(() => {
-  //   const slug = slugify(simpleData.name);
-  //   setSimpleData({ ...simpleData, id: slug });
-  // }, [simpleData.name]);
 
   const handleFieldName = (event) => {
     setSimpleData({ ...simpleData, name: event.target.value });
-  };
-
-  const handleFieldDefault = (event) => {
-    setSimpleData({ ...simpleData, default: event.target.value });
   };
 
   const handleFieldUnique = () => {
@@ -65,10 +53,6 @@ export default function SimpleForm(props) {
 
   const handleFieldSelect = () => {
     setSimpleData({ ...simpleData, select: !simpleData.select });
-  };
-
-  const handleFieldIsArray = () => {
-    setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
   };
 
   const handleSubmit = (event) => {
@@ -92,16 +76,6 @@ export default function SimpleForm(props) {
         fullWidth
         required
         helperText={'It will appear in the entry editor'}
-      />
-      <TextField
-        id="field-default-value"
-        label="Field default value"
-        onChange={handleFieldDefault}
-        value={simpleData.default}
-        variant="outlined"
-        className={classes.textField}
-        fullWidth
-        helperText={'Default value of this field'}
       />
       <Box width={'100%'}>
         <Grid container>
@@ -157,25 +131,6 @@ export default function SimpleForm(props) {
           <Grid item xs={12}>
             <Typography variant={'body2'} className={classes.info}>
               This option defines if the field you be returned from the database
-            </Typography>
-          </Grid>
-        </Grid>
-
-        <Grid container>
-          <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
-              <Typography variant={'button'} style={{ width: '100%' }}>
-                Array
-              </Typography>
-              <FormControlLabel
-                control={<Checkbox checked={simpleData.isArray} onChange={handleFieldIsArray} color="primary" />}
-                label=""
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'body2'} className={classes.info}>
-              Activate this option if you want your field to be of type Array
             </Typography>
           </Grid>
         </Grid>

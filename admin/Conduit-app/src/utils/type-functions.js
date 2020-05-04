@@ -1,57 +1,59 @@
 export const cloneItem = (destination, item, droppableDestination) => {
   const clone = Array.from(destination);
 
-  clone.splice(droppableDestination.index, 0, {...item});
+  clone.splice(droppableDestination.index, 0, { ...item });
   return clone;
 };
 
 export const addToGroup = (data, groupId, item, droppableDestination) => {
-  let idPosition = data.findIndex(i => i.id === groupId);
+  let idPosition = data.findIndex((i) => i.name === groupId);
   const clone = Array.from(data);
 
-  clone[idPosition].content.splice(droppableDestination.index, 0, {...item});
+  clone[idPosition].content.splice(droppableDestination.index, 0, { ...item });
 
   return clone;
 };
 
 export const addToChildGroup = (data, groupId, item, droppableDestination) => {
   const clone = Array.from(data);
-  const idPosition = data.findIndex(object => {
-    return object.content.find(content => content.id === groupId)
+  const idPosition = data.findIndex((object) => {
+    if (object.content) {
+      return object.content.find((content) => content.name === groupId);
+    }
   });
 
-  const idPosition2 = data[idPosition].content.findIndex(object2 => object2.id === groupId);
+  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
 
-  clone[idPosition].content[idPosition2].content.splice(droppableDestination.index, 0, {...item});
-  return clone
+  clone[idPosition].content[idPosition2].content.splice(droppableDestination.index, 0, { ...item });
+  return clone;
 };
 
 export const updateItem = (items, item, index) => {
   const updated = Array.from(items);
 
-  updated.splice(index, 1, {...item});
+  updated.splice(index, 1, { ...item });
   return updated;
 };
 
 export const updateGroupItem = (data, groupId, item, position) => {
-  let idPosition = data.findIndex(i => i.id === groupId);
+  let idPosition = data.findIndex((i) => i.name === groupId);
   const clone = Array.from(data);
 
-  clone[idPosition].content.splice(position, 1, {...item});
+  clone[idPosition].content.splice(position, 1, { ...item });
 
   return clone;
 };
 
 export const updateGroupChildItem = (data, groupId, item, position) => {
   const clone = Array.from(data);
-  const idPosition = data.findIndex(object => {
-    return object.content.find(content => content.id === groupId)
+  const idPosition = data.findIndex((object) => {
+    return object.content.find((content) => content.name === groupId);
   });
 
-  const idPosition2 = data[idPosition].content.findIndex(object2 => object2.id === groupId);
+  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
 
-  clone[idPosition].content[idPosition2].content.splice(position, 1, {...item});
-  return clone
+  clone[idPosition].content[idPosition2].content.splice(position, 1, { ...item });
+  return clone;
 };
 
 export const deleteItem = (items, index) => {
