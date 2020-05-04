@@ -2,6 +2,8 @@ import {ConnectionOptions, Mongoose} from "mongoose"
 import {MongooseSchema} from "./MongooseSchema";
 import {schemaConverter} from "./SchemaConverter";
 import {ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter} from "@conduit/sdk";
+const deepdash = require('deepdash/standalone')
+import { isEmpty, isNil, cloneDeep, isString, isObject } from 'lodash';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
@@ -16,8 +18,10 @@ export class MongooseAdapter implements DatabaseAdapter {
         useFindAndModify: false
     };
     models?: { [name: string]: MongooseSchema };
+    registeredSchemas: Map<string, ConduitSchema>;
 
     constructor(connectionString: string) {
+        this.registeredSchemas = new Map();
         this.connectionString = connectionString;
         this.mongoose = new Mongoose();
         this.mongoose.Promise = require("bluebird");
@@ -59,11 +63,14 @@ export class MongooseAdapter implements DatabaseAdapter {
         if (!this.models) {
             this.models = {};
         }
-        if (this.models[schema.name]) {
-            // this.systemRequiredValidator(this.models[schema.name], schema);
+        let newSchema = schemaConverter(schema);
+
+        if (this.registeredSchemas.has(schema.name)) {
+            schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, newSchema);
             delete this.mongoose.connection.models[schema.name];
         }
-        let newSchema = schemaConverter(schema);
+
+        this.registeredSchemas.set(schema.name, schema);
         this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
         return this.models[schema.name];
     }
@@ -82,21 +89,75 @@ export class MongooseAdapter implements DatabaseAdapter {
         }
         delete this.models![schemaName];
         delete this.mongoose.connection.models[schemaName];
+        // TODO should we delete anything else?
+    }
+
+    private systemRequiredValidator(oldSchema: ConduitSchema, newSchema: ConduitSchema): ConduitSchema {
+        console.log(newSchema.fields)
+
+        const clonedOld = cloneDeep(oldSchema.fields);
+        deepdash.eachDeep(clonedOld, (value: any, key: any, parent: any) => {
+
+            if (isString(value) ||  (!value.systemRequired && isString(value.type))) {
+                delete parent[key];
+                return false;
+            } else if (isObject(value) && isEmpty(value)){//(value as any).systemRequired) {
+                delete parent[key];
+                return false;
+            }
+
+
+        });
+
+        console.log(clonedOld)
+        return newSchema;
+
+    }
+
+    private filterRequired(fields: any) {
+        Object.keys(fields).forEach(key => {
+            const value = fields[key];
+
+            if (isString(value) ||  (!value.systemRequired && isString(value.type))) {
+                delete fields[key];
+            } else {
+                this.filterRequired(fields[key]);
+                if (Object.keys(fields[key]).length === 0) {
+                    console.log(fields[key])
+                    delete fields[key];
+                }
+            }
+        });
     }
     //
-    // private systemRequiredValidator(oldSchema: MongooseSchema, newSchema: ConduitSchema): boolean {
-    //     console.log('old', oldSchema)
-    //     console.log('new', newSchema)
-    //     if (!oldSchema.originalSchema.modelOptions.systemRequired) return true;
+    // private getSystemRequiredFields(oldSchemaFields: any, newSchemaFields: any) {
     //
-    //     Object.keys(newSchema.fields).forEach(fieldKey => {
-    //         if (!oldSchema.originalSchema.fields.hasOwnProperty(fieldKey)) {
-    //             throw ConduitError.forbidden('Fields are missing on system required schema');
-    //         }
-    //         // if ()
+    //     const tempObj: { [key: string]: any } = {};
+    //
+    //     Object.keys(oldSchemaFields).forEach(key => {
+    //        if (!oldSchemaFields[key].type && typeof !oldSchemaFields[key] === 'string') {
+    //            tempObj[key] = this.getSystemRequiredFields(oldSchemaFields[key], newSchemaFields[key]) ;
+    //
+    //        } else {
+    //            if (oldSchemaFields[key].systemRequired) {
+    //                tempObj[key] = oldSchemaFields[key];
+    //                return;
+    //            } else if (!newSchemaFields.hasOwnProperty(key) || !tempObj.hasOwnProperty(key)) throw ConduitError.forbidden('Fields are missing on schema');
+    //
+    //            if (!isNil(newSchemaFields[key]) &&
+    //              !oldSchemaFields[key].systemRequired &&
+    //              (oldSchemaFields[key].type !== newSchemaFields[key].type || oldSchemaFields[key] !== newSchemaFields[key])) {
+    //                console.log(oldSchemaFields[key], newSchemaFields[key])
+    //                console.log(oldSchemaFields[key] === newSchemaFields[key])
+    //                // TODO Migrate types on other models. Error throwing is temporary
+    //                throw ConduitError.forbidden('Invalid types on schema');
+    //            }
+    //        }
+    //
     //     });
-    //     console.log(oldSchema);
-    //     return true;
+    //     console.log(tempObj)
+    //     return tempObj;
     // }
+
 
 }
