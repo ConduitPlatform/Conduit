@@ -1,7 +1,7 @@
-import {ConnectionOptions, Mongoose} from "mongoose"
-import {MongooseSchema} from "./MongooseSchema";
-import {schemaConverter} from "./SchemaConverter";
-import {ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter} from "@conduit/sdk";
+import { ConnectionOptions, Mongoose } from 'mongoose';
+import { MongooseSchema } from './MongooseSchema';
+import { schemaConverter } from './SchemaConverter';
+import { ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter } from '@conduit/sdk';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
