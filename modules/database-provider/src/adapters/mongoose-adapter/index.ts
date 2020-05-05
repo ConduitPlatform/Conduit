@@ -125,9 +125,9 @@ export class MongooseAdapter implements DatabaseAdapter {
             if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key])) {
                 tempObj[key] = this.validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
             } else {
-                if (isNil(newSchemaFields) || isNil(newSchemaFields[key])) {
-                    throw ConduitError.forbidden('Fields are missing from schema');
-                }
+                // There used to be a check here for missing (non system required fields) from the new schema.
+                // this got removed so that deletion of fields is supported
+                // For a schema to be updated the caller must give the new schema after he gets the old one with getSchema
 
                 const oldType = oldSchemaFields[key].type ? oldSchemaFields[key].type : oldSchemaFields[key];
                 const newType = newSchemaFields[key].type ? newSchemaFields[key].type : newSchemaFields[key];
