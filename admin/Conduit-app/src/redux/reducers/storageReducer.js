@@ -1,7 +1,7 @@
 import { SET_STORAGE_ERROR, SET_STORAGE_CONFIG, START_STORAGE_LOADING, STOP_STORAGE_LOADING } from '../actions/actionTypes';
 
 const initialState = {
-  data: { config: null, notifications: null },
+  data: { config: null },
   loading: false,
   error: null,
 };

@@ -102,3 +102,10 @@ export const putNotificationConfig = (projectId, productKey, clientEmail) =>
     productKey,
     clientEmail,
   });
+
+/** Cloud storage requests **/
+export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
+export const putStorageSettings = (storageData) =>
+  axios.put(`${CONDUIT_API}/admin/config/storage`, {
+    ...storageData,
+  });

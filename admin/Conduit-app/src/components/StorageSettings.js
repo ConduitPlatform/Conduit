@@ -45,14 +45,15 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
     if (!config) {
       return;
     }
+
     setSettingsSate({
       ...settingsState,
       active: config.active,
       provider: config.provider,
       storagePath: config.storagePath,
       google: {
-        serviceAccountKeyPath: config.google.serviceAccountKeyPath,
-        bucketName: config.google.bucketName,
+        serviceAccountKeyPath: config.google ? config.google.serviceAccountKeyPath : '',
+        bucketName: config.google ? config.google.bucketName : '',
       },
     });
   }, [config]);
@@ -90,7 +91,13 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
   };
   const save = () => {
     const data = {
-      // todo set format API
+      active: settingsState.active,
+      provider: settingsState.provider,
+      storagePath: settingsState.storagePath,
+      google: {
+        serviceAccountKeyPath: settingsState.google.serviceAccountKeyPath,
+        bucketName: settingsState.google.bucketName,
+      },
     };
     handleSave(data);
   };
@@ -98,7 +105,7 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
   const renderSettingsFields = () => {
     return (
       <>
-        <Grid item xs={12}>
+        <Grid item xs={12} {...rest}>
           <Typography variant={'h6'}>The provider to use for storage</Typography>
         </Grid>
         <Grid item xs={6}>
@@ -152,6 +159,7 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
               setSettingsSate({
                 ...settingsState,
                 google: {
+                  ...settingsState.google,
                   serviceAccountKeyPath: event.target.value,
                 },
               });
@@ -170,6 +178,7 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
               setSettingsSate({
                 ...settingsState,
                 google: {
+                  ...settingsState.google,
                   bucketName: event.target.value,
                 },
               });
