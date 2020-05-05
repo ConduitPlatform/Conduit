@@ -3,22 +3,29 @@ import { ConduitSchema, TYPE } from '@conduit/sdk';
 export default new ConduitSchema(
   'File',
   {
+    _id: TYPE.ObjectId,
     user: {
       type: TYPE.Relation,
       required: true,
-      model: 'User'
+      model: 'User',
+      systemRequired: true
     },
     name: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
     folder: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
-    mimeType: TYPE.String
+    mimeType: { type: TYPE.String, systemRequired: true },
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   }
 );

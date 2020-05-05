@@ -1,8 +1,8 @@
-import { Schema } from 'mongoose';
-import { ConduitSchema } from '@conduit/sdk';
-import * as _ from 'lodash';
-
-const deepdash = require('deepdash/standalone')
+import {Schema} from "mongoose";
+import {ConduitSchema} from "@conduit/sdk";
+import * as _ from "lodash";
+import { isNil } from "lodash";
+const deepdash = require('deepdash/standalone');
 
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent
@@ -13,7 +13,6 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     let copy = _.cloneDeep(jsonSchema);
     let actual: any = copy.modelSchema;
 
-    // converts relations to mongoose relations
     if (actual.hasOwnProperty('_id')) {
         delete actual['_id'];
     }
@@ -39,5 +38,13 @@ function convert(value: any, key: any, parentValue: any, context: any) {
 
     if (parentValue[key]?.type === 'JSON') {
         parentValue[key].type = Schema.Types.Mixed;
+    }
+
+    if (!isNil(parentValue[key]) && parentValue[key] === 'JSON') {
+        parentValue[key] = Schema.Types.Mixed;
+    }
+
+    if (parentValue[key]?.systemRequired) {
+        delete parentValue[key].systemRequired;
     }
 }

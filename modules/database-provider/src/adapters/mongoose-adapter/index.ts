@@ -2,6 +2,8 @@ import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter } from '@conduit/sdk';
+const deepdash = require('deepdash/standalone');
+import { isEmpty, isNil, cloneDeep, isString, isObject, merge } from 'lodash';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
@@ -16,8 +18,10 @@ export class MongooseAdapter implements DatabaseAdapter {
         useFindAndModify: false
     };
     models?: { [name: string]: MongooseSchema };
+    registeredSchemas: Map<string, ConduitSchema>;
 
     constructor(connectionString: string) {
+        this.registeredSchemas = new Map();
         this.connectionString = connectionString;
         this.mongoose = new Mongoose();
         this.mongoose.Promise = require("bluebird");
@@ -59,10 +63,14 @@ export class MongooseAdapter implements DatabaseAdapter {
         if (!this.models) {
             this.models = {};
         }
-        if (this.models[schema.name]) {
+
+        if (this.registeredSchemas.has(schema.name)) {
+            schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
             delete this.mongoose.connection.models[schema.name];
         }
         let newSchema = schemaConverter(schema);
+
+        this.registeredSchemas.set(schema.name, schema);
         this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
         return this.models[schema.name];
     }
@@ -72,6 +80,64 @@ export class MongooseAdapter implements DatabaseAdapter {
             return this.models[schemaName]
         }
         throw new ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
+    }
+
+    deleteSchema(schemaName: string) {
+        if (!this.models?.[schemaName]) throw ConduitError.notFound('Requested schema not found');
+        if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
+            throw ConduitError.forbidden("Can't delete system required schema");
+        }
+        delete this.models![schemaName];
+        delete this.mongoose.connection.models[schemaName];
+        // TODO should we delete anything else?
+    }
+
+    private systemRequiredValidator(oldSchema: ConduitSchema, newSchema: ConduitSchema): ConduitSchema {
+
+        const clonedOld = cloneDeep(oldSchema.fields);
+
+        // get system required fields
+        deepdash.eachDeep(clonedOld, (value: any, key: any, parent: any) => {
+            if ((isString(value) && !parent.systemRequired) || (!value.systemRequired && isString(value.type))) {
+                delete parent[key];
+                return false;
+            } else if (isObject(value) && isEmpty(value)) {
+                delete parent[key];
+                return false;
+            }
+        }, {callbackAfterIterate: true});
+
+        if (!isEmpty(clonedOld)) {
+            merge(newSchema.fields, clonedOld);
+        }
+
+        // validate types
+        this.validateSchemaFields(oldSchema.fields, newSchema.fields);
+
+        return newSchema;
+
+    }
+
+    private validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
+        const tempObj: { [key: string]: any } = {};
+
+        Object.keys(oldSchemaFields).forEach(key => {
+            if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key])) {
+                tempObj[key] = this.validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
+            } else {
+                // There used to be a check here for missing (non system required fields) from the new schema.
+                // this got removed so that deletion of fields is supported
+                // For a schema to be updated the caller must give the new schema after he gets the old one with getSchema
+
+                const oldType = oldSchemaFields[key].type ? oldSchemaFields[key].type : oldSchemaFields[key];
+                const newType = newSchemaFields[key].type ? newSchemaFields[key].type : newSchemaFields[key];
+                if (oldType !== newType) {
+                    // TODO migrate types
+                    throw ConduitError.forbidden('Invalid schema types');
+                }
+            }
+        });
+        return tempObj;
     }
 
 }

@@ -39,6 +39,7 @@ export class ConfigModelGenerator {
         const partialSchema: { [key: string]: any } = {};
         partialSchema[key] = {
           type,
+          systemRequired: true,
           default: defaultValue
         };
 
@@ -53,6 +54,6 @@ export class ConfigModelGenerator {
     const configFieldsObject = this.getConfigFields(config);
     return new ConduitSchema('Config',
       configFieldsObject,
-      {timestamps: true});
+      {timestamps: true, systemRequired: true});
   }
 }

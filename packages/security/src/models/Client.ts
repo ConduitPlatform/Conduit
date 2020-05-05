@@ -6,20 +6,24 @@ export const ClientModel = new ConduitSchema('Client',
     clientId: {
       type: TYPE.String,
       unique: true,
-      required: true
+      required: true,
+      systemRequired: true
     },
     clientSecret: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
     platform: {
       type: TYPE.String,
       enum: Object.values(PlatformTypesEnum),
-      required: true
+      required: true,
+      systemRequired: true
     },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });
