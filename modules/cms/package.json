@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@conduit/sdk": "1.0.0",
+    "deepdash": "^5.0.3",
     "lodash": "^4.17.15"
   },
   "directories": {

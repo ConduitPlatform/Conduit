@@ -1,7 +1,7 @@
-import { ConduitSchema, ConduitSDK, IConduitDatabase, TYPE } from '@conduit/sdk';
+import { ConduitSchema, ConduitSDK, TYPE } from '@conduit/sdk';
 import { Request, Response } from 'express';
-import { isNil, merge } from 'lodash';
-import { CMS } from '../index';
+import { isNil } from 'lodash';
+import { validateSchemaInput } from '../utils/utilities';
 
 export class AdminHandlers {
   private readonly schemaDefinitionsModel: any;
@@ -53,6 +53,11 @@ export class AdminHandlers {
       return res.status(400).json({error: 'Required fields are missing'});
     }
 
+    const errorMessage = validateSchemaInput(name, fields, modelOptions, enabled);
+    if (!isNil(errorMessage)) {
+      return res.status(400).json({error: errorMessage});
+    }
+
     Object.assign(fields, {
       _id: TYPE.ObjectId,
       createdAt: TYPE.Date,
@@ -61,7 +66,10 @@ export class AdminHandlers {
     let options = undefined;
     if (!isNil(modelOptions)) options = JSON.stringify(modelOptions);
 
-    const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled});
+    let error = null;
+    const newSchema = await this.schemaDefinitionsModel.create({name, fields, modelOptions: options, enabled}).catch((e: any)=> error = e);
+    if (!isNil(error)) return res.status(403).json({error});
+
     if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
     if (newSchema.enabled) {
       this._createSchema(new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
@@ -106,6 +114,11 @@ export class AdminHandlers {
     }
 
     const { name, fields, modelOptions } = req.body;
+
+    const errorMessage = validateSchemaInput(name, fields, modelOptions);
+    if (!isNil(errorMessage)) {
+      return res.status(400).json({error: errorMessage});
+    }
 
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
