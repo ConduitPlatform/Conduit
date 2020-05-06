@@ -94,10 +94,28 @@ export default class AdminModule extends IConduitAdmin {
         let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure())
         routes.forEach(r => {
             let handler = (req: any, res: any, next: any) => {
+                const context = (req as any).conduit;
+                let params: any = {}
+                if (req.query) {
+                    Object.assign(params, req.query);
+                }
+                if (req.body) {
+                    Object.assign(params, req.body);
+                }
+                if (req.params) {
+                    Object.assign(params, req.params);
+                }
+                if (params.populate) {
+                    if (params.populate.includes(',')) {
+                        params.populate = params.populate.split(',');
+                    } else {
+                        params.populate = [params.populate];
+                    }
+                }
                 let request = {
-                    params: JSON.stringify(req.params),
-                    header: JSON.stringify(req.rawHeaders),
-                    context: JSON.stringify({})
+                    params: JSON.stringify(params),
+                    header: JSON.stringify(req.headers),
+                    context: JSON.stringify(context)
                 }
                 client[r.grpcFunction](request, (err: any, result: any) => {
                     if (err) {
