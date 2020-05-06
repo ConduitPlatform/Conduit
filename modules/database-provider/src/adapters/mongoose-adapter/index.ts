@@ -2,8 +2,9 @@ import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter } from '@conduit/sdk';
+import { cloneDeep, isEmpty, isObject, isString, merge } from 'lodash';
+
 const deepdash = require('deepdash/standalone');
-import { isEmpty, isNil, cloneDeep, isString, isObject, merge } from 'lodash';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
@@ -97,7 +98,8 @@ export class MongooseAdapter implements DatabaseAdapter {
         const clonedOld = cloneDeep(oldSchema.fields);
 
         // get system required fields
-        deepdash.eachDeep(clonedOld, (value: any, key: any, parent: any) => {
+        deepdash.eachDeep(clonedOld, (value: any, key: any, parent: any, ctx: any) => {
+            if (ctx.depth === 0) return true;
             if ((isString(value) && !parent.systemRequired) || (!value.systemRequired && isString(value.type))) {
                 delete parent[key];
                 return false;
