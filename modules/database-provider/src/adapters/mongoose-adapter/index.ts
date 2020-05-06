@@ -2,7 +2,7 @@ import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter } from '@conduit/sdk';
-import { cloneDeep, isEmpty, isObject, isString, merge } from 'lodash';
+import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
 
 const deepdash = require('deepdash/standalone');
 
@@ -100,7 +100,7 @@ export class MongooseAdapter implements DatabaseAdapter {
         // get system required fields
         deepdash.eachDeep(clonedOld, (value: any, key: any, parent: any, ctx: any) => {
             if (ctx.depth === 0) return true;
-            if ((isString(value) && !parent.systemRequired) || (!value.systemRequired && isString(value.type))) {
+            if (((isString(value) || isArray(value)) && !parent.systemRequired) || (!value.systemRequired && (isString(value.type) || isArray(value.type)))) {
                 delete parent[key];
                 return false;
             } else if (isObject(value) && isEmpty(value)) {
@@ -124,7 +124,7 @@ export class MongooseAdapter implements DatabaseAdapter {
         const tempObj: { [key: string]: any } = {};
 
         Object.keys(oldSchemaFields).forEach(key => {
-            if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key])) {
+            if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key]) && !isArray(oldSchemaFields[key])) {
                 tempObj[key] = this.validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
             } else {
                 // There used to be a check here for missing (non system required fields) from the new schema.
@@ -133,7 +133,11 @@ export class MongooseAdapter implements DatabaseAdapter {
 
                 const oldType = oldSchemaFields[key].type ? oldSchemaFields[key].type : oldSchemaFields[key];
                 const newType = newSchemaFields[key].type ? newSchemaFields[key].type : newSchemaFields[key];
-                if (oldType !== newType) {
+
+                if (isArray(oldType) && isArray(newType)) {
+                    if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0])) throw ConduitError.forbidden('Invalid schema types');
+                }
+                else if (oldType !== newType) {
                     // TODO migrate types
                     throw ConduitError.forbidden('Invalid schema types');
                 }
