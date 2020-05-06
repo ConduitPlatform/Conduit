@@ -1,6 +1,5 @@
 syntax = "proto3";
 package conduit.core;
-import "google/protobuf/any.proto";
 
 service Config {
     rpc Get (GetConfigRequest) returns (GetConfigResponse);
@@ -21,6 +20,7 @@ message RegisterAdminRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
+    string adminUrl = 3;
     message PathDefinition {
         string path = 1;
         string method = 2;
@@ -59,17 +59,17 @@ message ModuleExistsResponse {
     string url = 1;
 }
 
-message GetRequest {
+message GetConfigRequest {
     string key = 1;
 }
 
-message GetResponse {
-    google.protobuf.Any data = 1;
+message GetConfigResponse {
+    string data = 1;
 }
 message UpdateRequest {
-    google.protobuf.Any config = 1;
+    string config = 1;
     string moduleName = 2;
 }
 message UpdateResponse {
-    google.protobuf.Any result = 1;
+    string result = 1;
 }

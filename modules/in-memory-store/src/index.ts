@@ -12,7 +12,7 @@ let paths = require("./admin/admin.json")
         process.exit(-1);
     });
     let protofile = fs.readFileSync('./admin/admin.proto')
-    grpcSdk.admin.register(paths.functions, protofile.toString('UTF-8')).catch((err: Error) => {
+    grpcSdk.admin.register(paths.functions, protofile.toString('UTF-8'),store.url).catch((err: Error) => {
         console.log("Failed to register admin routes for in-memory store module!")
         console.error(err);
     });

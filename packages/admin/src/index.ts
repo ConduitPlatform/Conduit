@@ -5,12 +5,17 @@ import {AuthHandlers} from './handlers/auth';
 import {AdminSchema} from './models/Admin';
 import {ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin} from '@conduit/sdk';
 import AdminConfigSchema from './config/admin';
+import * as grpc from "grpc";
+
+let protoLoader = require('@grpc/proto-loader');
+import fs from 'fs';
+import path from 'path';
 
 export default class AdminModule extends IConduitAdmin {
     private readonly router: Router;
     conduit: ConduitSDK;
 
-    constructor(conduit: ConduitSDK) {
+    constructor(conduit: ConduitSDK, server: grpc.Server, packageDefinition: any) {
         super(conduit);
         this.router = Router();
 
@@ -45,6 +50,15 @@ export default class AdminModule extends IConduitAdmin {
         conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
         this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         conduit.getRouter().registerExpressRouter('/admin', this.router);
+
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+
+        //grpc stuff
+        // @ts-ignore
+        let admin = protoDescriptor.conduit.core.Admin;
+        server.addService(admin.service, {
+            registerAdminRoute: this.registerAdminRoute.bind(this),
+        })
     }
 
     static get config() {
@@ -53,6 +67,49 @@ export default class AdminModule extends IConduitAdmin {
 
     private registerSchemas(adapter: any) {
         adapter.createSchemaFromAdapter(AdminSchema);
+    }
+
+    //grpc
+    registerAdminRoute(call: any, callback: any) {
+        let protofile = call.request.protoFile
+        let routes: [{ path: string, method: string, grpcFunction: string }] = call.request.routes;
+        let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+        fs.writeFileSync(protoPath, protofile);
+        var packageDefinition = protoLoader.loadSync(
+            protoPath,
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+        //this can break everything change it
+        while (Object.keys(adminDescriptor)[0] !== 'Admin') {
+            adminDescriptor = adminDescriptor[Object.keys(adminDescriptor)[0]];
+        }
+        adminDescriptor = adminDescriptor[Object.keys(adminDescriptor)[0]];
+        let serverIp = call.request.adminUrl;
+        let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure())
+        routes.forEach(r => {
+            let handler = (req: any, res: any, next: any) => {
+                let request = {
+                    params: JSON.stringify(req.params),
+                    header: JSON.stringify(req.rawHeaders),
+                    context: JSON.stringify({})
+                }
+                client[r.grpcFunction](request, (err: any, result: any) => {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    res.status(200).json(result);
+                });
+            }
+            this.registerRoute(r.method, r.path, handler)
+        })
+        //perhaps wrong(?) we send an empty response
+        callback(null, null);
     }
 
     registerRoute(method: string, route: string, handler: Handler) {

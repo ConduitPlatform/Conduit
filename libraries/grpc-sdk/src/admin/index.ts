@@ -23,7 +23,7 @@ export default class Admin {
         this.client = new admin(url, grpc.credentials.createInsecure());
     }
 
-    register(paths: any[], protoFile: string): Promise<any> {
+    register(paths: any[], protoFile: string, serverUrl:string): Promise<any> {
 
         let grpcPathArray: any[] = [];
         paths.forEach(r => {
@@ -35,8 +35,9 @@ export default class Admin {
             grpcPathArray.push(obj);
         })
         let request = {
-            routesList: grpcPathArray,
-            protoFile: protoFile
+            routes: grpcPathArray,
+            protoFile: protoFile,
+            adminUrl: serverUrl
         };
         return new Promise((resolve, reject) => {
             this.client.registerAdminRoute(request, (err: any, res: any) => {

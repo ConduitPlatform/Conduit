@@ -1,7 +1,7 @@
 syntax = "proto3";
 package inmemorystore.admin;
 
-service InMemoryStoreAdmin {
+service Admin {
     rpc get (AdminRequest) returns (AdminResponse);
     rpc store (AdminRequest) returns (AdminResponse);
 }

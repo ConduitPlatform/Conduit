@@ -24,8 +24,8 @@ export class AdminHandler {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         // The protoDescriptor object has the full package hierarchy
         // @ts-ignore
-        var admin = protoDescriptor.inmemorystore.admin;
-        server.addService(admin.InMemoryStoreAdmin.service, {
+        var admin = protoDescriptor.inmemorystore.admin.Admin;
+        server.addService(admin.service, {
             get: this.get.bind(this),
             store: this.store.bind(this)
         });
@@ -38,7 +38,10 @@ export class AdminHandler {
     get(call: any, callback: any) {
         const key = call.request.key;
         if (isNil(key)) {
-            callback(new Error('Required parameter "key" is missing'), null);
+            callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Key is missing",
+            });
         }
 
         this._provider?.get(key)
@@ -46,8 +49,10 @@ export class AdminHandler {
                 callback(null, {value: r});
             })
             .catch(err => {
-                callback(new Error('Something went wrong'), null);
-
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.message,
+                });
             });
 
     }
@@ -55,7 +60,10 @@ export class AdminHandler {
     store(call: any, callback: any) {
         const {key, value} = call.request;
         if (isNil(key) || isNil(value)) {
-            callback(new Error('Required fields are missing'), null);
+            callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Required fields are missing",
+            });
         }
 
         this._provider?.store(key, value)
@@ -63,7 +71,10 @@ export class AdminHandler {
                 callback(null, {result: true});
             })
             .catch(err => {
-                callback(new Error('Something went wrong'), null);
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.message,
+                });
             });
     }
 }

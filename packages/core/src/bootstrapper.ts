@@ -10,6 +10,7 @@ import {ConduitSDK} from '@conduit/sdk';
 import * as grpc from "grpc";
 import ConfigManager from "@conduit/config";
 import path from 'path';
+
 let protoLoader = require('@grpc/proto-loader');
 
 export class CoreBootstrapper {
@@ -28,7 +29,7 @@ export class CoreBootstrapper {
             });
         let manager = new ConfigManager(server, packageDefinition, (url: string) => {
             primary.initialize();
-            CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
+            CoreBootstrapper.bootstrapSdkComponents(app, packageDefinition, server).catch(console.log);
         });
         let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
         server.bind(_url, grpc.ServerCredentials.createInsecure());
@@ -51,7 +52,7 @@ export class CoreBootstrapper {
         adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
     }
 
-    private static async bootstrapSdkComponents(app: ConduitApp) {
+    private static async bootstrapSdkComponents(app: ConduitApp, packageDefinition: string, server: any) {
         CoreBootstrapper.registerSchemas(app);
 
         const database = app.conduit.getDatabase();
@@ -61,7 +62,7 @@ export class CoreBootstrapper {
 
         await databaseConfigUtility.configureFromDatabase();
 
-        app.conduit.registerAdmin(new AdminModule(app.conduit));
+        app.conduit.registerAdmin(new AdminModule(app.conduit, server, packageDefinition));
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 

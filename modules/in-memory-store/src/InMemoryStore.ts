@@ -10,6 +10,7 @@ import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {grpcModule} from '@conduit/grpc-sdk';
 import InMemoryStoreConfigSchema from './config/in-memory-store';
 import {AdminHandler} from "./admin";
+import * as grpc from "grpc";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -58,7 +59,10 @@ export class InMemoryStore {
                 callback(null, {data: r.toString()});
             })
             .catch(err => {
-                callback(err);
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.messages,
+                });
             })
 
     }
@@ -69,7 +73,10 @@ export class InMemoryStore {
                 callback(null, {result: true});
             })
             .catch(err => {
-                callback(err, null);
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.messages,
+                });
             });
     }
 

@@ -12,7 +12,7 @@ export default class ConfigManager {
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
-            get: this.get,
+            get: this.get.bind(this),
             updateConfig: this.updateConfig.bind(this),
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
