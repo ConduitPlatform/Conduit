@@ -1,0 +1,23 @@
+syntax = 'proto3';
+package databaseprovider;
+
+message CreateSchemaRequest {
+  string schema = 1;
+}
+
+message CreateSchemaResponse {
+  string schema = 1;
+}
+
+message GetSchemaRequest {
+  string schemaName = 1;
+}
+
+message GetSchemaResponse {
+  string schema = 1;
+}
+
+service DatabaseProvider {
+  rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (CreateSchemaResponse);
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+}
