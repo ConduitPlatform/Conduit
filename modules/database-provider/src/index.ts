@@ -1,4 +1,4 @@
-import {DatabaseProvider} from "./databaseProvider";
+import {DatabaseProvider} from "./DatabaseProvider";
 import ConduitGrpcSdk from "@conduit/grpc-sdk";
 
 // if (process.env.CONDUIT_SERVER) {
