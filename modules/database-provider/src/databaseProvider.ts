@@ -1,5 +1,5 @@
 import {MongooseAdapter} from "./adapters/mongoose-adapter";
-import {DatabaseAdapter, SchemaAdapter} from './interfaces';
+import {DatabaseAdapter} from './interfaces';
 import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
 
@@ -11,9 +11,9 @@ export class DatabaseProvider {
   private _url: string;
 
   constructor(private readonly conduit: ConduitGrpcSdk) {
-    const dbType = process.env.dbType ? process.env.dbType : 'mongodb';
-    const databaseUrl = process.env.databaseUrl ?
-      process.env.databaseUrl : 'mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false';
+    const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
+    const databaseUrl = process.env.databaseURL ?
+      process.env.databaseURL : 'mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false';
 
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
