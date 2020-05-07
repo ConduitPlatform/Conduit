@@ -1,7 +1,7 @@
 import {ConnectionOptions, Mongoose} from "mongoose"
 import {MongooseSchema} from "./MongooseSchema";
 import {schemaConverter} from "./SchemaConverter";
-import {ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter} from "@conduit/sdk";
+import {DatabaseAdapter, SchemaAdapter} from '../../interfaces';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
@@ -54,24 +54,32 @@ export class MongooseAdapter implements DatabaseAdapter {
             });
     }
 
-    createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter {
+    createSchemaFromAdapter(schemaString: string): Promise<SchemaAdapter> {
+        const schema: any = JSON.parse(schemaString);
         const Schema = this.mongoose.Schema;
         if (!this.models) {
             this.models = {};
         }
         if (this.models[schema.name]) {
-            return this.models[schema.name];
+            return new Promise((resolve, reject) => {
+                resolve(this.models![schema.name]);
+            });
         }
         let newSchema = schemaConverter(schema);
         this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
-        return this.models[schema.name];
+        return new Promise((resolve, reject) => {
+            resolve(this.models![schema.name]);
+        });
     }
 
-    getSchema(schemaName: string): SchemaAdapter {
+    getSchema(schemaName: string): Promise<SchemaAdapter> {
         if (this.models) {
-            return this.models[schemaName]
+            return new Promise((resolve, reject) => {
+                resolve(this.models![schemaName]);
+            });
         }
-        throw new ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
+        // throw ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
+        throw new Error('Schema not defined yet');
     }
 
 }
