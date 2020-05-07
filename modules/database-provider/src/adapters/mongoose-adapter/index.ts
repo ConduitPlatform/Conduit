@@ -78,7 +78,6 @@ export class MongooseAdapter implements DatabaseAdapter {
                 resolve(this.models![schemaName]);
             });
         }
-        // throw ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
         throw new Error('Schema not defined yet');
     }
 
