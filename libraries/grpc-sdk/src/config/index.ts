@@ -69,6 +69,19 @@ export default class Config {
         });
     }
 
+    moduleList(): Promise<any[]> {
+        let request = {};
+        return new Promise((resolve, reject) => {
+            this.client.moduleList(request, (err: any, res: any) => {
+                if (err || !res) {
+                    reject(err || 'Something went wrong');
+                } else {
+                    resolve(res.modules);
+                }
+            })
+        });
+    }
+
     registerModule(name: string, url: string): Promise<any> {
         let request = {
             moduleName: name.toString(),

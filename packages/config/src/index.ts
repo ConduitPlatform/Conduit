@@ -16,6 +16,7 @@ export default class ConfigManager {
             updateConfig: this.updateConfig.bind(this),
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
+            moduleList: this.moduleList.bind(this),
         })
         this.databaseCallback = databaseCallback;
     }
@@ -32,7 +33,28 @@ export default class ConfigManager {
         if (this.registeredModules.has(call.moduleName)) {
             callback(null, this.registeredModules.get(call.moduleName));
         } else {
-            callback(new Error("Module does not exist"));
+            callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Module is missing",
+            });
+        }
+    }
+
+    moduleList(call: any, callback: any) {
+        if (this.registeredModules.size !== 0) {
+            let modules: any[] = [];
+            this.registeredModules.forEach((value: string, key: string) => {
+                modules.push({
+                    moduleName: key,
+                    url: value
+                })
+            });
+            callback(null, {modules})
+        } else {
+            callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Modules not available",
+            })
         }
     }
 

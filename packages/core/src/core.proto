@@ -5,6 +5,7 @@ service Config {
     rpc Get (GetConfigRequest) returns (GetConfigResponse);
     rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
     rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+    rpc ModuleList (Empty) returns (ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
 }
 
@@ -50,6 +51,15 @@ message RegisterModuleRequest {
 message RegisterModuleResponse {
     bool result = 1;
 }
+
+message ModuleListResponse {
+    repeated ModuleResponse modules = 1;
+    message ModuleResponse {
+        string moduleName = 1;
+        string url = 2;
+    }
+}
+
 
 message ModuleExistsRequest {
     string moduleName = 1;
