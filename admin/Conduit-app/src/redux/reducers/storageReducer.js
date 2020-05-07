@@ -1,4 +1,10 @@
-import { SET_STORAGE_ERROR, SET_STORAGE_CONFIG, START_STORAGE_LOADING, STOP_STORAGE_LOADING } from '../actions/actionTypes';
+import {
+  SET_STORAGE_ERROR,
+  SET_STORAGE_CONFIG,
+  START_STORAGE_LOADING,
+  STOP_STORAGE_LOADING,
+  CLEAR_STORAGE_PAGE_STORE,
+} from '../actions/actionTypes';
 
 const initialState = {
   data: { config: null },
@@ -30,6 +36,10 @@ const storageReducer = (state = initialState, action) => {
       return {
         ...state,
         error: action.payload.error,
+      };
+    case CLEAR_STORAGE_PAGE_STORE:
+      return {
+        ...initialState,
       };
     default:
       return state;

@@ -6,6 +6,7 @@ import {
   START_EMAIL_LOADING,
   STOP_EMAIL_LOADING,
   UPDATE_EMAIL_TEMPLATE,
+  CLEAR_EMAIL_PAGE_STORE,
 } from './actionTypes';
 
 export const setEmailTemplates = (data) => ({
@@ -39,4 +40,8 @@ export const addEmailTemplate = (data) => ({
 export const setEmailSettings = (data) => ({
   type: SET_EMAIL_SETTINGS,
   payload: data,
+});
+
+export const clearEmailPageStore = () => ({
+  type: CLEAR_EMAIL_PAGE_STORE,
 });

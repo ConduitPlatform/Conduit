@@ -1,6 +1,6 @@
 import axios from 'axios';
 import store from '../redux/store';
-import { clearAuthenticationToken, clearAuthPageStore } from '../redux/actions';
+import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
 const CONDUIT_API = 'http://13.95.17.12';
@@ -42,8 +42,7 @@ axios.interceptors.response.use(
     console.log(error);
     if (error.response.status === 401) {
       if (store) {
-        store().dispatch(clearAuthenticationToken());
-        store().dispatch(clearAuthPageStore());
+        store().dispatch(logout());
         Router.replace('/login');
       }
     }

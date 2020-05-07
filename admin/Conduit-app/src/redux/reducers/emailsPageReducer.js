@@ -6,6 +6,7 @@ import {
   START_EMAIL_LOADING,
   STOP_EMAIL_LOADING,
   UPDATE_EMAIL_TEMPLATE,
+  CLEAR_EMAIL_PAGE_STORE,
 } from '../actions/actionTypes';
 
 const initialState = {
@@ -64,6 +65,10 @@ const emailsPageReducer = (state = initialState, action) => {
           ...state.data,
           settings: action.payload,
         },
+      };
+    case CLEAR_EMAIL_PAGE_STORE:
+      return {
+        ...initialState,
       };
     default:
       return state;

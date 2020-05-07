@@ -1,4 +1,5 @@
 import {
+  CLEAR_NOTIFICATION_PAGE_STORE,
   SET_NOTIFICATION_CONFIG,
   SET_NOTIFICATION_ERROR,
   START_NOTIFICATION_LOADING,
@@ -35,6 +36,10 @@ const notificationReducer = (state = initialState, action) => {
       return {
         ...state,
         error: action.payload.error,
+      };
+    case CLEAR_NOTIFICATION_PAGE_STORE:
+      return {
+        ...initialState,
       };
     default:
       return state;

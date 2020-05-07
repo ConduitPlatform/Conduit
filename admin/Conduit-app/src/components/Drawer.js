@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
 import { useDispatch } from 'react-redux';
-import { clearAuthenticationToken } from '../redux/actions';
+import { logout } from '../redux/thunks/appAuthThunks';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -104,7 +104,7 @@ function CustomDrawer(props) {
   };
 
   const handleLogout = () => {
-    dispatch(clearAuthenticationToken());
+    dispatch(logout());
     Router.replace('/login');
   };
 

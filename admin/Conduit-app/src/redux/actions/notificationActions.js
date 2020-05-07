@@ -1,4 +1,5 @@
 import {
+  CLEAR_NOTIFICATION_PAGE_STORE,
   SET_NOTIFICATION_CONFIG,
   SET_NOTIFICATION_ERROR,
   START_NOTIFICATION_LOADING,
@@ -21,4 +22,8 @@ export const stopNotificationLoading = () => ({
 export const setNotificationError = (error) => ({
   type: SET_NOTIFICATION_ERROR,
   payload: { error },
+});
+
+export const clearNotificationPageStore = () => ({
+  type: CLEAR_NOTIFICATION_PAGE_STORE,
 });
