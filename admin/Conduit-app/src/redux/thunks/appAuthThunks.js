@@ -11,6 +11,7 @@ import {
 import { clearEmailPageStore } from '../actions/emailsActions';
 import { loginRequest } from '../../http/requests';
 import { removeCookie } from '../../utils/cookie';
+import { CLEAR_AUTHENTICATION_TOKEN } from '../actions/actionTypes';
 
 export const login = (username, password, remember) => {
   return (dispatch) => {
@@ -29,10 +30,6 @@ export const login = (username, password, remember) => {
   };
 };
 
-// todo create logout
-// todo clear all store data ( initial state for every reducer )
-
-// todo use logout when user sign out and when u got 401 error page
 export const logout = () => {
   return (dispatch) => {
     dispatch(clearAuthPageStore());
@@ -40,6 +37,7 @@ export const logout = () => {
     dispatch(clearNotificationPageStore());
     dispatch(clearStoragePageStore());
     // todo dispatch cmsPage when merge with master
+    dispatch(clearAuthenticationToken());
     removeCookie('JWT');
   };
 };
