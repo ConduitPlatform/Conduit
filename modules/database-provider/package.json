@@ -10,7 +10,9 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/sdk": "1.0.0",
+    "@conduit/grpc-sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
+    "grpc": "^1.24.2",
     "@types/mongoose": "^5.5.43",
     "lodash": "^4.17.15",
     "mongoose": "latest"
