@@ -59,7 +59,7 @@ export class CMS extends IConduitCMS {
 
     //todo add support for filtering
     constructSchemaRoutes(schema: SchemaAdapter) {
-        this.sdk.getAdmin().registerRoute('GET', '/cms/content' + schema.originalSchema.name,
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name,
             (req, res, next) => {
                 schema.findMany({})
                     .then(r => {
@@ -69,7 +69,7 @@ export class CMS extends IConduitCMS {
                         res.send(err);
                     });
             })
-        this.sdk.getAdmin().registerRoute('GET', '/cms/content' + schema.originalSchema.name + '/:id',
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name + '/:id',
             (req, res, next) => {
                 schema.findOne({id: req.params.id})
                     .then(r => {
