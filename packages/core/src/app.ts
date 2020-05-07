@@ -11,7 +11,6 @@ import {ConduitDefaultRouter} from '@conduit/router';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import {ConduitDefaultDatabase} from '@conduit/database-provider';
 import {ConduitLogger} from './utils/logging/logger';
 import {AppConfig} from './utils/config';
 import {MonitoringUtility} from './utils/monitoring';
@@ -33,7 +32,6 @@ export class App {
     }
 
     initialize() {
-        this.app.conduit.registerDatabase(new ConduitDefaultDatabase(process.env.databaseType!, process.env.databaseURL));
         this.registerGlobalMiddleware();
         this.registerRoutes();
         MonitoringUtility.getInstance().enableMetrics();
