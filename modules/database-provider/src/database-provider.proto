@@ -2,11 +2,11 @@ syntax = 'proto3';
 package databaseprovider;
 
 message CreateSchemaRequest {
-  string schema = 1;
+  Schema schema = 1;
 }
 
 message CreateSchemaResponse {
-  string schema = 1;
+  Schema schema = 1;
 }
 
 message GetSchemaRequest {
@@ -14,7 +14,13 @@ message GetSchemaRequest {
 }
 
 message GetSchemaResponse {
-  string schema = 1;
+  Schema schema = 1;
+}
+
+message Schema {
+  string name = 1;
+  string modelSchema = 2;
+  string modelOptions = 3;
 }
 
 service DatabaseProvider {

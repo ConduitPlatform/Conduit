@@ -54,8 +54,7 @@ export class MongooseAdapter implements DatabaseAdapter {
             });
     }
 
-    createSchemaFromAdapter(schemaString: string): Promise<SchemaAdapter> {
-        const schema: any = JSON.parse(schemaString);
+    createSchemaFromAdapter(schema: any): Promise<SchemaAdapter> {
         const Schema = this.mongoose.Schema;
         if (!this.models) {
             this.models = {};

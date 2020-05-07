@@ -8,7 +8,7 @@ import * as _ from "lodash";
 export function schemaConverter(jsonSchema: any) {
 
     let copy = _.cloneDeep(jsonSchema)
-    let actual: any = copy.modelSchema;
+    let actual: any = JSON.parse(copy.modelSchema);
 
     // converts relations to mongoose relations
     for (const key in actual as any) {
