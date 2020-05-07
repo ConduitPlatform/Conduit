@@ -10,8 +10,8 @@ import {
     IConduitDatabase,
     SchemaAdapter, TYPE
 } from '@conduit/sdk';
-import { AdminHandlers } from './handlers/admin';
-import { isNil } from 'lodash';
+import {AdminHandlers} from './handlers/admin';
+import {isNil} from 'lodash';
 
 export class CMS extends IConduitCMS {
 
@@ -19,7 +19,6 @@ export class CMS extends IConduitCMS {
     private readonly _schemas: { [name: string]: SchemaAdapter };
     private readonly _router: any;
     private readonly sdk: ConduitSDK;
-
 
     constructor(conduit: ConduitSDK) {
         super(conduit);
@@ -60,6 +59,26 @@ export class CMS extends IConduitCMS {
 
     //todo add support for filtering
     constructSchemaRoutes(schema: SchemaAdapter) {
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content' + schema.originalSchema.name,
+            (req, res, next) => {
+                schema.findMany({})
+                    .then(r => {
+                        res.json(r);
+                    })
+                    .catch(err => {
+                        res.send(err);
+                    });
+            })
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content' + schema.originalSchema.name + '/:id',
+            (req, res, next) => {
+                schema.findOne({id: req.params.id})
+                    .then(r => {
+                        res.json(r);
+                    })
+                    .catch(err => {
+                        res.send(err);
+                    });
+            })
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/content/' + schema.originalSchema.name,
@@ -72,7 +91,7 @@ export class CMS extends IConduitCMS {
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
             async (params: ConduitRouteParameters) => {
-                const { skip, limit } = params.params as any;
+                const {skip, limit} = params.params as any;
                 let skipNumber = 0, limitNumber = 25;
 
                 if (!isNil(skip)) {
@@ -125,22 +144,22 @@ export class CMS extends IConduitCMS {
         const adminHandlers = new AdminHandlers(this.sdk, this.createSchema.bind(this));
 
         this.sdk.getAdmin().registerRoute('GET', '/cms/schemas',
-          (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
+            (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('GET', '/cms/schemas/:id',
-          (req, res, next) => adminHandlers.getById(req, res).catch(next));
+            (req, res, next) => adminHandlers.getById(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('POST', '/cms/schemas',
-          (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
+            (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/toggle/:id',
-          (req, res, next) => adminHandlers.toggle(req, res).catch(next));
+            (req, res, next) => adminHandlers.toggle(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/:id',
-          (req, res, next) => adminHandlers.editSchema(req, res).catch(next));
+            (req, res, next) => adminHandlers.editSchema(req, res).catch(next));
 
         this.sdk.getAdmin().registerRoute('DELETE', '/cms/schemas/:id',
-          (req, res, next) => adminHandlers.deleteSchema(req, res).catch(next));
+            (req, res, next) => adminHandlers.deleteSchema(req, res).catch(next));
 
     }
 }
