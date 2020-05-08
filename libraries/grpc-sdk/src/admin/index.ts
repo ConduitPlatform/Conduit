@@ -41,7 +41,15 @@ export default class Admin {
             adminUrl: serverUrl
         };
 
-        return promisify(this.client.registerAdminRoute(request)).bind(this.client);
+        return new Promise((resolve, reject) => {
+            this.client.registerAdminRoute(request, (err: any, res: any) => {
+                if (err || !res) {
+                    reject(err || 'Something went wrong');
+                } else {
+                    resolve(res.modules);
+                }
+            })
+        });
     }
 
 }

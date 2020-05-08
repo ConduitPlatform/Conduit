@@ -23,10 +23,26 @@ export default class DatabaseProvider {
   }
 
   getSchema(schemaName: string): Promise<any> {
-    return promisify(this.client.getSchema(schemaName)).bind(this.client);
+    return new Promise((resolve, reject) => {
+      this.client.getSchema(schemaName, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.modules);
+        }
+      })
+    });
   }
 
   createSchemaFromAdapter(schema: any): Promise<any> {
-      return promisify(this.client.createSchemaFromAdapter(schema)).bind(this.client);
+    return new Promise((resolve, reject) => {
+      this.client.createSchemaFromAdapter(schema, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.modules);
+        }
+      })
+    });
   }
 }
