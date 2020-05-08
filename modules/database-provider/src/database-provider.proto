@@ -2,28 +2,66 @@ syntax = 'proto3';
 package databaseprovider;
 
 message CreateSchemaRequest {
-  Schema schema = 1;
+    Schema schema = 1;
 }
 
 message CreateSchemaResponse {
-  Schema schema = 1;
+    Schema schema = 1;
 }
 
 message GetSchemaRequest {
-  string schemaName = 1;
+    string schemaName = 1;
 }
 
 message GetSchemaResponse {
-  Schema schema = 1;
+    Schema schema = 1;
 }
 
 message Schema {
-  string name = 1;
-  string modelSchema = 2;
-  string modelOptions = 3;
+    string name = 1;
+    string modelSchema = 2;
+    string modelOptions = 3;
+}
+
+message FindOneRequest {
+    string schemaName = 1;
+    string query = 2;
+    string select = 3;
+}
+message FindRequest {
+    string schemaName = 1;
+    string query = 2;
+    string select = 3;
+    int32 skip = 4;
+    int32 limit = 5;
+    string sort = 6;
+}
+
+message QueryResponse {
+    string result = 1;
+}
+
+message QueryRequest {
+    string schemaName = 1;
+    string query = 2;
+}
+
+message UpdateRequest {
+    string schemaName = 1;
+    string query = 2;
+    string document = 3;
 }
 
 service DatabaseProvider {
-  rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (CreateSchemaResponse);
-  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+    rpc CreateSchemaFromAdapter (CreateSchemaRequest) returns (CreateSchemaResponse);
+    rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
+    // Database queries
+    rpc findOne (FindOneRequest) returns (QueryResponse);
+    rpc findMany (FindRequest) returns (QueryResponse);
+    rpc create (QueryRequest) returns (QueryResponse);
+    rpc deleteOne (QueryRequest) returns (QueryResponse);
+    rpc deleteMany (QueryRequest) returns (QueryResponse);
+    rpc findByIdAndUpdate (UpdateRequest) returns (QueryResponse);
+    rpc countDocuments (QueryRequest) returns (QueryResponse);
+
 }

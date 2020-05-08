@@ -30,21 +30,24 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.deleteMany(query).exec();
     }
 
-    findMany(query: any): Promise<any> {
-        return this.model.find(query).lean().exec();
+    findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any): Promise<any> {
+        let finalQuery = this.model.find(query);
+        if (skip !== null) {
+            finalQuery = finalQuery.skip(skip!);
+        }
+        if (limit !== null) {
+            finalQuery = finalQuery.limit(limit!);
+        }
+        if (sort !== null) {
+            finalQuery = finalQuery.sort(sort);
+        } else {
+            finalQuery = finalQuery.sort({createdAt: -1});
+        }
+        return finalQuery.lean().exec();
     }
 
     findOne(query: any, select?: string): Promise<any> {
         return this.model.findOne(query, select).lean().exec();
-    }
-
-    findPaginated(query: any, skip: number, limit: number) {
-        return this.model.find(query)
-            .sort({createdAt: -1})
-            .skip(skip)
-            .limit(limit)
-            .lean()
-            .exec();
     }
 
     countDocuments(query: any) {
