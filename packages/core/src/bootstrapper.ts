@@ -10,6 +10,7 @@ import {ConduitSDK} from '@conduit/sdk';
 import * as grpc from "grpc";
 import ConfigManager from "@conduit/config";
 import path from 'path';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -17,6 +18,9 @@ export class CoreBootstrapper {
     static bootstrap() {
         let primary = new App();
         const app = primary.get();
+        let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
+
+        const grpcSdk = new ConduitGrpcSdk(_url);
         var server = new grpc.Server();
         var packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './core.proto'),
@@ -29,9 +33,8 @@ export class CoreBootstrapper {
             });
         let manager = new ConfigManager(server, packageDefinition, (url: string) => {
             primary.initialize();
-            CoreBootstrapper.bootstrapSdkComponents(app, packageDefinition, server).catch(console.log);
+            CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
-        let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
         server.bind(_url, grpc.ServerCredentials.createInsecure());
         server.start();
         console.log("grpc server listening on:", _url);
@@ -52,17 +55,17 @@ export class CoreBootstrapper {
         adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
     }
 
-    private static async bootstrapSdkComponents(app: ConduitApp, packageDefinition: string, server: any) {
-        CoreBootstrapper.registerSchemas(app);
+    private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
+        // CoreBootstrapper.registerSchemas(app);
+        //
+        // const database = app.conduit.getDatabase();
+        // const appConfig: Config<any> = (app.conduit as any).config;
+        //
+        // const databaseConfigUtility = new DatabaseConfigUtility(database, appConfig);
+        //
+        // await databaseConfigUtility.configureFromDatabase();
 
-        const database = app.conduit.getDatabase();
-        const appConfig: Config<any> = (app.conduit as any).config;
-
-        const databaseConfigUtility = new DatabaseConfigUtility(database, appConfig);
-
-        await databaseConfigUtility.configureFromDatabase();
-
-        app.conduit.registerAdmin(new AdminModule(app.conduit, server, packageDefinition));
+        app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
 
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
@@ -80,7 +83,7 @@ export class CoreBootstrapper {
         //
         // app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
+        // CoreBootstrapper.registerAdminRoutes(app.conduit);
 
         app.initialized = true;
     }
