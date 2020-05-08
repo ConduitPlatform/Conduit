@@ -1,5 +1,6 @@
 import * as grpc from 'grpc';
 import path from 'path';
+import { promisify } from 'util';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -24,32 +25,17 @@ export default class InMemoryStore {
     }
 
     get(key: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-            this.client.get({
+            return promisify(this.client.get({
                 key: key
-            }, (err: any, res: any) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(res);
-                }
-            })
-        });
+            })).bind(this.client);
     }
 
     store(key: string, data: any): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            this.client.store({
+        // @ts-ignore
+        return promisify(this.client.store({
                 key: key,
                 data: data.toString()
-            }, (err: any, res: any) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(true);
-                }
-            })
-        });
+            })).bind(this.client);
     }
 
 }

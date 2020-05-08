@@ -61,7 +61,7 @@ export default class ConfigManager {
     registerModule(call: any, callback: any) {
         // todo implement
         this.registeredModules.set(call.request.moduleName, call.request.url);
-        if (call.request.moduleName === 'database') {
+        if (call.request.moduleName === 'database-provider') {
             this.databaseCallback();
         }
         callback(null, {result: true});

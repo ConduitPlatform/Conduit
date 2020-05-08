@@ -1,15 +1,11 @@
 import {Schema} from "mongoose";
-import {ConduitSchema} from "@conduit/sdk";
-import * as _ from "lodash";
-
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent
  * @param jsonSchema
  */
-export function schemaConverter(jsonSchema: ConduitSchema) {
+export function schemaConverter(jsonSchema: any) {
 
-    let copy = _.cloneDeep(jsonSchema)
-    let actual: any = copy.modelSchema;
+    let actual: any = JSON.parse(jsonSchema.modelSchema);
 
     // converts relations to mongoose relations
     for (const key in actual as any) {
@@ -30,5 +26,5 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     }
     // just to be sure
     // jsonSchema.modelSchema = actual;
-    return copy;
+    return actual;
 }

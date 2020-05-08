@@ -1,35 +1,13 @@
-import {MongooseAdapter} from "./adapters/mongoose-adapter";
-import {DatabaseAdapter, IConduitDatabase, SchemaAdapter} from "@conduit/sdk";
-import {ConduitSchema} from "@conduit/sdk";
+import {DatabaseProvider} from "./DatabaseProvider";
+import ConduitGrpcSdk from "@conduit/grpc-sdk";
 
-
-export class ConduitDefaultDatabase extends IConduitDatabase {
-
-    private readonly _activeAdapter: DatabaseAdapter;
-
-    constructor(dbType: string, databaseUrl: any) {
-        super(dbType, databaseUrl);
-        if (dbType === 'mongodb') {
-            this._activeAdapter = new MongooseAdapter(databaseUrl);
-        } else {
-            throw new Error("Arguments not supported")
-        }
-    }
-
-    /**
-     * Should accept a JSON schema and output a .ts interface for the adapter
-     * @param schema
-     */
-    createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter {
-        return this._activeAdapter.createSchemaFromAdapter(schema);
-    }
-
-    /**
-     * Given a schema name, returns the schema adapter assigned
-     * @param schemaName
-     */
-    getSchema(schemaName: string): SchemaAdapter {
-        return this._activeAdapter.getSchema(schemaName);
-    }
-}
-
+// if (process.env.CONDUIT_SERVER) {
+let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
+let store = new DatabaseProvider(grpcSdk);
+grpcSdk.config.registerModule('database-provider', store.url).catch(err => {
+    console.error(err)
+    process.exit(-1);
+});
+// } else {
+//     throw new Error("Conduit server URL not provided");
+// }

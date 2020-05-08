@@ -6,11 +6,14 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "tsc",
-    "publish": "npm publish"
+    "publish": "npm publish",
+    "postbuild": "copyfiles -u 1 src/*.proto ./dist/"
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/sdk": "1.0.0",
+    "@conduit/grpc-sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
+    "grpc": "^1.24.2",
     "@types/mongoose": "^5.5.43",
     "lodash": "^4.17.15",
     "mongoose": "latest"
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.149",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "copyfiles": "^2.2.0"
   }
 }

@@ -1,5 +1,6 @@
 import * as grpc from 'grpc';
 import path from "path";
+import { promisify } from 'util';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -27,15 +28,7 @@ export default class Config {
         let request = {
             key: name
         };
-        return new Promise((resolve, reject) => {
-            this.client.get(request, (err: any, res: any) => {
-                if (err || !res || !res.data) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.data);
-                }
-            })
-        });
+        return promisify(this.client.get(request)).bind(this.client);
     }
 
     updateConfig(config: any, name: string): Promise<any> {
@@ -43,43 +36,20 @@ export default class Config {
             config: config,
             moduleName: name
         };
-        return new Promise((resolve, reject) => {
-            this.client.updateConfig(request, (err: any, res: any) => {
-                if (err || !res || !res.result) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.result);
-                }
-            })
-        });
+
+        return promisify(this.client.updateConfig(request)).bind(this.client);
     }
 
     moduleExists(name: string): Promise<any> {
         let request = {
             moduleName: name
         };
-        return new Promise((resolve, reject) => {
-            this.client.moduleExists(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.url);
-                }
-            })
-        });
+        return promisify(this.client.moduleExists(request)).bind(this.client);
     }
 
     moduleList(): Promise<any[]> {
         let request = {};
-        return new Promise((resolve, reject) => {
-            this.client.moduleList(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.modules);
-                }
-            })
-        });
+        return promisify(this.client.moduleList(request)).bind(this.client);
     }
 
     registerModule(name: string, url: string): Promise<any> {
@@ -87,15 +57,8 @@ export default class Config {
             moduleName: name.toString(),
             url: url.toString()
         };
-        return new Promise((resolve, reject) => {
-            this.client.registerModule(request, (err: any, res: any) => {
-                if (err || !res || !res.result) {
-                    reject(err || 'Module was not registered');
-                } else {
-                    resolve(res.result);
-                }
-            })
-        });
+        return promisify(this.client.registerModule(request)).bind(this.client);
+
     }
 
 }

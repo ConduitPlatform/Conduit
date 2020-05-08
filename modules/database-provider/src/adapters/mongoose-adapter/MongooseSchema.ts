@@ -1,14 +1,14 @@
 import {Model, Schema} from "mongoose";
-import {ConduitSchema, SchemaAdapter} from "@conduit/sdk";
+import {SchemaAdapter} from '../../interfaces';
 
 export class MongooseSchema implements SchemaAdapter {
 
     model: Model<any>;
-    originalSchema: ConduitSchema;
+    originalSchema: any; // any for now
 
-    constructor(mongoose: any, schema: ConduitSchema) {
+    constructor(mongoose: any, schema: any) {
         this.originalSchema = schema;
-        this.model = mongoose.model(schema.name, new Schema(schema.modelSchema as any, schema.modelOptions))
+        this.model = mongoose.model(schema.name, new Schema(JSON.parse(schema.modelSchema) as any, JSON.parse(schema.modelOptions)) as Schema)
     }
 
     create(query: any): Promise<any> {
