@@ -1,17 +1,15 @@
 import {
   clearAuthenticationToken,
+  clearAuthPageStore,
+  clearNotificationPageStore,
+  clearStoragePageStore,
   setAuthenticationError,
   setAuthenticationToken,
   startAuthenticationLoading,
   stopAuthenticationLoading,
-  clearAuthPageStore,
-  clearStoragePageStore,
-  clearNotificationPageStore,
 } from '../actions';
 import { clearEmailPageStore } from '../actions/emailsActions';
 import { loginRequest } from '../../http/requests';
-import { removeCookie } from '../../utils/cookie';
-import { CLEAR_AUTHENTICATION_TOKEN } from '../actions/actionTypes';
 
 export const login = (username, password, remember) => {
   return (dispatch) => {
@@ -38,6 +36,5 @@ export const logout = () => {
     dispatch(clearStoragePageStore());
     // todo dispatch cmsPage when merge with master
     dispatch(clearAuthenticationToken());
-    removeCookie('JWT');
   };
 };
