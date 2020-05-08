@@ -62,9 +62,9 @@ export const getAuthUsersDataReq = (skip, limit) =>
     },
   });
 
-export const getAuthenticationConfig = () => axios.get(`${CONDUIT_API}/admin/authentication/config`);
+export const getAuthenticationConfig = () => axios.get(`${CONDUIT_API}/admin/config/authentication`);
 
-export const putAuthenticationConfig = (body) => axios.put(`${CONDUIT_API}/admin/authentication/config`, body);
+export const putAuthenticationConfig = (body) => axios.put(`${CONDUIT_API}/admin/config/authentication`, body);
 
 //REQUEST FOR EMAILS
 export const getEmailTemplateRequest = () => axios.get(`${CONDUIT_API}/admin/email/templates`);
@@ -74,8 +74,8 @@ export const postEmailTemplateRequest = (data) => axios.post(`${CONDUIT_API}/adm
 export const putEmailTemplateRequest = (templateId, data) =>
   axios.put(`${CONDUIT_API}/admin/email/templates/${templateId}`, { ...data });
 
-export const getEmailSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/email/config`);
-export const putEmailSettingsRequest = (data) => axios.put(`${CONDUIT_API}/admin/email/config`, { ...data });
+export const getEmailSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/email`);
+export const putEmailSettingsRequest = (data) => axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
 
 export const sendEmailRequest = (data) => axios.post(`${CONDUIT_API}/admin/email/send`, { ...data });
 
