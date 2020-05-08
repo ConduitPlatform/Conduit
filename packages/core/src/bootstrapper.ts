@@ -31,10 +31,13 @@ export class CoreBootstrapper {
                 defaults: true,
                 oneofs: true
             });
+        // NOTE: all core packages with grpc need to be created before grpc server start
         let manager = new ConfigManager(server, packageDefinition, (url: string) => {
             primary.initialize();
             CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
+        app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
+
         server.bind(_url, grpc.ServerCredentials.createInsecure());
         server.start();
         console.log("grpc server listening on:", _url);
@@ -65,8 +68,7 @@ export class CoreBootstrapper {
         //
         // await databaseConfigUtility.configureFromDatabase();
 
-        app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
-
+        app.conduit.getAdmin().initialize();
         app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
         //

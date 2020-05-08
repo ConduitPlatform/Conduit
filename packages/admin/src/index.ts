@@ -19,18 +19,9 @@ export default class AdminModule extends IConduitAdmin {
 
     constructor(grpcSdk: ConduitGrpcSdk, conduit: ConduitSDK, server: grpc.Server, packageDefinition: any) {
         super(conduit);
-        this.router = Router();
-        this.grpcSdk = grpcSdk;
         this.conduit = conduit;
-
-        this.handleDatabase().catch(console.log);
-
-        const adminHandlers = new AuthHandlers(conduit);
-        conduit.getRouter().registerDirectRouter('/admin/login',
-            (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
-        conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
-        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
-        conduit.getRouter().registerExpressRouter('/admin', this.router);
+        this.grpcSdk = grpcSdk;
+        this.router = Router();
 
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
@@ -42,38 +33,51 @@ export default class AdminModule extends IConduitAdmin {
         })
     }
 
+    initialize() {
+        this.handleDatabase().catch(console.log);
+        const adminHandlers = new AuthHandlers(this.conduit);
+        this.conduit.getRouter().registerDirectRouter('/admin/login',
+            (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
+        this.conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
+        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
+        this.conduit.getRouter().registerExpressRouter('/admin', this.router);
+
+    }
+
+    // @ts-ignore
     private async handleDatabase() {
         const {config} = this.conduit as any;
-
+        if (!this.grpcSdk.databaseProvider) {
+            await this.grpcSdk.refreshModules(true);
+            return this.handleDatabase();
+        }
         const databaseAdapter = this.grpcSdk.databaseProvider!;
 
-        this.registerSchemas(databaseAdapter);
+        await databaseAdapter.createSchemaFromAdapter(AdminSchema);
+
 
         const AdminModel = await databaseAdapter.getSchema('Admin');
 
         AdminModel.findOne({username: 'admin'})
-          .then((existing: any) => {
-              if (isNil(existing)) {
-                  const hashRounds = config.get('admin.auth.hashRounds');
-                  return hashPassword('admin', hashRounds);
-              }
-              return Promise.resolve(null);
-          })
-          .then((result: string | null) => {
-              if (!isNil(result)) {
-                  return AdminModel.create({username: 'admin', password: result});
-              }
-          })
-          .catch(console.log);
+            .then((existing: any) => {
+                if (isNil(existing)) {
+                    const hashRounds = config.get('admin.auth.hashRounds');
+                    return hashPassword('admin', hashRounds);
+                }
+                return Promise.resolve(null);
+            })
+            .then((result: string | null) => {
+                if (!isNil(result)) {
+                    return AdminModel.create({username: 'admin', password: result});
+                }
+            })
+            .catch(console.log);
     }
 
     static get config() {
         return AdminConfigSchema;
     }
 
-    private registerSchemas(adapter: any) {
-        adapter.createSchemaFromAdapter(AdminSchema);
-    }
 
     //grpc
     registerAdminRoute(call: any, callback: any) {
