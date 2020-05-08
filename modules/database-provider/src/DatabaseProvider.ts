@@ -2,6 +2,7 @@ import {MongooseAdapter} from "./adapters/mongoose-adapter";
 import {DatabaseAdapter} from './interfaces';
 import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
+import path from "path";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -20,9 +21,10 @@ export class DatabaseProvider {
     } else {
       throw new Error("Arguments not supported")
     }
+    let protoPath = path.resolve(__dirname, './database-provider.proto');
 
     let packageDefinition = protoLoader.loadSync(
-      './database-provider.proto',
+      protoPath,
       {
         keepCase: true,
         longs: String,
