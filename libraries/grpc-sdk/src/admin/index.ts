@@ -1,5 +1,6 @@
 import * as grpc from 'grpc';
 import path from 'path';
+import { promisify } from 'util';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -39,15 +40,8 @@ export default class Admin {
             protoFile: protoFile,
             adminUrl: serverUrl
         };
-        return new Promise((resolve, reject) => {
-            this.client.registerAdminRoute(request, (err: any, res: any) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve("OK");
-                }
-            })
-        });
+
+        return promisify(this.client.registerAdminRoute(request)).bind(this.client);
     }
 
 }
