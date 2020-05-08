@@ -3,6 +3,7 @@ import Admin from "./admin";
 import Router from "./router";
 import * as grpc from "grpc";
 import InMemoryStore from "./inMemoryStore";
+import DatabaseProvider from './databaseProvider';
 
 
 export default class ConduitGrpcSdk {
@@ -13,7 +14,8 @@ export default class ConduitGrpcSdk {
     private readonly _router: Router;
     private readonly _modules: any = {};
     private readonly _availableModules: any = {
-        "in-memory-store": InMemoryStore
+        "in-memory-store": InMemoryStore,
+        'database-provider': DatabaseProvider
     }
     private lastSearch: number = Date.now();
 
@@ -76,6 +78,15 @@ export default class ConduitGrpcSdk {
             return this._modules['in-memory-store'];
         } else {
             console.warn("In memory store not up yet!")
+            return null;
+        }
+    }
+
+    get databaseProvider(): DatabaseProvider | null {
+        if (this._modules['database-provider']) {
+            return this._modules['database-provider'];
+        } else {
+            console.warn("Database provider not up yet!")
             return null;
         }
     }
