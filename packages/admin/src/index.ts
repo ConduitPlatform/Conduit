@@ -57,9 +57,9 @@ export default class AdminModule extends IConduitAdmin {
 
 
         const AdminModel = await databaseAdapter.getSchema('Admin');
-
-        AdminModel.findOne({username: 'admin'})
+        databaseAdapter.findOne('Admin', JSON.stringify({username: 'admin'}))
             .then((existing: any) => {
+                existing = JSON.parse(existing);
                 if (isNil(existing)) {
                     const hashRounds = config.get('admin.auth.hashRounds');
                     return hashPassword('admin', hashRounds);

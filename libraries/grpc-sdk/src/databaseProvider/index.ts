@@ -52,4 +52,18 @@ export default class DatabaseProvider {
             })
         });
     }
+
+    findOne(schemaName: string, query: string, select?: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            // @ts-ignore
+            this.client.findOne({ schemaName, query, select },
+              (err: any, res: any) => {
+                  if (err || !res) {
+                      reject(err || 'Something went wrong');
+                  } else {
+                      resolve(res.result);
+                  }
+              })
+        });
+    }
 }

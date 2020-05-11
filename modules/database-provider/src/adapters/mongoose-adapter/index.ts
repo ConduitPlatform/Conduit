@@ -82,4 +82,13 @@ export class MongooseAdapter implements DatabaseAdapter {
         throw new Error('Schema not defined yet');
     }
 
+    getSchemaModel(schemaName: string): Promise<{model: any}> {
+        if (this.models) {
+            return new Promise((resolve, reject) => {
+                resolve({ model: this.models![schemaName] });
+            });
+        }
+        throw new Error('Schema not defined yet');
+    }
+
 }

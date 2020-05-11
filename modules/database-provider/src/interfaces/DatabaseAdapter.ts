@@ -1,5 +1,3 @@
-import {SchemaAdapter} from "./SchemaAdapter";
-
 export interface DatabaseAdapter {
 
     /**
@@ -14,5 +12,6 @@ export interface DatabaseAdapter {
      */
     getSchema(schemaName: string): Promise<{ schema: any }> ;
 
+    getSchemaModel(schemaName: string): Promise<{ model: any }>;
 
 }
