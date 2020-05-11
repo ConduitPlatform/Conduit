@@ -53,17 +53,35 @@ export default class DatabaseProvider {
         });
     }
 
-    findOne(schemaName: string, query: string, select?: string): Promise<any> {
+    findOne(schemaName: string, query: any, select?: any): Promise<any> {
         return new Promise((resolve, reject) => {
             // @ts-ignore
-            this.client.findOne({ schemaName, query, select },
+            const selectStr = select ? JSON.stringify(select) : null;
+            this.client.findOne({ schemaName, query: JSON.stringify(query), select: selectStr },
               (err: any, res: any) => {
                   if (err || !res) {
                       reject(err || 'Something went wrong');
                   } else {
-                      resolve(res.result);
+                      resolve(JSON.parse(res.result));
                   }
               })
+        });
+    }
+
+    findMany(schemaName: string, query: any, select?: any, skip?: number, limit?: number, sort?: any) {
+        return new Promise((resolve, reject) => {
+            const selectStr = select ? JSON.stringify(select) : null;
+            const sortStr = sort ? JSON.stringify(sort) : null;
+            this.client.findMany({schemaName, query: JSON.stringify(query), select: selectStr, skip, limit, sort: sortStr},
+              (err: any, res: any) => {
+                  if (err || !res) {
+                      reject(err || 'Something went wrong');
+                  } else {
+                      console.log(res.result)
+                      console.log(typeof res.result)
+                      resolve(JSON.parse(res.result));
+                  }
+              });
         });
     }
 }

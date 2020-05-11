@@ -41,7 +41,8 @@ export class DatabaseProvider {
         server.addService(databaseProvider.service, {
             createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
             getSchema: this.getSchema.bind(this),
-            findOne: this.findOne.bind(this)
+            findOne: this.findOne.bind(this),
+            findMany: this.findMany.bind(this)
         });
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -110,5 +111,25 @@ export class DatabaseProvider {
               });
           });
     }
-}
 
+    findMany(call: any, callback: any) {
+        this._activeAdapter.getSchemaModel(call.request.schemaName)
+          .then((schemaAdapter: { model: any }) => {
+              const skip = call.request.skip ? Number.parseInt(call.request.skip) : null;
+              const limit = call.request.limit ? Number.parseInt(call.request.limit) : null;
+              const select = call.request.select ? JSON.parse(call.request.select) : null;
+              const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
+
+              return schemaAdapter.model.findMany(JSON.parse(call.request.query), skip, limit, select, sort);
+          })
+          .then((docs: any) => {
+              callback(null, { result: JSON.stringify(docs) });
+          })
+          .catch((err: any) => {
+              callback({
+                  code: grpc.status.INTERNAL,
+                  message: err,
+              });
+          });
+    }
+}
