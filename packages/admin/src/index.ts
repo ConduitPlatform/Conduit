@@ -156,7 +156,7 @@ export default class AdminModule extends IConduitAdmin {
         }
     }
 
-    async authMiddleware(req: Request, res: Response, next: NextFunction) {
+    authMiddleware(req: Request, res: Response, next: NextFunction) {
         const {config} = this.conduit as any;
 
         const adminConfig = config.get('admin');
