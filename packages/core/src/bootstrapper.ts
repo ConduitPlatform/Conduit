@@ -69,7 +69,7 @@ export class CoreBootstrapper {
         // await databaseConfigUtility.configureFromDatabase();
 
         app.conduit.getAdmin().initialize();
-        app.conduit.registerSecurity(new SecurityModule(app.conduit));
+        // app.conduit.registerSecurity(new SecurityModule(app.conduit));
 
         //
         // app.conduit.registerEmail(new EmailModule(app.conduit));
