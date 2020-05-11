@@ -77,8 +77,6 @@ export default class DatabaseProvider {
                   if (err || !res) {
                       reject(err || 'Something went wrong');
                   } else {
-                      console.log(res.result)
-                      console.log(typeof res.result)
                       resolve(JSON.parse(res.result));
                   }
               });
