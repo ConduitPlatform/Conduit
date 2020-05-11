@@ -35,7 +35,7 @@ export default class AdminModule extends IConduitAdmin {
 
     initialize() {
         this.handleDatabase().catch(console.log);
-        const adminHandlers = new AuthHandlers(this.conduit);
+        const adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
         this.conduit.getRouter().registerDirectRouter('/admin/login',
             (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
         this.conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
@@ -156,14 +156,12 @@ export default class AdminModule extends IConduitAdmin {
         }
     }
 
-    authMiddleware(req: Request, res: Response, next: NextFunction) {
+    async authMiddleware(req: Request, res: Response, next: NextFunction) {
         const {config} = this.conduit as any;
 
         const adminConfig = config.get('admin');
 
-        const databaseAdapter = this.conduit.getDatabase();
-
-        const AdminModel = databaseAdapter.getSchema('Admin');
+        const databaseAdapter = this.grpcSdk.databaseProvider!;
 
         const tokenHeader = req.headers.authorization;
         if (isNil(tokenHeader)) {
@@ -187,7 +185,7 @@ export default class AdminModule extends IConduitAdmin {
         }
         const {id} = decoded;
 
-        AdminModel.findOne({_id: id})
+        databaseAdapter.findOne('Admin', {_id: id})
             .then((admin: any) => {
                 if (isNil(admin)) {
                     return res.status(401).json({error: 'No such user exists'});
