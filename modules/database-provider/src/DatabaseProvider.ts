@@ -44,7 +44,8 @@ export class DatabaseProvider {
             findMany: this.findMany.bind(this),
             create: this.create.bind(this),
             findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
-            deleteOne: this.deleteOne.bind(this)
+            deleteOne: this.deleteOne.bind(this),
+            deleteMany: this.deleteMany.bind(this)
         });
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -171,6 +172,22 @@ export class DatabaseProvider {
       this._activeAdapter.getSchemaModel(call.request.schemaName)
         .then((schemaAdapter: { model: any }) => {
           return schemaAdapter.model.deleteOne(JSON.parse(call.request.query));
+        })
+        .then(result => {
+          callback(null, {result: JSON.stringify(result)});
+        })
+        .catch((err: any) => {
+          callback({
+            code: grpc.status.INTERNAL,
+            message: err,
+          });
+        });
+    }
+
+    deleteMany(call: any, callback: any) {
+      this._activeAdapter.getSchemaModel(call.request.schemaName)
+        .then((schemaAdapter: { model: any }) => {
+          return schemaAdapter.model.deleteMany(JSON.parse(call.request.query));
         })
         .then(result => {
           callback(null, {result: JSON.stringify(result)});
