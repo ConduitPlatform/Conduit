@@ -134,4 +134,17 @@ export default class DatabaseProvider {
           });
       });
     }
+
+    countDocuments(schemaName: string, query: any) {
+      return new Promise((resolve, reject) => {
+        this.client.countDocuments({schemaName, query: JSON.stringify(query)},
+          (err: any, res: any) => {
+            if (err || !res) {
+              reject(err || 'Something went wrong');
+            } else {
+              resolve(JSON.parse(res.result));
+            }
+          });
+      });
+    }
 }
