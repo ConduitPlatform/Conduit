@@ -42,7 +42,8 @@ export class DatabaseProvider {
             getSchema: this.getSchema.bind(this),
             findOne: this.findOne.bind(this),
             findMany: this.findMany.bind(this),
-            create: this.create.bind(this)
+            create: this.create.bind(this),
+            findByIdAndUpdate: this.findByIdAndUpdate.bind(this)
         });
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -137,6 +138,22 @@ export class DatabaseProvider {
       this._activeAdapter.getSchemaModel(call.request.schemaName)
         .then((schemaAdapter: { model: any }) => {
           return schemaAdapter.model.create(JSON.parse(call.request.query));
+        })
+        .then(result => {
+          callback(null, {result: JSON.stringify(result)});
+        })
+        .catch((err: any) => {
+          callback({
+            code: grpc.status.INTERNAL,
+            message: err,
+          });
+        });
+    }
+
+    findByIdAndUpdate(call: any, callback: any) {
+      this._activeAdapter.getSchemaModel(call.request.schemaName)
+        .then((schemaAdapter: { model: any }) => {
+          return schemaAdapter.model.findByIdAndUpdate(JSON.parse(call.request.document));
         })
         .then(result => {
           callback(null, {result: JSON.stringify(result)});
