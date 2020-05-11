@@ -98,10 +98,10 @@ export class DatabaseProvider {
     findOne(call: any, callback: any) {
         this._activeAdapter.getSchemaModel(call.request.schemaName)
           .then((schemaAdapter: { model: any }) => {
-              schemaAdapter.model.findOne(JSON.parse(call.request.query), call.request.select ? JSON.parse(call.request.select) : null)
-                .then((doc: any) => {
-                    callback(null, {result: JSON.stringify(doc)});
-                });
+              return schemaAdapter.model.findOne(JSON.parse(call.request.query), call.request.select ? JSON.parse(call.request.select) : null);
+          })
+          .then((doc: any) => {
+              callback(null, { result: JSON.stringify(doc) });
           })
           .catch((err: any) => {
               callback({
