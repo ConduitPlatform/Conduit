@@ -3,7 +3,6 @@ import {DatabaseAdapter} from './interfaces';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
 import path from "path";
-import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -42,7 +41,8 @@ export class DatabaseProvider {
             createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
             getSchema: this.getSchema.bind(this),
             findOne: this.findOne.bind(this),
-            findMany: this.findMany.bind(this)
+            findMany: this.findMany.bind(this),
+            create: this.create.bind(this)
         });
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -131,5 +131,21 @@ export class DatabaseProvider {
                   message: err,
               });
           });
+    }
+
+    create(call: any, callback: any) {
+      this._activeAdapter.getSchemaModel(call.request.schemaName)
+        .then((schemaAdapter: { model: any }) => {
+          return schemaAdapter.model.create(JSON.parse(call.request.query));
+        })
+        .then(result => {
+          callback(null, {result: JSON.stringify(result)});
+        })
+        .catch((err: any) => {
+          callback({
+            code: grpc.status.INTERNAL,
+            message: err,
+          });
+        });
     }
 }
