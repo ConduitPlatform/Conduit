@@ -48,8 +48,7 @@ message QueryRequest {
 
 message UpdateRequest {
     string schemaName = 1;
-    string query = 2;
-    string document = 3;
+    string document = 2;
 }
 
 service DatabaseProvider {
