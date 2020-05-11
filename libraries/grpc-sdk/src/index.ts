@@ -88,6 +88,7 @@ export default class ConduitGrpcSdk {
 
     get databaseProvider(): DatabaseProvider | null {
         if (this._modules["database-provider"]) {
+            console.warn("Database provider is running");
             return this._modules["database-provider"];
         } else {
             console.warn("Database provider not up yet!")
