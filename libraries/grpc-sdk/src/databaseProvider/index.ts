@@ -28,7 +28,7 @@ export default class DatabaseProvider {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.modules);
+                    resolve(res.schema);
                 }
             })
         });
@@ -47,7 +47,7 @@ export default class DatabaseProvider {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.modules);
+                    resolve(res.schema);
                 }
             })
         });
