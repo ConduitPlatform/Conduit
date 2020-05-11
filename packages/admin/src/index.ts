@@ -55,8 +55,6 @@ export default class AdminModule extends IConduitAdmin {
 
         await databaseAdapter.createSchemaFromAdapter(AdminSchema);
 
-
-        const AdminModel = await databaseAdapter.getSchema('Admin');
         databaseAdapter.findOne('Admin', {username: 'admin'})
             .then((existing: any) => {
                 if (isNil(existing)) {
@@ -67,7 +65,7 @@ export default class AdminModule extends IConduitAdmin {
             })
             .then((result: string | null) => {
                 if (!isNil(result)) {
-                    return AdminModel.create({username: 'admin', password: result});
+                    return databaseAdapter.create('Admin', {username: 'admin', password: result});
                 }
             })
             .catch(console.log);
