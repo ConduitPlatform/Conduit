@@ -32,7 +32,7 @@ export class CoreBootstrapper {
                 oneofs: true
             });
         // NOTE: all core packages with grpc need to be created before grpc server start
-        let manager = new ConfigManager(server, packageDefinition, (url: string) => {
+        let manager = new ConfigManager(grpcSdk, server, packageDefinition, (url: string) => {
             primary.initialize();
             CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
@@ -44,10 +44,14 @@ export class CoreBootstrapper {
         return app;
     }
 
-    private static registerSchemas(app: ConduitApp) {
-        const database = app.conduit.getDatabase();
+    private static async registerSchemas(grpcSdk: ConduitGrpcSdk, app: ConduitApp): Promise<any> {
+        const database = grpcSdk.databaseProvider;
+        if (!grpcSdk.databaseProvider) {
+            await grpcSdk.refreshModules(true);
+            return this.registerSchemas(grpcSdk, app);
+        }
         const ConfigModel = new ConfigModelGenerator(app).configModel;
-        database.createSchemaFromAdapter(ConfigModel);
+        return database!.createSchemaFromAdapter(ConfigModel);
     }
 
     private static registerAdminRoutes(sdk: ConduitSDK) {
@@ -59,7 +63,7 @@ export class CoreBootstrapper {
     }
 
     private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
-        // CoreBootstrapper.registerSchemas(app);
+        CoreBootstrapper.registerSchemas(grpcSdk, app);
         //
         // const database = app.conduit.getDatabase();
         // const appConfig: Config<any> = (app.conduit as any).config;

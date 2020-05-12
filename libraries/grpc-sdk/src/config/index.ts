@@ -33,7 +33,7 @@ export default class Config {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.modules);
+                    resolve(JSON.parse(res.data));
                 }
             })
         });
@@ -41,7 +41,7 @@ export default class Config {
 
     updateConfig(config: any, name: string): Promise<any> {
         let request = {
-            config: config,
+            config: JSON.stringify(config),
             moduleName: name
         };
 
@@ -50,7 +50,7 @@ export default class Config {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.modules);
+                    resolve(JSON.parse(res.result));
                 }
             })
         });
