@@ -63,19 +63,16 @@ export class CoreBootstrapper {
     }
 
     private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
-        CoreBootstrapper.registerSchemas(grpcSdk, app);
-        //
-        // const database = app.conduit.getDatabase();
-        // const appConfig: Config<any> = (app.conduit as any).config;
-        //
-        // const databaseConfigUtility = new DatabaseConfigUtility(database, appConfig);
-        //
-        // await databaseConfigUtility.configureFromDatabase();
+        await CoreBootstrapper.registerSchemas(grpcSdk, app);
+
+        const appConfig: Config<any> = (app.conduit as any).config;
+        const databaseConfigUtility = new DatabaseConfigUtility(grpcSdk.databaseProvider!, appConfig);
+
+        await databaseConfigUtility.configureFromDatabase();
 
         app.conduit.getAdmin().initialize();
-        // app.conduit.registerSecurity(new SecurityModule(app.conduit));
+        app.conduit.registerSecurity(new SecurityModule(app.conduit, grpcSdk));
 
-        //
         // app.conduit.registerEmail(new EmailModule(app.conduit));
         //
         // app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
@@ -89,7 +86,7 @@ export class CoreBootstrapper {
         //
         // app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
-        // CoreBootstrapper.registerAdminRoutes(app.conduit);
+        CoreBootstrapper.registerAdminRoutes(app.conduit);
 
         app.initialized = true;
     }
