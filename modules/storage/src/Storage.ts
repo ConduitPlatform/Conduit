@@ -5,6 +5,7 @@ import StorageConfigSchema from './config/storage';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
+import * as path from 'path';
 let protoLoader = require('@grpc/proto-loader');
 
 export class StorageModule {
@@ -16,7 +17,7 @@ export class StorageModule {
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     var packageDefinition = protoLoader.loadSync(
-      './storage.proto',
+      path.resolve(__dirname, './storage.proto'),
       {
         keepCase: true,
         longs: String,
