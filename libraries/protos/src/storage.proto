@@ -2,7 +2,7 @@ syntax = "proto3";
 package storage;
 
 message SetConfigRequest {
-  string config = 1;
+  string newConfig = 1;
 }
 
 message SetConfigResponse {
