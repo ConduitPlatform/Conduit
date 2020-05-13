@@ -15,6 +15,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@conduit/grpc-sdk": "1.0.0",
     "@conduit/config": "1.0.0",
     "@conduit/admin": "1.0.0",
     "@conduit/database-provider": "1.0.0",

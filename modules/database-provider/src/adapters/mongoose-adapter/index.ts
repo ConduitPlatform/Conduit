@@ -54,27 +54,38 @@ export class MongooseAdapter implements DatabaseAdapter {
             });
     }
 
-    createSchemaFromAdapter(schema: any): Promise<SchemaAdapter> {
+    createSchemaFromAdapter(schema: any): Promise<{ schema: any }> {
         const Schema = this.mongoose.Schema;
         if (!this.models) {
             this.models = {};
         }
         if (this.models[schema.name]) {
             return new Promise((resolve, reject) => {
-                resolve(this.models![schema.name]);
+                resolve({ schema: this.models![schema.name].originalSchema });
             });
         }
+
         let newSchema = schemaConverter(schema);
-        this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
+        schema.modelSchema = newSchema
+        this.models[schema.name] = new MongooseSchema(this.mongoose, schema);
         return new Promise((resolve, reject) => {
-            resolve(this.models![schema.name]);
+            resolve({ schema: this.models![schema.name].originalSchema });
         });
     }
 
-    getSchema(schemaName: string): Promise<SchemaAdapter> {
+    getSchema(schemaName: string): Promise<{schema: any}> {
         if (this.models) {
             return new Promise((resolve, reject) => {
-                resolve(this.models![schemaName]);
+                resolve({ schema: this.models![schemaName].originalSchema });
+            });
+        }
+        throw new Error('Schema not defined yet');
+    }
+
+    getSchemaModel(schemaName: string): Promise<{model: any}> {
+        if (this.models) {
+            return new Promise((resolve, reject) => {
+                resolve({ model: this.models![schemaName] });
             });
         }
         throw new Error('Schema not defined yet');

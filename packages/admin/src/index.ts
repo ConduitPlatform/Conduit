@@ -10,46 +10,18 @@ import * as grpc from "grpc";
 let protoLoader = require('@grpc/proto-loader');
 import fs from 'fs';
 import path from 'path';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export default class AdminModule extends IConduitAdmin {
     private readonly router: Router;
     conduit: ConduitSDK;
+    grpcSdk: ConduitGrpcSdk;
 
-    constructor(conduit: ConduitSDK, server: grpc.Server, packageDefinition: any) {
+    constructor(grpcSdk: ConduitGrpcSdk, conduit: ConduitSDK, server: grpc.Server, packageDefinition: any) {
         super(conduit);
-        this.router = Router();
-
         this.conduit = conduit;
-        const {config} = conduit as any;
-
-        const databaseAdapter = conduit.getDatabase();
-
-        this.registerSchemas(databaseAdapter);
-
-        const AdminModel = databaseAdapter.getSchema('Admin');
-
-        AdminModel.findOne({username: 'admin'})
-            .then((existing: any) => {
-                if (isNil(existing)) {
-                    const hashRounds = config.get('admin.auth.hashRounds');
-                    return hashPassword('admin', hashRounds);
-                }
-                return Promise.resolve(null);
-            })
-            .then((result: string | null) => {
-                if (!isNil(result)) {
-                    return AdminModel.create({username: 'admin', password: result});
-                }
-            })
-            .catch(console.log);
-
-        const adminHandlers = new AuthHandlers(conduit);
-
-        conduit.getRouter().registerDirectRouter('/admin/login',
-            (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
-        conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
-        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
-        conduit.getRouter().registerExpressRouter('/admin', this.router);
+        this.grpcSdk = grpcSdk;
+        this.router = Router();
 
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
@@ -61,13 +33,48 @@ export default class AdminModule extends IConduitAdmin {
         })
     }
 
+    async initialize() {
+        await this.handleDatabase().catch(console.log);
+        const adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
+        this.conduit.getRouter().registerDirectRouter('/admin/login',
+            (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
+        this.conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
+        this.router.use((req, res, next) => this.authMiddleware(req, res, next));
+        this.conduit.getRouter().registerExpressRouter('/admin', this.router);
+
+    }
+
+    // @ts-ignore
+    private async handleDatabase() {
+        if (!this.grpcSdk.databaseProvider) {
+            await this.grpcSdk.refreshModules(true);
+            return this.handleDatabase();
+        }
+        const databaseAdapter = this.grpcSdk.databaseProvider!;
+
+        await databaseAdapter.createSchemaFromAdapter(AdminSchema);
+
+        databaseAdapter.findOne('Admin', {username: 'admin'})
+            .then(async (existing: any) => {
+                if (isNil(existing)) {
+                    const adminConfig = await this.grpcSdk.config.get('admin');
+                    const hashRounds = adminConfig.auth.hashRounds;
+                    return hashPassword('admin', hashRounds);
+                }
+                return Promise.resolve(null);
+            })
+            .then((result: string | null) => {
+                if (!isNil(result)) {
+                    return databaseAdapter.create('Admin', {username: 'admin', password: result});
+                }
+            })
+            .catch(console.log);
+    }
+
     static get config() {
         return AdminConfigSchema;
     }
 
-    private registerSchemas(adapter: any) {
-        adapter.createSchemaFromAdapter(AdminSchema);
-    }
 
     //grpc
     registerAdminRoute(call: any, callback: any) {
@@ -149,14 +156,10 @@ export default class AdminModule extends IConduitAdmin {
         }
     }
 
-    authMiddleware(req: Request, res: Response, next: NextFunction) {
-        const {config} = this.conduit as any;
+    async authMiddleware(req: Request, res: Response, next: NextFunction) {
 
-        const adminConfig = config.get('admin');
-
-        const databaseAdapter = this.conduit.getDatabase();
-
-        const AdminModel = databaseAdapter.getSchema('Admin');
+        const databaseAdapter = await this.grpcSdk.databaseProvider!;
+        const adminConfig = await this.grpcSdk.config.get('admin');
 
         const tokenHeader = req.headers.authorization;
         if (isNil(tokenHeader)) {
@@ -180,7 +183,7 @@ export default class AdminModule extends IConduitAdmin {
         }
         const {id} = decoded;
 
-        AdminModel.findOne({_id: id})
+        databaseAdapter.findOne('Admin', {_id: id})
             .then((admin: any) => {
                 if (isNil(admin)) {
                     return res.status(401).json({error: 'No such user exists'});
@@ -194,10 +197,11 @@ export default class AdminModule extends IConduitAdmin {
             });
     }
 
-    adminMiddleware(context: ConduitRouteParameters) {
+    async adminMiddleware(context: ConduitRouteParameters) {
+        const adminConfig = await this.grpcSdk.config.get('admin');
         return new Promise((resolve, reject) => {
             const masterkey = context.headers.masterkey;
-            if (isNil(masterkey) || masterkey !== (this.conduit as any).config.get('admin.auth.masterkey'))
+            if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
                 throw new ConduitError('UNAUTHORIZED', 401, 'Unauthorized');
             resolve("ok");
         })

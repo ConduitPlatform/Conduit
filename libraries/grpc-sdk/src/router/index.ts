@@ -40,7 +40,15 @@ export default class Router {
             routesList: grpcPathArray,
             protoFile: protoFile
         }
-        return promisify(this.client.registerConduitRoute(request)).bind(this.client);
+        return new Promise((resolve, reject) => {
+        this.client.registerConduitRoute(request, (err: any, res: any) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve("OK");
+                }
+            })
+        });
 
     }
 

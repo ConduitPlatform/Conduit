@@ -1,11 +1,11 @@
 import {Schema} from "mongoose";
+
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: any) {
-
-    let actual: any = JSON.parse(jsonSchema.modelSchema);
+    let actual: any = jsonSchema.modelSchema;
 
     // converts relations to mongoose relations
     for (const key in actual as any) {

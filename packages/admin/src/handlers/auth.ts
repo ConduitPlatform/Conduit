@@ -2,27 +2,28 @@ import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
 import { ConduitSDK } from '@conduit/sdk';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export class AuthHandlers {
 
   private readonly conduit: ConduitSDK;
+  private readonly grpcSdk: ConduitGrpcSdk;
 
-  constructor(conduit: ConduitSDK) {
+  constructor(grpcSdk: ConduitGrpcSdk, conduit: ConduitSDK) {
     this.conduit = conduit;
+    this.grpcSdk = grpcSdk;
   }
 
   async loginAdmin(req: Request, res: Response, next: NextFunction) {
     const { config } = this.conduit as any;
-    const database = this.conduit.getDatabase();
-
-    const AdminModel = database.getSchema('Admin');
+    const database = this.grpcSdk.databaseProvider!;
 
     const { username, password } = req.body;
     if (isNil(username) || isNil(password)) {
       return res.status(400).json({ error: 'Both username and password must be provided' });
     }
 
-    const admin = await AdminModel.findOne({ username });
+    const admin = await database.findOne('Admin', { username });
     if (isNil(admin)) {
       return res.status(403).json({ error: 'Invalid username/password' });
     }

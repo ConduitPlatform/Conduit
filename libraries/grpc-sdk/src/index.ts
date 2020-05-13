@@ -36,7 +36,7 @@ export default class ConduitGrpcSdk {
      * This will only work on known modules, since the primary usage for the sdk is internal
      */
     initializeModules() {
-        this._config
+        return this._config
             .moduleList()
             .then(r => {
                 this.lastSearch = Date.now();
@@ -45,9 +45,12 @@ export default class ConduitGrpcSdk {
                         this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
                     }
                 })
+                return "ok"
             })
             .catch(err => {
-                console.error(err);
+                if (err.code !== 5) {
+                    console.error(err);
+                }
             })
     }
 
@@ -55,10 +58,11 @@ export default class ConduitGrpcSdk {
      * Used to refresh all modules to check for new registrations
      * @param force If true will check for new modules no matter the interval
      */
-    refreshModules(force?: boolean) {
+    async refreshModules(force?: boolean) {
         if (this.lastSearch < (Date.now() - 3000) || force) {
-            this.initializeModules();
+            return this.initializeModules();
         }
+        return "ok";
     }
 
     get config(): Config {
@@ -84,6 +88,7 @@ export default class ConduitGrpcSdk {
 
     get databaseProvider(): DatabaseProvider | null {
         if (this._modules["database-provider"]) {
+            console.warn("Database provider is running");
             return this._modules["database-provider"];
         } else {
             console.warn("Database provider not up yet!")

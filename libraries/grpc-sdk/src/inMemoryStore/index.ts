@@ -25,17 +25,32 @@ export default class InMemoryStore {
     }
 
     get(key: string): Promise<any> {
-            return promisify(this.client.get({
-                key: key
-            })).bind(this.client);
+      return new Promise((resolve, reject) => {
+        this.client.get({
+          key: key
+        }, (err: any, res: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        })
+      });
     }
 
     store(key: string, data: any): Promise<boolean> {
-        // @ts-ignore
-        return promisify(this.client.store({
-                key: key,
-                data: data.toString()
-            })).bind(this.client);
+      return new Promise((resolve, reject) => {
+        this.client.store({
+          key: key,
+          data: data.toString()
+        }, (err: any, res: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(true);
+          }
+        })
+      });
     }
 
 }

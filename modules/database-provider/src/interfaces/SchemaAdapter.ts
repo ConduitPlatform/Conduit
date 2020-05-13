@@ -20,8 +20,12 @@ export interface SchemaAdapter {
     /**
      * Should find Many
      * @param query
+     * @param skip
+     * @param limit
+     * @param select
+     * @param sort
      */
-    findMany(query: any): Promise<any>;
+    findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any): Promise<any>;
 
     /**
      * Should create
@@ -34,8 +38,6 @@ export interface SchemaAdapter {
     deleteMany(query: any): Promise<any>;
 
     findByIdAndUpdate(document: any): Promise<any>;
-
-    findPaginated(query: any, skip: number, limit: number): Promise<any>;
 
     countDocuments(query: any): Promise<number>;
 
