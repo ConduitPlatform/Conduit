@@ -3,3 +3,5 @@
 **/.nyc_output
 /.idea
 **/*.tsbuildinfo
+**/src/proto/*.proto
+**/protos/src/*.proto

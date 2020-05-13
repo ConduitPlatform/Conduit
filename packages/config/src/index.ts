@@ -1,6 +1,6 @@
 import * as grpc from "grpc";
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
-import { isNil } from "lodash";
+import {isNil} from "lodash";
 
 
 export default class ConfigManager {
@@ -27,16 +27,16 @@ export default class ConfigManager {
     get(call: any, callback: any) {
         if (!isNil(this.grpcSdk.databaseProvider)) {
             this.grpcSdk.databaseProvider!.findOne('Config', {})
-              .then(dbConfig => {
-                  if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                  return callback(null, {data: JSON.stringify(dbConfig[call.request.key])})
-              })
-              .catch(err => {
-                  callback({
-                      code: grpc.status.INTERNAL,
-                      message: err,
-                  });
-              })
+                .then(dbConfig => {
+                    if (isNil(dbConfig)) throw new Error('Config not found in the database');
+                    return callback(null, {data: JSON.stringify(dbConfig[call.request.key])})
+                })
+                .catch(err => {
+                    callback({
+                        code: grpc.status.INTERNAL,
+                        message: err.message ? err.message : err,
+                    });
+                })
         } else {
             callback({
                 code: grpc.status.FAILED_PRECONDITION,
@@ -50,20 +50,20 @@ export default class ConfigManager {
         const newConfig = JSON.parse(call.request.config);
         if (!isNil(this.grpcSdk.databaseProvider)) {
             this.grpcSdk.databaseProvider!.findOne('Config', {})
-              .then(dbConfig => {
-                  if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                  dbConfig[call.request.moduleName] = newConfig;
-                  return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig)
-                    .then((updatedConfig: any) => {
-                        return callback(null, {result: JSON.stringify(updatedConfig[call.request.moduleName])})
-                    })
-              })
-              .catch(err => {
-                  callback({
-                      code: grpc.status.INTERNAL,
-                      message: err,
-                  });
-              });
+                .then(dbConfig => {
+                    if (isNil(dbConfig)) throw new Error('Config not found in the database');
+                    dbConfig[call.request.moduleName] = newConfig;
+                    return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig)
+                        .then((updatedConfig: any) => {
+                            return callback(null, {result: JSON.stringify(updatedConfig[call.request.moduleName])})
+                        })
+                })
+                .catch(err => {
+                    callback({
+                        code: grpc.status.INTERNAL,
+                        message: err.message ? err.message : err,
+                    });
+                });
         } else {
             callback({
                 code: grpc.status.FAILED_PRECONDITION,

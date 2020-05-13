@@ -24,6 +24,7 @@
     "rimraf": "^3.0.2"
   },
   "dependencies": {
+    "@conduit/grpc-sdk": "1.0.0",
     "@conduit/sdk": "1.0.0",
     "lodash": "^4.17.15"
   }
