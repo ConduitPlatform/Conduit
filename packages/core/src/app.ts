@@ -4,7 +4,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteReturnDefinition as ReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, IConduitRouter,
     TYPE
 } from '@conduit/sdk';
 import {ConduitDefaultRouter} from '@conduit/router';
@@ -17,7 +17,7 @@ import {MonitoringUtility} from './utils/monitoring';
 
 export class App {
     private app: ConduitApp;
-    private conduitRouter: ConduitDefaultRouter;
+    private conduitRouter: IConduitRouter;
     private readonly logger: ConduitLogger;
     private readonly appConfig: AppConfig;
 
@@ -46,9 +46,7 @@ export class App {
             initialized: false
         };
         this.app = Object.assign(expressApp, conduitExtras);
-        this.conduitRouter = new ConduitDefaultRouter(this.app);
-        this.conduitRouter.initGraphQL();
-        this.app.conduit.registerRouter(this.conduitRouter);
+        this.conduitRouter = this.app.conduit.getRouter();
     }
 
     private registerGlobalMiddleware() {

@@ -11,6 +11,7 @@ import * as grpc from "grpc";
 import ConfigManager from "@conduit/config";
 import path from 'path';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {ConduitDefaultRouter} from '@conduit/router';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -36,6 +37,8 @@ export class CoreBootstrapper {
             primary.initialize();
             CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
+
+        app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
         app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
 
         server.bind(_url, grpc.ServerCredentials.createInsecure());

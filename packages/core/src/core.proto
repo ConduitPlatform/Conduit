@@ -32,12 +32,26 @@ message RegisterConduitRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
+    string routerUrl = 3;
     message PathDefinition {
-        string path = 1;
-        string method = 2;
-        //  The json definition for the inputs
-        string inputs = 3;
+        ConduitRouteOptions options = 1;
+        ConduitRouteReturnDefinition inputs = 3;
         string grpcFunction = 4;
+    }
+
+    message ConduitRouteOptions {
+        string queryParams = 1;
+        string bodyParams = 2;
+        string urlParams = 3;
+        string action = 4;
+        string path = 5;
+        string name = 6;
+        string description = 7;
+    }
+
+    message ConduitRouteReturnDefinition {
+        string name = 1;
+        string fields = 2;
     }
 }
 
