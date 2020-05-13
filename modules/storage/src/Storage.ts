@@ -57,7 +57,7 @@ export class StorageModule {
     }
 
     let errorMessage: string | null = null;
-    const updateResult = await this.grpcSdk.updateConfig(newConfig, 'storage').catch((e: Error) => errorMessage = e.message);
+    const updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'storage').catch((e: Error) => errorMessage = e.message);
     if (!isNil(errorMessage)) {
       return callback({code: grpc.status.INTERNAL, message: errorMessage});
     }
@@ -73,10 +73,10 @@ export class StorageModule {
     }
 
     return callback(null, {updatedConfig: JSON.stringify(updateResult)});
-    
   }
 
-  private async enableModule() {
+  private async enableModule(): Promise<any> {
+    await this.ensureDatabase();
     const storageConfig = await this.grpcSdk.config.get('storage');
     const { provider, storagePath, google } = storageConfig;
 
@@ -96,6 +96,13 @@ export class StorageModule {
       return this.registerModels();
     }
     return database.createSchemaFromAdapter(File);
+  }
+
+  private async ensureDatabase(): Promise<any> {
+    if (!this.grpcSdk.databaseProvider) {
+      await this.grpcSdk.refreshModules(true);
+      return this.ensureDatabase();
+    }
   }
 
   // private registerRoutes() {
