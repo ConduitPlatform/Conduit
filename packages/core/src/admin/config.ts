@@ -2,12 +2,13 @@ import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
 import { AppConfig } from '../utils/config';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export class ConfigAdminHandlers {
-  private readonly database: IConduitDatabase;
+  private readonly database: any;
 
-  constructor(private readonly sdk: ConduitSDK) {
-    this.database = sdk.getDatabase();
+  constructor(private readonly sdk: ConduitSDK, private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = grpcSdk.databaseProvider;
   }
 
   async getConfig(req: Request, res: Response) {
