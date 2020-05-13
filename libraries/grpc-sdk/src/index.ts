@@ -5,7 +5,7 @@ import * as grpc from "grpc";
 import InMemoryStore from "./inMemoryStore";
 import DatabaseProvider from "./databaseProvider";
 import { Config as ConvictConfig } from 'convict';
-import { isNil, merge, isPlainObject } from "lodash";
+import { isNil, merge, isPlainObject, isEmpty } from "lodash";
 import validator from "validator";
 import isNaturalNumber = require("is-natural-number");
 import Storage from './storage';
@@ -111,48 +111,9 @@ export default class ConduitGrpcSdk {
         }
     }
 
-    async updateConfig(newConfig: any, moduleName?: string): Promise<any> {
-        const databaseProvider = await this.databaseProvider;
-        if (isNil(databaseProvider)) {
-            return this.updateConfig(newConfig, moduleName);
-        }
-        const dbConfig = await databaseProvider.findOne('Config', {});
-        if (isNil(dbConfig)) {
-            throw new Error('Config not set');
-        }
-        const appConfig = (this as any).config as ConvictConfig<any>;
-        let currentConfig: any;
-        if (isNil(moduleName)) {
-            currentConfig = dbConfig;
-        } else {
-            currentConfig = dbConfig[moduleName];
-        }
-
-        if (isNil(currentConfig)) currentConfig = {};
-        const final = merge(currentConfig, newConfig);
-        if (isNil(moduleName)){
-            Object.assign(dbConfig, final);
-        } else {
-            if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
-            Object.assign(dbConfig[moduleName], final);
-        }
-        const saved = await databaseProvider.findByIdAndUpdate('Config', dbConfig) as any;
-        delete saved._id;
-        delete saved.createdAt;
-        delete saved.updatedAt;
-        delete saved.__v;
-        appConfig.load(saved);
-
-        if (isNil(moduleName)) {
-            return saved;
-        } else {
-            return saved[moduleName];
-        }
-    }
-
     // this validator doesn't support custom convict types
     static validateConfig(configInput: any, configSchema: any): Boolean {
-        if (isNil(configInput)) return false;
+        if (isNil(configInput) || isEmpty(configInput)) return false;
 
         return Object.keys(configInput).every(key => {
             if (configSchema.hasOwnProperty(key)) {
