@@ -11,6 +11,7 @@ import {grpcModule} from '@conduit/grpc-sdk';
 import InMemoryStoreConfigSchema from './config/in-memory-store';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
+import * as path from 'path';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -23,7 +24,7 @@ export class InMemoryStore {
 
     constructor(private readonly conduit: ConduitGrpcSdk) {
         var packageDefinition = protoLoader.loadSync(
-            './in-memory-store.proto',
+            path.resolve(__dirname, './in-memory-store.proto'),
             {
                 keepCase: true,
                 longs: String,
@@ -38,7 +39,8 @@ export class InMemoryStore {
 
         server.addService(memoryStore.service, {
             get: this.get.bind(this),
-            store: this.store.bind(this)
+            store: this.store.bind(this),
+            setConfig: this.setConfig.bind(this)
         });
         this._admin = new AdminHandler(server, this._provider);
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
@@ -80,31 +82,33 @@ export class InMemoryStore {
             });
     }
 
-    async setConfig(newConfig: any) {
-        // this was wrong either way
-        // if (!ConduitSDK.validateConfig(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
-        //     throw new Error('Invalid configuration values');
-        // }
+    async setConfig(call: any, callback: any) {
+        const newConfig = JSON.parse(call.request.newConfig);
+        if (!ConduitGrpcSdk.validateConfig(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
+        }
 
         let errorMessage: string | null = null;
         const updateResult = await this.conduit.config.updateConfig(newConfig, 'inMemoryStore').catch((e: Error) => errorMessage = e.message);
         if (!isNil(errorMessage)) {
-            throw new Error(errorMessage);
+            return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
-        if ((this.conduit as any).config.get('inMemoryStore.active')) {
+        const inMemoryStoreConfig = await this.conduit.config.get('inMemoryStore');
+        if (inMemoryStoreConfig.active) {
             await this.enableModule().catch((e: Error) => errorMessage = e.message);
         } else {
-            throw new Error('Module is not active');
+            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
         }
         if (!isNil(errorMessage)) {
-            throw new Error(errorMessage);
+            return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
-        return updateResult;
+        return callback(null, {updatedConfig: JSON.stringify(updateResult)});;
     }
 
     private async enableModule() {
+        await this.ensureDatabase();
         if (!this.isRunning) {
             this.isRunning = true;
         }
@@ -131,5 +135,10 @@ export class InMemoryStore {
         }
     }
 
-
+    private async ensureDatabase(): Promise<any> {
+        if (!this.conduit.databaseProvider) {
+            await this.conduit.refreshModules(true);
+            return this.ensureDatabase();
+        }
+    }
 }

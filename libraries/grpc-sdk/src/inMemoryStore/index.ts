@@ -24,6 +24,19 @@ export default class InMemoryStore {
         this.client = new store(url, grpc.credentials.createInsecure());
     }
 
+    setConfig(newConfig: any) {
+      return new Promise((resolve, reject) => {
+        this.client.setConfig({newConfig: JSON.stringify(newConfig)},
+          (err: any, res: any) => {
+            if (err || !res) {
+              reject(err || 'Something went wrong');
+            } else {
+              resolve(JSON.parse(res.updatedConfig));
+            }
+          })
+      });
+    }
+
     get(key: string): Promise<any> {
       return new Promise((resolve, reject) => {
         this.client.get({
