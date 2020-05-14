@@ -13,6 +13,7 @@ import { isNil, isPlainObject, merge } from "lodash";
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
 import { Config as ConvictConfig } from 'convict';
+import { IConfigManager } from './modules/Config';
 
 export class ConduitSDK {
 
@@ -28,6 +29,7 @@ export class ConduitSDK {
     private _security?: IConduitSecurity;
     private _authentication?: IConduitAuthentication;
     private _cms?: IConduitCMS;
+    private _configManager?: IConfigManager;
 
     private constructor(app: Application) {
         this._app = app;
@@ -131,6 +133,16 @@ export class ConduitSDK {
     getAuthentication(): IConduitAuthentication {
         if (this._authentication) return this._authentication;
         throw new Error('Authentication module not assigned yet');
+    }
+
+    registerConfigManager(configManager: IConfigManager) {
+        if (this._configManager) throw new Error('Cannot register a second config manager');
+        this._configManager = configManager;
+    }
+
+    getConfigManager(): IConfigManager {
+        if (this._configManager) return this._configManager;
+        throw new Error('Config manager not assigned yet');
     }
 
     static getInstance(app: Application) {

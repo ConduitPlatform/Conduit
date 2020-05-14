@@ -4,7 +4,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteReturnDefinition as ReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, IAppConfig, IConfigManager,
     TYPE
 } from '@conduit/sdk';
 import {ConduitDefaultRouter} from '@conduit/router';
@@ -12,17 +12,16 @@ import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import {ConduitLogger} from './utils/logging/logger';
-import {AppConfig} from './utils/config';
 import {MonitoringUtility} from './utils/monitoring';
 
 export class App {
     private app: ConduitApp;
     private conduitRouter: ConduitDefaultRouter;
     private readonly logger: ConduitLogger;
-    private readonly appConfig: AppConfig;
+    private appConfig: IAppConfig;
 
-    constructor() {
-        this.appConfig = AppConfig.getInstance();
+    constructor(private readonly configManager: IConfigManager) {
+
         this.initializeSdk();
         this.logger = new ConduitLogger();
     }
@@ -40,6 +39,9 @@ export class App {
     private initializeSdk() {
         const expressApp = express();
         const conduitSDK = ConduitSDK.getInstance(expressApp);
+
+        this.appConfig = this.configManager.appConfig;
+
         (conduitSDK as any).config = this.appConfig.config;
         const conduitExtras = {
             conduit: conduitSDK,
@@ -49,6 +51,7 @@ export class App {
         this.conduitRouter = new ConduitDefaultRouter(this.app);
         this.conduitRouter.initGraphQL();
         this.app.conduit.registerRouter(this.conduitRouter);
+        this.app.conduit.registerConfigManager(this.configManager);
     }
 
     private registerGlobalMiddleware() {

@@ -1,19 +1,23 @@
 import * as grpc from "grpc";
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {isNil} from "lodash";
+import { DatabaseConfigUtility } from './utils/config';
+import { Config } from 'convict';
+import { AppConfig } from './utils/config';
+import { IConfigManager } from '@conduit/sdk';
 
 
-export default class ConfigManager {
+export default class ConfigManager implements IConfigManager{
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
     grpcSdk: ConduitGrpcSdk;
-    appConfig: any;
+    conduitConfig: any;
 
-    constructor(grpcSdk: ConduitGrpcSdk, server: grpc.Server, app: any, packageDefinition: any, databaseCallback: any) {
+    constructor(grpcSdk: ConduitGrpcSdk, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         this.grpcSdk = grpcSdk;
-        this.appConfig = app.conduit.config;
+        this.conduitConfig = this.appConfig.config;
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
@@ -24,6 +28,14 @@ export default class ConfigManager {
             moduleList: this.moduleList.bind(this),
         })
         this.databaseCallback = databaseCallback;
+    }
+
+    getDatabaseConfigUtility(appConfig: Config<any>) {
+        return new DatabaseConfigUtility(this.grpcSdk.databaseProvider!, appConfig);
+    }
+
+    get appConfig() {
+        return AppConfig.getInstance();
     }
 
     get(call: any, callback: any) {
@@ -61,7 +73,7 @@ export default class ConfigManager {
                             delete updatedConfig.createdAt;
                             delete updatedConfig.updatedAt;
                             delete updatedConfig.__v;
-                            this.appConfig.load(updatedConfig);
+                            this.conduitConfig.load(updatedConfig);
                             return callback(null, {result: JSON.stringify(updatedConfig[call.request.moduleName])})
                         })
                 })
