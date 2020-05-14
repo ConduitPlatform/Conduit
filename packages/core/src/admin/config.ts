@@ -1,7 +1,6 @@
 import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
-import { AppConfig } from '../utils/config';
 
 export class ConfigAdminHandlers {
   private readonly database: IConduitDatabase;
@@ -69,7 +68,7 @@ export class ConfigAdminHandlers {
     switch (moduleName) {
       case undefined:
         // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
-        if (!ConduitSDK.validateConfig(newConfig, AppConfig.getInstance().configSchema)) {
+        if (!ConduitSDK.validateConfig(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
           errorMessage = 'Invalid configuration values';
           break;
         }

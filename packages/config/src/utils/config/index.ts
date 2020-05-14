@@ -2,7 +2,8 @@ import path from 'path';
 import convict, { Config } from 'convict';
 import AppConfigSchema from './schema/app';
 import { isNil } from 'lodash';
-import AdminModule from '@conduit/admin';
+import { ConduitSDK } from '@conduit/sdk';
+// import AdminModule from '@conduit/admin';
 //  config import needs to be changed
 // import AuthenticationModule from '@conduit/authentication';
 // import AdminModule from '@conduit/admin';
@@ -50,7 +51,7 @@ export class AppConfig {
       // ...StorageModule.config,
       // ...InMemoryStore.config,
       // ...PushNotificationsModule.config,
-      ...AdminModule.config
+      // ...AdminModule.config
     };
   }
 

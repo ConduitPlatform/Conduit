@@ -1,6 +1,9 @@
 import * as grpc from "grpc";
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {isNil} from "lodash";
+import { DatabaseConfigUtility } from './utils/config';
+import { Config } from 'convict';
+import { AppConfig } from './utils/config';
 
 
 export default class ConfigManager {
@@ -22,6 +25,14 @@ export default class ConfigManager {
             moduleList: this.moduleList.bind(this),
         })
         this.databaseCallback = databaseCallback;
+    }
+
+    getDatabaseConfigUtility(appConfig: Config<any>) {
+        return new DatabaseConfigUtility(this.grpcSdk.databaseProvider!, appConfig);
+    }
+
+    get appConfig() {
+        return AppConfig.getInstance();
     }
 
     get(call: any, callback: any) {
