@@ -4,9 +4,10 @@ import {isNil} from "lodash";
 import { DatabaseConfigUtility } from './utils/config';
 import { Config } from 'convict';
 import { AppConfig } from './utils/config';
+import { IConfigManager } from '@conduit/sdk';
 
 
-export default class ConfigManager {
+export default class ConfigManager implements IConfigManager{
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();

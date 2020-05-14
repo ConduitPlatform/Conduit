@@ -68,7 +68,6 @@ export class CoreBootstrapper {
 
         const appConfig: Config<any> = (app.conduit as any).config;
         const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);
-        // new DatabaseConfigUtility(grpcSdk.databaseProvider!, appConfig);
 
         await databaseConfigUtility.configureFromDatabase();
 

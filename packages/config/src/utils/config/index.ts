@@ -2,7 +2,7 @@ import path from 'path';
 import convict, { Config } from 'convict';
 import AppConfigSchema from './schema/app';
 import { isNil } from 'lodash';
-import { ConduitSDK } from '@conduit/sdk';
+import { IAppConfig } from '@conduit/sdk';
 // import AdminModule from '@conduit/admin';
 //  config import needs to be changed
 // import AuthenticationModule from '@conduit/authentication';
@@ -12,7 +12,7 @@ import { ConduitSDK } from '@conduit/sdk';
 // import InMemoryStore from '@conduit/in-memory-store';
 // import PushNotificationsModule from '@conduit/push-notifications';
 
-export class AppConfig {
+export class AppConfig implements IAppConfig{
   private static instance: AppConfig;
   private readonly convictConfig: Config<any>;
   private completeConfigSchema: any;

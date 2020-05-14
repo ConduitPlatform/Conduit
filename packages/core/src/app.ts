@@ -4,7 +4,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteReturnDefinition as ReturnDefinition,
-    ConduitSDK,
+    ConduitSDK, IAppConfig, IConfigManager,
     TYPE
 } from '@conduit/sdk';
 import {ConduitDefaultRouter} from '@conduit/router';
@@ -18,9 +18,9 @@ export class App {
     private app: ConduitApp;
     private conduitRouter: ConduitDefaultRouter;
     private readonly logger: ConduitLogger;
-    private appConfig: any;
+    private appConfig: IAppConfig;
 
-    constructor(private readonly configManager: any) {
+    constructor(private readonly configManager: IConfigManager) {
 
         this.initializeSdk();
         this.logger = new ConduitLogger();

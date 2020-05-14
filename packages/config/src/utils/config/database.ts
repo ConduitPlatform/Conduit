@@ -1,8 +1,10 @@
 import {isNil} from 'lodash';
 import {Config} from 'convict';
+import { IDatabaseConfigUtility } from '@conduit/sdk';
 
-export class DatabaseConfigUtility {
+export class DatabaseConfigUtility extends IDatabaseConfigUtility{
     constructor(private readonly database: any, private readonly appConfig: Config<any>) {
+        super(database, appConfig);
     }
 
     async configureFromDatabase() {
