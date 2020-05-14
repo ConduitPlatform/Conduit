@@ -55,8 +55,8 @@ export class CoreBootstrapper {
         return database!.createSchemaFromAdapter(ConfigModel);
     }
 
-    private static registerAdminRoutes(sdk: ConduitSDK) {
-        const configHandlers = new ConfigAdminHandlers(sdk);
+    private static registerAdminRoutes(grpcSdk: ConduitGrpcSdk, sdk: ConduitSDK) {
+        const configHandlers = new ConfigAdminHandlers(grpcSdk, sdk);
         const adminModule = sdk.getAdmin();
 
         adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
@@ -87,7 +87,7 @@ export class CoreBootstrapper {
         //
         // app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
+        CoreBootstrapper.registerAdminRoutes(grpcSdk, app.conduit);
 
         app.initialized = true;
     }

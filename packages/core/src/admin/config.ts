@@ -1,18 +1,19 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitSDK } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import { ConduitUtilities } from '@conduit/utilities';
 
 export class ConfigAdminHandlers {
-  private readonly database: IConduitDatabase;
+  private readonly database: any;
 
-  constructor(private readonly sdk: ConduitSDK) {
-    this.database = sdk.getDatabase();
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitSDK) {
+    this.database = grpcSdk.databaseProvider;
   }
 
   async getConfig(req: Request, res: Response) {
-    const Config = this.database.getSchema('Config');
 
-    const dbConfig = await Config.findOne({});
+    const dbConfig = await this.database.findOne('Config', {});
     if (isNil(dbConfig)) {
       return res.json({});
     }
@@ -52,8 +53,7 @@ export class ConfigAdminHandlers {
   }
 
   async setConfig(req: Request, res: Response) {
-    const Config = this.database.getSchema('Config');
-    const dbConfig = await Config.findOne({});
+    const dbConfig = await this.database.findOne('Config', {});
     if (isNil(dbConfig)) {
       return res.status(404).json({ error: 'Config not set' });
     }
@@ -68,8 +68,8 @@ export class ConfigAdminHandlers {
     switch (moduleName) {
       case undefined:
         // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
-        if (!ConduitSDK.validateConfig(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
-          errorMessage = 'Invalid configuration values';
+        if (!ConduitUtilities.validateConfigFields(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
+          errorMessage = 'Invalid configuration fields';
           break;
         }
         updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => errorMessage = e.message);
