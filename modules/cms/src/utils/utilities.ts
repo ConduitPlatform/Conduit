@@ -51,8 +51,8 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       }
       fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
       if (!fieldsErrorFlag && value.type === TYPE.Relation) {
-        if (value.hasOwnProperty('ref')) {
-          if (!isString(value.ref)) fieldsErrorFlag = true;
+        if (value.hasOwnProperty('model')) {
+          if (!isString(value.model)) fieldsErrorFlag = true;
         } else {
           fieldsErrorFlag = true;
         }
