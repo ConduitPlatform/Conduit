@@ -6,6 +6,7 @@ import { isNil } from 'lodash';
 import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
 import * as path from 'path';
+import { ConduitUtilities } from '@conduit/utilities';
 let protoLoader = require('@grpc/proto-loader');
 
 export class StorageModule {
@@ -52,7 +53,7 @@ export class StorageModule {
   async setConfig(call: any, callback: any) {
 
     const newConfig = JSON.parse(call.request.newConfig);
-    if (!ConduitGrpcSdk.validateConfig(newConfig, StorageConfigSchema.storage)) {
+    if (!ConduitUtilities.validateConfigFields(newConfig, StorageConfigSchema.storage)) {
       return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
     }
 

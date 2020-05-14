@@ -29,6 +29,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@conduit/utilities": "1.0.0",
     "@conduit/grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "grpc": "^1.24.2",
