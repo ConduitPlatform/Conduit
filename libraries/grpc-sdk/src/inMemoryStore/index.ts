@@ -45,7 +45,7 @@ export default class InMemoryStore {
           if (err) {
             reject(err);
           } else {
-            resolve(res);
+            resolve(JSON.parse(res));
           }
         })
       });

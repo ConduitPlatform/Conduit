@@ -12,6 +12,7 @@ import InMemoryStoreConfigSchema from './config/in-memory-store';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
 import * as path from 'path';
+import { ConduitUtilities } from '@conduit/utilities';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -58,7 +59,7 @@ export class InMemoryStore {
     get(call: any, callback: any) {
         this._provider!.get(call.request.key)
             .then(r => {
-                callback(null, {data: r.toString()});
+                callback(null, {data: JSON.stringify(r)});
             })
             .catch(err => {
                 callback({
@@ -84,7 +85,7 @@ export class InMemoryStore {
 
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
-        if (!ConduitGrpcSdk.validateConfig(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
+        if (!ConduitUtilities.validateConfigFields(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 
@@ -104,7 +105,7 @@ export class InMemoryStore {
             return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
-        return callback(null, {updatedConfig: JSON.stringify(updateResult)});;
+        return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
     private async enableModule() {
@@ -122,8 +123,9 @@ export class InMemoryStore {
 
 
     private async initProvider() {
-        const name = (this.conduit as any).config.get('inMemoryStore.providerName');
-        const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = (this.conduit as any).config.get(`inMemoryStore.settings.${name}`);
+        const inMemoryStoreConfig = await (this.conduit as any).config.get('inMemoryStore');
+        const name = inMemoryStoreConfig.providerName;
+        const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = inMemoryStoreConfig.settings[name];
         if (name === 'redis') {
             this._provider = new RedisProvider(storageSettings as RedisSettings);
             const isReady = await (this._provider as RedisProvider).isReady();
