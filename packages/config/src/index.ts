@@ -12,10 +12,12 @@ export default class ConfigManager implements IConfigManager{
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
     grpcSdk: ConduitGrpcSdk;
+    conduitConfig: any;
 
     constructor(grpcSdk: ConduitGrpcSdk, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         this.grpcSdk = grpcSdk;
+        this.conduitConfig = this.appConfig.config;
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
@@ -64,9 +66,14 @@ export default class ConfigManager implements IConfigManager{
             this.grpcSdk.databaseProvider!.findOne('Config', {})
                 .then(dbConfig => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                    dbConfig[call.request.moduleName] = newConfig;
+                    Object.assign(dbConfig[call.request.moduleName], newConfig);
                     return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig)
                         .then((updatedConfig: any) => {
+                            delete updatedConfig._id;
+                            delete updatedConfig.createdAt;
+                            delete updatedConfig.updatedAt;
+                            delete updatedConfig.__v;
+                            this.conduitConfig.load(updatedConfig);
                             return callback(null, {result: JSON.stringify(updatedConfig[call.request.moduleName])})
                         })
                 })

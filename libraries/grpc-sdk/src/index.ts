@@ -4,6 +4,11 @@ import Router from "./router";
 import * as grpc from "grpc";
 import InMemoryStore from "./inMemoryStore";
 import DatabaseProvider from "./databaseProvider";
+import { Config as ConvictConfig } from 'convict';
+import { isNil, merge, isPlainObject, isEmpty } from "lodash";
+import validator from "validator";
+import isNaturalNumber = require("is-natural-number");
+import Storage from './storage';
 
 
 export default class ConduitGrpcSdk {
@@ -15,7 +20,8 @@ export default class ConduitGrpcSdk {
     private readonly _modules: any = {};
     private readonly _availableModules: any = {
         "in-memory-store": InMemoryStore,
-        "database-provider": DatabaseProvider
+        "database-provider": DatabaseProvider,
+        "storage": Storage
     }
     private lastSearch: number = Date.now();
 
@@ -96,6 +102,14 @@ export default class ConduitGrpcSdk {
         }
     }
 
+    get storage(): Storage | null {
+        if (this._modules["storage"]) {
+            return this._modules["storage"];
+        } else {
+            console.warn("Storage module not up yet!");
+            return null;
+        }
+    }
 
 }
 export let grpcModule: any = grpc;
