@@ -5,12 +5,14 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
+    "start": "node dist/index.js",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "publish": "npm publish"
   },
   "license": "ISC",
   "dependencies": {
+    "@conduit/utilities": "1.0.0",
     "@conduit/grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "grpc": "^1.24.2",

@@ -43,6 +43,8 @@ export default class ConfigManager implements IConfigManager{
             this.grpcSdk.databaseProvider!.findOne('Config', {})
                 .then(dbConfig => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
+                    if (isNil(dbConfig[call.request.key])) throw new Error(`Config for module "${call.request.key} not set`);
+                    // TODO set config for not set module
                     return callback(null, {data: JSON.stringify(dbConfig[call.request.key])})
                 })
                 .catch(err => {
