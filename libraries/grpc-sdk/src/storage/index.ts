@@ -36,4 +36,30 @@ export default class Storage {
     });
   }
 
+  getFile(id: string) {
+    return new Promise((resolve, reject) => {
+      this.client.getFile({id},
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || 'Something went wrong');
+          } else {
+            resolve(JSON.parse(res.fileDocument));
+          }
+        })
+    });
+  }
+
+  createFile(name: string, mimeType: string, data: string, folder: string) {
+    return new Promise((resolve, reject) => {
+      this.client.createFile({name, mimeType, data, folder},
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || 'Something went wrong');
+          } else {
+            resolve(JSON.parse(res.fileDocument));
+          }
+        })
+    });
+  }
+
 }
