@@ -1,25 +1,20 @@
-import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
+import { ConduitError, ConduitRouteParameters } from '@conduit/sdk';
 import { isString, isNil } from 'lodash';
 import { IStorageProvider } from '@conduit/storage-provider';
 import { v4 as uuid } from 'uuid';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export class FileHandlers {
-  private readonly database: IConduitDatabase;
+  private readonly database: any;
 
   constructor(
-    private readonly sdk: ConduitSDK,
+    private readonly grpcSdk: ConduitGrpcSdk,
     private readonly storageProvider: IStorageProvider
   ) {
-    this.database = sdk.getDatabase();
+    this.database = grpcSdk.databaseProvider;
   }
 
   async createFile(params: ConduitRouteParameters) {
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
-
-    const File = this.database.getSchema('File');
 
     const name = params.params?.name;
     const data = params.params?.data;
@@ -43,21 +38,16 @@ export class FileHandlers {
 
     await this.storageProvider.folder(folder).store(name, buffer);
 
-    return File.create({ name, mimeType, user, folder });
+    return this.database.create('File', { name, mimeType, folder });
   }
 
   async getFile(params: ConduitRouteParameters) {
     const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
     if (!isString(id)) {
       throw ConduitError.userInput('The provided id is invalid');
     }
-    const File = this.database.getSchema('File');
 
-    const found = await File.findOne({ _id: id, user: user._id });
+    const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
       throw ConduitError.notFound('File not found');
     }
@@ -88,8 +78,8 @@ export class FileHandlers {
     if (!isString(id)) {
       throw ConduitError.userInput('The provided id is invalid');
     }
-    const File = this.database.getSchema('File');
-    const found = await File.findOne({ _id: id, user: user._id });
+
+    const found = await this.database.findOne('File',{ _id: id, user: user._id });
     if (isNil(found)) {
       throw ConduitError.notFound('File not found');
     }
@@ -99,7 +89,7 @@ export class FileHandlers {
       throw ConduitError.internalServerError('Error deleting the file');
     }
 
-    await File.deleteOne({ _id: id });
+    await this.database.deleteOne('File',{ _id: id });
 
     return { success: true };
   }
@@ -113,8 +103,8 @@ export class FileHandlers {
     if (!isString(id)) {
       throw ConduitError.userInput('The provided id is invalid');
     }
-    const File = this.database.getSchema('File');
-    const found = await File.findOne({ _id: id, user: user._id });
+
+    const found = await this.database.findOne('File',{ _id: id, user: user._id });
     if (isNil(found)) {
       throw ConduitError.notFound('File not found');
     }
@@ -172,6 +162,6 @@ export class FileHandlers {
     found.name = newName;
     found.folder = newFolder;
 
-    return File.findByIdAndUpdate(found);
+    return this.database.findByIdAndUpdate('File', found);
   }
 }
