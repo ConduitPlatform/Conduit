@@ -36,7 +36,7 @@ export class AdminHandler {
     }
 
     get(call: any, callback: any) {
-        const key = call.request.key;
+        const key = JSON.parse(call.request.params).key;
         if (isNil(key)) {
             callback({
                 code: grpc.status.NOT_FOUND,
@@ -46,7 +46,7 @@ export class AdminHandler {
 
         this._provider?.get(key)
             .then(r => {
-                callback(null, {value: r});
+                callback(null, {result: JSON.stringify({value: r})});
             })
             .catch(err => {
                 callback({
@@ -58,7 +58,7 @@ export class AdminHandler {
     }
 
     store(call: any, callback: any) {
-        const {key, value} = call.request;
+        const {key, value} = JSON.parse(call.request.params);
         if (isNil(key) || isNil(value)) {
             callback({
                 code: grpc.status.NOT_FOUND,
@@ -68,7 +68,7 @@ export class AdminHandler {
 
         this._provider?.store(key, value)
             .then(r => {
-                callback(null, {result: true});
+                callback(null, {result: JSON.stringify({result: true})});
             })
             .catch(err => {
                 callback({
