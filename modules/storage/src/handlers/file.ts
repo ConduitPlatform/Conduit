@@ -71,15 +71,11 @@ export class FileHandlers {
 
   async deleteFile(params: ConduitRouteParameters) {
     const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
     if (!isString(id)) {
       throw ConduitError.userInput('The provided id is invalid');
     }
 
-    const found = await this.database.findOne('File',{ _id: id, user: user._id });
+    const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
       throw ConduitError.notFound('File not found');
     }
@@ -96,15 +92,11 @@ export class FileHandlers {
 
   async updateFile(params: ConduitRouteParameters) {
     const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
     if (!isString(id)) {
       throw ConduitError.userInput('The provided id is invalid');
     }
 
-    const found = await this.database.findOne('File',{ _id: id, user: user._id });
+    const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
       throw ConduitError.notFound('File not found');
     }
