@@ -1,16 +1,16 @@
-import { ConduitSDK, IConduitDatabase } from '@conduit/sdk';
 import { Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export class AdminHandlers {
-  private readonly database: IConduitDatabase;
+  private readonly database: any;
 
   constructor(
-    private readonly sdk: ConduitSDK,
+    private readonly grpcSdk: ConduitGrpcSdk,
     private readonly emailService: EmailService
   ) {
-    this.database = this.sdk.getDatabase();
+    this.database = this.grpcSdk.databaseProvider;
   }
 
   async getTemplates(req: Request, res: Response) {
@@ -24,10 +24,8 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const EmailTemplate = this.database.getSchema('EmailTemplate');
-
-    const templateDocumentsPromise = EmailTemplate.findPaginated({}, skipNumber, limitNumber);
-    const totalCountPromise = EmailTemplate.countDocuments({});
+    const templateDocumentsPromise = await this.database.findMany('EmailTemplate', {}, null, skipNumber, limitNumber);
+    const totalCountPromise = await this.database.countDocuments({});
 
     const [templateDocuments, totalCount] = await Promise.all([templateDocumentsPromise, totalCountPromise]);
 
@@ -40,9 +38,7 @@ export class AdminHandlers {
       return res.status(401).json({ error: 'Required fields are missing' });
     }
 
-    const EmailTemplate = this.database.getSchema('EmailTemplate');
-
-    const newTemplate = await EmailTemplate.create({
+    const newTemplate = await this.database.create('EmailTemplate',{
       name,
       subject,
       body,
@@ -65,9 +61,7 @@ export class AdminHandlers {
     });
     if (flag) return res.status(403).json({ error: 'Invalid parameters are given' });
 
-    const EmailTemplate = this.database.getSchema('EmailTemplate');
-
-    const templateDocument = await EmailTemplate.findOne({ _id: id });
+    const templateDocument = await this.database.findOne('EmailTemplate',{ _id: id });
     if (isNil(templateDocument)) {
       return res.status(404).json({ error: 'Template not found' });
     }
@@ -76,7 +70,7 @@ export class AdminHandlers {
       templateDocument[key] = params[key];
     });
 
-    const updatedTemplate = await EmailTemplate.findByIdAndUpdate(templateDocument);
+    const updatedTemplate = await this.database.findByIdAndUpdate('EmailTemplate', templateDocument);
 
     return res.json({ updatedTemplate });
   }

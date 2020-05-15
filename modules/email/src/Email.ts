@@ -1,0 +1,168 @@
+import {emailTemplateSchema} from './models/EmailTemplate';
+import {EmailProvider} from '@conduit/email-provider';
+import {EmailService} from './services/email.service';
+import {AdminHandlers} from './handlers/AdminHandlers';
+import EmailConfigSchema from './config/email';
+import {isNil} from 'lodash';
+import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
+import path from "path";
+import * as grpc from "grpc";
+import { ConduitUtilities } from '@conduit/utilities';
+let protoLoader = require('@grpc/proto-loader');
+
+export default class EmailModule {
+  private emailProvider: EmailProvider;
+  private emailService: EmailService;
+  private adminHandlers: AdminHandlers;
+  private isRunning: boolean = false;
+  private _url: string;
+
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk
+  ) {
+    let packageDefinition = protoLoader.loadSync(
+      path.resolve(__dirname, './email.proto'),
+      {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+      });
+    let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
+    let email = protoDescriptor.email.Email;
+    let server = new grpcModule.Server();
+
+    server.addService(email.service, {
+      setConfig: this.setConfig.bind(this),
+      registerTemplate: this.registerTemplate.bind(this),
+      sendEmail: this.sendEmail.bind(this)
+    });
+
+    // this._admin = new AdminHandler(server, this._provider);
+    this._url = process.env.SERVICE_URL || '0.0.0.0:0';
+    let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+    this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
+    console.log("bound on:", this._url);
+    server.start();
+
+    this.ensureDatabase().then(()=> {
+      this.grpcSdk.config.get('email').then((emailConfig: any) => {
+        if (emailConfig.active) {
+          this.enableModule().catch(console.log);
+        }
+      })
+    })
+
+  }
+
+  get url(): string {
+    return this._url;
+  }
+
+  static get config() {
+    return EmailConfigSchema;
+  }
+
+  async setConfig(call: any, callback: any) {
+    const newConfig = JSON.parse(call.request.newConfig);
+    if (!ConduitUtilities.validateConfigFields(newConfig, EmailConfigSchema.email)) {
+      return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
+    }
+
+    let errorMessage: string | null = null;
+    const updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      throw new Error(errorMessage);
+    }
+
+    const emailConfig = await this.grpcSdk.config.get('email');
+    if (emailConfig.active) {
+      await this.enableModule().catch((e: Error) => errorMessage = e.message);
+    } else {
+      return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
+    }
+    if (!isNil(errorMessage)) {
+      return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    }
+
+    return callback(null, {updatedConfig: JSON.stringify(updateResult)});
+  }
+
+  private async enableModule() {
+    if (!this.isRunning) {
+      this.registerModels();
+      this.initEmailProvider();
+      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
+      this.adminHandlers = new AdminHandlers(this.grpcSdk, this.emailService);
+      this.initAdminRoutes();
+      this.isRunning = true;
+    } else {
+      this.initEmailProvider();
+      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
+    }
+  }
+
+  async registerTemplate(call: any, callback: any) {
+    const params = {
+      name: call.request.name,
+      subject: call.request.subject,
+      body: call.request.body,
+      variables: call.request.variables
+    };
+    let errorMessage: string | null = null;
+    const template = await this.emailService.registerTemplate(params).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    return callback(null, {template: JSON.stringify(template)});
+  }
+
+  async sendEmail(call: any, callback: any) {
+    const template = call.request.templateName;
+    const params = {
+      email: call.request.params.email,
+      variables: JSON.parse(call.request.params.variables),
+      sender: call.request.params.sender
+    }
+    let errorMessage: string | null = null;
+    const sentMessageInfo = await this.emailService.sendEmail(template, params).catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    return callback(null, {sentMessageInfo});
+  }
+
+  private registerModels() {
+    const database = this.grpcSdk.databaseProvider;
+    database!.createSchemaFromAdapter(emailTemplateSchema);
+  }
+
+  private async initEmailProvider() {
+    const emailConfig = await this.grpcSdk.config.get('email');
+
+    let {transport, transportSettings} = emailConfig;
+
+    this.emailProvider = new EmailProvider(transport, transportSettings);
+  }
+
+  private initAdminRoutes() {
+    // const admin = this.sdk.getAdmin();
+    //
+    // admin.registerRoute('GET', '/email/templates',
+    //   (req, res, next) => this.adminHandlers.getTemplates(req, res).catch(next));
+    //
+    // admin.registerRoute('POST', '/email/templates',
+    //   (req, res, next) => this.adminHandlers.createTemplate(req, res).catch(next));
+    //
+    // admin.registerRoute('PUT', '/email/templates/:id',
+    //   (req, res, next) => this.adminHandlers.editTemplate(req, res).catch(next));
+    //
+    // admin.registerRoute('POST', '/email/send',
+    //   (req, res, next) => this.adminHandlers.sendEmail(req, res).catch(next));
+
+  }
+
+  private async ensureDatabase(): Promise<any> {
+    if (!this.grpcSdk.databaseProvider) {
+      await this.grpcSdk.refreshModules(true);
+      return this.ensureDatabase();
+    }
+  }
+}

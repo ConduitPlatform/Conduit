@@ -1,12 +1,16 @@
-import { ConduitSDK, IRegisterTemplateParams, ISendEmailParams } from '@conduit/sdk';
 import { isNil } from 'lodash';
 import { EmailProvider } from '@conduit/email-provider';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 
 export class EmailService {
+  private readonly database: any;
+
   constructor(
     private readonly emailer: EmailProvider,
-    private readonly sdk: ConduitSDK
+    private readonly grpcSdk: ConduitGrpcSdk
   ) {
+    this.database = this.grpcSdk.databaseProvider;
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
@@ -17,14 +21,10 @@ export class EmailService {
       variables
     } = params;
 
-    const database = this.sdk.getDatabase();
-
-    const TemplateSchema = database.getSchema('EmailTemplate');
-
-    const existing = await TemplateSchema.findOne({name});
+    const existing = await this.database.findOne('EmailTemplate',{name});
     if (!isNil(existing)) return existing;
 
-    return TemplateSchema.create({
+    return this.database.create('EmailTemplate',{
       name,
       subject,
       body,
@@ -40,11 +40,8 @@ export class EmailService {
     } = params;
 
     const builder = this.emailer.emailBuilder();
-    const database = this.sdk.getDatabase();
 
-    const TemplateSchema = database.getSchema('EmailTemplate');
-
-    const templateFound = await TemplateSchema.findOne({ name: template });
+    const templateFound = await this.database.findOne('EmailTemplate',{ name: template });
     if (isNil(templateFound)) {
       throw new Error(`Template ${template} not found`);
     }

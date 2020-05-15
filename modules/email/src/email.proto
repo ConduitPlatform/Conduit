@@ -1,0 +1,41 @@
+syntax = 'proto3';
+package email;
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+message RegisterTemplateRequest {
+  string name = 1;
+  string subject = 2;
+  string body = 3;
+  repeated string variables = 4;
+}
+
+message RegisterTemplateResponse {
+  string template = 1;
+}
+
+message SendEmailRequest {
+  string templateName = 1;
+  SendEmailParams params = 2;
+  message SendEmailParams {
+    string email = 1;
+    string variables = 2;
+    string sender = 3;
+  }
+}
+
+message SendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+service Email {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
+  rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+}
