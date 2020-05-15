@@ -16,6 +16,7 @@ export default class EmailModule {
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
   private _url: string;
+  private readonly grpcServer: any;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk
@@ -31,20 +32,19 @@ export default class EmailModule {
       });
     let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
     let email = protoDescriptor.email.Email;
-    let server = new grpcModule.Server();
+    this.grpcServer = new grpcModule.Server();
 
-    server.addService(email.service, {
+    this.grpcServer.addService(email.service, {
       setConfig: this.setConfig.bind(this),
       registerTemplate: this.registerTemplate.bind(this),
       sendEmail: this.sendEmail.bind(this)
     });
 
-    // this._admin = new AdminHandler(server, this._provider);
     this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-    let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
     this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
     console.log("bound on:", this._url);
-    server.start();
+    this.grpcServer.start();
 
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('email').then((emailConfig: any) => {
@@ -94,7 +94,7 @@ export default class EmailModule {
       this.registerModels();
       await this.initEmailProvider();
       this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
-      this.adminHandlers = new AdminHandlers(this.grpcSdk, this.emailService);
+      this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this.emailService);
       this.isRunning = true;
     } else {
       await this.initEmailProvider();

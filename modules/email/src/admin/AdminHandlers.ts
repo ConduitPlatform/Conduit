@@ -2,15 +2,39 @@ import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import grpc from "grpc";
+import path from "path";
+const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
   private readonly database: any;
 
   constructor(
+    server: grpc.Server,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly emailService: EmailService
   ) {
     this.database = this.grpcSdk.databaseProvider;
+
+    let packageDefinition = protoLoader.loadSync(
+      path.resolve(__dirname, './admin.proto'),
+      {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+      }
+    );
+    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    // The protoDescriptor object has the full package hierarchy
+    // @ts-ignore
+    let admin = protoDescriptor.email.admin.Admin;
+    server.addService(admin.service, {
+      getTemplates: this.getTemplates.bind(this),
+      createTemplate: this.createTemplate.bind(this),
+      editTemplate: this.editTemplate.bind(this),
+      sendEmail: this.sendEmail.bind(this)
+    });
   }
 
   async getTemplates(call: any, callback: any) {
