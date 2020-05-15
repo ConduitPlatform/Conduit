@@ -16,7 +16,7 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
             required: true
         },
         variables: {
-            type: [String]
+            type: [TYPE.String]
         },
         createdAt: {
             type: TYPE.Date,

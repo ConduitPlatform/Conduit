@@ -1,6 +1,5 @@
 import * as grpc from 'grpc';
 import path from 'path';
-import { promisify } from 'util';
 
 let protoLoader = require('@grpc/proto-loader');
 

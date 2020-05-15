@@ -92,13 +92,13 @@ export default class EmailModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.registerModels();
-      this.initEmailProvider();
+      await this.initEmailProvider();
       this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
       this.adminHandlers = new AdminHandlers(this.grpcSdk, this.emailService);
       this.initAdminRoutes();
       this.isRunning = true;
     } else {
-      this.initEmailProvider();
+      await this.initEmailProvider();
       this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
     }
   }
