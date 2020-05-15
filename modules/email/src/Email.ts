@@ -1,7 +1,7 @@
 import {emailTemplateSchema} from './models/EmailTemplate';
 import {EmailProvider} from '@conduit/email-provider';
 import {EmailService} from './services/email.service';
-import {AdminHandlers} from './handlers/AdminHandlers';
+import {AdminHandlers} from './admin/AdminHandlers';
 import EmailConfigSchema from './config/email';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
@@ -95,11 +95,10 @@ export default class EmailModule {
       await this.initEmailProvider();
       this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
       this.adminHandlers = new AdminHandlers(this.grpcSdk, this.emailService);
-      this.initAdminRoutes();
       this.isRunning = true;
     } else {
       await this.initEmailProvider();
-      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
+      this.emailService.updateProvider(this.emailProvider);
     }
   }
 
@@ -140,23 +139,6 @@ export default class EmailModule {
     let {transport, transportSettings} = emailConfig;
 
     this.emailProvider = new EmailProvider(transport, transportSettings);
-  }
-
-  private initAdminRoutes() {
-    // const admin = this.sdk.getAdmin();
-    //
-    // admin.registerRoute('GET', '/email/templates',
-    //   (req, res, next) => this.adminHandlers.getTemplates(req, res).catch(next));
-    //
-    // admin.registerRoute('POST', '/email/templates',
-    //   (req, res, next) => this.adminHandlers.createTemplate(req, res).catch(next));
-    //
-    // admin.registerRoute('PUT', '/email/templates/:id',
-    //   (req, res, next) => this.adminHandlers.editTemplate(req, res).catch(next));
-    //
-    // admin.registerRoute('POST', '/email/send',
-    //   (req, res, next) => this.adminHandlers.sendEmail(req, res).catch(next));
-
   }
 
   private async ensureDatabase(): Promise<any> {

@@ -7,10 +7,14 @@ export class EmailService {
   private readonly database: any;
 
   constructor(
-    private readonly emailer: EmailProvider,
+    private emailer: EmailProvider,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     this.database = this.grpcSdk.databaseProvider;
+  }
+
+  updateProvider(emailer: EmailProvider) {
+    this.emailer = emailer;
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
