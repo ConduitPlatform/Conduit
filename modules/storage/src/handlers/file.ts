@@ -1,4 +1,4 @@
-import { ConduitError, ConduitRouteParameters } from '@conduit/sdk';
+
 import { isString, isNil } from 'lodash';
 import { IStorageProvider } from '@conduit/storage-provider';
 import { v4 as uuid } from 'uuid';
@@ -14,7 +14,8 @@ export class FileHandlers {
     this.database = grpcSdk.databaseProvider;
   }
 
-  async createFile(params: ConduitRouteParameters) {
+  // async createFile(params: ConduitRouteParameters) {
+  async createFile(params: any) {
 
     const name = params.params?.name;
     const data = params.params?.data;
@@ -22,11 +23,11 @@ export class FileHandlers {
     const mimeType = params.params?.mimeType;
 
     if (!isString(data)) {
-      throw ConduitError.userInput('Invalid data provided');
+      // throw ConduitError.userInput('Invalid data provided');
     }
 
     if (!isString(folder)) {
-      throw ConduitError.userInput('No folder provided');
+      // throw ConduitError.userInput('No folder provided');
     }
 
     const buffer = Buffer.from(data, 'base64');
@@ -41,19 +42,20 @@ export class FileHandlers {
     return this.database.create('File', { name, mimeType, folder });
   }
 
-  async getFile(params: ConduitRouteParameters) {
+  // async getFile(params: ConduitRouteParameters) {
+  async getFile(params: any) {
     const id = params.params?.id;
     if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
+      // throw ConduitError.userInput('The provided id is invalid');
     }
 
     const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
+      // throw ConduitError.notFound('File not found');
     }
     // probably a buffer
     const file = await this.storageProvider.folder(found.folder).get(found.name).catch(error => {
-      throw ConduitError.notFound('File not found');
+      // throw ConduitError.notFound('File not found');
     });
 
     let data;
@@ -69,20 +71,21 @@ export class FileHandlers {
     };
   }
 
-  async deleteFile(params: ConduitRouteParameters) {
+  // async deleteFile(params: ConduitRouteParameters) {
+  async deleteFile(params: any) {
     const id = params.params?.id;
     if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
+      // throw ConduitError.userInput('The provided id is invalid');
     }
 
     const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
+      // throw ConduitError.notFound('File not found');
     }
 
     const success = await this.storageProvider.folder(found.folder).delete(found.name);
     if (!success) {
-      throw ConduitError.internalServerError('Error deleting the file');
+      // throw ConduitError.internalServerError('Error deleting the file');
     }
 
     await this.database.deleteOne('File',{ _id: id });
@@ -90,22 +93,23 @@ export class FileHandlers {
     return { success: true };
   }
 
-  async updateFile(params: ConduitRouteParameters) {
+  // async updateFile(params: ConduitRouteParameters) {
+  async updateFile(params: any) {
     const id = params.params?.id;
     if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
+      // throw ConduitError.userInput('The provided id is invalid');
     }
 
     const found = await this.database.findOne('File',{ _id: id });
     if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
+      // throw ConduitError.notFound('File not found');
     }
 
     // Create temporary file to make the changes so the original is not corrupted if anything fails
     const tempFileName = uuid();
     const oldData = await this.storageProvider.folder(found.folder).get(found.name)
       .catch(error => {
-        throw ConduitError.internalServerError('Error reading file');
+        // throw ConduitError.internalServerError('Error reading file');
       });
 
     const exists = await this.storageProvider.folder('temp').exists('');
@@ -116,7 +120,7 @@ export class FileHandlers {
     await this.storageProvider.folder('temp').store(tempFileName, oldData)
       .catch(error => {
         console.log(error);
-        throw ConduitError.internalServerError('I/O error');
+        // throw ConduitError.internalServerError('I/O error');
       });
 
     let failed = false;
@@ -140,11 +144,11 @@ export class FileHandlers {
     // Commit the changes to the actual file if everything is successful
     if (failed) {
       await this.storageProvider.folder('temp').delete(tempFileName);
-      throw ConduitError.internalServerError();
+      // throw ConduitError.internalServerError();
     }
     await this.storageProvider.folder('temp').moveToFolderAndRename(tempFileName, newName, newFolder)
       .catch(error => {
-        throw ConduitError.internalServerError('I/O error');
+        // throw ConduitError.internalServerError('I/O error');
       });
 
     if (shouldRemove) {

@@ -1,12 +1,12 @@
-import Config from "./config";
-import Admin from "./admin";
-import Router from "./router";
-import * as grpc from "grpc";
-import InMemoryStore from "./inMemoryStore";
-import DatabaseProvider from "./databaseProvider";
-import Storage from './storage';
-import Email from './email';
+import Config from "./modules/config";
+import Admin from "./modules/admin";
+import Router from "./modules/router";
+import DatabaseProvider from "./modules/databaseProvider";
+import InMemoryStore from "./modules/inMemoryStore";
+import Email from "./modules/email";
+import Storage from "./modules/storage";
 
+import * as grpc from "grpc";
 
 export default class ConduitGrpcSdk {
 
@@ -121,3 +121,8 @@ export default class ConduitGrpcSdk {
 
 }
 export let grpcModule: any = grpc;
+export * from "./interfaces";
+export * from "./models";
+export * from "./modules";
+export * from "./helpers";
+export * from './constants';

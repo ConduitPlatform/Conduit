@@ -218,7 +218,7 @@ export class ConduitSDK {
 }
 
 export * from "./models";
-export * from "./interaces";
+export * from "./interfaces";
 export * from "./modules";
 export * from "./helpers";
 export * from './constants';

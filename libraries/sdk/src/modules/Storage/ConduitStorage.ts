@@ -1,5 +1,5 @@
 import { ConduitSDK } from '../../index';
-import { IConduitModule } from '../../interaces/IConduitModule';
+import { IConduitModule } from '../../interfaces/IConduitModule';
 
 export abstract class IConduitStorage implements IConduitModule {
 
