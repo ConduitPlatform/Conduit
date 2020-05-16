@@ -8,3 +8,4 @@ export * from './Storage';
 export * from './Security';
 export * from './Authentication';
 export * from './Cms';
+export * from './Config';

@@ -1,10 +1,12 @@
-import Config from "./config";
-import Admin from "./admin";
-import Router from "./router";
-import * as grpc from "grpc";
-import InMemoryStore from "./inMemoryStore";
-import DatabaseProvider from "./databaseProvider";
+import Config from "./modules/config";
+import Admin from "./modules/admin";
+import Router from "./modules/router";
+import DatabaseProvider from "./modules/databaseProvider";
+import InMemoryStore from "./modules/inMemoryStore";
+import Email from "./modules/email";
+import Storage from "./modules/storage";
 
+import * as grpc from "grpc";
 
 export default class ConduitGrpcSdk {
 
@@ -15,7 +17,9 @@ export default class ConduitGrpcSdk {
     private readonly _modules: any = {};
     private readonly _availableModules: any = {
         "in-memory-store": InMemoryStore,
-        "database-provider": DatabaseProvider
+        "database-provider": DatabaseProvider,
+        "storage": Storage,
+        "email": Email
     }
     private lastSearch: number = Date.now();
 
@@ -96,6 +100,29 @@ export default class ConduitGrpcSdk {
         }
     }
 
+    get storage(): Storage | null {
+        if (this._modules["storage"]) {
+            return this._modules["storage"];
+        } else {
+            console.warn("Storage module not up yet!");
+            return null;
+        }
+    }
+
+    get emailProvider(): Email | null {
+        if (this._modules["email"]) {
+            console.warn("Email provider is running");
+            return this._modules["email"];
+        } else {
+            console.warn("Email provider not up yet!")
+            return null;
+        }
+    }
 
 }
 export let grpcModule: any = grpc;
+export * from "./interfaces";
+export * from "./models";
+export * from "./modules";
+export * from "./helpers";
+export * from './constants';

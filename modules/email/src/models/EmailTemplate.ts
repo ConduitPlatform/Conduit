@@ -1,4 +1,5 @@
-import {ConduitSchema, TYPE} from '@conduit/sdk';
+import {ConduitSchema, TYPE} from "@conduit/grpc-sdk";
+
 
 export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
     {
@@ -16,7 +17,7 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
             required: true
         },
         variables: {
-            type: [String]
+            type: [TYPE.String]
         },
         createdAt: {
             type: TYPE.Date,

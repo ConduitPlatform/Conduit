@@ -4,6 +4,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "start": "node dist/index.js",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build"
   },
@@ -15,8 +17,11 @@
   ],
   "license": "ISC",
   "dependencies": {
+    "@conduit/utilities": "1.0.0",
+    "@conduit/grpc-sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
     "@conduit/email-provider": "1.0.0",
-    "@conduit/sdk": "1.0.0",
+    "grpc": "^1.24.2",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
@@ -27,6 +32,7 @@
     "express": "~4.16.1",
     "rimraf": "^3.0.2",
     "smtp-server": "^3.6.0",
+    "copyfiles": "^2.2.0",
     "typescript": "^3.8.3"
   },
   "peerDependencies": {

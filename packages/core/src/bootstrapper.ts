@@ -1,7 +1,6 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
 import {ConfigModelGenerator} from './models/Config';
-import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
 import AdminModule from '@conduit/admin';
 import SecurityModule from '@conduit/security';
@@ -17,8 +16,7 @@ let protoLoader = require('@grpc/proto-loader');
 
 export class CoreBootstrapper {
     static bootstrap() {
-        let primary = new App();
-        const app = primary.get();
+        let primary: App;
         let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
 
         const grpcSdk = new ConduitGrpcSdk(_url);
@@ -34,10 +32,11 @@ export class CoreBootstrapper {
             });
         // NOTE: all core packages with grpc need to be created before grpc server start
         let manager = new ConfigManager(grpcSdk, server, packageDefinition, (url: string) => {
-            primary.initialize();
+            primary?.initialize();
             CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
-
+        primary = new App(manager)
+        const app = primary.get();
         app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
         app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
 
@@ -57,8 +56,8 @@ export class CoreBootstrapper {
         return database!.createSchemaFromAdapter(ConfigModel);
     }
 
-    private static registerAdminRoutes(sdk: ConduitSDK) {
-        const configHandlers = new ConfigAdminHandlers(sdk);
+    private static registerAdminRoutes(grpcSdk: ConduitGrpcSdk, sdk: ConduitSDK) {
+        const configHandlers = new ConfigAdminHandlers(grpcSdk, sdk);
         const adminModule = sdk.getAdmin();
 
         adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
@@ -69,7 +68,7 @@ export class CoreBootstrapper {
         await CoreBootstrapper.registerSchemas(grpcSdk, app);
 
         const appConfig: Config<any> = (app.conduit as any).config;
-        const databaseConfigUtility = new DatabaseConfigUtility(grpcSdk.databaseProvider!, appConfig);
+        const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);
 
         await databaseConfigUtility.configureFromDatabase();
 
@@ -89,7 +88,7 @@ export class CoreBootstrapper {
         //
         // app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
 
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
+        CoreBootstrapper.registerAdminRoutes(grpcSdk, app.conduit);
 
         app.initialized = true;
     }
