@@ -31,6 +31,7 @@ export class App {
     }
 
     initialize() {
+        this.conduitRouter = this.app.conduit.getRouter();
         this.registerGlobalMiddleware();
         this.registerRoutes();
         MonitoringUtility.getInstance().enableMetrics();
@@ -48,7 +49,6 @@ export class App {
             initialized: false
         };
         this.app = Object.assign(expressApp, conduitExtras);
-        this.conduitRouter = this.app.conduit.getRouter();
         this.app.conduit.registerConfigManager(this.configManager);
     }
 

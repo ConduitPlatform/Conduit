@@ -10,7 +10,7 @@ export default class Router {
     constructor(url: string) {
 
         var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, '../proto/core.proto'),
+            path.resolve(__dirname, '../../proto/core.proto'),
             {
                 keepCase: true,
                 longs: String,
@@ -24,21 +24,11 @@ export default class Router {
         this.client = new router(url, grpc.credentials.createInsecure());
     }
 
-    register(paths: any[], protoFile: string): Promise<any> {
-
-        let grpcPathArray: any[] = [];
-        paths.forEach(r => {
-            let obj = {
-                path: r.path,
-                method: r.method,
-                inputs: JSON.stringify(r.inputs),
-                grpcFunction: r.protoName
-            };
-            grpcPathArray.push(obj);
-        })
+    register(paths: any[], protoFile: string, url: string): Promise<any> {
         let request = {
-            routesList: grpcPathArray,
-            protoFile: protoFile
+            routes: paths,
+            protoFile: protoFile,
+            routerUrl: url
         }
         return new Promise((resolve, reject) => {
         this.client.registerConduitRoute(request, (err: any, res: any) => {

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package storage.router;
+
+service Router {
+    rpc GetFile (RouterRequest) returns (RouterResponse);
+    rpc CreateFile (RouterRequest) returns (RouterResponse);
+    rpc UpdateFile (RouterRequest) returns (RouterResponse);
+    rpc DeleteFile (RouterRequest) returns (RouterResponse);
+}
+// all admin requests accept the params,headers and context objects as stringified json
+message RouterRequest {
+    string params = 1;
+    string headers = 2;
+    string context = 3;
+}
+// all admin responses return their results as stringified json
+message RouterResponse {
+    string result = 1;
+}

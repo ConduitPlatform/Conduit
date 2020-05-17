@@ -10,7 +10,7 @@ export default class Config {
 
     constructor(url: string) {
         var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, '../proto/core.proto'),
+            path.resolve(__dirname, '../../proto/core.proto'),
             {
                 keepCase: true,
                 longs: String,

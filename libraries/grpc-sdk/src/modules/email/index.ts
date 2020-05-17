@@ -8,7 +8,7 @@ export default class Email {
 
   constructor(url: string) {
     let packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, '../proto/email.proto'),
+      path.resolve(__dirname, '../../proto/email.proto'),
       {
         keepCase: true,
         longs: String,

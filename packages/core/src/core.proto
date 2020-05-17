@@ -35,7 +35,7 @@ message RegisterConduitRouteRequest {
     string routerUrl = 3;
     message PathDefinition {
         ConduitRouteOptions options = 1;
-        ConduitRouteReturnDefinition inputs = 3;
+        ConduitRouteReturnDefinition returns = 3;
         string grpcFunction = 4;
     }
 

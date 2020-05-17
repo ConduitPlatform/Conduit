@@ -31,10 +31,15 @@ export class ConduitDefaultRouter implements IConduitRouter {
     }
 
     registerGrpcRoute(call: any, callback: any) {
-        let routes: ConduitRoute[] = grpcToConduitRoute(call.request);
-        routes.forEach(r => {
-            this.registerRoute(r);
-        })
+        try{
+            let routes: ConduitRoute[] = grpcToConduitRoute(call.request);
+            routes.forEach(r => {
+                this.registerRoute(r);
+            })
+        }catch(err){
+            return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"})
+        }
+
         //todo definetely missing an error handler here
         //perhaps wrong(?) we send an empty response
         callback(null, null);

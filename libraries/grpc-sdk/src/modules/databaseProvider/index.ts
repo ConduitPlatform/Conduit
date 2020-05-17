@@ -8,7 +8,7 @@ export default class DatabaseProvider {
     private readonly client: any;
 
     constructor(url: string) {
-        let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, '../proto/database-provider.proto'),
+        let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, '../../proto/database-provider.proto'),
             {
                 keepCase: true,
                 longs: String,
