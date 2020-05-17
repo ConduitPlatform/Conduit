@@ -28,10 +28,10 @@ export class FileRoutes {
         // @ts-ignore
         var router = protoDescriptor.storage.router.Router;
         server.addService(router.service, {
-            createFile: this.fileHandlers.createFile.bind(this),
-            deleteFile: this.fileHandlers.deleteFile.bind(this),
-            getFile: this.fileHandlers.getFile.bind(this),
-            updateFile: this.fileHandlers.updateFile.bind(this)
+            createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
+            deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
+            getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
+            updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers)
         });
     }
 
