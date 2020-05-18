@@ -44,18 +44,24 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       return false;
     }
     else if (isPlainObject(value) && value.hasOwnProperty('type')) {
-      if (!fieldsErrorFlag && isArray(value.type)) {
+      if (!fieldsErrorFlag && isPlainObject(value.type)) {
+        return true;
+      }
+      else if (!fieldsErrorFlag && isArray(value.type)) {
         if (value.type.length > 1) fieldsErrorFlag = true;
         if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value.type[0]);
         return false;
       }
-      fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
+      else fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
       if (!fieldsErrorFlag && value.type === TYPE.Relation) {
         if (value.hasOwnProperty('model')) {
           if (!isString(value.model)) fieldsErrorFlag = true;
         } else {
           fieldsErrorFlag = true;
         }
+      }
+      if (!fieldsErrorFlag && value.hasOwnProperty('select')) {
+        fieldsErrorFlag = !isBoolean(value.select);
       }
       if (!fieldsErrorFlag && value.hasOwnProperty('unique')) {
         fieldsErrorFlag = !isBoolean(value.unique);
@@ -71,6 +77,11 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value[0]);
       return false;
     }
+    else if (key === 'select') {
+      fieldsErrorFlag = !isBoolean(value);
+    } else if (key === 'required') {
+      fieldsErrorFlag = !isBoolean(value);
+    } else if (key === 'type') return true;
     else {
       fieldsErrorFlag = true;
       return false;

@@ -1,7 +1,7 @@
 import {Schema} from "mongoose";
 import {ConduitSchema} from "@conduit/sdk";
 import * as _ from "lodash";
-import { isNil } from "lodash";
+import { isNil, isPlainObject } from "lodash";
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -26,6 +26,11 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
 function convert(value: any, key: any, parentValue: any, context: any) {
 
     if (!parentValue?.hasOwnProperty(key)) {
+        return true;
+    }
+
+    if (isPlainObject(parentValue[key]?.type) && key !=='database') {
+        parentValue[key] = new ConduitSchema(`${key}_type`, parentValue[key].type, {_id: false, timestamps: false}).modelSchema;
         return true;
     }
 
