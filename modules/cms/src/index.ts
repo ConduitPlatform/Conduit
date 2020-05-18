@@ -1,5 +1,6 @@
 import schema from './interfaces/schema';
 import {
+    ConduitError,
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteParameters,
@@ -103,7 +104,9 @@ export class CMS extends IConduitCMS {
                 const schemasPromise = schema.findPaginated({}, skipNumber, limitNumber);
                 const documentCountPromise = schema.countDocuments({});
 
-                const [schemas, documentCount] = await Promise.all([schemasPromise, documentCountPromise]);
+                let err: any = null;
+                const [schemas, documentCount] = await Promise.all([schemasPromise, documentCountPromise]).catch(e => err = e);
+                if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
 
                 return {schemas, documentCount};
             }));
@@ -115,12 +118,15 @@ export class CMS extends IConduitCMS {
                 bodyParams: schema.originalSchema.fields
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-            (params: ConduitRouteParameters) => {
+            async (params: ConduitRouteParameters) => {
                 let body = params.params;
                 let context = params.context;
                 // the following line is a temporary solution
                 const latestSchema = this._adapter.getSchema(schema.originalSchema.name);
-                return latestSchema.create({...body, ...context});
+                let err: any = null;
+                const createdSchema = await latestSchema.create({...body, ...context}).catch(e => err = e);
+                if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
+                return createdSchema;
             }));
         // todo PUT should be identical to POST but all fields should be made optional
         // this.sdk.getRouter().registerRoute(new ConduitRoute(
