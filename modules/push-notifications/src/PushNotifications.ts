@@ -141,23 +141,6 @@ export default class PushNotificationsModule {
   //   ));
   // }
 
-
-  // registerAdminRoutes() {
-  //   const adminHandler = new AdminHandler(this.sdk, this._provider!);
-  //   this.sdk.getAdmin().registerRoute('GET', '/notification-token/:userId',
-  //     (req: Request, res: Response, next: NextFunction) => adminHandler.getNotificationToken(req, res, next).catch(next));
-  //
-  //   this.sdk.getAdmin().registerRoute('POST', '/notifications/send',
-  //     (req: Request, res: Response, next: NextFunction) => adminHandler.sendNotification(req, res, next).catch(next));
-  //
-  //   this.sdk.getAdmin().registerRoute('POST', '/notifications/send-many',
-  //     (req: Request, res: Response, next: NextFunction) => adminHandler.sendManyNotifications(req, res, next).catch(next));
-  //
-  //   this.sdk.getAdmin().registerRoute('POST', '/notifications/send-to-many-devices',
-  //     (req: Request, res: Response, next: NextFunction) => adminHandler.sendToManyDevices(req, res, next).catch(next));
-  //
-  // }
-
   private async ensureDatabase(): Promise<any> {
     if (!this.grpcSdk.databaseProvider) {
       await this.grpcSdk.refreshModules(true);
