@@ -9,7 +9,7 @@ export default class InMemoryStore {
 
     constructor(url: string) {
         var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, '../proto/in-memory-store.proto'),
+            path.resolve(__dirname, '../../proto/in-memory-store.proto'),
             {
                 keepCase: true,
                 longs: String,
