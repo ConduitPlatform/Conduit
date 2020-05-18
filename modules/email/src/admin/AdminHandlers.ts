@@ -142,7 +142,7 @@ export class AdminHandlers {
       message: errorMessage,
     });
 
-    return callback(null, JSON.stringify({message: 'Email sent'}));
+    return callback(null, {result: JSON.stringify({message: 'Email sent'})});
   }
 
 }

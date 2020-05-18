@@ -1,6 +1,5 @@
 import * as grpc from 'grpc';
 import path from 'path';
-import { promisify } from 'util';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -10,7 +9,7 @@ export default class Admin {
 
     constructor(url: string) {
         var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, '../proto/core.proto'),
+            path.resolve(__dirname, '../../proto/core.proto'),
             {
                 keepCase: true,
                 longs: String,

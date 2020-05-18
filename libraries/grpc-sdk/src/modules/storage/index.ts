@@ -9,7 +9,7 @@ export default class Storage {
 
   constructor(url: string) {
     var packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, '../proto/storage.proto'),
+      path.resolve(__dirname, '../../proto/storage.proto'),
       {
         keepCase: true,
         longs: String,
