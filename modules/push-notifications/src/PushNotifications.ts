@@ -44,8 +44,6 @@ export default class PushNotificationsModule {
     console.log("bound on:", this._url);
     this.grpcServer.start();
 
-
-
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('pushNotifications').then((notificationsConfig: any) => {
         if (notificationsConfig.active) {

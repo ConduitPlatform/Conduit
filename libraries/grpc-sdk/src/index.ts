@@ -7,6 +7,7 @@ import Email from "./modules/email";
 import Storage from "./modules/storage";
 
 import * as grpc from "grpc";
+import PushNotifications from './modules/pushNotifications';
 
 export default class ConduitGrpcSdk {
 
@@ -19,7 +20,8 @@ export default class ConduitGrpcSdk {
         "in-memory-store": InMemoryStore,
         "database-provider": DatabaseProvider,
         "storage": Storage,
-        "email": Email
+        "email": Email,
+        "push-notifications": PushNotifications
     }
     private lastSearch: number = Date.now();
 
@@ -115,6 +117,15 @@ export default class ConduitGrpcSdk {
             return this._modules["email"];
         } else {
             console.warn("Email provider not up yet!")
+            return null;
+        }
+    }
+
+    get pushNotifications(): PushNotifications | null {
+        if (this._modules["push-notifications"]) {
+            return this._modules["push-notifications"];
+        } else {
+            console.warn("Push notifications module not up yet!");
             return null;
         }
     }
