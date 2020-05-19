@@ -91,7 +91,16 @@ const checkIsChildOfObject = (innerFields) => {
 const constructFieldType = (field) => {
   const typeField = {};
   if (checkIsChildOfObject(field.type)) {
-    typeField.content = getSchemaFields(field.type);
+    typeField.isArray = Array.isArray(field.type);
+    if (typeField.isArray) {
+      let obj = {};
+      field.type.forEach((f) => {
+        obj = { ...obj, [f.name]: { ...constructFieldType(f) } };
+      });
+      typeField.content = getSchemaFields(obj);
+    } else {
+      typeField.content = getSchemaFields(field.type);
+    }
   }
   typeField.isArray = Array.isArray(field.type);
   if (typeField.isArray) {
@@ -107,7 +116,6 @@ const constructFieldType = (field) => {
   if (typeField.type !== 'Group') {
     typeField.unique = field.unique ? field.unique : false;
   }
-
 
   typeField.select = field.select ? field.select : false;
   typeField.required = field.required ? field.required : false;
@@ -186,11 +194,21 @@ export const prepareFields = (typeFields) => {
     const name = clone.name;
     let fields;
     if (clone.type === 'Group') {
-      fields = {
-        select: clone.select ? clone.select : false,
-        required: clone.required ? clone.required : false,
-        type: prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null),
-      };
+      if (clone.isArray) {
+        fields = {
+          select: clone.select ? clone.select : false,
+          required: clone.required ? clone.required : false,
+          type: [
+            prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null),
+          ],
+        };
+      } else {
+        fields = {
+          select: clone.select ? clone.select : false,
+          required: clone.required ? clone.required : false,
+          type: prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null),
+        };
+      }
     } else {
       fields = {
         type: clone.type
@@ -214,9 +232,7 @@ export const prepareFields = (typeFields) => {
     }
 
     delete clone.name;
-    if (clone.type === 'Group' && clone.isArray) {
-      deconstructed = { ...deconstructed, [name]: [fields] };
-    } else if (clone.type === 'Group' && !clone.isArray) {
+    if (clone.type === 'Group') {
       deconstructed = { ...deconstructed, [name]: { ...fields } };
     } else {
       deconstructed = { ...deconstructed, [name]: { ...fields } };

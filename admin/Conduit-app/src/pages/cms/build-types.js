@@ -279,7 +279,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleSave = (name) => {
+  const handleSave = () => {
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
