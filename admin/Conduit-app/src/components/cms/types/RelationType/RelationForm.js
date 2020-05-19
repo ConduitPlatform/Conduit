@@ -179,7 +179,7 @@ export default function RelationForm(props) {
           {data.schemas.map(
             (schema) =>
               schema.enabled &&
-              schema.name !== data.selectedSchema.name && (
+              schema.name !== data.selectedSchema?.name && (
                 <MenuItem key={schema.name} value={schema.name}>
                   <Checkbox checked={simpleData.relation.indexOf(schema.name) > -1} color={'primary'} />
                   <ListItemText primary={schema.name} />
