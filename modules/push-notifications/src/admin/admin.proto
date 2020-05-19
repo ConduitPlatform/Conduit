@@ -16,5 +16,5 @@ service Admin {
   rpc SendNotification(AdminRequest) returns (AdminResponse);
   rpc SendManyNotifications(AdminRequest) returns (AdminResponse);
   rpc SendToManyDevices(AdminRequest) returns (AdminResponse);
-  rpc GetNotificationToken(AdminRequest) returns (AdminResponse);
+  rpc GetNotificationTokens(AdminRequest) returns (AdminResponse);
 }
