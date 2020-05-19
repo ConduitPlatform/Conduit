@@ -156,6 +156,7 @@ const TabPanel = ({ handleCreate, handleSave, template, value, index }) => {
             id="filled-textarea"
             label="Body"
             multiline
+            rows={8}
             variant="outlined"
             value={templateState.body}
             onChange={(event) => {
