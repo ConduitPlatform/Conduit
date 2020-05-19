@@ -18,7 +18,7 @@ export class EmailProvider {
         if (transport === 'mailgun') {
             this._transportName = 'mailgun';
 
-            const {apiKey, domain, proxy, host} = transportSettings;
+            const {apiKey, domain, proxy, host} = transportSettings.mailgun;
 
             if (isNil(apiKey) || isNil(domain) || isNil(host)) {
                 throw new Error('Mailgun transport settings are missing');
