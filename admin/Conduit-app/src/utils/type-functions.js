@@ -95,7 +95,7 @@ const constructFieldType = (field) => {
     if (typeField.isArray) {
       let obj = {};
       field.type.forEach((f) => {
-        obj = { ...obj, [f.name]: { ...constructFieldType(f) } };
+        obj = { ...obj, ...f };
       });
       typeField.content = getSchemaFields(obj);
     } else {
