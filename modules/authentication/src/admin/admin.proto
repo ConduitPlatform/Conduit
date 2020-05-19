@@ -1,0 +1,17 @@
+syntax = "proto3";
+package authentication.admin;
+
+// all admin requests accept the params,headers and context objects as stringified json
+message AdminRequest {
+  string params = 1;
+  string headers = 2;
+  string context = 3;
+}
+// all admin responses return their results as stringified json
+message AdminResponse {
+  string result = 1;
+}
+
+service Admin {
+  rpc GetUsers(AdminRequest) returns (AdminResponse);
+}

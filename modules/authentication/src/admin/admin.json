@@ -1,0 +1,9 @@
+{
+  "functions": [
+    {
+      "path": "/users",
+      "method": "GET",
+      "protoName": "getUsers"
+    }
+  ]
+}
