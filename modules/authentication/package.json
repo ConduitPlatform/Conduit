@@ -4,9 +4,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "start": "node dist/index.js",
     "prepare": "npm run build",
     "build": "rimraf dist && tsc",
-    "publish": "npm publish"
+    "publish": "npm publish",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/"
   },
   "license": "ISC",
   "directories": {
@@ -19,7 +21,10 @@
     "registry": "http://registry.quintessential.gr/"
   },
   "dependencies": {
-    "@conduit/sdk": "1.0.0",
+    "@conduit/utilities": "1.0.0",
+    "@conduit/grpc-sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
+    "grpc": "^1.24.2",
     "bcrypt": "^3.0.7",
     "google-auth-library": "^5.10.1",
     "jsonwebtoken": "^8.5.1",
@@ -40,6 +45,7 @@
     "@types/request-promise": "^4.1.46",
     "@types/uuid": "^7.0.2",
     "rimraf": "^3.0.2",
+    "copyfiles": "^2.2.0",
     "typescript": "^3.8.3",
     "express": "~4.16.1"
   },

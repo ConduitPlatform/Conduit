@@ -1,0 +1,14 @@
+syntax = "proto3";
+package authentication;
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+service Authentication {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+}
