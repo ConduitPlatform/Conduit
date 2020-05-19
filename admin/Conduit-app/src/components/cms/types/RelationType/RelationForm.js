@@ -14,6 +14,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import ListItemText from '@material-ui/core/ListItemText';
+import { useSelector } from 'react-redux';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -54,13 +55,15 @@ export default function RelationForm(props) {
   const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
   const classes = useStyles();
 
+  const { data } = useSelector((state) => state.cmsReducer);
+
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    type: '',
+    type: selectedItem ? selectedItem.type : '',
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
-    relation: selectedItem ? selectedItem.relation : [],
+    relation: selectedItem ? selectedItem.model : '',
   });
 
   const handleFieldName = (event) => {
@@ -169,17 +172,20 @@ export default function RelationForm(props) {
           labelId="field-relation"
           id="field relation"
           label={'Relation'}
-          multiple
           value={simpleData.relation}
           onChange={handleFieldRelation}
-          renderValue={(selected) => selected.join(', ')}
+          renderValue={(selected) => selected}
           MenuProps={MenuProps}>
-          {['Value1', 'Value2', 'Value3'].map((name) => (
-            <MenuItem key={name} value={name}>
-              <Checkbox checked={simpleData.relation.indexOf(name) > -1} color={'primary'}/>
-              <ListItemText primary={name} />
-            </MenuItem>
-          ))}
+          {data.schemas.map(
+            (schema) =>
+              schema.enabled &&
+              schema.name !== data.selectedSchema.name && (
+                <MenuItem key={schema.name} value={schema.name}>
+                  <Checkbox checked={simpleData.relation.indexOf(schema.name) > -1} color={'primary'} />
+                  <ListItemText primary={schema.name} />
+                </MenuItem>
+              )
+          )}
         </Select>
         <FormHelperText>Select the Relation type</FormHelperText>
       </FormControl>

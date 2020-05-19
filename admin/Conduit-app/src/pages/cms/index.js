@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
@@ -10,194 +10,70 @@ import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
+import { useDispatch, useSelector } from 'react-redux';
+import { getCmsSchemas } from '../../redux/thunks';
+import Snackbar from '@material-ui/core/Snackbar';
+import Backdrop from '@material-ui/core/Backdrop';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Alert from '@material-ui/lab/Alert';
+import { makeStyles } from '@material-ui/core/styles';
+import { setSelectedSchema } from '../../redux/actions';
+import { toggleSchema, deleteSelectedSchema } from '../../redux/thunks/cmsThunks';
+
+const useStyles = makeStyles((theme) => ({
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+  },
+}));
 
 const Types = () => {
+  const { data, loading, error } = useSelector((state) => state.cmsReducer);
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
-  const [selectedSchema, setSelectedSchema] = useState(null);
+  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({ data: {}, action: '' });
+
   const router = useRouter();
+  const dispatch = useDispatch();
+  const classes = useStyles();
 
   const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Settings' }];
 
-  const schemaData = [
-    {
-      schemaTitle: 'user-schemas',
-      schemaDocs: [
-        {
-          title: 'user - 1',
-          treeData: [
-            {
-              id: 'firstname',
-              firstName: 'Dimitris',
-            },
-            {
-              id: 'surname',
-              surName: 'Vasileias',
-            },
-            {
-              id: 'address',
-              address: '',
-              children: [
-                {
-                  id: 'primary',
-                  addressName: 'Address 1, st.',
-                },
-                {
-                  id: 'postCode',
-                  postCode: '123 45',
-                },
-              ],
-            },
-            {
-              id: 'phone',
-              phone: '2100038453',
-            },
-          ],
-        },
-        {
-          title: 'user - 2',
-          treeData: [
-            {
-              id: 'firstname',
-              firstName: 'John',
-            },
-            {
-              id: 'surname',
-              surName: 'Chantzigoulas',
-            },
-            {
-              id: 'address',
-              address: '',
-              children: [
-                {
-                  id: 'primary',
-                  addressName: 'Address 1, st.',
-                },
-                {
-                  id: 'postCode',
-                  postCode: '123 45',
-                },
-              ],
-            },
-            {
-              id: 'phone',
-              phone: '2100038453',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      schemaTitle: 'admin-schemas',
-      schemaDocs: [
-        {
-          title: 'admin - 1',
-          treeData: [
-            {
-              id: 'firstname',
-              firstName: 'Dimitris',
-            },
-            {
-              id: 'surname',
-              surName: 'Vasileias',
-            },
-            {
-              id: 'address',
-              address: '',
-              children: [
-                {
-                  id: 'primary',
-                  addressName: 'Address 1, st.',
-                },
-                {
-                  id: 'postCode',
-                  postCode: '123 45',
-                },
-              ],
-            },
-            {
-              id: 'phone',
-              phone: '2100038453',
-            },
-          ],
-        },
-        {
-          title: 'admin - 2',
-          treeData: [
-            {
-              id: 'firstname',
-              firstName: 'John',
-            },
-            {
-              id: 'surname',
-              surName: 'Chantzigoulas',
-            },
-            {
-              id: 'address',
-              address: '',
-              children: [
-                {
-                  id: 'primary',
-                  addressName: 'Address 1, st.',
-                },
-                {
-                  id: 'postCode',
-                  postCode: '123 45',
-                },
-              ],
-            },
-            {
-              id: 'phone',
-              phone: '2100038453',
-            },
-          ],
-        },
-        {
-          title: 'admin - 3',
-          treeData: [
-            {
-              id: 'firstname',
-              firstName: 'John',
-            },
-            {
-              id: 'surname',
-              surName: 'Chantzigoulas',
-            },
-            {
-              id: 'address',
-              address: '',
-              children: [
-                {
-                  id: 'primary',
-                  addressName: 'Address 1, st.',
-                },
-                {
-                  id: 'postCode',
-                  postCode: '123 45',
-                },
-              ],
-            },
-            {
-              id: 'phone',
-              phone: '2100038453',
-            },
-          ],
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    dispatch(getCmsSchemas());
+  }, []);
+
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbarOpen(false);
+  };
+
+  const snackbarAlert = () => {
+    if (error) {
+      return (
+        <Alert variant={'filled'} onClose={handleClose} severity="error">
+          Something went wrong!
+        </Alert>
+      );
+    } else {
+      return undefined;
+    }
+  };
 
   const handleChange = (event, newValue) => {
     setSelected(newValue);
   };
 
-  const handleClose = () => {
+  const handleDialogClose = () => {
     setOpen(false);
   };
 
   const handleCloseDisable = () => {
-    setSelectedSchema(null);
+    setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };
 
@@ -205,13 +81,31 @@ const Types = () => {
     setOpen(true);
   };
 
-  const handleDisable = () => {
-    setSelectedSchema(null);
+  const handleDeleteSchema = () => {
+    dispatch(deleteSelectedSchema(selectedSchemaForAction.data._id));
+    setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };
 
-  const dummyData = [{ name: 'User', apiId: '123321', types: 'Object', itemsCount: 23 }];
-  const dummyDataDisable = [{ name: 'KKati', apiId: '123321', types: 'Object', itemsCount: 23 }];
+  const handleToggleSchema = () => {
+    dispatch(toggleSchema(selectedSchemaForAction.data._id));
+    setSelectedSchemaForAction({ data: {}, action: '' });
+    setOpenDisable(false);
+  };
+
+  const getActiveSchemas = () => {
+    if (!data || !data.schemas) {
+      return [];
+    }
+    return data.schemas.filter((s) => s.enabled);
+  };
+
+  const getDisabledSchemas = () => {
+    if (!data || !data.schemas) {
+      return [];
+    }
+    return data.schemas.filter((s) => !s.enabled);
+  };
 
   const enabledActions = [
     { title: 'Edit', type: 'edit' },
@@ -225,15 +119,20 @@ const Types = () => {
   const handleActions = (action, data) => {
     switch (action.type) {
       case 'edit':
+        dispatch(setSelectedSchema(data._id));
         router.push({ pathname: '/cms/build-types', query: { schemaId: data.id ? data.id : null } }, '/cms/build-types');
         break;
       case 'disable':
-        setSelectedSchema(data);
+        setSelectedSchemaForAction({ data, action: 'disable' });
         setOpenDisable(true);
         break;
       case 'enable':
+        setSelectedSchemaForAction({ data, action: 'enable' });
+        setOpenDisable(true);
         break;
       case 'delete':
+        setSelectedSchemaForAction({ data, action: 'delete' });
+        setOpenDisable(true);
         break;
     }
   };
@@ -249,28 +148,41 @@ const Types = () => {
         </Box>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
         <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-          <SchemasTable
-            activeSchemas={dummyData}
-            disabledSchemas={dummyDataDisable}
-            activeActions={enabledActions}
-            disabledActions={disabledActions}
-            handleActions={handleActions}
-          />
+          {data && data.schemas && (
+            <SchemasTable
+              activeSchemas={getActiveSchemas()}
+              disabledSchemas={getDisabledSchemas()}
+              activeActions={enabledActions}
+              disabledActions={disabledActions}
+              handleActions={handleActions}
+            />
+          )}
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <SchemaData data={schemaData} />
+          <SchemaData schemas={getActiveSchemas()} />
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
         {/*TODO SETTINGS*/}
       </Box>
-      <NewSchemaDialog open={open} handleClose={handleClose} />
+      <NewSchemaDialog open={open} handleClose={handleDialogClose} />
       <DisableSchemaDialog
         open={openDisable}
         handleClose={handleCloseDisable}
-        handleDisable={handleDisable}
-        selectedSchema={selectedSchema}
+        handleToggle={handleToggleSchema}
+        handleDelete={handleDeleteSchema}
+        selectedSchema={selectedSchemaForAction}
       />
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        {snackbarAlert()}
+      </Snackbar>
+      <Backdrop open={loading} className={classes.backdrop}>
+        <CircularProgress color="secondary" />
+      </Backdrop>
     </Layout>
   );
 };

@@ -6,20 +6,24 @@ import Box from '@material-ui/core/Box';
 import BuildTypesList from '../../components/cms/BuildTypesList';
 import BuildTypesContent from '../../components/cms/BuildTypesContent';
 import BuildTypesDrawer from '../../components/cms/BuildTypesDrawer';
-import Header from '../../components/cms/Header';
-import { headerHeight } from '../../components/cms/Header';
+import Header, { headerHeight } from '../../components/cms/Header';
 import {
-  cloneItem,
-  addToGroup,
   addToChildGroup,
-  updateItem,
-  updateGroupItem,
-  updateGroupChildItem,
-  reorderItems,
+  addToGroup,
+  cloneItem,
   deleteItem,
+  getSchemaFields,
+  prepareFields,
+  reorderItems,
+  updateGroupChildItem,
+  updateGroupItem,
+  updateItem,
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
+import { useDispatch, useSelector } from 'react-redux';
+import { createNewSchema, editSchema } from '../../redux/thunks/cmsThunks';
+import { clearSelectedSchema } from '../../redux/actions';
 
 const items = ['Text', 'Number', 'Date', 'Boolean', 'Enum', 'ObjectId', 'Group', 'Relation'];
 
@@ -65,12 +69,24 @@ const BuildTypes = () => {
 
   const classes = useStyles();
   const router = useRouter();
+  const dispatch = useDispatch();
+
+  const { data } = useSelector((state) => state.cmsReducer);
 
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
   const [drawerData, setDrawerData] = useState({ open: false, type: '', destination: null });
   const [duplicateId, setDuplicateId] = useState(false);
   const [selectedProps, setSelectedProps] = useState({ item: undefined, index: undefined, type: 'standard' });
+
+  useEffect(() => {
+    if (data && data.selectedSchema) {
+      setSchemaName(data.selectedSchema.name);
+
+      const formattedFields = getSchemaFields(data.selectedSchema.fields);
+      setSchemaFields({ newTypeFields: formattedFields });
+    }
+  }, [data]);
 
   useEffect(() => {
     if (router.query.name) {
@@ -157,9 +173,14 @@ const BuildTypes = () => {
 
     setDuplicateId(false);
 
-    let droppableIdString = `${drawerData.destination.droppableId}`;
-    let isGroup = droppableIdString.slice(0, 5);
-    let groupId = droppableIdString.substr(6);
+    let droppableIdString = '';
+    let isGroup = '';
+    let groupId = '';
+    if (drawerData.destination) {
+      droppableIdString = `${drawerData.destination.droppableId}`;
+      isGroup = droppableIdString.slice(0, 5);
+      groupId = droppableIdString.substr(6);
+    }
 
     if (selectedProps.item) {
       if (selectedProps.type === 'standard') {
@@ -259,10 +280,21 @@ const BuildTypes = () => {
   };
 
   const handleSave = (name) => {
-    console.log('name', name);
-    console.log(schemaFields.newTypeFields);
-    //todo create new schema with api request
-    // setData({ [newTypeFields]: [] });
+    if (data && data.selectedSchema) {
+      const { _id } = data.selectedSchema;
+      const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
+      const editableSchema = { name: schemaName, fields: editableSchemaFields };
+      // console.log(editableSchemaFields);
+      dispatch(editSchema(_id, editableSchema));
+    } else {
+      const newSchemaFields = prepareFields(schemaFields.newTypeFields);
+      const newSchema = { name: schemaName, fields: newSchemaFields };
+      // console.log(newSchemaFields);
+      dispatch(createNewSchema(newSchema));
+    }
+
+    dispatch(clearSelectedSchema());
+    router.push({ pathname: '/cms' });
   };
 
   return (

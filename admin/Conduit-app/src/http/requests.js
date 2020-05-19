@@ -102,6 +102,15 @@ export const putNotificationConfig = (projectId, productKey, clientEmail) =>
     clientEmail,
   });
 
+//CMS requests
+export const getCmsSchemasRequest = (skip, limit) => axios.get(`${CONDUIT_API}/admin/cms/schemas`, { params: { skip, limit } });
+export const getCmsSchemaByIdRequest = (_id) => axios.get(`${CONDUIT_API}/admin/cms/schemas${_id}`);
+export const postCmsSchemaRequest = (data) => axios.post(`${CONDUIT_API}/admin/cms/schemas`, { ...data });
+export const putCmsSchemaRequest = (_id, data) => axios.put(`${CONDUIT_API}/admin/cms/schemas/${_id}`, { ...data });
+export const deleteCmsSchemaRequest = (_id) => axios.delete(`${CONDUIT_API}/admin/cms/schemas/${_id}`);
+export const toggleSchemaByIdRequest = (_id) => axios.put(`${CONDUIT_API}/admin/cms/schemas/toggle/${_id}`);
+export const getCmsDocumentsByNameRequest = (name) => axios.get(`${CONDUIT_API}/admin/cms/content/${name}`);
+
 /** Cloud storage requests **/
 export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
 export const putStorageSettings = (storageData) =>

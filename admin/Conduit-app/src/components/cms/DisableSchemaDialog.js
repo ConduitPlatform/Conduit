@@ -6,6 +6,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import theme from '../../utils/theme';
 
 const useStyles = makeStyles((theme) => ({
   closeIcon: {
@@ -17,49 +18,116 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.error.main,
     color: theme.palette.common.white,
   },
+  enableButton: {
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.common.white,
+  },
+  deleteButton: {
+    backgroundColor: theme.palette.secondary.main,
+    color: theme.palette.common.white,
+  },
 }));
 
-const DisableSchemaDialog = ({ open, handleClose, handleDisable, selectedSchema }) => {
+const DisableSchemaDialog = ({ open, handleClose, handleToggle, handleDelete, selectedSchema }) => {
   const classes = useStyles();
 
-  const dialogText = "You won't be able to create new instances of";
-  const dialogTextArray = dialogText.split(' ');
+  const createDialogTitle = (action) => {
+    switch (action) {
+      case 'enable': {
+        return 'Enable CMS schema:';
+      }
+      case 'disable': {
+        return 'Disable CMS schema:';
+      }
+      case 'delete': {
+        return 'Delete CMS schema:';
+      }
+      default:
+        return '';
+    }
+  };
 
-  const handleDisableClick = () => {
-    handleDisable();
+  const createDialogInfo = (action) => {
+    switch (action) {
+      case 'enable': {
+        return 'This operation with enable the schema.';
+      }
+      case 'disable': {
+        return "This operation won't delete existing documents.";
+      }
+      case 'delete': {
+        return 'This operation will erase existing documents.';
+      }
+      default:
+        return '';
+    }
+  };
+
+  const generateButtonClass = (action) => {
+    switch (action) {
+      case 'enable': {
+        return classes.enableButton;
+      }
+      case 'disable': {
+        return classes.disableButton;
+      }
+      case 'delete': {
+        return classes.deleteButton;
+      }
+      default:
+        return null;
+    }
+  };
+
+  const generateButtonName = (action) => {
+    switch (action) {
+      case 'enable': {
+        return 'Enable';
+      }
+      case 'disable': {
+        return 'Disable';
+      }
+      case 'delete': {
+        return 'Delete';
+      }
+      default:
+        return '';
+    }
+  };
+
+  const handleClick = () => {
+    switch (selectedSchema.action) {
+      case 'enable':
+      case 'disable':
+        handleToggle();
+        break;
+      case 'delete':
+        handleDelete();
+        break;
+      default:
+        break;
+    }
   };
 
   return (
     <Dialog fullWidth={true} maxWidth={'md'} open={open} onClose={handleClose}>
       <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
-        Disable your custom type?
+        {createDialogTitle(selectedSchema.action)}
       </DialogTitle>
       <DialogContent>
-        {selectedSchema &&
-          dialogTextArray.map((word, index) => {
-            if (dialogTextArray.length - 1 === index) {
-              return (
-                <span style={{ fontWeight: 'bold' }} key={index}>
-                  {' '}
-                  {selectedSchema.name}.
-                </span>
-              );
-            } else {
-              return <span key={index}> {word}</span>;
-            }
-          })}
+        <span style={{ fontWeight: 'bold' }}>{selectedSchema ? selectedSchema.data.name : ''}</span>
       </DialogContent>
-      <DialogContent>{"This operation won't delete existing documents."}</DialogContent>
+      <DialogContent>{createDialogInfo(selectedSchema.action)}</DialogContent>
       <DialogActions>
         <Button onClick={() => handleClose()} variant="contained" style={{ textTransform: 'none' }}>
           Cancel
         </Button>
         <Button
-          onClick={handleDisableClick}
-          className={classes.disableButton}
+          onClick={handleClick}
+          className={generateButtonClass(selectedSchema.action)}
           variant="contained"
           style={{ textTransform: 'none' }}>
-          Disable
+          {generateButtonName(selectedSchema.action)}
         </Button>
       </DialogActions>
       <Button onClick={handleClose} className={classes.closeIcon}>

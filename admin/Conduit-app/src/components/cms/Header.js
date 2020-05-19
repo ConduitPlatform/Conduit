@@ -8,11 +8,14 @@ import SaveIcon from '@material-ui/icons/Save';
 import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
 import Link from 'next/link';
+import { useDispatch } from 'react-redux';
+import { clearSelectedSchema } from "../../redux/actions";
 
 export const headerHeight = 64;
 
 const useStyles = makeStyles((theme) => ({
   header: {
+    zIndex: 999,
     height: headerHeight,
     backgroundColor: theme.palette.primary.main,
     display: 'flex',
@@ -64,6 +67,7 @@ const useStyles = makeStyles((theme) => ({
 const Header = (props) => {
   const { name, handleSave, ...rest } = props;
   const classes = useStyles();
+  const dispatch = useDispatch();
 
   const [schemaName, setSchemaName] = useState(name);
 
@@ -79,11 +83,16 @@ const Header = (props) => {
     handleSave(schemaName);
   };
 
+  const handleBackButtonClick = () => {
+    dispatch(clearSelectedSchema());
+  };
+
   return (
     <Box className={clsx(classes.header, classes.colorWhite)} {...rest}>
       <Box display={'flex'} alignItems={'center'}>
         <Link href="/cms">
-          <a style={{ textDecoration: 'none' }}>
+          {/* TODO call dispatch clear cms */}
+          <a style={{ textDecoration: 'none' }} onClick={handleBackButtonClick}>
             <Box className={classes.backIconContainer}>
               <ArrowBackIcon className={clsx(classes.backIcon, classes.colorWhite)} />
             </Box>

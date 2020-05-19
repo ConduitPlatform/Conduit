@@ -27,6 +27,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
   const [order, setOrder] = useState('asc');
   const [orderById, setOrderById] = useState();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
 
   /** menu items Action button */
   const ITEM_HEIGHT = 48;
@@ -60,12 +61,14 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
     setOrderById(property);
   };
 
-  const handleClick = (event) => {
+  const handleClick = (event, row) => {
     setAnchorEl(event.currentTarget);
+    setSelectedRow(row);
   };
 
   const handleClose = () => {
     setAnchorEl(null);
+    setSelectedRow(null);
   };
 
   const getValue = (value) => {
@@ -81,63 +84,70 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
   };
 
   return (
-    <TableContainer component={Paper} {...rest}>
-      <Table className={classes.table} aria-label="simple table">
-        <TableHead>
-          <TableRow>
-            {/*	todo add checkbox cells in the future*/}
-            {headerCells.map((headCell) => (
-              <TableCell
-                key={headCell.id}
-                align={headCell.numeric ? 'right' : 'left'}
-                padding={headCell.disablePadding ? 'none' : 'default'}
-                sortDirection={orderById === headCell.id ? order : false}>
-                <TableSortLabel
-                  active={orderById === headCell.id}
-                  direction={orderById === headCell.id ? order : 'asc'}
-                  onClick={createSortHandler(headCell.id)}>
-                  {headCell.label}
-                </TableSortLabel>
-              </TableCell>
-            ))}
-            {actions && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {orderBy(rows, orderById, order).map((row, i) => (
-            <TableRow key={i}>
-              {Object.keys(row).map((item, j) => (
-                <TableCell key={`${i}-${j}`}>{getValue(row[item])}</TableCell>
-              ))}
-              {actions && (
-                <TableCell key={`action-${i}`} align={'right'}>
-                  <IconButton aria-label="more" aria-controls="long-menu" aria-haspopup="true" onClick={handleClick}>
-                    <MoreVertIcon />
-                  </IconButton>
-                  <Menu
-                    id="long-menu"
-                    anchorEl={anchorEl}
-                    keepMounted
-                    open={open}
-                    onClose={handleClose}
-                    PaperProps={{
-                      style: {
-                        maxHeight: ITEM_HEIGHT * 4.5,
-                        width: '20ch',
-                      },
-                    }}>
-                    {actions.map((action) => (
-                      <MenuItem key={action.type} onClick={() => onMenuItemClick(action, row)}>
-                        {action.title}
-                      </MenuItem>
-                    ))}
-                  </Menu>
+    <>
+      <TableContainer component={Paper} {...rest}>
+        <Table className={classes.table} aria-label="simple table">
+          <TableHead>
+            <TableRow>
+              {/*	todo add checkbox cells in the future*/}
+              {headerCells.map((headCell) => (
+                <TableCell
+                  key={headCell.id}
+                  align={headCell.numeric ? 'right' : 'left'}
+                  padding={headCell.disablePadding ? 'none' : 'default'}
+                  sortDirection={orderById === headCell.id ? order : false}>
+                  <TableSortLabel
+                    active={orderById === headCell.id}
+                    direction={orderById === headCell.id ? order : 'asc'}
+                    onClick={createSortHandler(headCell.id)}>
+                    {headCell.label}
+                  </TableSortLabel>
                 </TableCell>
-              )}
+              ))}
+              {actions && <TableCell />}
             </TableRow>
+          </TableHead>
+          <TableBody>
+            {orderBy(rows, orderById, order).map((row, i) => (
+              <TableRow key={i}>
+                {Object.keys(row).map((item, j) => (
+                  <TableCell key={`${i}-${j}`}>{getValue(row[item])}</TableCell>
+                ))}
+                {actions && (
+                  <TableCell key={`action-${i}`} align={'right'}>
+                    <IconButton
+                      aria-label="more"
+                      aria-controls="long-menu"
+                      aria-haspopup="true"
+                      onClick={(event) => handleClick(event, row)}>
+                      <MoreVertIcon />
+                    </IconButton>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {actions && (
+        <Menu
+          id="long-menu"
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleClose}
+          PaperProps={{
+            style: {
+              maxHeight: ITEM_HEIGHT * 4.5,
+              width: '20ch',
+            },
+          }}>
+          {actions.map((action, i) => (
+            <MenuItem key={`${action.type}-${i}`} onClick={() => onMenuItemClick(action, selectedRow)}>
+              {action.title}
+            </MenuItem>
           ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+        </Menu>
+      )}
+    </>
   );
 }

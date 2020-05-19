@@ -38,10 +38,21 @@ const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledA
   };
 
   const visibleData = () => {
+    let displayedData;
     if (active) {
-      return activeSchemas ? activeSchemas : [];
+      displayedData = activeSchemas.length > 0 ? activeSchemas : null;
+    } else {
+      displayedData = disabledSchemas.length > 0 ? disabledSchemas : null;
     }
-    return disabledSchemas ? disabledSchemas : [];
+
+    return displayedData
+      ? displayedData.map((d) => ({
+          _id: d._id,
+          name: d.name,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+        }))
+      : null;
   };
 
   const getActions = () => {
@@ -50,17 +61,6 @@ const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledA
     }
     return disabledActions;
   };
-
-  // const formatData = () => {
-  //   return data.map((d) => {
-  //     return {
-  //       name: d.name,
-  //       ApiId: d.apiId,
-  //       Types: d.types,
-  //       Items_Count: d.itemsCount,
-  //     };
-  //   });
-  // };
 
   return (
     <Container maxWidth={'lg'}>
@@ -74,8 +74,7 @@ const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledA
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
-
-      <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />
+      {visibleData() && <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />}
     </Container>
   );
 };

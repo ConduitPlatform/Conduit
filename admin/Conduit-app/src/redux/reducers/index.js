@@ -4,6 +4,7 @@ import authenticationPageReducer from './authenticationPageReducer';
 import emailsPageReducer from './emailsPageReducer';
 import notificationReducer from './notificationReducer';
 import storageReducer from './storageReducer';
+import cmsReducer from './cmsReducer';
 
 export default combineReducers({
   authenticationPageReducer,
@@ -11,4 +12,5 @@ export default combineReducers({
   emailsPageReducer,
   notificationReducer,
   storageReducer,
+  cmsReducer,
 });
