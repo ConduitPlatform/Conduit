@@ -35,7 +35,9 @@ export default class PushNotificationsModule {
     this.grpcServer = new grpcModule.Server();
 
     this.grpcServer.addService(notifications.service, {
-      setConfig: this.setConfig.bind(this)
+      setConfig: this.setConfig.bind(this),
+      setNotificationToken: this.setNotificationToken.bind(this),
+      getNotificationTokens: this.getNotificationTokens.bind(this)
     });
 
     this._url = process.env.SERVICE_URL || '0.0.0.0:0';
@@ -85,6 +87,31 @@ export default class PushNotificationsModule {
     }
 
     return callback(null, {updatedConfig: JSON.stringify(updateResult)});
+  }
+
+  async setNotificationToken(call: any, callback: any) {
+    const { token, platform, userId } = JSON.parse(call.request.params);
+    // TODO we probably need to get userId another way
+
+    let errorMessage: any = null;
+    const oldToken = await this.grpcSdk.databaseProvider!.findOne('NotificationToken', {userId, platform});
+    if (!isNil(oldToken)) await this.grpcSdk.databaseProvider!.deleteOne('NotificationToken', oldToken);
+
+    const newTokenDocument = await this.grpcSdk.databaseProvider!.create('NotificationToken', {
+      userId,
+      token,
+      platform
+    }).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+    return callback(null, {newTokenDocument: JSON.stringify(newTokenDocument)});
+  }
+
+  async getNotificationTokens(call: any, callback: any) {
+    const userId = JSON.parse(call.request.params).userId;
+
+    const tokenDocuments = await this.grpcSdk.databaseProvider!.findMany('NotificationToken', {userId});
+    return callback(null, {tokenDocuments: JSON.stringify(tokenDocuments)});
   }
 
   private async enableModule() {

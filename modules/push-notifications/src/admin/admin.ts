@@ -33,7 +33,7 @@ export class AdminHandler {
       sendNotification: this.sendNotification.bind(this),
       sendManyNotifications: this.sendManyNotifications.bind(this),
       sendToManyDevices: this.sendToManyDevices.bind(this),
-      getNotificationToken: this.getNotificationToken.bind(this)
+      getNotificationTokens: this.getNotificationTokens.bind(this)
     });
   }
 
@@ -109,7 +109,7 @@ export class AdminHandler {
     return callback(null, JSON.stringify({message: 'Ok'}));
   }
 
-  async getNotificationToken(call: any, callback: any) {
+  async getNotificationTokens(call: any, callback: any) {
     const { userId } = JSON.parse(call.request.params);
     if (isNil(userId)) {
       return callback({
