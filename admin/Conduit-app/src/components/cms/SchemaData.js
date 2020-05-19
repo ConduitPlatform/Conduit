@@ -2,7 +2,7 @@ import Box from '@material-ui/core/Box';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -16,8 +16,6 @@ import { MoreVert } from '@material-ui/icons';
 import CardContent from '@material-ui/core/CardContent';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import { useDispatch, useSelector } from 'react-redux';
-import { getSchemaDocuments } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -74,22 +72,12 @@ const TabPanel = (props) => {
 const ITEM_HEIGHT = 48;
 const options = ['edit', 'delete'];
 
-const SchemaData = ({ schemas }) => {
-  const dispatch = useDispatch();
+const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   const classes = useStyles();
-  const [value, setValue] = useState(0);
-  const [schemaName, setSchemaName] = useState('');
-  const { data } = useSelector((state) => state.cmsReducer);
+  const [selectedSchema, setSelectedSchema] = useState(0);
 
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
-
-  useEffect(() => {
-    if (schemas && schemas.length > 0) {
-      setSchemaName(schemas[0].name);
-      // dispatch(getSchemaDocuments(schemaName));
-    }
-  }, [schemas]);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -100,9 +88,9 @@ const SchemaData = ({ schemas }) => {
   };
 
   const handleChange = (event, newValue) => {
-    setValue(newValue);
-    setSchemaName(schemas[newValue].name);
-    dispatch(getSchemaDocuments(schemaName));
+    setSelectedSchema(newValue);
+    const name = schemas[newValue].name;
+    handleSchemaChange(name);
   };
 
   const createDocumentArray = (document) => {
@@ -123,14 +111,14 @@ const SchemaData = ({ schemas }) => {
               ? nodes.data.length > 0
                 ? '[...]'
                 : '[ ]'
-              : typeof nodes.data !== 'string' && Object.keys(nodes.data).length > 0
+              : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
               ? '{...}'
               : `${nodes.data}`}
           </Typography>
         }>
         {Array.isArray(nodes.data)
           ? nodes.data.map((node, index) => renderTree({ id: index.toString(), data: node }))
-          : typeof nodes.data !== 'string' && Object.keys(nodes.data).length > 0
+          : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
           ? createDocumentArray(nodes.data).map((node) => renderTree(node))
           : null}
       </TreeItem>
@@ -141,7 +129,7 @@ const SchemaData = ({ schemas }) => {
     <Container>
       <Box className={classes.root}>
         <Tabs
-          value={value}
+          value={selectedSchema}
           onChange={handleChange}
           orientation="vertical"
           variant="scrollable"
@@ -152,56 +140,60 @@ const SchemaData = ({ schemas }) => {
           })}
         </Tabs>
 
-        <TabPanel key={`tabPanel${0}`} value={value} index={0}>
-          {data.documents.map((doc, index) => {
-            return (
-              <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
-                <CardHeader
-                  title={doc._id}
-                  action={
-                    <>
-                      <IconButton aria-label="settings" onClick={handleClick}>
-                        <MoreVert />
-                      </IconButton>
-                      <Menu
-                        id="long-menu"
-                        anchorEl={anchorEl}
-                        keepMounted
-                        open={open}
-                        onClose={handleClose}
-                        PaperProps={{
-                          style: {
-                            maxHeight: ITEM_HEIGHT * 4.5,
-                            width: '20ch',
-                          },
-                        }}>
-                        {options.map((option) => (
-                          <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Menu>
-                    </>
-                  }
-                />
-                <CardContent>
-                  {createDocumentArray(doc).map((obj, index) => {
-                    return (
-                      <TreeView
-                        key={`treeView${index}`}
-                        className={classes.tree}
-                        defaultCollapseIcon={<ExpandMoreIcon />}
-                        defaultExpanded={['root']}
-                        defaultExpandIcon={<ChevronRightIcon />}>
-                        {renderTree(obj)}
-                      </TreeView>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </TabPanel>
+        {schemas.map((d, index) => {
+          return (
+            <TabPanel key={`tabPanel${index}`} value={selectedSchema} index={index}>
+              {documents.map((doc, index) => {
+                return (
+                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                    <CardHeader
+                      title={doc._id}
+                      action={
+                        <>
+                          <IconButton aria-label="settings" onClick={handleClick}>
+                            <MoreVert />
+                          </IconButton>
+                          <Menu
+                            id="long-menu"
+                            anchorEl={anchorEl}
+                            keepMounted
+                            open={open}
+                            onClose={handleClose}
+                            PaperProps={{
+                              style: {
+                                maxHeight: ITEM_HEIGHT * 4.5,
+                                width: '20ch',
+                              },
+                            }}>
+                            {options.map((option) => (
+                              <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
+                                {option}
+                              </MenuItem>
+                            ))}
+                          </Menu>
+                        </>
+                      }
+                    />
+                    <CardContent>
+                      {createDocumentArray(doc).map((obj, index) => {
+                        return (
+                          <TreeView
+                            key={`treeView${index}`}
+                            className={classes.tree}
+                            defaultCollapseIcon={<ExpandMoreIcon />}
+                            defaultExpanded={['root']}
+                            defaultExpandIcon={<ChevronRightIcon />}>
+                            {renderTree(obj)}
+                          </TreeView>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </TabPanel>
+          );
+        })}
       </Box>
     </Container>
   );

@@ -18,7 +18,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
 import { setSelectedSchema } from '../../redux/actions';
-import { toggleSchema, deleteSelectedSchema } from '../../redux/thunks/cmsThunks';
+import { toggleSchema, deleteSelectedSchema, getSchemaDocuments } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -44,6 +44,17 @@ const Types = () => {
   useEffect(() => {
     dispatch(getCmsSchemas());
   }, []);
+
+  useEffect(() => {
+    if (data.schemas.length > 0) {
+      const name = data.schemas[0].name;
+      dispatch(getSchemaDocuments(name));
+    }
+  }, [data.schemas]);
+
+  const handleSelectSchema = (name) => {
+    dispatch(getSchemaDocuments(name));
+  };
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -148,7 +159,7 @@ const Types = () => {
         </Box>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
         <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-          {data && data.schemas && (
+          {data && data.schemas && data.schemas.length > 0 && (
             <SchemasTable
               activeSchemas={getActiveSchemas()}
               disabledSchemas={getDisabledSchemas()}
@@ -159,7 +170,9 @@ const Types = () => {
           )}
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <SchemaData schemas={getActiveSchemas()} />
+          {data && data.schemas && data.schemas.length > 0 && (
+            <SchemaData schemas={getActiveSchemas()} documents={data.documents} handleSchemaChange={handleSelectSchema} />
+          )}
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
