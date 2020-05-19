@@ -81,10 +81,10 @@ export const getEmailSettings = () => {
   };
 };
 
-export const updateEmailSettings = () => {
+export const updateEmailSettings = (data) => {
   return (dispatch) => {
     dispatch(startEmailsLoading());
-    putEmailSettingsRequest()
+    putEmailSettingsRequest(data)
       .then((res) => {
         dispatch(setEmailSettings(res.data));
         dispatch(stopEmailsLoading());

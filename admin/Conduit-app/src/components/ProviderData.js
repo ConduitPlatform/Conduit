@@ -51,9 +51,18 @@ const ProviderData = ({ settings, error, handleSave }) => {
       transport: settings.transport,
       transportSettings: {
         ...settingsState.transportSettings,
-        apiKey: settings.transportSettings ? settings.transportSettings.apiKey : '',
-        domain: settings.transportSettings ? settings.transportSettings.domain : '',
-        host: settings.transportSettings ? settings.transportSettings.host : '',
+        apiKey:
+          settings.transportSettings && settings.transportSettings[settings.transport]
+            ? settings.transportSettings[settings.transport].apiKey
+            : '',
+        domain:
+          settings.transportSettings && settings.transportSettings[settings.transport]
+            ? settings.transportSettings[settings.transport].domain
+            : '',
+        host:
+          settings.transportSettings && settings.transportSettings[settings.transport]
+            ? settings.transportSettings[settings.transport].host
+            : '',
       },
     });
   }, [settings, error]);
@@ -67,7 +76,18 @@ const ProviderData = ({ settings, error, handleSave }) => {
   };
 
   const onSaveClick = () => {
-    handleSave(settingsState);
+    const data = {
+      active: settingsState.active,
+      transport: settingsState.transport,
+      transportSettings: {
+        [settingsState.transport]: {
+          apiKey: settingsState.transportSettings.apiKey,
+          domain: settingsState.transportSettings.domain,
+          host: settingsState.transportSettings.host,
+        },
+      },
+    };
+    handleSave(data);
   };
 
   const renderSettingsFields = () => {
