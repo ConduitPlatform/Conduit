@@ -153,9 +153,11 @@ const Types = () => {
       <Box p={2}>
         <Box display={'flex'} justifyContent={'space-between'} alignItems={'center'} mb={2}>
           <Typography variant={'h5'}>Content Management</Typography>
-          <Button variant="contained" color="primary" style={{ textTransform: 'capitalize' }} onClick={() => handleAdd()}>
-            Create new
-          </Button>
+          {selected === 0 && (
+            <Button variant="contained" color="primary" style={{ textTransform: 'capitalize' }} onClick={() => handleAdd()}>
+              Create new
+            </Button>
+          )}
         </Box>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
         <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
