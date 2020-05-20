@@ -18,6 +18,7 @@ export interface ConduitModelField {
     unique?: boolean
     select?: boolean
     required?: boolean
+    systemRequired?: boolean
 }
 
 export interface ConduitModel {
