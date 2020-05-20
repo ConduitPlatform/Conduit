@@ -44,7 +44,7 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       return false;
     }
     else if (isPlainObject(value) && value.hasOwnProperty('type')) {
-      if (!fieldsErrorFlag && isPlainObject(value.type)) {
+      if (!fieldsErrorFlag && isObject(value.type)) {
         return true;
       }
       else if (!fieldsErrorFlag && isArray(value.type)) {
