@@ -1,10 +1,18 @@
-import schema from "./interfaces/schema";
+import schema from './interfaces/schema';
 import {
+    ConduitError,
     ConduitRoute,
-    ConduitRouteActions as Actions, ConduitRouteParameters,
-    ConduitRouteReturnDefinition, ConduitSchema, ConduitSDK, IConduitCMS, IConduitDatabase,
-    SchemaAdapter
-} from "@conduit/sdk";
+    ConduitRouteActions as Actions,
+    ConduitRouteParameters,
+    ConduitRouteReturnDefinition,
+    ConduitSchema,
+    ConduitSDK,
+    IConduitCMS,
+    IConduitDatabase,
+    SchemaAdapter, TYPE
+} from '@conduit/sdk';
+import {AdminHandlers} from './handlers/admin';
+import {isNil} from 'lodash';
 
 export class CMS extends IConduitCMS {
 
@@ -13,7 +21,6 @@ export class CMS extends IConduitCMS {
     private readonly _router: any;
     private readonly sdk: ConduitSDK;
 
-
     constructor(conduit: ConduitSDK) {
         super(conduit);
         this._schemas = {};
@@ -21,15 +28,20 @@ export class CMS extends IConduitCMS {
         this._adapter = this.sdk.getDatabase();
         this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
         this.loadExistingSchemas();
+        this.constructAdminRoutes();
     }
 
     private loadExistingSchemas() {
-        this._adapter.getSchema('SchemaDefinitions').model
-            .find({})
+        this._adapter.getSchema('SchemaDefinitions')
+            .findMany({enabled: true})
             .then((r: any) => {
                 if (r) {
                     r.forEach((r: any) => {
-                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(r)
+                        if (typeof r.modelOptions === 'string') {
+                            r.modelOptions = JSON.parse(r.modelOptions);
+                        }
+                        const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
+                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(schema);
                         this.constructSchemaRoutes(this._schemas[r.name]);
                     })
                 }
@@ -46,18 +58,57 @@ export class CMS extends IConduitCMS {
         this.constructSchemaRoutes(this._schemas[schema.name]);
     }
 
-    //todo add support for paginantion
     //todo add support for filtering
     constructSchemaRoutes(schema: SchemaAdapter) {
-
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name,
+            (req, res, next) => {
+                schema.findMany({})
+                    .then(r => {
+                        res.json(r);
+                    })
+                    .catch(err => {
+                        res.send(err);
+                    });
+            })
+        this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name + '/:id',
+            (req, res, next) => {
+                schema.findOne({id: req.params.id})
+                    .then(r => {
+                        res.json(r);
+                    })
+                    .catch(err => {
+                        res.send(err);
+                    });
+            })
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {
                 path: '/content/' + schema.originalSchema.name,
-                action: Actions.GET
+                action: Actions.GET,
+                queryParams: {
+                    // this is string cause Number still throws an error in graphql as unknown type number
+                    skip: TYPE.String,
+                    limit: TYPE.String
+                }
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-            (params: ConduitRouteParameters) => {
-                return schema.findMany({});
+            async (params: ConduitRouteParameters) => {
+                const {skip, limit} = params.params as any;
+                let skipNumber = 0, limitNumber = 25;
+
+                if (!isNil(skip)) {
+                    skipNumber = Number.parseInt(skip as string);
+                }
+                if (!isNil(limit)) {
+                    limitNumber = Number.parseInt(limit as string);
+                }
+                const schemasPromise = schema.findPaginated({}, skipNumber, limitNumber);
+                const documentCountPromise = schema.countDocuments({});
+
+                let err: any = null;
+                const [schemas, documentCount] = await Promise.all([schemasPromise, documentCountPromise]).catch(e => err = e);
+                if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
+
+                return {schemas, documentCount};
             }));
 
         this.sdk.getRouter().registerRoute(new ConduitRoute(
@@ -67,11 +118,15 @@ export class CMS extends IConduitCMS {
                 bodyParams: schema.originalSchema.fields
             },
             new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-            (params: ConduitRouteParameters) => {
+            async (params: ConduitRouteParameters) => {
                 let body = params.params;
                 let context = params.context;
-                // todo check if this is correct. Context was added here in case the create method needs the user for example
-                return schema.create({...body, ...context});
+                // the following line is a temporary solution
+                const latestSchema = this._adapter.getSchema(schema.originalSchema.name);
+                let err: any = null;
+                const createdSchema = await latestSchema.create({...body, ...context}).catch(e => err = e);
+                if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
+                return createdSchema;
             }));
         // todo PUT should be identical to POST but all fields should be made optional
         // this.sdk.getRouter().registerRoute(new ConduitRoute(
@@ -91,6 +146,28 @@ export class CMS extends IConduitCMS {
 
     }
 
+    constructAdminRoutes() {
+        const adminHandlers = new AdminHandlers(this.sdk, this.createSchema.bind(this));
+
+        this.sdk.getAdmin().registerRoute('GET', '/cms/schemas',
+            (req, res, next) => adminHandlers.getAllSchemas(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('GET', '/cms/schemas/:id',
+            (req, res, next) => adminHandlers.getById(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('POST', '/cms/schemas',
+            (req, res, next) => adminHandlers.createSchema(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/toggle/:id',
+            (req, res, next) => adminHandlers.toggle(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('PUT', '/cms/schemas/:id',
+            (req, res, next) => adminHandlers.editSchema(req, res).catch(next));
+
+        this.sdk.getAdmin().registerRoute('DELETE', '/cms/schemas/:id',
+            (req, res, next) => adminHandlers.deleteSchema(req, res).catch(next));
+
+    }
 }
 
 

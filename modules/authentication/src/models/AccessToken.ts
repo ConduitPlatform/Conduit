@@ -5,27 +5,26 @@ export const AccessTokenSchema = new ConduitSchema('AccessToken',
     _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
-      model: 'User'
+      model: 'User',
+      systemRequired: true
     },
     clientId: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
     token: {
-      type: TYPE.String
+      type: TYPE.String,
+      systemRequired: true
     },
     expiresOn: {
-      type: TYPE.Date
-    },
-    createdAt: {
       type: TYPE.Date,
-      required: true
+      systemRequired: true
     },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

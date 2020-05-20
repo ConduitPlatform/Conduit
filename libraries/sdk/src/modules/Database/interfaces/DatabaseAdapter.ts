@@ -15,5 +15,7 @@ export interface DatabaseAdapter {
      */
     getSchema(schemaName: string): SchemaAdapter
 
+    deleteSchema(schemaName: string): void;
+
 
 }

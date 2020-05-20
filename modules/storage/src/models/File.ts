@@ -1,19 +1,25 @@
 import {ConduitSchema, TYPE} from "@conduit/grpc-sdk";
 
 export default new ConduitSchema(
-    'File',
-    {
-        name: {
-            type: TYPE.String,
-            required: true
-        },
-        folder: {
-            type: TYPE.String,
-            required: true
-        },
-        mimeType: TYPE.String
+  'File',
+  {
+    _id: TYPE.ObjectId,
+    name: {
+      type: TYPE.String,
+      required: true,
+      systemRequired: true
     },
-    {
-        timestamps: true
-    }
+    folder: {
+      type: TYPE.String,
+      required: true,
+      systemRequired: true
+    },
+    mimeType: { type: TYPE.String, systemRequired: true },
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
+  },
+  {
+    timestamps: true,
+    systemRequired: true
+  }
 );

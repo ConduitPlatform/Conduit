@@ -11,25 +11,27 @@ export default {
     },
     transportSettings: {
       doc: 'The settings for the transport',
-      apiKey: {
-        doc: 'The email service API key',
-        format: 'String',
-        default: undefined
-      },
-      domain: {
-        doc: 'The domain for the emails',
-        format: 'String',
-        default: undefined
-      },
-      host: {
-        doc: 'The host for email service',
-        format: 'String',
-        default: undefined
-      },
-      proxy: {
-        doc: 'The email proxy',
-        format: 'String',
-        default: undefined
+      mailgun: {
+        apiKey: {
+          doc: 'The email service API key',
+          format: 'String',
+          default: undefined
+        },
+        domain: {
+          doc: 'The domain for the emails',
+          format: 'String',
+          default: undefined
+        },
+        host: {
+          doc: 'The host for email service',
+          format: 'String',
+          default: undefined
+        },
+        proxy: {
+          doc: 'The email proxy',
+          format: 'String',
+          default: undefined
+        }
       },
       smtp: {
         doc: 'The SMTP transport settings',

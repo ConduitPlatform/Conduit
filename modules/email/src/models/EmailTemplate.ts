@@ -7,27 +7,24 @@ export const emailTemplateSchema = new ConduitSchema('EmailTemplate',
         name: {
             type: TYPE.String,
             unique: true,
-            required: true
-        },
+            required: true,
+        systemRequired: true},
         subject: {
-            type: TYPE.String
+            type: TYPE.String,
+      systemRequired: true
         },
         body: {
             type: TYPE.String,
-            required: true
-        },
+            required: true,
+        systemRequired: true},
         variables: {
-            type: [TYPE.String]
-        },
-        createdAt: {
-            type: TYPE.Date,
-            required: true
-        },
-        updatedAt: {
-            type: TYPE.Date,
-            required: true
-        }
-    },
-    {
-        timestamps: true
+            type: [TYPE.String],
+        systemRequired: true},
+        createdAt:  TYPE.Date,
+
+        updatedAt: TYPE.Date
+            },
+        {
+    timestamps: true,
+    systemRequired: true
     });

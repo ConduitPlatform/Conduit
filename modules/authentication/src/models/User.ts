@@ -6,51 +6,56 @@ export const UserSchema = new ConduitSchema('User',
     email: {
       type: TYPE.String,
       unique: true,
-      required: true
+      required: true,
+      systemRequired: true
     },
     hashedPassword: {
       type: TYPE.String,
-      select: false
+      select: false,
+      systemRequired: true
     },
     google: {
       id: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       },
       token: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       },
       tokenExpires: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       }
     },
     facebook: {
       id: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       },
       token: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       },
       tokenExpires: {
-        type: TYPE.String
+        type: TYPE.String,
+        systemRequired: true
       }
     },
     active: {
       type: TYPE.Boolean,
-      default: true
+      default: true,
+      systemRequired: true
     },
     isVerified: {
       type: TYPE.Boolean,
-      default: false
+      default: false,
+      systemRequired: true
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });
