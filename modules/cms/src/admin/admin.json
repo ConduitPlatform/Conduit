@@ -1,0 +1,34 @@
+{
+  "functions": [
+    {
+      "path": "/cms/schemas",
+      "method": "GET",
+      "protoName": "getAllSchemas"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "GET",
+      "protoName": "getById"
+    },
+    {
+      "path": "/cms/schemas",
+      "method": "POST",
+      "protoName": "createSchema"
+    },
+    {
+      "path": "/cms/schemas/toggle/:id",
+      "method": "PUT",
+      "protoName": "toggle"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "PUT",
+      "protoName": "editSchema"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "DELETE",
+      "protoName": "deleteSchema"
+    }
+  ]
+}
