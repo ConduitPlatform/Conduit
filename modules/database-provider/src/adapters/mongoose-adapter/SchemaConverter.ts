@@ -1,7 +1,7 @@
-import {Schema} from "mongoose";
+`import { Schema } from 'mongoose';
 import {ConduitSchema} from "@conduit/sdk";
 import * as _ from "lodash";
-import { isNil, isPlainObject } from "lodash";
+import { isNil, isObject, isArray } from "lodash";
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -29,8 +29,14 @@ function convert(value: any, key: any, parentValue: any, context: any) {
         return true;
     }
 
-    if (isPlainObject(parentValue[key]?.type) && key !=='database') {
-        parentValue[key] = new ConduitSchema(`${key}_type`, parentValue[key].type, {_id: false, timestamps: false}).modelSchema;
+    if (isObject(parentValue[key]?.type) && key !=='database' && key !== 'variables') {
+        if (isArray(parentValue[key].type)) {
+            const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {_id: false, timestamps: false});
+            parentValue[key] = schemaConverter(typeSchema).modelSchema;
+        } else {
+            const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {_id: false, timestamps: false});
+            parentValue[key] = schemaConverter(typeSchema).modelSchema;
+        }
         return true;
     }
 
