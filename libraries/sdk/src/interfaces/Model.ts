@@ -25,7 +25,9 @@ export interface ConduitModel {
 }
 
 export interface ConduitModelOptions {
-    timestamps?: boolean
+    timestamps?: boolean;
+    systemRequired?: boolean;
+    _id?: boolean;
 }
 
 
