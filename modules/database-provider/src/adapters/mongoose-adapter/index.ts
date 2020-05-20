@@ -1,12 +1,12 @@
 import {ConnectionOptions, Mongoose} from "mongoose"
 import {MongooseSchema} from "./MongooseSchema";
 import {schemaConverter} from "./SchemaConverter";
-import {ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter} from "@conduit/sdk";
+import {ConduitError, ConduitSchema} from "@conduit/grpc-sdk";
 import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
 
 const deepdash = require('deepdash/standalone');
 
-export class MongooseAdapter implements DatabaseAdapter {
+export class MongooseAdapter {
 
     mongoose: Mongoose;
     connectionString: string;
