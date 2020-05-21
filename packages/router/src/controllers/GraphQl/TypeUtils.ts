@@ -114,7 +114,7 @@ export function extractTypes(name: string, fields: ConduitModel | string, _input
                 addToRelation(value[0].model);
                 constructResolver(name, field, true);
                 typeString += field + ': ' + value[0].model + (value[0].required ? '!' : '') + ' ';
-            } else if (typeof value[0].type == 'string') {
+            } else if (typeof value[0].type === 'string') {
                 typeString += field + ': [' + getGraphQLType(value[0].type) + (value[0].required ? '!' : '') + '] ';
             } else if (Array.isArray(value[0].type)) {
                 let parseResult = arrayHandler(name, field, value[0].type as Array<any>);
