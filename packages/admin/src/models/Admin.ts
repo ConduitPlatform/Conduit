@@ -1,22 +1,18 @@
-import { ConduitSchema, TYPE } from '@conduit/sdk';
+import { ConduitSchema, TYPE } from '@conduit/grpc-sdk';
 
 export const AdminSchema = new ConduitSchema('Admin',
   {
     _id: TYPE.ObjectId,
     username: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
     password: {
       type: TYPE.String,
-      required: true
+      required: true,
+      systemRequired: true
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
-  },{timestamps: true});
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
+  },{timestamps: true, systemRequired: true});

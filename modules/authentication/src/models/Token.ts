@@ -5,26 +5,25 @@ export const Token = new ConduitSchema('Token',
     _id: TYPE.ObjectId,
     type: {
       type: TYPE.String,
+      systemRequired: true
     },
     userId: {
       type: TYPE.Relation,
-      model: 'User'
+      model: 'User',
+      systemRequired: true
     },
     token: {
-      type: TYPE.String
+      type: TYPE.String,
+      systemRequired: true
     },
     data: {
-      type: TYPE.JSON
+      type: TYPE.JSON,
+      systemRequired: true
     },
-    createdAt: {
-      type: TYPE.Date,
-      required: true
-    },
-    updatedAt: {
-      type: TYPE.Date,
-      required: true
-    }
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
-    timestamps: true
+    timestamps: true,
+    systemRequired: true
   });

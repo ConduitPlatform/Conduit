@@ -1,0 +1,59 @@
+{
+  "functions": [
+    {
+      "path": "/cms/schemas",
+      "method": "GET",
+      "protoName": "getAllSchemas"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "GET",
+      "protoName": "getById"
+    },
+    {
+      "path": "/cms/schemas",
+      "method": "POST",
+      "protoName": "createSchema"
+    },
+    {
+      "path": "/cms/schemas/toggle/:id",
+      "method": "PUT",
+      "protoName": "toggle"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "PUT",
+      "protoName": "editSchema"
+    },
+    {
+      "path": "/cms/schemas/:id",
+      "method": "DELETE",
+      "protoName": "deleteSchema"
+    },
+    {
+      "path": "/cms/content/:schemaName",
+      "method": "GET",
+      "protoName": "getDocuments"
+    },
+    {
+      "path": "/cms/content/:schemaName/:id",
+      "method": "GET",
+      "protoName": "getDocumentById"
+    },
+    {
+      "path": "/cms/content/:schemaName",
+      "method": "POST",
+      "protoName": "createDocument"
+    },
+    {
+      "path": "/cms/schemas/:schemaName/:id",
+      "method": "PUT",
+      "protoName": "editDocument"
+    },
+    {
+      "path": "/cms/schemas/:schemaName/:id",
+      "method": "DELETE",
+      "protoName": "deleteDocument"
+    }
+  ]
+}

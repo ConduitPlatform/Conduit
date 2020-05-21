@@ -18,6 +18,7 @@ export interface ConduitModelField {
     unique?: boolean
     select?: boolean
     required?: boolean
+    systemRequired?: boolean
 }
 
 export interface ConduitModel {
@@ -25,7 +26,9 @@ export interface ConduitModel {
 }
 
 export interface ConduitModelOptions {
-    timestamps?: boolean
+    timestamps?: boolean;
+    systemRequired?: boolean;
+    _id?: boolean;
 }
 
 

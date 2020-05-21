@@ -49,7 +49,13 @@ export class InMemoryStore {
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
         server.start();
-        this.enableModule().catch(console.log)
+        this.ensureDatabase().then(()=> {
+            this.conduit.config.get('inMemoryStore').then((storeConfig: any) => {
+                if (storeConfig.active) {
+                    return this.enableModule()
+                }
+            })
+        }).catch(console.log);
     }
 
     get url(): string {
@@ -109,7 +115,6 @@ export class InMemoryStore {
     }
 
     private async enableModule() {
-        await this.ensureDatabase();
         if (!this.isRunning) {
             this.isRunning = true;
         }

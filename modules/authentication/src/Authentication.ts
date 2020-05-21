@@ -50,7 +50,6 @@ export default class AuthenticationModule {
     this.grpcServer.addService(authentication.service, {
       setConfig: this.setConfig.bind(this)
     });
-    this._admin = new AdminHandlers(this.grpcServer, grpcSdk);
     this._url = process.env.SERVICE_URL || '0.0.0.0:0';
     let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
     this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
@@ -60,10 +59,10 @@ export default class AuthenticationModule {
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('authentication').then((authConfig: any) => {
         if (authConfig.active) {
-          this.enableModule().catch(console.log);
+          return this.enableModule();
         }
       })
-    })
+    }).catch(console.log);
   }
 
   get url(): string {

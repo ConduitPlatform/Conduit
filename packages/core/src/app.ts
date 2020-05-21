@@ -49,7 +49,7 @@ export class App {
         };
         this.app = Object.assign(expressApp, conduitExtras);
         this.conduitRouter = new ConduitDefaultRouter(this.app);
-        this.conduitRouter.initGraphQL();
+        this.conduitRouter.initGraphQL(); // graphql can't register secondary mutation with the same name on edit schema
         this.app.conduit.registerRouter(this.conduitRouter);
         this.app.conduit.registerConfigManager(this.configManager);
     }
