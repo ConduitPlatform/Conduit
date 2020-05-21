@@ -4,7 +4,7 @@ import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteReturnDefinition as ReturnDefinition,
-    ConduitSDK, IAppConfig, IConfigManager,
+    ConduitSDK, IConduitRouter, IAppConfig, IConfigManager,
     TYPE
 } from '@conduit/sdk';
 import {ConduitDefaultRouter} from '@conduit/router';
@@ -16,7 +16,7 @@ import {MonitoringUtility} from './utils/monitoring';
 
 export class App {
     private app: ConduitApp;
-    private conduitRouter: ConduitDefaultRouter;
+    private conduitRouter: IConduitRouter;
     private readonly logger: ConduitLogger;
     private appConfig: IAppConfig;
 
@@ -31,6 +31,7 @@ export class App {
     }
 
     initialize() {
+        this.conduitRouter = this.app.conduit.getRouter();
         this.registerGlobalMiddleware();
         this.registerRoutes();
         MonitoringUtility.getInstance().enableMetrics();
@@ -48,9 +49,6 @@ export class App {
             initialized: false
         };
         this.app = Object.assign(expressApp, conduitExtras);
-        this.conduitRouter = new ConduitDefaultRouter(this.app);
-        this.conduitRouter.initGraphQL(); // graphql can't register secondary mutation with the same name on edit schema
-        this.app.conduit.registerRouter(this.conduitRouter);
         this.app.conduit.registerConfigManager(this.configManager);
     }
 
