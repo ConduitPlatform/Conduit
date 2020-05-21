@@ -58,10 +58,7 @@ export class AdminHandlers {
 
     let errorMessage: string | null = null;
     const [schemas, documentsCount] = await Promise.all([schemasPromise, documentsCountPromise]).catch(e => errorMessage = e.message);
-    if (!isNil(errorMessage)) return callback({
-      code: grpc.status.INTERNAL,
-      message: errorMessage,
-    });
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify({results: schemas, documentsCount})});
   }
@@ -75,7 +72,9 @@ export class AdminHandlers {
       });
     }
 
-    const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id});
+    let errorMessage = null;
+    const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     if (isNil(requestedSchema)) {
       return callback({
@@ -136,7 +135,9 @@ export class AdminHandlers {
         message: 'Path parameter "id" is missing'
       });
     }
-    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id});
+    let errorMessage = null;
+    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     if (isNil(requestedSchema)) {
       return callback({
@@ -153,7 +154,8 @@ export class AdminHandlers {
       this._createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
     }
 
-    const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions',requestedSchema);
+    const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions',requestedSchema).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify({name: updatedSchema.name, enabled: updatedSchema.enabled})});
   }
@@ -166,7 +168,10 @@ export class AdminHandlers {
         message: 'Path parameter "id" is missing'
       });
     }
-    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id});
+
+    let errorMessage = null;
+    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     if (isNil(requestedSchema)) {
       return callback({
@@ -175,7 +180,7 @@ export class AdminHandlers {
       });
     }
 
-    const errorMessage = validateSchemaInput(name, fields, modelOptions);
+    errorMessage = validateSchemaInput(name, fields, modelOptions);
     if (!isNil(errorMessage)) {
       return callback({
         code: grpc.status.INTERNAL,
@@ -187,7 +192,9 @@ export class AdminHandlers {
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
     requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
 
-    const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions',requestedSchema);
+    const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions',requestedSchema).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (!isNil(updatedSchema.modelOptions)) updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
 
     // TODO reinitialise routes?
@@ -208,7 +215,10 @@ export class AdminHandlers {
       });
     }
 
-    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id});
+    let errorMessage = null;
+    const requestedSchema = await this.database.findOne('SchemaDefinitions',{_id: id}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(requestedSchema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -216,7 +226,8 @@ export class AdminHandlers {
       });
     }
 
-    await this.database.deleteOne('SchemaDefinitions', requestedSchema);
+    await this.database.deleteOne('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     // TODO disable routes
     return callback(null, {result: 'Schema successfully deleted'});
@@ -225,7 +236,10 @@ export class AdminHandlers {
   async getDocuments(call: any, callback: any) {
     const { skip, limit, schemaName } = JSON.parse(call.request.params);
 
-    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName});
+    let errorMessage: any = null;
+    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -242,7 +256,6 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    let errorMessage: any = null;
     const documentsPromise = this.database.findMany(schemaName, {}, null, skipNumber, limitNumber);
     const countPromise = this.database.countDocuments(schemaName, {});
 
@@ -260,7 +273,10 @@ export class AdminHandlers {
   async getDocumentById(call: any, callback: any) {
     const {schemaName, id} = JSON.parse(call.request.params);
 
-    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName});
+    let errorMessage: any = null;
+    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -268,14 +284,10 @@ export class AdminHandlers {
       });
     }
 
-    let errorMessage: any = null;
+
     const document = await this.database.findOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(document)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -288,7 +300,10 @@ export class AdminHandlers {
   async createDocument(call: any, callback: any) {
     const {schemaName, inputDocument} = JSON.parse(call.request.params);
 
-    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName});
+    let errorMessage: any = null;
+    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -296,14 +311,8 @@ export class AdminHandlers {
       });
     }
 
-    let errorMessage: any = null;
     const newDocument = await this.database.create(schemaName, inputDocument).catch((e: any) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify(newDocument)});
   }
@@ -311,7 +320,10 @@ export class AdminHandlers {
   async editDocument(call: any, callback: any) {
     const {schemaName, id, changedDocument} = JSON.parse(call.request.params);
 
-    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName});
+    let errorMessage: any = null;
+    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -319,18 +331,13 @@ export class AdminHandlers {
       });
     }
 
-    let errorMessage: any = null;
     const dbDocument = await this.database.findOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     Object.assign(dbDocument, changedDocument);
 
-    const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument);
+    const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify(updatedDocument)});
   }
@@ -338,7 +345,10 @@ export class AdminHandlers {
   async deleteDocument(call: any, callback: any) {
     const {schemaName, id} = JSON.parse(call.request.params);
 
-    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName});
+    let errorMessage: any = null;
+    const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -346,14 +356,8 @@ export class AdminHandlers {
       });
     }
 
-    let errorMessage: any = null;
     await this.database.deleteOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: 'Ok'});
   }

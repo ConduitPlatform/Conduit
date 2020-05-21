@@ -49,10 +49,10 @@ export default class PushNotificationsModule {
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('pushNotifications').then((notificationsConfig: any) => {
         if (notificationsConfig.active) {
-          this.enableModule().catch(console.log);
+          return this.enableModule()
         }
       })
-    })
+    }).catch(console.log);
   }
 
   get url(): string {
@@ -90,12 +90,15 @@ export default class PushNotificationsModule {
   }
 
   async setNotificationToken(call: any, callback: any) {
-    const { token, platform, userId } = JSON.parse(call.request.params);
-    // TODO we probably need to get userId another way
+    const { token, platform } = JSON.parse(call.request.params);
+    const {userId} = JSON.parse(call.request.context);
 
     let errorMessage: any = null;
-    const oldToken = await this.grpcSdk.databaseProvider!.findOne('NotificationToken', {userId, platform});
-    if (!isNil(oldToken)) await this.grpcSdk.databaseProvider!.deleteOne('NotificationToken', oldToken);
+    this.grpcSdk.databaseProvider!.findOne('NotificationToken', {userId, platform}).then(oldToken => {
+      if (!isNil(oldToken)) return this.grpcSdk.databaseProvider!.deleteOne('NotificationToken', oldToken);
+    })
+      .catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     const newTokenDocument = await this.grpcSdk.databaseProvider!.create('NotificationToken', {
       userId,
@@ -110,7 +113,11 @@ export default class PushNotificationsModule {
   async getNotificationTokens(call: any, callback: any) {
     const userId = JSON.parse(call.request.params).userId;
 
-    const tokenDocuments = await this.grpcSdk.databaseProvider!.findMany('NotificationToken', {userId});
+    let errorMessage = null;
+    const tokenDocuments = await this.grpcSdk.databaseProvider!.findMany('NotificationToken', {userId})
+      .catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     return callback(null, {tokenDocuments: JSON.stringify(tokenDocuments)});
   }
 

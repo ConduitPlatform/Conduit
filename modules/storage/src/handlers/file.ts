@@ -6,12 +6,18 @@ import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
 export class FileHandlers {
   private readonly database: any;
+  private storageProvider: IStorageProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly storageProvider: IStorageProvider
+    storageProvider: IStorageProvider
   ) {
     this.database = grpcSdk.databaseProvider;
+    this.storageProvider = storageProvider;
+  }
+
+  updateProvider(storageProvider: IStorageProvider) {
+    this.storageProvider = storageProvider;
   }
 
   // async createFile(params: ConduitRouteParameters) {
