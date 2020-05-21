@@ -10,10 +10,10 @@ export class FileHandlers {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     storageProvider: IStorageProvider) {
-        this.initDb(grpcSdk);
+        this.initDb(grpcSdk, storageProvider);
     }
 
-    async initDb(grpcSdk: ConduitGrpcSdk) {
+    async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
         while (!grpcSdk.databaseProvider) {
             await grpcSdk.refreshModules();
         }
