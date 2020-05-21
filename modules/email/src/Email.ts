@@ -49,10 +49,10 @@ export default class EmailModule {
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('email').then((emailConfig: any) => {
         if (emailConfig.active) {
-          this.enableModule().catch(console.log);
+          return this.enableModule();
         }
       })
-    })
+    }).catch(console.log);
 
   }
 
