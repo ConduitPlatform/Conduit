@@ -46,12 +46,12 @@ export class StorageModule {
         console.log("bound on:", this._url);
         server.start();
         this.ensureDatabase().then(() => {
-      this.grpcSdk.config.get('storage').then((storageConfig: any) => {
-        if (storageConfig.active) {
-          return this.enableModule();
-        }
-      })
-    }).catch(console.log);
+            this.grpcSdk.config.get('storage').then((storageConfig: any) => {
+                 if (storageConfig.active) {
+                  return this.enableModule();
+                 }
+            })
+        }).catch(console.log);
     }
 
     get routes() {
@@ -120,7 +120,7 @@ export class StorageModule {
 
     private async enableModule(): Promise<any> {
         const storageConfig = await this.grpcSdk.config.get('storage');
-    const { provider, storagePath, google } = storageConfig;
+        const { provider, storagePath, google } = storageConfig;
 
         if (!this.isRunning) {
             this.storageProvider = createStorageProvider(provider, {storagePath, google});
