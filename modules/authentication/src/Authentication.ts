@@ -59,10 +59,10 @@ export default class AuthenticationModule {
     this.ensureDatabase().then(()=> {
       this.grpcSdk.config.get('authentication').then((authConfig: any) => {
         if (authConfig.active) {
-          this.enableModule().catch(console.log);
+          return this.enableModule();
         }
       })
-    })
+    }).catch(console.log);
   }
 
   get url(): string {
