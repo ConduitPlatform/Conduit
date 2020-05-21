@@ -98,8 +98,7 @@ export default class PushNotificationsModule {
       if (!isNil(oldToken)) return this.grpcSdk.databaseProvider!.deleteOne('NotificationToken', oldToken);
     })
       .catch(e => errorMessage = e.message);
-
-    errorMessage = null;
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     const newTokenDocument = await this.grpcSdk.databaseProvider!.create('NotificationToken', {
       userId,
