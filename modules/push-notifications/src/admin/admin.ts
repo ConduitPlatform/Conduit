@@ -58,7 +58,10 @@ export class AdminHandler {
       message: 'Required fields are missing',
     });
 
-    await this.provider.sendToDevice(params, this.databaseAdapter);
+    let errorMessage = null;
+    await this.provider.sendToDevice(params, this.databaseAdapter).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     return callback(null, JSON.stringify({message: 'Ok'}));
   }
 
@@ -82,7 +85,11 @@ export class AdminHandler {
       code: grpc.status.INVALID_ARGUMENT,
       message: 'Required fields are missing',
     });
-    await this.provider.sendMany(params, this.databaseAdapter);
+
+    let errorMessage = null;
+    await this.provider.sendMany(params, this.databaseAdapter).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     return callback(null, JSON.stringify({message: 'Ok'}));
   }
 
@@ -105,7 +112,10 @@ export class AdminHandler {
       message: 'Required fields are missing',
     });
 
-    await this.provider.sendToManyDevices(params, this.databaseAdapter);
+    let errorMessage = null;
+    await this.provider.sendToManyDevices(params, this.databaseAdapter).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
     return callback(null, JSON.stringify({message: 'Ok'}));
   }
 
@@ -117,7 +127,10 @@ export class AdminHandler {
         message: 'User id parameter was not provided'
       });
     }
-    const tokenDocuments = await this.databaseAdapter.findMany('NotificationToken',{ userId });
+
+    let errorMessage = null;
+    const tokenDocuments = await this.databaseAdapter.findMany('NotificationToken',{ userId }).catch(e => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify({tokenDocuments})});
   }
