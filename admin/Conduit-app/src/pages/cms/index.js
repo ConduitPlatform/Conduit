@@ -24,6 +24,10 @@ const useStyles = makeStyles((theme) => ({
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
+  snackBar: {
+    maxWidth: '80%',
+    width: 'auto',
+  },
 }));
 
 const Types = () => {
@@ -67,7 +71,7 @@ const Types = () => {
     if (error) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          Something went wrong!
+          {error?.data?.error ? error.data.error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -190,6 +194,7 @@ const Types = () => {
       />
       <Snackbar
         open={snackbarOpen}
+        className={classes.snackBar}
         autoHideDuration={6000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

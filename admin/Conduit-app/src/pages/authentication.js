@@ -19,6 +19,10 @@ const useStyles = makeStyles((theme) => ({
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
+  snackBar: {
+    maxWidth: '80%',
+    width: 'auto',
+  },
 }));
 
 const Authentication = () => {
@@ -78,7 +82,11 @@ const Authentication = () => {
     if (authUsersError || authConfigError) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          Something went wrong!
+          {authUsersError?.data.error
+            ? authUsersError.data.error
+            : authConfigError?.data?.error
+            ? authConfigError.data.error
+            : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -118,6 +126,7 @@ const Authentication = () => {
       </Box>
       <Snackbar
         open={snackbarOpen}
+        className={classes.snackBar}
         autoHideDuration={6000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

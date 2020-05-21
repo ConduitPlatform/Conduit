@@ -39,6 +39,10 @@ const useStyles = makeStyles((theme) => ({
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
+  snackBar: {
+    maxWidth: '80%',
+    width: 'auto',
+  },
 }));
 
 const Login = () => {
@@ -66,7 +70,7 @@ const Login = () => {
     if (authState.error) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          Something went wrong!
+          {authState?.error?.data?.error ? authState.error.data.error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -154,6 +158,7 @@ const Login = () => {
           </Formik>
           <Snackbar
             open={snackbarOpen}
+            className={classes.snackBar}
             autoHideDuration={6000}
             onClose={handleClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
