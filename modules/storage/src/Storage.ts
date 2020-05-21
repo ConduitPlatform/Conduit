@@ -112,7 +112,7 @@ export class StorageModule {
       this.isRunning = true;
     } else {
       this.storageProvider = createStorageProvider(provider, { storagePath, google });
-      this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+      this._fileHandlers.updateProvider(this.storageProvider);
     }
   }
 
