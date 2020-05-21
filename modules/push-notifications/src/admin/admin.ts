@@ -129,7 +129,7 @@ export class AdminHandler {
     }
 
     let errorMessage = null;
-    const tokenDocuments = await this.databaseAdapter.findMany('NotificationToken',{ userId }).catch(e => errorMessage = e.message);
+    const tokenDocuments = await this.databaseAdapter.findMany('NotificationToken',{ userId }).catch((e: any) => errorMessage = e.message);
     if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
     return callback(null, {result: JSON.stringify({tokenDocuments})});
