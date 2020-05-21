@@ -42,7 +42,7 @@ export class CMS {
             this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
             this.loadExistingSchemas();
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.createSchema.bind(this));
-        });
+        }).catch(console.log);
     }
 
     private loadExistingSchemas() {
