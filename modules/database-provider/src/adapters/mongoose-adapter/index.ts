@@ -5,6 +5,7 @@ import {DatabaseAdapter, SchemaAdapter} from '../../interfaces';
 
 export class MongooseAdapter implements DatabaseAdapter {
 
+    connected: boolean = false;
     mongoose: Mongoose;
     connectionString: string;
     options: ConnectionOptions = {
@@ -24,29 +25,41 @@ export class MongooseAdapter implements DatabaseAdapter {
         this.connect();
     }
 
+    async ensureConnected(): Promise<any> {
+        return new Promise((resolve, reject) => {
+            let db = this.mongoose.connection;
+            db.on('connected', () => {
+                console.log('MongoDB dashboard is connected');
+                resolve();
+            });
+
+            db.on('error', (err: any) => {
+                console.error('Dashboard Connection error:', err.message);
+                reject();
+            });
+
+            db.once('open', function callback() {
+                console.info("Connected to Dashboard Database!");
+                resolve();
+            });
+
+            db.on('reconnected', function () {
+                console.log('Dashboard Database reconnected!');
+                resolve();
+            });
+
+            db.on('disconnected', function () {
+                console.log('Dashboard Database Disconnected');
+                reject();
+            });
+        });
+    }
+
     connect() {
         this.mongoose
             .connect(this.connectionString, this.options)
             .then(() => {
-                console.log('MongoDB dashboard is connected');
-                let db = this.mongoose.connection;
 
-                db.on('error', (err: any) => {
-                    console.error('Dashboard Connection error:', err.message);
-                });
-
-                db.once('open', function callback() {
-                    console.info("Connected to Dashboard Database!");
-                });
-
-                db.on('reconnected', function () {
-                    console.log('Dashboard Database reconnected!');
-                });
-
-                db.on('disconnected', function () {
-                    console.log('Dashboard Database Disconnected');
-
-                });
             })
             .catch((err: any) => {
                 console.log(err);

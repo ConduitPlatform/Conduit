@@ -14,4 +14,6 @@ export interface DatabaseAdapter {
 
     getSchemaModel(schemaName: string): Promise<{ model: any }>;
 
+    ensureConnected(): Promise<any>;
+
 }

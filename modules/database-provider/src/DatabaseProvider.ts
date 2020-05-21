@@ -21,23 +21,29 @@ export class DatabaseProvider {
         } else {
             throw new Error("Arguments not supported")
         }
-        let protoPath = path.resolve(__dirname, './database-provider.proto');
 
-        let packageDefinition = protoLoader.loadSync(
+    }
+
+    ensureIsRunning() {
+      return new Promise((resolve, reject) => {
+        this._activeAdapter.ensureConnected().then(() => {
+          let protoPath = path.resolve(__dirname, './database-provider.proto');
+
+          let packageDefinition = protoLoader.loadSync(
             protoPath,
             {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
+              keepCase: true,
+              longs: String,
+              enums: String,
+              defaults: true,
+              oneofs: true
             });
-        let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
+          let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
 
-        let databaseProvider = protoDescriptor.databaseprovider.DatabaseProvider;
-        let server = new grpcModule.Server();
+          let databaseProvider = protoDescriptor.databaseprovider.DatabaseProvider;
+          let server = new grpcModule.Server();
 
-        server.addService(databaseProvider.service, {
+          server.addService(databaseProvider.service, {
             createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
             getSchema: this.getSchema.bind(this),
             findOne: this.findOne.bind(this),
@@ -47,12 +53,16 @@ export class DatabaseProvider {
             deleteOne: this.deleteOne.bind(this),
             deleteMany: this.deleteMany.bind(this),
             countDocuments: this.countDocuments.bind(this)
-        });
-        this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
-        this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-        console.log("bound on:", this._url);
-        server.start();
+          });
+          this._url = process.env.SERVICE_URL || '0.0.0.0:0';
+          let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+          this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
+          console.log("bound on:", this._url);
+          server.start();
+          resolve();
+        }).catch(() => reject());
+      });
+
     }
 
     get url() {
