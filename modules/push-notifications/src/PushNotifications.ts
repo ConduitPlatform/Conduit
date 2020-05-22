@@ -8,6 +8,7 @@ import ConduitGrpcSdk, { grpcModule } from '@conduit/grpc-sdk';
 import { ConduitUtilities } from '@conduit/utilities';
 import * as grpc from 'grpc';
 import { AdminHandler } from './admin/admin';
+import { PushNotificationsRoutes } from './routes/Routes';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -19,6 +20,7 @@ export default class PushNotificationsModule {
   private _url: string;
   // @ts-ignore
   private adminHandler: AdminHandler;
+  private _routes: any[];
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     let packageDefinition = protoLoader.loadSync(
@@ -39,6 +41,8 @@ export default class PushNotificationsModule {
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this)
     });
+    let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+    this._routes = router.registeredRoutes;
 
     this._url = process.env.SERVICE_URL || '0.0.0.0:0';
     let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -53,6 +57,10 @@ export default class PushNotificationsModule {
         }
       })
     }).catch(console.log);
+  }
+
+  get routes() {
+    return this._routes;
   }
 
   get url(): string {
@@ -125,9 +133,6 @@ export default class PushNotificationsModule {
     if (!this.isRunning) {
       await this.initProvider();
       this.adminHandler = new AdminHandler(this.grpcServer, this.grpcSdk, this._provider!);
-      // this.sdk.getRouter()
-      //   .registerRouteMiddleware('/notification-token', this.sdk.getAuthentication().middleware);
-      // this.registerConsumerRoutes();
       this.isRunning = true;
 
     } else {
@@ -148,30 +153,6 @@ export default class PushNotificationsModule {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
   }
-
-  // registerConsumerRoutes() {
-  //   const notificationTokensHandler = new NotificationTokensHandler(this.sdk);
-  //   this.sdk.getRouter().registerRoute(new ConduitRoute(
-  //     {
-  //       path: '/notification-token',
-  //       action: ConduitRouteActions.POST,
-  //       bodyParams: {
-  //         token: TYPE.String,
-  //         platform: TYPE.String
-  //       }
-  //     },
-  //     new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
-  //       message: TYPE.String, newTokenDocument: {
-  //         _id: ConduitObjectId.Required,
-  //         userId: ConduitObjectId.Required,
-  //         token: ConduitString.Required,
-  //         createdAt: ConduitDate.Required,
-  //         updatedAt: ConduitDate.Required
-  //       }
-  //     }),
-  //     (params: ConduitRouteParameters) => notificationTokensHandler.setNotificationToken(params)
-  //   ));
-  // }
 
   private async ensureDatabase(): Promise<any> {
     if (!this.grpcSdk.databaseProvider) {
