@@ -1,119 +1,128 @@
-import {Request, Response} from 'express';
-import {
-    ConduitError,
-    ConduitRoute,
-    ConduitRouteActions as Actions,
-    ConduitRouteParameters,
-    ConduitRouteReturnDefinition,
-    ConduitSDK, ConduitString,
-    IConduitDatabase,
-    IConduitEmail,
-    TYPE,
-} from '@conduit/sdk';
 import {isNil} from 'lodash';
 import {AuthService} from '../../services/auth';
 import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import * as grpc from 'grpc';
 
 export class LocalHandlers {
-    private readonly database: IConduitDatabase;
-    private readonly emailModule: IConduitEmail;
+    private database: any;
+    private emailModule: any;
 
-    constructor(private readonly sdk: ConduitSDK, private readonly authService: AuthService) {
-        this.database = sdk.getDatabase();
-        this.emailModule = sdk.getEmail();
-        this.registerRoutes();
+    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
+        this.initDbAndEmail(grpcSdk);
     }
 
-    async register(params: ConduitRouteParameters) {
-        const {email, password} = params.params as any;
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
+    private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
+        while (!grpcSdk.databaseProvider && !grpcSdk.emailProvider) {
+            await grpcSdk.refreshModules();
+        }
+        this.database = grpcSdk.databaseProvider;
+        this.emailModule = grpcSdk.emailProvider;
+    }
 
-        if (isNil(email) || isNil(password)) throw ConduitError.userInput('Email and password required');
+    async register(call: any, callback: any) {
+        const {email, password} = JSON.parse(call.request.params);
+        let errorMessage = null;
 
-        const User = this.database.getSchema('User');
-        const Token = this.database.getSchema('Token');
+        if (isNil(email) || isNil(password)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Email and password required'});
 
-        let user = await User.findOne({email});
-        if (!isNil(user)) throw ConduitError.forbidden('User already exists');
+        let user = await this.database.findOne('User',{email}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (!isNil(user)) return callback({code: grpc.status.ALREADY_EXISTS, message: 'User already exists'});
 
-        const hashedPassword = await this.authService.hashPassword(password);
-        user = await User.create({
-            email,
-            hashedPassword
-        });
+        user = await this.authService.hashPassword(password)
+          .then((hashedPassword: string) => {
+              return this.database.create('User', {email, hashedPassword});
+          })
+          .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (config.local.sendVerificationEmail) {
-            const verificationTokenDoc = await Token.create({
+            this.database.create('Token', {
                 type: TokenType.VERIFICATION_TOKEN,
                 userId: user._id,
                 token: uuid()
-            });
+            })
+              .then((verificationToken: any) => {
+                return { verificationToken, hostUrl: this.grpcSdk.config.get('hostUrl') };
+            })
+              .then((result: {hostUrl: Promise<any>, verificationToken: any}) => {
+                  const link = `${result.hostUrl}/hook/verify-email/${result.verificationToken.token}`;
+                  return this.emailModule.sendEmail('EmailVerification', {
+                      email: user.email,
+                      sender: 'conduit@gmail.com',
+                      variables: {
+                          applicationName: 'Conduit',
+                          link
+                      }
+                  });
+              })
+              .catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-            const link = `${appConfig.get('hostUrl')}/hook/verify-email/${verificationTokenDoc.token}`;
-            await this.emailModule.sendEmail('EmailVerification', {
-                email: user.email,
-                sender: 'conduit@gmail.com',
-                variables: {
-                    applicationName: 'Conduit',
-                    link
-                }
-            });
         }
 
-        return 'Registration was successful';
+        return callback(null, {result: JSON.stringify({message: 'Registration was successful'})});
     }
 
-    async authenticate(params: ConduitRouteParameters) {
-        const {email, password} = params.params as any;
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
+    async authenticate(call: any, callback: any) {
+        const {email, password} = JSON.parse(call.request.params);
+        const context = JSON.parse(call.request.context);
+        let errorMessage = null;
 
-        if (isNil(params.context)) throw ConduitError.unauthorized('No headers provided');
-        const clientId = params.context.clientId;
+        if (isNil(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
+        const clientId = context.clientId;
 
-        if (isNil(email) || isNil(password)) throw ConduitError.userInput('Email and password required');
+        if (isNil(email) || isNil(password)) return callback({code: grpc.status.INVALID_ARGUMENT, 'Email and password required'});
 
-        const User = this.database.getSchema('User');
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
+        const user = await this.database.findOne('User',{email}, 'hashedPassword').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
+        if (!user.active) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Inactive user'});
 
-        const user = await User.findOne({email}, '+hashedPassword');
-        if (isNil(user)) throw ConduitError.unauthorized('Invalid login credentials');
-        if (!user.active) throw ConduitError.forbidden('Inactive user');
+        const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (!passwordsMatch) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
 
-        const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword);
-        if (!passwordsMatch) throw ConduitError.unauthorized('Invalid login credentials');
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (config.local.verificationRequired && !user.isVerified) {
+            return callback({code: grpc.status.PERMISSION_DENIED, message: 'You must verify your account to login'});
+        }
 
-        if (config.local.verificationRequired && !user.isVerified)
-            throw ConduitError.forbidden('You must verify your account to login');
-
-        await AccessToken.deleteMany({userId: user._id, clientId});
-        await RefreshToken.deleteMany({userId: user._id, clientId});
+        const promise1 = this.database.deleteMany('AccessToken',{userId: user._id, clientId});
+        const promise2 = this.database.deleteMany('RefreshToken',{userId: user._id, clientId});
+        await Promise.all([promise1, promise2]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const signTokenOptions: ISignTokenOptions = {
             secret: config.jwtSecret,
             expiresIn: config.tokenInvalidationPeriod
         };
 
-        const accessToken = await AccessToken.create({
+        const accessToken = await this.database.create('AccessToken',{
             userId: user._id,
             clientId,
             token: this.authService.signToken({id: user._id}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const refreshToken = await RefreshToken.create({
+        const refreshToken = await this.database.create('RefreshToken',{
             userId: user._id,
             clientId,
             token: this.authService.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return {userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token};
+        return callback(null, {result: JSON.stringify({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token})});
     }
 
     async forgotPassword(params: ConduitRouteParameters) {

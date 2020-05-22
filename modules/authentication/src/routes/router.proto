@@ -1,0 +1,24 @@
+syntax = "proto3";
+package authentication.proto;
+
+message RouterRequest {
+  string params = 1;
+  string headers = 2;
+  string context = 3;
+}
+
+message RouterResponse {
+  string result = 1;
+}
+
+service Router {
+  rpc Register(RouterRequest) returns (RouterResponse);
+  rpc AuthenticateLocal(RouterRequest) returns (RouterResponse);
+  rpc ForgotPassword(RouterRequest) returns (RouterResponse);
+  rpc ResetPassword(RouterRequest) returns (RouterResponse);
+  rpc VerifyEmail(RouterRequest) returns (RouterResponse);
+  rpc AuthenticateGoogle(RouterRequest) returns (RouterResponse);
+  rpc AuthenticateFacebook(RouterRequest) returns (RouterResponse);
+  rpc RenewAuth(RouterRequest) returns (RouterResponse);
+  rpc LogOut(RouterRequest) returns (RouterResponse);
+}
