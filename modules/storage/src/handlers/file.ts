@@ -31,11 +31,11 @@ export class FileHandlers {
         const {name, data, folder, mimeType} = JSON.parse(call.request.params);
 
         if (!isString(data)) {
-            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Invalid data provided'});
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid data provided'});
         }
 
         if (!isString(folder)) {
-          return callback({code: grpc.status.FAILED_PRECONDITION, message: 'No folder provided'});
+          return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No folder provided'});
         }
 
         const buffer = Buffer.from(data, 'base64');
@@ -62,7 +62,7 @@ export class FileHandlers {
     async getFile(call: any, callback: any) {
         const { id } = JSON.parse(call.request.params);
         if (!isString(id)) {
-          return callback({code: grpc.status.FAILED_PRECONDITION, message: 'The provided id is invalid'});
+          return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
         }
 
         let errorMessage = null;
@@ -92,7 +92,7 @@ export class FileHandlers {
     async deleteFile(call: any, callback: any) {
         const { id } = JSON.parse(call.request.params);
         if (!isString(id)) {
-          return callback({code: grpc.status.FAILED_PRECONDITION, message: 'The provided id is invalid'});
+          return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
         }
 
         let errorMessage = null;
@@ -117,7 +117,7 @@ export class FileHandlers {
     async updateFile(call: any, callback: any) {
         const { id, data, name, folder, mimeType } = JSON.parse(call.request.params);
         if (!isString(id)) {
-          return callback({code: grpc.status.FAILED_PRECONDITION, message: 'The provided id is invalid'});
+          return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
         }
 
         let errorMessage = null;

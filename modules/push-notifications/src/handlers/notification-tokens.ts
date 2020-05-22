@@ -19,7 +19,7 @@ export class NotificationTokensHandler {
   async setNotificationToken(call: any, callback: any) {
     const { token, platform } = JSON.parse(call.request.params);
     if (isNil(token) || isNil(platform)) {
-      return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Required fields are missing'});
+      return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Required fields are missing'});
     }
     const userId = JSON.parse(call.request.context).user._id;
 
