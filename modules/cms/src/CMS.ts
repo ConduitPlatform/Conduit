@@ -3,6 +3,7 @@ import {AdminHandlers} from './admin/admin';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, { ConduitSchema, grpcModule } from '@conduit/grpc-sdk';
 import path from "path";
+import { CmsRoutes } from './routes/Routes';
 let protoLoader = require('@grpc/proto-loader');
 
 export class CMS {
@@ -14,6 +15,7 @@ export class CMS {
     private readonly _router: any;
     private _url: string;
     private readonly grpcServer: any;
+    private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
         const packageDefinition = protoLoader.loadSync(
@@ -30,6 +32,9 @@ export class CMS {
         const cms = protoDescriptor.cms.CMS;
         this.grpcServer = new grpcModule.Server();
         // this.grpcServer.addService(cms.service, {});
+
+        let consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
+        this._routes = consumerRoutes.registeredRoutes;
 
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -56,7 +61,6 @@ export class CMS {
                         }
                         const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
                         this._schemas[r.name] = this._adapter.createSchemaFromAdapter(schema);
-                        this.constructSchemaRoutes(this._schemas[r.name]);
                     })
                 }
 
@@ -67,101 +71,16 @@ export class CMS {
             })
     }
 
+    get routes() {
+        return this._routes;
+    }
+
     get url(): string {
         return this._url;
     }
 
     createSchema(schema: ConduitSchema): void {
         this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
-        this.constructSchemaRoutes(this._schemas[schema.name]);
-    }
-
-    //todo add support for filtering
-    constructSchemaRoutes(schema: any) { // used to be SchemaAdapter
-        // this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name,
-        //     (req, res, next) => {
-        //         schema.findMany({})
-        //             .then(r => {
-        //                 res.json(r);
-        //             })
-        //             .catch(err => {
-        //                 res.send(err);
-        //             });
-        //     })
-        // this.sdk.getAdmin().registerRoute('GET', '/cms/content/' + schema.originalSchema.name + '/:id',
-        //     (req, res, next) => {
-        //         schema.findOne({id: req.params.id})
-        //             .then(r => {
-        //                 res.json(r);
-        //             })
-        //             .catch(err => {
-        //                 res.send(err);
-        //             });
-        //     })
-        // this.sdk.getRouter().registerRoute(new ConduitRoute(
-        //     {
-        //         path: '/content/' + schema.originalSchema.name,
-        //         action: Actions.GET,
-        //         queryParams: {
-        //             // this is string cause Number still throws an error in graphql as unknown type number
-        //             skip: TYPE.String,
-        //             limit: TYPE.String
-        //         }
-        //     },
-        //     new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-        //     async (params: ConduitRouteParameters) => {
-        //         const {skip, limit} = params.params as any;
-        //         let skipNumber = 0, limitNumber = 25;
-        //
-        //         if (!isNil(skip)) {
-        //             skipNumber = Number.parseInt(skip as string);
-        //         }
-        //         if (!isNil(limit)) {
-        //             limitNumber = Number.parseInt(limit as string);
-        //         }
-        //         const schemasPromise = schema.findPaginated({}, skipNumber, limitNumber);
-        //         const documentCountPromise = schema.countDocuments({});
-        //
-        //         let err: any = null;
-        //         const [schemas, documentCount] = await Promise.all([schemasPromise, documentCountPromise]).catch(e => err = e);
-        //         if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
-        //
-        //         return {schemas, documentCount};
-        //     }));
-
-        // this.sdk.getRouter().registerRoute(new ConduitRoute(
-        //     {
-        //         path: '/content/' + schema.originalSchema.name,
-        //         action: Actions.POST,
-        //         bodyParams: schema.originalSchema.fields
-        //     },
-        //     new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-        //     async (params: ConduitRouteParameters) => {
-        //         let body = params.params;
-        //         let context = params.context;
-        //         // the following line is a temporary solution
-        //         const latestSchema = this._adapter.getSchema(schema.originalSchema.name);
-        //         let err: any = null;
-        //         const createdSchema = await latestSchema.create({...body, ...context}).catch(e => err = e);
-        //         if (!isNil(err)) throw new ConduitError('Database error', 500, err.message);
-        //         return createdSchema;
-        //     }));
-        // // todo PUT should be identical to POST but all fields should be made optional
-        // // this.sdk.getRouter().registerRoute(new ConduitRoute(
-        // //     {
-        // //         path: '/content/' + schema.originalSchema.name,
-        // //         action: Actions.POST,
-        // //         bodyParams: schema.originalSchema.fields
-        // //     },
-        // //     new ConduitRouteReturnDefinition(schema.originalSchema.name, schema.originalSchema.fields),
-        // //     (params: ConduitRouteParameters) => {
-        // //         let body = params.params;
-        // //         let context = params.context;
-        // //         // todo check if this is correct. Context was added here in case the create method needs the user for example
-        // //         return schema.create({body, ...context});
-        // //     }));
-
-
     }
 
     private async ensureDatabase(): Promise<any> {

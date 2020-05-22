@@ -17,6 +17,11 @@ grpcSdk.admin.register(paths.functions, protofile.toString('UTF-8'),store.url).c
   console.log("Failed to register admin routes for CMS module!")
   console.error(err);
 });
+let routesProtoFile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'));
+grpcSdk.router.register(store.routes, routesProtoFile.toString('UTF-8'), store.url).catch((err: Error) => {
+  console.log("Failed to register routes for CMS module!")
+  console.error(err);
+});
 // } else {
 //     throw new Error("Conduit server URL not provided");
 // }
