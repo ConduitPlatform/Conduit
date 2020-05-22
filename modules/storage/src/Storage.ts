@@ -16,6 +16,7 @@ export class StorageModule {
     private isRunning: boolean = false;
     private readonly _url: string;
     private _fileHandlers: FileHandlers;
+    private grpcServer: any;
     private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -31,20 +32,20 @@ export class StorageModule {
         var protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
 
         var storage = protoDescriptor.storage.Storage;
-        var server = new grpcModule.Server();
+        this.grpcServer = new grpcModule.Server();
 
-        server.addService(storage.service, {
+        this.grpcServer.addService(storage.service, {
             setConfig: this.setConfig.bind(this),
             getFile: this.getFileGrpc.bind(this),
             createFile: this.createFileGrpc.bind(this)
         });
-        let files = new FileRoutes(server, grpcSdk, this.storageProvider);
+        let files = new FileRoutes(this.grpcServer, grpcSdk, this.storageProvider);
         this._routes = files.registeredRoutes;
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
-        server.start();
+        this.grpcServer.start();
         this.ensureDatabase().then(() => {
             this.grpcSdk.config.get('storage').then((storageConfig: any) => {
                  if (storageConfig.active) {
@@ -97,10 +98,10 @@ export class StorageModule {
 
         const id = call.request.id;
         let errorMessage: string | null = null;
-        const response = await this._fileHandlers.getFile({
+        const response = await this._fileHandlers.getFile(JSON.stringify({request: {
             params: {id},
             headers: {}
-        }).catch(e => errorMessage = e.message);
+        }}), callback).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {fileDocument: JSON.stringify(response)});
     }
@@ -110,10 +111,10 @@ export class StorageModule {
 
         const {name, mimeType, data, folder} = call.request;
         let errorMessage: string | null = null;
-        const response = await this._fileHandlers.createFile({
+        const response = await this._fileHandlers.createFile(JSON.stringify({request: {
             params: {name, mimeType, data, folder},
             headers: {}
-        }).catch(e => errorMessage = e.message);
+        }}), callback).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {fileDocument: JSON.stringify(response)});
     }
@@ -125,7 +126,6 @@ export class StorageModule {
         if (!this.isRunning) {
             this.storageProvider = createStorageProvider(provider, {storagePath, google});
             this.registerModels();
-            this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
             this.isRunning = true;
         } else {
             this.storageProvider = createStorageProvider(provider, {storagePath, google});
