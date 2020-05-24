@@ -1,9 +1,10 @@
 import schema from './models/schema';
 import {AdminHandlers} from './admin/admin';
 import {isNil} from 'lodash';
-import ConduitGrpcSdk, { ConduitSchema, grpcModule } from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {ConduitSchema, grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
-import { CmsRoutes } from './routes/Routes';
+import {CmsRoutes} from './routes/Routes';
+
 let protoLoader = require('@grpc/proto-loader');
 
 export class CMS {
@@ -19,14 +20,14 @@ export class CMS {
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
         const packageDefinition = protoLoader.loadSync(
-          path.resolve(__dirname, './cms.proto'),
-          {
-              keepCase: true,
-              longs: String,
-              enums: String,
-              defaults: true,
-              oneofs: true
-          });
+            path.resolve(__dirname, './cms.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
         const protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
 
         const cms = protoDescriptor.cms.CMS;
@@ -42,12 +43,13 @@ export class CMS {
         console.log("bound on:", this._url);
         this.grpcServer.start();
 
-        this.ensureDatabase().then(() => {
-            this._adapter = this.grpcSdk.databaseProvider;
-            this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
-            this.loadExistingSchemas();
-            this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.createSchema.bind(this));
-        }).catch(console.log);
+        this.grpcSdk.waitForExistence('database-provider')
+            .then(() => {
+                this._adapter = this.grpcSdk.databaseProvider!;
+                this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
+                this.loadExistingSchemas();
+                this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.createSchema.bind(this));
+            }).catch(console.log);
     }
 
     private loadExistingSchemas() {
@@ -81,13 +83,6 @@ export class CMS {
 
     createSchema(schema: ConduitSchema): void {
         this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
-    }
-
-    private async ensureDatabase(): Promise<any> {
-        if (!this.grpcSdk.databaseProvider) {
-            await this.grpcSdk.refreshModules(true);
-            return this.ensureDatabase();
-        }
     }
 }
 

@@ -47,8 +47,7 @@ export default class AdminModule extends IConduitAdmin {
     // @ts-ignore
     private async handleDatabase() {
         if (!this.grpcSdk.databaseProvider) {
-            await this.grpcSdk.refreshModules(true);
-            return this.handleDatabase();
+            await this.grpcSdk.waitForExistence('database-provider');
         }
         const databaseAdapter = this.grpcSdk.databaseProvider!;
 

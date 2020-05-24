@@ -249,7 +249,7 @@ export class GraphQLController {
         this.mutations = '';
         const self = this;
         this._internalRoute = Router();
-        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
+        this._internalRoute.use('/graphql', (req: Request, res: Response, next: NextFunction) => {
             if (self._apollo) {
                 self._apollo(req, res, next)
             } else {

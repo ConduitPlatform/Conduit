@@ -6,6 +6,7 @@ import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import * as grpc from 'grpc';
+import {ConduitError, ConduitRouteParameters} from "@conduit/grpc-sdk";
 
 export class LocalHandlers {
     private database: any;
@@ -16,9 +17,8 @@ export class LocalHandlers {
     }
 
     private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-        while (!grpcSdk.databaseProvider && !grpcSdk.emailProvider) {
-            await grpcSdk.refreshModules();
-        }
+        await grpcSdk.waitForExistence('database-provider');
+        await grpcSdk.waitForExistence('email');
         this.database = grpcSdk.databaseProvider;
         this.emailModule = grpcSdk.emailProvider;
     }
@@ -27,17 +27,20 @@ export class LocalHandlers {
         const {email, password} = JSON.parse(call.request.params);
         let errorMessage = null;
 
-        if (isNil(email) || isNil(password)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Email and password required'});
+        if (isNil(email) || isNil(password)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'Email and password required'
+        });
 
-        let user = await this.database.findOne('User',{email}).catch((e: any) => errorMessage = e.message);
+        let user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (!isNil(user)) return callback({code: grpc.status.ALREADY_EXISTS, message: 'User already exists'});
 
         user = await this.authService.hashPassword(password)
-          .then((hashedPassword: string) => {
-              return this.database.create('User', {email, hashedPassword});
-          })
-          .catch((e: any) => errorMessage = e.message);
+            .then((hashedPassword: string) => {
+                return this.database.create('User', {email, hashedPassword});
+            })
+            .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
@@ -49,21 +52,21 @@ export class LocalHandlers {
                 userId: user._id,
                 token: uuid()
             })
-              .then((verificationToken: any) => {
-                return { verificationToken, hostUrl: this.grpcSdk.config.get('hostUrl') };
-            })
-              .then((result: {hostUrl: Promise<any>, verificationToken: any}) => {
-                  const link = `${result.hostUrl}/hook/verify-email/${result.verificationToken.token}`;
-                  return this.emailModule.sendEmail('EmailVerification', {
-                      email: user.email,
-                      sender: 'conduit@gmail.com',
-                      variables: {
-                          applicationName: 'Conduit',
-                          link
-                      }
-                  });
-              })
-              .catch((e: any) => errorMessage = e.message);
+                .then((verificationToken: any) => {
+                    return {verificationToken, hostUrl: this.grpcSdk.config.get('hostUrl')};
+                })
+                .then((result: { hostUrl: Promise<any>, verificationToken: any }) => {
+                    const link = `${result.hostUrl}/hook/verify-email/${result.verificationToken.token}`;
+                    return this.emailModule.sendEmail('EmailVerification', {
+                        email: user.email,
+                        sender: 'conduit@gmail.com',
+                        variables: {
+                            applicationName: 'Conduit',
+                            link
+                        }
+                    });
+                })
+                .catch((e: any) => errorMessage = e.message);
             if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         }
@@ -79,9 +82,12 @@ export class LocalHandlers {
         if (isNil(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
         const clientId = context.clientId;
 
-        if (isNil(email) || isNil(password)) return callback({code: grpc.status.INVALID_ARGUMENT, 'Email and password required'});
+        if (isNil(email) || isNil(password)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'Email and password required'
+        });
 
-        const user = await this.database.findOne('User',{email}, 'hashedPassword').catch((e: any) => errorMessage = e.message);
+        const user = await this.database.findOne('User', {email}, 'hashedPassword').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
         if (!user.active) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Inactive user'});
@@ -96,8 +102,8 @@ export class LocalHandlers {
             return callback({code: grpc.status.PERMISSION_DENIED, message: 'You must verify your account to login'});
         }
 
-        const promise1 = this.database.deleteMany('AccessToken',{userId: user._id, clientId});
-        const promise2 = this.database.deleteMany('RefreshToken',{userId: user._id, clientId});
+        const promise1 = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
+        const promise2 = this.database.deleteMany('RefreshToken', {userId: user._id, clientId});
         await Promise.all([promise1, promise2]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
@@ -106,7 +112,7 @@ export class LocalHandlers {
             expiresIn: config.tokenInvalidationPeriod
         };
 
-        const accessToken = await this.database.create('AccessToken',{
+        const accessToken = await this.database.create('AccessToken', {
             userId: user._id,
             clientId,
             token: this.authService.signToken({id: user._id}, signTokenOptions),
@@ -114,7 +120,7 @@ export class LocalHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const refreshToken = await this.database.create('RefreshToken',{
+        const refreshToken = await this.database.create('RefreshToken', {
             userId: user._id,
             clientId,
             token: this.authService.randomToken(),
@@ -122,7 +128,13 @@ export class LocalHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, {result: JSON.stringify({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token})});
+        return callback(null, {
+            result: JSON.stringify({
+                userId: user._id.toString(),
+                accessToken: accessToken.token,
+                refreshToken: refreshToken.token
+            })
+        });
     }
 
     async forgotPassword(params: ConduitRouteParameters) {
@@ -221,15 +233,15 @@ export class LocalHandlers {
     registerRoutes() {
         // Register endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
-          {
-              path: '/authentication/local/new',
-              action: Actions.POST,
-              bodyParams: {
-                  email: TYPE.String,
-                  password: TYPE.String
-              }
-          },
-          new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register.bind(this)));
+            {
+                path: '/authentication/local/new',
+                action: Actions.POST,
+                bodyParams: {
+                    email: TYPE.String,
+                    password: TYPE.String
+                }
+            },
+            new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register.bind(this)));
         // Login Endpoint
         this.sdk.getRouter().registerRoute(new ConduitRoute(
             {

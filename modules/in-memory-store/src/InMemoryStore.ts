@@ -12,7 +12,7 @@ import InMemoryStoreConfigSchema from './config/in-memory-store';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
 import * as path from 'path';
-import { ConduitUtilities } from '@conduit/utilities';
+import {ConduitUtilities} from '@conduit/utilities';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -49,13 +49,17 @@ export class InMemoryStore {
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
         server.start();
-        this.ensureDatabase().then(()=> {
-            this.conduit.config.get('inMemoryStore').then((storeConfig: any) => {
+
+        this.conduit.waitForExistence('database-provider')
+            .then(() => {
+                return this.conduit.config.get('inMemoryStore')
+            })
+            .then((storeConfig: any) => {
                 if (storeConfig.active) {
                     return this.enableModule()
                 }
             })
-        }).catch(console.log);
+            .catch(console.log);
     }
 
     get url(): string {
@@ -139,13 +143,6 @@ export class InMemoryStore {
             this._provider = new MemcachedProvider(storageSettings as MemcachedSettings);
         } else {
             this._provider = new Localprovider(storageSettings as LocalSettings);
-        }
-    }
-
-    private async ensureDatabase(): Promise<any> {
-        if (!this.conduit.databaseProvider) {
-            await this.conduit.refreshModules(true);
-            return this.ensureDatabase();
         }
     }
 }

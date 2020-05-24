@@ -47,11 +47,8 @@ export class CoreBootstrapper {
     }
 
     private static async registerSchemas(grpcSdk: ConduitGrpcSdk, app: ConduitApp): Promise<any> {
+        await grpcSdk.waitForExistence('database-provider');
         const database = grpcSdk.databaseProvider;
-        if (!grpcSdk.databaseProvider) {
-            await grpcSdk.refreshModules(true);
-            return this.registerSchemas(grpcSdk, app);
-        }
         const ConfigModel = new ConfigModelGenerator(app).configModel;
         return database!.createSchemaFromAdapter(ConfigModel);
     }

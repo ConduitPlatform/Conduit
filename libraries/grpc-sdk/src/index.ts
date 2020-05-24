@@ -34,10 +34,17 @@ export default class ConduitGrpcSdk {
         this._admin = new Admin(this.serverUrl);
         this._router = new Router(this.serverUrl);
         this.initializeModules();
-        // service discovery should be better
-        setInterval(() => {
-            this.initializeModules()
-        }, 3000);
+        this.watchModules();
+    }
+
+    watchModules() {
+        this.config.watchModules().on('module-registered', (modules: any) => {
+            modules.forEach((m: any) => {
+                if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+                    this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+                }
+            })
+        })
     }
 
     /**
@@ -61,6 +68,19 @@ export default class ConduitGrpcSdk {
                     console.error(err);
                 }
             })
+    }
+
+    async waitForExistence(moduleName: string) {
+        while (!this._modules[moduleName]) {
+            await this.sleep(1000);
+        }
+        return true;
+    }
+
+    sleep(ms: number) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, ms);
+        });
     }
 
     /**
@@ -97,7 +117,6 @@ export default class ConduitGrpcSdk {
 
     get databaseProvider(): DatabaseProvider | null {
         if (this._modules["database-provider"]) {
-            console.warn("Database provider is running");
             return this._modules["database-provider"];
         } else {
             console.warn("Database provider not up yet!")
@@ -116,7 +135,6 @@ export default class ConduitGrpcSdk {
 
     get emailProvider(): Email | null {
         if (this._modules["email"]) {
-            console.warn("Email provider is running");
             return this._modules["email"];
         } else {
             console.warn("Email provider not up yet!")

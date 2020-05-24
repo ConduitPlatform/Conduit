@@ -40,7 +40,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
             return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"})
         }
 
-        //todo definetely missing an error handler here
+        //todo definitely missing an error handler here
         //perhaps wrong(?) we send an empty response
         callback(null, null);
     }

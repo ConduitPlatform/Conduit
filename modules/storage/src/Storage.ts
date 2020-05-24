@@ -1,4 +1,4 @@
-import { createStorageProvider, IStorageProvider } from '@conduit/storage-provider';
+import {createStorageProvider, IStorageProvider} from '@conduit/storage-provider';
 import File from './models/File';
 import StorageConfigSchema from './config/storage';
 import {isNil} from 'lodash';
@@ -46,13 +46,15 @@ export class StorageModule {
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
         this.grpcServer.start();
-        this.ensureDatabase().then(() => {
-            this.grpcSdk.config.get('storage').then((storageConfig: any) => {
-                 if (storageConfig.active) {
-                  return this.enableModule();
-                 }
+        this.grpcSdk.waitForExistence('database-provider')
+            .then(() => {
+                return this.grpcSdk.config.get('storage')
             })
-        }).catch(console.log);
+            .then((storageConfig: any) => {
+                if (storageConfig.active) {
+                    return this.enableModule();
+                }
+            }).catch(console.log);
     }
 
     get routes() {
@@ -98,10 +100,12 @@ export class StorageModule {
 
         const id = call.request.id;
         let errorMessage: string | null = null;
-        const response = await this._fileHandlers.getFile(JSON.stringify({request: {
-            params: {id},
-            headers: {}
-        }}), callback).catch(e => errorMessage = e.message);
+        const response = await this._fileHandlers.getFile(JSON.stringify({
+            request: {
+                params: {id},
+                headers: {}
+            }
+        }), callback).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {fileDocument: JSON.stringify(response)});
     }
@@ -111,17 +115,19 @@ export class StorageModule {
 
         const {name, mimeType, data, folder} = call.request;
         let errorMessage: string | null = null;
-        const response = await this._fileHandlers.createFile(JSON.stringify({request: {
-            params: {name, mimeType, data, folder},
-            headers: {}
-        }}), callback).catch(e => errorMessage = e.message);
+        const response = await this._fileHandlers.createFile(JSON.stringify({
+            request: {
+                params: {name, mimeType, data, folder},
+                headers: {}
+            }
+        }), callback).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {fileDocument: JSON.stringify(response)});
     }
 
     private async enableModule(): Promise<any> {
         const storageConfig = await this.grpcSdk.config.get('storage');
-        const { provider, storagePath, google } = storageConfig;
+        const {provider, storagePath, google} = storageConfig;
 
         if (!this.isRunning) {
             this.storageProvider = createStorageProvider(provider, {storagePath, google});
@@ -134,17 +140,6 @@ export class StorageModule {
     }
 
     private registerModels(): any {
-        const database = this.grpcSdk.databaseProvider;
-        if (isNil(database)) {
-            return this.registerModels();
-        }
-        return database.createSchemaFromAdapter(File);
-    }
-
-    private async ensureDatabase(): Promise<any> {
-        if (!this.grpcSdk.databaseProvider) {
-            await this.grpcSdk.refreshModules(true);
-            return this.ensureDatabase();
-        }
+        return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(File);
     }
 }

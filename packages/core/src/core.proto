@@ -6,6 +6,7 @@ service Config {
     rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
     rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
     rpc ModuleList (Empty) returns (ModuleListResponse);
+    rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
 }
 
