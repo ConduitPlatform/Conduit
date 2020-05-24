@@ -34,10 +34,6 @@ export class GraphQLController {
         this.initialize();
     }
 
-    getInternalRoute() {
-        return this._internalRoute;
-    }
-
     handleRequest(req: Request, res: Response, next: NextFunction) {
         this._internalRoute(req, res, next);
     }
@@ -221,6 +217,7 @@ export class GraphQLController {
             this.refreshRoutes();
         } else {
             this.addConduitRoute(route);
+            this.refreshGQLServer();
         }
     }
 
@@ -249,7 +246,7 @@ export class GraphQLController {
         this.mutations = '';
         const self = this;
         this._internalRoute = Router();
-        this._internalRoute.use('/graphql', (req: Request, res: Response, next: NextFunction) => {
+        this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
             if (self._apollo) {
                 self._apollo(req, res, next)
             } else {
