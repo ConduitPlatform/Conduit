@@ -9,16 +9,19 @@ import ConduitGrpcSdk, {
 } from '@conduit/grpc-sdk';
 import { AuthService } from '../services/auth';
 import { FacebookHandlers } from '../handlers/auth/facebook';
+import { GoogleHandlers } from '../handlers/auth/google';
 const protoLoader = require('@grpc/proto-loader');
 const PROTO_PATH = __dirname + '/router.proto';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
   private readonly facebookHandlers: FacebookHandlers;
+  private readonly googleHandlers: GoogleHandlers;
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, authService: AuthService) {
     this.localHandlers = new LocalHandlers(grpcSdk, authService);
     this.facebookHandlers = new FacebookHandlers(grpcSdk, authService);
+    this.googleHandlers = new GoogleHandlers(grpcSdk, authService);
 
     const packageDefinition = protoLoader.loadSync(
       PROTO_PATH,
@@ -40,7 +43,8 @@ export class AuthenticationRoutes {
       forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
-      authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers)
+      authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
+      authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers)
     });
   }
 
@@ -121,6 +125,24 @@ export class AuthenticationRoutes {
       }),
       'authenticateFacebook'
       )));
+
+    routesArray.push(constructRoute(new ConduitRoute({
+        path: '/authentication/google',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
+          id_token: TYPE.String,
+          access_token: TYPE.String,
+          refresh_token: TYPE.String,
+          expires_in: TYPE.String
+        }
+      },
+      new ConduitRouteReturnDefinition('GoogleResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required
+      }),
+      'authenticateGoogle'
+    )))
 
     return routesArray;
   }
