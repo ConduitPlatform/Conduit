@@ -17,7 +17,6 @@ import CardContent from '@material-ui/core/CardContent';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
-import Grid from '@material-ui/core/Grid';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -151,15 +150,15 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
           return (
             <TabPanel key={`tabPanel${index}`} value={selectedSchema} index={index}>
               {documents.length > 0 ? (
-                [
+                <>
                   <Button
                     key={`btn_${documents.length - 1}`}
                     variant="contained"
                     color="primary"
                     style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
                     Create New
-                  </Button>,
-                  documents.map((doc, index) => {
+                  </Button>
+                  {documents.map((doc, index) => {
                     return (
                       <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
                         <CardHeader
@@ -206,8 +205,8 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
                         </CardContent>
                       </Card>
                     );
-                  }),
-                ]
+                  })}
+                </>
               ) : (
                 <>
                   <Box className={classes.emptyDocuments}>
