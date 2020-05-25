@@ -1,5 +1,5 @@
 syntax = "proto3";
-package authentication.proto;
+package authentication.router;
 
 message RouterRequest {
   string params = 1;

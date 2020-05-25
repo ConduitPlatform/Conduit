@@ -8,14 +8,17 @@ import ConduitGrpcSdk, {
   TYPE
 } from '@conduit/grpc-sdk';
 import { AuthService } from '../services/auth';
+import { FacebookHandlers } from '../handlers/auth/facebook';
 const protoLoader = require('@grpc/proto-loader');
 const PROTO_PATH = __dirname + '/router.proto';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
+  private readonly facebookHandlers: FacebookHandlers;
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, authService: AuthService) {
     this.localHandlers = new LocalHandlers(grpcSdk, authService);
+    this.facebookHandlers = new FacebookHandlers(grpcSdk, authService);
 
     const packageDefinition = protoLoader.loadSync(
       PROTO_PATH,
@@ -36,7 +39,8 @@ export class AuthenticationRoutes {
       authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
       forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
-      verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers)
+      verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
+      authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers)
     });
   }
 
@@ -67,7 +71,7 @@ export class AuthenticationRoutes {
         userId: ConduitString.Required,
         accessToken: ConduitString.Required,
         refreshToken: ConduitString.Required
-      }), 'authenticate')));
+      }), 'authenticateLocal')));
 
     routesArray.push(constructRoute(new ConduitRoute({
         path: '/authentication/forgot-password',
@@ -101,6 +105,22 @@ export class AuthenticationRoutes {
     }, new ConduitRouteReturnDefinition('', ''),
       'verifyEmail'
     )));
+
+    routesArray.push(constructRoute(new ConduitRoute({
+        path: '/authentication/facebook',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
+          // todo switch to required when the parsing is added
+          access_token: ConduitString.Optional
+        }
+      },
+      new ConduitRouteReturnDefinition('FacebookResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required
+      }),
+      'authenticateFacebook'
+      )));
 
     return routesArray;
   }
