@@ -6,7 +6,6 @@ import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import * as grpc from 'grpc';
-import {ConduitError, ConduitRouteParameters} from "@conduit/grpc-sdk";
 
 export class LocalHandlers {
     private database: any;
@@ -87,7 +86,7 @@ export class LocalHandlers {
             message: 'Email and password required'
         });
 
-        const user = await this.database.findOne('User', {email}, 'hashedPassword').catch((e: any) => errorMessage = e.message);
+        const user = await this.database.findOne('User', {email}, '+hashedPassword').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
         if (!user.active) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Inactive user'});
@@ -137,146 +136,114 @@ export class LocalHandlers {
         });
     }
 
-    async forgotPassword(params: ConduitRouteParameters) {
-        const email = (params.params as any).email;
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
+    async forgotPassword(call: any, callback: any) {
+        const { email } = (call.request.params);
+        const config = await this.grpcSdk.config.get('authentication');
+        let errorMessage = null;
 
-        if (isNil(email)) throw ConduitError.userInput('Email field required');
+        if (isNil(email)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Email field required'});
 
-        const User = this.database.getSchema('User');
-        const Token = this.database.getSchema('Token');
-
-        const user = await User.findOne({email});
+        const user = await this.database.findOne('User',{email}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-            return 'Ok';
+            return callback(null, {result: JSON.stringify({message: 'Ok'})});
 
-        const oldToken = await Token.findOne({type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id});
-        if (!isNil(oldToken)) await Token.deleteOne(oldToken);
+        this.database.findOne('Token', {type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id})
+          .then((oldToken: any) => {
+              if (!isNil(oldToken)) return this.database.deleteOne('Token', oldToken);
+          })
+          .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const passwordResetTokenDoc = await Token.create({
+        const passwordResetTokenDoc = await this.database.create('Token', {
             type: TokenType.PASSWORD_RESET_TOKEN,
             userId: user._id,
             token: uuid()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const link = `${appConfig.get('hostUrl')}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-        await this.emailModule.sendEmail('ForgotPassword', {
-            email: user.email,
-            sender: 'conduit@gmail.com',
-            variables: {
-                applicationName: 'Conduit',
-                link
-            }
-        });
+       this.grpcSdk.config.get('hostUrl')
+         .then((hostUrl: any) => {
+             const link = `${hostUrl}/authentication/reset-password/${passwordResetTokenDoc.token}`;
+             return this.emailModule.sendEmail('ForgotPassword', {
+                 email: user.email,
+                 sender: 'conduit@gmail.com',
+                 variables: {
+                     applicationName: 'Conduit',
+                     link
+                 }
+             });
+         })
+         .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return 'Ok';
+        return callback(null, {result: JSON.stringify({message: 'Ok'})});
     }
 
-    async resetPassword(params: ConduitRouteParameters) {
-        const {passwordResetToken: passwordResetTokenParam, password: newPassword} = params.params as any;
+    async resetPassword(call: any, callback: any) {
+        const {passwordResetToken: passwordResetTokenParam, password: newPassword} = JSON.parse(call.request.params);
 
         if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-            throw ConduitError.userInput('Required fields are missing');
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Required fields are missing'});
         }
 
-        const User = this.database.getSchema('User');
-        const Token = this.database.getSchema('Token');
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
+        let errorMessage = null;
 
-        const passwordResetTokenDoc = await Token.findOne({
+        const passwordResetTokenDoc = await this.database.findOne('Token',{
             type: TokenType.PASSWORD_RESET_TOKEN,
             token: passwordResetTokenParam
-        });
-        if (isNil(passwordResetTokenDoc)) throw ConduitError.forbidden('Invalid parameters');
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(passwordResetTokenDoc)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
 
-        const user = await User.findOne({_id: passwordResetTokenDoc.userId}, '+hashedPassword');
-        if (isNil(user)) throw ConduitError.notFound('User not found');
+        const user = await this.database.findOne('User',{_id: passwordResetTokenDoc.userId}, '+hashedPassword').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(user)) return callback({code: grpc.status.NOT_FOUND, message: 'User not found'});
 
-        const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword);
-        if (passwordsMatch) throw ConduitError.forbidden('Password can\'t be the same as the old one');
+        const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (passwordsMatch) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Password can\'t be the same as the old one'});
 
-        user.hashedPassword = await this.authService.hashPassword(newPassword);
-        await User.findByIdAndUpdate(user);
-        await Token.deleteOne(passwordResetTokenDoc);
-        await AccessToken.deleteMany({userId: user._id});
-        await RefreshToken.deleteMany({userId: user._id});
+        user.hashedPassword = await this.authService.hashPassword(newPassword).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return 'Password reset successful';
+        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const tokenPromise =  this.database.deleteOne('Token', passwordResetTokenDoc);
+        const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
+        const refreshTokenPromise = this.database.deleteMany('RefreshToken',{userId: user._id});
+
+        await Promise.all([userPromise, tokenPromise, accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify({message: 'Password reset successful'})});
     }
 
-    async verifyEmail(req: Request, res: Response) {
-        const verificationTokenParam = req.params.verificationToken;
-        if (isNil(verificationTokenParam)) return res.status(401).json({error: 'Invalid parameters'});
+    async verifyEmail(call: any, callback: any) {
+        const verificationTokenParam = call.request.params.verificationToken;
+        if (isNil(verificationTokenParam)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
 
-        const User = this.database.getSchema('User');
-        const Token = this.database.getSchema('Token');
+        let errorMessage = null;
 
-        const verificationTokenDoc = await Token.findOne({
+        const verificationTokenDoc = await this.database.findOne('Token', {
             type: TokenType.VERIFICATION_TOKEN,
             token: verificationTokenParam
-        });
-        if (isNil(verificationTokenDoc)) return res.status(401).json({error: 'Invalid parameters'});
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(verificationTokenDoc)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
 
-        const user = await User.findOne({_id: verificationTokenDoc.userId});
-        if (isNil(user)) return res.status(404).json({error: 'User not found'});
+        const user = await this.database.findOne('User', {_id: verificationTokenDoc.userId}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(user)) return callback({code: grpc.status.NOT_FOUND, message: 'User not found'});
 
         user.isVerified = true;
-        await User.findByIdAndUpdate(user);
-        await Token.deleteOne(verificationTokenDoc);
+        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const tokenPromise = this.database.deleteOne('Token', verificationTokenDoc);
 
-        return res.json({message: 'Email verified'});
+        await Promise.all([userPromise, tokenPromise]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify({message: 'Email verified'})});
     }
 
-    registerRoutes() {
-        // Register endpoint
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/local/new',
-                action: Actions.POST,
-                bodyParams: {
-                    email: TYPE.String,
-                    password: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('RegisterResponse', 'String'), this.register.bind(this)));
-        // Login Endpoint
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/local',
-                action: Actions.POST,
-                bodyParams: {
-                    email: TYPE.String,
-                    password: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('LoginResponse', {
-                userId: ConduitString.Required,
-                accessToken: ConduitString.Required,
-                refreshToken: ConduitString.Required
-            }), this.authenticate.bind(this)));
-        // Forgot-password endpoint
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/forgot-password',
-                action: Actions.POST,
-                bodyParams: {
-                    email: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'), this.forgotPassword.bind(this)));
-        // Reset-password endpoint
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/reset-password',
-                action: Actions.POST,
-                bodyParams: {
-                    passwordResetToken: TYPE.String,
-                    password: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'), this.resetPassword.bind(this)));
-    }
 }

@@ -1,19 +1,15 @@
 import * as models from './models';
 import * as templates from './templates';
-import {Router} from 'express';
-import {LocalHandlers} from './handlers/auth/local';
 import {AuthService} from './services/auth';
-import {FacebookHandlers} from './handlers/auth/facebook';
-import {GoogleHandlers} from './handlers/auth/google';
 // import {AuthMiddleware} from './middleware/auth';
 import {AdminHandlers} from './admin/admin';
-import {CommonHandlers} from './handlers/auth/common';
 import AuthenticationConfigSchema from './config/authentication';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
 import {ConduitUtilities} from '@conduit/utilities';
 import * as grpc from "grpc";
+import { AuthenticationRoutes } from './routes/Routes';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -24,16 +20,14 @@ export default class AuthenticationModule {
     private authService: AuthService;
     private _admin: AdminHandlers;
     // private hookRouter: Router;
-    // private authMiddleware: AuthMiddleware;
-    // private commonHandlers: CommonHandlers;
-    // private localHandlers: LocalHandlers;
-    // private facebookHandlers: FacebookHandlers;
-    // private googleHandlers: GoogleHandlers;
     private isRunning: boolean = false;
     private _url: string;
     private readonly grpcServer: any;
+    private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+        this.authService = new AuthService();
+
         const packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './authentication.proto'),
             {
@@ -51,6 +45,9 @@ export default class AuthenticationModule {
         this.grpcServer.addService(authentication.service, {
             setConfig: this.setConfig.bind(this)
         });
+        let router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.authService);
+        this._routes = router.registeredRoutes;
+
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
@@ -66,6 +63,10 @@ export default class AuthenticationModule {
                     return this.enableModule();
                 }
             }).catch(console.log);
+    }
+
+    get routes() {
+        return this._routes;
     }
 
     get url(): string {
@@ -102,7 +103,6 @@ export default class AuthenticationModule {
             this.database = this.grpcSdk.databaseProvider;
             this.emailModule = this.grpcSdk.emailProvider;
             // this.conduitRouter = this.sdk.getRouter();
-            this.authService = new AuthService();
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
             // this.authMiddleware = new AuthMiddleware(this.grpcSdk);
             // this.hookRouter = Router();
