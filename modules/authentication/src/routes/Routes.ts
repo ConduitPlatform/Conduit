@@ -161,7 +161,6 @@ export class AuthenticationRoutes {
           bodyParams: {
             id_token: TYPE.String,
             access_token: TYPE.String,
-            refresh_token: TYPE.String,
             expires_in: TYPE.String
           }
         },
