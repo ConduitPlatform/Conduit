@@ -112,7 +112,8 @@ export class GraphQLController {
     }
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
-        let pathName: string[] = input.path.replace('-', '').split('/');
+        // todo refine this, simply replacing : with empty is too dumb
+        let pathName: string[] = input.path.replace('-', '').replace(':','').split('/');
         if (pathName[pathName.length - 1].length === 0 || pathName[pathName.length - 1] === '') {
             pathName = pathName.slice(0, pathName.length - 1);
         } else {
