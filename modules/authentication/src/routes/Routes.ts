@@ -122,7 +122,7 @@ export class AuthenticationRoutes {
               urlParams: {
                 verificationToken: TYPE.String
               }
-            }, new ConduitRouteReturnDefinition('', ''),
+            }, new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
             'verifyEmail'
           )));
 
