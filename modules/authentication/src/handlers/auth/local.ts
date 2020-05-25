@@ -137,7 +137,7 @@ export class LocalHandlers {
     }
 
     async forgotPassword(call: any, callback: any) {
-        const { email } = (call.request.params);
+        const { email } = JSON.parse(call.request.params);
         const config = await this.grpcSdk.config.get('authentication');
         let errorMessage = null;
 
@@ -220,7 +220,7 @@ export class LocalHandlers {
     }
 
     async verifyEmail(call: any, callback: any) {
-        const verificationTokenParam = call.request.params.verificationToken;
+        const verificationTokenParam = JSON.parse(call.request.params).verificationToken;
         if (isNil(verificationTokenParam)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
 
         let errorMessage = null;
