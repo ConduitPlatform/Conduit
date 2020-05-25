@@ -16,6 +16,8 @@ import { MoreVert } from '@material-ui/icons';
 import CardContent from '@material-ui/core/CardContent';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
+import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -55,6 +57,11 @@ const useStyles = makeStyles((theme) => ({
   },
   bold: {
     fontWeight: 'bold',
+  },
+  emptyDocuments: {
+    margin: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
   },
 }));
 
@@ -143,54 +150,74 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
         {schemas.map((d, index) => {
           return (
             <TabPanel key={`tabPanel${index}`} value={selectedSchema} index={index}>
-              {documents.map((doc, index) => {
-                return (
-                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
-                    <CardHeader
-                      title={doc._id}
-                      action={
-                        <>
-                          <IconButton aria-label="settings" onClick={handleClick}>
-                            <MoreVert />
-                          </IconButton>
-                          <Menu
-                            id="long-menu"
-                            anchorEl={anchorEl}
-                            keepMounted
-                            open={open}
-                            onClose={handleClose}
-                            PaperProps={{
-                              style: {
-                                maxHeight: ITEM_HEIGHT * 4.5,
-                                width: '20ch',
-                              },
-                            }}>
-                            {options.map((option) => (
-                              <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Menu>
-                        </>
-                      }
-                    />
-                    <CardContent>
-                      {createDocumentArray(doc).map((obj, index) => {
-                        return (
-                          <TreeView
-                            key={`treeView${index}`}
-                            className={classes.tree}
-                            defaultCollapseIcon={<ExpandMoreIcon />}
-                            defaultExpanded={['root']}
-                            defaultExpandIcon={<ChevronRightIcon />}>
-                            {renderTree(obj)}
-                          </TreeView>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {documents.length > 0 ? (
+                [
+                  <Button
+                    key={`btn_${documents.length - 1}`}
+                    variant="contained"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
+                    Create New
+                  </Button>,
+                  documents.map((doc, index) => {
+                    return (
+                      <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                        <CardHeader
+                          title={doc._id}
+                          action={
+                            <>
+                              <IconButton aria-label="settings" onClick={handleClick}>
+                                <MoreVert />
+                              </IconButton>
+                              <Menu
+                                id="long-menu"
+                                anchorEl={anchorEl}
+                                keepMounted
+                                open={open}
+                                onClose={handleClose}
+                                PaperProps={{
+                                  style: {
+                                    maxHeight: ITEM_HEIGHT * 4.5,
+                                    width: '20ch',
+                                  },
+                                }}>
+                                {options.map((option) => (
+                                  <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
+                                    {option}
+                                  </MenuItem>
+                                ))}
+                              </Menu>
+                            </>
+                          }
+                        />
+                        <CardContent>
+                          {createDocumentArray(doc).map((obj, index) => {
+                            return (
+                              <TreeView
+                                key={`treeView${index}`}
+                                className={classes.tree}
+                                defaultCollapseIcon={<ExpandMoreIcon />}
+                                defaultExpanded={['root']}
+                                defaultExpandIcon={<ChevronRightIcon />}>
+                                {renderTree(obj)}
+                              </TreeView>
+                            );
+                          })}
+                        </CardContent>
+                      </Card>
+                    );
+                  }),
+                ]
+              ) : (
+                <>
+                  <Box className={classes.emptyDocuments}>
+                    <p>No documents are availables.</p>
+                    <Button variant="contained" color="primary">
+                      Create New
+                    </Button>
+                  </Box>
+                </>
+              )}
             </TabPanel>
           );
         })}
