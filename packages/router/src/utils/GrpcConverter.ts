@@ -48,13 +48,17 @@ export function grpcToConduitRoute(request: any): ConduitRoute[] {
         let options: any = r.options;
         for (let k in options) {
             if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
-            options[k] = JSON.parse(options[k]);
+            try{
+                options[k] = JSON.parse(options[k]);
+            } catch (e) {}
         }
 
         let returns: any = r.returns;
         for (let k in returns) {
             if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
-            returns[k] = JSON.parse(returns[k]);
+            try {
+                returns[k] = JSON.parse(returns[k]);
+            } catch (e) {}
         }
         finalRoutes.push(new ConduitRoute(options, returns, handler));
     })
