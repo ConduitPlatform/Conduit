@@ -46,7 +46,6 @@ export default class AuthenticationModule {
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
-        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
@@ -102,6 +101,7 @@ export default class AuthenticationModule {
             let router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.authService, authConfig);
             this._routes = router.registeredRoutes;
 
+            this.grpcServer.start();
             this.isRunning = true;
         } else {
             // TODO For now an update on the config will not influence the routes(providers) that should influence
