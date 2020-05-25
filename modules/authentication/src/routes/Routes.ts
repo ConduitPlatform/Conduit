@@ -10,6 +10,7 @@ import ConduitGrpcSdk, {
 import { AuthService } from '../services/auth';
 import { FacebookHandlers } from '../handlers/auth/facebook';
 import { GoogleHandlers } from '../handlers/auth/google';
+import { CommonHandlers } from '../handlers/auth/common';
 const protoLoader = require('@grpc/proto-loader');
 const PROTO_PATH = __dirname + '/router.proto';
 
@@ -17,11 +18,13 @@ export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
   private readonly facebookHandlers: FacebookHandlers;
   private readonly googleHandlers: GoogleHandlers;
+  private readonly commonHandlers: CommonHandlers;
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, authService: AuthService) {
     this.localHandlers = new LocalHandlers(grpcSdk, authService);
     this.facebookHandlers = new FacebookHandlers(grpcSdk, authService);
     this.googleHandlers = new GoogleHandlers(grpcSdk, authService);
+    this.commonHandlers = new CommonHandlers(grpcSdk, authService);
 
     const packageDefinition = protoLoader.loadSync(
       PROTO_PATH,
@@ -44,7 +47,9 @@ export class AuthenticationRoutes {
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
       authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
-      authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers)
+      authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
+      renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
+      logOut: this.commonHandlers.logOut.bind(this.commonHandlers)
     });
   }
 
@@ -142,7 +147,29 @@ export class AuthenticationRoutes {
         refreshToken: ConduitString.Required
       }),
       'authenticateGoogle'
-    )))
+    )));
+
+    routesArray.push(constructRoute(new ConduitRoute({
+        path: '/authentication/renew',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
+          refreshToken: TYPE.String
+        }
+      },
+      new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required
+      }),
+      'renewAuth'
+    )));
+
+    routesArray.push(constructRoute(new ConduitRoute({
+        path: '/authentication/logout',
+        action: ConduitRouteActions.POST
+      },
+      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+      'logOut'
+    )));
 
     return routesArray;
   }
