@@ -1,5 +1,4 @@
 import * as models from './models';
-import * as templates from './templates';
 import {AuthService} from './services/auth';
 // import {AuthMiddleware} from './middleware/auth';
 import {AdminHandlers} from './admin/admin';
@@ -15,11 +14,8 @@ let protoLoader = require('@grpc/proto-loader');
 
 export default class AuthenticationModule {
     private database: any;
-    private emailModule: any;
-    // private conduitRouter: IConduitRouter;
     private authService: AuthService;
     private _admin: AdminHandlers;
-    // private hookRouter: Router;
     private isRunning: boolean = false;
     private _url: string;
     private readonly grpcServer: any;
@@ -45,8 +41,6 @@ export default class AuthenticationModule {
         this.grpcServer.addService(authentication.service, {
             setConfig: this.setConfig.bind(this)
         });
-        let router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.authService);
-        this._routes = router.registeredRoutes;
 
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -60,7 +54,7 @@ export default class AuthenticationModule {
             })
             .then((authConfig: any) => {
                 if (authConfig.active) {
-                    return this.enableModule();
+                    return this.enableModule(authConfig);
                 }
             }).catch(console.log);
     }
@@ -87,7 +81,7 @@ export default class AuthenticationModule {
 
         const authenticationConfig = await this.grpcSdk.config.get('authentication');
         if (authenticationConfig.active) {
-            await this.enableModule().catch((e: Error) => errorMessage = e.message);
+            await this.enableModule(authenticationConfig).catch((e: Error) => errorMessage = e.message);
         } else {
             return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
         }
@@ -98,17 +92,16 @@ export default class AuthenticationModule {
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
-    private async enableModule() {
+    private async enableModule(authConfig: any) {
         if (!this.isRunning) {
             this.database = this.grpcSdk.databaseProvider;
-            this.emailModule = this.grpcSdk.emailProvider;
-            // this.conduitRouter = this.sdk.getRouter();
+
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
-            // this.authMiddleware = new AuthMiddleware(this.grpcSdk);
-            // this.hookRouter = Router();
-            this.registerSchemas();
-            const config = this.grpcSdk.config.get('authentication');
-            // this.registerAuthRoutes(config);
+            await this.registerSchemas();
+
+            let router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.authService, authConfig);
+            this._routes = router.registeredRoutes;
+
             this.isRunning = true;
         } else {
             // TODO For now an update on the config will not influence the routes(providers) that should influence
@@ -124,51 +117,10 @@ export default class AuthenticationModule {
     }
 
     private registerSchemas() {
-        Object.values(models).forEach(model => {
-            this.database.createSchemaFromAdapter(model);
+        const promises = Object.values(models).map(model => {
+            return this.database.createSchemaFromAdapter(model);
         });
+        return Promise.all(promises);
     }
 
-    private registerTemplates() {
-        const promises = Object.values(templates).map(template => {
-            return this.emailModule.registerTemplate(template);
-        });
-        Promise.all(promises).catch(console.log);
-    }
-
-    // private registerAuthRoutes(config: any) {
-    //   const {config: appConfig} = this.sdk as any;
-    //
-    //   let enabled = false;
-    //
-    //   const authMiddleware = this.authMiddleware.middleware.bind(this.authMiddleware);
-    //
-    //   if (config.local.enabled) {
-    //     if (!appConfig.get('email.active')) {
-    //       throw ConduitError.forbidden('Cannot use local authentication without email module being enabled');
-    //     }
-    //     this.registerTemplates();
-    //     this.localHandlers = new LocalHandlers(this.sdk, this.authService);
-    //     enabled = true;
-    //   }
-    //
-    //   if (config.facebook.enabled) {
-    //     this.facebookHandlers = new FacebookHandlers(this.sdk, this.authService);
-    //     enabled = true;
-    //   }
-    //
-    //   if (config.google.enabled) {
-    //     this.googleHandlers = new GoogleHandlers(this.sdk, this.authService);
-    //     enabled = true;
-    //   }
-    //
-    //   if (enabled) {
-    //     this.commonHandlers = new CommonHandlers(this.sdk, this.authService);
-    //     this.conduitRouter.registerRouteMiddleware('/authentication/logout', authMiddleware);
-    //   }
-    //
-    //   this.hookRouter.get('/verify-email/:verificationToken', (req, res, next) => this.localHandlers.verifyEmail(req, res).catch(next));
-    //
-    //   this.conduitRouter.registerExpressRouter('/hook', this.hookRouter);
-    // }
 }

@@ -4,8 +4,9 @@ import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduit/grpc-sdk';
 import * as grpc from 'grpc';
+import * as templates from '../../templates';
 
 export class LocalHandlers {
     private database: any;
@@ -20,6 +21,22 @@ export class LocalHandlers {
         await grpcSdk.waitForExistence('email');
         this.database = grpcSdk.databaseProvider;
         this.emailModule = grpcSdk.emailProvider;
+        this.registerTemplates();
+    }
+
+    private registerTemplates() {
+        let flag = false;
+        this.grpcSdk.config.get('email')
+          .then(async (emailConfig: any) => {
+              if (emailConfig.active) {
+                  const promises = Object.values(templates).map(template => {
+                      return this.emailModule.registerTemplate(template);
+                  });
+                  await Promise.all(promises);
+              }
+          })
+          .catch(() => flag = true);
+        if (flag) throw ConduitError.internalServerError('Internal error while registering email templates');
     }
 
     async register(call: any, callback: any) {
