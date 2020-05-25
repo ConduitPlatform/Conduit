@@ -33,7 +33,7 @@ export default class ConduitGrpcSdk {
         this._config = new Config(this.serverUrl);
         this._admin = new Admin(this.serverUrl);
         this._router = new Router(this.serverUrl);
-        this.initializeModules();
+        this.initializeModules().then(() => {});
         this.watchModules();
     }
 

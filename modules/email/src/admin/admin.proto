@@ -1,6 +1,13 @@
 syntax = "proto3";
 package email.admin;
 
+service Admin {
+  rpc GetTemplates(AdminRequest) returns (AdminResponse);
+  rpc CreateTemplate(AdminRequest) returns (AdminResponse);
+  rpc EditTemplate(AdminRequest) returns (AdminResponse);
+  rpc SendEmail(AdminRequest) returns (AdminResponse);
+}
+
 // all admin requests accept the params,headers and context objects as stringified json
 message AdminRequest {
   string params = 1;
@@ -10,11 +17,4 @@ message AdminRequest {
 // all admin responses return their results as stringified json
 message AdminResponse {
   string result = 1;
-}
-
-service Admin {
-  rpc GetTemplates(AdminRequest) returns (AdminResponse);
-  rpc CreateTemplate(AdminRequest) returns (AdminResponse);
-  rpc EditTemplate(AdminRequest) returns (AdminResponse);
-  rpc SendEmail(AdminRequest) returns (AdminResponse);
 }

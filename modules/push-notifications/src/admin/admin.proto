@@ -1,6 +1,12 @@
 syntax = "proto3";
 package pushnotifications.admin;
 
+service Admin {
+  rpc SendNotification(AdminRequest) returns (AdminResponse);
+  rpc SendManyNotifications(AdminRequest) returns (AdminResponse);
+  rpc SendToManyDevices(AdminRequest) returns (AdminResponse);
+  rpc GetNotificationTokens(AdminRequest) returns (AdminResponse);
+}
 // all admin requests accept the params,headers and context objects as stringified json
 message AdminRequest {
   string params = 1;
@@ -12,9 +18,4 @@ message AdminResponse {
   string result = 1;
 }
 
-service Admin {
-  rpc SendNotification(AdminRequest) returns (AdminResponse);
-  rpc SendManyNotifications(AdminRequest) returns (AdminResponse);
-  rpc SendToManyDevices(AdminRequest) returns (AdminResponse);
-  rpc GetNotificationTokens(AdminRequest) returns (AdminResponse);
-}
+

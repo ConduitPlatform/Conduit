@@ -1,16 +1,6 @@
 syntax = "proto3";
 package authentication.router;
 
-message RouterRequest {
-  string params = 1;
-  string headers = 2;
-  string context = 3;
-}
-
-message RouterResponse {
-  string result = 1;
-}
-
 service Router {
   rpc Register(RouterRequest) returns (RouterResponse);
   rpc AuthenticateLocal(RouterRequest) returns (RouterResponse);
@@ -22,3 +12,14 @@ service Router {
   rpc RenewAuth(RouterRequest) returns (RouterResponse);
   rpc LogOut(RouterRequest) returns (RouterResponse);
 }
+
+message RouterRequest {
+  string params = 1;
+  string headers = 2;
+  string context = 3;
+}
+
+message RouterResponse {
+  string result = 1;
+}
+

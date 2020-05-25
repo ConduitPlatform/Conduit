@@ -1,6 +1,10 @@
 syntax = "proto3";
 package pushnotifications.router;
 
+service Router {
+  rpc SetNotificationToken(RouterRequest) returns (RouterResponse);
+}
+
 message RouterRequest {
   string params = 1;
   string headers = 2;
@@ -11,6 +15,3 @@ message RouterResponse {
   string result = 1;
 }
 
-service Router {
-  rpc SetNotificationToken(RouterRequest) returns (RouterResponse);
-}
