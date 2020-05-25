@@ -7,6 +7,9 @@ module.exports = {
         {
             name: 'Database-provider',
             script: './modules/database-provider/dist/index.js',
+            env: {
+                databaseURL: "***REMOVED***"
+            }
             // watch: ['./service-worker']
         }],
 };
