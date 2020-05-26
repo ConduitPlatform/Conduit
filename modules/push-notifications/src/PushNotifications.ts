@@ -9,6 +9,7 @@ import {ConduitUtilities} from '@conduit/utilities';
 import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';
+import * as models from './models';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -47,8 +48,7 @@ export default class PushNotificationsModule {
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-        console.log("bound on:", this._url);
-        this.grpcServer.start();
+
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
@@ -134,9 +134,11 @@ export default class PushNotificationsModule {
     private async enableModule() {
         if (!this.isRunning) {
             await this.initProvider();
+            await this.registerSchemas();
             this.adminHandler = new AdminHandler(this.grpcServer, this.grpcSdk, this._provider!);
+            console.log("bound on:", this._url);
+            this.grpcServer.start();
             this.isRunning = true;
-
         } else {
             await this.initProvider();
             this.adminHandler.updateProvider(this._provider!);
@@ -145,7 +147,7 @@ export default class PushNotificationsModule {
 
     private async initProvider() {
         const notificationsConfig = await this.grpcSdk.config.get('pushNotifications');
-        const name = notificationsConfig.name;
+        const name = notificationsConfig.providerName;
         const settings = notificationsConfig[name];
 
         if (name === 'firebase') {
@@ -154,6 +156,13 @@ export default class PushNotificationsModule {
             // this was done just for now so that we surely initialize the _provider variable
             this._provider = new FirebaseProvider(settings as IFirebaseSettings);
         }
+    }
+
+    private registerSchemas() {
+        const promises = Object.values(models).map(model => {
+            return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(model);
+        });
+        return Promise.all(promises);
     }
 
 }

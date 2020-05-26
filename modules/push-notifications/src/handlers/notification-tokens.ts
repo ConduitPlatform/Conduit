@@ -19,7 +19,9 @@ export class NotificationTokensHandler {
         if (isNil(token) || isNil(platform)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Required fields are missing'});
         }
-        const userId = JSON.parse(call.request.context).user._id;
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isNil(context.user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized'});
+        const userId = context.user._id;
 
         let errorMessage = null;
         this.database.findOne('NotificationToken', {userId, platform})
