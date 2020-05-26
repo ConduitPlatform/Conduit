@@ -131,7 +131,7 @@ export class RestController {
             self.checkMiddlewares(route.input.path, context)
               .then(r => route.executeRequest(context))
               .then((r: any) => res.status(200).json(JSON.parse(r.result)))
-              .catch((err: Error | ConduitError) => {
+              .catch((err: Error | ConduitError | any) => {
                   if (err.hasOwnProperty("status")) {
                       console.log(err);
                       res.status((err as ConduitError).status).json({
@@ -139,6 +139,23 @@ export class RestController {
                           status: (err as ConduitError).status,
                           message: err.message,
                       });
+                  } else if (err.hasOwnProperty("code")) {
+                    let statusCode: number;
+                    let name: string;
+                    switch (err.code) {
+                        case 5:
+                            name = 'NOT_FOUND';
+                            statusCode = 404;
+                            break;
+                        default:
+                            name = 'INTERNAL_SERVER_ERROR';
+                            statusCode = 500;
+                    }
+                    res.status(statusCode).json({
+                        name,
+                        status: statusCode,
+                        message: err.details
+                    });
                   } else {
                       console.log(err);
                       res.status(500).json({
