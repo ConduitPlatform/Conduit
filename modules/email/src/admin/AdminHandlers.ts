@@ -86,7 +86,7 @@ export class AdminHandlers {
 
 
     async editTemplate(call: any, callback: any) {
-        const {id, params} = JSON.parse(call.request.params);
+        const {id, template: params} = JSON.parse(call.request.params);
 
         const allowedFields = ['name', 'subject', 'body', 'variables'];
 
