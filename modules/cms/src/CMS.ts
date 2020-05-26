@@ -13,10 +13,9 @@ export class CMS {
     // @ts-ignore
     private _admin: AdminHandlers;
     private _schemas: { [name: string]: any } = {}; // used to be SchemaAdapter
-    private readonly _router: any;
     private _url: string;
     private readonly grpcServer: any;
-    private _routes: any[];
+    private _routes: any[] | null = null;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
         const packageDefinition = protoLoader.loadSync(
@@ -34,14 +33,9 @@ export class CMS {
         this.grpcServer = new grpcModule.Server();
         // this.grpcServer.addService(cms.service, {});
 
-        let consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
-        this._routes = consumerRoutes.registeredRoutes;
-
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-        console.log("bound on:", this._url);
-        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
@@ -49,6 +43,11 @@ export class CMS {
                 this._schemas['SchemaDefinitions'] = this._adapter.createSchemaFromAdapter(schema);
                 this.loadExistingSchemas();
                 this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.createSchema.bind(this));
+              let consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
+              this._routes = consumerRoutes.registeredRoutes;
+
+              console.log("bound on:", this._url);
+                this.grpcServer.start();
             }).catch(console.log);
     }
 
