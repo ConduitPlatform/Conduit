@@ -127,7 +127,7 @@ export default class AdminModule extends IConduitAdmin {
                     if (err) {
                         return res.status(500).send(err);
                     }
-                    res.status(200).json(result);
+                    res.status(200).json(JSON.parse(result.result));
                 });
             }
             this.registerRoute(r.method, r.path, handler)
