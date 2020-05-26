@@ -13,14 +13,14 @@ export class LocalHandlers {
     private emailModule: any;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
-        this.initDbAndEmail(grpcSdk);
+        this.initDbAndEmail();
     }
 
-    private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-        await grpcSdk.waitForExistence('database-provider');
-        await grpcSdk.waitForExistence('email');
-        this.database = grpcSdk.databaseProvider;
-        this.emailModule = grpcSdk.emailProvider;
+    private async initDbAndEmail() {
+        await this.grpcSdk.waitForExistence('database-provider');
+        await this.grpcSdk.waitForExistence('email');
+        this.database = this.grpcSdk.databaseProvider;
+        this.emailModule = this.grpcSdk.emailProvider;
         this.registerTemplates();
     }
 
