@@ -130,7 +130,7 @@ export class RestController {
             let context = extractRequestData(req)
             self.checkMiddlewares(route.input.path, context)
               .then(r => route.executeRequest(context))
-              .then((r: any) => res.status(200).json(r))
+              .then((r: any) => res.status(200).json(JSON.parse(r.result)))
               .catch((err: Error | ConduitError) => {
                   if (err.hasOwnProperty("status")) {
                       console.log(err);
