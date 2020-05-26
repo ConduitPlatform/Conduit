@@ -48,7 +48,7 @@ export class AdminHandlers {
         }
 
         const templateDocumentsPromise = this.database.findMany('EmailTemplate', {}, null, skipNumber, limitNumber);
-        const totalCountPromise = this.database.countDocuments({});
+        const totalCountPromise = this.database.countDocuments('EmailTemplate', {});
 
         let errorMessage: string | null = null;
         const [templateDocuments, totalCount] = await Promise.all([templateDocumentsPromise, totalCountPromise]).catch((e: any) => errorMessage = e.message);
