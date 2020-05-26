@@ -143,9 +143,21 @@ export class RestController {
                     let statusCode: number;
                     let name: string;
                     switch (err.code) {
+                        case 3:
+                            name = 'INVALID_ARGUMENTS';
+                            statusCode = 400;
+                            break;
                         case 5:
                             name = 'NOT_FOUND';
                             statusCode = 404;
+                            break;
+                        case 7:
+                            name = 'FORBIDDEN';
+                            statusCode = 403;
+                            break;
+                        case 16:
+                            name = 'UNAUTHORIZED';
+                            statusCode = 401;
                             break;
                         default:
                             name = 'INTERNAL_SERVER_ERROR';
