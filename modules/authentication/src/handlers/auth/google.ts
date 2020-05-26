@@ -46,10 +46,6 @@ export class GoogleHandlers {
             return callback({code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized'});
         }
 
-        const User = this.database.getSchema('User');
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
-
         let user = await this.database.findOne('User', {email: payload.email}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
