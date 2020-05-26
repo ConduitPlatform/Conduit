@@ -11,6 +11,7 @@ import * as templates from '../../templates';
 export class LocalHandlers {
     private database: any;
     private emailModule: any;
+    private initialized: boolean = false;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
         this.initDbAndEmail();
@@ -22,6 +23,7 @@ export class LocalHandlers {
         this.database = this.grpcSdk.databaseProvider;
         this.emailModule = this.grpcSdk.emailProvider;
         this.registerTemplates();
+        this.initialized = true;
     }
 
     private registerTemplates() {
@@ -40,6 +42,7 @@ export class LocalHandlers {
     }
 
     async register(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
         const {email, password} = JSON.parse(call.request.params);
         let errorMessage = null;
 
@@ -91,6 +94,7 @@ export class LocalHandlers {
     }
 
     async authenticate(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
         const {email, password} = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
         let errorMessage = null;
@@ -154,6 +158,8 @@ export class LocalHandlers {
     }
 
     async forgotPassword(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
+
         const { email } = JSON.parse(call.request.params);
         const config = await this.grpcSdk.config.get('authentication');
         let errorMessage = null;
@@ -199,6 +205,8 @@ export class LocalHandlers {
     }
 
     async resetPassword(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
+
         const {passwordResetToken: passwordResetTokenParam, password: newPassword} = JSON.parse(call.request.params);
 
         if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
@@ -237,6 +245,8 @@ export class LocalHandlers {
     }
 
     async verifyEmail(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
+
         const verificationTokenParam = JSON.parse(call.request.params).verificationToken;
         if (isNil(verificationTokenParam)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
 
