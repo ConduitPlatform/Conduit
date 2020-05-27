@@ -159,9 +159,7 @@ export default class ConfigManager implements IConfigManager {
     private registerAdminRoutes() {
         const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
         const adminModule = this.sdk.getAdmin();
-        //
-        // adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
-        // adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
+
         adminModule.registerRoute('GET', '/config/modules', (req: Request, res: Response, next: NextFunction) => {
             if (isNil((req as any).conduit)) {
                 (req as any).conduit = {};
@@ -169,6 +167,15 @@ export default class ConfigManager implements IConfigManager {
             (req as any).conduit.registeredModules = this.registeredModules;
             return adminHandlers.moduleList(req, res);
         });
+        adminModule.registerRoute('GET', '/config/:module?', (req: Request, res: Response, next: NextFunction) => {
+            if (isNil((req as any).conduit)) {
+                (req as any).conduit = {};
+            }
+            (req as any).conduit.registeredModules = this.registeredModules;
+            return adminHandlers.getConfig(req, res);
+        });
+
+        // adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
 
     }
 
