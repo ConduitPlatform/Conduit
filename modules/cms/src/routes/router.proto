@@ -1,0 +1,21 @@
+syntax = "proto3";
+package cms.router;
+
+service Router {
+  rpc GetDocuments(RouterRequest) returns (RouterResponse);
+  rpc GetDocumentById(RouterRequest) returns (RouterResponse);
+  rpc CreateDocument(RouterRequest) returns (RouterResponse);
+  rpc EditDocument(RouterRequest) returns (RouterResponse);
+  rpc DeleteDocument(RouterRequest) returns (RouterResponse);
+}
+
+message RouterRequest {
+  string params = 1;
+  string headers = 2;
+  string context = 3;
+}
+
+message RouterResponse {
+  string result = 1;
+}
+

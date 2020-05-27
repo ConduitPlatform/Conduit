@@ -87,7 +87,7 @@ export class DatabaseProvider {
             .catch(err => {
                 callback({
                     code: grpc.status.INTERNAL,
-                    message: err.messages,
+                    message: err.message,
                 });
             });
     }
@@ -121,7 +121,7 @@ export class DatabaseProvider {
           .catch((err: any) => {
               callback({
                   code: grpc.status.INTERNAL,
-                  message: err,
+                  message: err.message,
               });
           });
     }
@@ -142,7 +142,7 @@ export class DatabaseProvider {
           .catch((err: any) => {
               callback({
                   code: grpc.status.INTERNAL,
-                  message: err,
+                  message: err.message,
               });
           });
     }
@@ -158,7 +158,7 @@ export class DatabaseProvider {
         .catch((err: any) => {
           callback({
             code: grpc.status.INTERNAL,
-            message: err,
+            message: err.message,
           });
         });
     }
@@ -174,7 +174,7 @@ export class DatabaseProvider {
         .catch((err: any) => {
           callback({
             code: grpc.status.INTERNAL,
-            message: err,
+            message: err.message,
           });
         });
     }
@@ -190,7 +190,7 @@ export class DatabaseProvider {
         .catch((err: any) => {
           callback({
             code: grpc.status.INTERNAL,
-            message: err,
+            message: err.message,
           });
         });
     }
@@ -206,7 +206,7 @@ export class DatabaseProvider {
         .catch((err: any) => {
           callback({
             code: grpc.status.INTERNAL,
-            message: err,
+            message: err.message,
           });
         });
     }
@@ -222,7 +222,7 @@ export class DatabaseProvider {
         .catch((err: any) => {
           callback({
             code: grpc.status.INTERNAL,
-            message: err,
+            message: err.message,
           });
         });
     }

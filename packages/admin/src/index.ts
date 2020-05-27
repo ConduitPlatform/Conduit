@@ -47,8 +47,7 @@ export default class AdminModule extends IConduitAdmin {
     // @ts-ignore
     private async handleDatabase() {
         if (!this.grpcSdk.databaseProvider) {
-            await this.grpcSdk.refreshModules(true);
-            return this.handleDatabase();
+            await this.grpcSdk.waitForExistence('database-provider');
         }
         const databaseAdapter = this.grpcSdk.databaseProvider!;
 
@@ -128,7 +127,7 @@ export default class AdminModule extends IConduitAdmin {
                     if (err) {
                         return res.status(500).send(err);
                     }
-                    res.status(200).json(result);
+                    res.status(200).json(JSON.parse(result.result));
                 });
             }
             this.registerRoute(r.method, r.path, handler)

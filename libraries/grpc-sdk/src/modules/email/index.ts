@@ -36,14 +36,14 @@ export default class Email {
     });
   }
 
-  registerTemplate(name: string, subject: string, body: string, variables: string[]) {
+  registerTemplate(template: {name: string, subject: string, body: string, variables: string[]}) {
     return new Promise((resolve, reject) => {
       this.client.registerTemplate(
         {
-          name,
-          subject,
-          body,
-          variables
+          name: template.name,
+          subject: template.subject,
+          body: template.body,
+          variables: template.variables
         },(err: any, res: any) => {
           if (err) {
             reject(err);

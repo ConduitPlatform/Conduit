@@ -10,6 +10,7 @@ import * as grpc from "grpc";
 import ConfigManager from "@conduit/config";
 import path from 'path';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {ConduitDefaultRouter} from '@conduit/router';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -36,7 +37,7 @@ export class CoreBootstrapper {
         });
         primary = new App(manager)
         const app = primary.get();
-
+        app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
         app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
 
         server.bind(_url, grpc.ServerCredentials.createInsecure());
@@ -46,11 +47,8 @@ export class CoreBootstrapper {
     }
 
     private static async registerSchemas(grpcSdk: ConduitGrpcSdk, app: ConduitApp): Promise<any> {
+        await grpcSdk.waitForExistence('database-provider');
         const database = grpcSdk.databaseProvider;
-        if (!grpcSdk.databaseProvider) {
-            await grpcSdk.refreshModules(true);
-            return this.registerSchemas(grpcSdk, app);
-        }
         const ConfigModel = new ConfigModelGenerator(app).configModel;
         return database!.createSchemaFromAdapter(ConfigModel);
     }

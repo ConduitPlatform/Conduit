@@ -1,24 +1,29 @@
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import grpc from "grpc";
 import path from "path";
-import { isNil } from 'lodash';
+import {isNil} from 'lodash';
+
 const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
-    private readonly database: any;
+    private database: any;
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
-        this.database = this.grpcSdk.databaseProvider;
+        const self = this;
+        grpcSdk.waitForExistence('database-provider')
+            .then(r => {
+                self.database = self.grpcSdk.databaseProvider;
+            })
 
         let packageDefinition = protoLoader.loadSync(
-          path.resolve(__dirname, './admin.proto'),
-          {
-              keepCase: true,
-              longs: String,
-              enums: String,
-              defaults: true,
-              oneofs: true
-          }
+            path.resolve(__dirname, './admin.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            }
         );
         let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         // @ts-ignore
@@ -39,8 +44,8 @@ export class AdminHandlers {
             limitNumber = Number.parseInt(limit as string);
         }
 
-        const usersPromise = this.database.findMany('User',{}, null, skipNumber, limitNumber);
-        const countPromise = this.database.countDocuments('User',{});
+        const usersPromise = this.database.findMany('User', {}, null, skipNumber, limitNumber);
+        const countPromise = this.database.countDocuments('User', {});
 
         let errorMessage: string | null = null;
         const [users, count] = await Promise.all([usersPromise, countPromise]).catch((e: any) => errorMessage = e.message);

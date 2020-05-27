@@ -2,7 +2,10 @@ import {Application, NextFunction, Router, Request, Response} from "express";
 import {RouterBuilder} from "./builders";
 import {ConduitRoutingController} from "./controllers/Routing";
 import {ConduitRoute, IConduitRouter, ConduitRouteParameters} from "@conduit/sdk";
+import * as grpc from "grpc";
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
+import {grpcToConduitRoute} from './utils/GrpcConverter';
 
 export class ConduitDefaultRouter implements IConduitRouter {
 
@@ -10,12 +13,36 @@ export class ConduitDefaultRouter implements IConduitRouter {
     private _internalRouter: ConduitRoutingController;
     private _globalMiddlewares: string[];
     private _routes: any[];
+    grpcSdk: ConduitGrpcSdk;
 
-    constructor(app: Application) {
+    constructor(app: Application, grpcSdk: ConduitGrpcSdk, packageDefinition: any, server: grpc.Server) {
         this._app = app;
         this._routes = [];
         this._globalMiddlewares = [];
         this._internalRouter = new ConduitRoutingController(this._app);
+        this.initGraphQL();
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        this.grpcSdk = grpcSdk;
+        // @ts-ignore
+        var router = protoDescriptor.conduit.core.Router;
+        server.addService(router.service, {
+            registerConduitRoute: this.registerGrpcRoute.bind(this),
+        })
+    }
+
+    registerGrpcRoute(call: any, callback: any) {
+        try{
+            let routes: ConduitRoute[] = grpcToConduitRoute(call.request);
+            routes.forEach(r => {
+                this.registerRoute(r);
+            })
+        }catch(err){
+            return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"})
+        }
+
+        //todo definitely missing an error handler here
+        //perhaps wrong(?) we send an empty response
+        callback(null, null);
     }
 
     initGraphQL() {

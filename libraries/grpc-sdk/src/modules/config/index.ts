@@ -1,6 +1,6 @@
 import * as grpc from 'grpc';
 import path from "path";
-import { promisify } from 'util';
+import {EventEmitter} from "events";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -98,6 +98,25 @@ export default class Config {
                 }
             })
         });
+    }
+
+    watchModules() {
+        let emitter = new EventEmitter();
+        let call = this.client.watchModules({})
+        call.on('data', function (data: any) {
+            emitter.emit('module-registered', data.modules);
+        });
+        // call.on('end', function() {
+        //     // The server has finished sending
+        // });
+        // call.on('error', function(e) {
+        //     // An error has occurred and the stream has been closed.
+        // });
+        // call.on('status', function(status) {
+        //     // process status
+        // });
+
+        return emitter;
 
     }
 

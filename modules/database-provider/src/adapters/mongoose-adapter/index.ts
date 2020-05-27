@@ -141,7 +141,7 @@ export class MongooseAdapter {
         }
 
         // validate types
-        this.validateSchemaFields(oldSchema.fields, newSchema.fields);
+        this.validateSchemaFields(oldSchema.fields ?? oldSchema.modelSchema, newSchema.fields ?? newSchema.modelSchema);
 
         return newSchema;
 

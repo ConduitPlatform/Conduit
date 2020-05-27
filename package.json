@@ -20,7 +20,8 @@
   "license": "ISC",
   "devDependencies": {
     "copyfiles": "^2.2.0",
-    "lerna": "^3.13.1"
+    "lerna": "^3.13.1",
+    "pm2": "^4.4.0"
   },
   "dependencies": {
     "docz": "^2.3.1",

@@ -107,9 +107,9 @@ export class ConduitRoute {
 
     private _returnType: ConduitRouteReturnDefinition;
     private _input: ConduitRouteOptions;
-    private _handler: (request: ConduitRouteParameters) => Promise<any>;
+    private _handler: string;
 
-    constructor(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: (request: ConduitRouteParameters) => Promise<any>) {
+    constructor(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: string) {
         this._input = input;
         this._returnType = type;
         this._handler = handler;
@@ -127,7 +127,7 @@ export class ConduitRoute {
         return this._returnType.fields;
     }
 
-    executeRequest(request: ConduitRouteParameters): Promise<any> {
-        return this._handler(request);
+    get handler(): string {
+        return this._handler;
     }
 }

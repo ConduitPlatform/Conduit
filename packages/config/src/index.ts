@@ -1,18 +1,20 @@
 import * as grpc from "grpc";
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {isNil} from "lodash";
-import { DatabaseConfigUtility } from './utils/config';
-import { Config } from 'convict';
-import { AppConfig } from './utils/config';
-import { IConfigManager } from '@conduit/sdk';
+import {DatabaseConfigUtility} from './utils/config';
+import {Config} from 'convict';
+import {AppConfig} from './utils/config';
+import {IConfigManager} from '@conduit/sdk';
+import {EventEmitter} from "events";
 
 
-export default class ConfigManager implements IConfigManager{
+export default class ConfigManager implements IConfigManager {
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
     grpcSdk: ConduitGrpcSdk;
     conduitConfig: any;
+    moduleRegister: EventEmitter;
 
     constructor(grpcSdk: ConduitGrpcSdk, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
@@ -26,8 +28,10 @@ export default class ConfigManager implements IConfigManager{
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
             moduleList: this.moduleList.bind(this),
+            watchModules: this.watchModules.bind(this),
         })
         this.databaseCallback = databaseCallback;
+        this.moduleRegister = new EventEmitter();
     }
 
     getDatabaseConfigUtility(appConfig: Config<any>) {
@@ -122,11 +126,27 @@ export default class ConfigManager implements IConfigManager{
         }
     }
 
+    watchModules(call: any, callback: any) {
+        const self = this;
+        this.moduleRegister.on('module-registered',  ()=>{
+            let modules: any[] = [];
+            self.registeredModules.forEach((value: string, key: string) => {
+                modules.push({
+                    moduleName: key,
+                    url: value
+                })
+            });
+            call.write({modules})
+        })
+        // todo this should close gracefully I guess.
+    }
+
     registerModule(call: any, callback: any) {
         this.registeredModules.set(call.request.moduleName, call.request.url);
         if (call.request.moduleName === 'database-provider') {
             this.databaseCallback();
         }
+        this.moduleRegister.emit('module-registered');
         callback(null, {result: true});
     }
 

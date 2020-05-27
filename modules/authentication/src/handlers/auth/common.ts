@@ -1,49 +1,47 @@
-import {
-    ConduitError,
-    ConduitRoute,
-    ConduitRouteActions as Actions,
-    ConduitRouteParameters,
-    ConduitRouteReturnDefinition,
-    ConduitSDK, ConduitString,
-    IConduitDatabase,
-    TYPE
-} from '@conduit/sdk';
-import {isNil} from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import {AuthService} from '../../services/auth';
 import moment from 'moment';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import grpc from "grpc";
 
 export class CommonHandlers {
-    private readonly database: IConduitDatabase;
+    private database: any;
 
-    constructor(private readonly sdk: ConduitSDK, private readonly authService: AuthService) {
-        this.database = sdk.getDatabase();
-        this.registerRoutes();
+    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
+        this.initDbAndEmail(grpcSdk);
     }
 
-    async renewAuth(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
-        const clientId = params.context.clientId;
+    private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
+        await grpcSdk.waitForExistence('database-provider');
+        this.database = grpcSdk.databaseProvider;
+    }
 
-        const {refreshToken} = params.params as any;
+    async renewAuth(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
+
+        const clientId = context.clientId;
+
+        const {refreshToken} = JSON.parse(call.request.params);
         if (isNil(refreshToken)) {
-            throw ConduitError.userInput('Invalid parameters');
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
         }
 
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
+        let errorMessage = null;
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
-
-        const oldRefreshToken = await RefreshToken.findOne({token: refreshToken, clientId});
+        const oldRefreshToken = await this.database.findOne('RefreshToken', {token: refreshToken, clientId}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(oldRefreshToken)) {
-            throw ConduitError.forbidden('Invalid parameters');
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
         }
 
-        const oldAccessToken = await AccessToken.findOne({clientId});
+        const oldAccessToken = await this.database.findOne('AccessToken', {clientId}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(oldAccessToken)) {
-            throw ConduitError.notFound('No access token found');
+            return callback({code: grpc.status.NOT_FOUND, message: 'No access token found'});
         }
 
         const signTokenOptions: ISignTokenOptions = {
@@ -51,63 +49,50 @@ export class CommonHandlers {
             expiresIn: config.tokenInvalidationPeriod
         };
 
-        const newAccessToken = await AccessToken.create({
+        const newAccessToken = await this.database.create('AccessToken', {
             userId: oldRefreshToken.userId,
             clientId,
             token: this.authService.signToken({id: oldRefreshToken.userId}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const newRefreshToken = await RefreshToken.create({
+        const newRefreshToken = await this.database.create('AccessToken', {
             userId: oldRefreshToken.userId,
             clientId,
             token: this.authService.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        await AccessToken.deleteOne(oldAccessToken);
-        await RefreshToken.deleteOne(oldRefreshToken);
+        const accessTokenPromise = this.database.deleteOne('AccessToken', oldAccessToken);
+        const refreshTokenPromise = this.database.deleteOne('RefreshToken', oldRefreshToken);
 
-        return {
+        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify({
             accessToken: newAccessToken.token,
             refreshToken: newRefreshToken.token
-        };
+        })});
     }
 
-    async logOut(params: ConduitRouteParameters) {
-        if (isNil(params.context)) throw ConduitError.forbidden('No headers provided');
-        const clientId = params.context.clientId;
+    async logOut(call: any, callback: any) {
 
-        const user = params.context.user;
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
 
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
+        const clientId = context.clientId;
+        const user = context.user;
 
-        await AccessToken.deleteOne({userId: user._id, clientId});
-        await RefreshToken.deleteOne({userId: user._id, clientId});
+        const accessTokenPromise = this.database.deleteOne('AccessToken', {userId: user._id, clientId});
+        const refreshTokenPromise = this.database.deleteOne('RefreshToken', {userId: user._id, clientId});
 
-        return 'Logged out';
+        let errorMessage = null;
+        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify({message: 'Logged out'})});
     }
 
-    registerRoutes() {
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/renew',
-                action: Actions.POST,
-                bodyParams: {
-                    refreshToken: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-                accessToken: ConduitString.Required,
-                refreshToken: ConduitString.Required
-            }), this.renewAuth.bind(this)));
-
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/logout',
-                action: Actions.POST
-            },
-            new ConduitRouteReturnDefinition('LogoutResponse', 'String'), this.logOut.bind(this)));
-    }
 }
