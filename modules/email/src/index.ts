@@ -2,13 +2,14 @@ import ConduitGrpcSdk from "@conduit/grpc-sdk";
 import fs from "fs";
 import * as path from 'path';
 import EmailModule from './Email';
+import EmailConfigSchema from './config/email';
 
 let paths = require("./admin/admin.json")
 
 // if (process.env.CONDUIT_SERVER) {
 let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
 let email = new EmailModule(grpcSdk);
-grpcSdk.config.registerModule('email', email.url).catch(err => {
+grpcSdk.config.registerModule('email', email.url, EmailConfigSchema).catch((err: any) => {
     console.error(err)
     process.exit(-1);
 });

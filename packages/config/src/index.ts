@@ -8,6 +8,7 @@ import { ConduitSDK, IConfigManager } from '@conduit/sdk';
 import {EventEmitter} from "events";
 import { AdminHandlers } from './admin/admin';
 import { NextFunction, Request, Response } from 'express';
+import { ConfigModelGenerator } from './models/Config';
 
 export default class ConfigManager implements IConfigManager {
 
@@ -38,6 +39,13 @@ export default class ConfigManager implements IConfigManager {
 
     initConfigAdminRoutes() {
         this.registerAdminRoutes();
+    }
+
+    async registerConfigSchemas(): Promise<any> {
+        await this.grpcSdk.waitForExistence('database-provider');
+        const database = this.grpcSdk.databaseProvider;
+        const ConfigModel = new ConfigModelGenerator(this.sdk).configModel;
+        return database!.createSchemaFromAdapter(ConfigModel);
     }
 
     getDatabaseConfigUtility(appConfig: Config<any>) {
@@ -147,10 +155,21 @@ export default class ConfigManager implements IConfigManager {
         // todo this should close gracefully I guess.
     }
 
-    registerModule(call: any, callback: any) {
+    async registerModulesConfigSchema(newModulesConfigSchema: any) {
+        AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
+        await this.registerConfigSchemas();
+    }
+
+    async registerModule(call: any, callback: any) {
         this.registeredModules.set(call.request.moduleName, call.request.url);
         if (call.request.moduleName === 'database-provider') {
             this.databaseCallback();
+        }
+        if (call.request.newConfigSchema !== '') {
+            const newConfigSchema = JSON.parse(call.request.newConfigSchema);
+            let errorMessage = null;
+            await this.registerModulesConfigSchema(newConfigSchema).catch(e=> errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
         this.moduleRegister.emit('module-registered');
         callback(null, {result: true});
@@ -165,8 +184,9 @@ export default class ConfigManager implements IConfigManager {
                 (req as any).conduit = {};
             }
             (req as any).conduit.registeredModules = this.registeredModules;
-            return adminHandlers.moduleList(req, res);
+            return adminHandlers.getModules(req, res);
         });
+
         adminModule.registerRoute('GET', '/config/:module?', (req: Request, res: Response, next: NextFunction) => {
             if (isNil((req as any).conduit)) {
                 (req as any).conduit = {};
@@ -175,7 +195,13 @@ export default class ConfigManager implements IConfigManager {
             return adminHandlers.getConfig(req, res);
         });
 
-        // adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
+        adminModule.registerRoute('PUT', '/config/:module?', (req: Request, res: Response, next: NextFunction) => {
+            if (isNil((req as any).conduit)) {
+                (req as any).conduit = {};
+            }
+            (req as any).conduit.registeredModules = this.registeredModules;
+            return adminHandlers.setConfig(req, res);
+        });
 
     }
 

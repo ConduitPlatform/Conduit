@@ -4,6 +4,8 @@ export abstract class IConfigManager {
   abstract getDatabaseConfigUtility(appConfig: any): IDatabaseConfigUtility;
   abstract get appConfig(): IAppConfig;
   abstract initConfigAdminRoutes(): void;
+  abstract registerConfigSchemas(): Promise<any>;
+  abstract registerModulesConfigSchema(newConfigSchema: any): Promise<void>;
 
 }
 

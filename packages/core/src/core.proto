@@ -61,6 +61,7 @@ message Empty {
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
+    string newConfigSchema = 3;
 }
 
 message RegisterModuleResponse {

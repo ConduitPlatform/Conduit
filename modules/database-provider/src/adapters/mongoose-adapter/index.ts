@@ -79,7 +79,10 @@ export class MongooseAdapter {
         }
 
         if (this.registeredSchemas.has(schema.name)) {
-            schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+            if (schema.name !== 'Config') {
+                schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+                // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
+            }
             delete this.mongoose.connection.models[schema.name];
         }
 

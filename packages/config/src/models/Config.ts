@@ -1,12 +1,12 @@
-import { ConduitModel, ConduitSchema, TYPE } from '@conduit/sdk';
-import { ConduitApp } from '../interfaces/ConduitApp';
+import { ConduitModel, ConduitSchema, ConduitSDK, TYPE } from '@conduit/sdk';
 import { Config } from 'convict';
+import { AppConfig } from '../utils/config';
 
 export class ConfigModelGenerator {
   private appConfig: Config<any>;
 
-  constructor(app: ConduitApp) {
-    this.appConfig = (app.conduit as any).config;
+  constructor(sdk: ConduitSDK) {
+    this.appConfig = (sdk as any).config;
   }
 
   private getConfigFields(parentObject: any, disabledModuleFlag: boolean = false): ConduitModel {
@@ -50,7 +50,7 @@ export class ConfigModelGenerator {
   }
 
   get configModel() {
-    const config =  this.appConfig.get();
+    const config = AppConfig.getInstance().configSchema;
     const configFieldsObject = this.getConfigFields(config);
     return new ConduitSchema('Config',
       configFieldsObject,

@@ -1,6 +1,7 @@
 import * as grpc from 'grpc';
 import path from "path";
 import {EventEmitter} from "events";
+import { isNil } from 'lodash';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -84,11 +85,13 @@ export default class Config {
         });
     }
 
-    registerModule(name: string, url: string): Promise<any> {
-        let request = {
+    registerModule(name: string, url: string, newConfigSchema?: any): Promise<any> {
+        // TODO make newConfigSchema required when all modules provide their config schema
+        let request: {[key: string]: any} = {
             moduleName: name.toString(),
             url: url.toString()
         };
+        if (!isNil(newConfigSchema)) request['newConfigSchema'] = JSON.stringify(newConfigSchema);
         return new Promise((resolve, reject) => {
             this.client.registerModule(request, (err: any, res: any) => {
                 if (err || !res) {
