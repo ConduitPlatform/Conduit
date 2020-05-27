@@ -157,30 +157,19 @@ export default class ConfigManager implements IConfigManager {
     }
 
     private registerAdminRoutes() {
-        // const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
+        const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
         const adminModule = this.sdk.getAdmin();
         //
         // adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
         // adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
-        adminModule.registerRoute('GET', '/config/modules', this.moduleListAdminHandler.bind(this));
+        adminModule.registerRoute('GET', '/config/modules', (req: Request, res: Response, next: NextFunction) => {
+            if (isNil((req as any).conduit)) {
+                (req as any).conduit = {};
+            }
+            (req as any).conduit.registeredModules = this.registeredModules;
+            return adminHandlers.moduleList(req, res);
+        });
+
     }
-
-    private async moduleListAdminHandler(req: Request, res: Response, next: NextFunction) {
-        if (this.registeredModules.size !== 0) {
-            let modules: any[] = [];
-            this.registeredModules.forEach((value: string, key: string) => {
-                modules.push({
-                    moduleName: key,
-                    url: value
-                })
-            });
-            return res.json({ modules });
-        } else {
-            return res.status(404).json({ message: 'Modules not available' });
-        }
-    }
-
-
-
 
 }
