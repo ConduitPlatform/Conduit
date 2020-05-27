@@ -1,26 +1,24 @@
-import express, {NextFunction, Request, Response} from 'express';
-import {ConduitApp} from './interfaces/ConduitApp';
+import express, { NextFunction, Request, Response } from 'express';
+import { ConduitApp } from './interfaces/ConduitApp';
 import {
     ConduitRoute,
     ConduitRouteActions as Actions,
     ConduitRouteReturnDefinition as ReturnDefinition,
-    ConduitSDK, IConduitRouter, IAppConfig, IConfigManager,
-    TYPE
+    ConduitSDK,
+    IConduitRouter
 } from '@conduit/sdk';
-import {ConduitDefaultRouter} from '@conduit/router';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import {ConduitLogger} from './utils/logging/logger';
-import {MonitoringUtility} from './utils/monitoring';
+import { ConduitLogger } from './utils/logging/logger';
+import { MonitoringUtility } from './utils/monitoring';
 
 export class App {
     private app: ConduitApp;
     private conduitRouter: IConduitRouter;
     private readonly logger: ConduitLogger;
-    private appConfig: IAppConfig;
 
-    constructor(private readonly configManager: IConfigManager) {
+    constructor() {
 
         this.initializeSdk();
         this.logger = new ConduitLogger();
@@ -41,15 +39,11 @@ export class App {
         const expressApp = express();
         const conduitSDK = ConduitSDK.getInstance(expressApp);
 
-        this.appConfig = this.configManager.appConfig;
-
-        (conduitSDK as any).config = this.appConfig.config;
         const conduitExtras = {
             conduit: conduitSDK,
             initialized: false
         };
         this.app = Object.assign(expressApp, conduitExtras);
-        this.app.conduit.registerConfigManager(this.configManager);
     }
 
     private registerGlobalMiddleware() {

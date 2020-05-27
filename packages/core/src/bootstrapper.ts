@@ -31,12 +31,14 @@ export class CoreBootstrapper {
                 oneofs: true
             });
         // NOTE: all core packages with grpc need to be created before grpc server start
-        let manager = new ConfigManager(grpcSdk, server, packageDefinition, (url: string) => {
+        primary = new App();
+        const app = primary.get();
+        let manager = new ConfigManager(grpcSdk, app.conduit, server, packageDefinition, (url: string) => {
             primary?.initialize();
             CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
         });
-        primary = new App(manager)
-        const app = primary.get();
+
+        app.conduit.registerConfigManager(manager);
         app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
         app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
 
