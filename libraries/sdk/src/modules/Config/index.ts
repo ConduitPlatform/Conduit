@@ -3,6 +3,7 @@ import { Config } from 'convict';
 export abstract class IConfigManager {
   abstract getDatabaseConfigUtility(appConfig: any): IDatabaseConfigUtility;
   abstract get appConfig(): IAppConfig;
+  abstract initConfigAdminRoutes(): void;
 
 }
 

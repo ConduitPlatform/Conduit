@@ -4,9 +4,10 @@ import {isNil} from "lodash";
 import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
 import {AppConfig} from './utils/config';
-import {IConfigManager} from '@conduit/sdk';
+import { ConduitSDK, IConfigManager } from '@conduit/sdk';
 import {EventEmitter} from "events";
-
+import { AdminHandlers } from './admin/admin';
+import { NextFunction, Request, Response } from 'express';
 
 export default class ConfigManager implements IConfigManager {
 
@@ -16,10 +17,11 @@ export default class ConfigManager implements IConfigManager {
     conduitConfig: any;
     moduleRegister: EventEmitter;
 
-    constructor(grpcSdk: ConduitGrpcSdk, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
+    constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitSDK, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         this.grpcSdk = grpcSdk;
         this.conduitConfig = this.appConfig.config;
+        (sdk as any).config = this.appConfig.config;
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
@@ -32,6 +34,10 @@ export default class ConfigManager implements IConfigManager {
         })
         this.databaseCallback = databaseCallback;
         this.moduleRegister = new EventEmitter();
+    }
+
+    initConfigAdminRoutes() {
+        this.registerAdminRoutes();
     }
 
     getDatabaseConfigUtility(appConfig: Config<any>) {
@@ -149,6 +155,32 @@ export default class ConfigManager implements IConfigManager {
         this.moduleRegister.emit('module-registered');
         callback(null, {result: true});
     }
+
+    private registerAdminRoutes() {
+        // const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
+        const adminModule = this.sdk.getAdmin();
+        //
+        // adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
+        // adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
+        adminModule.registerRoute('GET', '/config/modules', this.moduleListAdminHandler.bind(this));
+    }
+
+    private async moduleListAdminHandler(req: Request, res: Response, next: NextFunction) {
+        if (this.registeredModules.size !== 0) {
+            let modules: any[] = [];
+            this.registeredModules.forEach((value: string, key: string) => {
+                modules.push({
+                    moduleName: key,
+                    url: value
+                })
+            });
+            return res.json({ modules });
+        } else {
+            return res.status(404).json({ message: 'Modules not available' });
+        }
+    }
+
+
 
 
 }
