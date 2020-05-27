@@ -112,10 +112,6 @@ export default class AuthenticationModule {
     //   return this.authMiddleware.middleware.bind(this.authMiddleware);
     // }
 
-    static get config() {
-        return AuthenticationConfigSchema;
-    }
-
     private registerSchemas() {
         const promises = Object.values(models).map(model => {
             return this.database.createSchemaFromAdapter(model);

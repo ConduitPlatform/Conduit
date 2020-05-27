@@ -69,10 +69,6 @@ export default class PushNotificationsModule {
         return this._url;
     }
 
-    static get config() {
-        return PushNotificationsConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
 

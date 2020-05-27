@@ -126,11 +126,6 @@ export class InMemoryStore {
         this._admin.updateProvider(this._provider);
     }
 
-    static get config() {
-        return InMemoryStoreConfigSchema;
-    }
-
-
     private async initProvider() {
         const inMemoryStoreConfig = await (this.conduit as any).config.get('inMemoryStore');
         const name = inMemoryStoreConfig.providerName;

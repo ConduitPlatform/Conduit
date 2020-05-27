@@ -65,10 +65,6 @@ export class StorageModule {
         return this._url;
     }
 
-    static get config() {
-        return StorageConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
 
         const newConfig = JSON.parse(call.request.newConfig);
