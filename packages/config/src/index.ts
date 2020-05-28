@@ -32,6 +32,7 @@ export default class ConfigManager implements IConfigManager {
             registerModule: this.registerModule.bind(this),
             moduleList: this.moduleList.bind(this),
             watchModules: this.watchModules.bind(this),
+            registerModulesConfig: this.registerModulesConfigGrpc.bind(this)
         })
         this.databaseCallback = databaseCallback;
         this.moduleRegister = new EventEmitter();
@@ -59,10 +60,9 @@ export default class ConfigManager implements IConfigManager {
     get(call: any, callback: any) {
         if (!isNil(this.grpcSdk.databaseProvider)) {
             this.grpcSdk.databaseProvider!.findOne('Config', {})
-                .then(dbConfig => {
+                .then(async (dbConfig: any) => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
                     if (isNil(dbConfig[call.request.key])) throw new Error(`Config for module "${call.request.key} not set`);
-                    // TODO set config for not set module
                     return callback(null, {data: JSON.stringify(dbConfig[call.request.key])})
                 })
                 .catch(err => {
@@ -155,21 +155,32 @@ export default class ConfigManager implements IConfigManager {
         // todo this should close gracefully I guess.
     }
 
-    async registerModulesConfigSchema(newModulesConfigSchema: any) {
+    async registerModulesConfigGrpc(call: any, callback: any) {
+        const newModulesConfigSchema = JSON.parse(call.request.newModulesConfigSchema);
+        const name = call.request.name;
+        let errorMessage = null;
+        await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        return callback(null, {});
+    }
+
+    async registerModulesConfig(name: string, newModulesConfigSchema: any) {
         AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
-        await this.registerConfigSchemas();
+        let errorMessage = null;
+        await this.registerConfigSchemas().catch(e => errorMessage = e.message);
+        if (!isNil(errorMessage)) {
+            throw new Error(errorMessage)
+        }
+        const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
+        if (isNil(dbConfig[name])) {
+            await this.getDatabaseConfigUtility(this.appConfig.config).updateDbConfig();
+        }
     }
 
     async registerModule(call: any, callback: any) {
         this.registeredModules.set(call.request.moduleName, call.request.url);
         if (call.request.moduleName === 'database-provider') {
             this.databaseCallback();
-        }
-        if (call.request.newConfigSchema !== '') {
-            const newConfigSchema = JSON.parse(call.request.newConfigSchema);
-            let errorMessage = null;
-            await this.registerModulesConfigSchema(newConfigSchema).catch(e=> errorMessage = e.message);
-            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
         this.moduleRegister.emit('module-registered');
         callback(null, {result: true});

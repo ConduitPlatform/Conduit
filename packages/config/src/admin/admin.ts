@@ -110,7 +110,7 @@ export class AdminHandlers {
         break;
       case 'in-memory-store':
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.inMemoryStore)) return res.json({ message: 'Module not available' });
-        updatedConfig = await this.sdk.getInMemoryStore().setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
+        updatedConfig = await this.grpcSdk.inMemoryStore.setConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'push-notifications':
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.pushNotifications)) return res.json({ message: 'Module not available' });

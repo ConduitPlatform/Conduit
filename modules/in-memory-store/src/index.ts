@@ -2,14 +2,13 @@ import {InMemoryStore} from "./InMemoryStore";
 import ConduitGrpcSdk from "@conduit/grpc-sdk";
 import fs from "fs";
 import * as path from 'path';
-import InMemoryStoreConfigSchema from './config/in-memory-store';
 
 let paths = require("./admin/admin.json")
 
 // if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
     let store = new InMemoryStore(grpcSdk);
-    grpcSdk.config.registerModule('in-memory-store', store.url, InMemoryStoreConfigSchema).catch(err => {
+    grpcSdk.config.registerModule('in-memory-store', store.url).catch((err: any) => {
         console.error(err)
         process.exit(-1);
     });

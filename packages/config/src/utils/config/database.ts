@@ -27,4 +27,18 @@ export class DatabaseConfigUtility extends IDatabaseConfigUtility{
 
         this.appConfig.load(dbConfig);
     }
+
+    async updateDbConfig() {
+        let dbConfig = await this.database.findOne('Config', {});
+        const appConfig = this.appConfig.get();
+        Object.keys(appConfig).forEach(key => {
+            dbConfig[key] = appConfig[key];
+        })
+        dbConfig = await this.database.findByIdAndUpdate('Config', dbConfig);
+        delete dbConfig._id;
+        delete dbConfig.createdAt;
+        delete dbConfig.updatedAt;
+        delete dbConfig.__v;
+        this.appConfig.load(dbConfig);
+    }
 }
