@@ -3,14 +3,13 @@ import fs from "fs";
 import * as path from 'path';
 import AuthenticationModule from './Authentication';
 import { isNil } from "lodash";
-import AuthenticationConfigSchema from './config/authentication';
 
 let paths = require("./admin/admin.json")
 
 // if (process.env.CONDUIT_SERVER) {
 let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
 let authentication = new AuthenticationModule(grpcSdk);
-grpcSdk.config.registerModule('authentication', authentication.url, AuthenticationConfigSchema).catch(err => {
+grpcSdk.config.registerModule('authentication', authentication.url).catch(err => {
   console.error(err)
   process.exit(-1);
 });

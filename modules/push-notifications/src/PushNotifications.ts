@@ -52,6 +52,9 @@ export default class PushNotificationsModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
+                return this.grpcSdk.config.registerModulesConfig('pushNotifications', PushNotificationsConfigSchema);
+            })
+            .then(() => {
                 return this.grpcSdk.config.get('pushNotifications')
             })
             .then((notificationsConfig: any) => {

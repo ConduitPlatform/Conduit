@@ -46,6 +46,9 @@ export default class EmailModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
+                return this.grpcSdk.config.registerModulesConfig('email', EmailConfigSchema);
+            })
+            .then(() => {
                 return this.grpcSdk.config.get('email')
             })
             .then((emailConfig: any) => {

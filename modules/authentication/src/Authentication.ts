@@ -49,6 +49,9 @@ export default class AuthenticationModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
+                return this.grpcSdk.config.registerModulesConfig('authentication', AuthenticationConfigSchema);
+            })
+            .then(() => {
                 return this.grpcSdk.config.get('authentication')
             })
             .then((authConfig: any) => {

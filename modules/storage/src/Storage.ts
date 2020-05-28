@@ -48,6 +48,9 @@ export class StorageModule {
         this.grpcServer.start();
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
+                  return this.grpcSdk.config.registerModulesConfig('storage', StorageConfigSchema);
+            })
+            .then(() => {
                 return this.grpcSdk.config.get('storage')
             })
             .then((storageConfig: any) => {
