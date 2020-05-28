@@ -60,27 +60,26 @@ export default class EmailModule {
         return this._url;
     }
 
-    static get config() {
-        return EmailConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
+        console.log(newConfig)
+        if (isNil(newConfig.active) || isNil(newConfig.transport) || isNil(newConfig.transportSettings)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
+        }
         if (!ConduitUtilities.validateConfigFields(newConfig, EmailConfigSchema.email)) {
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
 
         let errorMessage: string | null = null;
-        const updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
-        if (!isNil(errorMessage)) {
-            throw new Error(errorMessage);
-        }
+        let updateResult = null;
 
-        const emailConfig = await this.grpcSdk.config.get('email');
-        if (emailConfig.active) {
-            await this.enableModule().catch((e: Error) => errorMessage = e.message);
+        if (newConfig.active) {
+            await this.enableModule(newConfig).catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         } else {
-            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
+            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module must be active'});
         }
         if (!isNil(errorMessage)) {
             return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -89,7 +88,7 @@ export default class EmailModule {
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
-    private async enableModule() {
+    private async enableModule(newConfig?: any) {
         if (!this.isRunning) {
             this.registerModels();
             await this.initEmailProvider();
@@ -99,7 +98,7 @@ export default class EmailModule {
             this.grpcServer.start();
             this.isRunning = true;
         } else {
-            await this.initEmailProvider();
+            await this.initEmailProvider(newConfig);
             this.emailService.updateProvider(this.emailProvider);
         }
     }
@@ -135,8 +134,8 @@ export default class EmailModule {
         database!.createSchemaFromAdapter(emailTemplateSchema);
     }
 
-    private async initEmailProvider() {
-        const emailConfig = await this.grpcSdk.config.get('email');
+    private async initEmailProvider(newConfig?: any) {
+        let emailConfig = !isNil(newConfig) ? newConfig : await this.grpcSdk.config.get('email');
 
         let {transport, transportSettings} = emailConfig;
 
