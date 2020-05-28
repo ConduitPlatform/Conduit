@@ -62,7 +62,6 @@ export default class EmailModule {
 
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
-        console.log(newConfig)
         if (isNil(newConfig.active) || isNil(newConfig.transport) || isNil(newConfig.transportSettings)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
