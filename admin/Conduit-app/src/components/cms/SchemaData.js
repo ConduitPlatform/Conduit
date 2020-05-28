@@ -17,6 +17,10 @@ import CardContent from '@material-ui/core/CardContent';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
+import Dialog from '@material-ui/core/Dialog';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogActions from '@material-ui/core/DialogActions';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,6 +49,12 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
     maxWidth: 400,
   },
+  'Mui-selected': {
+    background: 'none',
+    '&:hover': {
+      background: 'none !important',
+    },
+  },
   card: {
     margin: theme.spacing(1),
   },
@@ -62,15 +72,15 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexDirection: 'column',
   },
+  deleteButton: {
+    backgroundColor: theme.palette.secondary.main,
+    color: theme.palette.common.white,
+  },
 }));
 
 const TabPanel = (props) => {
   const classes = useStyles();
-  const { value, index, children } = props;
-
-  if (value !== index) {
-    return null;
-  }
+  const { children } = props;
 
   return <Box className={classes.cardContainer}>{children}</Box>;
 };
@@ -81,11 +91,17 @@ const options = ['edit', 'delete'];
 const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   const classes = useStyles();
   const [selectedSchema, setSelectedSchema] = useState(0);
-
+  const [docIndex, setDocIndex] = useState(null);
+  const [createIndex, setCreateIndex] = useState(null);
+  const [docAction, setDocAction] = useState('');
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
+  const [dialog, setDialog] = useState(false);
 
-  const handleClick = (event) => {
+  const [objFields, setObjFields] = useState([]);
+
+  const handleClick = (event, idx) => {
+    setDocIndex(idx);
     setAnchorEl(event.currentTarget);
   };
 
@@ -94,6 +110,7 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   };
 
   const handleChange = (event, newValue) => {
+    setDocAction('');
     setSelectedSchema(newValue);
     const name = schemas[newValue].name;
     handleSchemaChange(name);
@@ -111,8 +128,8 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
         key={nodes.id}
         nodeId={nodes.id}
         label={
-          <Typography>
-            <span className={classes.bold}>{`${nodes.id}: `}</span>
+          <Typography variant={'subtitle2'}>
+            <Typography component={'span'} className={classes.bold}>{`${nodes.id}: `}</Typography>
             {Array.isArray(nodes.data)
               ? nodes.data.length > 0
                 ? '[...]'
@@ -131,6 +148,104 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
     );
   };
 
+  const renderEditTree = (nodes) => {
+    return (
+      <TreeItem
+        key={nodes.name}
+        nodeId={nodes.name}
+        label={
+          <Typography variant={'subtitle2'} style={{ display: 'flex', alignItems: 'center', marginBottom: '.5rem' }}>
+            <Typography component={'span'} className={classes.bold}>{`${nodes.name}: `}</Typography>
+            {typeof nodes.type === 'string' ? (
+              <TextField
+                id={nodes.name}
+                required={nodes.required}
+                type={nodes.type}
+                onChange={(event) => handleTextChange(event, nodes.name)}
+                size={'small'}
+                variant={'outlined'}
+                style={{ width: '30vw', zIndex: '1020' }}
+                value={nodes.value}
+              />
+            ) : null}
+          </Typography>
+        }>
+        {nodes.type && typeof nodes.type !== 'string'
+          ? nodes.type.map((item) => {
+              return renderEditTree(item);
+            })
+          : null}
+      </TreeItem>
+    );
+  };
+
+  const handleTextChange = (event, objName) => {
+    const found = objFields.find((obj) => obj.name === objName);
+    if (found) {
+      found.value = event.target.value;
+    }
+  };
+
+  const onSelectAction = (option) => {
+    handleClose();
+    if (option === 'edit') {
+      setDocAction('edit');
+      const arrFields = getFields(schemas[selectedSchema].fields, 'edit');
+      setObjFields([...arrFields]);
+    } else if (option === 'delete') {
+      setDocAction('delete');
+      openDialog(docIndex);
+    }
+  };
+
+  const cancelEditDocument = () => {
+    setDocAction('');
+    setObjFields([]);
+    setCreateIndex(null);
+  };
+
+  const addNewDocument = () => {
+    setDocAction('create');
+    setCreateIndex(selectedSchema);
+    const arrFields = getFields(schemas[selectedSchema].fields, 'create');
+    setObjFields([...arrFields]);
+  };
+
+  const getFields = (fields, action) => {
+    const editFields = [];
+    Object.keys(fields).forEach((item) => {
+      if (typeof fields[item] !== 'string') {
+        if (typeof fields[item].type === 'string') {
+          const value = action === 'edit' ? documents[docIndex][item] : null;
+          const obj = { name: item.toString(), ...fields[item], value: action === 'edit' ? value : fields[item].default };
+          editFields.push(obj);
+        } else {
+          const group = { name: item.toString(), type: getFields(fields[item].type, action) };
+          editFields.push(group);
+        }
+      }
+    });
+    return editFields;
+  };
+
+  const closeDialog = () => {
+    setDialog(false);
+  };
+
+  const openDialog = () => {
+    setDialog(true);
+  };
+
+  const handleDelete = () => {
+    //  todo handle delete document API call
+  };
+
+  const handleCreateDocument = () => {
+    // TODO API call redux (actions etc...)
+    console.log('Schema id, name ', schemas[createIndex]._id, schemas[createIndex].name);
+    console.log('SAVE CREATE DOCUMENT', objFields);
+  };
+
   return (
     <Container>
       <Box className={classes.root}>
@@ -146,81 +261,175 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
           })}
         </Tabs>
 
-        {schemas.map((d, index) => {
-          return (
-            <TabPanel key={`tabPanel${index}`} value={selectedSchema} index={index}>
-              {documents.length > 0 ? (
-                <>
-                  <Button
-                    key={`btn_${documents.length - 1}`}
-                    variant="contained"
-                    color="primary"
-                    style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
-                    Create New
-                  </Button>
-                  {documents.map((doc, index) => {
-                    return (
-                      <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
-                        <CardHeader
-                          title={doc._id}
-                          action={
-                            <>
-                              <IconButton aria-label="settings" onClick={handleClick}>
-                                <MoreVert />
-                              </IconButton>
-                              <Menu
-                                id="long-menu"
-                                anchorEl={anchorEl}
-                                keepMounted
-                                open={open}
-                                onClose={handleClose}
-                                PaperProps={{
-                                  style: {
-                                    maxHeight: ITEM_HEIGHT * 4.5,
-                                    width: '20ch',
-                                  },
-                                }}>
-                                {options.map((option) => (
-                                  <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
-                                    {option}
-                                  </MenuItem>
-                                ))}
-                              </Menu>
-                            </>
-                          }
-                        />
-                        <CardContent>
-                          {createDocumentArray(doc).map((obj, index) => {
-                            return (
-                              <TreeView
-                                key={`treeView${index}`}
-                                className={classes.tree}
-                                defaultCollapseIcon={<ExpandMoreIcon />}
-                                defaultExpanded={['root']}
-                                defaultExpandIcon={<ChevronRightIcon />}>
-                                {renderTree(obj)}
-                              </TreeView>
-                            );
-                          })}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </>
-              ) : (
-                <>
-                  <Box className={classes.emptyDocuments}>
-                    <p>No documents are availables.</p>
-                    <Button variant="contained" color="primary">
-                      Create New
-                    </Button>
-                  </Box>
-                </>
+        <TabPanel value={selectedSchema}>
+          {documents.length > 0 || docAction === 'create' ? (
+            <>
+              {docAction !== 'edit' && docAction !== 'create' && (
+                <Button
+                  key={`btn_${documents.length - 1}`}
+                  variant="contained"
+                  color="primary"
+                  style={{ alignSelf: 'flex-end', margin: '.5rem' }}
+                  onClick={() => addNewDocument()}>
+                  Add Document
+                </Button>
               )}
-            </TabPanel>
-          );
-        })}
+              {docAction === '' || docAction === 'delete' ? (
+                documents.map((doc, index) => {
+                  return (
+                    <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                      <CardHeader
+                        title={doc._id}
+                        action={
+                          <>
+                            <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
+                              <MoreVert />
+                            </IconButton>
+                          </>
+                        }
+                      />
+                      <CardContent>
+                        {createDocumentArray(doc).map((obj, index) => {
+                          return (
+                            <TreeView
+                              key={`treeView${index}`}
+                              className={classes.tree}
+                              defaultCollapseIcon={<ExpandMoreIcon />}
+                              defaultExpanded={['root']}
+                              defaultExpandIcon={<ChevronRightIcon />}>
+                              {renderTree(obj)}
+                            </TreeView>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              ) : docAction === 'create' ? (
+                <Card key={`card_CreateNew`} className={classes.card} variant={'outlined'}>
+                  <CardHeader
+                    title={`Schema: ${schemas[createIndex].name}`}
+                    action={
+                      <>
+                        <Button
+                          key={`btn_Cancel_Insert`}
+                          variant="contained"
+                          color="primary"
+                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
+                          onClick={cancelEditDocument}>
+                          Cancel
+                        </Button>
+                        <Button
+                          key={`btn_Save_Create`}
+                          onClick={handleCreateDocument}
+                          variant="contained"
+                          color="primary"
+                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
+                          Save
+                        </Button>
+                      </>
+                    }
+                  />
+                  <CardContent>
+                    {objFields.map((obj, index) => {
+                      return (
+                        <TreeView
+                          aria-selected={false}
+                          key={`treeView${index}`}
+                          className={classes.tree}
+                          defaultCollapseIcon={<ExpandMoreIcon />}
+                          defaultExpanded={['root']}
+                          defaultExpandIcon={<ChevronRightIcon />}>
+                          {renderEditTree(obj)}
+                        </TreeView>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card key={`card${docIndex}`} className={classes.card} variant={'outlined'}>
+                  <CardHeader
+                    title={documents[docIndex]._id}
+                    action={
+                      <>
+                        <Button
+                          key={`btn_Cancel_${documents[docIndex]}`}
+                          variant="contained"
+                          color="primary"
+                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
+                          onClick={cancelEditDocument}>
+                          Cancel
+                        </Button>
+                        <Button
+                          key={`btn_Save_${documents[docIndex]}`}
+                          variant="contained"
+                          color="primary"
+                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
+                          Save
+                        </Button>
+                      </>
+                    }
+                  />
+                  <CardContent>
+                    {objFields.map((obj, index) => {
+                      return (
+                        <TreeView
+                          key={`treeView${index}`}
+                          className={classes.tree}
+                          defaultCollapseIcon={<ExpandMoreIcon />}
+                          defaultExpanded={['root']}
+                          defaultExpandIcon={<ChevronRightIcon />}>
+                          {renderEditTree(obj)}
+                        </TreeView>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <>
+              <Box className={classes.emptyDocuments}>
+                <p>No documents are availables.</p>
+                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
+                  Add Document
+                </Button>
+              </Box>
+            </>
+          )}
+        </TabPanel>
       </Box>
+      <Dialog fullWidth={false} maxWidth={'md'} open={dialog} onClose={handleClose}>
+        <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
+          Delete document : {documents[docIndex]?._id}
+        </DialogTitle>
+        <DialogActions>
+          <Button onClick={() => closeDialog()} variant="contained" style={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} className={classes.deleteButton} variant="contained" style={{ textTransform: 'none' }}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Menu
+        id="long-menu"
+        anchorEl={anchorEl}
+        keepMounted
+        open={open}
+        onClose={handleClose}
+        PaperProps={{
+          style: {
+            maxHeight: ITEM_HEIGHT * 4.5,
+            width: '20ch',
+          },
+        }}>
+        {options.map((option) => (
+          <MenuItem key={option} selected={option === 'Pyxis'} onClick={() => onSelectAction(option)}>
+            {option}
+          </MenuItem>
+        ))}
+      </Menu>
     </Container>
   );
 };
