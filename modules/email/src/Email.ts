@@ -78,10 +78,7 @@ export default class EmailModule {
             updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
             if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         } else {
-            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module must be active'});
-        }
-        if (!isNil(errorMessage)) {
-            return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module must be activated to set config'});
         }
 
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
