@@ -100,7 +100,11 @@ export class DatabaseProvider {
     getSchema(call: any, callback: any) {
         this._activeAdapter.getSchema(call.request.schemaName)
             .then(schemaAdapter => {
-                callback(null, schemaAdapter);
+                callback(null, {schema: {
+                    name: schemaAdapter.schema.name,
+                    modelSchema: JSON.stringify(schemaAdapter.schema.modelSchema),
+                    modelOptions: JSON.stringify(schemaAdapter.schema.modelOptions)
+                  }});
             })
             .catch(err => {
                 callback({

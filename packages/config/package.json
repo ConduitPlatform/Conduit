@@ -15,6 +15,7 @@
     "@conduit/sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "convict": "^5.2.0",
+    "deepdash": "^5.0.4",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15",
     "memjs": "^1.2.2",

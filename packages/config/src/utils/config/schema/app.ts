@@ -1,56 +1,57 @@
-export default {
+import { ConduitSchema, TYPE } from '@conduit/sdk';
+
+export default new ConduitSchema('Config', {
+    _id: TYPE.ObjectId,
     env: {
-        doc: 'The application environment.',
-        format: [
-            'production',
-            'development',
-            'test'
-        ],
+        type: TYPE.String,
         default: 'development',
-        env: 'NODE_ENV'
+        enum: ['production', 'development', 'test'],
+        systemRequired: true,
+        // env: 'NODE_ENV'
     },
     database: {
-        doc: 'The connection details for Prisma',
         type: {
-            format: "String",
-            default: 'mongodb'
+            type: TYPE.String,
+            default: 'mongodb',
+            systemRequired: true
         },
         databaseURL: {
-            format: "String",
-            default: 'mongodb://localhost:27017/conduit'
-        }
-    },
-    hostUrl: {
-        doc: 'The base host url',
-        format: 'String',
-        default: 'http://localhost:3000'
+            type: TYPE.String,
+            default: 'mongodb://localhost:27017/conduit',
+            systemRequired: true
+        },
+        hostUrl: {
+            type: TYPE.String,
+            default: 'http://localhost:3000',
+            systemRequired: true
     },
     transports: {
         rest: {
             enabled: {
-                doc: 'If the REST API should be enabled -this does not affect admin endpoints',
-                format: 'Boolean',
-                default: true
+                type: TYPE.Boolean,
+                default: true,
+                systemRequired: true
             }
         },
         graphql: {
             enabled: {
-                doc: 'If the GraphQL API should be enabled -this does not affect admin endpoints',
-                format: 'Boolean',
-                default: true
+                type: TYPE.Boolean,
+                default: true,
+                systemRequired: true
             }
         }
     },
     activatedModules: {
-        doc: 'An array with the names of the activated modules',
-        format: '*',
-        default: ['cms', 'storage']
+        type: TYPE.JSON,
+        default: ['cms', 'storage'],
+        systemRequired: true
     },
     port: {
-        doc: 'The port to bind.',
-        format: 'Number',
+        type: TYPE.Number,
         default: 8080,
-        env: 'PORT',
-        arg: 'port'
+        // env: 'PORT',
+        // arg: 'port',
+        systemRequired: true
     }
-};
+    }
+}, {systemRequired: true, timestamps: true});

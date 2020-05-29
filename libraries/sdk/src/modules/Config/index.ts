@@ -2,10 +2,11 @@ import { Config } from 'convict';
 
 export abstract class IConfigManager {
   abstract getDatabaseConfigUtility(appConfig: any): IDatabaseConfigUtility;
-  abstract get appConfig(): IAppConfig;
+  // abstract get appConfig(): IAppConfig;
   abstract initConfigAdminRoutes(): void;
-  abstract registerConfigSchemas(): Promise<any>;
-  abstract registerModulesConfig(name: string, newModulesConfigSchema: any): Promise<any>;
+  abstract registerAppConfig(): Promise<any>;
+  abstract registerConfigSchemas(newConfig: any): Promise<any>;
+  abstract registerModulesConfig(newModulesConfigSchemaFields: any): Promise<any>;
 
 }
 

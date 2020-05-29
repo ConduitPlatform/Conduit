@@ -1,7 +1,6 @@
 import * as grpc from 'grpc';
 import path from "path";
 import {EventEmitter} from "events";
-import { isNil } from 'lodash';
 
 let protoLoader = require('@grpc/proto-loader');
 

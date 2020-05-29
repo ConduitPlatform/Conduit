@@ -47,12 +47,12 @@ export class CoreBootstrapper {
     }
 
     private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
-        await app.conduit.getConfigManager().registerConfigSchemas();
+        await app.conduit.getConfigManager().registerAppConfig();
+        //
+        // const appConfig: Config<any> = (app.conduit as any).config;
+        // const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);
 
-        const appConfig: Config<any> = (app.conduit as any).config;
-        const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);
-
-        await databaseConfigUtility.configureFromDatabase();
+        // await databaseConfigUtility.configureFromDatabase();
 
         app.conduit.getAdmin().initialize();
         app.conduit.getConfigManager().initConfigAdminRoutes();

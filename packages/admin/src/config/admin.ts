@@ -1,25 +1,27 @@
+import { TYPE } from '@conduit/sdk';
+
 export default {
   admin: {
     auth: {
       tokenSecret: {
-        doc: 'The secret to be used to sing the admin tokens',
-        format: 'String',
-        default: 'fjeinqgwenf'
+        type: TYPE.String,
+        default: 'fjeinqgwenf',
+        systemRequired: true
       },
       hashRounds: {
-        doc: 'The hash rounds to be used for bcrypt when hashing admin password',
-        format: 'Number',
-        default: 11
+        type: TYPE.Number,
+        default: 11,
+        systemRequired: true
       },
       tokenExpirationTime: {
-        doc: 'Milliseconds after which the admin tokens expire',
-        format: 'Number',
-        default: 21600
+        type: TYPE.Number,
+        default: 21600,
+        systemRequired: true
       },
       masterkey: {
-        doc: 'The key that admin users need to have to interact with the admin service',
-        format: 'String',
-        default: 'M4ST3RK3Y'
+        type: TYPE.String,
+        default: 'M4ST3RK3Y',
+        systemRequired: true
       }
     }
   }

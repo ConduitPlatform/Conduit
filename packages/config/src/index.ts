@@ -3,7 +3,7 @@ import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {isNil} from "lodash";
 import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
-import {AppConfig} from './utils/config';
+import AppConfigSchema from './utils/config/schema/app';
 import { ConduitSDK, IConfigManager } from '@conduit/sdk';
 import {EventEmitter} from "events";
 import { AdminHandlers } from './admin/admin';
@@ -21,8 +21,8 @@ export default class ConfigManager implements IConfigManager {
     constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitSDK, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         this.grpcSdk = grpcSdk;
-        this.conduitConfig = this.appConfig.config;
-        (sdk as any).config = this.appConfig.config;
+        // this.conduitConfig = this.appConfig.config;
+        // (sdk as any).config = this.appConfig.config;
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
@@ -42,20 +42,33 @@ export default class ConfigManager implements IConfigManager {
         this.registerAdminRoutes();
     }
 
-    async registerConfigSchemas(): Promise<any> {
-        await this.grpcSdk.waitForExistence('database-provider');
+    async registerAppConfig() {
+        await this.registerConfigSchemas(AppConfigSchema);
+    }
+
+    async registerConfigSchemas(newConfig: any): Promise<any> {
         const database = this.grpcSdk.databaseProvider;
-        const ConfigModel = new ConfigModelGenerator(this.sdk).configModel;
-        return database!.createSchemaFromAdapter(ConfigModel);
+        if (isNil(newConfig.name)) {
+            let ConfigSchema = await database!.getSchema('Config');
+            ConfigSchema = {
+                name: ConfigSchema.name,
+                modelSchema: JSON.parse(ConfigSchema.modelSchema),
+                modelOptions: JSON.parse(ConfigSchema.modelOptions)
+            }
+            Object.assign(ConfigSchema.modelSchema, newConfig);
+
+            return database!.createSchemaFromAdapter(ConfigSchema);
+        }
+        return database!.createSchemaFromAdapter(newConfig);
     }
 
     getDatabaseConfigUtility(appConfig: Config<any>) {
         return new DatabaseConfigUtility(this.grpcSdk.databaseProvider!, appConfig);
     }
 
-    get appConfig() {
-        return AppConfig.getInstance();
-    }
+    // get appConfig() {
+    //     return AppConfig.getInstance();
+    // }
 
     get(call: any, callback: any) {
         if (!isNil(this.grpcSdk.databaseProvider)) {
@@ -159,22 +172,22 @@ export default class ConfigManager implements IConfigManager {
         const newModulesConfigSchema = JSON.parse(call.request.newModulesConfigSchema);
         const name = call.request.name;
         let errorMessage = null;
-        await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
+        // await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {});
     }
 
-    async registerModulesConfig(name: string, newModulesConfigSchema: any) {
-        AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
+    async registerModulesConfig(newModulesConfigSchemaFields: any) {
+        // AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
         let errorMessage = null;
-        await this.registerConfigSchemas().catch(e => errorMessage = e.message);
+        await this.registerConfigSchemas(newModulesConfigSchemaFields).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) {
             throw new Error(errorMessage)
         }
-        const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
-        if (isNil(dbConfig[name])) {
-            await this.getDatabaseConfigUtility(this.appConfig.config).updateDbConfig();
-        }
+        // const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
+        // if (isNil(dbConfig[name])) {
+        //     await this.getDatabaseConfigUtility(this.appConfig.config).updateDbConfig();
+        // }
     }
 
     async registerModule(call: any, callback: any) {
