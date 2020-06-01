@@ -94,10 +94,10 @@ export class AdminHandlers {
     switch (moduleName) {
       case undefined:
         // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
-        if (!ConduitUtilities.validateConfigFields(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
-          errorMessage = 'Invalid configuration fields';
-          break;
-        }
+        // if (!ConduitUtilities.validateConfigFields(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
+        //   errorMessage = 'Invalid configuration fields';
+        //   break;
+        // }
         updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => errorMessage = e.message);
         break;
       case 'authentication':

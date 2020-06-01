@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 
 // if (process.env.CONDUIT_SERVER) {
-let grpcSdk = new ConduitGrpcSdk("0.0.0.0:55152");
+let grpcSdk = new ConduitGrpcSdk("0.0.0.0:8080");
 let storage = new StorageModule(grpcSdk);
 grpcSdk.config.registerModule('storage', storage.url).catch(err => {
     console.error(err)

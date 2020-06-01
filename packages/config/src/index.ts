@@ -10,7 +10,7 @@ import { AdminHandlers } from './admin/admin';
 import { NextFunction, Request, Response } from 'express';
 import { ConfigModelGenerator } from './models/Config';
 
-export default class ConfigManager implements IConfigManager {
+export default class ConfigManager {
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
@@ -43,27 +43,13 @@ export default class ConfigManager implements IConfigManager {
     }
 
     async registerAppConfig() {
-        await this.registerConfigSchemas(AppConfigSchema);
+        await this.getDatabaseConfigUtility().registerConfigSchemas(AppConfigSchema);
     }
 
-    async registerConfigSchemas(newConfig: any): Promise<any> {
-        const database = this.grpcSdk.databaseProvider;
-        if (isNil(newConfig.name)) {
-            let ConfigSchema = await database!.getSchema('Config');
-            ConfigSchema = {
-                name: ConfigSchema.name,
-                modelSchema: JSON.parse(ConfigSchema.modelSchema),
-                modelOptions: JSON.parse(ConfigSchema.modelOptions)
-            }
-            Object.assign(ConfigSchema.modelSchema, newConfig);
 
-            return database!.createSchemaFromAdapter(ConfigSchema);
-        }
-        return database!.createSchemaFromAdapter(newConfig);
-    }
 
-    getDatabaseConfigUtility(appConfig: Config<any>) {
-        return new DatabaseConfigUtility(this.grpcSdk.databaseProvider!, appConfig);
+    getDatabaseConfigUtility() {
+        return new DatabaseConfigUtility(this.grpcSdk);
     }
 
     // get appConfig() {
@@ -170,24 +156,24 @@ export default class ConfigManager implements IConfigManager {
 
     async registerModulesConfigGrpc(call: any, callback: any) {
         const newModulesConfigSchema = JSON.parse(call.request.newModulesConfigSchema);
-        const name = call.request.name;
+        const name = call.request.moduleName;
         let errorMessage = null;
-        // await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
+        await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         return callback(null, {});
     }
 
-    async registerModulesConfig(newModulesConfigSchemaFields: any) {
+    async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
         // AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
         let errorMessage = null;
-        await this.registerConfigSchemas(newModulesConfigSchemaFields).catch(e => errorMessage = e.message);
+        await this.getDatabaseConfigUtility().registerConfigSchemas(newModulesConfigSchemaFields).catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) {
             throw new Error(errorMessage)
         }
-        // const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
-        // if (isNil(dbConfig[name])) {
-        //     await this.getDatabaseConfigUtility(this.appConfig.config).updateDbConfig();
-        // }
+        const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
+        if (isNil(dbConfig[name])) {
+            await this.getDatabaseConfigUtility().updateDbConfig(newModulesConfigSchemaFields);
+        }
     }
 
     async registerModule(call: any, callback: any) {

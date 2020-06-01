@@ -1,32 +1,31 @@
+import { TYPE } from '@conduit/grpc-sdk';
+
 export default {
   storage: {
-    doc: 'The config of the storage module',
-    active: {
-      format: 'Boolean',
-      default: true
-    },
-    provider: {
-      doc: 'The provider to use for storage',
-      format: 'String',
-      default: 'local'
-    },
-    storagePath: {
-      doc: 'The path used for local storage',
-      format: 'String',
-      default: '/var/tmp'
-    },
-    google: {
-      doc: 'The config for the google storage provider',
-      serviceAccountKeyPath: {
-        doc: 'The path to the service account key',
-        format: 'String',
-        default: '~/google_storage_service_account.json'
+    default: {active: true},
+    type: {
+      active: {
+        type: TYPE.Boolean,
+        default: true
       },
-      bucketName: {
-        doc: 'The name of the storage bucket',
-        format: 'String',
-        default: 'conduit'
+      provider: {
+        type: TYPE.String,
+        default: 'local'
+      },
+      storagePath: {
+        type: TYPE.String,
+        default: '/var/tmp'
+      },
+      google: {
+        serviceAccountKeyPath: {
+          type: TYPE.String,
+          default: '~/google_storage_service_account.json'
+        },
+        bucketName: {
+          type: TYPE.String,
+          default: 'conduit'
+        }
       }
     }
   },
-};
+}

@@ -34,7 +34,7 @@ export default class AdminModule extends IConduitAdmin {
     }
 
     async initialize() {
-        await this.conduit.getConfigManager().registerModulesConfig(AdminConfigSchema);
+        await this.conduit.getConfigManager().registerModulesConfig('admin', AdminConfigSchema);
         await this.handleDatabase().catch(console.log);
         const adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
         this.conduit.getRouter().registerDirectRouter('/admin/login',
