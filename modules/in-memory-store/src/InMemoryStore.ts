@@ -12,8 +12,6 @@ import InMemoryStoreConfigSchema from './config';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
 import * as path from 'path';
-import {ConduitUtilities} from '@conduit/utilities';
-import PushNotificationsConfigSchema from "../../push-notifications/src/config";
 
 let protoLoader = require('@grpc/proto-loader');
 

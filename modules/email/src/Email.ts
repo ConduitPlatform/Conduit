@@ -7,8 +7,6 @@ import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
 import * as grpc from "grpc";
-import InMemoryStoreConfigSchema from "../../in-memory-store/src/config";
-
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -43,14 +41,15 @@ export default class EmailModule {
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-
+        console.log("bound on:", this._url);
+        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
                 return this.grpcSdk.config.get('email')
             })
             .catch(() => {
-                return this.grpcSdk.config.updateConfig(EmailConfigSchema, 'email');
+                return this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email');
             })
             .then((emailConfig: any) => {
                 if (emailConfig.active) {
@@ -94,8 +93,7 @@ export default class EmailModule {
             await this.initEmailProvider();
             this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
             this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this.emailService);
-            console.log("bound on:", this._url);
-            this.grpcServer.start();
+
             this.isRunning = true;
         } else {
             await this.initEmailProvider(newConfig);

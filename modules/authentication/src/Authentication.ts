@@ -2,14 +2,12 @@ import * as models from './models';
 import {AuthService} from './services/auth';
 // import {AuthMiddleware} from './middleware/auth';
 import {AdminHandlers} from './admin/admin';
-import AuthenticationConfigSchema from './config/authentication';
+import AuthenticationConfigSchema from './config';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
-import {ConduitUtilities} from '@conduit/utilities';
 import * as grpc from "grpc";
 import {AuthenticationRoutes} from './routes/Routes';
-import EmailConfigSchema from "../../email/src/config";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -53,7 +51,7 @@ export default class AuthenticationModule {
                 return this.grpcSdk.config.get('authentication')
             })
             .catch(() => {
-                return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema, 'authentication');
+                return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema.getProperties(), 'authentication');
             })
             .then((authConfig: any) => {
                 if (authConfig.active) {

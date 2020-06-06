@@ -1,5 +1,4 @@
 export default {
-  email: {
     doc: 'The options for the conduit email provider',
     active: {
       format: 'Boolean',
@@ -62,5 +61,4 @@ export default {
         }
       }
     }
-  },
 };
