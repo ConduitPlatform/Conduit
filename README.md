@@ -11,12 +11,12 @@ Conduit is a NodeJS Based API platform/Gateway, that aims to cut down backend de
 ## Info
 - Server runs at: http://localhost:3000
 - Metrics dashboard available at: http://localhost:3000/appmetrics-dash
-
-## TODO
-- Create the modules (duh)
+## DONE
+- Create the modules
+- Ability to split config schema per module for easier maintenance
 - Data persistence for config data
+## TODO
 - Cluster mode support to run multiple instances
 - Messaging system to communicate with micro-services and other instances
 - Event bus system to handle inter-module communications
 - Add the ability to add conduit as a middleware. 
-- Ability to split config schema per module for easier maintenance
