@@ -8,11 +8,12 @@ import {StorageProvider} from './interaces/StorageProvider'
 import {isNil} from 'lodash';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {grpcModule} from '@conduit/grpc-sdk';
-import InMemoryStoreConfigSchema from './config/in-memory-store';
+import InMemoryStoreConfigSchema from './config';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
 import * as path from 'path';
 import {ConduitUtilities} from '@conduit/utilities';
+import PushNotificationsConfigSchema from "../../push-notifications/src/config";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -52,11 +53,11 @@ export class InMemoryStore {
 
         this.conduit.waitForExistence('database-provider')
             .then(() => {
-                return this.conduit.config.registerModulesConfig('inMemoryStore', InMemoryStoreConfigSchema);
-            })
-            .then(() => {
                 return this.conduit.config.get('inMemoryStore');
-             })
+            })
+            .catch(() => {
+                return this.conduit.config.updateConfig(InMemoryStoreConfigSchema.getProperties(), 'inMemoryStore');
+            })
             .then((storeConfig: any) => {
                 if (storeConfig.active) {
                     return this.enableModule()
@@ -101,7 +102,7 @@ export class InMemoryStore {
         if (isNil(newConfig.active) || isNil(newConfig.providerName) || isNil(newConfig.settings)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
-        if (!ConduitUtilities.validateConfigFields(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
+        if (!InMemoryStoreConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 

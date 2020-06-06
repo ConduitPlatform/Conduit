@@ -1,7 +1,7 @@
 import {IPushNotificationsProvider} from './interfaces/IPushNotificationsProvider';
 import {IFirebaseSettings} from './interfaces/IFirebaseSettings';
 import {FirebaseProvider} from './providers/firebase';
-import PushNotificationsConfigSchema from './config/push-notifications';
+import PushNotificationsConfigSchema from './config';
 import {isNil} from 'lodash';
 import path from 'path';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
@@ -10,6 +10,7 @@ import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';
 import * as models from './models';
+import StorageConfigSchema from "../../storage/src/config";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -52,10 +53,10 @@ export default class PushNotificationsModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
-                return this.grpcSdk.config.registerModulesConfig('pushNotifications', PushNotificationsConfigSchema);
-            })
-            .then(() => {
                 return this.grpcSdk.config.get('pushNotifications')
+            })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
             })
             .then((notificationsConfig: any) => {
                 if (notificationsConfig.active) {
@@ -75,7 +76,7 @@ export default class PushNotificationsModule {
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
 
-        if (!ConduitUtilities.validateConfigFields(newConfig, PushNotificationsConfigSchema.pushNotifications)) {
+        if (!PushNotificationsConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 

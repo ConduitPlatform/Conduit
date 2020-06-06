@@ -2,12 +2,13 @@ import {emailTemplateSchema} from './models/EmailTemplate';
 import {EmailProvider} from '@conduit/email-provider';
 import {EmailService} from './services/email.service';
 import {AdminHandlers} from './admin/AdminHandlers';
-import EmailConfigSchema from './config/email';
+import EmailConfigSchema from './config';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
 import * as grpc from "grpc";
-import {ConduitUtilities} from '@conduit/utilities';
+import InMemoryStoreConfigSchema from "../../in-memory-store/src/config";
+
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -46,10 +47,10 @@ export default class EmailModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
-                return this.grpcSdk.config.registerModulesConfig('email', EmailConfigSchema);
-            })
-            .then(() => {
                 return this.grpcSdk.config.get('email')
+            })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(EmailConfigSchema, 'email');
             })
             .then((emailConfig: any) => {
                 if (emailConfig.active) {
@@ -68,7 +69,7 @@ export default class EmailModule {
         if (isNil(newConfig.active) || isNil(newConfig.transport) || isNil(newConfig.transportSettings)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
-        if (!ConduitUtilities.validateConfigFields(newConfig, EmailConfigSchema.email)) {
+        if (!EmailConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
 

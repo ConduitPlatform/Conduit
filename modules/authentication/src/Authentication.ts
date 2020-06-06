@@ -8,7 +8,8 @@ import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
 import {ConduitUtilities} from '@conduit/utilities';
 import * as grpc from "grpc";
-import { AuthenticationRoutes } from './routes/Routes';
+import {AuthenticationRoutes} from './routes/Routes';
+import EmailConfigSchema from "../../email/src/config";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -49,10 +50,10 @@ export default class AuthenticationModule {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
-                return this.grpcSdk.config.registerModulesConfig('authentication', AuthenticationConfigSchema);
-            })
-            .then(() => {
                 return this.grpcSdk.config.get('authentication')
+            })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema, 'authentication');
             })
             .then((authConfig: any) => {
                 if (authConfig.active) {
@@ -71,7 +72,7 @@ export default class AuthenticationModule {
 
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
-        if (!ConduitUtilities.validateConfigFields(newConfig, AuthenticationConfigSchema.authentication)) {
+        if (!AuthenticationConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 
