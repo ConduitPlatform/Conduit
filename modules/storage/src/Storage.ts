@@ -47,10 +47,10 @@ export class StorageModule {
         this.grpcServer.start();
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
-                return this.grpcSdk.config.updateConfig(StorageConfigSchema.getProperties(), 'storage');
-            })
-            .then(() => {
                 return this.grpcSdk.config.get('storage')
+            })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(StorageConfigSchema.getProperties(), 'storage');
             })
             .then((storageConfig: any) => {
                 if (storageConfig.active) {
