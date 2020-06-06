@@ -1,6 +1,5 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
-import {Config} from 'convict';
 import AdminModule from '@conduit/admin';
 import SecurityModule from '@conduit/security';
 import * as grpc from "grpc";
@@ -8,6 +7,7 @@ import ConfigManager from "@conduit/config";
 import path from 'path';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {ConduitDefaultRouter} from '@conduit/router';
+import convict from "./utils/config";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -48,6 +48,7 @@ export class CoreBootstrapper {
 
     private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
         await app.conduit.getConfigManager().registerAppConfig();
+        await app.conduit.getConfigManager().registerModulesConfig('core', convict.getProperties());
         //
         // const appConfig: Config<any> = (app.conduit as any).config;
         // const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);

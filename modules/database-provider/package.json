@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "prepublish": "npm run build",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "publish": "npm publish",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/"
   },
@@ -33,6 +33,7 @@
   "devDependencies": {
     "@types/lodash": "^4.14.149",
     "typescript": "^3.7.5",
-    "copyfiles": "^2.2.0"
+    "copyfiles": "^2.2.0",
+    "rimraf": "^3.0.2"
   }
 }

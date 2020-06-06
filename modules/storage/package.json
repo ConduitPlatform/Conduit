@@ -32,6 +32,7 @@
     "@conduit/utilities": "1.0.0",
     "@conduit/grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
+    "convict": "^6.0.0",
     "grpc": "^1.24.2",
     "@conduit/storage-provider": "1.0.0",
     "lodash": "^4.17.15",

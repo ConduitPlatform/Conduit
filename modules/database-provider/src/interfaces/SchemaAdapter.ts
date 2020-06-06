@@ -33,11 +33,11 @@ export interface SchemaAdapter {
      */
     create(query: any): Promise<any>;
 
-    deleteOne(query: any): Promise<any>;
+    deleteOne(query: any): Promise<any>
 
     deleteMany(query: any): Promise<any>;
 
-    findByIdAndUpdate(document: any): Promise<any>;
+    findByIdAndUpdate(id:any, document: any): Promise<any>;
 
     countDocuments(query: any): Promise<number>;
 

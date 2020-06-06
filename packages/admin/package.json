@@ -34,6 +34,7 @@
   "dependencies": {
     "@conduit/grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
+    "convict": "^6.0.0",
     "grpc": "^1.24.2",
     "@conduit/sdk": "1.0.0",
     "bcrypt": "^4.0.1",

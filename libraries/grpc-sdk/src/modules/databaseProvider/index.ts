@@ -94,9 +94,9 @@ export default class DatabaseProvider {
         });
     }
 
-    findByIdAndUpdate(schemaName: string, document: any) {
+    findByIdAndUpdate(schemaName: string, id:any, document: any) {
       return new Promise((resolve, reject) => {
-        this.client.findByIdAndUpdate({schemaName, document: JSON.stringify(document)},
+        this.client.findByIdAndUpdate({schemaName, id, query: JSON.stringify(document)},
           (err: any, res: any) => {
             if (err || !res) {
               reject(err || 'Something went wrong');
@@ -105,6 +105,7 @@ export default class DatabaseProvider {
             }
           });
       });
+
     }
 
     deleteOne(schemaName: string, query: any) {

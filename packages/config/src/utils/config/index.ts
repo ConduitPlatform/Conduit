@@ -1,6 +1,6 @@
 import path from 'path';
 import convict, { Config } from 'convict';
-import AppConfigSchema from './schema/app';
+import AppConfigSchema from './schema/config';
 import { isNil } from 'lodash';
 import { IAppConfig } from '@conduit/sdk';
 

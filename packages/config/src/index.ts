@@ -3,26 +3,22 @@ import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {isNil} from "lodash";
 import {DatabaseConfigUtility} from './utils/config';
 import {Config} from 'convict';
-import AppConfigSchema from './utils/config/schema/app';
-import { ConduitSDK, IConfigManager } from '@conduit/sdk';
+import AppConfigSchema from './utils/config/schema/config';
+import {ConduitSDK, IConfigManager} from '@conduit/sdk';
 import {EventEmitter} from "events";
-import { AdminHandlers } from './admin/admin';
-import { NextFunction, Request, Response } from 'express';
-import { ConfigModelGenerator } from './models/Config';
+import {AdminHandlers} from './admin/admin';
+import {NextFunction, Request, Response} from 'express';
 
-export default class ConfigManager {
+export default class ConfigManager implements IConfigManager {
 
     databaseCallback: any;
     registeredModules: Map<string, string> = new Map<string, string>();
     grpcSdk: ConduitGrpcSdk;
-    conduitConfig: any;
     moduleRegister: EventEmitter;
 
     constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitSDK, server: grpc.Server, packageDefinition: any, databaseCallback: any) {
         var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         this.grpcSdk = grpcSdk;
-        // this.conduitConfig = this.appConfig.config;
-        // (sdk as any).config = this.appConfig.config;
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
@@ -31,8 +27,7 @@ export default class ConfigManager {
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
             moduleList: this.moduleList.bind(this),
-            watchModules: this.watchModules.bind(this),
-            registerModulesConfig: this.registerModulesConfigGrpc.bind(this)
+            watchModules: this.watchModules.bind(this)
         })
         this.databaseCallback = databaseCallback;
         this.moduleRegister = new EventEmitter();
@@ -47,24 +42,19 @@ export default class ConfigManager {
     }
 
 
-
     getDatabaseConfigUtility() {
         return new DatabaseConfigUtility(this.grpcSdk);
     }
-
-    // get appConfig() {
-    //     return AppConfig.getInstance();
-    // }
 
     get(call: any, callback: any) {
         if (!isNil(this.grpcSdk.databaseProvider)) {
             this.grpcSdk.databaseProvider!.findOne('Config', {})
                 .then(async (dbConfig: any) => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                    if (isNil(dbConfig[call.request.key])) throw new Error(`Config for module "${call.request.key} not set`);
-                    return callback(null, {data: JSON.stringify(dbConfig[call.request.key])})
+                    if (isNil(dbConfig['moduleConfigs'][call.request.key])) throw new Error(`Config for module "${call.request.key} not set`);
+                    return callback(null, {data: JSON.stringify(dbConfig['moduleConfigs'][call.request.key])})
                 })
-                .catch(err => {
+                .catch((err: Error) => {
                     callback({
                         code: grpc.status.INTERNAL,
                         message: err.message ? err.message : err,
@@ -85,15 +75,17 @@ export default class ConfigManager {
             this.grpcSdk.databaseProvider!.findOne('Config', {})
                 .then(dbConfig => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                    Object.assign(dbConfig[call.request.moduleName], newConfig);
-                    return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig)
+                    if (!dbConfig['moduleConfigs']) {
+                        dbConfig['moduleConfigs'] = {};
+                    }
+                    let modName = "moduleConfigs." + call.request.moduleName
+                    return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {$set: {[modName]: newConfig}})
                         .then((updatedConfig: any) => {
                             delete updatedConfig._id;
                             delete updatedConfig.createdAt;
                             delete updatedConfig.updatedAt;
                             delete updatedConfig.__v;
-                            this.conduitConfig.load(updatedConfig);
-                            return callback(null, {result: JSON.stringify(updatedConfig[call.request.moduleName])})
+                            return callback(null, {result: JSON.stringify(updatedConfig['moduleConfigs'][call.request.moduleName])})
                         })
                 })
                 .catch(err => {
@@ -108,6 +100,27 @@ export default class ConfigManager {
                 message: "Database provider not set",
             });
         }
+    }
+
+    async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
+        await this.grpcSdk.waitForExistence('database-provider');
+        this.grpcSdk.databaseProvider!.findOne('Config', {})
+            .then(dbConfig => {
+                if (isNil(dbConfig)) throw new Error('Config not found in the database');
+                if (!dbConfig['moduleConfigs']) {
+                    dbConfig['moduleConfigs'] = {};
+                }
+                let modName = "moduleConfigs." + name
+                return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {$set: {[modName]: newModulesConfigSchemaFields}})
+                    .then((updatedConfig: any) => {
+                        delete updatedConfig._id;
+                        delete updatedConfig.createdAt;
+                        delete updatedConfig.updatedAt;
+                        delete updatedConfig.__v;
+                        return updatedConfig['moduleConfigs'][name]
+                    })
+            });
+
     }
 
     moduleExists(call: any, callback: any) {
@@ -141,7 +154,7 @@ export default class ConfigManager {
 
     watchModules(call: any, callback: any) {
         const self = this;
-        this.moduleRegister.on('module-registered',  ()=>{
+        this.moduleRegister.on('module-registered', () => {
             let modules: any[] = [];
             self.registeredModules.forEach((value: string, key: string) => {
                 modules.push({
@@ -152,28 +165,6 @@ export default class ConfigManager {
             call.write({modules})
         })
         // todo this should close gracefully I guess.
-    }
-
-    async registerModulesConfigGrpc(call: any, callback: any) {
-        const newModulesConfigSchema = JSON.parse(call.request.newModulesConfigSchema);
-        const name = call.request.moduleName;
-        let errorMessage = null;
-        await this.registerModulesConfig(name, newModulesConfigSchema).catch(e => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        return callback(null, {});
-    }
-
-    async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
-        // AppConfig.getInstance().addModulesConfigSchema(newModulesConfigSchema);
-        let errorMessage = null;
-        await this.getDatabaseConfigUtility().registerConfigSchemas(newModulesConfigSchemaFields).catch(e => errorMessage = e.message);
-        if (!isNil(errorMessage)) {
-            throw new Error(errorMessage)
-        }
-        const dbConfig = await this.grpcSdk.databaseProvider!.findOne('Config', {});
-        if (isNil(dbConfig[name])) {
-            await this.getDatabaseConfigUtility().updateDbConfig(newModulesConfigSchemaFields);
-        }
     }
 
     async registerModule(call: any, callback: any) {

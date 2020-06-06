@@ -9,7 +9,7 @@ module.exports = {
             script: './modules/database-provider/dist/index.js',
             env: {
                 CONDUIT_SERVER: "0.0.0.0:55152",
-                databaseURL: "***REMOVED***"
+                databaseURL: "mongodb://localhost:27017/conduit"
             }
             // watch: ['./service-worker']
         }],

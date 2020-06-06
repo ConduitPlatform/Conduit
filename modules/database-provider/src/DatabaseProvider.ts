@@ -109,7 +109,7 @@ export class DatabaseProvider {
             .catch(err => {
                 callback({
                     code: grpc.status.INTERNAL,
-                    message: err.messages,
+                    message: err.message,
                 });
             });
     }
@@ -170,7 +170,7 @@ export class DatabaseProvider {
     findByIdAndUpdate(call: any, callback: any) {
       this._activeAdapter.getSchemaModel(call.request.schemaName)
         .then((schemaAdapter: { model: any }) => {
-          return schemaAdapter.model.findByIdAndUpdate(JSON.parse(call.request.document));
+          return schemaAdapter.model.findByIdAndUpdate(call.request.id, JSON.parse(call.request.query));
         })
         .then(result => {
           callback(null, {result: JSON.stringify(result)});
