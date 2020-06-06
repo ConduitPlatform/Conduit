@@ -1,11 +1,10 @@
 import {createStorageProvider, IStorageProvider} from '@conduit/storage-provider';
 import File from './models/File';
-import StorageConfigSchema from './config/storage';
+import StorageConfigSchema from './config';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import * as grpc from "grpc";
 import * as path from 'path';
-import {ConduitUtilities} from '@conduit/utilities';
 import {FileHandlers} from './handlers/file';
 import {FileRoutes} from "./routes/file";
 
@@ -50,6 +49,9 @@ export class StorageModule {
             .then(() => {
                 return this.grpcSdk.config.get('storage')
             })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(StorageConfigSchema.getProperties(), 'storage');
+            })
             .then((storageConfig: any) => {
                 if (storageConfig.active) {
                     return this.enableModule();
@@ -65,14 +67,10 @@ export class StorageModule {
         return this._url;
     }
 
-    static get config() {
-        return StorageConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
 
         const newConfig = JSON.parse(call.request.newConfig);
-        if (!ConduitUtilities.validateConfigFields(newConfig, StorageConfigSchema.storage)) {
+        if (!StorageConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 

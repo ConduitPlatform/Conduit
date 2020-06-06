@@ -1,7 +1,5 @@
 import * as grpc from 'grpc';
 import path from 'path';
-import {promisify} from 'util';
-
 let protoLoader = require('@grpc/proto-loader');
 
 export default class DatabaseProvider {
@@ -39,7 +37,7 @@ export default class DatabaseProvider {
             this.client.createSchemaFromAdapter({
                 schema:{
                     name: schema.name,
-                    modelSchema: JSON.stringify(schema.fields),
+                    modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
                     modelOptions: JSON.stringify(schema.modelOptions)
                 }
 
@@ -96,9 +94,9 @@ export default class DatabaseProvider {
         });
     }
 
-    findByIdAndUpdate(schemaName: string, document: any) {
+    findByIdAndUpdate(schemaName: string, id:any, document: any) {
       return new Promise((resolve, reject) => {
-        this.client.findByIdAndUpdate({schemaName, document: JSON.stringify(document)},
+        this.client.findByIdAndUpdate({schemaName, id, query: JSON.stringify(document)},
           (err: any, res: any) => {
             if (err || !res) {
               reject(err || 'Something went wrong');
@@ -107,6 +105,7 @@ export default class DatabaseProvider {
             }
           });
       });
+
     }
 
     deleteOne(schemaName: string, query: any) {

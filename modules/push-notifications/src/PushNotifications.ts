@@ -1,11 +1,10 @@
 import {IPushNotificationsProvider} from './interfaces/IPushNotificationsProvider';
 import {IFirebaseSettings} from './interfaces/IFirebaseSettings';
 import {FirebaseProvider} from './providers/firebase';
-import PushNotificationsConfigSchema from './config/push-notifications';
+import PushNotificationsConfigSchema from './config';
 import {isNil} from 'lodash';
 import path from 'path';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
-import {ConduitUtilities} from '@conduit/utilities';
 import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';
@@ -48,15 +47,21 @@ export default class PushNotificationsModule {
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-
+        console.log("bound on:", this._url);
+        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
                 return this.grpcSdk.config.get('pushNotifications')
             })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
+            })
             .then((notificationsConfig: any) => {
                 if (notificationsConfig.active) {
                     return this.enableModule()
+                } else {
+                    return console.log("Will wait for proper config");
                 }
             }).catch(console.log);
     }
@@ -69,14 +74,10 @@ export default class PushNotificationsModule {
         return this._url;
     }
 
-    static get config() {
-        return PushNotificationsConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
 
-        if (!ConduitUtilities.validateConfigFields(newConfig, PushNotificationsConfigSchema.pushNotifications)) {
+        if (!PushNotificationsConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 
@@ -136,8 +137,6 @@ export default class PushNotificationsModule {
             await this.initProvider();
             await this.registerSchemas();
             this.adminHandler = new AdminHandler(this.grpcServer, this.grpcSdk, this._provider!);
-            console.log("bound on:", this._url);
-            this.grpcServer.start();
             this.isRunning = true;
         } else {
             await this.initProvider();

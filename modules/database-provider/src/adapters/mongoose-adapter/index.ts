@@ -2,7 +2,7 @@ import {ConnectionOptions, Mongoose} from "mongoose"
 import {MongooseSchema} from "./MongooseSchema";
 import {schemaConverter} from "./SchemaConverter";
 import {ConduitError, ConduitSchema} from "@conduit/grpc-sdk";
-import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
+import {cloneDeep, isEmpty, isObject, isString, merge, isArray} from 'lodash';
 
 const deepdash = require('deepdash/standalone');
 
@@ -79,7 +79,10 @@ export class MongooseAdapter {
         }
 
         if (this.registeredSchemas.has(schema.name)) {
-            schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+            if (schema.name !== 'Config') {
+                schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+                // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
+            }
             delete this.mongoose.connection.models[schema.name];
         }
 
@@ -88,24 +91,21 @@ export class MongooseAdapter {
         this.registeredSchemas.set(schema.name, schema);
         this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
         return new Promise((resolve, reject) => {
-            resolve({ schema: this.models![schema.name] });
+            resolve({schema: this.models![schema.name]});
         });
     }
 
-    getSchema(schemaName: string): Promise<{schema: any}> {
+    async getSchema(schemaName: string): Promise<{ schema: any }> {
         if (this.models) {
-            return new Promise((resolve, reject) => {
-                resolve({ schema: this.models![schemaName].originalSchema });
-            });
+            return {schema: this.models![schemaName].originalSchema};
         }
         throw new Error('Schema not defined yet');
     }
 
-    getSchemaModel(schemaName: string): Promise<{model: any}> {
+    async getSchemaModel(schemaName: string): Promise<{ model: any }> {
         if (this.models) {
-            return new Promise((resolve, reject) => {
-                resolve({ model: this.models![schemaName] });
-            });
+            return {model: this.models![schemaName]};
+
         }
         throw new Error('Schema not defined yet');
     }
@@ -163,8 +163,7 @@ export class MongooseAdapter {
 
                 if (isArray(oldType) && isArray(newType)) {
                     if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0])) throw ConduitError.forbidden('Invalid schema types');
-                }
-                else if (oldType !== newType) {
+                } else if (oldType !== newType) {
                     // TODO migrate types
                     throw ConduitError.forbidden('Invalid schema types');
                 }

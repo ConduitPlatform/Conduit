@@ -35,7 +35,7 @@ export interface SchemaAdapter {
 
     deleteMany(query: any): Promise<any>;
 
-    findByIdAndUpdate(document: any): Promise<any>;
+    findByIdAndUpdate(id: any, query: any): Promise<any>;
 
     findPaginated(query: any, skip: number, limit: number): Promise<any>;
 

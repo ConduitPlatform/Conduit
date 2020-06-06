@@ -17,9 +17,15 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.create(query).then(r => r.toObject());
     }
 
-    findByIdAndUpdate(document: any): Promise<any> {
-        document.updatedAt = new Date();
-        return this.model.findByIdAndUpdate(document._id, document, {new: true}).lean().exec();
+    findByIdAndUpdate(id: any, query: any): Promise<any> {
+        // check if it is a document
+        if (!query['$set']) {
+            query.updatedAt = new Date();
+        } else {
+            query['$set']['updatedAt'] = new Date();
+        }
+
+        return this.model.findByIdAndUpdate(id, query, {new: true}).lean().exec();
     }
 
     deleteOne(query: any): Promise<any> {

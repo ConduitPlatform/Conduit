@@ -8,11 +8,10 @@ import {StorageProvider} from './interaces/StorageProvider'
 import {isNil} from 'lodash';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import {grpcModule} from '@conduit/grpc-sdk';
-import InMemoryStoreConfigSchema from './config/in-memory-store';
+import InMemoryStoreConfigSchema from './config';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";
 import * as path from 'path';
-import {ConduitUtilities} from '@conduit/utilities';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -52,7 +51,10 @@ export class InMemoryStore {
 
         this.conduit.waitForExistence('database-provider')
             .then(() => {
-                return this.conduit.config.get('inMemoryStore')
+                return this.conduit.config.get('inMemoryStore');
+            })
+            .catch(() => {
+                return this.conduit.config.updateConfig(InMemoryStoreConfigSchema.getProperties(), 'inMemoryStore');
             })
             .then((storeConfig: any) => {
                 if (storeConfig.active) {
@@ -95,44 +97,38 @@ export class InMemoryStore {
 
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
-        if (!ConduitUtilities.validateConfigFields(newConfig, InMemoryStoreConfigSchema.inMemoryStore)) {
+        if (isNil(newConfig.active) || isNil(newConfig.providerName) || isNil(newConfig.settings)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
+        }
+        if (!InMemoryStoreConfigSchema.load(newConfig).validate()) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
         }
 
         let errorMessage: string | null = null;
-        const updateResult = await this.conduit.config.updateConfig(newConfig, 'inMemoryStore').catch((e: Error) => errorMessage = e.message);
-        if (!isNil(errorMessage)) {
-            return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        }
+        let updateResult = null;
 
-        const inMemoryStoreConfig = await this.conduit.config.get('inMemoryStore');
-        if (inMemoryStoreConfig.active) {
+        if (newConfig.active) {
             await this.enableModule().catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            updateResult = await this.conduit.config.updateConfig(newConfig, 'inMemoryStore').catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         } else {
-            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
-        }
-        if (!isNil(errorMessage)) {
-            return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module must be activated to set config'});
         }
 
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
-    private async enableModule() {
+    private async enableModule(newConfig?: any) {
         if (!this.isRunning) {
             this.isRunning = true;
         }
-        await this.initProvider();
+        await this.initProvider(newConfig);
         this._admin.updateProvider(this._provider);
     }
 
-    static get config() {
-        return InMemoryStoreConfigSchema;
-    }
-
-
-    private async initProvider() {
-        const inMemoryStoreConfig = await (this.conduit as any).config.get('inMemoryStore');
+    private async initProvider(newConfig?: any) {
+        const inMemoryStoreConfig = !isNil(newConfig) ? newConfig : await (this.conduit as any).config.get('inMemoryStore');
         const name = inMemoryStoreConfig.providerName;
         const storageSettings: LocalSettings | RedisSettings | MemcachedSettings = inMemoryStoreConfig.settings[name];
         if (name === 'redis') {

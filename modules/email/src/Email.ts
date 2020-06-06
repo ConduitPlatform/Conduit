@@ -2,12 +2,11 @@ import {emailTemplateSchema} from './models/EmailTemplate';
 import {EmailProvider} from '@conduit/email-provider';
 import {EmailService} from './services/email.service';
 import {AdminHandlers} from './admin/AdminHandlers';
-import EmailConfigSchema from './config/email';
+import EmailConfigSchema from './config';
 import {isNil} from 'lodash';
 import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
 import path from "path";
 import * as grpc from "grpc";
-import {ConduitUtilities} from '@conduit/utilities';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -42,11 +41,15 @@ export default class EmailModule {
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-
+        console.log("bound on:", this._url);
+        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
                 return this.grpcSdk.config.get('email')
+            })
+            .catch(() => {
+                return this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email');
             })
             .then((emailConfig: any) => {
                 if (emailConfig.active) {
@@ -60,46 +63,40 @@ export default class EmailModule {
         return this._url;
     }
 
-    static get config() {
-        return EmailConfigSchema;
-    }
-
     async setConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.newConfig);
-        if (!ConduitUtilities.validateConfigFields(newConfig, EmailConfigSchema.email)) {
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration values'});
+        if (isNil(newConfig.active) || isNil(newConfig.transport) || isNil(newConfig.transportSettings)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
+        }
+        if (!EmailConfigSchema.load(newConfig).validate()) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid configuration given'});
         }
 
         let errorMessage: string | null = null;
-        const updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
-        if (!isNil(errorMessage)) {
-            throw new Error(errorMessage);
-        }
+        let updateResult = null;
 
-        const emailConfig = await this.grpcSdk.config.get('email');
-        if (emailConfig.active) {
-            await this.enableModule().catch((e: Error) => errorMessage = e.message);
+        if (newConfig.active) {
+            await this.enableModule(newConfig).catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            updateResult = await this.grpcSdk.config.updateConfig(newConfig, 'email').catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         } else {
-            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
-        }
-        if (!isNil(errorMessage)) {
-            return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module must be activated to set config'});
         }
 
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
-    private async enableModule() {
+    private async enableModule(newConfig?: any) {
         if (!this.isRunning) {
             this.registerModels();
             await this.initEmailProvider();
             this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
             this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this.emailService);
-            console.log("bound on:", this._url);
-            this.grpcServer.start();
+
             this.isRunning = true;
         } else {
-            await this.initEmailProvider();
+            await this.initEmailProvider(newConfig);
             this.emailService.updateProvider(this.emailProvider);
         }
     }
@@ -135,8 +132,8 @@ export default class EmailModule {
         database!.createSchemaFromAdapter(emailTemplateSchema);
     }
 
-    private async initEmailProvider() {
-        const emailConfig = await this.grpcSdk.config.get('email');
+    private async initEmailProvider(newConfig?: any) {
+        let emailConfig = !isNil(newConfig) ? newConfig : await this.grpcSdk.config.get('email');
 
         let {transport, transportSettings} = emailConfig;
 

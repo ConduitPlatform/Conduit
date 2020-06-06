@@ -9,11 +9,11 @@ import {IConduitStorage} from './modules/Storage';
 import {IConduitSecurity} from './modules/Security';
 import {IConduitAuthentication} from './modules/Authentication';
 import {IConduitCMS} from "./modules/Cms";
-import { isNil, isPlainObject, merge } from "lodash";
+import {isNil, isPlainObject, merge} from "lodash";
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
-import { Config as ConvictConfig } from 'convict';
-import { IConfigManager } from './modules/Config';
+import {Config as ConvictConfig} from 'convict';
+import {IConfigManager} from './modules/Config';
 
 export class ConduitSDK {
 
@@ -169,13 +169,13 @@ export class ConduitSDK {
 
         if (isNil(currentConfig)) currentConfig = {};
         const final = merge(currentConfig, newConfig);
-        if (isNil(moduleName)){
+        if (isNil(moduleName)) {
             Object.assign(dbConfig, final);
         } else {
             if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
             Object.assign(dbConfig[moduleName], final);
         }
-        const saved = await Config.findByIdAndUpdate(dbConfig);
+        const saved = await Config.findByIdAndUpdate(dbConfig._id, dbConfig);
         delete saved._id;
         delete saved.createdAt;
         delete saved.updatedAt;

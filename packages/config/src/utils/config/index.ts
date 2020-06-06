@@ -1,20 +1,12 @@
 import path from 'path';
 import convict, { Config } from 'convict';
-import AppConfigSchema from './schema/app';
+import AppConfigSchema from './schema/config';
 import { isNil } from 'lodash';
 import { IAppConfig } from '@conduit/sdk';
-// import AdminModule from '@conduit/admin';
-//  config import needs to be changed
-// import AuthenticationModule from '@conduit/authentication';
-// import AdminModule from '@conduit/admin';
-// import EmailModule from '@conduit/email';
-// import StorageModule from '@conduit/storage';
-// import InMemoryStore from '@conduit/in-memory-store';
-// import PushNotificationsModule from '@conduit/push-notifications';
 
 export class AppConfig implements IAppConfig{
   private static instance: AppConfig;
-  private readonly convictConfig: Config<any>;
+  private convictConfig: Config<any>;
   private completeConfigSchema: any;
 
   static getInstance() {
@@ -33,26 +25,18 @@ export class AppConfig implements IAppConfig{
   }
 
   private constructor() {
-    this.completeConfigSchema = this.mergeSchemas();
+    this.completeConfigSchema = AppConfigSchema;
     this.convictConfig = convict(this.completeConfigSchema);
     this.loadConfig();
     this.validateConfig();
     this.injectEnvironmentVariables();
   }
 
-  // const AuthenticationConfigSchema = AuthenticationModule.config;
-
-  private mergeSchemas() {
-    return {
-      ...AppConfigSchema,
-      // config import needs to be changed
-      // ...AuthenticationModule.config,
-      // ...EmailModule.config,
-      // ...StorageModule.config,
-      // ...InMemoryStore.config,
-      // ...PushNotificationsModule.config,
-      // ...AdminModule.config
-    };
+  addModulesConfigSchema(moduleConfigSchema: any) {
+    this.completeConfigSchema = {...this.completeConfigSchema, ...moduleConfigSchema};
+    this.convictConfig = convict(this.completeConfigSchema);
+    this.loadConfig();
+    this.validateConfig();
   }
 
   private loadConfig() {

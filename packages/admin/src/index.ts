@@ -4,7 +4,7 @@ import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import {AdminSchema} from './models/Admin';
 import {ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin} from '@conduit/sdk';
-import AdminConfigSchema from './config/admin';
+import AdminConfigSchema from './config';
 import * as grpc from "grpc";
 
 let protoLoader = require('@grpc/proto-loader');
@@ -34,6 +34,7 @@ export default class AdminModule extends IConduitAdmin {
     }
 
     async initialize() {
+        await this.conduit.getConfigManager().registerModulesConfig('admin', AdminConfigSchema.getProperties());
         await this.handleDatabase().catch(console.log);
         const adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
         this.conduit.getRouter().registerDirectRouter('/admin/login',
@@ -69,11 +70,6 @@ export default class AdminModule extends IConduitAdmin {
             })
             .catch(console.log);
     }
-
-    static get config() {
-        return AdminConfigSchema;
-    }
-
 
     //grpc
     registerAdminRoute(call: any, callback: any) {

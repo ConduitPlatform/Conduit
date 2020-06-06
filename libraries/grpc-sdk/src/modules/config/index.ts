@@ -85,7 +85,8 @@ export default class Config {
     }
 
     registerModule(name: string, url: string): Promise<any> {
-        let request = {
+        // TODO make newConfigSchema required when all modules provide their config schema
+        let request: {[key: string]: any} = {
             moduleName: name.toString(),
             url: url.toString()
         };
@@ -118,6 +119,19 @@ export default class Config {
 
         return emitter;
 
+    }
+
+    registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
+        let request = {moduleName, newModulesConfigSchema: JSON.stringify(newModulesConfigSchema)};
+        return new Promise((resolve, reject) => {
+            this.client.registerModulesConfig(request, (err: any, res: any) => {
+                if (err || !res) {
+                    reject(err || 'Something went wrong');
+                } else {
+                    resolve({});
+                }
+            })
+        });
     }
 
 }

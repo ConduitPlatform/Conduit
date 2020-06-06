@@ -8,6 +8,7 @@ service Config {
     rpc ModuleList (Empty) returns (ModuleListResponse);
     rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+    rpc RegisterModulesConfig(RegisterModulesConfigRequest) returns (Empty);
 }
 
 service Admin {
@@ -61,6 +62,7 @@ message Empty {
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
+    string newConfigSchema = 3;
 }
 
 message RegisterModuleResponse {
@@ -98,3 +100,9 @@ message UpdateRequest {
 message UpdateResponse {
     string result = 1;
 }
+
+message RegisterModulesConfigRequest {
+    string moduleName = 1;
+    string newModulesConfigSchema = 2;
+}
+

@@ -1,30 +1,22 @@
 import {isNil} from 'lodash';
 import {Config} from 'convict';
-import { IDatabaseConfigUtility } from '@conduit/sdk';
+import {IDatabaseConfigUtility} from '@conduit/sdk';
+import ConduitGrpcSdk from '@conduit/grpc-sdk';
 
-export class DatabaseConfigUtility extends IDatabaseConfigUtility{
-    constructor(private readonly database: any, private readonly appConfig: Config<any>) {
-        super(database, appConfig);
+export class DatabaseConfigUtility {
+    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     }
 
-    async configureFromDatabase() {
-        let dbConfig = await this.database.findOne('Config', {});
-
-        if (isNil(dbConfig)) {
-            const appConfig = this.appConfig.get();
-            const configToCreate: { [key: string]: any } = {};
-            Object.keys(appConfig).forEach(key => {
-                if (appConfig[key].active === false) return;
-                configToCreate[key] = appConfig[key];
+    async registerConfigSchemas(newConfig: any): Promise<any> {
+        await this.grpcSdk.waitForExistence('database-provider'); // for some reason if we remove this line database is null
+        const database = this.grpcSdk.databaseProvider;
+        return database!.createSchemaFromAdapter(newConfig)
+            .then(r => {
+                return database!.findOne('Config', {});
+            })
+            .then(r => {
+                if (!r) database!.create('Config', {});
             });
-            dbConfig = await this.database.create('Config', configToCreate);
-        }
-
-        delete dbConfig._id;
-        delete dbConfig.createdAt;
-        delete dbConfig.updatedAt;
-        delete dbConfig.__v;
-
-        this.appConfig.load(dbConfig);
     }
+
 }
