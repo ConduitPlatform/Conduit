@@ -22,7 +22,7 @@ export default class ConfigManager implements IConfigManager {
         // @ts-ignore
         var config = protoDescriptor.conduit.core.Config;
         server.addService(config.service, {
-            get: this.get.bind(this),
+            get: this.getGrpc.bind(this),
             updateConfig: this.updateConfig.bind(this),
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
@@ -46,25 +46,31 @@ export default class ConfigManager implements IConfigManager {
         return new DatabaseConfigUtility(this.grpcSdk);
     }
 
-    get(call: any, callback: any) {
+    getGrpc(call: any, callback: any) {
+        this.get(call.request.key)
+            .then(r => {
+                callback(null, {data: JSON.stringify(r)})
+            })
+            .catch(err => {
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.message ? err.message : err,
+                });
+            })
+    }
+
+
+    async get(name: string) {
         if (!isNil(this.grpcSdk.databaseProvider)) {
-            this.grpcSdk.databaseProvider!.findOne('Config', {})
+            return this.grpcSdk.databaseProvider!.findOne('Config', {})
                 .then(async (dbConfig: any) => {
                     if (isNil(dbConfig)) throw new Error('Config not found in the database');
-                    if (isNil(dbConfig['moduleConfigs'][call.request.key])) throw new Error(`Config for module "${call.request.key} not set`);
-                    return callback(null, {data: JSON.stringify(dbConfig['moduleConfigs'][call.request.key])})
+                    if (isNil(dbConfig['moduleConfigs'][name])) throw new Error(`Config for module "${name} not set`);
+                    return dbConfig['moduleConfigs'][name]
                 })
-                .catch((err: Error) => {
-                    callback({
-                        code: grpc.status.INTERNAL,
-                        message: err.message ? err.message : err,
-                    });
-                })
+
         } else {
-            callback({
-                code: grpc.status.FAILED_PRECONDITION,
-                message: "Database provider not set",
-            });
+            throw new Error("Database provider not set");
         }
 
     }

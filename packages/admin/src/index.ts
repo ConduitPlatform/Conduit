@@ -57,7 +57,7 @@ export default class AdminModule extends IConduitAdmin {
         databaseAdapter.findOne('Admin', {username: 'admin'})
             .then(async (existing: any) => {
                 if (isNil(existing)) {
-                    const adminConfig = await this.grpcSdk.config.get('admin');
+                    const adminConfig = await this.conduit.getConfigManager().get('admin');
                     const hashRounds = adminConfig.auth.hashRounds;
                     return hashPassword('admin', hashRounds);
                 }
@@ -154,7 +154,7 @@ export default class AdminModule extends IConduitAdmin {
     async authMiddleware(req: Request, res: Response, next: NextFunction) {
 
         const databaseAdapter = await this.grpcSdk.databaseProvider!;
-        const adminConfig = await this.grpcSdk.config.get('admin');
+        const adminConfig = await this.conduit.getConfigManager().get('admin');
 
         const tokenHeader = req.headers.authorization;
         if (isNil(tokenHeader)) {
@@ -193,7 +193,7 @@ export default class AdminModule extends IConduitAdmin {
     }
 
     async adminMiddleware(context: ConduitRouteParameters) {
-        const adminConfig = await this.grpcSdk.config.get('admin');
+        const adminConfig = await this.conduit.getConfigManager().get('admin');
         return new Promise((resolve, reject) => {
             const masterkey = context.headers.masterkey;
             if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
