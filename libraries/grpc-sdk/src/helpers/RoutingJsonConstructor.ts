@@ -1,10 +1,11 @@
 import {ConduitRoute} from "../interfaces";
 
-export function constructRoute(route: ConduitRoute) {
+export function constructRoute(route: ConduitRoute, middleware?: boolean) {
     let routeObject: any = {
         options: {},
         returns: {},
-        grpcFunction: ''
+        grpcFunction: '',
+        isMiddleware: !!middleware
     };
     routeObject.grpcFunction = route.handler;
     routeObject.options = route.input;

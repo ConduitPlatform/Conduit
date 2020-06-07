@@ -8,7 +8,7 @@ let protoLoader = require('@grpc/proto-loader');
 export function grpcToConduitRoute(request: any): ConduitRoute[] {
     let finalRoutes: ConduitRoute[] = [];
     let protofile = request.protoFile
-    let routes: [{ options: any, returns: any, grpcFunction: string }] = request.routes;
+    let routes: [{ options: any, returns: any, grpcFunction: string, isMiddleware: boolean }] = request.routes;
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protofile);
     var packageDefinition = protoLoader.loadSync(
@@ -48,9 +48,10 @@ export function grpcToConduitRoute(request: any): ConduitRoute[] {
         let options: any = r.options;
         for (let k in options) {
             if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
-            try{
+            try {
                 options[k] = JSON.parse(options[k]);
-            } catch (e) {}
+            } catch (e) {
+            }
         }
 
         let returns: any = r.returns;
@@ -58,9 +59,10 @@ export function grpcToConduitRoute(request: any): ConduitRoute[] {
             if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
             try {
                 returns[k] = JSON.parse(returns[k]);
-            } catch (e) {}
+            } catch (e) {
+            }
         }
-        finalRoutes.push(new ConduitRoute(options, returns, handler));
+        finalRoutes.push(new ConduitRoute(options, returns, handler, r.isMiddleware));
     })
     return finalRoutes;
 }

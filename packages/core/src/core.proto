@@ -8,7 +8,7 @@ service Config {
     rpc ModuleList (Empty) returns (ModuleListResponse);
     rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
-    rpc RegisterModulesConfig(RegisterModulesConfigRequest) returns (Empty);
+    rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
 }
 
 service Admin {
@@ -37,8 +37,9 @@ message RegisterConduitRouteRequest {
     string routerUrl = 3;
     message PathDefinition {
         ConduitRouteOptions options = 1;
-        ConduitRouteReturnDefinition returns = 3;
-        string grpcFunction = 4;
+        ConduitRouteReturnDefinition returns = 2;
+        string grpcFunction = 3;
+        bool isMiddleware = 4;
     }
 
     message ConduitRouteOptions {

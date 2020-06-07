@@ -31,12 +31,16 @@ export class ConduitDefaultRouter implements IConduitRouter {
     }
 
     registerGrpcRoute(call: any, callback: any) {
-        try{
+        try {
             let routes: ConduitRoute[] = grpcToConduitRoute(call.request);
             routes.forEach(r => {
-                this.registerRoute(r);
+                if (r.isMiddleware) {
+                    this.registerRouteMiddleware(r.input.path, r.executeRequest);
+                } else {
+                    this.registerRoute(r);
+                }
             })
-        }catch(err){
+        } catch (err) {
             return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"})
         }
 

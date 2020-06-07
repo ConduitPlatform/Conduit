@@ -75,6 +75,11 @@ export default class ConfigManager implements IConfigManager {
 
     }
 
+    async set(name: string, newModulesConfigSchemaFields: any) {
+        return this.registerModulesConfig(name, newModulesConfigSchemaFields);
+
+    }
+
     updateConfig(call: any, callback: any) {
         const newConfig = JSON.parse(call.request.config);
         if (!isNil(this.grpcSdk.databaseProvider)) {
