@@ -1,0 +1,22 @@
+{
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "prettier",
+    "plugin:prettier/recommended"
+  ],
+  "plugins": [
+    "react",
+    "prettier"
+  ],
+  "rules": {
+    "react/prop-types": 0,
+    "prettier/prettier": "error"
+  },
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  }
+}
