@@ -1,6 +1,6 @@
-import { isEmpty, isNil } from 'lodash';
+import {isEmpty, isNil} from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
-import {AuthService} from '../../services/auth';
+import {AuthUtils} from '../../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import grpc from "grpc";
@@ -8,7 +8,7 @@ import grpc from "grpc";
 export class CommonHandlers {
     private database: any;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
+    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
         this.initDbAndEmail(grpcSdk);
     }
 
@@ -19,7 +19,10 @@ export class CommonHandlers {
 
     async renewAuth(call: any, callback: any) {
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
 
         const clientId = context.clientId;
 
@@ -32,7 +35,10 @@ export class CommonHandlers {
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const oldRefreshToken = await this.database.findOne('RefreshToken', {token: refreshToken, clientId}).catch((e: any) => errorMessage = e.message);
+        const oldRefreshToken = await this.database.findOne('RefreshToken', {
+            token: refreshToken,
+            clientId
+        }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(oldRefreshToken)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
@@ -52,7 +58,7 @@ export class CommonHandlers {
         const newAccessToken = await this.database.create('AccessToken', {
             userId: oldRefreshToken.userId,
             clientId,
-            token: this.authService.signToken({id: oldRefreshToken.userId}, signTokenOptions),
+            token: AuthUtils.signToken({id: oldRefreshToken.userId}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -60,7 +66,7 @@ export class CommonHandlers {
         const newRefreshToken = await this.database.create('AccessToken', {
             userId: oldRefreshToken.userId,
             clientId,
-            token: this.authService.randomToken(),
+            token: AuthUtils.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -71,16 +77,21 @@ export class CommonHandlers {
         await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, {result: JSON.stringify({
-            accessToken: newAccessToken.token,
-            refreshToken: newRefreshToken.token
-        })});
+        return callback(null, {
+            result: JSON.stringify({
+                accessToken: newAccessToken.token,
+                refreshToken: newRefreshToken.token
+            })
+        });
     }
 
     async logOut(call: any, callback: any) {
 
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
 
         const clientId = context.clientId;
         const user = context.user;

@@ -1,5 +1,4 @@
 import * as models from './models';
-import {AuthService} from './services/auth';
 // import {AuthMiddleware} from './middleware/auth';
 import {AdminHandlers} from './admin/admin';
 import AuthenticationConfigSchema from './config';
@@ -13,16 +12,13 @@ let protoLoader = require('@grpc/proto-loader');
 
 export default class AuthenticationModule {
     private database: any;
-    private authService: AuthService;
     private _admin: AdminHandlers;
     private isRunning: boolean = false;
     private _url: string;
+    private _router: AuthenticationRoutes;
     private readonly grpcServer: any;
-    private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-        this.authService = new AuthService();
-
         const packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './authentication.proto'),
             {
@@ -60,10 +56,6 @@ export default class AuthenticationModule {
             }).catch(console.log);
     }
 
-    get routes() {
-        return this._routes;
-    }
-
     get url(): string {
         return this._url;
     }
@@ -96,18 +88,13 @@ export default class AuthenticationModule {
     private async enableModule(authConfig: any) {
         if (!this.isRunning) {
             this.database = this.grpcSdk.databaseProvider;
-
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
             await this.registerSchemas();
-
-            let router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.authService, authConfig);
-            this._routes = router.registeredRoutes;
-
+            this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
             this.grpcServer.start();
             this.isRunning = true;
-        } else {
-            // TODO For now an update on the config will not influence the routes(providers) that should influence
         }
+        await this._router.registerRoutes(this._url)
     }
 
     // get middleware() {

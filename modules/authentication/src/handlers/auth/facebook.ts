@@ -1,24 +1,61 @@
 import request, {OptionsWithUrl} from 'request-promise';
 import {isNil, isEmpty} from 'lodash';
-import {AuthService} from '../../services/auth';
+import {AuthUtils} from '../../utils/auth';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
 import ConduitGrpcSdk from '@conduit/grpc-sdk';
 import grpc from "grpc";
+import {ConduitError} from "@conduit/grpc-sdk";
 
 export class FacebookHandlers {
     private database: any;
+    private initialized: boolean = false;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
-        this.initDbAndEmail(grpcSdk);
+    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+        this.validate()
+            .then(r => {
+                return this.initDbAndEmail();
+            })
+            .catch(err => {
+                console.log("Facebook not active");
+            })
     }
 
-    private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-        await grpcSdk.waitForExistence('database-provider');
-        this.database = grpcSdk.databaseProvider;
+    async validate(): Promise<Boolean> {
+        return this.grpcSdk.config.get('authentication')
+            .then((authConfig: any) => {
+                if (!authConfig.facebook.active) {
+                    throw ConduitError.forbidden('Facebook auth is deactivated');
+                }
+                if (!authConfig.facebook || !authConfig.facebook.clientId) {
+                    throw ConduitError.forbidden('Cannot enable facebook auth due to missing clientId');
+                }
+            })
+            .then(() => {
+                if (!this.initialized) {
+                    return this.initDbAndEmail();
+                }
+            })
+            .then(r => {
+                return true;
+            })
+            .catch((err: Error) => {
+                // De-initialize the provider if the config is now invalid
+                this.initialized = false;
+                throw err;
+            });
+    }
+
+    private async initDbAndEmail() {
+        await this.grpcSdk.waitForExistence('database-provider');
+        this.database = this.grpcSdk.databaseProvider;
+        this.initialized = true;
+
     }
 
     async authenticate(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
+
         const {access_token} = JSON.parse(call.request.params);
 
         let errorMessage = null;
@@ -27,7 +64,10 @@ export class FacebookHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'No headers provided'});
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
 
 
         const facebookOptions: OptionsWithUrl = {
@@ -83,7 +123,7 @@ export class FacebookHandlers {
         const accessToken = await this.database.create('AccessToken', {
             userId: user._id,
             clientId: context.clientId,
-            token: this.authService.signToken({id: user._id}, signTokenOptions),
+            token: AuthUtils.signToken({id: user._id}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -91,12 +131,18 @@ export class FacebookHandlers {
         const refreshToken = await this.database.create('RefreshToken', {
             userId: user._id,
             clientId: context.clientId,
-            token: this.authService.randomToken(),
+            token: AuthUtils.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, {result: JSON.stringify({userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token})});
+        return callback(null, {
+            result: JSON.stringify({
+                userId: user._id.toString(),
+                accessToken: accessToken.token,
+                refreshToken: refreshToken.token
+            })
+        });
     }
 
 }

@@ -1,10 +1,10 @@
 import {isNil} from 'lodash';
-import {AuthService} from '../../services/auth';
+import {AuthUtils} from '../../utils/auth';
 import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
-import ConduitGrpcSdk, { ConduitError } from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {ConduitError} from '@conduit/grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../../templates';
 
@@ -13,8 +13,37 @@ export class LocalHandlers {
     private emailModule: any;
     private initialized: boolean = false;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly authService: AuthService) {
-        this.initDbAndEmail();
+    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+        this.validate()
+            .then(r => {
+                return this.initDbAndEmail();
+            })
+            .catch(err => {
+                console.log("Local not active");
+            })
+
+    }
+
+    async validate(): Promise<Boolean> {
+        return this.grpcSdk.config.get('email')
+            .then((emailConfig: any) => {
+                if (!emailConfig.active) {
+                    throw ConduitError.forbidden('Cannot use local authentication without email module being enabled');
+                }
+            })
+            .then(() => {
+                if (!this.initialized) {
+                    return this.initDbAndEmail();
+                }
+            })
+            .then(r => {
+                return true;
+            })
+            .catch((err: Error) => {
+                // De-initialize the provider if the config is now invalid
+                this.initialized = false;
+                throw err;
+            });
     }
 
     private async initDbAndEmail() {
@@ -27,18 +56,19 @@ export class LocalHandlers {
     }
 
     private registerTemplates() {
-        let flag = false;
         this.grpcSdk.config.get('email')
-          .then(async (emailConfig: any) => {
-              if (emailConfig.active) {
-                  const promises = Object.values(templates).map(template => {
-                      return this.emailModule.registerTemplate(template);
-                  });
-                  await Promise.all(promises);
-              }
-          })
-          .catch(() => flag = true);
-        if (flag) throw ConduitError.internalServerError('Internal error while registering email templates');
+            .then((emailConfig: any) => {
+                const promises = Object.values(templates).map(template => {
+                    return this.emailModule.registerTemplate(template);
+                });
+                return Promise.all(promises);
+            })
+            .then(r => {
+                console.log("Email templates registered");
+            })
+            .catch(() => {
+                console.error('Internal error while registering email templates')
+            });
     }
 
     async register(call: any, callback: any) {
@@ -55,7 +85,7 @@ export class LocalHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (!isNil(user)) return callback({code: grpc.status.ALREADY_EXISTS, message: 'User already exists'});
 
-        user = await this.authService.hashPassword(password)
+        user = await AuthUtils.hashPassword(password)
             .then((hashedPassword: string) => {
                 return this.database.create('User', {email, hashedPassword});
             })
@@ -112,7 +142,7 @@ export class LocalHandlers {
         if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
         if (!user.active) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Inactive user'});
 
-        const passwordsMatch = await this.authService.checkPassword(password, user.hashedPassword).catch((e: any) => errorMessage = e.message);
+        const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (!passwordsMatch) return callback({code: grpc.status.UNAUTHENTICATED, message: 'Invalid login credentials'});
 
@@ -135,7 +165,7 @@ export class LocalHandlers {
         const accessToken = await this.database.create('AccessToken', {
             userId: user._id,
             clientId,
-            token: this.authService.signToken({id: user._id}, signTokenOptions),
+            token: AuthUtils.signToken({id: user._id}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -143,7 +173,7 @@ export class LocalHandlers {
         const refreshToken = await this.database.create('RefreshToken', {
             userId: user._id,
             clientId,
-            token: this.authService.randomToken(),
+            token: AuthUtils.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -160,23 +190,23 @@ export class LocalHandlers {
     async forgotPassword(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
 
-        const { email } = JSON.parse(call.request.params);
+        const {email} = JSON.parse(call.request.params);
         const config = await this.grpcSdk.config.get('authentication');
         let errorMessage = null;
 
         if (isNil(email)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Email field required'});
 
-        const user = await this.database.findOne('User',{email}).catch((e: any) => errorMessage = e.message);
+        const user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
             return callback(null, {result: JSON.stringify({message: 'Ok'})});
 
         this.database.findOne('Token', {type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id})
-          .then((oldToken: any) => {
-              if (!isNil(oldToken)) return this.database.deleteOne('Token', oldToken);
-          })
-          .catch((e: any) => errorMessage = e.message);
+            .then((oldToken: any) => {
+                if (!isNil(oldToken)) return this.database.deleteOne('Token', oldToken);
+            })
+            .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const passwordResetTokenDoc = await this.database.create('Token', {
@@ -186,19 +216,19 @@ export class LocalHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-       this.grpcSdk.config.get('hostUrl')
-         .then((hostUrl: any) => {
-             const link = `${hostUrl}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-             return this.emailModule.sendEmail('ForgotPassword', {
-                 email: user.email,
-                 sender: 'conduit@gmail.com',
-                 variables: {
-                     applicationName: 'Conduit',
-                     link
-                 }
-             });
-         })
-         .catch((e: any) => errorMessage = e.message);
+        this.grpcSdk.config.get('hostUrl')
+            .then((hostUrl: any) => {
+                const link = `${hostUrl}/authentication/reset-password/${passwordResetTokenDoc.token}`;
+                return this.emailModule.sendEmail('ForgotPassword', {
+                    email: user.email,
+                    sender: 'conduit@gmail.com',
+                    variables: {
+                        applicationName: 'Conduit',
+                        link
+                    }
+                });
+            })
+            .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         return callback(null, {result: JSON.stringify({message: 'Ok'})});
@@ -215,28 +245,34 @@ export class LocalHandlers {
 
         let errorMessage = null;
 
-        const passwordResetTokenDoc = await this.database.findOne('Token',{
+        const passwordResetTokenDoc = await this.database.findOne('Token', {
             type: TokenType.PASSWORD_RESET_TOKEN,
             token: passwordResetTokenParam
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(passwordResetTokenDoc)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
+        if (isNil(passwordResetTokenDoc)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'Invalid parameters'
+        });
 
-        const user = await this.database.findOne('User',{_id: passwordResetTokenDoc.userId}, '+hashedPassword').catch((e: any) => errorMessage = e.message);
+        const user = await this.database.findOne('User', {_id: passwordResetTokenDoc.userId}, '+hashedPassword').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(user)) return callback({code: grpc.status.NOT_FOUND, message: 'User not found'});
 
-        const passwordsMatch = await this.authService.checkPassword(newPassword, user.hashedPassword).catch((e: any) => errorMessage = e.message);
+        const passwordsMatch = await AuthUtils.checkPassword(newPassword, user.hashedPassword).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (passwordsMatch) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Password can\'t be the same as the old one'});
+        if (passwordsMatch) return callback({
+            code: grpc.status.PERMISSION_DENIED,
+            message: 'Password can\'t be the same as the old one'
+        });
 
-        user.hashedPassword = await this.authService.hashPassword(newPassword).catch((e: any) => errorMessage = e.message);
+        user.hashedPassword = await AuthUtils.hashPassword(newPassword).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const userPromise = this.database.findByIdAndUpdate('User', user);
-        const tokenPromise =  this.database.deleteOne('Token', passwordResetTokenDoc);
+        const tokenPromise = this.database.deleteOne('Token', passwordResetTokenDoc);
         const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
-        const refreshTokenPromise = this.database.deleteMany('RefreshToken',{userId: user._id});
+        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id});
 
         await Promise.all([userPromise, tokenPromise, accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -248,7 +284,10 @@ export class LocalHandlers {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
 
         const verificationTokenParam = JSON.parse(call.request.params).verificationToken;
-        if (isNil(verificationTokenParam)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
+        if (isNil(verificationTokenParam)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'Invalid parameters'
+        });
 
         let errorMessage = null;
 
@@ -257,7 +296,10 @@ export class LocalHandlers {
             token: verificationTokenParam
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(verificationTokenDoc)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
+        if (isNil(verificationTokenDoc)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'Invalid parameters'
+        });
 
         const user = await this.database.findOne('User', {_id: verificationTokenDoc.userId}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
