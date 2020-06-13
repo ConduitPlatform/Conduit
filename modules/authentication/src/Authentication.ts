@@ -51,7 +51,7 @@ export default class AuthenticationModule {
             })
             .then((authConfig: any) => {
                 if (authConfig.active) {
-                    return this.enableModule(authConfig);
+                    return this.enableModule();
                 }
             }).catch(console.log);
     }
@@ -74,7 +74,7 @@ export default class AuthenticationModule {
 
         const authenticationConfig = await this.grpcSdk.config.get('authentication');
         if (authenticationConfig.active) {
-            await this.enableModule(authenticationConfig).catch((e: Error) => errorMessage = e.message);
+            await this.enableModule().catch((e: Error) => errorMessage = e.message);
         } else {
             return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
         }
@@ -85,7 +85,7 @@ export default class AuthenticationModule {
         return callback(null, {updatedConfig: JSON.stringify(updateResult)});
     }
 
-    private async enableModule(authConfig: any) {
+    private async enableModule() {
         if (!this.isRunning) {
             this.database = this.grpcSdk.databaseProvider;
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
@@ -96,10 +96,6 @@ export default class AuthenticationModule {
         }
         await this._router.registerRoutes(this._url)
     }
-
-    // get middleware() {
-    //   return this.authMiddleware.middleware.bind(this.authMiddleware);
-    // }
 
     private registerSchemas() {
         const promises = Object.values(models).map(model => {

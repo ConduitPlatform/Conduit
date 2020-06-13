@@ -1,102 +1,121 @@
 import ConduitGrpcSdk, {
-  ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  constructRoute,
-  TYPE
+    ConduitRoute,
+    ConduitRouteActions,
+    ConduitRouteReturnDefinition,
+    constructRoute,
+    TYPE
 } from '@conduit/grpc-sdk';
-import { CmsHandlers } from '../handlers/CmsHandlers';
+import {CmsHandlers} from '../handlers/CmsHandlers';
 import grpc from 'grpc';
+import fs from "fs";
+import path from "path";
 
 var protoLoader = require('@grpc/proto-loader');
 var PROTO_PATH = __dirname + '/router.proto';
 
 export class CmsRoutes {
-  private readonly handlers: CmsHandlers;
+    private readonly handlers: CmsHandlers;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
-    this.handlers = new CmsHandlers(grpcSdk);
+    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly url: string) {
+        this.handlers = new CmsHandlers(grpcSdk);
 
-    const packageDefinition = protoLoader.loadSync(
-      PROTO_PATH,
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true
-      });
-    const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const router = protoDescriptor.cms.router.Router;
-    server.addService(router.service, {
-      getDocuments: this.handlers.getDocuments.bind(this.handlers),
-      getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
-      createDocument: this.handlers.createDocument.bind(this.handlers),
-      editDocument: this.handlers.editDocument.bind(this.handlers),
-      deleteDocument: this.handlers.deleteDocument.bind(this.handlers)
-    });
-  }
+        const packageDefinition = protoLoader.loadSync(
+            PROTO_PATH,
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        // @ts-ignore
+        const router = protoDescriptor.cms.router.Router;
+        server.addService(router.service, {
+            getDocuments: this.handlers.getDocuments.bind(this.handlers),
+            getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
+            createDocument: this.handlers.createDocument.bind(this.handlers),
+            editDocument: this.handlers.editDocument.bind(this.handlers),
+            deleteDocument: this.handlers.deleteDocument.bind(this.handlers)
+        });
+    }
 
-  get registeredRoutes(): any[] {
-    let routesArray: any = [];
+    refreshRoutes(schemas: { [name: string]: any }) {
+        let routesProtoFile = fs.readFileSync(path.resolve(__dirname, './router.proto'));
+        this.grpcSdk.router.register(this.registeredRoutes(schemas), routesProtoFile.toString('UTF-8'), this.url)
+            .catch((err: Error) => {
+                console.log("Failed to register routes for CMS module!")
+                console.error(err);
+            });
+    }
 
-    routesArray.push(constructRoute(new ConduitRoute({
-        path: '/content/:schemaName',
-        action: ConduitRouteActions.GET,
-        queryParams: {
-          skip: TYPE.Number,
-          limit: TYPE.Number
-        },
-        urlParams: {
-          schemaName: TYPE.String
+    registeredRoutes(schemas: { [name: string]: any }): any[] {
+        let routesArray: any[] = [];
+        for (const k in schemas) {
+            if (!schemas.hasOwnProperty(k)) continue;
+            routesArray = routesArray.concat(this.getOps(k, schemas[k]));
         }
-      }, new ConduitRouteReturnDefinition('documents', {result: {documents: [TYPE.JSON], documentsCount: TYPE.Number}}),
-      'getDocuments'
-    )));
+        return routesArray;
+    }
 
-    routesArray.push(constructRoute(new ConduitRoute({
-      path: '/content/:schemaName/:id',
-      action: ConduitRouteActions.GET,
-      urlParams: {
-        schemaName: TYPE.String,
-        id: TYPE.String
-      }
-      }, new ConduitRouteReturnDefinition('document', {document: TYPE.JSON}),
-      'getDocumentById')));
+    getOps(schemaName: string, actualSchema: any) {
+        let routesArray: any = [];
 
-    routesArray.push(constructRoute(new ConduitRoute({
-      path: '/content/:schemaName',
-      action: ConduitRouteActions.POST,
-      bodyParams: {
-        inputDocument: TYPE.JSON
-      }
-      }, new ConduitRouteReturnDefinition('document', {document: TYPE.JSON}),
-      'createDocument')));
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}`,
+                action: ConduitRouteActions.GET,
+                queryParams: {
+                    skip: TYPE.Number,
+                    limit: TYPE.Number
+                }
+            }, new ConduitRouteReturnDefinition(`get${schemaName}`, {
+                result: {
+                    documents: [actualSchema.modelSchema],
+                    documentsCount: TYPE.Number
+                }
+            }),
+            'getDocuments'
+        )));
 
-    routesArray.push(constructRoute(new ConduitRoute({
-      path: '/content/:schemaName/:id',
-      action: ConduitRouteActions.UPDATE,
-      urlParams: {
-        schemaName: TYPE.String,
-        id: TYPE.String,
-      },
-      bodyParams: {
-        changedDocument: TYPE.JSON
-      }
-      }, new ConduitRouteReturnDefinition('document', {document: TYPE.JSON}),
-      'editDocument')));
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}/:id`,
+                action: ConduitRouteActions.GET,
+                urlParams: {
+                    id: TYPE.String
+                }
+            }, new ConduitRouteReturnDefinition(`get${schemaName}ById`, actualSchema.modelSchema),
+            'getDocumentById')));
 
-    routesArray.push(constructRoute(new ConduitRoute({
-      path: '/content/:schemaName/:id',
-      action: ConduitRouteActions.DELETE,
-      urlParams: {
-        schemaName: TYPE.String,
-        id: TYPE.String
-      }
-      }, new ConduitRouteReturnDefinition('result', {result: TYPE.String}),
-      'deleteDocument')));
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}`,
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                    inputDocument: actualSchema
+                }
+            }, new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.modelSchema),
+            'createDocument')));
 
-    return routesArray;
-  }
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}/:id`,
+                action: ConduitRouteActions.UPDATE,
+                urlParams: {
+                    id: TYPE.String,
+                },
+                bodyParams: {
+                    changedDocument: actualSchema.modelSchema
+                }
+            }, new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.modelSchema),
+            'editDocument')));
+
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}/:id`,
+                action: ConduitRouteActions.DELETE,
+                urlParams: {
+                    id: TYPE.String
+                }
+            }, new ConduitRouteReturnDefinition('result', {result: TYPE.String}),
+            'deleteDocument')));
+
+        return routesArray;
+    }
 }

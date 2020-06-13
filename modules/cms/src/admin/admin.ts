@@ -3,21 +3,16 @@ import {isNil} from 'lodash';
 import {validateSchemaInput} from '../utils/utilities';
 import path from "path";
 import grpc from "grpc";
+import {SchemaController} from "../controllers/schema.controller";
 
 const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
-    private readonly _createSchema: (schema: ConduitSchema) => void;
     private database: any;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, createSchema: (schema: ConduitSchema) => void) {
-        const self = this;
-        this.grpcSdk.waitForExistence('database-provider')
-            .then(r => {
-                self.database = self.grpcSdk.databaseProvider;
-            })
-        this._createSchema = createSchema;
+    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController) {
 
+        this.database = this.grpcSdk.databaseProvider;
         let packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './admin.proto'),
             {
@@ -131,7 +126,7 @@ export class AdminHandlers {
 
         if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
         if (newSchema.enabled) {
-            this._createSchema(new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
+            this.schemaController.createSchema(new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
         }
 
         return callback(null, {result: JSON.stringify(newSchema)})
@@ -161,7 +156,7 @@ export class AdminHandlers {
             // TODO disable routes
         } else {
             requestedSchema.enabled = true;
-            this._createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
+            this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
         }
 
         const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
@@ -209,7 +204,7 @@ export class AdminHandlers {
 
         // TODO reinitialise routes?
         if (updatedSchema.enabled) {
-            this._createSchema(new ConduitSchema(updatedSchema.name, updatedSchema.fields, updatedSchema.modelOptions));
+            this.schemaController.createSchema(new ConduitSchema(updatedSchema.name, updatedSchema.fields, updatedSchema.modelOptions));
         }
         // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
