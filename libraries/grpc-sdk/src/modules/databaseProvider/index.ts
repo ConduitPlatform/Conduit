@@ -1,5 +1,6 @@
 import * as grpc from 'grpc';
 import path from 'path';
+
 let protoLoader = require('@grpc/proto-loader');
 
 export default class DatabaseProvider {
@@ -35,7 +36,7 @@ export default class DatabaseProvider {
     createSchemaFromAdapter(schema: any): Promise<any> {
         return new Promise((resolve, reject) => {
             this.client.createSchemaFromAdapter({
-                schema:{
+                schema: {
                     name: schema.name,
                     modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
                     modelOptions: JSON.stringify(schema.modelOptions)
@@ -45,7 +46,11 @@ export default class DatabaseProvider {
                 if (err || !res) {
                     reject(err || 'Something went wrong');
                 } else {
-                    resolve(res.schema);
+                    resolve({
+                        name: res.schema.name,
+                        modelSchema: JSON.parse(res.schema.modelSchema),
+                        modelOptions: JSON.parse(res.schema.modelOptions)
+                    });
                 }
             })
         });
@@ -55,14 +60,14 @@ export default class DatabaseProvider {
         return new Promise((resolve, reject) => {
             // @ts-ignore
             const selectStr = select ? JSON.stringify(select) : null;
-            this.client.findOne({ schemaName, query: JSON.stringify(query), select: selectStr },
-              (err: any, res: any) => {
-                  if (err || !res) {
-                      reject(err || 'Something went wrong');
-                  } else {
-                      resolve(JSON.parse(res.result));
-                  }
-              })
+            this.client.findOne({schemaName, query: JSON.stringify(query), select: selectStr},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                })
         });
     }
 
@@ -70,80 +75,87 @@ export default class DatabaseProvider {
         return new Promise((resolve, reject) => {
             const selectStr = select ? JSON.stringify(select) : null;
             const sortStr = sort ? JSON.stringify(sort) : null;
-            this.client.findMany({schemaName, query: JSON.stringify(query), select: selectStr, skip, limit, sort: sortStr},
-              (err: any, res: any) => {
-                  if (err || !res) {
-                      reject(err || 'Something went wrong');
-                  } else {
-                      resolve(JSON.parse(res.result));
-                  }
-              });
+            this.client.findMany({
+                    schemaName,
+                    query: JSON.stringify(query),
+                    select: selectStr,
+                    skip,
+                    limit,
+                    sort: sortStr
+                },
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
         });
     }
 
     create(schemaName: string, query: any) {
         return new Promise((resolve, reject) => {
             this.client.create({schemaName, query: JSON.stringify(query)},
-              (err: any, res: any) => {
-                  if (err || !res) {
-                      reject(err || 'Something went wrong');
-                  } else {
-                      resolve(JSON.parse(res.result));
-                  }
-              });
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
         });
     }
 
-    findByIdAndUpdate(schemaName: string, id:any, document: any) {
-      return new Promise((resolve, reject) => {
-        this.client.findByIdAndUpdate({schemaName, id, query: JSON.stringify(document)},
-          (err: any, res: any) => {
-            if (err || !res) {
-              reject(err || 'Something went wrong');
-            } else {
-              resolve(JSON.parse(res.result));
-            }
-          });
-      });
+    findByIdAndUpdate(schemaName: string, id: any, document: any) {
+        return new Promise((resolve, reject) => {
+            this.client.findByIdAndUpdate({schemaName, id, query: JSON.stringify(document)},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
+        });
 
     }
 
     deleteOne(schemaName: string, query: any) {
-      return new Promise((resolve, reject) => {
-        this.client.deleteOne({schemaName, query: JSON.stringify(query)},
-          (err: any, res: any) => {
-            if (err || !res) {
-              reject(err || 'Something went wrong');
-            } else {
-              resolve(JSON.parse(res.result));
-            }
-          });
-      });
+        return new Promise((resolve, reject) => {
+            this.client.deleteOne({schemaName, query: JSON.stringify(query)},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
+        });
     }
 
     deleteMany(schemaName: string, query: any) {
-      return new Promise((resolve, reject) => {
-        this.client.deleteMany({schemaName, query: JSON.stringify(query)},
-          (err: any, res: any) => {
-            if (err || !res) {
-              reject(err || 'Something went wrong');
-            } else {
-              resolve(JSON.parse(res.result));
-            }
-          });
-      });
+        return new Promise((resolve, reject) => {
+            this.client.deleteMany({schemaName, query: JSON.stringify(query)},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
+        });
     }
 
     countDocuments(schemaName: string, query: any) {
-      return new Promise((resolve, reject) => {
-        this.client.countDocuments({schemaName, query: JSON.stringify(query)},
-          (err: any, res: any) => {
-            if (err || !res) {
-              reject(err || 'Something went wrong');
-            } else {
-              resolve(JSON.parse(res.result));
-            }
-          });
-      });
+        return new Promise((resolve, reject) => {
+            this.client.countDocuments({schemaName, query: JSON.stringify(query)},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'Something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
+        });
     }
 }
