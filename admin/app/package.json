@@ -1,5 +1,5 @@
 {
-  "name": "@conduit/admin",
+  "name": "@conduit/admin-front",
   "version": "0.1.0",
   "private": true,
   "scripts": {

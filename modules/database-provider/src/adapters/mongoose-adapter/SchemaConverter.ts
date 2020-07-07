@@ -1,4 +1,4 @@
-`import { Schema } from 'mongoose';
+import { Schema } from 'mongoose';
 import {ConduitSchema} from "@conduit/sdk";
 import * as _ from "lodash";
 import { isNil, isObject, isArray } from "lodash";
