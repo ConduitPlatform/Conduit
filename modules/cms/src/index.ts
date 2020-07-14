@@ -13,7 +13,7 @@ if (process.env.CONDUIT_SERVER) {
         process.exit(-1);
     });
     let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-    grpcSdk.admin.register(paths.functions, protofile.toString('UTF-8'), cms.url).catch((err: Error) => {
+    grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'), cms.url).catch((err: Error) => {
         console.log("Failed to register admin routes for CMS module!")
         console.error(err);
     });

@@ -5,5 +5,8 @@
     "admin/*",
     "modules/*"
   ],
-  "version": "independent"
+  "version": "independent",
+  "npmClient": "yarn",
+  "stream": true,
+  "useWorkspaces": true
 }

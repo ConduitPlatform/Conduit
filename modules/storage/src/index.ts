@@ -11,7 +11,7 @@ if (process.env.CONDUIT_SERVER) {
         process.exit(-1);
     });
     let protofile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'))
-    grpcSdk.router.register(storage.routes, protofile.toString('UTF-8'), storage.url).catch((err: Error) => {
+    grpcSdk.router.register(storage.routes, protofile.toString('utf-8'), storage.url).catch((err: Error) => {
         console.log("Failed to register routes for storage module!")
         console.error(err);
     });

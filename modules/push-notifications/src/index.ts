@@ -13,12 +13,12 @@ if (process.env.CONDUIT_SERVER) {
         process.exit(-1);
     });
     let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-    grpcSdk.admin.register(paths.functions, protofile.toString('UTF-8'), notifications.url).catch((err: Error) => {
+    grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'), notifications.url).catch((err: Error) => {
         console.log("Failed to register admin routes for push-notifications module!")
         console.error(err);
     });
     let routerProtoFile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'));
-    grpcSdk.router.register(notifications.routes, routerProtoFile.toString('UTF-8'), notifications.url).catch((err: Error) => {
+    grpcSdk.router.register(notifications.routes, routerProtoFile.toString('utf-8'), notifications.url).catch((err: Error) => {
         console.log('Failed to register routes for push notifications module');
         console.log(err);
     });

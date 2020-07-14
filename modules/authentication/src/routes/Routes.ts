@@ -64,7 +64,7 @@ export class AuthenticationRoutes {
         let routerProtoFile = fs.readFileSync(path.resolve(__dirname, './router.proto'));
         let activeRoutes = await this.getRegisteredRoutes()
         this.grpcSdk.router
-            .register(activeRoutes, routerProtoFile.toString('UTF-8'), url)
+            .register(activeRoutes, routerProtoFile.toString('utf-8'), url)
             .catch((err: Error) => {
                 console.log('Failed to register routes for authentication module');
                 console.log(err);

@@ -47,7 +47,7 @@ export class CmsRoutes {
             return;
         }
         let routesProtoFile = fs.readFileSync(path.resolve(__dirname, './router.proto'));
-        this.grpcSdk.router.register(this.registeredRoutes(schemaCopy), routesProtoFile.toString('UTF-8'), this.url)
+        this.grpcSdk.router.register(this.registeredRoutes(schemaCopy), routesProtoFile.toString('utf-8'), this.url)
             .catch((err: Error) => {
                 console.log("Failed to register routes for CMS module!")
                 console.error(err);
