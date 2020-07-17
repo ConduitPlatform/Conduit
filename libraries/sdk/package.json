@@ -1,12 +1,11 @@
 {
-  "name": "@conduit/sdk",
-  "version": "1.0.0",
+  "name": "@quintessential-sft/conduit-sdk",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
-    "publish": "npm publish"
+    "build": "rimraf dist && tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -22,7 +21,12 @@
     "src"
   ],
   "publishConfig": {
-    "registry": "http://registry.quintessential.gr/"
+    "registry":"https://npm.pkg.github.com/"
+  },
+  "repository" : {
+    "type" : "git",
+    "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
+    "directory": "libraries/sdk"
   },
   "devDependencies": {
     "@types/convict": "^4.2.1",

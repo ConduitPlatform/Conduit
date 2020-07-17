@@ -19,11 +19,14 @@
   "files": [
     "src"
   ],
+   "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  },
   "license": "ISC",
   "dependencies": {
-    "@conduit/grpc-sdk": "1.0.0",
-    "@conduit/storage-provider": "1.0.0",
-    "@conduit/utilities": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
+    "@quintessential-sft/storage-provider": "1.0.0",
+    "@quintessential-sft/conduit-utilities": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
     "grpc": "^1.24.2",

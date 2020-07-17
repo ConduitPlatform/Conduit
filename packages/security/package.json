@@ -1,5 +1,5 @@
 {
-  "name": "@conduit/security",
+  "name": "@quintessential-sft/conduit-security",
   "version": "1.0.0",
   "description": "This will be added as a required middleware, configurable on how strict is should be",
   "main": "dist/index.js",
@@ -16,6 +16,9 @@
   "files": [
     "src"
   ],
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  },
   "devDependencies": {
     "@types/express": "^4.17.4",
     "@types/lodash": "^4.14.149",
@@ -24,8 +27,8 @@
     "rimraf": "^3.0.2"
   },
   "dependencies": {
-    "@conduit/grpc-sdk": "1.0.0",
-    "@conduit/sdk": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-sdk": "1.0.0",
     "lodash": "^4.17.15"
   }
 }

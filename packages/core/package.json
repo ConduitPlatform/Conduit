@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "dist/bin/www.js",
   "types": "dist/bin/www.d.ts",
+  "private": true,
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
@@ -13,14 +14,17 @@
     "prepare": "npm run build",
     "prepublish": "npm run build"
   },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  },
   "license": "ISC",
   "dependencies": {
-    "@conduit/utilities": "1.0.0",
-    "@conduit/grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-utilities": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-sdk": "1.0.0",
     "@conduit/config": "1.0.0",
     "@conduit/admin": "1.0.0",
     "@conduit/router": "1.0.0",
-    "@conduit/sdk": "1.0.0",
     "@conduit/security": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "grpc": "^1.24.2",

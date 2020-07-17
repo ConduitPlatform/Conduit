@@ -1,5 +1,5 @@
 {
-  "name": "@conduit/grpc-sdk",
+  "name": "@quintessential-sft/conduit-grpc-sdk",
   "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -7,8 +7,7 @@
     "prepublish": "npm run build",
     "prebuild": "sh build.sh",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -f src/proto/* ./dist/proto/",
-    "publish": "npm publish"
+    "postbuild": "copyfiles -f src/proto/* ./dist/proto/"
   },
   "license": "ISC",
   "dependencies": {
@@ -28,7 +27,12 @@
     "src"
   ],
   "publishConfig": {
-    "registry": "http://registry.quintessential.gr/"
+    "registry":"https://npm.pkg.github.com/"
+  },
+  "repository" : {
+    "type" : "git",
+    "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
+    "directory": "libraries/grpc-sdk"
   },
   "devDependencies": {
     "@types/convict": "^4.2.1",

@@ -1,11 +1,12 @@
 {
-  "name": "@conduit/admin",
+  "name": "@quintessential-sft/conduit-admin",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build"
   },
@@ -19,11 +20,11 @@
     "src"
   ],
   "publishConfig": {
-    "registry": "http://registry.quintessential.gr/"
+    "registry":"https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@conduit/grpc-sdk": "1.0.0",
-    "@conduit/sdk": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "bcrypt": "^4.0.1",
     "convict": "^6.0.0",

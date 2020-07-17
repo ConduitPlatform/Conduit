@@ -15,13 +15,16 @@
   "files": [
     "src"
   ],
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  },
   "license": "ISC",
   "dependencies": {
-    "@conduit/utilities": "1.0.0",
-    "@conduit/grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-utilities": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
+    "@quintessiantial-sft/email-provider": "1.0.0",
     "convict": "^6.0.0",
     "@grpc/proto-loader": "^0.5.4",
-    "@conduit/email-provider": "1.0.0",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15"
   },

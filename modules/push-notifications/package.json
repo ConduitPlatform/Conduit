@@ -8,22 +8,23 @@
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
-    "publish": "npm publish"
+    "build": "rimraf dist && tsc"
   },
   "author": "",
   "license": "ISC",
   "directories": {
     "lib": "src"
   },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
+  },
   "files": [
     "src"
   ],
   "dependencies": {
-    "@conduit/utilities": "1.0.0",
-    "@conduit/grpc-sdk": "1.0.0",
+    "@quintessential-sft/conduit-utilities": "1.0.0",
+    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
-    "@conduit/sdk": "1.0.0",
     "grpc": "^1.24.2",
     "convict": "^6.0.0",
     "firebase-admin": "^8.10.0",

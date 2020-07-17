@@ -1,5 +1,7 @@
 FROM node:dubnium
 
+COPY . /app
+
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/libraries /app/libraries
