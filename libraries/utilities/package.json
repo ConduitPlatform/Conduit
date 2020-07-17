@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/conduit-utilities",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,18 +9,18 @@
     "build": "rimraf dist && tsc"
   },
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
-  "repository" : {
-    "type" : "git",
+  "repository": {
+    "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
     "directory": "libraries/utilities"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "lodash": "^4.17.15",
-    "deepdash": "^5.0.1"
+    "deepdash": "^5.0.1",
+    "lodash": "^4.17.15"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.150",

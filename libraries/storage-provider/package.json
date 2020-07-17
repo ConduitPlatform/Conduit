@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/storage-provider",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -18,10 +18,10 @@
     "lib"
   ],
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
-  "repository" : {
-    "type" : "git",
+  "repository": {
+    "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
     "directory": "libraries/storage-provider"
   },

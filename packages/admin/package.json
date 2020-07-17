@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/conduit-admin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,12 +20,12 @@
     "src"
   ],
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
-    "@quintessential-sft/conduit-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-sdk": "1.0.0",
     "bcrypt": "^4.0.1",
     "convict": "^6.0.0",
     "grpc": "^1.24.2",

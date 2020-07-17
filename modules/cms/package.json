@@ -1,6 +1,6 @@
 {
   "name": "@conduit/cms",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -11,12 +11,12 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@quintessential-sft/conduit-utilities": "1.0.0",
-    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "convict": "^6.0.0",
-    "grpc": "^1.24.2",
     "deepdash": "^5.0.3",
+    "grpc": "^1.24.2",
     "lodash": "^4.17.15"
   },
   "directories": {
@@ -26,13 +26,13 @@
     "src"
   ],
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
     "@types/express": "^4.17.6",
     "@types/lodash": "^4.14.150",
     "copyfiles": "^2.2.0",
-    "@types/convict": "^4.2.1",
     "rimraf": "^3.0.2",
     "typescript": "^3.7.5"
   }

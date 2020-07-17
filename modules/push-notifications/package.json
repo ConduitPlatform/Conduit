@@ -1,6 +1,6 @@
 {
   "name": "@conduit/push-notifications",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Handles sending push notifications to users",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,18 +16,18 @@
     "lib": "src"
   },
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
   "files": [
     "src"
   ],
   "dependencies": {
-    "@quintessential-sft/conduit-utilities": "1.0.0",
-    "@quintessential-sft/conduit-grpc-sdk": "1.0.0",
     "@grpc/proto-loader": "^0.5.4",
-    "grpc": "^1.24.2",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "convict": "^6.0.0",
     "firebase-admin": "^8.10.0",
+    "grpc": "^1.24.2",
     "lodash": "^4.17.15"
   },
   "devDependencies": {

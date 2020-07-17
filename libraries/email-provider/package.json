@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/email-provider",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -26,10 +26,10 @@
     "src"
   ],
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
-  "repository" : {
-    "type" : "git",
+  "repository": {
+    "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
     "directory": "libraries/email-provider"
   },

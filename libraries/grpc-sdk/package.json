@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/conduit-grpc-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -12,13 +12,13 @@
   "license": "ISC",
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
+    "@types/google-protobuf": "^3.2.7",
     "convict": "^5.2.0",
+    "google-protobuf": "^3.8.0-rc.1",
     "grpc": "1.24.2",
     "is-natural-number": "^4.0.1",
     "lodash": "^4.17.15",
-    "validator": "^13.0.0",
-    "@types/google-protobuf": "^3.2.7",
-    "google-protobuf": "^3.8.0-rc.1"
+    "validator": "^13.0.0"
   },
   "directories": {
     "lib": "src"
@@ -27,10 +27,10 @@
     "src"
   ],
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/"
+    "registry": "https://npm.pkg.github.com/"
   },
-  "repository" : {
-    "type" : "git",
+  "repository": {
+    "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
     "directory": "libraries/grpc-sdk"
   },
@@ -41,11 +41,11 @@
     "@types/lodash": "^4.14.150",
     "@types/node": "^13.9.8",
     "@types/validator": "^13.0.0",
-    "grpc-tools": "^1.8.1",
+    "copyfiles": "^2.2.0",
     "express": "~4.16.1",
+    "grpc-tools": "^1.8.1",
     "rimraf": "^3.0.2",
     "ts-protoc-gen": "^0.12.0",
-    "typescript": "^3.7.5",
-    "copyfiles": "^2.2.0"
+    "typescript": "^3.7.5"
   }
 }
