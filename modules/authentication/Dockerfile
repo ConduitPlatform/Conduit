@@ -3,13 +3,12 @@ FROM node:dubnium
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/libraries /app/libraries
-COPY --from=conduit-base:latest /app/modules/email /app/modules/email
+COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authentication
 COPY --from=conduit-base:latest /app/node_modules /app/node_modules
 
-WORKDIR /app/modules/email
+WORKDIR /app/modules/authentication
 
 ENV CONDUIT_SERVER conduit_server
-
  
 ENV SERVICE_URL 0.0.0.0:5000
 

@@ -7,7 +7,8 @@
     "start": "node dist/index.js",
     "prepare": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/"
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-authentication:latest . && docker push quintessential.azurecr.io/conduit-authentication:latest"
   },
   "license": "ISC",
   "directories": {

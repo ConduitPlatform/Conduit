@@ -8,12 +8,16 @@ let paths = require("./admin/admin.json")
 if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
     let cms = new CMS(grpcSdk);
-    grpcSdk.config.registerModule('cms', cms.url).catch(err => {
+    let url = cms.url;
+    if(process.env.REGISTER_NAME){
+        url = 'authentication:'+url.split(':')[1];
+    }
+    grpcSdk.config.registerModule('cms', url).catch(err => {
         console.error(err)
         process.exit(-1);
     });
     let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-    grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'), cms.url).catch((err: Error) => {
+    grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'), url).catch((err: Error) => {
         console.log("Failed to register admin routes for CMS module!")
         console.error(err);
     });

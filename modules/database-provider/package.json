@@ -7,7 +7,8 @@
     "start": "node dist/index.js",
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/*.proto ./dist/"
+    "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-database:latest . && docker push quintessential.azurecr.io/conduit-database:latest"
   },
   "license": "ISC",
   "dependencies": {
