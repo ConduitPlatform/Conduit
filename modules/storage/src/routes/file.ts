@@ -1,9 +1,9 @@
 import File from '../models/File';
 import {FileHandlers} from '../handlers/file';
-import {IStorageProvider} from '@conduit/storage-provider';
+import {IStorageProvider} from '@quintessential-sft/storage-provider';
 import grpc from "grpc";
-import {ConduitRoute, ConduitRouteActions, ConduitRouteReturnDefinition, TYPE, constructRoute} from "@conduit/grpc-sdk";
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {ConduitRoute, ConduitRouteActions, ConduitRouteReturnDefinition, TYPE, constructRoute} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 var protoLoader = require('@grpc/proto-loader');
 var PROTO_PATH = __dirname + '/router.proto';

@@ -1,4 +1,4 @@
-import {TYPE} from '@conduit/sdk';
+import {TYPE} from '@quintessential-sft/conduit-sdk';
 
 export default {
     env: {

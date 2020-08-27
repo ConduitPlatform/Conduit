@@ -1,8 +1,8 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@conduit/sdk';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@quintessential-sft/conduit-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 class SecurityModule extends IConduitSecurity {
 

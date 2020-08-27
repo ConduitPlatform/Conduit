@@ -1,5 +1,5 @@
 import {isNil} from 'lodash';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 export class NotificationTokensHandler {

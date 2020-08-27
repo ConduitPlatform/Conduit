@@ -1,12 +1,12 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
-import AdminModule from '@conduit/admin';
-import SecurityModule from '@conduit/security';
+import AdminModule from '@quintessential-sft/conduit-admin';
+import SecurityModule from '@quintessential-sft/conduit-security';
 import * as grpc from "grpc";
-import ConfigManager from "@conduit/config";
+import ConfigManager from '@quintessential-sft/conduit-config';
 import path from 'path';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
-import {ConduitDefaultRouter} from '@conduit/router';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import {ConduitDefaultRouter} from '@quintessential-sft/conduit-router';
 import convict from "./utils/config";
 
 let protoLoader = require('@grpc/proto-loader');

@@ -6,8 +6,8 @@ import {Localprovider} from './providers/local';
 import {MemcachedProvider} from './providers/memcached';
 import {StorageProvider} from './interaces/StorageProvider'
 import {isNil} from 'lodash';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
-import {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import InMemoryStoreConfigSchema from './config';
 import {AdminHandler} from "./admin";
 import * as grpc from "grpc";

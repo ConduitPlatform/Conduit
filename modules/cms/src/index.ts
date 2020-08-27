@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from "@conduit/grpc-sdk";
+import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import fs from "fs";
 import * as path from 'path';
 import {CMS} from './CMS';
@@ -10,7 +10,7 @@ if (process.env.CONDUIT_SERVER) {
     let cms = new CMS(grpcSdk);
     let url = cms.url;
     if(process.env.REGISTER_NAME){
-        url = 'authentication:'+url.split(':')[1];
+        url = 'cms:'+url.split(':')[1];
     }
     grpcSdk.config.registerModule('cms', url).catch(err => {
         console.error(err)

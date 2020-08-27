@@ -3,9 +3,9 @@ import {isEmpty, isNil} from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import {AuthUtils} from '../../utils/auth';
 import moment = require('moment');
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
-import {ConduitError} from "@conduit/grpc-sdk";
+import {ConduitError} from '@quintessential-sft/conduit-grpc-sdk';
 
 export class GoogleHandlers {
     private readonly client: OAuth2Client;

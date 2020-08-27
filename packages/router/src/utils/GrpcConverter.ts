@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import grpc from "grpc";
-import {ConduitRoute, ConduitRouteParameters} from "@conduit/sdk";
+import {ConduitRoute, ConduitRouteParameters} from '@quintessential-sft/conduit-sdk';
 
 let protoLoader = require('@grpc/proto-loader');
 

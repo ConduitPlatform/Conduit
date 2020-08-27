@@ -1,5 +1,5 @@
 import {DatabaseProvider} from "./DatabaseProvider";
-import ConduitGrpcSdk from "@conduit/grpc-sdk";
+import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 
 if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);

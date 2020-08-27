@@ -1,6 +1,6 @@
 // todo Create the controller that creates REST-specific endpoints
 import { Handler, IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
-import { ConduitError, ConduitRoute, ConduitRouteActions, ConduitRouteParameters } from '@conduit/sdk';
+import { ConduitError, ConduitRoute, ConduitRouteActions, ConduitRouteParameters } from '@quintessential-sft/conduit-sdk';
 
 function extractRequestData(req: Request) {
 

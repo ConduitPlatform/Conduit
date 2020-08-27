@@ -4,7 +4,7 @@ import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
-import ConduitGrpcSdk, {ConduitError} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {ConduitError} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../../templates';
 

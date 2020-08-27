@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import PushNotifications from './PushNotifications';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 let paths = require("./admin/admin.json")
 

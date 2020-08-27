@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition, ConduitString,
   constructRoute,
   TYPE
-} from '@conduit/grpc-sdk';
+} from '@quintessential-sft/conduit-grpc-sdk';
 
 var protoLoader = require('@grpc/proto-loader');
 var PROTO_PATH = __dirname + '/router.proto';

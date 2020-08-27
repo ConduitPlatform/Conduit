@@ -1,5 +1,5 @@
 import {Router} from "express";
-import {ConduitRouteBuilder, ConduitRouteOptions} from "@conduit/sdk";
+import {ConduitRouteBuilder, ConduitRouteOptions} from '@quintessential-sft/conduit-sdk';
 
 export class RouteBuilder extends ConduitRouteBuilder {
 

@@ -1,9 +1,7 @@
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
-import { ConduitSDK } from '@conduit/sdk';
-import grpc from "grpc";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSDK } from '@quintessential-sft/conduit-sdk';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
-import { ConduitUtilities } from '../../../../libraries/utilities/dist';
 
 export class AdminHandlers {
   private readonly database: any;

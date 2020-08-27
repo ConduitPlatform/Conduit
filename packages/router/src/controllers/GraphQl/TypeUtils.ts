@@ -1,4 +1,4 @@
-import {ConduitModel} from "@conduit/sdk";
+import {ConduitModel} from '@quintessential-sft/conduit-sdk';
 
 const deepdash = require('deepdash/standalone')
 

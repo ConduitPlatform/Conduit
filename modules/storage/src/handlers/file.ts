@@ -1,7 +1,7 @@
 import {isString, isNil} from 'lodash';
-import {IStorageProvider} from '@conduit/storage-provider';
+import {IStorageProvider} from '@quintessential-sft/storage-provider';
 import {v4 as uuid} from 'uuid';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 export class FileHandlers {

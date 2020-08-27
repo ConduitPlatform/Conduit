@@ -6,7 +6,7 @@ import {
     ConduitRouteReturnDefinition as ReturnDefinition,
     ConduitSDK,
     IConduitRouter
-} from '@conduit/sdk';
+} from '@quintessential-sft/conduit-sdk';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';

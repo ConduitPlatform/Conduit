@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import {StorageModule} from './Storage';
 import fs from "fs";
 import path from "path";

@@ -1,8 +1,8 @@
 import {NextFunction, Request, Response} from 'express';
 import {isNil} from 'lodash';
 import {comparePasswords, signToken} from '../utils/auth';
-import {ConduitSDK, IConfigManager} from '@conduit/sdk';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {ConduitSDK, IConfigManager} from '@quintessential-sft/conduit-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export class AuthHandlers {
 

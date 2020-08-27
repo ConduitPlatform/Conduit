@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
     ConduitRouteReturnDefinition,
     constructRoute,
     TYPE
-} from '@conduit/grpc-sdk';
+} from '@quintessential-sft/conduit-grpc-sdk';
 import {CmsHandlers} from '../handlers/CmsHandlers';
 import grpc from 'grpc';
 import fs from "fs";

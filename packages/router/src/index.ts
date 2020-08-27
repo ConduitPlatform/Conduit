@@ -1,9 +1,9 @@
 import {Application, NextFunction, Router, Request, Response} from "express";
 import {RouterBuilder} from "./builders";
 import {ConduitRoutingController} from "./controllers/Routing";
-import {ConduitRoute, IConduitRouter, ConduitRouteParameters} from "@conduit/sdk";
+import {ConduitRoute, IConduitRouter, ConduitRouteParameters} from '@quintessential-sft/conduit-sdk';
 import * as grpc from "grpc";
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 import {grpcToConduitRoute} from './utils/GrpcConverter';
 

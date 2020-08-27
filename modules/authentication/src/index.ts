@@ -1,5 +1,5 @@
 import fs from "fs";
-import ConduitGrpcSdk from "@conduit/grpc-sdk";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as path from 'path';
 import AuthenticationModule from './Authentication';
 

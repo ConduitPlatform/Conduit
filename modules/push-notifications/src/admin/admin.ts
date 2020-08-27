@@ -1,5 +1,5 @@
 import {isEmpty, isNil} from 'lodash';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from "path";
 import {IPushNotificationsProvider} from '../interfaces/IPushNotificationsProvider';

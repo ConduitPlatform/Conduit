@@ -1,7 +1,7 @@
 // todo create the controller that should construct both REST & GraphQL routes
 import {Application, NextFunction, Request, Response, Router} from "express";
 import {RestController} from "./Rest";
-import {ConduitRoute, ConduitRouteParameters} from "@conduit/sdk";
+import {ConduitRoute, ConduitRouteParameters} from '@quintessential-sft/conduit-sdk';
 import {GraphQLController} from "./GraphQl/GraphQL";
 
 export class ConduitRoutingController {

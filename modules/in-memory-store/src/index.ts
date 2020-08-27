@@ -1,5 +1,5 @@
 import {InMemoryStore} from "./InMemoryStore";
-import ConduitGrpcSdk from "@conduit/grpc-sdk";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import fs from "fs";
 import * as path from 'path';
 

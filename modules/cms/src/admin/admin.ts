@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, {ConduitSchema, TYPE} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
 import {isNil} from 'lodash';
 import {validateSchemaInput} from '../utils/utilities';
 import path from "path";

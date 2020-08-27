@@ -1,7 +1,7 @@
 import {ConnectionOptions, Mongoose} from "mongoose"
 import {MongooseSchema} from "./MongooseSchema";
 import {schemaConverter} from "./SchemaConverter";
-import {ConduitError, ConduitSchema} from "@conduit/grpc-sdk";
+import {ConduitError, ConduitSchema} from "@quintessential-sft/conduit-grpc-sdk";
 import {cloneDeep, isEmpty, isObject, isString, merge, isArray} from 'lodash';
 
 const deepdash = require('deepdash/standalone');

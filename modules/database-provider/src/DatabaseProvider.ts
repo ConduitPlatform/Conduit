@@ -1,6 +1,6 @@
 import {MongooseAdapter} from "./adapters/mongoose-adapter";
 import {DatabaseAdapter, SchemaAdapter} from './interfaces';
-import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from "grpc";
 import path from "path";
 

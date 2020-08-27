@@ -3,9 +3,9 @@ import {isNil, isEmpty} from 'lodash';
 import {AuthUtils} from '../../utils/auth';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
 import moment = require('moment');
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
-import {ConduitError} from "@conduit/grpc-sdk";
+import {ConduitError} from '@quintessential-sft/conduit-grpc-sdk';
 
 export class FacebookHandlers {
     private database: any;

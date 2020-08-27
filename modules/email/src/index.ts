@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from "@conduit/grpc-sdk";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import fs from "fs";
 import * as path from 'path';
 import EmailModule from './Email';

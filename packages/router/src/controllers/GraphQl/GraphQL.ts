@@ -5,11 +5,11 @@ import {
     ConduitRouteActions, ConduitRouteOptionExtended,
     ConduitRouteOptions,
     ConduitRouteParameters
-} from "@conduit/sdk";
+} from '@quintessential-sft/conduit-sdk';
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
 import {GraphQLScalarType, Kind} from "graphql";
-import {ConduitError} from "@conduit/sdk";
+import {ConduitError} from '@quintessential-sft/conduit-sdk';
 
 const {
     parseResolveInfo,

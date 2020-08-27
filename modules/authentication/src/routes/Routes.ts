@@ -7,14 +7,14 @@ import ConduitGrpcSdk, {
     ConduitRouteReturnDefinition, ConduitString,
     constructRoute,
     TYPE
-} from '@conduit/grpc-sdk';
+} from '@quintessential-sft/conduit-grpc-sdk';
 import {FacebookHandlers} from '../handlers/auth/facebook';
 import {GoogleHandlers} from '../handlers/auth/google';
 import {CommonHandlers} from '../handlers/auth/common';
 import {isNil} from 'lodash';
 import fs from "fs";
 import path from "path";
-import {ConduitRouteParameters} from "@conduit/grpc-sdk";
+import {ConduitRouteParameters} from '@quintessential-sft/conduit-grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 const PROTO_PATH = __dirname + '/router.proto';

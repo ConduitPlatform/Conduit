@@ -1,6 +1,6 @@
 import schema from './models/schema';
 import {AdminHandlers} from './admin/admin';
-import ConduitGrpcSdk, {ConduitSchema, grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {ConduitSchema, grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import {CmsRoutes} from './routes/Routes';
 import {SchemaController} from "./controllers/schema.controller";

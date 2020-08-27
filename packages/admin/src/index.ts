@@ -3,14 +3,14 @@ import {hashPassword, verifyToken} from './utils/auth';
 import {Router, Handler, Request, Response, NextFunction} from 'express';
 import {AuthHandlers} from './handlers/auth';
 import {AdminSchema} from './models/Admin';
-import {ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin} from '@conduit/sdk';
+import {ConduitError, ConduitRouteParameters, ConduitSDK, IConduitAdmin} from '@quintessential-sft/conduit-sdk';
 import AdminConfigSchema from './config';
 import * as grpc from "grpc";
 
 let protoLoader = require('@grpc/proto-loader');
 import fs from 'fs';
 import path from 'path';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export default class AdminModule extends IConduitAdmin {
     private readonly router: Router;

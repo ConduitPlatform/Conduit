@@ -10,7 +10,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@conduit/sdk": "1.0.0",
+    "@quintessential-sft/conduit-sdk": "^1.0.0",
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@types/lodash": "^4.14.149",

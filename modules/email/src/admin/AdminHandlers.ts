@@ -1,6 +1,6 @@
 import {isNil} from 'lodash';
 import {EmailService} from '../services/email.service';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 

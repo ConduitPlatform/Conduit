@@ -3,7 +3,7 @@ import * as models from './models';
 import {AdminHandlers} from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import {isNil} from 'lodash';
-import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import * as grpc from "grpc";
 import {AuthenticationRoutes} from './routes/Routes';

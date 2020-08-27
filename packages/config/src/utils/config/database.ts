@@ -1,7 +1,5 @@
-import {isNil} from 'lodash';
 import {Config} from 'convict';
-import {IDatabaseConfigUtility} from '@conduit/sdk';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export class DatabaseConfigUtility {
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {

@@ -1,10 +1,10 @@
 import {emailTemplateSchema} from './models/EmailTemplate';
-import {EmailProvider} from '@conduit/email-provider';
+import {EmailProvider} from '@quintessential-sft/email-provider';
 import {EmailService} from './services/email.service';
 import {AdminHandlers} from './admin/AdminHandlers';
 import EmailConfigSchema from './config';
 import {isNil} from 'lodash';
-import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import * as grpc from "grpc";
 

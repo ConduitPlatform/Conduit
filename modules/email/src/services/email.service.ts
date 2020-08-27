@@ -1,6 +1,6 @@
 import {isNil} from 'lodash';
-import {EmailProvider} from '@conduit/email-provider';
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import {EmailProvider} from '@quintessential-sft/email-provider';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import {IRegisterTemplateParams, ISendEmailParams} from '../interfaces';
 
 export class EmailService {

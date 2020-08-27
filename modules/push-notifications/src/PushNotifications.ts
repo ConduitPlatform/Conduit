@@ -4,7 +4,7 @@ import {FirebaseProvider} from './providers/firebase';
 import PushNotificationsConfigSchema from './config';
 import {isNil} from 'lodash';
 import path from 'path';
-import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';

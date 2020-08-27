@@ -1,4 +1,4 @@
-import { ConduitModel, ConduitSchema, ConduitSDK, TYPE } from '@conduit/sdk';
+import { ConduitModel, ConduitSchema, ConduitSDK, TYPE } from '@quintessential-sft/conduit-sdk';
 import { Config } from 'convict';
 import { AppConfig } from '../utils/config';
 import { isNil, isPlainObject, cloneDeep, isString, isArray } from 'lodash';

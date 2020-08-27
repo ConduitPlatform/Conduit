@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduit/grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';

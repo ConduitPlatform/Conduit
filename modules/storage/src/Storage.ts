@@ -1,8 +1,8 @@
-import {createStorageProvider, IStorageProvider} from '@conduit/storage-provider';
+import {createStorageProvider, IStorageProvider} from '@quintessential-sft/storage-provider';
 import File from './models/File';
 import StorageConfigSchema from './config';
 import {isNil} from 'lodash';
-import ConduitGrpcSdk, {grpcModule} from '@conduit/grpc-sdk';
+import ConduitGrpcSdk, {grpcModule} from'@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from "grpc";
 import * as path from 'path';
 import {FileHandlers} from './handlers/file';
