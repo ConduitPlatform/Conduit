@@ -54,12 +54,60 @@ export class CmsRoutes {
             });
     }
 
+    compareFunction(schemaA: any, schemaB: any): number {
+        let hasA = [];
+        let hasB = [];
+        for (const k in schemaA.modelSchema) {
+            if (schemaA.modelSchema[k].ref) {
+                hasA.push(schemaA.modelSchema[k].ref);
+            }
+        }
+        for (const k in schemaB.modelSchema) {
+            if (schemaB.modelSchema[k].ref) {
+                hasB.push(schemaB.modelSchema[k].ref);
+            }
+        }
+
+        if (hasA.length === 0 && hasB.length === 0) {
+            return 0;
+        } else if (hasA.length === 0 && hasB.length !== 0) {
+            if (hasB.indexOf(schemaA.name)) {
+                return 1;
+            } else {
+                return -1;
+            }
+        } else if (hasA.length !== 0 && hasB.length === 0) {
+            if (hasA.indexOf(schemaB.name)) {
+                return -1;
+            } else {
+                return 1;
+            }
+        } else {
+            if (hasA.indexOf(schemaB.name) && hasB.indexOf(schemaA.name)) {
+                return 0;
+            } else if (hasA.indexOf(schemaB.name)) {
+                return -1;
+            } else if (hasB.indexOf(schemaA.name)) {
+                return 1;
+            }else{
+                return 0;
+            }
+        }
+    }
+
+
     registeredRoutes(schemas: { [name: string]: any }): any[] {
         let routesArray: any[] = [];
+        let schemaSort = [];
         for (const k in schemas) {
-            if (!schemas.hasOwnProperty(k)) continue;
-            routesArray = routesArray.concat(this.getOps(k, schemas[k]));
+            schemaSort.push(k);
         }
+        schemaSort.sort((a: string, b: string) => {
+            return this.compareFunction(schemas[a], schemas[b]);
+        })
+        schemaSort.forEach(r=>{
+            routesArray = routesArray.concat(this.getOps(r, schemas[r]));
+        })
         return routesArray;
     }
 
@@ -94,9 +142,7 @@ export class CmsRoutes {
         routesArray.push(constructRoute(new ConduitRoute({
                 path: `/content/${schemaName}`,
                 action: ConduitRouteActions.POST,
-                bodyParams: {
-                    inputDocument: actualSchema
-                }
+                bodyParams: actualSchema.modelSchema
             }, new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.modelSchema),
             'createDocument')));
 
@@ -106,9 +152,7 @@ export class CmsRoutes {
                 urlParams: {
                     id: TYPE.String,
                 },
-                bodyParams: {
-                    changedDocument: actualSchema.modelSchema
-                }
+                bodyParams: actualSchema.modelSchema
             }, new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.modelSchema),
             'editDocument')));
 
@@ -118,7 +162,7 @@ export class CmsRoutes {
                 urlParams: {
                     id: TYPE.String
                 }
-            }, new ConduitRouteReturnDefinition('result', {result: TYPE.String}),
+            }, new ConduitRouteReturnDefinition(`delete${schemaName}`, {result: TYPE.String}),
             'deleteDocument')));
 
         return routesArray;

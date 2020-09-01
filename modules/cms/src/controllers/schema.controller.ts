@@ -18,15 +18,26 @@ export class SchemaController {
         this._adapter
             .findMany('SchemaDefinitions', {enabled: true})
             .then((r: any) => {
+                let promise = new Promise((resolve, reject) => {
+                    resolve();
+                });
                 if (r) {
                     r.forEach((r: any) => {
                         if (typeof r.modelOptions === 'string') {
                             r.modelOptions = JSON.parse(r.modelOptions);
                         }
                         const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
-                        this._schemas[r.name] = this._adapter.createSchemaFromAdapter(schema);
+                        promise = promise.then(r => {
+                            return this._adapter.createSchemaFromAdapter(schema)
+                        }).then(p => {
+                            this._schemas[r.name] = p;
+                        })
+
                     })
-                    this.router.refreshRoutes(this._schemas);
+                    promise.then(r => {
+                        this.router.refreshRoutes(this._schemas);
+                    })
+
                 }
 
             })

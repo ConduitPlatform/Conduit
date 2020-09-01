@@ -2,6 +2,7 @@ import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import fs from "fs";
 import * as path from 'path';
 import {CMS} from './CMS';
+import * as process from "process";
 
 let paths = require("./admin/admin.json")
 
@@ -9,7 +10,7 @@ if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
     let cms = new CMS(grpcSdk);
     let url = cms.url;
-    if(process.env.REGISTER_NAME){
+    if (process.env.REGISTER_NAME === 'true') {
         url = 'cms:'+url.split(':')[1];
     }
     grpcSdk.config.registerModule('cms', url).catch(err => {
