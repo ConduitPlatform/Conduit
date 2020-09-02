@@ -57,14 +57,14 @@ export class CmsRoutes {
     compareFunction(schemaA: any, schemaB: any): number {
         let hasA = [];
         let hasB = [];
-        for (const k in schemaA.modelSchema) {
-            if (schemaA.modelSchema[k].ref) {
-                hasA.push(schemaA.modelSchema[k].ref);
+        for (const k in schemaA.fields) {
+            if (schemaA.fields[k].model) {
+                hasA.push(schemaA.fields[k].model);
             }
         }
-        for (const k in schemaB.modelSchema) {
-            if (schemaB.modelSchema[k].ref) {
-                hasB.push(schemaB.modelSchema[k].ref);
+        for (const k in schemaB.fields) {
+            if (schemaB.fields[k].model) {
+                hasB.push(schemaB.fields[k].model);
             }
         }
 
@@ -113,6 +113,14 @@ export class CmsRoutes {
 
     getOps(schemaName: string, actualSchema: any) {
         let routesArray: any = [];
+        routesArray.push(constructRoute(new ConduitRoute({
+                path: `/content/${schemaName}/:id`,
+                action: ConduitRouteActions.GET,
+                urlParams: {
+                    id: TYPE.String
+                }
+            }, new ConduitRouteReturnDefinition(`${schemaName}`, actualSchema.fields),
+            'getDocumentById')));
 
         routesArray.push(constructRoute(new ConduitRoute({
                 path: `/content/${schemaName}`,
@@ -123,7 +131,7 @@ export class CmsRoutes {
                 }
             }, new ConduitRouteReturnDefinition(`get${schemaName}`, {
                 result: {
-                    documents: [actualSchema.modelSchema],
+                    documents: [actualSchema.fields],
                     documentsCount: TYPE.Number
                 }
             }),
@@ -131,19 +139,10 @@ export class CmsRoutes {
         )));
 
         routesArray.push(constructRoute(new ConduitRoute({
-                path: `/content/${schemaName}/:id`,
-                action: ConduitRouteActions.GET,
-                urlParams: {
-                    id: TYPE.String
-                }
-            }, new ConduitRouteReturnDefinition(`get${schemaName}ById`, actualSchema.modelSchema),
-            'getDocumentById')));
-
-        routesArray.push(constructRoute(new ConduitRoute({
                 path: `/content/${schemaName}`,
                 action: ConduitRouteActions.POST,
-                bodyParams: actualSchema.modelSchema
-            }, new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.modelSchema),
+                bodyParams: actualSchema.fields
+            }, new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.fields),
             'createDocument')));
 
         routesArray.push(constructRoute(new ConduitRoute({
@@ -152,8 +151,8 @@ export class CmsRoutes {
                 urlParams: {
                     id: TYPE.String,
                 },
-                bodyParams: actualSchema.modelSchema
-            }, new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.modelSchema),
+                bodyParams: actualSchema.fields
+            }, new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
             'editDocument')));
 
         routesArray.push(constructRoute(new ConduitRoute({

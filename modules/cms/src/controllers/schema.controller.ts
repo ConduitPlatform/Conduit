@@ -34,8 +34,12 @@ export class SchemaController {
                         })
 
                     })
-                    promise.then(r => {
-                        this.router.refreshRoutes(this._schemas);
+                    promise.then(p => {
+                        let routeSchemas:any = {};
+                        r.forEach((schema:any) => {
+                            routeSchemas[schema.name] = schema;
+                        })
+                        this.router.refreshRoutes(routeSchemas);
                     })
 
                 }
