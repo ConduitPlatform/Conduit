@@ -1,12 +1,14 @@
 {
   "name": "@conduit/storage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This will provide a consistent storage mechanism",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "start": "node dist/index.js",
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto ./dist/",
     "prepare": "npm run build"
   },
   "keywords": [],
@@ -17,19 +19,28 @@
   "files": [
     "src"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "license": "ISC",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-utilities": "^1.0.1",
+    "@quintessential-sft/storage-provider": "^1.0.1",
+    "convict": "^6.0.0",
+    "grpc": "^1.24.2",
+    "lodash": "^4.17.15",
+    "uuid": "^7.0.3"
+  },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
     "@types/express": "^4.16.1",
     "@types/lodash": "^4.14.149",
     "@types/uuid": "^7.0.2",
+    "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
     "typescript": "^3.8.3"
-  },
-  "dependencies": {
-    "@conduit/sdk": "1.0.0",
-    "@conduit/storage-provider": "1.0.0",
-    "lodash": "^4.17.15",
-    "uuid": "^7.0.3"
   },
   "peerDependencies": {
     "express": "~4.16.1"

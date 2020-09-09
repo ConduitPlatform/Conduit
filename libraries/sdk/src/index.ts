@@ -9,10 +9,11 @@ import {IConduitStorage} from './modules/Storage';
 import {IConduitSecurity} from './modules/Security';
 import {IConduitAuthentication} from './modules/Authentication';
 import {IConduitCMS} from "./modules/Cms";
-import { isNil, isPlainObject, merge } from "lodash";
+import {isNil, isPlainObject, merge} from "lodash";
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
-import { Config as ConvictConfig } from 'convict';
+import {Config as ConvictConfig} from 'convict';
+import {IConfigManager} from './modules/Config';
 
 export class ConduitSDK {
 
@@ -28,6 +29,7 @@ export class ConduitSDK {
     private _security?: IConduitSecurity;
     private _authentication?: IConduitAuthentication;
     private _cms?: IConduitCMS;
+    private _configManager?: IConfigManager;
 
     private constructor(app: Application) {
         this._app = app;
@@ -133,6 +135,16 @@ export class ConduitSDK {
         throw new Error('Authentication module not assigned yet');
     }
 
+    registerConfigManager(configManager: IConfigManager) {
+        if (this._configManager) throw new Error('Cannot register a second config manager');
+        this._configManager = configManager;
+    }
+
+    getConfigManager(): IConfigManager {
+        if (this._configManager) return this._configManager;
+        throw new Error('Config manager not assigned yet');
+    }
+
     static getInstance(app: Application) {
         if (!this._instance && !app) throw new Error("No settings provided to initialize");
         if (!this._instance) {
@@ -157,13 +169,13 @@ export class ConduitSDK {
 
         if (isNil(currentConfig)) currentConfig = {};
         const final = merge(currentConfig, newConfig);
-        if (isNil(moduleName)){
+        if (isNil(moduleName)) {
             Object.assign(dbConfig, final);
         } else {
             if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
             Object.assign(dbConfig[moduleName], final);
         }
-        const saved = await Config.findByIdAndUpdate(dbConfig);
+        const saved = await Config.findByIdAndUpdate(dbConfig._id, dbConfig);
         delete saved._id;
         delete saved.createdAt;
         delete saved.updatedAt;
@@ -206,7 +218,7 @@ export class ConduitSDK {
 }
 
 export * from "./models";
-export * from "./interaces";
+export * from "./interfaces";
 export * from "./modules";
 export * from "./helpers";
 export * from './constants';

@@ -1,11 +1,14 @@
 {
   "name": "@conduit/email",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "start": "node dist/index.js",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build": "rimraf dist && tsc",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-email:latest . && docker push quintessential.azurecr.io/conduit-email:latest"
   },
   "directories": {
     "lib": "src"
@@ -13,17 +16,26 @@
   "files": [
     "src"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "license": "ISC",
   "dependencies": {
-    "@conduit/email-provider": "1.0.0",
-    "@conduit/sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-utilities": "^1.0.1",
+    "@quintessential-sft/email-provider": "^1.0.0",
+    "convict": "^6.0.0",
+    "grpc": "^1.24.2",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
     "@types/express": "^4.16.1",
     "@types/lodash": "^4.14.149",
     "@types/nodemailer": "^6.4.0",
     "@types/smtp-server": "^3.5.4",
+    "copyfiles": "^2.2.0",
     "express": "~4.16.1",
     "rimraf": "^3.0.2",
     "smtp-server": "^3.6.0",

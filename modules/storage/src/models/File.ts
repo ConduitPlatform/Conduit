@@ -1,15 +1,9 @@
-import { ConduitSchema, TYPE } from '@conduit/sdk';
+import {ConduitSchema, TYPE} from "@quintessential-sft/conduit-grpc-sdk";
 
 export default new ConduitSchema(
   'File',
   {
     _id: TYPE.ObjectId,
-    user: {
-      type: TYPE.Relation,
-      required: true,
-      model: 'User',
-      systemRequired: true
-    },
     name: {
       type: TYPE.String,
       required: true,

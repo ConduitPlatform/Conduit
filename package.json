@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "docz:dev": "docz dev",
@@ -11,21 +12,25 @@
     "build:bootstrap": "lerna run build",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit .",
     "push:docker": "docker push quintessential.azurecr.io/conduit",
-    "deploy:docker": "npm run build:docker && npm run push:docker",
-    "snyk-protect": "snyk protect",
-    "prepare": "npm run snyk-protect"
+    "deploy:docker": "npm run build:docker && npm run push:docker"
   },
+  "workspaces": [
+    "packages/*",
+    "libraries/*",
+    "admin/*",
+    "modules/*"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "lerna": "^3.13.1"
+    "copyfiles": "^2.2.0",
+    "lerna": "^3.13.1",
+    "pm2": "^4.4.0"
   },
   "dependencies": {
     "docz": "^2.3.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "snyk": "^1.321.0"
-  },
-  "snyk": true
+    "react": "16.12.0",
+    "react-dom": "16.12.0"
+  }
 }

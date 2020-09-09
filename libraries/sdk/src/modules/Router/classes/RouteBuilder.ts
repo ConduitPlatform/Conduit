@@ -1,5 +1,5 @@
 import {Router} from "express";
-import {ConduitRouteOptions} from "../../../interaces";
+import {ConduitRouteOptions} from "../../../interfaces";
 
 export abstract class ConduitRouteBuilder {
 

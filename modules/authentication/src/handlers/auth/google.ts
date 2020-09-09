@@ -1,57 +1,100 @@
-import {
-    ConduitRoute,
-    ConduitRouteActions as Actions,
-    ConduitRouteParameters, ConduitRouteReturnDefinition,
-    ConduitSDK, ConduitString,
-    IConduitDatabase, TYPE,
-    ConduitError
-} from '@conduit/sdk';
-import {OAuth2Client} from 'google-auth-library';
-import {isNil} from 'lodash';
+import {auth, OAuth2Client} from 'google-auth-library';
+import {isEmpty, isNil} from 'lodash';
 import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
-import {AuthService} from '../../services/auth';
+import {AuthUtils} from '../../utils/auth';
 import moment = require('moment');
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import grpc from "grpc";
+import {ConduitError} from '@quintessential-sft/conduit-grpc-sdk';
 
 export class GoogleHandlers {
     private readonly client: OAuth2Client;
-    private readonly database: IConduitDatabase;
+    private database: any;
+    private initialized: boolean = false;
 
-    constructor(private readonly sdk: ConduitSDK, private readonly authService: AuthService) {
+    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
         this.client = new OAuth2Client();
-        this.database = sdk.getDatabase();
-        this.registerRoutes();
+        this.validate()
+            .then(() => {
+                return this.initDbAndEmail();
+            })
+            .catch(err => {
+                console.log("Google not active");
+            })
     }
 
-    async authenticate(params: ConduitRouteParameters) {
-        const {id_token, access_token, expires_in} = params.params as any;
-        const {config: appConfig} = this.sdk as any;
-        const config = appConfig.get('authentication');
+    async validate(): Promise<Boolean> {
+        return this.grpcSdk.config.get('authentication')
+            .then((authConfig: any) => {
+                if(!authConfig.google.active){
+                    throw ConduitError.forbidden('Google auth is deactivated');
+                }
+                if (!authConfig.google || !authConfig.google.clientId) {
+                    throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
+                }
+            })
+            .then(() => {
+                if (!this.initialized) {
+                    return this.initDbAndEmail();
+                }
+            })
+            .then(r => {
+                return true;
+            })
+            .catch((err: Error) => {
+                // De-initialize the provider if the config is now invalid
+                this.initialized = false;
+                throw err;
+            });
+    }
 
-        if (isNil(params.context)) throw ConduitError.unauthorized('No headers provided');
+    private async initDbAndEmail() {
+        await this.grpcSdk.waitForExistence('database-provider');
+        this.database = this.grpcSdk.databaseProvider;
+        this.initialized = true;
+    }
+
+
+    async authenticate(call: any, callback: any) {
+        if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
+        const {id_token, access_token, expires_in} = JSON.parse(call.request.params);
+
+        let errorMessage = null;
+
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
 
         const ticket = await this.client.verifyIdToken({
             idToken: id_token,
             audience: config.google.clientId
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const payload = ticket.getPayload();
         if (isNil(payload)) {
-            throw ConduitError.unauthorized('Received invalid response from the Google API');
+            return callback({
+                code: grpc.status.UNAUTHENTICATED,
+                message: 'Received invalid response from the Google API'
+            });
         }
         if (!payload.email_verified) {
-            throw ConduitError.unauthorized();
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized'});
         }
 
-        const User = this.database.getSchema('User');
-        const AccessToken = this.database.getSchema('AccessToken');
-        const RefreshToken = this.database.getSchema('RefreshToken');
+        let user = await this.database.findOne('User', {email: payload.email}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        let user = await User.findOne({email: payload.email});
 
         if (!isNil(user)) {
-            if (!user.active) throw ConduitError.forbidden('Inactive user');
+            if (!user.active) return callback({code: grpc.status.PERMISSION_DENIED, message: 'Inactive user'});
             if (!config.google.accountLinking) {
-                throw ConduitError.forbidden('User with this email already exists');
+                return callback({code: grpc.status.PERMISSION_DENIED, message: 'User with this email already exists'});
             }
             if (isNil(user.google)) {
                 user.google = {
@@ -60,10 +103,11 @@ export class GoogleHandlers {
                     tokenExpires: moment().add(expires_in as number, 'milliseconds')
                 };
                 if (!user.isVerified) user.isVerified = true;
-                user = await User.findByIdAndUpdate(user);
+                user = await this.database.findByIdAndUpdate('User', user).catch((e: any) => errorMessage = e.message);
+                if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
             }
         } else {
-            user = await User.create({
+            user = await this.database.create('User', {
                 email: payload.email,
                 google: {
                     id: payload.sub,
@@ -71,7 +115,8 @@ export class GoogleHandlers {
                     tokenExpires: moment().add(expires_in).format()
                 },
                 isVerified: true
-            });
+            }).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
         const signTokenOptions: ISignTokenOptions = {
@@ -79,39 +124,29 @@ export class GoogleHandlers {
             expiresIn: config.tokenInvalidationPeriod
         };
 
-        const accessToken = await AccessToken.create({
+        const accessToken = await this.database.create('AccessToken', {
             userId: user._id,
-            clientId: params.context.clientId,
-            token: this.authService.signToken({id: user._id}, signTokenOptions),
+            clientId: context.clientId,
+            token: AuthUtils.signToken({id: user._id}, signTokenOptions),
             expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate()
-        });
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const refreshToken = await RefreshToken.create({
+        const refreshToken = await this.database.create('RefreshToken', {
             userId: user._id,
-            clientId: params.context.clientId,
-            token: this.authService.randomToken(),
+            clientId: context.clientId,
+            token: AuthUtils.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {
+            result: JSON.stringify({
+                userId: user._id.toString(),
+                accessToken: accessToken.token,
+                refreshToken: refreshToken.token
+            })
         });
-
-        return {userId: user._id.toString(), accessToken: accessToken.token, refreshToken: refreshToken.token};
     }
 
-    registerRoutes() {
-        this.sdk.getRouter().registerRoute(new ConduitRoute(
-            {
-                path: '/authentication/google',
-                action: Actions.POST,
-                bodyParams: {
-                    id_token: TYPE.String,
-                    access_token: TYPE.String,
-                    refresh_token: TYPE.String,
-                    expires_in: TYPE.String
-                }
-            },
-            new ConduitRouteReturnDefinition('GoogleResponse', {
-                userId: ConduitString.Required,
-                accessToken: ConduitString.Required,
-                refreshToken: ConduitString.Required
-            }), this.authenticate.bind(this)));
-    }
 }

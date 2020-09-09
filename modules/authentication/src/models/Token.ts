@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@conduit/sdk';
+import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
 
 export const Token = new ConduitSchema('Token',
   {

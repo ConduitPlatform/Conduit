@@ -6,6 +6,8 @@ export abstract class IConduitAdmin {
     constructor(conduit: ConduitSDK) {
     }
 
+    abstract initialize(): void;
+
     abstract registerRoute(method: string, route: string, handler: Handler): void;
 
     abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;

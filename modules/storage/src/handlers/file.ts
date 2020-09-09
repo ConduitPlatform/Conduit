@@ -1,177 +1,196 @@
-import { ConduitError, ConduitRouteParameters, ConduitSDK, IConduitDatabase } from '@conduit/sdk';
-import { isString, isNil } from 'lodash';
-import { IStorageProvider } from '@conduit/storage-provider';
-import { v4 as uuid } from 'uuid';
+import {isString, isNil} from 'lodash';
+import {IStorageProvider} from '@quintessential-sft/storage-provider';
+import {v4 as uuid} from 'uuid';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import * as grpc from 'grpc';
 
 export class FileHandlers {
-  private readonly database: IConduitDatabase;
+    private database: any;
+    private storageProvider: IStorageProvider;
 
-  constructor(
-    private readonly sdk: ConduitSDK,
-    private readonly storageProvider: IStorageProvider
-  ) {
-    this.database = sdk.getDatabase();
-  }
-
-  async createFile(params: ConduitRouteParameters) {
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
+    constructor(private readonly grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
+        this.initDb(grpcSdk, storageProvider);
     }
 
-    const File = this.database.getSchema('File');
-
-    const name = params.params?.name;
-    const data = params.params?.data;
-    const folder = params.params?.folder;
-    const mimeType = params.params?.mimeType;
-
-    if (!isString(data)) {
-      throw ConduitError.userInput('Invalid data provided');
+    async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
+        await grpcSdk.waitForExistence('database-provider');
+        this.database = grpcSdk.databaseProvider;
+        this.storageProvider = storageProvider;
     }
 
-    if (!isString(folder)) {
-      throw ConduitError.userInput('No folder provided');
+    updateProvider(storageProvider: IStorageProvider) {
+        this.storageProvider = storageProvider;
     }
 
-    const buffer = Buffer.from(data, 'base64');
+    async createFile(call: any, callback: any) {
 
-    const exists = await this.storageProvider.folder(folder).exists('');
-    if (!exists) {
-      await this.storageProvider.folder('').createFolder(folder);
+        const {name, data, folder, mimeType} = JSON.parse(call.request.params);
+
+        if (!isString(data)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid data provided'});
+        }
+
+        if (!isString(folder)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No folder provided'});
+        }
+
+        const buffer = Buffer.from(data, 'base64');
+
+        let errorMessage = null;
+        await this.storageProvider.folder(folder).exists('')
+            .then(exists => {
+                if (!exists) {
+                    return this.storageProvider.folder('').createFolder(folder);
+                }
+            })
+            .then(() => {
+                this.storageProvider.folder(folder).store(name, buffer);
+            })
+            .catch(e => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const newFile = await this.database.create('File', {
+            name,
+            mimeType,
+            folder
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify(newFile)});
     }
 
-    await this.storageProvider.folder(folder).store(name, buffer);
+    async getFile(call: any, callback: any) {
+        const {id} = JSON.parse(call.request.params);
+        if (!isString(id)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
+        }
 
-    return File.create({ name, mimeType, user, folder });
-  }
+        let errorMessage = null;
+        const result = await this.database.findOne('File', {_id: id})
+            .then((found: any) => {
+                if (isNil(found)) {
+                    throw new Error('File not found');
+                }
+                return {file: this.storageProvider.folder(found.folder).get(found.name), found};
+            })
+            .then((obj: any) => {
+                let data;
+                if (Buffer.isBuffer(obj.file)) {
+                    data = obj.file.toString('base64');
+                } else {
+                    data = Buffer.from(obj.file.toString()).toString('base64');
+                }
 
-  async getFile(params: ConduitRouteParameters) {
-    const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
-    if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
-    }
-    const File = this.database.getSchema('File');
+                return {...obj.found, data};
+            })
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-    const found = await File.findOne({ _id: id, user: user._id });
-    if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
-    }
-    // probably a buffer
-    const file = await this.storageProvider.folder(found.folder).get(found.name).catch(error => {
-      throw ConduitError.notFound('File not found');
-    });
-
-    let data;
-    if (Buffer.isBuffer(file)) {
-      data = file.toString('base64');
-    } else {
-      data = Buffer.from(file.toString()).toString('base64');
+        return callback(null, {result: JSON.stringify(result)});
     }
 
-    return {
-      ...found,
-      data
-    };
-  }
+    async deleteFile(call: any, callback: any) {
+        const {id} = JSON.parse(call.request.params);
+        if (!isString(id)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
+        }
 
-  async deleteFile(params: ConduitRouteParameters) {
-    const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
-    if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
-    }
-    const File = this.database.getSchema('File');
-    const found = await File.findOne({ _id: id, user: user._id });
-    if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
-    }
+        let errorMessage = null;
+        this.database.findOne('File', {_id: id})
+            .then((found: any) => {
+                if (isNil(found)) {
+                    throw new Error('File not found');
+                }
+                return this.storageProvider.folder(found.folder).delete(found.name);
+            })
+            .then((success: boolean) => {
+                if (!success) {
+                    throw new Error('Error deleting the file');
+                }
+                return this.database.deleteOne('File', {_id: id});
+            })
+            .catch((e: any) => errorMessage = e.message);
 
-    const success = await this.storageProvider.folder(found.folder).delete(found.name);
-    if (!success) {
-      throw ConduitError.internalServerError('Error deleting the file');
-    }
-
-    await File.deleteOne({ _id: id });
-
-    return { success: true };
-  }
-
-  async updateFile(params: ConduitRouteParameters) {
-    const id = params.params?.id;
-    const user = params.context?.user;
-    if (isNil(user)) {
-      throw ConduitError.forbidden('Invalid credentials');
-    }
-    if (!isString(id)) {
-      throw ConduitError.userInput('The provided id is invalid');
-    }
-    const File = this.database.getSchema('File');
-    const found = await File.findOne({ _id: id, user: user._id });
-    if (isNil(found)) {
-      throw ConduitError.notFound('File not found');
+        return callback(null, {result: JSON.stringify({success: true})});
     }
 
-    // Create temporary file to make the changes so the original is not corrupted if anything fails
-    const tempFileName = uuid();
-    const oldData = await this.storageProvider.folder(found.folder).get(found.name)
-      .catch(error => {
-        throw ConduitError.internalServerError('Error reading file');
-      });
+    async updateFile(call: any, callback: any) {
+        const {id, data, name, folder, mimeType} = JSON.parse(call.request.params);
+        if (!isString(id)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
+        }
 
-    const exists = await this.storageProvider.folder('temp').exists('');
-    if (!exists) {
-      await this.storageProvider.folder('temp').createFolder('');
+        let errorMessage = null;
+        const found = await this.database.findOne('File', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(found)) {
+            return callback({code: grpc.status.NOT_FOUND, message: errorMessage});
+        }
+
+        // Create temporary file to make the changes so the original is not corrupted if anything fails
+        const tempFileName = uuid();
+        const oldData = await this.storageProvider.folder(found.folder).get(found.name)
+            .catch(error => {
+                errorMessage = 'Error reading file';
+            });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const exists = await this.storageProvider.folder('temp').exists('').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (!exists) {
+            await this.storageProvider.folder('temp').createFolder('').catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        }
+
+        await this.storageProvider.folder('temp').store(tempFileName, oldData)
+            .catch(error => {
+                console.log(error);
+                errorMessage = 'I/O Error';
+            });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        let failed = false;
+
+        if (!isNil(data)) {
+            const buffer = Buffer.from(data, 'base64');
+            await this.storageProvider.folder('temp').store(tempFileName, buffer)
+                .catch(error => {
+                    failed = true;
+                });
+        }
+
+        const newName = name ?? found.name;
+        const newFolder = folder ?? found.folder;
+
+        const shouldRemove = newName !== found.name;
+
+        found.mimeType = mimeType ?? found.mimeType;
+
+        // Commit the changes to the actual file if everything is successful
+        if (failed) {
+            await this.storageProvider.folder('temp').delete(tempFileName).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            return callback({code: grpc.status.INTERNAL, message: ''});
+        }
+        await this.storageProvider.folder('temp').moveToFolderAndRename(tempFileName, newName, newFolder)
+            .catch(error => {
+                errorMessage = 'I/O Error';
+            });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (shouldRemove) {
+            await this.storageProvider.folder(found.folder).delete(found.name).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            ;
+        }
+
+        found.name = newName;
+        found.folder = newFolder;
+
+        const updatedFile = await this.database.findByIdAndUpdate('File', found).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify(updatedFile)});
     }
-
-    await this.storageProvider.folder('temp').store(tempFileName, oldData)
-      .catch(error => {
-        console.log(error);
-        throw ConduitError.internalServerError('I/O error');
-      });
-
-    let failed = false;
-
-    const data = params.params?.data;
-    if (!isNil(data)) {
-      const buffer = Buffer.from(data, 'base64');
-      await this.storageProvider.folder('temp').store(tempFileName, buffer)
-        .catch(error => {
-          failed = true;
-        });
-    }
-
-    const newName = params.params?.name ?? found.name;
-    const newFolder = params.params?.folder ?? found.folder;
-
-    const shouldRemove = newName !== found.name;
-
-    found.mimeType = params.params?.mimeType ?? found.mimeType;
-
-    // Commit the changes to the actual file if everything is successful
-    if (failed) {
-      await this.storageProvider.folder('temp').delete(tempFileName);
-      throw ConduitError.internalServerError();
-    }
-    await this.storageProvider.folder('temp').moveToFolderAndRename(tempFileName, newName, newFolder)
-      .catch(error => {
-        throw ConduitError.internalServerError('I/O error');
-      });
-
-    if (shouldRemove) {
-      await this.storageProvider.folder(found.folder).delete(found.name);
-    }
-
-    found.name = newName;
-    found.folder = newFolder;
-
-    return File.findByIdAndUpdate(found);
-  }
 }

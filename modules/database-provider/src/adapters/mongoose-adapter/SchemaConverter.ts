@@ -1,5 +1,5 @@
-import { Schema } from 'mongoose';
-import {ConduitSchema} from "@conduit/sdk";
+import {Schema} from "mongoose";
+import {ConduitSchema} from "@quintessential-sft/conduit-grpc-sdk";
 import * as _ from "lodash";
 import { isNil, isObject, isArray } from "lodash";
 const deepdash = require('deepdash/standalone');

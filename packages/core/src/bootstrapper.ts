@@ -1,68 +1,63 @@
 import {App} from './app';
 import {ConduitApp} from './interfaces/ConduitApp';
-import { ConfigModelGenerator } from './models/Config';
-import {DatabaseConfigUtility} from './utils/config';
-import {Config} from 'convict';
-import AdminModule from '@conduit/admin';
-import SecurityModule from '@conduit/security';
-import PushNotificationsModule from '@conduit/push-notifications';
-import EmailModule from '@conduit/email';
-import AuthenticationModule from '@conduit/authentication';
-import {CMS} from '@conduit/cms';
-import StorageModule from '@conduit/storage';
-import InMemoryStoreModule from '@conduit/in-memory-store';
-import {ConfigAdminHandlers} from './admin/config';
-import {ConduitSDK} from '@conduit/sdk';
+import AdminModule from '@quintessential-sft/conduit-admin';
+import SecurityModule from '@quintessential-sft/conduit-security';
+import * as grpc from "grpc";
+import ConfigManager from '@quintessential-sft/conduit-config';
+import path from 'path';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import {ConduitDefaultRouter} from '@quintessential-sft/conduit-router';
+import convict from "./utils/config";
+
+let protoLoader = require('@grpc/proto-loader');
 
 export class CoreBootstrapper {
     static bootstrap() {
-        const app = new App().get();
-        CoreBootstrapper.bootstrapSdkComponents(app).catch(console.log);
+        let primary: App;
+        let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
+
+        const grpcSdk = new ConduitGrpcSdk(_url);
+        var server = new grpc.Server();
+        var packageDefinition = protoLoader.loadSync(
+            path.resolve(__dirname, './core.proto'),
+            {
+                keepCase: true,
+                longs: String,
+                enums: String,
+                defaults: true,
+                oneofs: true
+            });
+        // NOTE: all core packages with grpc need to be created before grpc server start
+        primary = new App();
+        const app = primary.get();
+
+        let manager = new ConfigManager(grpcSdk, app.conduit, server, packageDefinition, (url: string) => {
+            primary?.initialize();
+            CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
+        });
+
+        app.conduit.registerConfigManager(manager);
+        app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
+        app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
+
+        server.bind(_url, grpc.ServerCredentials.createInsecure());
+        server.start();
+        console.log("grpc server listening on:", _url);
         return app;
     }
 
-    private static registerSchemas(app: ConduitApp) {
-        const database = app.conduit.getDatabase();
-        const ConfigModel = new ConfigModelGenerator(app).configModel;
-        database.createSchemaFromAdapter(ConfigModel);
-    }
+    private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp, packageDefinition: string, server: any) {
+        await app.conduit.getConfigManager().registerAppConfig();
+        await app.conduit.getConfigManager().registerModulesConfig('core', convict.getProperties());
+        //
+        // const appConfig: Config<any> = (app.conduit as any).config;
+        // const databaseConfigUtility = app.conduit.getConfigManager().getDatabaseConfigUtility(appConfig);
 
-    private static registerAdminRoutes(sdk: ConduitSDK) {
-        const configHandlers = new ConfigAdminHandlers(sdk);
-        const adminModule = sdk.getAdmin();
+        // await databaseConfigUtility.configureFromDatabase();
 
-        adminModule.registerRoute('GET', '/config/:module?', configHandlers.getConfig.bind(configHandlers));
-        adminModule.registerRoute('PUT', '/config/:module?', configHandlers.setConfig.bind(configHandlers));
-    }
-
-    private static async bootstrapSdkComponents(app: ConduitApp) {
-        CoreBootstrapper.registerSchemas(app);
-
-        const database = app.conduit.getDatabase();
-        const appConfig: Config<any> = (app.conduit as any).config;
-
-        const databaseConfigUtility = new DatabaseConfigUtility(database, appConfig);
-
-        await databaseConfigUtility.configureFromDatabase();
-
-        app.conduit.registerAdmin(new AdminModule(app.conduit));
-
-        app.conduit.registerSecurity(new SecurityModule(app.conduit));
-
-        app.conduit.registerEmail(new EmailModule(app.conduit));
-
-        app.conduit.registerAuthentication(new AuthenticationModule(app.conduit));
-
-        app.conduit.registerPushNotifications(new PushNotificationsModule(app.conduit));
-
-        // initialize plugin AFTER the authentication so that we may provide access control to the plugins
-        app.conduit.registerCMS(new CMS(app.conduit));
-
-        app.conduit.registerStorage(new StorageModule(app.conduit));
-
-        app.conduit.registerInMemoryStore(new InMemoryStoreModule(app.conduit));
-
-        CoreBootstrapper.registerAdminRoutes(app.conduit);
+        app.conduit.getAdmin().initialize();
+        app.conduit.getConfigManager().initConfigAdminRoutes();
+        app.conduit.registerSecurity(new SecurityModule(app.conduit, grpcSdk));
 
         app.initialized = true;
     }

@@ -1,6 +1,6 @@
 // todo Create the controller that creates REST-specific endpoints
 import { Handler, IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
-import { ConduitError, ConduitRoute, ConduitRouteActions, ConduitRouteParameters } from '@conduit/sdk';
+import { ConduitError, ConduitRoute, ConduitRouteActions, ConduitRouteParameters } from '@quintessential-sft/conduit-sdk';
 
 function extractRequestData(req: Request) {
 
@@ -130,8 +130,8 @@ export class RestController {
             let context = extractRequestData(req)
             self.checkMiddlewares(route.input.path, context)
               .then(r => route.executeRequest(context))
-              .then((r: any) => res.status(200).json(r))
-              .catch((err: Error | ConduitError) => {
+              .then((r: any) => res.status(200).json(JSON.parse(r.result)))
+              .catch((err: Error | ConduitError | any) => {
                   if (err.hasOwnProperty("status")) {
                       console.log(err);
                       res.status((err as ConduitError).status).json({
@@ -139,6 +139,35 @@ export class RestController {
                           status: (err as ConduitError).status,
                           message: err.message,
                       });
+                  } else if (err.hasOwnProperty("code")) {
+                    let statusCode: number;
+                    let name: string;
+                    switch (err.code) {
+                        case 3:
+                            name = 'INVALID_ARGUMENTS';
+                            statusCode = 400;
+                            break;
+                        case 5:
+                            name = 'NOT_FOUND';
+                            statusCode = 404;
+                            break;
+                        case 7:
+                            name = 'FORBIDDEN';
+                            statusCode = 403;
+                            break;
+                        case 16:
+                            name = 'UNAUTHORIZED';
+                            statusCode = 401;
+                            break;
+                        default:
+                            name = 'INTERNAL_SERVER_ERROR';
+                            statusCode = 500;
+                    }
+                    res.status(statusCode).json({
+                        name,
+                        status: statusCode,
+                        message: err.details
+                    });
                   } else {
                       console.log(err);
                       res.status(500).json({

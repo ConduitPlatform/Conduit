@@ -1,12 +1,11 @@
 {
-  "name": "@conduit/email-provider",
-  "version": "1.0.0",
+  "name": "@quintessential-sft/email-provider",
+  "version": "1.0.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run snyk-protect && npm run build",
     "build": "tsc",
-    "publish": "npm publish",
     "test": "cross-env TS_NODE_FILES=true mocha --timeout 10000 --reporter nyan -r ts-node/register test/**/*.ts",
     "coverage": "nyc r lcov -e .ts -x \"*.test.ts\" npm run test",
     "snyk-protect": "snyk protect"
@@ -27,7 +26,12 @@
     "src"
   ],
   "publishConfig": {
-    "registry": "http://registry.quintessential.gr/"
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
+    "directory": "libraries/email-provider"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",

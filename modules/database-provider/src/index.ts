@@ -1,39 +1,21 @@
-import {MongooseAdapter} from "./adapters/mongoose-adapter";
-import {DatabaseAdapter, IConduitDatabase, SchemaAdapter} from "@conduit/sdk";
-import {ConduitSchema} from "@conduit/sdk";
+import {DatabaseProvider} from "./DatabaseProvider";
+import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 
-
-export class ConduitDefaultDatabase extends IConduitDatabase {
-
-    private readonly _activeAdapter: DatabaseAdapter;
-
-    constructor(dbType: string, databaseUrl: any) {
-        super(dbType, databaseUrl);
-        if (dbType === 'mongodb') {
-            this._activeAdapter = new MongooseAdapter(databaseUrl);
-        } else {
-            throw new Error("Arguments not supported")
+if (process.env.CONDUIT_SERVER) {
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let databaseProvider = new DatabaseProvider(grpcSdk);
+    databaseProvider.ensureIsRunning().then(() => {
+        let url = databaseProvider.url;
+        if(process.env.REGISTER_NAME){
+            url = 'database-provider:'+url.split(':')[1];
         }
-    }
-
-    /**
-     * Should accept a JSON schema and output a .ts interface for the adapter
-     * @param schema
-     */
-    createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter {
-        return this._activeAdapter.createSchemaFromAdapter(schema);
-    }
-
-    /**
-     * Given a schema name, returns the schema adapter assigned
-     * @param schemaName
-     */
-    getSchema(schemaName: string): SchemaAdapter {
-        return this._activeAdapter.getSchema(schemaName);
-    }
-
-    deleteSchema(schemaName: string): void {
-        this._activeAdapter.deleteSchema(schemaName);
-    }
+        grpcSdk.config.registerModule('database-provider', url)
+        .catch((err: any) => {
+            console.error(err)
+            process.exit(-1);
+        });
+        
+    });
+} else {
+    throw new Error("Conduit server URL not provided");
 }
-

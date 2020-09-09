@@ -1,13 +1,14 @@
-import { ConnectionOptions, Mongoose } from 'mongoose';
-import { MongooseSchema } from './MongooseSchema';
-import { schemaConverter } from './SchemaConverter';
-import { ConduitError, ConduitSchema, DatabaseAdapter, SchemaAdapter } from '@conduit/sdk';
-import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
+import {ConnectionOptions, Mongoose} from "mongoose"
+import {MongooseSchema} from "./MongooseSchema";
+import {schemaConverter} from "./SchemaConverter";
+import {ConduitError, ConduitSchema} from "@quintessential-sft/conduit-grpc-sdk";
+import {cloneDeep, isEmpty, isObject, isString, merge, isArray} from 'lodash';
 
 const deepdash = require('deepdash/standalone');
 
-export class MongooseAdapter implements DatabaseAdapter {
+export class MongooseAdapter {
 
+    connected: boolean = false;
     mongoose: Mongoose;
     connectionString: string;
     options: ConnectionOptions = {
@@ -29,29 +30,41 @@ export class MongooseAdapter implements DatabaseAdapter {
         this.connect();
     }
 
+    async ensureConnected(): Promise<any> {
+        return new Promise((resolve, reject) => {
+            let db = this.mongoose.connection;
+            db.on('connected', () => {
+                console.log('MongoDB dashboard is connected');
+                resolve();
+            });
+
+            db.on('error', (err: any) => {
+                console.error('Dashboard Connection error:', err.message);
+                reject();
+            });
+
+            db.once('open', function callback() {
+                console.info("Connected to Dashboard Database!");
+                resolve();
+            });
+
+            db.on('reconnected', function () {
+                console.log('Dashboard Database reconnected!');
+                resolve();
+            });
+
+            db.on('disconnected', function () {
+                console.log('Dashboard Database Disconnected');
+                reject();
+            });
+        });
+    }
+
     connect() {
         this.mongoose
             .connect(this.connectionString, this.options)
             .then(() => {
-                console.log('MongoDB dashboard is connected');
-                let db = this.mongoose.connection;
 
-                db.on('error', (err: any) => {
-                    console.error('Dashboard Connection error:', err.message);
-                });
-
-                db.once('open', function callback() {
-                    console.info("Connected to Dashboard Database!");
-                });
-
-                db.on('reconnected', function () {
-                    console.log('Dashboard Database reconnected!');
-                });
-
-                db.on('disconnected', function () {
-                    console.log('Dashboard Database Disconnected');
-
-                });
             })
             .catch((err: any) => {
                 console.log(err);
@@ -59,28 +72,42 @@ export class MongooseAdapter implements DatabaseAdapter {
             });
     }
 
-    createSchemaFromAdapter(schema: ConduitSchema): SchemaAdapter {
+    createSchemaFromAdapter(schema: any): Promise<{ schema: any }> {
         const Schema = this.mongoose.Schema;
         if (!this.models) {
             this.models = {};
         }
 
         if (this.registeredSchemas.has(schema.name)) {
-            schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+            if (schema.name !== 'Config') {
+                schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+                // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
+            }
             delete this.mongoose.connection.models[schema.name];
         }
+
         let newSchema = schemaConverter(schema);
 
         this.registeredSchemas.set(schema.name, schema);
         this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
-        return this.models[schema.name];
+        return new Promise((resolve, reject) => {
+            resolve({schema: this.models![schema.name]});
+        });
     }
 
-    getSchema(schemaName: string): SchemaAdapter {
+    async getSchema(schemaName: string): Promise<{ schema: any }> {
         if (this.models) {
-            return this.models[schemaName]
+            return {schema: this.models![schemaName].originalSchema};
         }
-        throw new ConduitError("SchemaLookupError", 500, "Schema not defined yet!");
+        throw new Error('Schema not defined yet');
+    }
+
+    async getSchemaModel(schemaName: string): Promise<{ model: any }> {
+        if (this.models) {
+            return {model: this.models![schemaName]};
+
+        }
+        throw new Error('Schema not defined yet');
     }
 
     deleteSchema(schemaName: string) {
@@ -114,7 +141,7 @@ export class MongooseAdapter implements DatabaseAdapter {
         }
 
         // validate types
-        this.validateSchemaFields(oldSchema.fields, newSchema.fields);
+        this.validateSchemaFields(oldSchema.fields ?? oldSchema.modelSchema, newSchema.fields ?? newSchema.modelSchema);
 
         return newSchema;
 
@@ -136,8 +163,7 @@ export class MongooseAdapter implements DatabaseAdapter {
 
                 if (isArray(oldType) && isArray(newType)) {
                     if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0])) throw ConduitError.forbidden('Invalid schema types');
-                }
-                else if (oldType !== newType) {
+                } else if (oldType !== newType) {
                     // TODO migrate types
                     throw ConduitError.forbidden('Invalid schema types');
                 }

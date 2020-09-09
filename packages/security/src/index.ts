@@ -1,18 +1,19 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitSDK, IConduitDatabase, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@conduit/sdk';
+import {ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@quintessential-sft/conduit-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 class SecurityModule extends IConduitSecurity {
 
-    private readonly database: IConduitDatabase;
+    private readonly database: any;
     conduit: ConduitSDK;
 
-    constructor(conduit: ConduitSDK) {
+    constructor(conduit: ConduitSDK, grpcSdk: ConduitGrpcSdk) {
         super(conduit);
 
         this.conduit = conduit;
-        this.database = conduit.getDatabase();
+        this.database = grpcSdk.databaseProvider!;
         this.database.createSchemaFromAdapter(ClientModel);
 
         conduit.getAdmin().registerRoute('POST', '/client',
@@ -23,7 +24,7 @@ class SecurityModule extends IConduitSecurity {
                     return res.status(401).json({error: 'Invalid platform'});
                 }
 
-                await this.database.getSchema('Client').create({
+                await this.database.create('Client', {
                     clientId,
                     clientSecret,
                     platform
@@ -51,8 +52,8 @@ class SecurityModule extends IConduitSecurity {
             return next(ConduitError.unauthorized());
         }
 
-        this.database.getSchema('Client')
-            .findOne({clientId: clientid, clientSecret: clientsecret})
+        this.database
+            .findOne('Client', {clientId: clientid, clientSecret: clientsecret})
             .then((client: any) => {
                 if (isNil(client)) {
                     throw ConduitError.unauthorized();

@@ -1,6 +1,6 @@
 import {IRoute, Router} from "express";
 import {RouteBuilder} from "./RouteBuilder";
-import {ConduitRouteOptions, ConduitRouterBuilder} from "@conduit/sdk";
+import {ConduitRouteOptions, ConduitRouterBuilder} from '@quintessential-sft/conduit-sdk';
 
 export class RouterBuilder extends ConduitRouterBuilder {
 

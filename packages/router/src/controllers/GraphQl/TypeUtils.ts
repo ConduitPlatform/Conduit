@@ -1,4 +1,4 @@
-import {ConduitModel} from "@conduit/sdk";
+import {ConduitModel, ConduitNumber, TYPE} from '@quintessential-sft/conduit-sdk';
 
 const deepdash = require('deepdash/standalone')
 
@@ -113,8 +113,8 @@ export function extractTypes(name: string, fields: ConduitModel | string, _input
             if (value[0].type === 'Relation') {
                 addToRelation(value[0].model);
                 constructResolver(name, field, true);
-                typeString += field + ': ' + value[0].model + (value[0].required ? '!' : '') + ' ';
-            } else if (typeof value[0].type == 'string') {
+                typeString += field + ': ' + (input ? 'ID' : value[0].model) + (value[0].required ? '!' : '') + ' ';
+            } else if (typeof value[0].type === 'string') {
                 typeString += field + ': [' + getGraphQLType(value[0].type) + (value[0].required ? '!' : '') + '] ';
             } else if (Array.isArray(value[0].type)) {
                 let parseResult = arrayHandler(name, field, value[0].type as Array<any>);
@@ -164,7 +164,7 @@ export function extractTypes(name: string, fields: ConduitModel | string, _input
                             if ((fields[field] as any).type === 'Relation') {
                                 addToRelation((fields[field] as any).model);
                                 constructResolver(name, field, true);
-                                typeString += field + ': ' + (fields[field] as any).model + ((fields[field] as any).required ? '!' : '') + ' ';
+                                typeString += field + ': ' + (input ? 'ID' : (fields[field] as any).model) + ((fields[field] as any).required ? '!' : '') + ' ';
                             } else {
                                 typeString += field + ': ' + getGraphQLType((fields[field] as any).type) + ((fields[field] as any).required ? '!' : '') + ' ';
                             }

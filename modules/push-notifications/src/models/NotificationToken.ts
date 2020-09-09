@@ -1,4 +1,4 @@
-import { ConduitSchema, PlatformTypesEnum, TYPE } from '@conduit/sdk';
+import { ConduitSchema, PlatformTypesEnum, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 export const NotificationTokenModel = new ConduitSchema('NotificationToken',
   {

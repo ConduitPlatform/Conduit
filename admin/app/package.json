@@ -1,9 +1,9 @@
 {
   "name": "@conduit/admin-front",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8080",
     "build": "next build",
     "start": "next start",
     "snyk-protect": "snyk protect",
@@ -30,8 +30,8 @@
     "redux": "^4.0.5",
     "redux-devtools-extension": "^2.13.8",
     "redux-thunk": "^2.3.0",
-    "swr": "^0.1.18",
-    "snyk": "^1.321.0"
+    "snyk": "^1.321.0",
+    "swr": "^0.1.18"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",

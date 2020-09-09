@@ -1,0 +1,34 @@
+syntax = 'proto3';
+package pushnotifications;
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+message SetNotificationTokenRequest {
+  string token = 1;
+  string platform = 2;
+  string userId = 3;
+}
+
+message SetNotificationTokenResponse {
+  string newTokenDocument = 1;
+}
+
+message GetNotificationTokensRequest {
+  string userId = 1;
+}
+
+message GetNotificationTokensResponse {
+  repeated string tokenDocuments = 1;
+}
+
+service PushNotifications {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
+  rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
+}

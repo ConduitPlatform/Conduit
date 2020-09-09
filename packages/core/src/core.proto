@@ -1,0 +1,109 @@
+syntax = "proto3";
+package conduit.core;
+
+service Config {
+    rpc Get (GetConfigRequest) returns (GetConfigResponse);
+    rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
+    rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+    rpc ModuleList (Empty) returns (ModuleListResponse);
+    rpc WatchModules (Empty) returns (stream ModuleListResponse);
+    rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+    rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
+}
+
+service Admin {
+    rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+}
+
+service Router {
+    rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+}
+
+message RegisterAdminRouteRequest {
+
+    repeated PathDefinition routes = 1;
+    string protoFile = 2;
+    string adminUrl = 3;
+    message PathDefinition {
+        string path = 1;
+        string method = 2;
+        string grpcFunction = 3;
+    }
+}
+message RegisterConduitRouteRequest {
+
+    repeated PathDefinition routes = 1;
+    string protoFile = 2;
+    string routerUrl = 3;
+    message PathDefinition {
+        ConduitRouteOptions options = 1;
+        ConduitRouteReturnDefinition returns = 2;
+        string grpcFunction = 3;
+        bool isMiddleware = 4;
+    }
+
+    message ConduitRouteOptions {
+        string queryParams = 1;
+        string bodyParams = 2;
+        string urlParams = 3;
+        string action = 4;
+        string path = 5;
+        string name = 6;
+        string description = 7;
+    }
+
+    message ConduitRouteReturnDefinition {
+        string name = 1;
+        string fields = 2;
+    }
+}
+
+message Empty {
+}
+message RegisterModuleRequest {
+    string moduleName = 1;
+    string url = 2;
+    string newConfigSchema = 3;
+}
+
+message RegisterModuleResponse {
+    bool result = 1;
+}
+
+message ModuleListResponse {
+    repeated ModuleResponse modules = 1;
+    message ModuleResponse {
+        string moduleName = 1;
+        string url = 2;
+    }
+}
+
+
+message ModuleExistsRequest {
+    string moduleName = 1;
+}
+
+message ModuleExistsResponse {
+    string url = 1;
+}
+
+message GetConfigRequest {
+    string key = 1;
+}
+
+message GetConfigResponse {
+    string data = 1;
+}
+message UpdateRequest {
+    string config = 1;
+    string moduleName = 2;
+}
+message UpdateResponse {
+    string result = 1;
+}
+
+message RegisterModulesConfigRequest {
+    string moduleName = 1;
+    string newModulesConfigSchema = 2;
+}
+

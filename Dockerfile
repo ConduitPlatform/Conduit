@@ -1,13 +1,13 @@
-FROM node:dubnium-alpine
+FROM node:dubnium
 
-RUN apk --no-cache add --virtual builds-deps build-base python
+#RUN apk --no-cache add --virtual builds-deps build-base python
 
 COPY . /app
 
 WORKDIR /app
 
-RUN npm install && npx lerna bootstrap && npx lerna run build
+#RUN npm install -g yarn
+RUN npm install -g node-gyp
+RUN yarn && npx lerna run build
 
-WORKDIR /app/packages/core
-
-CMD ["npm", "start"]
+CMD ["yarn", "start"]

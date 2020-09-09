@@ -1,12 +1,11 @@
 {
-  "name": "@conduit/storage-provider",
-  "version": "1.0.0",
+  "name": "@quintessential-sft/storage-provider",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc",
-    "publish": "npm publish"
+    "build": "tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -19,7 +18,12 @@
     "lib"
   ],
   "publishConfig": {
-    "registry": "http://registry.quintessential.gr/"
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
+    "directory": "libraries/storage-provider"
   },
   "devDependencies": {
     "typescript": "^3.7.5"

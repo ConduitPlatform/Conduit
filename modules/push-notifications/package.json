@@ -1,31 +1,41 @@
 {
   "name": "@conduit/push-notifications",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Handles sending push notifications to users",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "start": "node dist/index.js",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
-    "publish": "npm publish"
+    "build": "rimraf dist && tsc"
   },
   "author": "",
   "license": "ISC",
   "directories": {
     "lib": "src"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "files": [
     "src"
   ],
   "dependencies": {
-    "@conduit/sdk": "1.0.0",
+    "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-utilities": "^1.0.1",
+    "convict": "^6.0.0",
     "firebase-admin": "^8.10.0",
-    "lodash": "^4.17.15",
-    "rimraf": "^3.0.2"
+    "grpc": "^1.24.2",
+    "lodash": "^4.17.15"
   },
   "devDependencies": {
+    "@types/convict": "^4.2.1",
     "@types/express": "^4.17.4",
     "@types/lodash": "^4.14.149",
+    "copyfiles": "^2.3.0",
+    "rimraf": "^3.0.2",
     "typescript": "^3.8.3"
   }
 }

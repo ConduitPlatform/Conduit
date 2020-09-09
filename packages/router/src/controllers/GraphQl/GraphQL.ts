@@ -5,11 +5,11 @@ import {
     ConduitRouteActions, ConduitRouteOptionExtended,
     ConduitRouteOptions,
     ConduitRouteParameters
-} from "@conduit/sdk";
+} from '@quintessential-sft/conduit-sdk';
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
 import {GraphQLScalarType, Kind} from "graphql";
-import {ConduitError} from "@conduit/sdk";
+import {ConduitError} from '@quintessential-sft/conduit-sdk';
 
 const {
     parseResolveInfo,
@@ -34,10 +34,6 @@ export class GraphQLController {
         this.initialize();
     }
 
-    getInternalRoute() {
-        return this._internalRoute;
-    }
-
     handleRequest(req: Request, res: Response, next: NextFunction) {
         this._internalRoute(req, res, next);
     }
@@ -57,7 +53,7 @@ export class GraphQLController {
     }
 
     generateType(name: string, fields: ConduitModel | string) {
-        if (this.typeDefs.includes(name)) {
+        if (this.typeDefs.includes(' ' + name+' ')) {
             return;
         }
         const self = this;
@@ -116,7 +112,8 @@ export class GraphQLController {
     }
 
     generateAction(input: ConduitRouteOptions, returnType: string) {
-        let pathName: string[] = input.path.replace('-', '').split('/');
+        // todo refine this, simply replacing : with empty is too dumb
+        let pathName: string[] = input.path.replace('-', '').replace(':','').split('/');
         if (pathName[pathName.length - 1].length === 0 || pathName[pathName.length - 1] === '') {
             pathName = pathName.slice(0, pathName.length - 1);
         } else {
@@ -221,6 +218,7 @@ export class GraphQLController {
             this.refreshRoutes();
         } else {
             this.addConduitRoute(route);
+            this.refreshGQLServer();
         }
     }
 

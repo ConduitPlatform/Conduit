@@ -1,6 +1,6 @@
 import {NextFunction, Router, Request, Response} from "express";
 import {ConduitRouterBuilder} from "../classes";
-import {ConduitRoute, ConduitRouteParameters} from "../../../interaces";
+import {ConduitRoute, ConduitRouteParameters} from "../../../interfaces";
 
 export interface IConduitRouter {
 
