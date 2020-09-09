@@ -53,7 +53,7 @@ export class GraphQLController {
     }
 
     generateType(name: string, fields: ConduitModel | string) {
-        if (this.typeDefs.includes(name)) {
+        if (this.typeDefs.includes(' ' + name+' ')) {
             return;
         }
         const self = this;

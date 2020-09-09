@@ -197,15 +197,16 @@ export class AdminHandlers {
         requestedSchema.fields = fields ? fields : requestedSchema.fields;
         requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
 
-        const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
+        const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (!isNil(updatedSchema.modelOptions)) updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
 
-        // TODO reinitialise routes?
+        // Mongoose requires that schemas are re-created in order to update them
         if (updatedSchema.enabled) {
             this.schemaController.createSchema(new ConduitSchema(updatedSchema.name, updatedSchema.fields, updatedSchema.modelOptions));
         }
+        // TODO reinitialise routes?
         // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
         return callback(null, {result: JSON.stringify(updatedSchema)});
