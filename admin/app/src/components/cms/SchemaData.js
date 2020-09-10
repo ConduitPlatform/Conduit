@@ -21,6 +21,7 @@ import TextField from '@material-ui/core/TextField';
 import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
+import CreateDialog from './DocumentCreateDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -97,8 +98,12 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
   const [dialog, setDialog] = useState(false);
-
   const [objFields, setObjFields] = useState([]);
+  const [createDocument, setCreateDocument] = useState(false);
+
+  const handleCreateDialog = () => {
+    setCreateDocument(!createDocument);
+  };
 
   const handleClick = (event, idx) => {
     setDocIndex(idx);
@@ -205,10 +210,11 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   };
 
   const addNewDocument = () => {
-    setDocAction('create');
-    setCreateIndex(selectedSchema);
-    const arrFields = getFields(schemas[selectedSchema].fields, 'create');
-    setObjFields([...arrFields]);
+    handleCreateDialog();
+    // setDocAction('create');
+    // setCreateIndex(selectedSchema);
+    // const arrFields = getFields(schemas[selectedSchema].fields, 'create');
+    // setObjFields([...arrFields]);
   };
 
   const getFields = (fields, action) => {
@@ -399,6 +405,9 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
           )}
         </TabPanel>
       </Box>
+      <Dialog open={createDocument} onClose={handleCreateDialog} maxWidth={'md'} fullWidth={true}>
+        <CreateDialog schema={schemas[selectedSchema]} handleCancel={handleCreateDialog} />
+      </Dialog>
       <Dialog fullWidth={false} maxWidth={'md'} open={dialog} onClose={handleClose}>
         <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
           Delete document : {documents[docIndex]?._id}

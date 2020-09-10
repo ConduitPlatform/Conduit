@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import ExpansionPanel from '@material-ui/core/ExpansionPanel';
-import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
-import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Switch from '@material-ui/core/Switch';
@@ -23,7 +23,7 @@ const useStyles = makeStyles((theme) => ({
     borderTopRightRadius: 4,
   },
   expandedPanel: {
-    '&.MuiExpansionPanel-root.Mui-expanded': {
+    '&.MuiAccordion-root.Mui-expanded': {
       marginTop: 0,
     },
   },
@@ -147,7 +147,7 @@ export default function AuthAccordion(props) {
     closeExpanded(type);
   };
 
-  const expansionPanelGenerator = (providerData) => {
+  const AccordionGenerator = (providerData) => {
     if (!providerData) {
       return;
     }
@@ -157,12 +157,12 @@ export default function AuthAccordion(props) {
           return;
         }
         return (
-          <ExpansionPanel
+          <Accordion
             expanded={expanded.includes('local')}
             onChange={() => openExpanded('local')}
             style={{ cursor: 'default' }}
             classes={{ root: classes.expandedPanel }}>
-            <ExpansionPanelSummary id={'local'}>
+            <AccordionSummary id={'local'}>
               <Box display={'flex'} alignItems={'center'} flex={1}>
                 <Typography variant={'subtitle2'} className={classes.typography}>
                   Identifier/Password
@@ -177,8 +177,8 @@ export default function AuthAccordion(props) {
                   {local.enabled ? 'Enabled' : 'Disabled'}
                 </Typography>
               </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{ root: classes.details }}>
+            </AccordionSummary>
+            <AccordionDetails classes={{ root: classes.details }}>
               <Box
                 display={'flex'}
                 flexDirection={'column'}
@@ -279,8 +279,8 @@ export default function AuthAccordion(props) {
                   </Button>
                 </Box>
               </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+            </AccordionDetails>
+          </Accordion>
         );
 
       case 'google':
@@ -288,8 +288,8 @@ export default function AuthAccordion(props) {
           return;
         }
         return (
-          <ExpansionPanel expanded={expanded.includes('google')} onChange={() => openExpanded('google')}>
-            <ExpansionPanelSummary id={'google'}>
+          <Accordion expanded={expanded.includes('google')} onChange={() => openExpanded('google')}>
+            <AccordionSummary id={'google'}>
               <Box display={'flex'} alignItems={'center'} flex={1}>
                 <Typography variant={'subtitle2'} className={classes.typography}>
                   Google
@@ -304,8 +304,8 @@ export default function AuthAccordion(props) {
                   {google.enabled ? 'Enabled' : 'Disabled'}
                 </Typography>
               </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{ root: classes.details }}>
+            </AccordionSummary>
+            <AccordionDetails classes={{ root: classes.details }}>
               <Box
                 display={'flex'}
                 flexDirection={'column'}
@@ -383,8 +383,8 @@ export default function AuthAccordion(props) {
                   </Button>
                 </Box>
               </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+            </AccordionDetails>
+          </Accordion>
         );
 
       case 'facebook':
@@ -392,8 +392,8 @@ export default function AuthAccordion(props) {
           return;
         }
         return (
-          <ExpansionPanel expanded={expanded.includes('facebook')} onChange={() => openExpanded('facebook')}>
-            <ExpansionPanelSummary id={'email'}>
+          <Accordion expanded={expanded.includes('facebook')} onChange={() => openExpanded('facebook')}>
+            <AccordionSummary id={'email'}>
               <Box display={'flex'} alignItems={'center'} flex={1}>
                 <Typography variant={'subtitle2'} className={classes.typography}>
                   Facebook
@@ -408,8 +408,8 @@ export default function AuthAccordion(props) {
                   {facebook.enabled ? 'Enabled' : 'Disabled'}
                 </Typography>
               </Box>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails classes={{ root: classes.details }}>
+            </AccordionSummary>
+            <AccordionDetails classes={{ root: classes.details }}>
               <Box
                 display={'flex'}
                 flexDirection={'column'}
@@ -487,8 +487,8 @@ export default function AuthAccordion(props) {
                   </Button>
                 </Box>
               </Box>
-            </ExpansionPanelDetails>
-          </ExpansionPanel>
+            </AccordionDetails>
+          </Accordion>
         );
       default:
         return null;
@@ -505,9 +505,9 @@ export default function AuthAccordion(props) {
           Status
         </Typography>
       </Box>
-      {expansionPanelGenerator('local')}
-      {expansionPanelGenerator('google')}
-      {expansionPanelGenerator('facebook')}
+      {AccordionGenerator('local')}
+      {AccordionGenerator('google')}
+      {AccordionGenerator('facebook')}
     </Box>
   );
 }
