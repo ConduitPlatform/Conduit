@@ -1,11 +1,17 @@
 import cookie from 'js-cookie';
 
-export const setCookie = (key, value) => {
+export const setCookie = (key, value, remember) => {
   if (typeof window !== 'undefined') {
-    cookie.set(key, value, {
-      expires: 1,
-      path: '/',
-    });
+    if (remember) {
+      cookie.set(key, value, {
+        expires: 1,
+        path: '/',
+      });
+    } else {
+      cookie.set(key, value, {
+        path: '/',
+      });
+    }
   }
 };
 export const removeCookie = (key) => {
