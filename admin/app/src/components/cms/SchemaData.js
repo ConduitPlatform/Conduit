@@ -2,7 +2,7 @@ import Box from '@material-ui/core/Box';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -19,8 +19,6 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
 import CreateDialog from './DocumentCreateDialog';
 
 const useStyles = makeStyles((theme) => ({
@@ -100,6 +98,15 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
   const [dialog, setDialog] = useState(false);
   const [objFields, setObjFields] = useState([]);
   const [createDocument, setCreateDocument] = useState(false);
+  const [documentData, setDocumentData] = useState([]);
+
+  useEffect(() => {
+    console.log(documents.documents);
+    if (documents && documents.documents) {
+      setDocumentData(documents.documents);
+    }
+    return () => {};
+  }, [documents]);
 
   const handleCreateDialog = () => {
     setCreateDocument(!createDocument);
@@ -211,10 +218,6 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
 
   const addNewDocument = () => {
     handleCreateDialog();
-    // setDocAction('create');
-    // setCreateIndex(selectedSchema);
-    // const arrFields = getFields(schemas[selectedSchema].fields, 'create');
-    // setObjFields([...arrFields]);
   };
 
   const getFields = (fields, action) => {
@@ -268,130 +271,38 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
         </Tabs>
 
         <TabPanel value={selectedSchema}>
-          {documents.length > 0 || docAction === 'create' ? (
+          {documentData.length > 0 ? (
             <>
-              {docAction !== 'edit' && docAction !== 'create' && (
-                <Button
-                  key={`btn_${documents.length - 1}`}
-                  variant="contained"
-                  color="primary"
-                  style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                  onClick={() => addNewDocument()}>
-                  Add Document
-                </Button>
-              )}
-              {docAction === '' || docAction === 'delete' ? (
-                documents.map((doc, index) => {
-                  return (
-                    <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
-                      <CardHeader
-                        title={doc._id}
-                        action={
-                          <>
-                            <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
-                              <MoreVert />
-                            </IconButton>
-                          </>
-                        }
-                      />
-                      <CardContent>
-                        {createDocumentArray(doc).map((obj, index) => {
-                          return (
-                            <TreeView
-                              key={`treeView${index}`}
-                              className={classes.tree}
-                              defaultCollapseIcon={<ExpandMoreIcon />}
-                              defaultExpanded={['root']}
-                              defaultExpandIcon={<ChevronRightIcon />}>
-                              {renderTree(obj)}
-                            </TreeView>
-                          );
-                        })}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              ) : docAction === 'create' ? (
-                <Card key={`card_CreateNew`} className={classes.card} variant={'outlined'}>
-                  <CardHeader
-                    title={`Schema: ${schemas[createIndex].name}`}
-                    action={
-                      <>
-                        <Button
-                          key={`btn_Cancel_Insert`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                          onClick={cancelEditDocument}>
-                          Cancel
-                        </Button>
-                        <Button
-                          key={`btn_Save_Create`}
-                          onClick={handleCreateDocument}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
-                          Save
-                        </Button>
-                      </>
-                    }
-                  />
-                  <CardContent>
-                    {objFields.map((obj, index) => {
-                      return (
-                        <TreeView
-                          aria-selected={false}
-                          key={`treeView${index}`}
-                          className={classes.tree}
-                          defaultCollapseIcon={<ExpandMoreIcon />}
-                          defaultExpanded={['root']}
-                          defaultExpandIcon={<ChevronRightIcon />}>
-                          {renderEditTree(obj)}
-                        </TreeView>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card key={`card${docIndex}`} className={classes.card} variant={'outlined'}>
-                  <CardHeader
-                    title={documents[docIndex]._id}
-                    action={
-                      <>
-                        <Button
-                          key={`btn_Cancel_${documents[docIndex]}`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                          onClick={cancelEditDocument}>
-                          Cancel
-                        </Button>
-                        <Button
-                          key={`btn_Save_${documents[docIndex]}`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
-                          Save
-                        </Button>
-                      </>
-                    }
-                  />
-                  <CardContent>
-                    {objFields.map((obj, index) => {
-                      return (
-                        <TreeView
-                          key={`treeView${index}`}
-                          className={classes.tree}
-                          defaultCollapseIcon={<ExpandMoreIcon />}
-                          defaultExpanded={['root']}
-                          defaultExpandIcon={<ChevronRightIcon />}>
-                          {renderEditTree(obj)}
-                        </TreeView>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
+              {documentData.map((doc, index) => {
+                return (
+                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                    <CardHeader
+                      title={doc._id}
+                      action={
+                        <>
+                          <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
+                            <MoreVert />
+                          </IconButton>
+                        </>
+                      }
+                    />
+                    <CardContent>
+                      {createDocumentArray(doc).map((obj, index) => {
+                        return (
+                          <TreeView
+                            key={`treeView${index}`}
+                            className={classes.tree}
+                            defaultCollapseIcon={<ExpandMoreIcon />}
+                            defaultExpanded={['root']}
+                            defaultExpandIcon={<ChevronRightIcon />}>
+                            {renderTree(obj)}
+                          </TreeView>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </>
           ) : (
             <>
@@ -408,7 +319,7 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
       <Dialog open={createDocument} onClose={handleCreateDialog} maxWidth={'md'} fullWidth={true}>
         <CreateDialog schema={schemas[selectedSchema]} handleCancel={handleCreateDialog} />
       </Dialog>
-      <Dialog fullWidth={false} maxWidth={'md'} open={dialog} onClose={handleClose}>
+      {/* <Dialog fullWidth={false} maxWidth={'md'} open={dialog} onClose={handleClose}>
         <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
           Delete document : {documents[docIndex]?._id}
         </DialogTitle>
@@ -420,7 +331,7 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
             Delete
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
       <Menu
         id="long-menu"
         anchorEl={anchorEl}
