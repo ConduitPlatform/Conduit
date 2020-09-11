@@ -17,9 +17,7 @@ const initialState = {
 const appAuthReducer = (state = initialState, action) => {
   switch (action.type) {
     case SET_AUTHENTICATION_TOKEN:
-      if (action.cookie) {
-        setCookie('JWT', action.payload);
-      }
+      setCookie('JWT', action.payload, action.cookie);
       return {
         ...state,
         token: action.payload,
