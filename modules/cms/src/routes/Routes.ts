@@ -130,10 +130,8 @@ export class CmsRoutes {
                     limit: TYPE.Number
                 }
             }, new ConduitRouteReturnDefinition(`get${schemaName}`, {
-                result: {
-                    documents: [actualSchema.fields],
-                    documentsCount: TYPE.Number
-                }
+                documents: [actualSchema.fields],
+                documentsCount: TYPE.Number
             }),
             'getDocuments'
         )));

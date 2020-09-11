@@ -267,13 +267,19 @@ export class GraphQLController {
             }
             this.resolvers['Query'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
+                context.path = route.input.path;
                 return self.checkMiddlewares(route.input.path, context)
                   .then((r: any) => route.executeRequest({
                       ...context,
                       params: args
                   }))
                   .then((r: any) => {
-                      return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                      let result = r;
+                      if(r.result){
+                          result = JSON.parse(r.result);
+
+                      }
+                      return typeof route.returnTypeFields === 'string' ? {result: r} : result;
                   })
                   .catch((err: Error | ConduitError) => {
                       if (err.hasOwnProperty("status")) {
@@ -289,10 +295,16 @@ export class GraphQLController {
             }
             this.resolvers['Mutation'][actionName] = (parent: any, args: any, context: any, info: any) => {
                 args = self.shouldPopulate(args, info);
+                context.path = route.input.path;
                 return self.checkMiddlewares(route.input.path, context)
                   .then((r: any) => route.executeRequest({...context, params: args}))
                   .then(r => {
-                      return typeof route.returnTypeFields === 'string' ? {result: r} : r;
+                      let result = r;
+                      if(r.result){
+                          result = JSON.parse(r.result);
+
+                      }
+                      return typeof route.returnTypeFields === 'string' ? {result: r} : result;
                   })
                   .catch((err: Error | ConduitError) => {
                       if (err.hasOwnProperty("status")) {

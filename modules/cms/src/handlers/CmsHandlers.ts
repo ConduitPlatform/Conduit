@@ -15,7 +15,8 @@ export class CmsHandlers {
     }
 
     async getDocuments(call: any, callback: any) {
-        const {skip, limit, schemaName} = JSON.parse(call.request.params);
+        const {skip, limit} = JSON.parse(call.request.params);
+        const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
         const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
@@ -52,7 +53,8 @@ export class CmsHandlers {
     }
 
     async getDocumentById(call: any, callback: any) {
-        const {schemaName, id} = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
+        const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
         const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
@@ -79,7 +81,8 @@ export class CmsHandlers {
     }
 
     async createDocument(call: any, callback: any) {
-        const {schemaName, inputDocument} = JSON.parse(call.request.params);
+        const inputDocument = JSON.parse(call.request.params).params;
+        const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
         const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
@@ -99,7 +102,8 @@ export class CmsHandlers {
     }
 
     async editDocument(call: any, callback: any) {
-        const {schemaName, id, changedDocument} = JSON.parse(call.request.params);
+        const {id, changedDocument} = JSON.parse(call.request.params);
+        const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
         const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
@@ -124,7 +128,8 @@ export class CmsHandlers {
     }
 
     async deleteDocument(call: any, callback: any) {
-        const {schemaName, id} = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
+        const schemaName = call.request.path.split('/')[2]
 
         let errorMessage: any = null;
         const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
