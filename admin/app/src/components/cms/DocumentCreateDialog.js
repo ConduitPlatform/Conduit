@@ -1,5 +1,6 @@
 import Box from '@material-ui/core/Box';
 import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -7,6 +8,8 @@ import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Switch from '@material-ui/core/Switch';
+import { Select } from '@material-ui/core';
+import { createSchemaDocument } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   headerContainer: {
@@ -16,29 +19,17 @@ const useStyles = makeStyles((theme) => ({
   'MuiInputBase-root': {
     background: 'red',
   },
-  // input: {
-  //   border: '1px solid',
-  //   borderColor: theme.palette.secondary.contrastText,
-  //   borderRadius: '4px',
-  //   padding: '0 10px',
-  //   marginLeft: theme.spacing(1),
-  //   '&.Mui-focused': {
-  //     borderColor: theme.palette.primary.main,
-  //   },
-  // },
-  // label: {
-  //   marginTop: theme.spacing(2),
-  // },
   divider: {
     width: '100%',
   },
+  'MuiSelect-root': {},
 }));
 
 const CreateDialog = ({ schema, handleCancel }) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
 
   const [document, setDocument] = useState([]);
-  const [value, setValue] = useState('');
 
   useEffect(() => {
     if (schema) {
@@ -49,7 +40,6 @@ const CreateDialog = ({ schema, handleCancel }) => {
   const initDocument = () => {
     const fields = schema.fields;
     const documentFields = deconstructFields(fields);
-    console.log(documentFields);
     setDocument(documentFields);
   };
 
@@ -74,19 +64,23 @@ const CreateDialog = ({ schema, handleCancel }) => {
   };
 
   const handleSaveClick = () => {
-    console.log(document);
+    dispatch(createSchemaDocument(schema.name, document));
+    handleCancel();
   };
 
   const handleValueChange = (index, indexInner, event) => {
-    // const type = document[index].type;
-    // console.log(type);
-    // if (type.toString().toLowerCase() === 'boolean') {
-    //   document[index].value = Boolean(event.target.value);
-    // } else if (type.toString().toLowerCase() === 'number') {
-    //   document[index].value = Number(event.target.value);
-    // } else {
-    document[index].value = event.target.value;
-    // }
+    const newValue = event.target.value;
+    const currentDocuments = document.slice();
+    const type = currentDocuments[index].type.toString().toLowerCase();
+    if (type === 'boolean') {
+      document[index].value = Boolean(event.target.value);
+    } else if (type === 'number') {
+      document[index].value = Number(event.target.value);
+    } else {
+      document[index].value = event.target.value;
+    }
+    currentDocuments[index].value = newValue;
+    setDocument(currentDocuments);
   };
 
   return (
@@ -154,6 +148,17 @@ const CreateDialog = ({ schema, handleCancel }) => {
                   variant={'outlined'}
                   size={'small'}
                   value={doc.value}
+                  onChange={(e) => {
+                    handleValueChange(index, 0, e);
+                  }}
+                />
+              )}
+              {doc.type.toString().toLowerCase() === 'relation' && (
+                <Select
+                  variant={'outlined'}
+                  size={'small'}
+                  value={doc.value}
+                  fullWidth
                   onChange={(e) => {
                     handleValueChange(index, 0, e);
                   }}

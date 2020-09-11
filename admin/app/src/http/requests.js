@@ -117,3 +117,6 @@ export const putStorageSettings = (storageData) =>
   axios.put(`${CONDUIT_API}/admin/config/storage`, {
     ...storageData,
   });
+
+export const createSchemaDocumentRequest = (schemaName, documentData) =>
+  axios.post(`${CONDUIT_API}/admin/cms/content/${schemaName}`, { ...documentData });

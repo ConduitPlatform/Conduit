@@ -14,6 +14,7 @@ import {
   postCmsSchemaRequest,
   putCmsSchemaRequest,
   toggleSchemaByIdRequest,
+  createSchemaDocumentRequest,
 } from '../../http/requests';
 
 export const getCmsSchemas = () => {
@@ -98,6 +99,29 @@ export const getSchemaDocuments = (name) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
     getCmsDocumentsByNameRequest(name)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setSchemaDocumentsByName(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const createSchemaDocument = (schemaName, documentData) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    const body = {
+      schemaName,
+      inputDocument: {},
+    };
+    documentData.forEach((d) => {
+      body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
+    });
+    createSchemaDocumentRequest(schemaName, body)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setSchemaDocumentsByName(res.data));
