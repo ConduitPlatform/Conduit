@@ -43,6 +43,7 @@ const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
   };
 
   const populateEditData = (documentsData) => {
+    if (!editData) return;
     const keys = Object.keys(editData);
     keys.forEach((k) => {
       const found = documentsData.find((d) => d.name === k);
