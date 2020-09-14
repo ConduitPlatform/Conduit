@@ -177,7 +177,7 @@ const Types = () => {
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
           {data && data.schemas && data.schemas.length > 0 && (
-            <SchemaData schemas={getActiveSchemas()} documents={data.documents} handleSchemaChange={handleSelectSchema} />
+            <SchemaData schemas={getActiveSchemas()} schemaDocuments={data.documents} handleSchemaChange={handleSelectSchema} />
           )}
         </Box>
       </Box>

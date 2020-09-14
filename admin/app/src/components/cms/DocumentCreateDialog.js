@@ -1,6 +1,5 @@
 import Box from '@material-ui/core/Box';
 import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -9,7 +8,6 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Switch from '@material-ui/core/Switch';
 import { Select } from '@material-ui/core';
-import { createSchemaDocument } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   headerContainer: {
@@ -25,22 +23,33 @@ const useStyles = makeStyles((theme) => ({
   'MuiSelect-root': {},
 }));
 
-const CreateDialog = ({ schema, handleCancel }) => {
+const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
 
   const [document, setDocument] = useState([]);
 
   useEffect(() => {
     if (schema) {
       initDocument();
+      if (document.length > 0) populateEditData();
     }
   }, [schema]);
 
   const initDocument = () => {
     const fields = schema.fields;
     const documentFields = deconstructFields(fields);
+    populateEditData(documentFields);
     setDocument(documentFields);
+  };
+
+  const populateEditData = (documentsData) => {
+    const keys = Object.keys(editData);
+    keys.forEach((k) => {
+      const found = documentsData.find((d) => d.name === k);
+      if (found) {
+        found.value = editData[k];
+      }
+    });
   };
 
   const deconstructFields = (fields) => {
@@ -64,8 +73,7 @@ const CreateDialog = ({ schema, handleCancel }) => {
   };
 
   const handleSaveClick = () => {
-    dispatch(createSchemaDocument(schema.name, document));
-    handleCancel();
+    handleCreate(schema.name, document);
   };
 
   const handleValueChange = (index, indexInner, event) => {
@@ -89,7 +97,6 @@ const CreateDialog = ({ schema, handleCancel }) => {
         <Typography variant={'h5'}>Add a document</Typography>
         <Typography variant={'subtitle1'}>/{schema.name}</Typography>
       </Box>
-
       <Box padding={6}>
         <Grid container spacing={2} alignItems={'center'} justify={'flex-start'}>
           <Grid item xs={2}>

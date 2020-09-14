@@ -15,6 +15,8 @@ import {
   putCmsSchemaRequest,
   toggleSchemaByIdRequest,
   createSchemaDocumentRequest,
+  deleteSchemaDocumentRequest,
+  editSchemaDocumentRequest,
 } from '../../http/requests';
 
 export const getCmsSchemas = () => {
@@ -122,10 +124,40 @@ export const createSchemaDocument = (schemaName, documentData) => {
       body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
     });
     createSchemaDocumentRequest(schemaName, body)
-      .then((res) => {
+      .then(() => {
         dispatch(stopCmsLoading());
-        dispatch(setSchemaDocumentsByName(res.data));
         dispatch(setCmsError(null));
+        dispatch(getSchemaDocuments(schemaName));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const deleteSchemaDocument = (schemaName, documentId) => {
+  return (dispatch) => {
+    deleteSchemaDocumentRequest(schemaName, documentId)
+      .then(() => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError(null));
+        dispatch(getSchemaDocuments(schemaName));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const editSchemaDocument = (schemaName, documentId, documentData) => {
+  return (dispatch) => {
+    editSchemaDocumentRequest(schemaName, documentId, documentData)
+      .then(() => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError(null));
+        dispatch(getSchemaDocuments(schemaName));
       })
       .catch((err) => {
         dispatch(stopCmsLoading());
