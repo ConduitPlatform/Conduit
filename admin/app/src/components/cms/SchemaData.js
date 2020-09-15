@@ -100,10 +100,11 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docIndex, setDocIndex] = useState(null);
   const [anchorEl, setAnchorEl] = React.useState(null);
-  const open = Boolean(anchorEl);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDocument, setCreateDocument] = useState(false);
   const [documents, setDocuments] = useState([]);
+
+  const open = Boolean(anchorEl);
 
   useEffect(() => {
     if (schemaDocuments && schemaDocuments.documents) {
@@ -112,7 +113,10 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
     return () => {};
   }, [schemaDocuments]);
 
-  const handleCreateDialog = () => {
+  const handleCreateDialog = (create) => {
+    if (!create) {
+      setSelectedDocument(null);
+    }
     setCreateDocument(!createDocument);
   };
 
@@ -139,6 +143,46 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
     });
   };
 
+  const handleEditClick = () => {
+    setAnchorEl(null);
+    const currentSelectedDocument = documents[docIndex];
+    setSelectedDocument(currentSelectedDocument);
+    setCreateDocument(true);
+    // setDocIndex(null);
+  };
+
+  const handleDeleteClick = () => {
+    setAnchorEl(null);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleMenuClose = () => {
+    setDocIndex(null);
+    setAnchorEl(null);
+  };
+
+  const addNewDocument = () => {
+    handleCreateDialog(true);
+  };
+
+  const handleCloseDeleteConfirmationDialog = () => {
+    setDocIndex(null);
+    setAnchorEl(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    const _id = documents[docIndex]._id;
+    const schemaName = schemas[selectedSchema].name;
+    dispatch(deleteSchemaDocument(schemaName, _id));
+    handleCloseDeleteConfirmationDialog();
+  };
+
+  const handleCreateDocument = (schemaName, document) => {
+    dispatch(createSchemaDocument(schemaName, document));
+    setCreateDocument(false);
+  };
+
   const renderTree = (nodes) => {
     return (
       <TreeItem
@@ -163,47 +207,6 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
           : null}
       </TreeItem>
     );
-  };
-
-  const handleEditClick = () => {
-    setAnchorEl(null);
-    const currentSelectedDocument = documents[docIndex];
-    setSelectedDocument(currentSelectedDocument);
-    setCreateDocument(true);
-    // setDocIndex(null);
-  };
-
-  const handleDeleteClick = () => {
-    console.log(documents[docIndex]);
-    setAnchorEl(null);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleMenuClose = () => {
-    setDocIndex(null);
-    setAnchorEl(null);
-  };
-
-  const addNewDocument = () => {
-    handleCreateDialog();
-  };
-
-  const handleCloseDeleteConfirmationDialog = () => {
-    setDocIndex(null);
-    setAnchorEl(null);
-    setDeleteDialogOpen(false);
-  };
-
-  const handleDelete = () => {
-    const _id = documents[docIndex]._id;
-    const schemaName = schemas[selectedSchema].name;
-    dispatch(deleteSchemaDocument(schemaName, _id));
-    handleCloseDeleteConfirmationDialog();
-  };
-
-  const handleCreateDocument = (schemaName, document) => {
-    dispatch(createSchemaDocument(schemaName, document));
-    setCreateDocument(false);
   };
 
   return (
@@ -272,11 +275,11 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
           )}
         </TabPanel>
       </Box>
-      <Dialog open={createDocument} onClose={handleCreateDialog} maxWidth={'md'} fullWidth={true}>
+      <Dialog open={createDocument} onClose={() => handleCreateDialog(false)} maxWidth={'md'} fullWidth={true}>
         <CreateDialog
           schema={schemas[selectedSchema]}
           handleCreate={handleCreateDocument}
-          handleCancel={handleCreateDialog}
+          handleCancel={() => handleCreateDialog(false)}
           editData={selectedDocument}
         />
       </Dialog>
