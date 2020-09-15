@@ -8,6 +8,7 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Switch from '@material-ui/core/Switch';
 import { Select } from '@material-ui/core';
+import CustomDatepicker from '../CustomDatepicker';
 
 const useStyles = makeStyles((theme) => ({
   headerContainer: {
@@ -20,7 +21,15 @@ const useStyles = makeStyles((theme) => ({
   divider: {
     width: '100%',
   },
-  'MuiSelect-root': {},
+  GridContainer: {
+    background: 'rgba(0, 83, 156, .07)',
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    borderRadius: 4,
+  },
+  Divider: {
+    marginBottom: theme.spacing(1),
+  },
 }));
 
 const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
@@ -78,18 +87,178 @@ const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
   };
 
   const handleValueChange = (index, indexInner, event) => {
-    const newValue = event.target.value;
-    const currentDocuments = document.slice();
-    const type = currentDocuments[index].type.toString().toLowerCase();
-    if (type === 'boolean') {
-      document[index].value = Boolean(event.target.value);
-    } else if (type === 'number') {
-      document[index].value = Number(event.target.value);
+    const newValue = event.target ? event.target.value : event;
+    const activeIndex = indexInner !== null ? indexInner : index;
+    let currentDocuments;
+    let type;
+    if (indexInner === null) {
+      currentDocuments = document.slice();
+      type = currentDocuments[index].type.toString().toLowerCase();
     } else {
-      document[index].value = event.target.value;
+      currentDocuments = document[index];
+      currentDocuments = currentDocuments.fields.slice();
+      type = currentDocuments[indexInner].type.toString().toLowerCase();
     }
-    currentDocuments[index].value = newValue;
-    setDocument(currentDocuments);
+    if (type === 'boolean') {
+      currentDocuments[activeIndex].value = Boolean(event.target.value);
+    } else if (type === 'number') {
+      currentDocuments[activeIndex].value = Number(event.target.value);
+    } else if (type === 'date') {
+      currentDocuments[activeIndex].value = event.toISOString();
+    } else {
+      currentDocuments[activeIndex].value = event.target ? event.target.value : event;
+    }
+    if (indexInner !== null) {
+      const docs = document.slice();
+      docs[index].fields = currentDocuments;
+      setDocument(docs);
+    } else {
+      currentDocuments[activeIndex].value = newValue;
+      setDocument(currentDocuments);
+    }
+  };
+
+  const renderNormalField = (doc, index) => {
+    return (
+      <Grid
+        key={'key-' + doc.name}
+        container
+        spacing={2}
+        alignItems={'center'}
+        justify={'flex-start'}
+        className={classes.GridContainer}>
+        <Grid item xs={3}>
+          <Typography variant={'body1'}>{doc.name}</Typography>
+        </Grid>
+        <Grid item xs={1}>
+          <Typography variant={'body1'}>:</Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <Typography variant={'caption'}>{doc.type ? doc.type : 'Object'}</Typography>
+        </Grid>
+        <Grid item xs={1}>
+          <Typography variant={'caption'}>=</Typography>
+        </Grid>
+        <Grid item container justify={'center'} xs={4}>
+          {renderInputFields(doc, index, null)}
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderObjectField = (doc, index) => {
+    return (
+      <Grid
+        key={'key-' + doc.name}
+        container
+        spacing={2}
+        alignItems={'center'}
+        justify={'flex-start'}
+        className={classes.GridContainer}>
+        <Grid item xs={3}>
+          <Typography variant={'body1'}>{doc.name}</Typography>
+        </Grid>
+        <Grid item xs={9}>
+          <Divider />
+        </Grid>
+        <Grid item xs={12}>
+          {doc.fields.map((innerDoc, indexInner) => {
+            return (
+              <Grid key={'key-' + innerDoc.name} container spacing={1} alignItems={'center'} justify={'flex-end'}>
+                <Grid item xs={1} />
+                <Grid item xs={2}>
+                  <Typography variant={'body1'}>{`${innerDoc.name}`}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'caption'}>:</Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant={'body1'}>{`${innerDoc.type}`}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'caption'}>=</Typography>
+                </Grid>
+                <Grid item container justify={'center'} xs={4}>
+                  {renderInputFields(innerDoc, index, indexInner)}
+                </Grid>
+                <Grid item xs={11}>
+                  <Divider className={classes.Divider} />
+                </Grid>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Grid>
+    );
+  };
+
+  const renderFields = (documentData) => {
+    return documentData.map((doc, index) => {
+      return doc.type ? renderNormalField(doc, index) : renderObjectField(doc, index);
+    });
+  };
+
+  const renderInputFields = (doc, index, innerIndex) => {
+    if (doc.type.toString().toLowerCase() === 'boolean') {
+      return (
+        <Switch
+          color={'primary'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'string') {
+      return (
+        <TextField
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'date') {
+      return (
+        <CustomDatepicker
+          value={doc.value}
+          setValue={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'number') {
+      return (
+        <TextField
+          type={'number'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'relation') {
+      return (
+        <Select
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          fullWidth
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
   };
 
   return (
@@ -100,11 +269,11 @@ const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
       </Box>
       <Box padding={6}>
         <Grid container spacing={2} alignItems={'center'} justify={'flex-start'}>
-          <Grid item xs={2}>
+          <Grid item xs={3}>
             <Typography variant={'body1'}>Field</Typography>
           </Grid>
           <Grid item xs={1} />
-          <Grid item xs={2}>
+          <Grid item xs={3}>
             <Typography variant={'body1'}>Type</Typography>
           </Grid>
           <Grid item xs={1} />
@@ -115,66 +284,7 @@ const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
             <Divider className={classes.divider} />
           </Grid>
         </Grid>
-        {document.map((doc, index) => (
-          <Grid key={'key-' + doc.name} container spacing={2} alignItems={'center'} justify={'flex-start'}>
-            <Grid item xs={2}>
-              <Typography variant={'body1'}>{doc.name}</Typography>
-            </Grid>
-            <Grid item xs={1}>
-              <Typography variant={'body1'}>:</Typography>
-            </Grid>
-            <Grid item xs={2}>
-              <Typography variant={'caption'}>{doc.type}</Typography>
-            </Grid>
-            <Grid item xs={1}>
-              <Typography variant={'caption'}>=</Typography>
-            </Grid>
-            <Grid item container justify={'center'} xs={3}>
-              {doc.type.toString().toLowerCase() === 'boolean' && (
-                <Switch
-                  color={'primary'}
-                  value={doc.value}
-                  onChange={(e) => {
-                    handleValueChange(index, 0, e);
-                  }}
-                />
-              )}
-              {doc.type.toString().toLowerCase() === 'string' && (
-                <TextField
-                  type={'text'}
-                  variant={'outlined'}
-                  size={'small'}
-                  value={doc.value}
-                  onChange={(e) => {
-                    handleValueChange(index, 0, e);
-                  }}
-                />
-              )}
-              {doc.type.toString().toLowerCase() === 'number' && (
-                <TextField
-                  type={'number'}
-                  variant={'outlined'}
-                  size={'small'}
-                  value={doc.value}
-                  onChange={(e) => {
-                    handleValueChange(index, 0, e);
-                  }}
-                />
-              )}
-              {doc.type.toString().toLowerCase() === 'relation' && (
-                <Select
-                  variant={'outlined'}
-                  size={'small'}
-                  value={doc.value}
-                  fullWidth
-                  onChange={(e) => {
-                    handleValueChange(index, 0, e);
-                  }}
-                />
-              )}
-            </Grid>
-          </Grid>
-        ))}
+        {renderFields(document)}
       </Box>
 
       <Divider className={classes.divider} />
