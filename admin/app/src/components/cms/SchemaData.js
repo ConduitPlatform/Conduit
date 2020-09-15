@@ -22,7 +22,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import CreateDialog from './DocumentCreateDialog';
-import { createSchemaDocument, deleteSchemaDocument } from '../../redux/thunks/cmsThunks';
+import { createSchemaDocument, deleteSchemaDocument, editSchemaDocument } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -183,6 +183,12 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
     setCreateDocument(false);
   };
 
+  const handleEditDocument = (schemaName, document) => {
+    const _id = selectedDocument._id;
+    dispatch(editSchemaDocument(schemaName, _id, document));
+    setCreateDocument(false);
+  };
+
   const renderTree = (nodes) => {
     return (
       <TreeItem
@@ -279,6 +285,7 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
         <CreateDialog
           schema={schemas[selectedSchema]}
           handleCreate={handleCreateDocument}
+          handleEdit={handleEditDocument}
           handleCancel={() => handleCreateDialog(false)}
           editData={selectedDocument}
         />

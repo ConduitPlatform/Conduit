@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
+const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
 
   const [document, setDocument] = useState([]);
@@ -83,7 +83,11 @@ const CreateDialog = ({ schema, handleCreate, handleCancel, editData }) => {
   };
 
   const handleSaveClick = () => {
-    handleCreate(schema.name, document);
+    if (editData) {
+      handleEdit(schema.name, document);
+    } else {
+      handleCreate(schema.name, document);
+    }
   };
 
   const handleValueChange = (index, indexInner, event) => {

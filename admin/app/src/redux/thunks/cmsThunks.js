@@ -153,7 +153,14 @@ export const deleteSchemaDocument = (schemaName, documentId) => {
 
 export const editSchemaDocument = (schemaName, documentId, documentData) => {
   return (dispatch) => {
-    editSchemaDocumentRequest(schemaName, documentId, documentData)
+    const body = {
+      schemaName,
+      inputDocument: {},
+    };
+    documentData.forEach((d) => {
+      body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
+    });
+    editSchemaDocumentRequest(schemaName, documentId, body)
       .then(() => {
         dispatch(stopCmsLoading());
         dispatch(setCmsError(null));
