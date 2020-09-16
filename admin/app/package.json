@@ -10,9 +10,11 @@
     "prepare": "yarn run snyk-protect"
   },
   "dependencies": {
+    "@date-io/moment": "1.x",
     "@material-ui/core": "^4.9.4",
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.44",
+    "@material-ui/pickers": "^3.2.10",
     "@material-ui/styles": "latest",
     "axios": "^0.19.2",
     "clsx": "^1.1.0",

@@ -2,7 +2,8 @@ import Box from '@material-ui/core/Box';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -12,15 +13,16 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import CardHeader from '@material-ui/core/CardHeader';
 import IconButton from '@material-ui/core/IconButton';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogActions from '@material-ui/core/DialogActions';
 import { MoreVert } from '@material-ui/icons';
 import CardContent from '@material-ui/core/CardContent';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
 import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
+import CreateDialog from './DocumentCreateDialog';
+import { createSchemaDocument, deleteSchemaDocument, editSchemaDocument } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -72,45 +74,64 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexDirection: 'column',
   },
+  addDocBox: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: theme.spacing(3),
+  },
   deleteButton: {
-    backgroundColor: theme.palette.secondary.main,
-    color: theme.palette.common.white,
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
   },
 }));
 
-const TabPanel = (props) => {
+const TabPanel = ({ children }) => {
   const classes = useStyles();
-  const { children } = props;
-
   return <Box className={classes.cardContainer}>{children}</Box>;
 };
 
 const ITEM_HEIGHT = 48;
-const options = ['edit', 'delete'];
 
-const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
+const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
   const classes = useStyles();
-  const [selectedSchema, setSelectedSchema] = useState(0);
-  const [docIndex, setDocIndex] = useState(null);
-  const [createIndex, setCreateIndex] = useState(null);
-  const [docAction, setDocAction] = useState('');
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const open = Boolean(anchorEl);
-  const [dialog, setDialog] = useState(false);
+  const dispatch = useDispatch();
 
-  const [objFields, setObjFields] = useState([]);
+  const [selectedSchema, setSelectedSchema] = useState(0);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [docIndex, setDocIndex] = useState(null);
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [createDocument, setCreateDocument] = useState(false);
+  const [documents, setDocuments] = useState([]);
+
+  const open = Boolean(anchorEl);
+
+  useEffect(() => {
+    if (schemaDocuments && schemaDocuments.documents) {
+      setDocuments(schemaDocuments.documents);
+    }
+    return () => {};
+  }, [schemaDocuments]);
+
+  const handleCreateDialog = (create) => {
+    if (!create) {
+      setSelectedDocument(null);
+    }
+    setCreateDocument(!createDocument);
+  };
 
   const handleClick = (event, idx) => {
     setDocIndex(idx);
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
+  const handleConfirmationDialogClose = () => {
+    setDeleteDialogOpen(false);
+    setDocIndex(null);
     setAnchorEl(null);
   };
 
   const handleChange = (event, newValue) => {
-    setDocAction('');
     setSelectedSchema(newValue);
     const name = schemas[newValue].name;
     handleSchemaChange(name);
@@ -120,6 +141,52 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
     return Object.keys(document).map((key) => {
       return { id: key, data: document[key] };
     });
+  };
+
+  const handleEditClick = () => {
+    setAnchorEl(null);
+    const currentSelectedDocument = documents[docIndex];
+    setSelectedDocument(currentSelectedDocument);
+    setCreateDocument(true);
+    // setDocIndex(null);
+  };
+
+  const handleDeleteClick = () => {
+    setAnchorEl(null);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleMenuClose = () => {
+    setDocIndex(null);
+    setAnchorEl(null);
+  };
+
+  const addNewDocument = () => {
+    handleCreateDialog(true);
+  };
+
+  const handleCloseDeleteConfirmationDialog = () => {
+    setDocIndex(null);
+    setAnchorEl(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    const _id = documents[docIndex]._id;
+    const schemaName = schemas[selectedSchema].name;
+    dispatch(deleteSchemaDocument(schemaName, _id));
+    handleCloseDeleteConfirmationDialog();
+  };
+
+  const handleCreateDocument = (schemaName, document) => {
+    dispatch(createSchemaDocument(schemaName, document));
+    setCreateDocument(false);
+  };
+
+  const handleEditDocument = (schemaName, document) => {
+    const _id = selectedDocument._id;
+    dispatch(editSchemaDocument(schemaName, _id, document));
+    setCreateDocument(false);
   };
 
   const renderTree = (nodes) => {
@@ -148,104 +215,6 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
     );
   };
 
-  const renderEditTree = (nodes) => {
-    return (
-      <TreeItem
-        key={nodes.name}
-        nodeId={nodes.name}
-        label={
-          <Typography variant={'subtitle2'} style={{ display: 'flex', alignItems: 'center', marginBottom: '.5rem' }}>
-            <Typography component={'span'} className={classes.bold}>{`${nodes.name}: `}</Typography>
-            {typeof nodes.type === 'string' ? (
-              <TextField
-                id={nodes.name}
-                required={nodes.required}
-                type={nodes.type}
-                onChange={(event) => handleTextChange(event, nodes.name)}
-                size={'small'}
-                variant={'outlined'}
-                style={{ width: '30vw', zIndex: '1020' }}
-                value={nodes.value}
-              />
-            ) : null}
-          </Typography>
-        }>
-        {nodes.type && typeof nodes.type !== 'string'
-          ? nodes.type.map((item) => {
-              return renderEditTree(item);
-            })
-          : null}
-      </TreeItem>
-    );
-  };
-
-  const handleTextChange = (event, objName) => {
-    const found = objFields.find((obj) => obj.name === objName);
-    if (found) {
-      found.value = event.target.value;
-    }
-  };
-
-  const onSelectAction = (option) => {
-    handleClose();
-    if (option === 'edit') {
-      setDocAction('edit');
-      const arrFields = getFields(schemas[selectedSchema].fields, 'edit');
-      setObjFields([...arrFields]);
-    } else if (option === 'delete') {
-      setDocAction('delete');
-      openDialog(docIndex);
-    }
-  };
-
-  const cancelEditDocument = () => {
-    setDocAction('');
-    setObjFields([]);
-    setCreateIndex(null);
-  };
-
-  const addNewDocument = () => {
-    setDocAction('create');
-    setCreateIndex(selectedSchema);
-    const arrFields = getFields(schemas[selectedSchema].fields, 'create');
-    setObjFields([...arrFields]);
-  };
-
-  const getFields = (fields, action) => {
-    const editFields = [];
-    Object.keys(fields).forEach((item) => {
-      if (typeof fields[item] !== 'string') {
-        if (typeof fields[item].type === 'string') {
-          const value = action === 'edit' ? documents[docIndex][item] : null;
-          const obj = { name: item.toString(), ...fields[item], value: action === 'edit' ? value : fields[item].default };
-          editFields.push(obj);
-        } else {
-          const group = { name: item.toString(), type: getFields(fields[item].type, action) };
-          editFields.push(group);
-        }
-      }
-    });
-    return editFields;
-  };
-
-  const closeDialog = () => {
-    setDialog(false);
-  };
-
-  const openDialog = () => {
-    setDialog(true);
-  };
-
-  const handleDelete = () => {
-    //  todo handle delete document API call
-  };
-
-  const handleCreateDocument = () => {
-    // TODO API call redux (actions etc...)
-    console.log('Schema id, name ', schemas[createIndex]._id, schemas[createIndex].name);
-    console.log('SAVE CREATE DOCUMENT', objFields);
-  };
-
   return (
     <Container>
       <Box className={classes.root}>
@@ -262,130 +231,43 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
         </Tabs>
 
         <TabPanel value={selectedSchema}>
-          {documents.length > 0 || docAction === 'create' ? (
+          {documents.length > 0 ? (
             <>
-              {docAction !== 'edit' && docAction !== 'create' && (
-                <Button
-                  key={`btn_${documents.length - 1}`}
-                  variant="contained"
-                  color="primary"
-                  style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                  onClick={() => addNewDocument()}>
+              {documents.map((doc, index) => {
+                return (
+                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                    <CardHeader
+                      title={doc._id}
+                      action={
+                        <>
+                          <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
+                            <MoreVert />
+                          </IconButton>
+                        </>
+                      }
+                    />
+                    <CardContent>
+                      {createDocumentArray(doc).map((obj, index) => {
+                        return (
+                          <TreeView
+                            key={`treeView${index}`}
+                            className={classes.tree}
+                            defaultCollapseIcon={<ExpandMoreIcon />}
+                            defaultExpanded={['root']}
+                            defaultExpandIcon={<ChevronRightIcon />}>
+                            {renderTree(obj)}
+                          </TreeView>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              <Box className={classes.addDocBox}>
+                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
                   Add Document
                 </Button>
-              )}
-              {docAction === '' || docAction === 'delete' ? (
-                documents.map((doc, index) => {
-                  return (
-                    <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
-                      <CardHeader
-                        title={doc._id}
-                        action={
-                          <>
-                            <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
-                              <MoreVert />
-                            </IconButton>
-                          </>
-                        }
-                      />
-                      <CardContent>
-                        {createDocumentArray(doc).map((obj, index) => {
-                          return (
-                            <TreeView
-                              key={`treeView${index}`}
-                              className={classes.tree}
-                              defaultCollapseIcon={<ExpandMoreIcon />}
-                              defaultExpanded={['root']}
-                              defaultExpandIcon={<ChevronRightIcon />}>
-                              {renderTree(obj)}
-                            </TreeView>
-                          );
-                        })}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              ) : docAction === 'create' ? (
-                <Card key={`card_CreateNew`} className={classes.card} variant={'outlined'}>
-                  <CardHeader
-                    title={`Schema: ${schemas[createIndex].name}`}
-                    action={
-                      <>
-                        <Button
-                          key={`btn_Cancel_Insert`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                          onClick={cancelEditDocument}>
-                          Cancel
-                        </Button>
-                        <Button
-                          key={`btn_Save_Create`}
-                          onClick={handleCreateDocument}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
-                          Save
-                        </Button>
-                      </>
-                    }
-                  />
-                  <CardContent>
-                    {objFields.map((obj, index) => {
-                      return (
-                        <TreeView
-                          aria-selected={false}
-                          key={`treeView${index}`}
-                          className={classes.tree}
-                          defaultCollapseIcon={<ExpandMoreIcon />}
-                          defaultExpanded={['root']}
-                          defaultExpandIcon={<ChevronRightIcon />}>
-                          {renderEditTree(obj)}
-                        </TreeView>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card key={`card${docIndex}`} className={classes.card} variant={'outlined'}>
-                  <CardHeader
-                    title={documents[docIndex]._id}
-                    action={
-                      <>
-                        <Button
-                          key={`btn_Cancel_${documents[docIndex]}`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}
-                          onClick={cancelEditDocument}>
-                          Cancel
-                        </Button>
-                        <Button
-                          key={`btn_Save_${documents[docIndex]}`}
-                          variant="contained"
-                          color="primary"
-                          style={{ alignSelf: 'flex-end', margin: '.5rem' }}>
-                          Save
-                        </Button>
-                      </>
-                    }
-                  />
-                  <CardContent>
-                    {objFields.map((obj, index) => {
-                      return (
-                        <TreeView
-                          key={`treeView${index}`}
-                          className={classes.tree}
-                          defaultCollapseIcon={<ExpandMoreIcon />}
-                          defaultExpanded={['root']}
-                          defaultExpandIcon={<ChevronRightIcon />}>
-                          {renderEditTree(obj)}
-                        </TreeView>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
+              </Box>
             </>
           ) : (
             <>
@@ -399,12 +281,21 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
           )}
         </TabPanel>
       </Box>
-      <Dialog fullWidth={false} maxWidth={'md'} open={dialog} onClose={handleClose}>
+      <Dialog open={createDocument} onClose={() => handleCreateDialog(false)} maxWidth={'md'} fullWidth={true}>
+        <CreateDialog
+          schema={schemas[selectedSchema]}
+          handleCreate={handleCreateDocument}
+          handleEdit={handleEditDocument}
+          handleCancel={() => handleCreateDialog(false)}
+          editData={selectedDocument}
+        />
+      </Dialog>
+      <Dialog fullWidth maxWidth={'sm'} open={deleteDialogOpen} onClose={handleConfirmationDialogClose}>
         <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
           Delete document : {documents[docIndex]?._id}
         </DialogTitle>
         <DialogActions>
-          <Button onClick={() => closeDialog()} variant="contained" style={{ textTransform: 'none' }}>
+          <Button onClick={handleCloseDeleteConfirmationDialog} variant="contained" style={{ textTransform: 'none' }}>
             Cancel
           </Button>
           <Button onClick={handleDelete} className={classes.deleteButton} variant="contained" style={{ textTransform: 'none' }}>
@@ -417,18 +308,15 @@ const SchemaData = ({ schemas, documents, handleSchemaChange }) => {
         anchorEl={anchorEl}
         keepMounted
         open={open}
-        onClose={handleClose}
+        onClose={handleMenuClose}
         PaperProps={{
           style: {
             maxHeight: ITEM_HEIGHT * 4.5,
             width: '20ch',
           },
         }}>
-        {options.map((option) => (
-          <MenuItem key={option} selected={option === 'Pyxis'} onClick={() => onSelectAction(option)}>
-            {option}
-          </MenuItem>
-        ))}
+        <MenuItem onClick={handleEditClick}>Edit</MenuItem>
+        <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
       </Menu>
     </Container>
   );
