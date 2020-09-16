@@ -5,3 +5,4 @@
 **/*.tsbuildinfo
 **/src/proto/*.proto
 **/protos/src/*.proto
+.vscode
