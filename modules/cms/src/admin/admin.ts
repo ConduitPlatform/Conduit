@@ -342,7 +342,7 @@ export class AdminHandlers {
 
         Object.assign(dbDocument, changedDocument);
 
-        const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument).catch((e: any) => errorMessage = e.message);
+        const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument._id, dbDocument).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         return callback(null, {result: JSON.stringify(updatedDocument)});
