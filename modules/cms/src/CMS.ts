@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {ConduitSchema, grpcModule} from '@quintessential-sft/con
 import path from "path";
 import {CmsRoutes} from './routes/Routes';
 import {SchemaController} from "./controllers/schema.controller";
+import process from "process";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -40,8 +41,12 @@ export class CMS {
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {
+                let url = self.url;
+                if (process.env.REGISTER_NAME === 'true') {
+                    url = 'cms:'+url.split(':')[1];
+                }
                 self._adapter = self.grpcSdk.databaseProvider!;
-                let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk, self.url);
+                let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk, url);
                 self.schemaController = new SchemaController(self.grpcSdk, consumerRoutes);
                 self._admin = new AdminHandlers(self.grpcServer, self.grpcSdk, self.schemaController!);
                 console.log("bound on:", self._url);

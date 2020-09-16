@@ -94,7 +94,11 @@ export default class AuthenticationModule {
             this.grpcServer.start();
             this.isRunning = true;
         }
-        await this._router.registerRoutes(this._url)
+        let url = this._url;
+        if(process.env.REGISTER_NAME){
+            url = 'authentication:'+this._url.split(':')[1];
+        }
+        await this._router.registerRoutes(url)
     }
 
     private registerSchemas() {
