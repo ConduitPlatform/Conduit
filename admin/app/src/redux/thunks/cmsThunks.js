@@ -138,6 +138,7 @@ export const createSchemaDocument = (schemaName, documentData) => {
 
 export const deleteSchemaDocument = (schemaName, documentId) => {
   return (dispatch) => {
+    dispatch(startCmsLoading());
     deleteSchemaDocumentRequest(schemaName, documentId)
       .then(() => {
         dispatch(stopCmsLoading());
@@ -153,12 +154,14 @@ export const deleteSchemaDocument = (schemaName, documentId) => {
 
 export const editSchemaDocument = (schemaName, documentId, documentData) => {
   return (dispatch) => {
+    dispatch(startCmsLoading());
     const body = {
       schemaName,
-      inputDocument: {},
+      id: documentId,
+      changedDocument: {},
     };
     documentData.forEach((d) => {
-      body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
+      body.changedDocument = { ...body.changedDocument, [d.name]: d.value };
     });
     editSchemaDocumentRequest(schemaName, documentId, body)
       .then(() => {
