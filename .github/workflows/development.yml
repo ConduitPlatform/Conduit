@@ -40,11 +40,11 @@ jobs:
           uses: actions/cache@v1
           with:
             path: ~/.npm
-            key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+            key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
             restore-keys: |
                   ${{ runner.os }}-node-
-        - run: npm ci
-        - run: npm run docz:build
+        - run: yarn install --frozen-lockfile
+        - run: yarn run docz:build
         - name: Deploy
           uses: peaceiris/actions-gh-pages@v3
           with:

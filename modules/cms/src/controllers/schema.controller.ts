@@ -35,8 +35,8 @@ export class SchemaController {
 
                     })
                     promise.then(p => {
-                        let routeSchemas:any = {};
-                        r.forEach((schema:any) => {
+                        let routeSchemas: any = {};
+                        r.forEach((schema: any) => {
                             routeSchemas[schema.name] = schema;
                         })
                         this.router.refreshRoutes(routeSchemas);
@@ -59,8 +59,33 @@ export class SchemaController {
 
     }
 
+    refreshRoutes() {
+        this._adapter
+            .findMany('SchemaDefinitions', {enabled: true})
+            .then((r: any) => {
+                if (r) {
+                    let routeSchemas: any = {};
+                    r.forEach((schema: any) => {
+                        if (typeof r.modelOptions === 'string') {
+                            r.modelOptions = JSON.parse(r.modelOptions);
+                        }
+                        routeSchemas[schema.name] = schema;
+                    })
+                    this.router.refreshRoutes(routeSchemas);
+                } else {
+                    console.error("Something went wrong when loading schema for cms");
+                    console.error("No schemas emitted");
+                }
+            })
+            .catch((err: Error) => {
+                console.error("Something went wrong when loading schema for cms");
+                console.error(err);
+            })
+    }
+
     createSchema(schema: ConduitSchema): void {
         this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
+        this.refreshRoutes();
     }
 
 

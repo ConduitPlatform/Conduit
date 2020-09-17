@@ -153,7 +153,7 @@ export class AdminHandlers {
 
         if (requestedSchema.enabled) {
             requestedSchema.enabled = false;
-            // TODO disable routes
+            this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
         } else {
             requestedSchema.enabled = true;
             this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
@@ -235,7 +235,7 @@ export class AdminHandlers {
         await this.database.deleteOne('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        // TODO disable routes
+        this.schemaController.refreshRoutes();
         return callback(null, {result: 'Schema successfully deleted'});
     }
 
