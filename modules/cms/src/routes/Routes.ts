@@ -72,9 +72,9 @@ export class CmsRoutes {
             return 0;
         } else if (hasA.length === 0 && hasB.length !== 0) {
             if (hasB.indexOf(schemaA.name)) {
-                return 1;
-            } else {
                 return -1;
+            } else {
+                return 1;
             }
         } else if (hasA.length !== 0 && hasB.length === 0) {
             if (hasA.indexOf(schemaB.name)) {
@@ -84,13 +84,13 @@ export class CmsRoutes {
             }
         } else {
             if (hasA.indexOf(schemaB.name) && hasB.indexOf(schemaA.name)) {
-                return 0;
+                return 1;
             } else if (hasA.indexOf(schemaB.name)) {
                 return -1;
             } else if (hasB.indexOf(schemaA.name)) {
                 return 1;
             }else{
-                return 0;
+                return 1;
             }
         }
     }
