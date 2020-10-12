@@ -125,17 +125,6 @@ const Types = () => {
       { name: 'Endpoint 5', id: 5 },
       { name: 'Endpoint 6', id: 6 },
       { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
-      { name: 'Endpoint 7', id: 7 },
     ];
   };
 
@@ -206,7 +195,7 @@ const Types = () => {
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-        <CustomQueries endpoints={getEndpoints()} />
+        <CustomQueries endpoints={getEndpoints()} availableSchemas={data.schemas} />
       </Box>
       <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
         {/*TODO SETTINGS*/}
