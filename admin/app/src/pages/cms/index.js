@@ -10,6 +10,7 @@ import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
+import CustomQueries from '../../components/cms/CustomQueries';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCmsSchemas } from '../../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -43,7 +44,7 @@ const Types = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
 
-  const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Settings' }];
+  const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Custom' }, { title: 'Settings' }];
 
   useEffect(() => {
     dispatch(getCmsSchemas());
@@ -115,6 +116,29 @@ const Types = () => {
     return data.schemas.filter((s) => s.enabled);
   };
 
+  const getEndpoints = () => {
+    return [
+      { name: 'Endpoint 1', id: 1 },
+      { name: 'Endpoint 2', id: 2 },
+      { name: 'Endpoint 3', id: 3 },
+      { name: 'Endpoint 4', id: 4 },
+      { name: 'Endpoint 5', id: 5 },
+      { name: 'Endpoint 6', id: 6 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+      { name: 'Endpoint 7', id: 7 },
+    ];
+  };
+
   const getDisabledSchemas = () => {
     if (!data || !data.schemas) {
       return [];
@@ -182,6 +206,9 @@ const Types = () => {
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
+        <CustomQueries endpoints={getEndpoints()} />
+      </Box>
+      <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
         {/*TODO SETTINGS*/}
       </Box>
       <NewSchemaDialog open={open} handleClose={handleDialogClose} />
