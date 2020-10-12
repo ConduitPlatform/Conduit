@@ -159,7 +159,7 @@ export class CmsRoutes {
                 urlParams: {
                     id: TYPE.String
                 }
-            }, new ConduitRouteReturnDefinition(`delete${schemaName}`, {result: TYPE.String}),
+            }, new ConduitRouteReturnDefinition(`delete${schemaName}`, TYPE.String),
             'deleteDocument')));
 
         return routesArray;

@@ -102,7 +102,7 @@ export class CmsHandlers {
     }
 
     async editDocument(call: any, callback: any) {
-        const {id, changedDocument} = JSON.parse(call.request.params);
+        const {id, params} = JSON.parse(call.request.params);
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
@@ -119,9 +119,9 @@ export class CmsHandlers {
         const dbDocument = await this.database.findOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        Object.assign(dbDocument, changedDocument);
+        Object.assign(dbDocument, params);
 
-        const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument).catch((e: any) => errorMessage = e.message);
+        const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument._id, dbDocument).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         return callback(null, {result: JSON.stringify(updatedDocument)});

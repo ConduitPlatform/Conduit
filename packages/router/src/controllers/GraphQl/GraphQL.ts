@@ -4,7 +4,7 @@ import {
     ConduitRoute,
     ConduitRouteActions, ConduitRouteOptionExtended,
     ConduitRouteOptions,
-    ConduitRouteParameters
+    ConduitRouteParameters, TYPE
 } from '@quintessential-sft/conduit-sdk';
 import {extractTypes, findPopulation, ParseResult} from "./TypeUtils";
 import {GraphQLJSONObject} from "graphql-type-json";
@@ -231,7 +231,7 @@ export class GraphQLController {
                     return new Date(value); // value from the client
                 },
                 serialize(value) {
-                    return value.getTime(); // value sent to the client
+                    return  value; // value sent to the client
                 },
                 parseLiteral(ast) {
                     if (ast.kind === Kind.INT) {
@@ -274,12 +274,13 @@ export class GraphQLController {
                       params: args
                   }))
                   .then((r: any) => {
-                      let result = r;
-                      if(r.result){
-                          result = JSON.parse(r.result);
-
+                      let result = r.result ? r.result : r;
+                      if(r.result && !(typeof route.returnTypeFields === 'string')){
+                          result = JSON.parse(result);
+                      }else{
+                          result = {result: result};
                       }
-                      return typeof route.returnTypeFields === 'string' ? {result: r} : result;
+                      return result;
                   })
                   .catch((err: Error | ConduitError) => {
                       if (err.hasOwnProperty("status")) {
@@ -299,12 +300,13 @@ export class GraphQLController {
                 return self.checkMiddlewares(route.input.path, context)
                   .then((r: any) => route.executeRequest({...context, params: args}))
                   .then(r => {
-                      let result = r;
-                      if(r.result){
-                          result = JSON.parse(r.result);
-
+                      let result = r.result ? r.result : r;
+                      if(r.result && !(typeof route.returnTypeFields === 'string')){
+                          result = JSON.parse(result);
+                      }else{
+                          result = {result: result};
                       }
-                      return typeof route.returnTypeFields === 'string' ? {result: r} : result;
+                      return result;
                   })
                   .catch((err: Error | ConduitError) => {
                       if (err.hasOwnProperty("status")) {
