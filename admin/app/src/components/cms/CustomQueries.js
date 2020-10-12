@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
     textTransform: 'none',
   },
   grid: {
-    background: 'rgba(0, 0, 0, 0.1)',
+    background: 'rgba(0, 0, 0, 0.05)',
     borderRadius: '4px',
     padding: theme.spacing(3),
   },
@@ -80,6 +80,9 @@ const useStyles = makeStyles((theme) => ({
       //   },
     },
   },
+  textField: {
+    width: '245px',
+  },
 }));
 
 const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
@@ -87,22 +90,130 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
 
   const [selectedEndpoint, setSelectedEndpoint] = useState();
   const [selectedOperation, setSelectedOperation] = useState();
+  const [selectedSchema, setSelectedSchema] = useState();
   const [name, setName] = useState('');
+  const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
+  const [selectedInputs, setSelectedInputs] = useState([]);
+  const [selectedQueries, setSelectedQueries] = useState([]);
 
   const handleListItemSelect = (endpoint) => {
     setSelectedEndpoint(endpoint);
   };
 
-  const handleOperationChange = () => {};
+  const handleOperationChange = (value) => {
+    setSelectedOperation(value);
+  };
 
   const handleNameChange = (value) => {
     setName(value);
   };
 
+  const handleAddNewEndpoint = () => {
+    setSelectedEndpoint({});
+  };
+
+  const getAvailableFieldsOfSchema = (schemaSelected) => {
+    if (schemaSelected) {
+      const found = availableSchemas.find((schema) => schema._id === schemaSelected);
+      if (found) {
+        return found.fields;
+      }
+    }
+  };
+
+  const handleSchemaChange = (event) => {
+    setSelectedSchema(event.target.value);
+    const fields = getAvailableFieldsOfSchema(event.target.value);
+    setAvailableFieldsOfSchema(Object.keys(fields));
+  };
+
+  const handleInputNameChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.value = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputTypeChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.type = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputArgsTypeChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.argsType = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleAddInput = () => {
+    const input = {
+      value: '',
+      type: '',
+      argsType: '',
+    };
+    setSelectedInputs([...selectedInputs, input]);
+  };
+
+  const handleAddQuery = () => {
+    const query = {
+      field: '',
+      condition: '',
+      comparisonField: '',
+    };
+    setSelectedQueries([...selectedQueries, query]);
+  };
+
+  const handleQueryFieldChange = (event, index) => {
+    const value = event.target.value;
+    const currentQueries = selectedQueries.slice();
+    const input = currentQueries[index];
+    if (input) {
+      input.field = value;
+      setSelectedQueries(currentQueries);
+    }
+  };
+
+  const handleQueryConditionChange = (event, index) => {
+    const value = event.target.value;
+    const currentQueries = selectedQueries.slice();
+    const input = currentQueries[index];
+    if (input) {
+      input.condition = value;
+      setSelectedQueries(currentQueries);
+    }
+  };
+
+  const handleQueryComparisonFieldChange = (event, index) => {
+    const value = event.target.value;
+    const currentQueries = selectedQueries.slice();
+    const input = currentQueries[index];
+    if (input) {
+      input.comparisonField = value;
+      setSelectedQueries(currentQueries);
+    }
+  };
+
   const renderSideList = () => {
     return (
       <Box className={classes.listBox}>
-        <Button variant="contained" color={'primary'} className={classes.button} endIcon={<AddCircleOutlineIcon />}>
+        <Button
+          variant="contained"
+          color={'primary'}
+          className={classes.button}
+          endIcon={<AddCircleOutlineIcon />}
+          onClick={handleAddNewEndpoint}>
           Add endpoint
         </Button>
         <Divider flexItem variant="middle" className={classes.divider}></Divider>
@@ -127,15 +238,15 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
       <>
         <Grid item xs={6}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Select Operation</InputLabel>
+            <InputLabel htmlFor="select_operation">Select Operation</InputLabel>
             <Select
               native
               value={selectedOperation}
               onChange={handleOperationChange}
               labelWidth={100}
               inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
+                name: 'select_operation',
+                id: 'select_operation',
               }}>
               <option aria-label="None" value="" />
               <option value={'find/get'}>Find/Get</option>
@@ -147,18 +258,18 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
         </Grid>
         <Grid item xs={6}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Select Schema</InputLabel>
+            <InputLabel htmlFor="select_schema">Select Schema</InputLabel>
             <Select
               native
-              value={selectedOperation}
-              onChange={handleOperationChange}
+              value={selectedSchema}
+              onChange={handleSchemaChange}
               inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
+                name: 'select_schema',
+                id: 'select_schema',
               }}>
               <option aria-label="None" value="" />
               {availableSchemas.map((schema) => (
-                <option key={`schema-${schema.id}`} value={schema.id}>
+                <option key={`schema-${schema.id}`} value={schema._id}>
                   {schema.name}
                 </option>
               ))}
@@ -170,92 +281,62 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
   };
 
   const renderInputsList = () => {
-    return (
+    return selectedInputs.map((input, index) => (
       <>
-        <Grid item xs={1}>
-          <Typography>1.</Typography>
+        <Grid item xs={1} key={index}>
+          <Typography>{index + 1}.</Typography>
         </Grid>
         <Grid item xs={3}>
-          <TextField></TextField>
+          <TextField value={input.value} onChange={(event) => handleInputNameChange(event, index)}></TextField>
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Select Schema</InputLabel>
-            <Select
-              native
-              value={selectedOperation}
-              onChange={handleOperationChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
-              }}>
+            <InputLabel>Type</InputLabel>
+            <Select native value={input.type} onChange={(event) => handleInputTypeChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={10}>Schema 1</option>
-              <option value={20}>Schema 2</option>
-              <option value={30}>Schema 3</option>
-              <option value={30}>Schema 4</option>
+              <option value={'String'}>String</option>
+              <option value={'Number'}>Number</option>
+              <option value={'Boolean'}>Boolean</option>
+              <option value={'ObjectId'}>ObjectId</option>
+              <option value={'Date'}>Date</option>
             </Select>
           </FormControl>
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Select Schema</InputLabel>
-            <Select
-              native
-              value={selectedOperation}
-              onChange={handleOperationChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
-              }}>
+            <Select native value={input.argsType} onChange={(event) => handleInputArgsTypeChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={10}>Schema 1</option>
-              <option value={20}>Schema 2</option>
-              <option value={30}>Schema 3</option>
-              <option value={30}>Schema 4</option>
+              <option value={'query_params'}>Query params</option>
+              <option value={'body'}>Body</option>
+              <option value={'form_data'}>Form Data</option>
             </Select>
           </FormControl>
         </Grid>
       </>
-    );
+    ));
   };
 
   const renderQueryOptions = () => {
-    return (
+    return selectedQueries.map((query, index) => (
       <>
         <Grid item xs={1}>
-          <Typography>1.</Typography>
+          <Typography>{index + 1}.</Typography>
         </Grid>
         <Grid item xs={3}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Select Field</InputLabel>
-            <Select
-              native
-              value={selectedOperation}
-              onChange={handleOperationChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
-              }}>
+            <Select native value={query.field} onChange={(event) => handleQueryFieldChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={10}>Username</option>
-              <option value={20}>Email</option>
-              <option value={30}>Role</option>
-              <option value={30}>Age</option>
+              {availableFieldsOfSchema.map((field, index) => (
+                <option key={`idx-${index}-field`} value={field}>
+                  {field}
+                </option>
+              ))}
             </Select>
           </FormControl>
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Add Condition</InputLabel>
-            <Select
-              native
-              value={selectedOperation}
-              onChange={handleOperationChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
-              }}>
+            <Select native value={query.condition} onChange={(event) => handleQueryConditionChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'equal-to'}>(==) equal to</option>
               <option value={'not-equal-to'}>(!=) not equal to</option>
@@ -272,29 +353,21 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="age-native-simple">Comparison Field</InputLabel>
-            <Select
-              native
-              value={selectedOperation}
-              onChange={handleOperationChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-native-simple',
-              }}>
+            <Select native value={query.comparisonField} onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={10}>Custom</option>
-              <option value={20}>Schema Fields</option>
-              <option value={30}>Input Fields</option>
+              <option value={'Custom'}>Custom</option>
+              <option value={'Schema Fields'}>Schema Fields</option>
+              <option value={'Input Fields'}>Input Fields</option>
             </Select>
           </FormControl>
         </Grid>
       </>
-    );
+    ));
   };
 
   const renderSaveSection = () => {
     return (
-      <Grid container justify="flex-end" spacing={1}>
+      <Grid container justify="flex-end" spacing={1} style={{ paddingTop: '30px' }}>
         <Grid item xs={4} md={2}>
           <Button variant="contained" color="secondary">
             Cancel
@@ -321,14 +394,24 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
         <Box>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12}>
-              <TextField label={'Name'} value={name} onChange={handleNameChange}></TextField>
+              <TextField
+                variant={'outlined'}
+                className={classes.textField}
+                label={'Name'}
+                value={name}
+                onChange={handleNameChange}></TextField>
             </Grid>
             {renderOperationSection()}
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
               <Typography>Inputs</Typography>
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-              <Button variant="text" color={'primary'} className={classes.button} startIcon={<AddCircleOutlineIcon />}>
+              <Button
+                variant="text"
+                color={'primary'}
+                className={classes.button}
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={handleAddInput}>
                 Add another
               </Button>
             </Grid>
@@ -343,7 +426,12 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
               <Typography>Query</Typography>
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-              <Button variant="text" color={'primary'} className={classes.button} startIcon={<AddCircleOutlineIcon />}>
+              <Button
+                variant="text"
+                color={'primary'}
+                className={classes.button}
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={handleAddQuery}>
                 Add another
               </Button>
             </Grid>
