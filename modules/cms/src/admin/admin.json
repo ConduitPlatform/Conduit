@@ -54,6 +54,26 @@
       "path": "/cms/schemas/:schemaName/:id",
       "method": "DELETE",
       "protoName": "deleteDocument"
+    },
+    {
+      "path": "/cms/customEndpoints",
+      "method": "GET",
+      "protoName": "getCustomEndpoints"
+    },
+    {
+      "path": "/cms/customEndpoints/:id",
+      "method": "PUT",
+      "protoName": "editCustomEndpoints"
+    },
+    {
+      "path": "/cms/customEndpoints/:id",
+      "method": "DELETE",
+      "protoName": "deleteCustomEndpoints"
+    },
+    {
+      "path": "/cms/customEndpoints",
+      "method": "POST",
+      "protoName": "createCustomEndpoints"
     }
   ]
 }
