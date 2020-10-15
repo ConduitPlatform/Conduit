@@ -97,16 +97,10 @@ export class AdminHandlers {
     
     async deleteCustomEndpoints(call: any, callback: any) {
         const { id } = JSON.parse(call.request.params);
-
-        let errorMessage: any = null;
-        const schema = await this.database.findOne('CustomEndpoints', { _id: id }).catch((e: any) => 
-        errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-        
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
-                message: '"id" is missing'
+                message: 'Id is missing'
             });
         }
         if (id.length === 0) {
@@ -115,6 +109,12 @@ export class AdminHandlers {
                 message: 'Id must not be empty'
             });
         }
+        let errorMessage: any = null;
+        const schema = await this.database.findOne('CustomEndpoints', { _id: id }).catch((e: any) => 
+        errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        
+        
         if (isNil(schema)) {
             return callback({
                 code: grpc.status.NOT_FOUND,
