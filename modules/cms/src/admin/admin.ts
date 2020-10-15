@@ -65,12 +65,87 @@ export class AdminHandlers {
                 code: grpc.status.INVALID_ARGUMENT,
                 message: 'Required fields are missing'
             });
+        } if (name.length === 0) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Name must not be empty'
+            });
         }
-    }
-    async deleteCustomEndpoints(call: any, callback: any) {
-        const { id, name, operation, selectedSchema, inputs, queries } = JSON.parse(call.request.params);
+        if (operation < 0 || operation > 3) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Operation is not valid'
 
+            });
+        }
+        if (selectedSchema.length === 0) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'SelectedSchema must not be empty'
+            });
+        } let errorMessage: string | null = null;
+        const findSchema = await this.database.findOne('CustomEndpoints', {
+            _id: id
+        }).catch((e: any) =>
+            errorMessage = e.message);
+        if (!isNil(errorMessage) || isNil(findSchema)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Schema not found'
+            });
+        }
+       
+
+       // Object.assign(target, ...sources)
+       
+      // Object.assign(findSchema, );
+     //ask for enable
+
+    //   The findByIdAndUpdate() method has two mandatory parameters
+    // – the value of the _id field of the document and the update.
+        const updatedSchema = await this.database.findByIdAndUpdate
+        ('CustomEndpoints' ,findSchema._id, findSchema  ).catch((e: any) =>
+         errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback(null, { result: JSON.stringify(updatedSchema) });
     }
+
+    
+      
+
+    
+    async deleteCustomEndpoints(call: any, callback: any) {
+        const { id } = JSON.parse(call.request.params);
+
+        let errorMessage: any = null;
+        const schema = await this.database.findOne('CustomEndpoints', { _id: id }).catch((e: any) => 
+        errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        
+        if (isNil(id)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: '"id" is missing'
+            });
+        }
+        if (id.length === 0) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Id must not be empty'
+            });
+        }
+        if (isNil(schema)) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: 'Requested schema not found',
+            });
+        }
+        
+        await this.database.deleteOne('CustomEndpoints', { _id: id }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback(null, { result: 'Selected Schema is Deleted' });
+    }
+
     async createCustomEndpoints(call: any, callback: any) {
         const { name, operation, selectedSchema, inputs, queries } = JSON.parse(call.request.params);
 
@@ -103,7 +178,7 @@ export class AdminHandlers {
         }
         let errorMessage: string | null = null;
         const findSchema = await this.database.findOne('SchemaDefinitions', {
-            _id:selectedSchema
+            _id: selectedSchema
         }).catch((e: any) =>
             errorMessage = e.message);
         if (!isNil(errorMessage) || isNil(findSchema)) {
@@ -116,17 +191,17 @@ export class AdminHandlers {
         // todo checks for inputs & queries
 
         errorMessage = null;
-        const newSchema = await this.database.create('customEndpoints', {
+        const newSchema = await this.database.create('CustomEndpoints', {
             name,
             operation, selectedSchema, inputs, queries
         }).catch((e: any) =>
             errorMessage = e.message);
-            if (!isNil(errorMessage) ) {
-                return callback({
-                    code: grpc.status.INVALID_ARGUMENT,
-                    message: 'Endpoint Creation failed'
-                });
-            }
+        if (!isNil(errorMessage)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Endpoint Creation failed'
+            });
+        }
         return callback(null, { result: JSON.stringify(newSchema) });
     }
 
