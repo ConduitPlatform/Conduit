@@ -153,7 +153,6 @@ export class AdminHandlers {
 
         if (requestedSchema.enabled) {
             requestedSchema.enabled = false;
-            this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
         } else {
             requestedSchema.enabled = true;
             this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
