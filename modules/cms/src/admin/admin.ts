@@ -61,7 +61,7 @@ export class AdminHandlers {
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
-                      message: ''
+                      message: 'id must not be null'
                });
         }
         let errorMessage: string | null = null;
@@ -89,57 +89,6 @@ export class AdminHandlers {
 
          if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
          return callback(null, { result: JSON.stringify(updatedSchema) });
-        
-
-    //     if (isNil(name) || isNil(operation) || isNil(selectedSchema) ||
-    //         isNil(inputs) || isNil(queries)) {
-    //         return callback({
-    //             code: grpc.status.INVALID_ARGUMENT,
-    //             message: 'Required fields are missing'
-    //         });
-    //     } if (name.length === 0) {
-    //         return callback({
-    //             code: grpc.status.INVALID_ARGUMENT,
-    //             message: 'Name must not be empty'
-    //         });
-    //     }
-    //     if (operation < 0 || operation > 3) {
-    //         return callback({
-    //             code: grpc.status.INVALID_ARGUMENT,
-    //             message: 'Operation is not valid'
-
-    //         });
-    //     }
-    //     if (selectedSchema.length === 0) {
-    //         return callback({
-    //             code: grpc.status.INVALID_ARGUMENT,
-    //             message: 'SelectedSchema must not be empty'
-    //         });
-    //     }
-    //     const findSchema = await this.database.findOne('CustomEndpoints', {
-    //         _id: id
-    //     }).catch((e: any) =>
-    //         errorMessage = e.message);
-    //     if (!isNil(errorMessage) || isNil(findSchema)) {
-    //         return callback({
-    //             code: grpc.status.INVALID_ARGUMENT,
-    //             message: 'Schema not found'
-    //         });
-    //     }
-       
-
-    //    // Object.assign(target, ...sources)
-       
-    //   // Object.assign(findSchema, );
-    //  //ask for enable
-
-    // //   The findByIdAndUpdate() method has two mandatory parameters
-    // // – the value of the _id field of the document and the update.
-    //     const updatedSchema = await this.database.findByIdAndUpdate
-    //     ('CustomEndpoints' ,findSchema._id, findSchema  ).catch((e: any) =>
-    //      errorMessage = e.message);
-    //     if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    //     return callback(null, { result: JSON.stringify(updatedSchema) });
     }
 
     
