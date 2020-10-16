@@ -18,6 +18,10 @@ function extractRequestData(req: Request) {
     if (req.params) {
         Object.assign(params, req.params);
     }
+
+    if (req.headers) {
+        Object.assign(params, req.headers);
+    }
     if (params.populate) {
         if (params.populate.includes(',')) {
             params.populate = params.populate.split(',');
@@ -33,7 +37,7 @@ function extractRequestData(req: Request) {
 export class RestController {
 
     private _router!: Router
-    private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
+    private _middlewares?: { [field: string]: (ConduitRoute)[] };
     private _registeredRoutes: Map<string, Handler | ConduitRoute>;
 
     constructor() {
@@ -68,7 +72,7 @@ export class RestController {
         }
     }
 
-    registerMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+    registerMiddleware(path: string, middleware: ConduitRoute) {
         if (!this._middlewares) {
             this._middlewares = {};
         }
@@ -87,7 +91,7 @@ export class RestController {
                 if (!this._middlewares.hasOwnProperty(k)) continue;
                 if (path.indexOf(k) === 0) {
                     this._middlewares[k].forEach(m => {
-                        primaryPromise = primaryPromise.then(r => m(params));
+                        primaryPromise = primaryPromise.then(r => m.executeRequest(params));
                     })
                 }
             }

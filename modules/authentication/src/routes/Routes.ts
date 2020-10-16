@@ -219,41 +219,49 @@ export class AuthenticationRoutes {
         return routesArray;
     }
 
-    middleware(request: ConduitRouteParameters): Promise<any> {
-        return new Promise((resolve, reject) => {
-            const header = (request.headers['Authorization'] || request.headers['authorization']) as string;
-            if (isNil(header)) {
-                throw ConduitError.unauthorized();
-            }
-            const args = header.split(' ');
+    middleware(call: any, callback: any) {
+        let context = JSON.parse(call.request.context)
+        let headers = JSON.parse(call.request.headers)
+        if (call.request.path === '/authentication/local' || call.request.path === '/authentication/local/new') {
+            return callback(null, {result: "ok"});
+        }
+        const header = (headers['Authorization'] || headers['authorization']) as string;
+        if (isNil(header)) {
+            return callback({
+                code: grpc.status.UNAUTHENTICATED,
+                message: 'No authorization header present',
+            });
+        }
+        const args = header.split(' ');
 
-            const prefix = args[0];
-            if (prefix !== 'Bearer') {
-                throw ConduitError.unauthorized();
-            }
+        if (args[0] !== 'Bearer' || isNil(args[1])) {
+            return callback({
+                code: grpc.status.UNAUTHENTICATED,
+                message: 'Authorization header malformed',
+            });
+        }
 
-            const token = args[1];
-            if (isNil(token)) {
-                throw ConduitError.unauthorized();
-            }
-
-            resolve(this.grpcSdk.databaseProvider!.findOne('AccessToken', {
-                token,
-                clientId: (request as any).context.clientId
-            }))
-        }).then((accessTokenDoc: any) => {
-            if (isNil(accessTokenDoc)) {
-                throw ConduitError.unauthorized();
-            }
-
-            return this.grpcSdk.databaseProvider!.findOne('User', {_id: accessTokenDoc.userId})
+        this.grpcSdk.databaseProvider!.findOne('AccessToken', {
+            token: args[1],
+            clientId: context.clientId
         })
+            .then((accessTokenDoc: any) => {
+                if (isNil(accessTokenDoc)) {
+                    callback({
+                        code: grpc.status.UNAUTHENTICATED,
+                        message: 'Token is expired or otherwise not valid',
+                    });
+                }
+                return this.grpcSdk.databaseProvider!.findOne('User', {_id: accessTokenDoc.userId})
+            })
             .then(user => {
                 if (isNil(user)) {
-                    throw ConduitError.notFound('User not found');
+                    return callback({
+                        code: grpc.status.UNAUTHENTICATED,
+                        message: 'User no longer exists',
+                    });
                 }
-                (request as any).context.user = user;
-                return "ok";
+                callback(null, {user: user});
             });
 
     }

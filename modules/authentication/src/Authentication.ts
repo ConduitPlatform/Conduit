@@ -95,7 +95,7 @@ export default class AuthenticationModule {
             this.isRunning = true;
         }
         let url = this._url;
-        if(process.env.REGISTER_NAME){
+        if(process.env.REGISTER_NAME === 'true'){
             url = 'authentication:'+this._url.split(':')[1];
         }
         await this._router.registerRoutes(url)

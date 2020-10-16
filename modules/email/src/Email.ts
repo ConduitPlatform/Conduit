@@ -37,6 +37,7 @@ export default class EmailModule {
             registerTemplate: this.registerTemplate.bind(this),
             sendEmail: this.sendEmail.bind(this)
         });
+        this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this.emailService);
 
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
         let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
@@ -92,8 +93,6 @@ export default class EmailModule {
             this.registerModels();
             await this.initEmailProvider();
             this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
-            this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this.emailService);
-
             this.isRunning = true;
         } else {
             await this.initEmailProvider(newConfig);

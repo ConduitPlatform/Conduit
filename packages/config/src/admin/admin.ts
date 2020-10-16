@@ -48,23 +48,23 @@ export class AdminHandlers {
         break;
       case 'authentication':
         if (!registeredModules.has(module)) return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.authentication;
+        finalConfig = dbConfig.moduleConfigs.authentication;
         break;
       case 'email':
         if (!registeredModules.has(module)) return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.email;
+        finalConfig = dbConfig.moduleConfigs.email;
         break;
       case 'storage':
         if (!registeredModules.has(module)) return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.storage;
+        finalConfig = dbConfig.moduleConfigs.storage;
         break;
       case 'push-notifications':
         if (!registeredModules.has(module)) return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.pushNotifications;
+        finalConfig = dbConfig.moduleConfigs.pushNotifications;
         break;
       case 'in-memory-store':
         if (!registeredModules.has(module)) return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.inMemoryStore;
+        finalConfig = dbConfig.moduleConfigs.inMemoryStore;
         break;
       default:
         return res.status(404).json({ error: 'Resource not found' });

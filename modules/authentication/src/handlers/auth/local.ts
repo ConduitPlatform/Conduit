@@ -125,7 +125,7 @@ export class LocalHandlers {
 
     async authenticate(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const {email, password} = JSON.parse(call.request.params);
+        const {email, password} = JSON.parse(call.request.params).params;
         const context = JSON.parse(call.request.context);
         let errorMessage = null;
 

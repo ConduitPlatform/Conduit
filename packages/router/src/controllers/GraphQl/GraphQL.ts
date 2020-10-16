@@ -26,7 +26,7 @@ export class GraphQLController {
     private _internalRoute: any;
     private _apollo?: any;
     private _relationTypes: string[] = [];
-    private _middlewares?: { [field: string]: ((request: ConduitRouteParameters) => Promise<any>)[] };
+    private _middlewares?: { [field: string]: ConduitRoute[] };
     private _registeredRoutes!: Map<string, ConduitRoute>;
 
     constructor(app: Application) {
@@ -182,7 +182,7 @@ export class GraphQLController {
         return args;
     }
 
-    registerMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+    registerMiddleware(path: string, middleware: ConduitRoute) {
         if (!this._middlewares) {
             this._middlewares = {};
         }
@@ -201,7 +201,7 @@ export class GraphQLController {
                 if (!this._middlewares.hasOwnProperty(k)) continue;
                 if (path.indexOf(k) === 0) {
                     this._middlewares[k].forEach(m => {
-                        primaryPromise = primaryPromise.then(r => m(params));
+                        primaryPromise = primaryPromise.then(() => m.executeRequest.bind(m)(params));
                     })
                 }
             }
@@ -269,10 +269,7 @@ export class GraphQLController {
                 args = self.shouldPopulate(args, info);
                 context.path = route.input.path;
                 return self.checkMiddlewares(route.input.path, context)
-                  .then((r: any) => route.executeRequest({
-                      ...context,
-                      params: args
-                  }))
+                  .then((r: any) => route.executeRequest.bind(route)({...context, params: args}))
                   .then((r: any) => {
                       let result = r.result ? r.result : r;
                       if(r.result && !(typeof route.returnTypeFields === 'string')){
@@ -298,7 +295,7 @@ export class GraphQLController {
                 args = self.shouldPopulate(args, info);
                 context.path = route.input.path;
                 return self.checkMiddlewares(route.input.path, context)
-                  .then((r: any) => route.executeRequest({...context, params: args}))
+                  .then((r: any) => route.executeRequest.bind(route)({...context, params: args}))
                   .then(r => {
                       let result = r.result ? r.result : r;
                       if(r.result && !(typeof route.returnTypeFields === 'string')){
