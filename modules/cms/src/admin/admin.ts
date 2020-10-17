@@ -1,9 +1,9 @@
-import ConduitGrpcSdk, { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
-import { isNil } from 'lodash';
-import { validateSchemaInput } from '../utils/utilities';
+import ConduitGrpcSdk, {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
+import {isNil} from 'lodash';
+import {validateSchemaInput} from '../utils/utilities';
 import path from "path";
 import grpc from "grpc";
-import { SchemaController } from "../controllers/schema.controller";
+import {SchemaController} from "../controllers/schema.controller";
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -50,32 +50,144 @@ export class AdminHandlers {
     async getCustomEndpoints(call: any, callback: any) {
         let errorMessage: string | null = null;
 
-        const customEndpointsDocs = await this.database.findMany('CustomEndpoints', {}, null, null, null).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-        return callback(null, { result: JSON.stringify({ results: customEndpointsDocs }) });
+        const customEndpointsDocs = await this.database.findMany('CustomEndpoints', {}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        return callback(null, {result: JSON.stringify({results: customEndpointsDocs})});
     }
 
     async editCustomEndpoints(call: any, callback: any) {
         const params = JSON.parse(call.request.params);
         const id = params.id;
+        const {inputs, queries, selectedSchema} = params
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
-                      message: 'id must not be null'
-               });
+                message: 'id must not be null'
+            });
         }
         let errorMessage: string | null = null;
         delete params.id;
         const found = await this.database.findOne('CustomEndpoints', {
             _id: id
         }).catch((e: any) => errorMessage = e.message);
-
         if (isNil(found) || !isNil(errorMessage)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
-                      message: 'Schema not found'
-               });
+                message: 'Schema not found'
+            });
         }
+        errorMessage = null;
+        const findSchema = await this.database.findOne('SchemaDefinitions', {
+            _id: selectedSchema
+        }).catch((e: any) =>
+            errorMessage = e.message);
+        if (!isNil(errorMessage) || isNil(findSchema)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'SelectedSchema not found'
+            });
+        }
+
+        // todo checks for inputs & queries
+        if (!Array.isArray(inputs)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Inputs must be an array, even if empty!'
+            });
+        }
+        if (!Array.isArray(queries) || queries.length === 0) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'The queries field must be an array, and not empty!'
+            });
+        }
+        /**
+         * Input schema:
+         * {
+         * name: String,
+         * type: String that is inside the TYPE enum of the sdk
+         * location: String (Body, queryParams, url)
+         * }
+         */
+        errorMessage = null;
+        inputs.forEach(r => {
+            if (isNil(r.name) || isNil(r.type) || isNil(r.location)) {
+                return errorMessage = "Name, type and location must be present in the input"
+
+            }
+            if (r.name.length === 0) {
+                return errorMessage = "Name cannot be empty";
+            }
+            if (r.type.length === 0) {
+                return errorMessage = "Type cannot be empty";
+            }
+            if (r.location.length === 0) {
+                return errorMessage = "Location cannot be empty";
+            }
+
+            if (!Object.values(TYPE).includes(r.type)) {
+                return errorMessage = "Type is not valid!";
+            }
+
+            if (!['Body', 'QueryParams', 'URL'].includes(r.location)) {
+                return errorMessage = "Location is not valid!";
+            }
+        })
+        if (!isNil(errorMessage)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: errorMessage
+            });
+        }
+
+        /**
+         * Input schema:
+         * {
+         * schemaField: String,
+         * operation: number for supported operations
+         * comparisonField: {
+         *     type: String Any of Custom, Schema, Input
+         *     value: String
+         * }
+         * }
+         */
+        errorMessage = null;
+        queries.forEach(r => {
+            if (isNil(r.schemaField) || isNil(r.operation) || isNil(r.comparisonField)) {
+                return errorMessage = "schemaField, operation and comparisonField must be present in the input"
+
+            }
+            if (r.schemaField.length === 0) {
+                return errorMessage = "schemaField cannot be empty";
+            }
+            if (r.operation.length === 0) {
+                return errorMessage = "operation cannot be empty";
+            }
+            if (Object.keys(r.comparisonField).length === 0 || isNil(r.comparisonField.type) || isNil(r.comparisonField.value)) {
+                return errorMessage = "comparisonField cannot be empty and should contain type and value";
+            }
+
+            if (!Object.keys(findSchema).includes(r.schemaField)) {
+                return errorMessage = "schemaField is not present in selected schema!";
+            }
+
+            if(r.operation < 0 || r.operation > 10){
+                return errorMessage = "operation is invalid!";
+            }
+
+            if (r.comparisonField.type === 'Schema') {
+                if (!Object.keys(findSchema).includes(r.comparisonField.value)) {
+                    return errorMessage = "comparisonField value is not present in selected schema!";
+                }
+            } else if (r.comparisonField.type === 'Input') {
+                let inputNames = inputs.map(r => r.name);
+                if (!inputNames.includes(r.comparisonField.value)) {
+                    return errorMessage = "comparisonField value is not present in provided inputs!";
+                }
+            } else if (r.comparisonField.type !== 'Custom') {
+                return errorMessage = "comparisonField type is invalid!";
+            }
+        })
 
 
         Object.keys(params).forEach(key => {
@@ -84,19 +196,15 @@ export class AdminHandlers {
         });
 
         const updatedSchema = await this.database.findByIdAndUpdate
-        ('CustomEndpoints' ,found._id, found  ).catch((e: any) =>
-         errorMessage = e.message);
+        ('CustomEndpoints', found._id, found).catch((e: any) =>
+            errorMessage = e.message);
 
-         if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-         return callback(null, { result: JSON.stringify(updatedSchema) });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        return callback(null, {result: JSON.stringify(updatedSchema)});
     }
 
-    
-      
-
-    
     async deleteCustomEndpoints(call: any, callback: any) {
-        const { id } = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -110,25 +218,25 @@ export class AdminHandlers {
             });
         }
         let errorMessage: any = null;
-        const schema = await this.database.findOne('CustomEndpoints', { _id: id }).catch((e: any) => 
-        errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-        
-        
+        const schema = await this.database.findOne('CustomEndpoints', {_id: id}).catch((e: any) =>
+            errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+
         if (isNil(schema)) {
             return callback({
                 code: grpc.status.NOT_FOUND,
                 message: 'Requested schema not found',
             });
         }
-        
-        await this.database.deleteOne('CustomEndpoints', { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-        return callback(null, { result: 'Selected Schema is Deleted' });
+
+        await this.database.deleteOne('CustomEndpoints', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        return callback(null, {result: 'Selected Schema is Deleted'});
     }
 
     async createCustomEndpoints(call: any, callback: any) {
-        const { name, operation, selectedSchema, inputs, queries } = JSON.parse(call.request.params);
+        const {name, operation, selectedSchema, inputs, queries} = JSON.parse(call.request.params);
 
         if (isNil(name) || isNil(operation) || isNil(selectedSchema) ||
             isNil(inputs) || isNil(queries)) {
@@ -169,8 +277,111 @@ export class AdminHandlers {
             });
         }
 
-        // todo checks for inputs & queries
+        if (!Array.isArray(inputs)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Inputs must be an array, even if empty!'
+            });
+        }
+        if (!Array.isArray(queries) || queries.length === 0) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'The queries field must be an array, and not empty!'
+            });
+        }
+        /**
+         * Input schema:
+         * {
+         * name: String,
+         * type: String that is inside the TYPE enum of the sdk
+         * location: String (Body, queryParams, url)
+         * }
+         */
+        errorMessage = null;
+        inputs.forEach(r => {
+            if (isNil(r.name) || isNil(r.type) || isNil(r.location)) {
+                return errorMessage = "Name, type and location must be present in the input"
 
+            }
+            if (r.name.length === 0) {
+                return errorMessage = "Name cannot be empty";
+            }
+            if (r.type.length === 0) {
+                return errorMessage = "Type cannot be empty";
+            }
+            if (r.location.length === 0) {
+                return errorMessage = "Location cannot be empty";
+            }
+
+            if (!Object.values(TYPE).includes(r.type)) {
+                return errorMessage = "Type is not valid!";
+            }
+
+            if (!['Body', 'QueryParams', 'URL'].includes(r.location)) {
+                return errorMessage = "Location is not valid!";
+            }
+        })
+        if (!isNil(errorMessage)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: errorMessage
+            });
+        }
+
+        /**
+         * Input schema:
+         * {
+         * schemaField: String,
+         * operation: number for supported operations
+         * comparisonField: {
+         *     type: String Any of Custom, Schema, Input
+         *     value: String
+         * }
+         * }
+         */
+        errorMessage = null;
+        queries.forEach(r => {
+            if (isNil(r.schemaField) || isNil(r.operation) || isNil(r.comparisonField)) {
+                return errorMessage = "schemaField, operation and comparisonField must be present in the input"
+
+            }
+            if (r.schemaField.length === 0) {
+                return errorMessage = "schemaField cannot be empty";
+            }
+            if (r.operation.length === 0) {
+                return errorMessage = "operation cannot be empty";
+            }
+            if (Object.keys(r.comparisonField).length === 0 || isNil(r.comparisonField.type) || isNil(r.comparisonField.value)) {
+                return errorMessage = "comparisonField cannot be empty and should contain type and value";
+            }
+
+            if (!Object.keys(findSchema).includes(r.schemaField)) {
+                return errorMessage = "schemaField is not present in selected schema!";
+            }
+
+            if(r.operation < 0 || r.operation > 10){
+                return errorMessage = "operation is invalid!";
+            }
+
+            if (r.comparisonField.type === 'Schema') {
+                if (!Object.keys(findSchema).includes(r.comparisonField.value)) {
+                    return errorMessage = "comparisonField value is not present in selected schema!";
+                }
+            } else if (r.comparisonField.type === 'Input') {
+                let inputNames = inputs.map(r => r.name);
+                if (!inputNames.includes(r.comparisonField.value)) {
+                    return errorMessage = "comparisonField value is not present in provided inputs!";
+                }
+            } else if (r.comparisonField.type !== 'Custom') {
+                return errorMessage = "comparisonField type is invalid!";
+            }
+        })
+        if (!isNil(errorMessage)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: errorMessage
+            });
+        }
         errorMessage = null;
         const newSchema = await this.database.create('CustomEndpoints', {
             name,
@@ -183,12 +394,12 @@ export class AdminHandlers {
                 message: 'Endpoint Creation failed'
             });
         }
-        return callback(null, { result: JSON.stringify(newSchema) });
+        return callback(null, {result: JSON.stringify(newSchema)});
     }
 
 
     async getAllSchemas(call: any, callback: any) {
-        const { skip, limit } = JSON.parse(call.request.params);
+        const {skip, limit} = JSON.parse(call.request.params);
         let skipNumber = 0, limitNumber = 25;
 
         if (!isNil(skip)) {
@@ -203,13 +414,13 @@ export class AdminHandlers {
 
         let errorMessage: string | null = null;
         const [schemas, documentsCount] = await Promise.all([schemasPromise, documentsCountPromise]).catch(e => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, { result: JSON.stringify({ results: schemas, documentsCount }) });
+        return callback(null, {result: JSON.stringify({results: schemas, documentsCount})});
     }
 
     async getById(call: any, callback: any) {
-        const { id } = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -218,8 +429,8 @@ export class AdminHandlers {
         }
 
         let errorMessage = null;
-        const requestedSchema = await this.database.findOne('SchemaDefinitions', { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(requestedSchema)) {
             return callback({
@@ -228,11 +439,11 @@ export class AdminHandlers {
             });
         }
 
-        return callback(null, { result: JSON.stringify(requestedSchema) });
+        return callback(null, {result: JSON.stringify(requestedSchema)});
     }
 
     async createSchema(call: any, callback: any) {
-        const { name, fields, modelOptions, enabled } = JSON.parse(call.request.params);
+        const {name, fields, modelOptions, enabled} = JSON.parse(call.request.params);
 
         if (isNil(name) || isNil(fields)) {
             return callback({
@@ -274,11 +485,11 @@ export class AdminHandlers {
             this.schemaController.createSchema(new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions));
         }
 
-        return callback(null, { result: JSON.stringify(newSchema) })
+        return callback(null, {result: JSON.stringify(newSchema)})
     }
 
     async toggle(call: any, callback: any) {
-        const { id } = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -286,8 +497,8 @@ export class AdminHandlers {
             });
         }
         let errorMessage = null;
-        const requestedSchema = await this.database.findOne('SchemaDefinitions', { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(requestedSchema)) {
             return callback({
@@ -305,13 +516,13 @@ export class AdminHandlers {
         }
 
         const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, { result: JSON.stringify({ name: updatedSchema.name, enabled: updatedSchema.enabled }) });
+        return callback(null, {result: JSON.stringify({name: updatedSchema.name, enabled: updatedSchema.enabled})});
     }
 
     async editSchema(call: any, callback: any) {
-        const { id, name, fields, modelOptions } = JSON.parse(call.request.params);
+        const {id, name, fields, modelOptions} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -320,8 +531,8 @@ export class AdminHandlers {
         }
 
         let errorMessage = null;
-        const requestedSchema = await this.database.findOne('SchemaDefinitions', { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(requestedSchema)) {
             return callback({
@@ -343,7 +554,7 @@ export class AdminHandlers {
         requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
 
         const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (!isNil(updatedSchema.modelOptions)) updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
 
@@ -354,11 +565,11 @@ export class AdminHandlers {
         // TODO reinitialise routes?
         // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
-        return callback(null, { result: JSON.stringify(updatedSchema) });
+        return callback(null, {result: JSON.stringify(updatedSchema)});
     }
 
     async deleteSchema(call: any, callback: any) {
-        const { id } = JSON.parse(call.request.params);
+        const {id} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -367,8 +578,8 @@ export class AdminHandlers {
         }
 
         let errorMessage = null;
-        const requestedSchema = await this.database.findOne('SchemaDefinitions', { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const requestedSchema = await this.database.findOne('SchemaDefinitions', {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(requestedSchema)) {
             return callback({
@@ -378,18 +589,18 @@ export class AdminHandlers {
         }
 
         await this.database.deleteOne('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         this.schemaController.refreshRoutes();
-        return callback(null, { result: 'Schema successfully deleted' });
+        return callback(null, {result: 'Schema successfully deleted'});
     }
 
     async getDocuments(call: any, callback: any) {
-        const { skip, limit, schemaName } = JSON.parse(call.request.params);
+        const {skip, limit, schemaName} = JSON.parse(call.request.params);
 
         let errorMessage: any = null;
-        const schema = await this.database.findOne('SchemaDefinitions', { name: schemaName }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(schema)) {
             return callback({
@@ -418,15 +629,15 @@ export class AdminHandlers {
             });
         }
 
-        return callback(null, { result: JSON.stringify({ documents, documentsCount }) });
+        return callback(null, {result: JSON.stringify({documents, documentsCount})});
     }
 
     async getDocumentById(call: any, callback: any) {
-        const { schemaName, id } = JSON.parse(call.request.params);
+        const {schemaName, id} = JSON.parse(call.request.params);
 
         let errorMessage: any = null;
-        const schema = await this.database.findOne('SchemaDefinitions', { name: schemaName }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(schema)) {
             return callback({
@@ -436,8 +647,8 @@ export class AdminHandlers {
         }
 
 
-        const document = await this.database.findOne(schemaName, { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const document = await this.database.findOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(document)) {
             return callback({
@@ -445,15 +656,15 @@ export class AdminHandlers {
                 message: 'Requested document not found',
             });
         }
-        return callback(null, { result: JSON.stringify(document) });
+        return callback(null, {result: JSON.stringify(document)});
     }
 
     async createDocument(call: any, callback: any) {
-        const { schemaName, inputDocument } = JSON.parse(call.request.params);
+        const {schemaName, inputDocument} = JSON.parse(call.request.params);
 
         let errorMessage: any = null;
-        const schema = await this.database.findOne('SchemaDefinitions', { name: schemaName }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(schema)) {
             return callback({
@@ -463,17 +674,17 @@ export class AdminHandlers {
         }
 
         const newDocument = await this.database.create(schemaName, inputDocument).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, { result: JSON.stringify(newDocument) });
+        return callback(null, {result: JSON.stringify(newDocument)});
     }
 
     async editDocument(call: any, callback: any) {
-        const { schemaName, id, changedDocument } = JSON.parse(call.request.params);
+        const {schemaName, id, changedDocument} = JSON.parse(call.request.params);
 
         let errorMessage: any = null;
-        const schema = await this.database.findOne('SchemaDefinitions', { name: schemaName }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(schema)) {
             return callback({
@@ -482,23 +693,23 @@ export class AdminHandlers {
             });
         }
 
-        const dbDocument = await this.database.findOne(schemaName, { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const dbDocument = await this.database.findOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         Object.assign(dbDocument, changedDocument);
 
         const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument._id, dbDocument).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, { result: JSON.stringify(updatedDocument) });
+        return callback(null, {result: JSON.stringify(updatedDocument)});
     }
 
     async deleteDocument(call: any, callback: any) {
-        const { schemaName, id } = JSON.parse(call.request.params);
+        const {schemaName, id} = JSON.parse(call.request.params);
 
         let errorMessage: any = null;
-        const schema = await this.database.findOne('SchemaDefinitions', { name: schemaName }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (isNil(schema)) {
             return callback({
@@ -507,9 +718,9 @@ export class AdminHandlers {
             });
         }
 
-        await this.database.deleteOne(schemaName, { _id: id }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        await this.database.deleteOne(schemaName, {_id: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, { result: 'Ok' });
+        return callback(null, {result: 'Ok'});
     }
 }
