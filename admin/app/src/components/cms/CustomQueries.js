@@ -15,7 +15,9 @@ import {
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
+import ConditionsEnum from '../../models/ConditionsEnum';
+import OperationsEnum from '../../models/OperationsEnum';
 
 const useStyles = makeStyles((theme) => ({
   listBox: {
@@ -249,10 +251,10 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
                 id: 'select_operation',
               }}>
               <option aria-label="None" value="" />
-              <option value={'find/get'}>Find/Get</option>
-              <option value={'create'}>Create</option>
-              <option value={'update/edit'}>Update/Edit</option>
-              <option value={'delete'}>Delete</option>
+              <option value={OperationsEnum.GET}>Find/Get</option>
+              <option value={OperationsEnum.POST}>Create</option>
+              <option value={OperationsEnum.PUT}>Update/Edit</option>
+              <option value={OperationsEnum.DELETE}>Delete</option>
             </Select>
           </FormControl>
         </Grid>
@@ -268,8 +270,8 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
                 id: 'select_schema',
               }}>
               <option aria-label="None" value="" />
-              {availableSchemas.map((schema) => (
-                <option key={`schema-${schema.id}`} value={schema._id}>
+              {availableSchemas.map((schema, index) => (
+                <option key={`schema-${schema.id ? schema.id : index}`} value={schema._id}>
                   {schema.name}
                 </option>
               ))}
@@ -282,7 +284,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
 
   const renderInputsList = () => {
     return selectedInputs.map((input, index) => (
-      <>
+      <Fragment key={`input-${index}`}>
         <Grid item xs={1} key={index}>
           <Typography>{index + 1}.</Typography>
         </Grid>
@@ -312,13 +314,13 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
             </Select>
           </FormControl>
         </Grid>
-      </>
+      </Fragment>
     ));
   };
 
   const renderQueryOptions = () => {
     return selectedQueries.map((query, index) => (
-      <>
+      <Fragment key={`query-${index}`}>
         <Grid item xs={1}>
           <Typography>{index + 1}.</Typography>
         </Grid>
@@ -338,16 +340,15 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
           <FormControl className={classes.formControl}>
             <Select native value={query.condition} onChange={(event) => handleQueryConditionChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={'equal-to'}>(==) equal to</option>
-              <option value={'not-equal-to'}>(!=) not equal to</option>
-              <option value={'equal-to'}>(==) equal to</option>
-              <option value={'greater-than'}>{'(>) greater than'}</option>
-              <option value={'greater-that-or-equal-to'}>{'(>=) greater that or equal to'}</option>
-              <option value={'less than'}>{'(<) less than'}</option>
-              <option value={'less-that-or-equal-to'}>{'(<=) less that or equal to'}</option>
-              <option value={'equal-to-any-of-the-following'}>(in) equal to any of the following</option>
-              <option value={'not-equal-to-any-of-the-following'}>(not-in) not equal to any of the following</option>
-              <option value={'an-array-containing'}>(array-contains) an array containing</option>
+              <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
+              <option value={ConditionsEnum.NEQUAL}>(!=) not equal to</option>
+              <option value={ConditionsEnum.GREATER}>{'(>) greater than'}</option>
+              <option value={ConditionsEnum.GREATER_EQ}>{'(>=) greater that or equal to'}</option>
+              <option value={ConditionsEnum.LESS}>{'(<) less than'}</option>
+              <option value={ConditionsEnum.LESS_EQ}>{'(<=) less that or equal to'}</option>
+              <option value={ConditionsEnum.EQUAL_SET}>(in) equal to any of the following</option>
+              <option value={ConditionsEnum.NEQUAL_SET}>(not-in) not equal to any of the following</option>
+              <option value={ConditionsEnum.CONTAIN}>(array-contains) an array containing</option>
             </Select>
           </FormControl>
         </Grid>
@@ -361,7 +362,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
             </Select>
           </FormControl>
         </Grid>
-      </>
+      </Fragment>
     ));
   };
 
