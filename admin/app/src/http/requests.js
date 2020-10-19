@@ -126,3 +126,16 @@ export const deleteSchemaDocumentRequest = (schemaName, documentId) =>
 
 export const editSchemaDocumentRequest = (schemaName, documentId, documentData) =>
   axios.put(`${CONDUIT_API}/admin/cms/schemas/${schemaName}/${documentId}`, { ...documentData });
+
+export const getCustomEndpointsRequest = () => {
+  return axios.get(`${CONDUIT_API}/admin/cms/customEndpoints`);
+};
+export const editCustomEndpointsRequest = (_id, endpointData) => {
+  return axios.put(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`, { endpointData });
+};
+export const deleteCustomEndpointsRequest = (_id) => {
+  return axios.delete(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`);
+};
+export const createCustomEndpointsRequest = (endpointData) => {
+  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, { endpointData });
+};
