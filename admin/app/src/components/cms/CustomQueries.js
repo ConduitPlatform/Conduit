@@ -90,8 +90,8 @@ const useStyles = makeStyles((theme) => ({
 const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
   const classes = useStyles();
 
-  const [selectedEndpoint, setSelectedEndpoint] = useState();
-  const [selectedOperation, setSelectedOperation] = useState();
+  const [selectedEndpoint, setSelectedEndpoint] = useState(-1);
+  const [selectedOperation, setSelectedOperation] = useState(-1);
   const [selectedSchema, setSelectedSchema] = useState();
   const [name, setName] = useState('');
   const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
@@ -102,8 +102,8 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
     setSelectedEndpoint(endpoint);
   };
 
-  const handleOperationChange = (value) => {
-    setSelectedOperation(value);
+  const handleOperationChange = (event) => {
+    setSelectedOperation(event.target.value);
   };
 
   const handleNameChange = (value) => {
@@ -250,7 +250,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
                 name: 'select_operation',
                 id: 'select_operation',
               }}>
-              <option aria-label="None" value="" />
+              <option aria-label="None" value={-1} />
               <option value={OperationsEnum.GET}>Find/Get</option>
               <option value={OperationsEnum.POST}>Create</option>
               <option value={OperationsEnum.PUT}>Update/Edit</option>
