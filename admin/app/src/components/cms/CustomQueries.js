@@ -101,6 +101,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [createMode, setCreateMode] = useState(false);
 
   const handleConfirmationDialogClose = () => {
     setConfirmationOpen(false);
@@ -112,6 +113,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
 
   const handleEditClick = () => {
     setEditMode(true);
+    setCreateMode(false);
   };
 
   const handleCreateClick = () => {
@@ -120,6 +122,12 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
 
   const handleSaveClick = () => {
     handleEdit();
+  };
+
+  const handleCancelClick = () => {
+    setCreateMode(false);
+    setEditMode(false);
+    setSelectedEndpoint(undefined);
   };
 
   const handleDeleteConfirmed = () => {
@@ -141,6 +149,8 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
 
   const handleAddNewEndpoint = () => {
     setSelectedEndpoint({});
+    setEditMode(false);
+    setCreateMode(true);
   };
 
   const getAvailableFieldsOfSchema = (schemaSelected) => {
@@ -271,6 +281,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
           <FormControl className={classes.formControl}>
             <InputLabel htmlFor="select_operation">Select Operation</InputLabel>
             <Select
+              disabled={!editMode}
               native
               value={selectedOperation}
               onChange={handleOperationChange}
@@ -291,6 +302,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
           <FormControl className={classes.formControl}>
             <InputLabel htmlFor="select_schema">Select Schema</InputLabel>
             <Select
+              disabled={!editMode}
               native
               value={selectedSchema}
               onChange={handleSchemaChange}
@@ -323,7 +335,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
             <InputLabel>Type</InputLabel>
-            <Select native value={input.type} onChange={(event) => handleInputTypeChange(event, index)}>
+            <Select disabled={!editMode} native value={input.type} onChange={(event) => handleInputTypeChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'String'}>String</option>
               <option value={'Number'}>Number</option>
@@ -335,7 +347,11 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <Select native value={input.argsType} onChange={(event) => handleInputArgsTypeChange(event, index)}>
+            <Select
+              disabled={!editMode}
+              native
+              value={input.argsType}
+              onChange={(event) => handleInputArgsTypeChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'query_params'}>Query params</option>
               <option value={'body'}>Body</option>
@@ -355,7 +371,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
         <Grid item xs={3}>
           <FormControl className={classes.formControl}>
-            <Select native value={query.field} onChange={(event) => handleQueryFieldChange(event, index)}>
+            <Select disabled={!editMode} native value={query.field} onChange={(event) => handleQueryFieldChange(event, index)}>
               <option aria-label="None" value="" />
               {availableFieldsOfSchema.map((field, index) => (
                 <option key={`idx-${index}-field`} value={field}>
@@ -367,7 +383,11 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <Select native value={query.condition} onChange={(event) => handleQueryConditionChange(event, index)}>
+            <Select
+              disabled={!editMode}
+              native
+              value={query.condition}
+              onChange={(event) => handleQueryConditionChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'equal-to'}>(==) equal to</option>
               <option value={'not-equal-to'}>(!=) not equal to</option>
@@ -384,7 +404,11 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
-            <Select native value={query.comparisonField} onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
+            <Select
+              disabled={!editMode}
+              native
+              value={query.comparisonField}
+              onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'Custom'}>Custom</option>
               <option value={'Schema Fields'}>Schema Fields</option>
@@ -397,16 +421,20 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
   };
 
   const renderSaveSection = () => {
+    if (!editMode && !createMode) {
+      return null;
+    }
     return (
       <Grid container justify="flex-end" spacing={1} style={{ paddingTop: '30px' }}>
         <Grid item xs={4} md={2}>
-          <Button variant="contained" color="secondary">
+          <Button variant="contained" color="secondary" onClick={handleCancelClick}>
             Cancel
           </Button>
         </Grid>
+
         <Grid item xs={4} md={2}>
-          <Button variant="contained" color="primary">
-            Save
+          <Button variant="contained" color="primary" onClick={editMode ? handleSaveClick : createMode ? handleCreateClick : ''}>
+            {editMode ? 'Save' : createMode ? 'Create' : ''}
           </Button>
         </Grid>
       </Grid>
@@ -426,6 +454,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={7}>
               <TextField
+                disabled={!editMode}
                 variant={'outlined'}
                 className={classes.textField}
                 label={'Name'}
@@ -446,6 +475,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
               <Button
+                disabled={!editMode}
                 variant="text"
                 color={'primary'}
                 className={classes.button}
@@ -466,6 +496,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
               <Button
+                disabled={!editMode}
                 variant="text"
                 color={'primary'}
                 className={classes.button}
