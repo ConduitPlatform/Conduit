@@ -12,10 +12,14 @@ import {
   Select,
   Button,
   TextField,
+  IconButton,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import DeleteIcon from '@material-ui/icons/Delete';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
+import EditIcon from '@material-ui/icons/Edit';
 import React, { useState } from 'react';
+import ConfirmationDialog from '../ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   listBox: {
@@ -85,7 +89,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
+const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, handleEdit, handleDelete }) => {
   const classes = useStyles();
 
   const [selectedEndpoint, setSelectedEndpoint] = useState();
@@ -95,6 +99,33 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
   const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
   const [selectedInputs, setSelectedInputs] = useState([]);
   const [selectedQueries, setSelectedQueries] = useState([]);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  const handleConfirmationDialogClose = () => {
+    setConfirmationOpen(false);
+  };
+
+  const handleDeleteClick = () => {
+    setConfirmationOpen(true);
+  };
+
+  const handleEditClick = () => {
+    setEditMode(true);
+  };
+
+  const handleCreateClick = () => {
+    handleCreate();
+  };
+
+  const handleSaveClick = () => {
+    handleEdit();
+  };
+
+  const handleDeleteConfirmed = () => {
+    handleConfirmationDialogClose();
+    handleDelete(selectedEndpoint.id);
+  };
 
   const handleListItemSelect = (endpoint) => {
     setSelectedEndpoint(endpoint);
@@ -393,13 +424,21 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
       return (
         <Box>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12}>
+            <Grid item xs={7}>
               <TextField
                 variant={'outlined'}
                 className={classes.textField}
                 label={'Name'}
                 value={name}
                 onChange={handleNameChange}></TextField>
+            </Grid>
+            <Grid item xs={5} style={{ textAlign: 'end' }}>
+              <IconButton aria-label="delete" onClick={handleDeleteClick}>
+                <DeleteIcon />
+              </IconButton>
+              <IconButton aria-label="edit" onClick={handleEditClick}>
+                <EditIcon />
+              </IconButton>
             </Grid>
             {renderOperationSection()}
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
@@ -456,6 +495,14 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [] }) => {
           {renderMainContent()}
         </Grid>
       </Grid>
+      <ConfirmationDialog
+        open={confirmationOpen}
+        title={'Custom Endpoint Deletion'}
+        description={`You are about to delete custom endpoint with name: ${selectedEndpoint?.name}`}
+        buttonText={'Procceed'}
+        handleClose={handleConfirmationDialogClose}
+        buttonAction={handleDeleteConfirmed}
+      />
     </Container>
   );
 };
