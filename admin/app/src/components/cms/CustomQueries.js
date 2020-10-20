@@ -18,10 +18,11 @@ import { makeStyles } from '@material-ui/core/styles';
 import DeleteIcon from '@material-ui/icons/Delete';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EditIcon from '@material-ui/icons/Edit';
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import ConfirmationDialog from '../ConfirmationDialog';
 import OperationsEnum from '../../models/OperationsEnum';
 import ConditionsEnum from '../../models/ConditionsEnum';
+import InputLocationEnum from '../../models/InputLocationEnum';
 
 const useStyles = makeStyles((theme) => ({
   listBox: {
@@ -95,15 +96,31 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
   const classes = useStyles();
 
   const [selectedEndpoint, setSelectedEndpoint] = useState();
+  const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
+
+  /**
+   * @description Custom endpoint data local state fields
+   */
+  const [name, setName] = useState('');
   const [selectedOperation, setSelectedOperation] = useState();
   const [selectedSchema, setSelectedSchema] = useState();
-  const [name, setName] = useState('');
-  const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
   const [selectedInputs, setSelectedInputs] = useState([]);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [createMode, setCreateMode] = useState(false);
+
+  useEffect(() => {
+    if (selectedEndpoint) {
+      setName(selectedEndpoint.name);
+      setSelectedOperation(selectedEndpoint.operation);
+      setSelectedSchema(selectedEndpoint.schema);
+      const fields = getAvailableFieldsOfSchema(selectedEndpoint.schema);
+      setAvailableFieldsOfSchema(Object.keys(fields));
+      setSelectedInputs(selectedEndpoint.inputs);
+      setSelectedQueries(selectedEndpoint.queries);
+    }
+  }, [selectedEndpoint]);
 
   const handleConfirmationDialogClose = () => {
     setConfirmationOpen(false);
@@ -175,7 +192,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
     const currentInputs = selectedInputs.slice();
     const input = currentInputs[index];
     if (input) {
-      input.value = value;
+      input.name = value;
       setSelectedInputs(currentInputs);
     }
   };
@@ -190,12 +207,12 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
     }
   };
 
-  const handleInputArgsTypeChange = (event, index) => {
+  const handleInputLocationChange = (event, index) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = currentInputs[index];
     if (input) {
-      input.argsType = value;
+      input.location = value;
       setSelectedInputs(currentInputs);
     }
   };
@@ -223,7 +240,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
     const currentQueries = selectedQueries.slice();
     const input = currentQueries[index];
     if (input) {
-      input.field = value;
+      input.schemaField = value;
       setSelectedQueries(currentQueries);
     }
   };
@@ -233,17 +250,22 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
     const currentQueries = selectedQueries.slice();
     const input = currentQueries[index];
     if (input) {
-      input.condition = value;
+      input.operation = value;
       setSelectedQueries(currentQueries);
     }
   };
 
   const handleQueryComparisonFieldChange = (event, index) => {
     const value = event.target.value;
+
+    const type = value.split('-')[0];
+    const actualValue = value.split('-')[1];
+
     const currentQueries = selectedQueries.slice();
     const input = currentQueries[index];
     if (input) {
-      input.comparisonField = value;
+      input.comparisonField.type = type;
+      input.comparisonField.value = actualValue;
       setSelectedQueries(currentQueries);
     }
   };
@@ -332,7 +354,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
           <Typography>{index + 1}.</Typography>
         </Grid>
         <Grid item xs={3}>
-          <TextField value={input.value} onChange={(event) => handleInputNameChange(event, index)}></TextField>
+          <TextField value={input.name} onChange={(event) => handleInputNameChange(event, index)}></TextField>
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
@@ -352,12 +374,12 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
             <Select
               disabled={!editMode}
               native
-              value={input.argsType}
-              onChange={(event) => handleInputArgsTypeChange(event, index)}>
+              value={input.location}
+              onChange={(event) => handleInputLocationChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={'query_params'}>Query params</option>
-              <option value={'body'}>Body</option>
-              <option value={'form_data'}>Form Data</option>
+              <option value={InputLocationEnum.QUERY_PARAMS}>Query params</option>
+              <option value={InputLocationEnum.BODY}>Body</option>
+              <option value={InputLocationEnum.URL_PARAMS}>Form Data</option>
             </Select>
           </FormControl>
         </Grid>
@@ -373,7 +395,11 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
         <Grid item xs={3}>
           <FormControl className={classes.formControl}>
-            <Select disabled={!editMode} native value={query.field} onChange={(event) => handleQueryFieldChange(event, index)}>
+            <Select
+              disabled={!editMode}
+              native
+              value={query.schemaField}
+              onChange={(event) => handleQueryFieldChange(event, index)}>
               <option aria-label="None" value="" />
               {availableFieldsOfSchema.map((field, index) => (
                 <option key={`idx-${index}-field`} value={field}>
@@ -388,7 +414,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
             <Select
               disabled={!editMode}
               native
-              value={query.condition}
+              value={query.operation}
               onChange={(event) => handleQueryConditionChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
@@ -408,12 +434,24 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
             <Select
               disabled={!editMode}
               native
-              value={query.comparisonField}
+              value={query.comparisonField.type + '-' + query.comparisonField.value}
               onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
               <option aria-label="None" value="" />
-              <option value={'Custom'}>Custom</option>
-              <option value={'Schema Fields'}>Schema Fields</option>
-              <option value={'Input Fields'}>Input Fields</option>
+              <optgroup label="Custom Value"></optgroup>
+              <optgroup label="Schema Fields">
+                {availableFieldsOfSchema.map((field, index) => (
+                  <option key={`idx-${index}-field`} value={'Schema-' + field}>
+                    {field}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Input Fields">
+                {selectedInputs.map((input, index) => (
+                  <option key={`idx-${index}-input`} value={'Input-' + input.name}>
+                    {input.name}
+                  </option>
+                ))}
+              </optgroup>
             </Select>
           </FormControl>
         </Grid>
