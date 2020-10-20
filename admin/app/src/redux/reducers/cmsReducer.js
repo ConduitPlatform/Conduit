@@ -15,6 +15,20 @@ const initialState = {
   data: {
     schemas: [],
     documents: [],
+    customEndpoints: [
+      {
+        name: 'Endpoint 1',
+        id: 1,
+        inputs: [{ name: 'Test', type: 'String', location: 'Body' }],
+        queries: [{ schemaField: 'Test', operation: 'String', comparisonField: { type: '', value: '' } }],
+      },
+      {
+        name: 'Endpoint 2',
+        id: 2,
+        inputs: [{ name: 'Test', type: 'String', location: 'Body' }],
+        queries: [{ schemaField: 'Test', operation: 'String', comparisonField: { type: '', value: '' } }],
+      },
+    ],
     count: 0,
     config: null,
     selectedSchema: null,

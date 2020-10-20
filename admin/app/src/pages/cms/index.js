@@ -116,18 +116,6 @@ const Types = () => {
     return data.schemas.filter((s) => s.enabled);
   };
 
-  const getEndpoints = () => {
-    return [
-      { name: 'Endpoint 1', id: 1 },
-      { name: 'Endpoint 2', id: 2 },
-      { name: 'Endpoint 3', id: 3 },
-      { name: 'Endpoint 4', id: 4 },
-      { name: 'Endpoint 5', id: 5 },
-      { name: 'Endpoint 6', id: 6 },
-      { name: 'Endpoint 7', id: 7 },
-    ];
-  };
-
   const getDisabledSchemas = () => {
     if (!data || !data.schemas) {
       return [];
@@ -209,7 +197,7 @@ const Types = () => {
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
         <CustomQueries
-          endpoints={getEndpoints()}
+          endpoints={data.customEndpoints}
           availableSchemas={data.schemas}
           handleCreate={handleCreateCustomEndpoint}
           handleEdit={handleEditCustomEndpoint}
