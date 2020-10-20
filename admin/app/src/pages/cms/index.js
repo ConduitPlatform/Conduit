@@ -19,7 +19,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
 import { setSelectedSchema } from '../../redux/actions';
-import { toggleSchema, deleteSelectedSchema, getSchemaDocuments } from '../../redux/thunks/cmsThunks';
+import { toggleSchema, deleteSelectedSchema, getSchemaDocuments, deleteCustomEndpoints } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -32,6 +32,10 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Types = () => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const classes = useStyles();
+
   const { data, loading, error } = useSelector((state) => state.cmsReducer);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -39,10 +43,6 @@ const Types = () => {
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({ data: {}, action: '' });
-
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const classes = useStyles();
 
   const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Custom' }, { title: 'Settings' }];
 
@@ -165,6 +165,19 @@ const Types = () => {
     }
   };
 
+  const handleCreateCustomEndpoint = (data) => {
+    console.log(data);
+  };
+  const handleEditCustomEndpoint = (_id, data) => {
+    console.log(data);
+  };
+  const handleDeleteCustomEndpoint = (endpointId) => {
+    console.log(endpointId);
+    if (endpointId) {
+      dispatch(deleteCustomEndpoints(endpointId));
+    }
+  };
+
   return (
     <Layout itemSelected={4}>
       <Box p={2}>
@@ -195,7 +208,13 @@ const Types = () => {
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-        <CustomQueries endpoints={getEndpoints()} availableSchemas={data.schemas} />
+        <CustomQueries
+          endpoints={getEndpoints()}
+          availableSchemas={data.schemas}
+          handleCreate={handleCreateCustomEndpoint}
+          handleEdit={handleEditCustomEndpoint}
+          handleDelete={handleDeleteCustomEndpoint}
+        />
       </Box>
       <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
         {/*TODO SETTINGS*/}
