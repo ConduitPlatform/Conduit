@@ -4,7 +4,7 @@ export const setCookie = (key, value, remember) => {
   if (typeof window !== 'undefined') {
     if (remember) {
       cookie.set(key, value, {
-        expires: 1,
+        expires: 100,
         path: '/',
       });
     } else {
