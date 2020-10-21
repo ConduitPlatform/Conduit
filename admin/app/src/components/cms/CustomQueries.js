@@ -354,7 +354,10 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
           <Typography>{index + 1}.</Typography>
         </Grid>
         <Grid item xs={3}>
-          <TextField value={input.name} onChange={(event) => handleInputNameChange(event, index)}></TextField>
+          <TextField
+            disabled={!editMode}
+            value={input.name}
+            onChange={(event) => handleInputNameChange(event, index)}></TextField>
         </Grid>
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
