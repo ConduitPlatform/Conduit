@@ -175,7 +175,7 @@ const Types = () => {
 
   const handleCreateCustomEndpoint = (data) => {
     if (data) {
-      dispatch(createCustomEndpoints(...data));
+      dispatch(createCustomEndpoints(data));
     }
   };
   const handleEditCustomEndpoint = (_id, data) => {

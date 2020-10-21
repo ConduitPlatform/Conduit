@@ -162,11 +162,26 @@ const CustomQueries = ({
   };
 
   const handleCreateClick = () => {
-    handleCreate();
+    const data = {
+      name: name,
+      operaton: selectedOperation,
+      schema: selectedSchema,
+      inputs: selectedInputs,
+      queries: selectedQueries,
+    };
+    handleCreate(data);
   };
 
   const handleSaveClick = () => {
-    handleEdit();
+    const data = {
+      name: name,
+      operaton: selectedOperation,
+      schema: selectedSchema,
+      inputs: selectedInputs,
+      queries: selectedQueries,
+    };
+    const _id = selectedEndpoint._id;
+    handleEdit(_id, data);
   };
 
   const handleCancelClick = () => {
@@ -193,9 +208,14 @@ const CustomQueries = ({
   };
 
   const handleAddNewEndpoint = () => {
-    setSelectedEndpoint({});
-    setEditMode(false);
+    setSelectedEndpoint(undefined);
+    setEditMode(true);
     setCreateMode(true);
+    setName('');
+    setSelectedOperation(-1);
+    setSelectedSchema('');
+    setSelectedInputs([]);
+    setSelectedQueries([]);
   };
 
   const handleSchemaChange = (event) => {
@@ -236,18 +256,21 @@ const CustomQueries = ({
 
   const handleAddInput = () => {
     const input = {
-      value: '',
+      name: '',
       type: '',
-      argsType: '',
+      location: '',
     };
     setSelectedInputs([...selectedInputs, input]);
   };
 
   const handleAddQuery = () => {
     const query = {
-      field: '',
-      condition: '',
-      comparisonField: '',
+      schemaField: '',
+      operation: '',
+      comparisonField: {
+        type: '',
+        value: '',
+      },
     };
     setSelectedQueries([...selectedQueries, query]);
   };
@@ -511,8 +534,8 @@ const CustomQueries = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={editMode ? handleSaveClick : createMode ? handleCreateClick : ''}>
-            {editMode ? 'Save' : createMode ? 'Create' : ''}
+            onClick={createMode ? handleCreateClick : editMode ? handleSaveClick : ''}>
+            {createMode ? 'Create' : editMode ? 'Save' : ''}
           </Button>
         </Grid>
       </Grid>
@@ -520,7 +543,7 @@ const CustomQueries = ({
   };
 
   const renderMainContent = () => {
-    if (!selectedEndpoint) {
+    if (!selectedEndpoint && !createMode) {
       return (
         <Box className={classes.mainContent}>
           <Typography>Select an endpoint to view more</Typography>

@@ -219,21 +219,15 @@ export const deleteCustomEndpoints = (_id) => {
   };
 };
 
-export const createCustomEndpoints = (
-  name,
-  operation,
-  selectedSchema,
-  inputs,
-  queries
-) => {
+export const createCustomEndpoints = (endPointData) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
     const body = {
-      name,
-      operation,
-      selectedSchema,
-      inputs,
-      queries,
+      name: endPointData.name,
+      operation: endPointData.operation,
+      selectedSchema: endPointData.selectedSchema,
+      inputs: endPointData.inputs,
+      queries: endPointData.queries,
     };
     createCustomEndpointsRequest(body)
       .then((res) => {
