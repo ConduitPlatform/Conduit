@@ -116,17 +116,37 @@ const CustomQueries = ({
   const [editMode, setEditMode] = useState(false);
   const [createMode, setCreateMode] = useState(false);
 
-  useEffect(() => {
+  const getAvailableFieldsOfSchema = useCallback(
+    (schemaSelected) => {
+      if (schemaSelected) {
+        const found = availableSchemas.find((schema) => schema._id === schemaSelected);
+        if (found) {
+          return found.fields;
+        }
+      }
+    },
+    [availableSchemas]
+  );
+
+  const initializeData = useCallback(() => {
     if (selectedEndpoint) {
       setName(selectedEndpoint.name);
       setSelectedOperation(selectedEndpoint.operation);
       setSelectedSchema(selectedEndpoint.schema);
+
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.schema);
       setAvailableFieldsOfSchema(Object.keys(fields));
-      setSelectedInputs(selectedEndpoint.inputs);
-      setSelectedQueries(selectedEndpoint.queries);
+
+      const inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
+      const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
+      setSelectedInputs(inputs);
+      setSelectedQueries(queries);
     }
   }, [getAvailableFieldsOfSchema, selectedEndpoint]);
+
+  useEffect(() => {
+    initializeData();
+  }, [initializeData]);
 
   const handleConfirmationDialogClose = () => {
     setConfirmationOpen(false);
@@ -152,7 +172,7 @@ const CustomQueries = ({
   const handleCancelClick = () => {
     setCreateMode(false);
     setEditMode(false);
-    setSelectedEndpoint(undefined);
+    initializeData();
   };
 
   const handleDeleteConfirmed = () => {
@@ -168,8 +188,8 @@ const CustomQueries = ({
     setSelectedOperation(event.target.value);
   };
 
-  const handleNameChange = (value) => {
-    setName(value);
+  const handleNameChange = (event) => {
+    setName(event.target.value);
   };
 
   const handleAddNewEndpoint = () => {
@@ -177,18 +197,6 @@ const CustomQueries = ({
     setEditMode(false);
     setCreateMode(true);
   };
-
-  const getAvailableFieldsOfSchema = useCallback(
-    (schemaSelected) => {
-      if (schemaSelected) {
-        const found = availableSchemas.find((schema) => schema._id === schemaSelected);
-        if (found) {
-          return found.fields;
-        }
-      }
-    },
-    [availableSchemas]
-  );
 
   const handleSchemaChange = (event) => {
     setSelectedSchema(event.target.value);
@@ -532,12 +540,16 @@ const CustomQueries = ({
                 onChange={handleNameChange}></TextField>
             </Grid>
             <Grid item xs={5} style={{ textAlign: 'end' }}>
-              <IconButton aria-label="delete" onClick={handleDeleteClick}>
-                <DeleteIcon />
-              </IconButton>
-              <IconButton aria-label="edit" onClick={handleEditClick}>
-                <EditIcon />
-              </IconButton>
+              {!editMode && (
+                <IconButton aria-label="delete" onClick={handleDeleteClick}>
+                  <DeleteIcon />
+                </IconButton>
+              )}
+              {!editMode && (
+                <IconButton aria-label="edit" onClick={handleEditClick}>
+                  <EditIcon />
+                </IconButton>
+              )}
             </Grid>
             {renderOperationSection()}
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
@@ -599,7 +611,7 @@ const CustomQueries = ({
       <ConfirmationDialog
         open={confirmationOpen}
         title={'Custom Endpoint Deletion'}
-        description={`You are about to delete custom endpoint with name: ${selectedEndpoint?.name}`}
+        description={`You are about to delete custom endpoint with name:${selectedEndpoint?.name}`}
         buttonText={'Procceed'}
         handleClose={handleConfirmationDialogClose}
         buttonAction={handleDeleteConfirmed}
