@@ -18,7 +18,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import DeleteIcon from '@material-ui/icons/Delete';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EditIcon from '@material-ui/icons/Edit';
-import React, { Fragment, useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState, useCallback } from 'react';
 import ConfirmationDialog from '../ConfirmationDialog';
 import OperationsEnum from '../../models/OperationsEnum';
 import ConditionsEnum from '../../models/ConditionsEnum';
@@ -92,7 +92,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, handleEdit, handleDelete }) => {
+const CustomQueries = ({
+  endpoints = [],
+  availableSchemas = [],
+  handleCreate,
+  handleEdit,
+  handleDelete,
+}) => {
   const classes = useStyles();
 
   const [selectedEndpoint, setSelectedEndpoint] = useState();
@@ -120,7 +126,7 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
       setSelectedInputs(selectedEndpoint.inputs);
       setSelectedQueries(selectedEndpoint.queries);
     }
-  }, [selectedEndpoint]);
+  }, [getAvailableFieldsOfSchema, selectedEndpoint]);
 
   const handleConfirmationDialogClose = () => {
     setConfirmationOpen(false);
@@ -172,14 +178,17 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
     setCreateMode(true);
   };
 
-  const getAvailableFieldsOfSchema = (schemaSelected) => {
-    if (schemaSelected) {
-      const found = availableSchemas.find((schema) => schema._id === schemaSelected);
-      if (found) {
-        return found.fields;
+  const getAvailableFieldsOfSchema = useCallback(
+    (schemaSelected) => {
+      if (schemaSelected) {
+        const found = availableSchemas.find((schema) => schema._id === schemaSelected);
+        if (found) {
+          return found.fields;
+        }
       }
-    }
-  };
+    },
+    [availableSchemas]
+  );
 
   const handleSchemaChange = (event) => {
     setSelectedSchema(event.target.value);
@@ -336,7 +345,9 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
               }}>
               <option aria-label="None" value="" />
               {availableSchemas.map((schema, index) => (
-                <option key={`schema-${schema.id ? schema.id : index}`} value={schema._id}>
+                <option
+                  key={`schema-${schema.id ? schema.id : index}`}
+                  value={schema._id}>
                   {schema.name}
                 </option>
               ))}
@@ -362,7 +373,11 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         <Grid item xs={4}>
           <FormControl className={classes.formControl}>
             <InputLabel>Type</InputLabel>
-            <Select disabled={!editMode} native value={input.type} onChange={(event) => handleInputTypeChange(event, index)}>
+            <Select
+              disabled={!editMode}
+              native
+              value={input.type}
+              onChange={(event) => handleInputTypeChange(event, index)}>
               <option aria-label="None" value="" />
               <option value={'String'}>String</option>
               <option value={'Number'}>Number</option>
@@ -423,12 +438,22 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
               <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
               <option value={ConditionsEnum.NEQUAL}>(!=) not equal to</option>
               <option value={ConditionsEnum.GREATER}>{'(>) greater than'}</option>
-              <option value={ConditionsEnum.GREATER_EQ}>{'(>=) greater that or equal to'}</option>
+              <option value={ConditionsEnum.GREATER_EQ}>
+                {'(>=) greater that or equal to'}
+              </option>
               <option value={ConditionsEnum.LESS}>{'(<) less than'}</option>
-              <option value={ConditionsEnum.LESS_EQ}>{'(<=) less that or equal to'}</option>
-              <option value={ConditionsEnum.EQUAL_SET}>(in) equal to any of the following</option>
-              <option value={ConditionsEnum.NEQUAL_SET}>(not-in) not equal to any of the following</option>
-              <option value={ConditionsEnum.CONTAIN}>(array-contains) an array containing</option>
+              <option value={ConditionsEnum.LESS_EQ}>
+                {'(<=) less that or equal to'}
+              </option>
+              <option value={ConditionsEnum.EQUAL_SET}>
+                (in) equal to any of the following
+              </option>
+              <option value={ConditionsEnum.NEQUAL_SET}>
+                (not-in) not equal to any of the following
+              </option>
+              <option value={ConditionsEnum.CONTAIN}>
+                (array-contains) an array containing
+              </option>
             </Select>
           </FormControl>
         </Grid>
@@ -475,7 +500,10 @@ const CustomQueries = ({ endpoints = [], availableSchemas = [], handleCreate, ha
         </Grid>
 
         <Grid item xs={4} md={2}>
-          <Button variant="contained" color="primary" onClick={editMode ? handleSaveClick : createMode ? handleCreateClick : ''}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={editMode ? handleSaveClick : createMode ? handleCreateClick : ''}>
             {editMode ? 'Save' : createMode ? 'Create' : ''}
           </Button>
         </Grid>
