@@ -1,22 +1,27 @@
 {
+  "env": {
+    "browser": true,
+    "es6": true
+  },
   "extends": [
     "eslint:recommended",
+    "react-app",
     "plugin:react/recommended",
-    "prettier",
     "plugin:prettier/recommended"
   ],
-  "plugins": [
-    "react",
-    "prettier"
-  ],
-  "rules": {
-    "react/prop-types": 0,
-    "prettier/prettier": "error"
-  },
-  "parser": "babel-eslint",
   "parserOptions": {
-    "ecmaFeatures": {
-      "jsx": true
-    }
+    "ecmaVersion": 2018,
+    "sourceType": "module"
+  },
+  "plugins": ["react-hooks"],
+  "rules": {
+    "no-console": "warn",
+    "no-eval": "error",
+    "import/first": "error",
+    "react/prop-types": 0,
+    "max-len": ["error", 90],
+    "no-case-declarations": 0,
+    "react-hooks/rules-of-hooks": "error", 
+    "react-hooks/exhaustive-deps": "warn" 
   }
 }
