@@ -219,7 +219,13 @@ export const deleteCustomEndpoints = (_id) => {
   };
 };
 
-export const createCustomEndpoints = (name, operation, selectedSchema, inputs, queries) => {
+export const createCustomEndpoints = (
+  name,
+  operation,
+  selectedSchema,
+  inputs,
+  queries
+) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
     const body = {

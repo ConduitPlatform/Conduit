@@ -19,7 +19,14 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
 import { setSelectedSchema } from '../../redux/actions';
-import { toggleSchema, deleteSelectedSchema, getSchemaDocuments, deleteCustomEndpoints } from '../../redux/thunks/cmsThunks';
+import {
+  toggleSchema,
+  deleteSelectedSchema,
+  getSchemaDocuments,
+  deleteCustomEndpoints,
+  createCustomEndpoints,
+  updateCustomEndpoints,
+} from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -42,20 +49,28 @@ const Types = () => {
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
-  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({ data: {}, action: '' });
+  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({
+    data: {},
+    action: '',
+  });
 
-  const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Custom' }, { title: 'Settings' }];
+  const tabs = [
+    { title: 'Schemas' },
+    { title: 'Data' },
+    { title: 'Custom' },
+    { title: 'Settings' },
+  ];
 
   useEffect(() => {
     dispatch(getCmsSchemas());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (data.schemas.length > 0) {
       const name = data.schemas[0].name;
       dispatch(getSchemaDocuments(name));
     }
-  }, [data.schemas]);
+  }, [data.schemas, dispatch]);
 
   const handleSelectSchema = (name) => {
     dispatch(getSchemaDocuments(name));
@@ -136,7 +151,10 @@ const Types = () => {
     switch (action.type) {
       case 'edit':
         dispatch(setSelectedSchema(data._id));
-        router.push({ pathname: '/cms/build-types', query: { schemaId: data.id ? data.id : null } }, '/cms/build-types');
+        router.push(
+          { pathname: '/cms/build-types', query: { schemaId: data.id ? data.id : null } },
+          '/cms/build-types'
+        );
         break;
       case 'disable':
         setSelectedSchemaForAction({ data, action: 'disable' });
@@ -150,14 +168,20 @@ const Types = () => {
         setSelectedSchemaForAction({ data, action: 'delete' });
         setOpenDisable(true);
         break;
+      default:
+        break;
     }
   };
 
   const handleCreateCustomEndpoint = (data) => {
-    console.log(data);
+    if (data) {
+      dispatch(createCustomEndpoints(...data));
+    }
   };
   const handleEditCustomEndpoint = (_id, data) => {
+    console.log(_id);
     console.log(data);
+    dispatch(updateCustomEndpoints(data));
   };
   const handleDeleteCustomEndpoint = (endpointId) => {
     console.log(endpointId);
@@ -169,10 +193,18 @@ const Types = () => {
   return (
     <Layout itemSelected={4}>
       <Box p={2}>
-        <Box display={'flex'} justifyContent={'space-between'} alignItems={'center'} mb={2}>
+        <Box
+          display={'flex'}
+          justifyContent={'space-between'}
+          alignItems={'center'}
+          mb={2}>
           <Typography variant={'h5'}>Content Management</Typography>
           {selected === 0 && (
-            <Button variant="contained" color="primary" style={{ textTransform: 'capitalize' }} onClick={() => handleAdd()}>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ textTransform: 'capitalize' }}
+              onClick={() => handleAdd()}>
               Create new
             </Button>
           )}
@@ -191,7 +223,11 @@ const Types = () => {
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
           {data && data.schemas && data.schemas.length > 0 && (
-            <SchemaData schemas={getActiveSchemas()} schemaDocuments={data.documents} handleSchemaChange={handleSelectSchema} />
+            <SchemaData
+              schemas={getActiveSchemas()}
+              schemaDocuments={data.documents}
+              handleSchemaChange={handleSelectSchema}
+            />
           )}
         </Box>
       </Box>
