@@ -305,7 +305,7 @@ const CustomQueries = ({
     const query = currentQueries[index];
     if (query) {
       query.comparisonField.type = type;
-      query.comparisonField.value = actualValue;
+      query.comparisonField.value = actualValue ? actualValue : '';
       setSelectedQueries(currentQueries);
     }
   };
@@ -506,11 +506,15 @@ const CustomQueries = ({
               fullWidth
               disabled={!editMode}
               native
-              value={query.comparisonField.type + '-' + query.comparisonField.value}
+              value={
+                query.comparisonField.type === 'Custom'
+                  ? query.comparisonField.type
+                  : query.comparisonField.type + '-' + query.comparisonField.value
+              }
               onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
               <option aria-label="None" value="" />
               <optgroup label="Custom Value">
-                <option value={'Custom-'}>Add a custom value</option>
+                <option value={'Custom'}>Add a custom value</option>
               </optgroup>
               <optgroup label="Schema Fields">
                 {availableFieldsOfSchema.map((field, index) => (
@@ -532,6 +536,8 @@ const CustomQueries = ({
         {query.comparisonField.type === 'Custom' && (
           <Grid item xs={2}>
             <TextField
+              label={'Custom Value'}
+              variant={'outlined'}
               disabled={!editMode}
               fullWidth
               placeholder={'Value'}
