@@ -302,10 +302,20 @@ const CustomQueries = ({
     const actualValue = value.split('-')[1];
 
     const currentQueries = selectedQueries.slice();
-    const input = currentQueries[index];
-    if (input) {
-      input.comparisonField.type = type;
-      input.comparisonField.value = actualValue;
+    const query = currentQueries[index];
+    if (query) {
+      query.comparisonField.type = type;
+      query.comparisonField.value = actualValue;
+      setSelectedQueries(currentQueries);
+    }
+  };
+
+  const handleCustomValueChange = (event, index) => {
+    const value = event.target.value;
+    const currentQueries = selectedQueries.slice();
+    const query = currentQueries[index];
+    if (query) {
+      query.comparisonField.value = value;
       setSelectedQueries(currentQueries);
     }
   };
@@ -445,6 +455,7 @@ const CustomQueries = ({
         <Grid item xs={3}>
           <FormControl className={classes.formControl}>
             <Select
+              fullWidth
               disabled={!editMode}
               native
               value={query.schemaField}
@@ -458,11 +469,12 @@ const CustomQueries = ({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <FormControl className={classes.formControl}>
             <Select
               disabled={!editMode}
               native
+              fullWidth
               value={query.operation}
               onChange={(event) => handleQueryConditionChange(event, index)}>
               <option aria-label="None" value="" />
@@ -488,15 +500,18 @@ const CustomQueries = ({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <FormControl className={classes.formControl}>
             <Select
+              fullWidth
               disabled={!editMode}
               native
               value={query.comparisonField.type + '-' + query.comparisonField.value}
               onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
               <option aria-label="None" value="" />
-              <optgroup label="Custom Value"></optgroup>
+              <optgroup label="Custom Value">
+                <option value={'Custom-'}>Add a custom value</option>
+              </optgroup>
               <optgroup label="Schema Fields">
                 {availableFieldsOfSchema.map((field, index) => (
                   <option key={`idx-${index}-field`} value={'Schema-' + field}>
@@ -514,6 +529,17 @@ const CustomQueries = ({
             </Select>
           </FormControl>
         </Grid>
+        {query.comparisonField.type === 'Custom' && (
+          <Grid item xs={2}>
+            <TextField
+              disabled={!editMode}
+              fullWidth
+              placeholder={'Value'}
+              value={query.comparisonField.value}
+              onChange={(event) => handleCustomValueChange(event, index)}
+            />
+          </Grid>
+        )}
       </Fragment>
     ));
   };
