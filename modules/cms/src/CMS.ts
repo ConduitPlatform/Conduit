@@ -5,7 +5,7 @@ import path from "path";
 import {CmsRoutes} from './routes/Routes';
 import {SchemaController} from "./controllers/cms/schema.controller";
 import process from "process";
-import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
+import { CustomEndpointController } from './controllers/CustomEndpoints/customEndpoint.controller';
 
 let protoLoader = require('@grpc/proto-loader');
 

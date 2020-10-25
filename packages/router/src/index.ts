@@ -90,6 +90,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         this._internalRouter.registerConduitRoute(route);
     }
 
+    //@ts-ignore
     registerRouteMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>): void {
         this._internalRouter.registerRouteMiddleware(path, middleware);
     }

@@ -5,7 +5,7 @@ import {SchemaController} from "../controllers/cms/schema.controller";
 import {SchemaAdmin} from "./schema.admin";
 import {DocumentsAdmin} from "./documents.admin";
 import {CustomEndpointsAdmin} from "./customEndpoints/customEndpoints.admin";
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
+import { CustomEndpointController } from '../controllers/CustomEndpoints/customEndpoint.controller';
 
 const protoLoader = require('@grpc/proto-loader');
 

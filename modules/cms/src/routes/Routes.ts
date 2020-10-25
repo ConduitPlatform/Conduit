@@ -2,7 +2,7 @@ import { CmsHandlers } from "../handlers/cms.handler";
 import grpc from "grpc";
 import fs from "fs";
 import path from "path";
-import { CustomEndpointHandler } from "../handlers/customEndpoint.handler";
+import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 
 var protoLoader = require("@grpc/proto-loader");

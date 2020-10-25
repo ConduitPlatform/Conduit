@@ -4,7 +4,7 @@ import { inputValidation, queryValidation } from "./utils";
 import grpc from "grpc";
 import { isNil } from "lodash";
 import schema from "../../models/customEndpoint.schema";
-import { CustomEndpointController } from "../../controllers/customEndpoints/customEndpoint.controller";
+import { CustomEndpointController } from "../../controllers/CustomEndpoints/customEndpoint.controller";
 
 export class CustomEndpointsAdmin {
   private database: any;

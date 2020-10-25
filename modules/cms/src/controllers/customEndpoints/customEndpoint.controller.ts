@@ -1,4 +1,5 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
+import { CustomEndpointHandler } from "../../handlers/CustomEndpoints/customEndpoint.handler";
 import { CustomEndpoint } from "../../models/CustomEndpoint";
 import { CmsRoutes } from "../../routes/Routes";
 import { createCustomEndpointRoute } from "./utils";
@@ -21,7 +22,9 @@ export class CustomEndpointController {
         let routes: any[] = [];
         r.forEach((schema: CustomEndpoint) => {
           routes.push(createCustomEndpointRoute(schema));
+          CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
+        
         this.router.addRoutes(routes);
       })
       .catch((err: Error) => {
