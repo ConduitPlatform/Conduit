@@ -1,7 +1,7 @@
 import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
 
 
-const schema = new ConduitSchema('CustomEndpoint', {
+const schema = new ConduitSchema('CustomEndpoints', {
         _id: TYPE.ObjectId,
         name: {
             type: TYPE.String,

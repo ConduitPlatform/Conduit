@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 8080",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 8080",
     "snyk-protect": "snyk protect",
     "prepare": "yarn run snyk-protect"
   },

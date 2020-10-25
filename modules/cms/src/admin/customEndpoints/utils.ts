@@ -22,7 +22,7 @@ export function queryValidation(findSchema: any, inputs: any, schemaField: strin
         return "comparisonField cannot be empty and should contain type and value";
     }
 
-    if (!Object.keys(findSchema).includes(schemaField)) {
+    if (!Object.keys(findSchema.fields).includes(schemaField)) {
         return "schemaField is not present in selected schema!";
     }
 
@@ -53,7 +53,7 @@ export function queryValidation(findSchema: any, inputs: any, schemaField: strin
  * location: String (Body, queryParams, url)
  * }
  */
-export function inputValidation(name: string, type: any, location: string): boolean | string {
+export function inputValidation(name: string, type: any, location: number): boolean | string {
     if (isNil(name) || isNil(type) || isNil(location)) {
         return "Name, type and location must be present in the input"
     }
@@ -63,15 +63,12 @@ export function inputValidation(name: string, type: any, location: string): bool
     if (type.length === 0) {
         return "Type cannot be empty";
     }
-    if (location.length === 0) {
-        return "Location cannot be empty";
-    }
-
+    
     if (!Object.values(TYPE).includes(type)) {
         return "Type is not valid!";
     }
 
-    if (!['Body', 'QueryParams', 'URL'].includes(location)) {
+    if (location < 0 || location  >2) {
         return "Location is not valid!";
     }
     return true;

@@ -3,6 +3,7 @@ import {SchemaController} from "../../controllers/schema.controller";
 import {inputValidation, queryValidation} from "./utils";
 import grpc from "grpc";
 import {isNil} from "lodash";
+import schema from "../../models/customEndpoint";
 
 export class CustomEndpointsAdmin {
 
@@ -10,6 +11,13 @@ export class CustomEndpointsAdmin {
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController) {
         this.database = this.grpcSdk.databaseProvider;
+        this.database.createSchemaFromAdapter(schema)
+        .then((r:any)=>{
+            console.log("Registered custom endpoints schema")
+        })
+        .catch((err:any)=>{
+            console.log(err);
+        });
     }
 
     async getCustomEndpoints(call: any, callback: any) {
@@ -125,20 +133,19 @@ export class CustomEndpointsAdmin {
         if (isNil(schema)) {
             return callback({
                 code: grpc.status.NOT_FOUND,
-                message: 'Requested schema not found',
+                message: 'Requested Custom Endpoint not found',
             });
         }
 
         await this.database.deleteOne('CustomEndpoints', {_id: id}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        return callback(null, {result: 'Selected Schema is Deleted'});
+        return callback(null, {result: 'Custom Endpoint deleted'});
     }
 
     async createCustomEndpoints(call: any, callback: any) {
         const {name, operation, selectedSchema, inputs, queries} = JSON.parse(call.request.params);
 
-        if (isNil(name) || isNil(operation) || isNil(selectedSchema) ||
-            isNil(inputs) || isNil(queries)) {
+        if (isNil(name) || isNil(operation) || isNil(selectedSchema) || isNil(queries)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
                 message: 'Required fields are missing'
@@ -176,7 +183,7 @@ export class CustomEndpointsAdmin {
             });
         }
 
-        if (!Array.isArray(inputs)) {
+        if (!isNil(inputs) && !Array.isArray(inputs)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
                 message: 'Inputs must be an array, even if empty!'
@@ -188,19 +195,21 @@ export class CustomEndpointsAdmin {
                 message: 'The queries field must be an array, and not empty!'
             });
         }
-
-        errorMessage = null;
-        inputs.forEach(r => {
-            let error = inputValidation(r.name, r.type, r.location);
-            if (error !== true) {
-                return errorMessage = error as string;
+        
+        if(!isNil(inputs) && inputs.length > 0){
+            errorMessage = null;
+            inputs.forEach(r => {
+                let error = inputValidation(r.name, r.type, r.location);
+                if (error !== true) {
+                    return errorMessage = error as string;
+                }
+            })
+            if (!isNil(errorMessage)) {
+                return callback({
+                    code: grpc.status.INVALID_ARGUMENT,
+                    message: errorMessage
+                });
             }
-        })
-        if (!isNil(errorMessage)) {
-            return callback({
-                code: grpc.status.INVALID_ARGUMENT,
-                message: errorMessage
-            });
         }
 
         errorMessage = null;
