@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {ConduitSchema, TYPE} from "@quintessential-sft/conduit-g
 import {isNil} from "lodash";
 import grpc from "grpc";
 import {validateSchemaInput} from "../utils/utilities";
-import {SchemaController} from "../controllers/schema.controller";
+import {SchemaController} from "../controllers/cms/schema.controller";
 
 export class SchemaAdmin {
 

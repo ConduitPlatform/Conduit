@@ -1,7 +1,7 @@
 import {isNil} from "lodash";
 import grpc from "grpc";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import {SchemaController} from "../controllers/schema.controller";
+import {SchemaController} from "../controllers/cms/schema.controller";
 
 export class DocumentsAdmin {
 

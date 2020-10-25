@@ -1,17 +1,18 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import grpc from "grpc";
-import {SchemaController} from "../controllers/schema.controller";
+import {SchemaController} from "../controllers/cms/schema.controller";
 import {SchemaAdmin} from "./schema.admin";
 import {DocumentsAdmin} from "./documents.admin";
 import {CustomEndpointsAdmin} from "./customEndpoints/customEndpoints.admin";
+import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 
 const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
     private database: any;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController) {
+    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController, private readonly customEndpointController: CustomEndpointController) {
 
         this.database = this.grpcSdk.databaseProvider;
         let packageDefinition = protoLoader.loadSync(
@@ -29,7 +30,7 @@ export class AdminHandlers {
         let admin = protoDescriptor.cms.admin.Admin;
         let schemaAdmin = new SchemaAdmin(this.grpcSdk, this.schemaController);
         let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
-        let customEndpointsAdmin = new CustomEndpointsAdmin(this.grpcSdk, this.schemaController);
+        let customEndpointsAdmin = new CustomEndpointsAdmin(this.grpcSdk, this.customEndpointController);
         server.addService(admin.service, {
             getAllSchemas: schemaAdmin.getAllSchemas.bind(schemaAdmin),
             getById: schemaAdmin.getById.bind(schemaAdmin),
