@@ -5,7 +5,7 @@ import {
   constructRoute,
   TYPE,
 } from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpoint } from "../../models/CustomEndpoint";
+import { CustomEndpoint } from "../../models/customEndpoint";
 
 function getOperation(op: number) {
   switch (op) {

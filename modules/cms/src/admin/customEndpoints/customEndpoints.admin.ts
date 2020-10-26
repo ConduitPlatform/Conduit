@@ -1,10 +1,9 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { SchemaController } from "../../controllers/cms/schema.controller";
 import { inputValidation, queryValidation } from "./utils";
 import grpc from "grpc";
 import { isNil } from "lodash";
 import schema from "../../models/customEndpoint.schema";
-import { CustomEndpointController } from "../../controllers/CustomEndpoints/customEndpoint.controller";
+import { CustomEndpointController } from "../../controllers/customEndpoints/customEndpoint.controller";
 
 export class CustomEndpointsAdmin {
   private database: any;

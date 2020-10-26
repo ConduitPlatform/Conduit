@@ -1,7 +1,7 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpoint } from "../../models/CustomEndpoint";
 import { constructQuery, getOpName } from "./utils";
 import grpc from "grpc";
+import { CustomEndpoint } from "../../models/customEndpoint";
 
 export class CustomEndpointHandler {
   private static routeControllers: { [name: string]: any } = {};

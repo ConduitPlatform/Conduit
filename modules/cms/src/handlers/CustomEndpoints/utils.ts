@@ -1,5 +1,5 @@
 import { ConduitRouteActions } from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpoint } from "../../models/CustomEndpoint";
+import { CustomEndpoint } from "../../models/customEndpoint";
 
 export function getOpName(name: string, op: number) {
   let operation;
