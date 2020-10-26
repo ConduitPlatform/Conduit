@@ -1,10 +1,11 @@
-import schema from './models/schema';
+import schema from './models/schemaDefinitions.schema';
 import {AdminHandlers} from './admin/admin';
 import ConduitGrpcSdk, {ConduitSchema, grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import {CmsRoutes} from './routes/Routes';
-import {SchemaController} from "./controllers/schema.controller";
+import {SchemaController} from "./controllers/cms/schema.controller";
 import process from "process";
+import { CustomEndpointController } from './controllers/CustomEndpoints/customEndpoint.controller';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -16,6 +17,7 @@ export class CMS {
     private _url: string;
     private readonly grpcServer: any;
     private schemaController: SchemaController | undefined;
+    private customEndpointController: CustomEndpointController | undefined;
     private _routes: any[] | null = null;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -48,7 +50,8 @@ export class CMS {
                 self._adapter = self.grpcSdk.databaseProvider!;
                 let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk, url);
                 self.schemaController = new SchemaController(self.grpcSdk, consumerRoutes);
-                self._admin = new AdminHandlers(self.grpcServer, self.grpcSdk, self.schemaController!);
+                self.customEndpointController = new CustomEndpointController(self.grpcSdk, consumerRoutes);
+                self._admin = new AdminHandlers(self.grpcServer, self.grpcSdk, self.schemaController!, self.customEndpointController!);
                 console.log("bound on:", self._url);
                 self.grpcServer.start();
             }).catch(console.log);

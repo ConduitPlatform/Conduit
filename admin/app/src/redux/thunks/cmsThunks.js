@@ -17,6 +17,10 @@ import {
   createSchemaDocumentRequest,
   deleteSchemaDocumentRequest,
   editSchemaDocumentRequest,
+  createCustomEndpointsRequest,
+  deleteCustomEndpointsRequest,
+  editCustomEndpointsRequest,
+  getCustomEndpointsRequest,
 } from '../../http/requests';
 
 export const getCmsSchemas = () => {
@@ -172,6 +176,65 @@ export const editSchemaDocument = (schemaName, documentId, documentData) => {
       .catch((err) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const getCustomEndpoints = () => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    getCustomEndpointsRequest()
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+};
+
+export const updateCustomEndpoints = (_id, endpointData) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    editCustomEndpointsRequest(_id, endpointData)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+};
+
+export const deleteCustomEndpoints = (_id) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    deleteCustomEndpointsRequest(_id)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+};
+
+export const createCustomEndpoints = (endPointData) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    const body = {
+      name: endPointData.name,
+      operation: endPointData.operation,
+      selectedSchema: endPointData.selectedSchema,
+      inputs: endPointData.inputs,
+      queries: endPointData.queries,
+    };
+    createCustomEndpointsRequest(body)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
       });
   };
 };

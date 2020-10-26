@@ -3,7 +3,7 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
-const CONDUIT_API = 'http://23.97.149.151:3000';
+const CONDUIT_API = 'http://localhost:3000';
 const config = {
   masterkey: 'M4ST3RK3Y',
 };
@@ -62,22 +62,29 @@ export const getAuthUsersDataReq = (skip, limit) =>
     },
   });
 
-export const getAuthenticationConfig = () => axios.get(`${CONDUIT_API}/admin/config/authentication`);
+export const getAuthenticationConfig = () =>
+  axios.get(`${CONDUIT_API}/admin/config/authentication`);
 
-export const putAuthenticationConfig = (body) => axios.put(`${CONDUIT_API}/admin/config/authentication`, body);
+export const putAuthenticationConfig = (body) =>
+  axios.put(`${CONDUIT_API}/admin/config/authentication`, body);
 
 //REQUEST FOR EMAILS
-export const getEmailTemplateRequest = () => axios.get(`${CONDUIT_API}/admin/email/templates`);
+export const getEmailTemplateRequest = () =>
+  axios.get(`${CONDUIT_API}/admin/email/templates`);
 
-export const postEmailTemplateRequest = (data) => axios.post(`${CONDUIT_API}/admin/email/templates`, { ...data });
+export const postEmailTemplateRequest = (data) =>
+  axios.post(`${CONDUIT_API}/admin/email/templates`, { ...data });
 
 export const putEmailTemplateRequest = (templateId, data) =>
   axios.put(`${CONDUIT_API}/admin/email/templates/${templateId}`, { ...data });
 
-export const getEmailSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/email`);
-export const putEmailSettingsRequest = (data) => axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
+export const getEmailSettingsRequest = () =>
+  axios.get(`${CONDUIT_API}/admin/config/email`);
+export const putEmailSettingsRequest = (data) =>
+  axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
 
-export const sendEmailRequest = (data) => axios.post(`${CONDUIT_API}/admin/email/send`, { ...data });
+export const sendEmailRequest = (data) =>
+  axios.post(`${CONDUIT_API}/admin/email/send`, { ...data });
 
 export const loginRequest = (username, password) =>
   axios.post(
@@ -94,7 +101,8 @@ export const sendNotification = (data) =>
   axios.post(`${CONDUIT_API}/notifications/send`, {
     ...data,
   });
-export const getNotificationConfig = () => axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
+export const getNotificationConfig = () =>
+  axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
 export const putNotificationConfig = (projectId, productKey, clientEmail) =>
   axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
     projectId,
@@ -103,13 +111,20 @@ export const putNotificationConfig = (projectId, productKey, clientEmail) =>
   });
 
 //CMS requests
-export const getCmsSchemasRequest = (skip, limit) => axios.get(`${CONDUIT_API}/admin/cms/schemas`, { params: { skip, limit } });
-export const getCmsSchemaByIdRequest = (_id) => axios.get(`${CONDUIT_API}/admin/cms/schemas${_id}`);
-export const postCmsSchemaRequest = (data) => axios.post(`${CONDUIT_API}/admin/cms/schemas`, { ...data });
-export const putCmsSchemaRequest = (_id, data) => axios.put(`${CONDUIT_API}/admin/cms/schemas/${_id}`, { ...data });
-export const deleteCmsSchemaRequest = (_id) => axios.delete(`${CONDUIT_API}/admin/cms/schemas/${_id}`);
-export const toggleSchemaByIdRequest = (_id) => axios.put(`${CONDUIT_API}/admin/cms/schemas/toggle/${_id}`);
-export const getCmsDocumentsByNameRequest = (name) => axios.get(`${CONDUIT_API}/admin/cms/content/${name}`);
+export const getCmsSchemasRequest = (skip, limit) =>
+  axios.get(`${CONDUIT_API}/admin/cms/schemas`, { params: { skip, limit } });
+export const getCmsSchemaByIdRequest = (_id) =>
+  axios.get(`${CONDUIT_API}/admin/cms/schemas${_id}`);
+export const postCmsSchemaRequest = (data) =>
+  axios.post(`${CONDUIT_API}/admin/cms/schemas`, { ...data });
+export const putCmsSchemaRequest = (_id, data) =>
+  axios.put(`${CONDUIT_API}/admin/cms/schemas/${_id}`, { ...data });
+export const deleteCmsSchemaRequest = (_id) =>
+  axios.delete(`${CONDUIT_API}/admin/cms/schemas/${_id}`);
+export const toggleSchemaByIdRequest = (_id) =>
+  axios.put(`${CONDUIT_API}/admin/cms/schemas/toggle/${_id}`);
+export const getCmsDocumentsByNameRequest = (name) =>
+  axios.get(`${CONDUIT_API}/admin/cms/content/${name}`);
 
 /** Cloud storage requests **/
 export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
@@ -125,4 +140,19 @@ export const deleteSchemaDocumentRequest = (schemaName, documentId) =>
   axios.delete(`${CONDUIT_API}/admin/cms/schemas/${schemaName}/${documentId}`);
 
 export const editSchemaDocumentRequest = (schemaName, documentId, documentData) =>
-  axios.put(`${CONDUIT_API}/admin/cms/schemas/${schemaName}/${documentId}`, { ...documentData });
+  axios.put(`${CONDUIT_API}/admin/cms/schemas/${schemaName}/${documentId}`, {
+    ...documentData,
+  });
+
+export const getCustomEndpointsRequest = () => {
+  return axios.get(`${CONDUIT_API}/admin/cms/customEndpoints`);
+};
+export const editCustomEndpointsRequest = (_id, endpointData) => {
+  return axios.put(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`, { endpointData });
+};
+export const deleteCustomEndpointsRequest = (_id) => {
+  return axios.delete(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`);
+};
+export const createCustomEndpointsRequest = (endpointData) => {
+  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, { endpointData });
+};

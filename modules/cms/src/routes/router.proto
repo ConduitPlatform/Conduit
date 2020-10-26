@@ -2,11 +2,16 @@ syntax = "proto3";
 package cms.router;
 
 service Router {
+
+  // Common CMS routes
   rpc GetDocuments(RouterRequest) returns (RouterResponse);
   rpc GetDocumentById(RouterRequest) returns (RouterResponse);
   rpc CreateDocument(RouterRequest) returns (RouterResponse);
   rpc EditDocument(RouterRequest) returns (RouterResponse);
   rpc DeleteDocument(RouterRequest) returns (RouterResponse);
+
+  //Custom Endpoints route
+  rpc CustomOperation(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

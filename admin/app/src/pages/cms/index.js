@@ -19,7 +19,14 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
 import { setSelectedSchema } from '../../redux/actions';
-import { toggleSchema, deleteSelectedSchema, getSchemaDocuments } from '../../redux/thunks/cmsThunks';
+import {
+  toggleSchema,
+  deleteSelectedSchema,
+  getSchemaDocuments,
+  deleteCustomEndpoints,
+  createCustomEndpoints,
+  updateCustomEndpoints,
+} from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -32,30 +39,38 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Types = () => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const classes = useStyles();
+
   const { data, loading, error } = useSelector((state) => state.cmsReducer);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
-  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({ data: {}, action: '' });
+  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({
+    data: {},
+    action: '',
+  });
 
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const classes = useStyles();
-
-  const tabs = [{ title: 'Schemas' }, { title: 'Data' }, { title: 'Custom' }, { title: 'Settings' }];
+  const tabs = [
+    { title: 'Schemas' },
+    { title: 'Data' },
+    { title: 'Custom' },
+    { title: 'Settings' },
+  ];
 
   useEffect(() => {
     dispatch(getCmsSchemas());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (data.schemas.length > 0) {
       const name = data.schemas[0].name;
       dispatch(getSchemaDocuments(name));
     }
-  }, [data.schemas]);
+  }, [data.schemas, dispatch]);
 
   const handleSelectSchema = (name) => {
     dispatch(getSchemaDocuments(name));
@@ -116,18 +131,6 @@ const Types = () => {
     return data.schemas.filter((s) => s.enabled);
   };
 
-  const getEndpoints = () => {
-    return [
-      { name: 'Endpoint 1', id: 1 },
-      { name: 'Endpoint 2', id: 2 },
-      { name: 'Endpoint 3', id: 3 },
-      { name: 'Endpoint 4', id: 4 },
-      { name: 'Endpoint 5', id: 5 },
-      { name: 'Endpoint 6', id: 6 },
-      { name: 'Endpoint 7', id: 7 },
-    ];
-  };
-
   const getDisabledSchemas = () => {
     if (!data || !data.schemas) {
       return [];
@@ -148,7 +151,10 @@ const Types = () => {
     switch (action.type) {
       case 'edit':
         dispatch(setSelectedSchema(data._id));
-        router.push({ pathname: '/cms/build-types', query: { schemaId: data.id ? data.id : null } }, '/cms/build-types');
+        router.push(
+          { pathname: '/cms/build-types', query: { schemaId: data.id ? data.id : null } },
+          '/cms/build-types'
+        );
         break;
       case 'disable':
         setSelectedSchemaForAction({ data, action: 'disable' });
@@ -162,16 +168,43 @@ const Types = () => {
         setSelectedSchemaForAction({ data, action: 'delete' });
         setOpenDisable(true);
         break;
+      default:
+        break;
+    }
+  };
+
+  const handleCreateCustomEndpoint = (data) => {
+    if (data) {
+      dispatch(createCustomEndpoints(data));
+    }
+  };
+  const handleEditCustomEndpoint = (_id, data) => {
+    console.log(_id);
+    console.log(data);
+    dispatch(updateCustomEndpoints(data));
+  };
+  const handleDeleteCustomEndpoint = (endpointId) => {
+    console.log(endpointId);
+    if (endpointId) {
+      dispatch(deleteCustomEndpoints(endpointId));
     }
   };
 
   return (
     <Layout itemSelected={4}>
       <Box p={2}>
-        <Box display={'flex'} justifyContent={'space-between'} alignItems={'center'} mb={2}>
+        <Box
+          display={'flex'}
+          justifyContent={'space-between'}
+          alignItems={'center'}
+          mb={2}>
           <Typography variant={'h5'}>Content Management</Typography>
           {selected === 0 && (
-            <Button variant="contained" color="primary" style={{ textTransform: 'capitalize' }} onClick={() => handleAdd()}>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ textTransform: 'capitalize' }}
+              onClick={() => handleAdd()}>
               Create new
             </Button>
           )}
@@ -190,12 +223,22 @@ const Types = () => {
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
           {data && data.schemas && data.schemas.length > 0 && (
-            <SchemaData schemas={getActiveSchemas()} schemaDocuments={data.documents} handleSchemaChange={handleSelectSchema} />
+            <SchemaData
+              schemas={getActiveSchemas()}
+              schemaDocuments={data.documents}
+              handleSchemaChange={handleSelectSchema}
+            />
           )}
         </Box>
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-        <CustomQueries endpoints={getEndpoints()} availableSchemas={data.schemas} />
+        <CustomQueries
+          endpoints={data.customEndpoints}
+          availableSchemas={data.schemas}
+          handleCreate={handleCreateCustomEndpoint}
+          handleEdit={handleEditCustomEndpoint}
+          handleDelete={handleDeleteCustomEndpoint}
+        />
       </Box>
       <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
         {/*TODO SETTINGS*/}
