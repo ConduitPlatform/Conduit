@@ -43,7 +43,7 @@ export class ConduitRoutingController {
         this._middlewareRouter.use(middleware);
     }
 
-    registerRouteMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>) {
+    registerRouteMiddleware(path: string, middleware: ConduitRoute) {
         this._restRouter.registerMiddleware(path, middleware);
         this._graphQLRouter?.registerMiddleware(path, middleware);
     }

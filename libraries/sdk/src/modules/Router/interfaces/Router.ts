@@ -6,7 +6,7 @@ export interface IConduitRouter {
 
     registerGlobalMiddleware(name: string, middleware: any): void
 
-    registerRouteMiddleware(path: string, middleware: (request: ConduitRouteParameters) => Promise<any>): void
+    registerRouteMiddleware(path: string, middleware: ConduitRoute): void
 
     getGlobalMiddlewares(): string[]
 

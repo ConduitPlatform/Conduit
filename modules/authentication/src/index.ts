@@ -9,7 +9,7 @@ if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
     let authentication = new AuthenticationModule(grpcSdk);
     let url = authentication.url;
-    if(process.env.REGISTER_NAME){
+    if(process.env.REGISTER_NAME === 'true'){
         url = 'authentication:'+url.split(':')[1];
     }
     grpcSdk.config.registerModule('authentication', url).catch(err => {

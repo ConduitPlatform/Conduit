@@ -91,7 +91,7 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
   };
 
   const handleValueChange = (index, indexInner, event) => {
-    const newValue = event.target ? event.target.value : event;
+    // const newValue = event.target ? event.target.value : event;
     const activeIndex = indexInner !== null ? indexInner : index;
     let currentDocuments;
     let type;
@@ -104,7 +104,7 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
       type = currentDocuments[indexInner].type.toString().toLowerCase();
     }
     if (type === 'boolean') {
-      currentDocuments[activeIndex].value = Boolean(event.target.value);
+      currentDocuments[activeIndex].value = Boolean(event.target.checked);
     } else if (type === 'number') {
       currentDocuments[activeIndex].value = Number(event.target.value);
     } else if (type === 'date') {
@@ -117,7 +117,7 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
       docs[index].fields = currentDocuments;
       setDocument(docs);
     } else {
-      currentDocuments[activeIndex].value = newValue;
+      // currentDocuments[activeIndex].value = newValue;
       setDocument(currentDocuments);
     }
   };
@@ -207,7 +207,7 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
       return (
         <Switch
           color={'primary'}
-          value={doc.value}
+          checked={doc.value}
           onChange={(e) => {
             handleValueChange(index, innerIndex, e);
           }}

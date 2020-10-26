@@ -49,7 +49,6 @@ export class AdminHandlers {
             editCustomEndpoints: customEndpointsAdmin.editCustomEndpoints.bind(customEndpointsAdmin)
 
         });
-
     }
 
 

@@ -2,6 +2,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import fs from "fs";
 import * as path from 'path';
 import EmailModule from './Email';
+import process from "process";
 
 let paths = require("./admin/admin.json")
 
@@ -9,7 +10,7 @@ if (process.env.CONDUIT_SERVER) {
     let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
     let email = new EmailModule(grpcSdk);
     let url = email.url;
-    if(process.env.REGISTER_NAME){
+    if(process.env.REGISTER_NAME === 'true'){
         url = 'email-provider:'+url.split(':')[1];
     
     }
