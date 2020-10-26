@@ -16,27 +16,35 @@ export class CustomEndpointHandler {
     //use it to find the right controller
     let path = call.request.path.split("/")[2];
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
+    let params = JSON.parse(call.request.params).params;
+    let searchString = "";
 
-    this.grpcSdk
-      .databaseProvider!.findOne("SchemaDefinitions", { _id: endpoint.selectedSchema })
+    endpoint.queries.forEach(
+      (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
+        if (searchString.length !== 0) searchString += ",";
+        if (r.comparisonField.type === "Input") {
+          searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
+        } else {
+          searchString += constructQuery(r.schemaField, r.operation, r.comparisonField.value);
+        }
+      }
+    );
+
+    searchString = "{" + searchString + "}";
+    let promise;
+
+    if (endpoint.operation === 0) {
+      promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchema, JSON.parse(searchString));
+    } else if (endpoint.operation === 3) {
+      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchema, JSON.parse(searchString));
+    } else {
+      // todo for now
+      promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchema, JSON.parse(searchString));
+    }
+
+    promise
       .then((r) => {
-        let params = JSON.parse(call.request.params).params
-        let searchString = "";
-        endpoint.queries.forEach(
-          (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
-            if (searchString.length !== 0) searchString += ",";
-            if (r.comparisonField.type === "Input") {
-              searchString += constructQuery(r.schemaField, r.operation,JSON.stringify(params[r.comparisonField.value]));
-            } else {
-              searchString += constructQuery(r.schemaField, r.operation, r.comparisonField.value);
-            }
-          }
-        );
-        searchString = "{" + searchString + "}";
-        return this.grpcSdk.databaseProvider!.findMany(r.name, JSON.parse(searchString));
-      })
-      .then((r) => {
-        callback(null, { result: JSON.stringify({result:r}) });
+        callback(null, { result: JSON.stringify({ result: r }) });
       })
       .catch((err) => {
         callback({ code: grpc.status.INTERNAL, message: err.message });
