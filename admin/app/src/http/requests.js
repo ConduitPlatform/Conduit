@@ -154,5 +154,5 @@ export const deleteCustomEndpointsRequest = (_id) => {
   return axios.delete(`${CONDUIT_API}/admin/cms/customEndpoints/${_id}`);
 };
 export const createCustomEndpointsRequest = (endpointData) => {
-  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, { endpointData });
+  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, endpointData);
 };
