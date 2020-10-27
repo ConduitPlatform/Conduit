@@ -26,6 +26,7 @@ import {
   deleteCustomEndpoints,
   createCustomEndpoints,
   updateCustomEndpoints,
+  getCustomEndpoints,
 } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
@@ -63,6 +64,7 @@ const Types = () => {
 
   useEffect(() => {
     dispatch(getCmsSchemas());
+    dispatch(getCustomEndpoints());
   }, [dispatch]);
 
   useEffect(() => {
@@ -179,12 +181,9 @@ const Types = () => {
     }
   };
   const handleEditCustomEndpoint = (_id, data) => {
-    console.log(_id);
-    console.log(data);
-    dispatch(updateCustomEndpoints(data));
+    dispatch(updateCustomEndpoints(_id, data));
   };
   const handleDeleteCustomEndpoint = (endpointId) => {
-    console.log(endpointId);
     if (endpointId) {
       dispatch(deleteCustomEndpoints(endpointId));
     }
