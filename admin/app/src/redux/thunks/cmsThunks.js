@@ -202,8 +202,8 @@ export const updateCustomEndpoints = (_id, endpointData) => {
     dispatch(startCmsLoading());
     editCustomEndpointsRequest(_id, endpointData)
       .then((res) => {
-        console.log(res);
         dispatch(stopCmsLoading());
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
         console.log(err);
@@ -218,7 +218,7 @@ export const deleteCustomEndpoints = (_id) => {
     deleteCustomEndpointsRequest(_id)
       .then((res) => {
         dispatch(stopCmsLoading());
-        console.log(res);
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
         dispatch(stopCmsLoading());
@@ -239,8 +239,8 @@ export const createCustomEndpoints = (endPointData) => {
     };
     createCustomEndpointsRequest(body)
       .then((res) => {
-        console.log(res);
         dispatch(stopCmsLoading());
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
         dispatch(stopCmsLoading());
