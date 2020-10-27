@@ -13,7 +13,7 @@ const schema = new ConduitSchema('CustomEndpoints', {
             required: true
         },
         selectedSchema: {
-            type: TYPE.ObjectId,
+            type: TYPE.String,
             required: true
         },
         inputs: {
