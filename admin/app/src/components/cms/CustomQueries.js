@@ -371,7 +371,7 @@ const CustomQueries = ({
           {endpoints.map((endpoint) => (
             <ListItem
               button
-              key={`endpoint-${endpoint.id}`}
+              key={`endpoint-${endpoint._id}`}
               className={classes.listItem}
               onClick={() => handleListItemSelect(endpoint)}
               selected={selectedEndpoint?._id === endpoint?._id}>
