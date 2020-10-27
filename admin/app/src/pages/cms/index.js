@@ -55,6 +55,8 @@ const Types = () => {
     action: '',
   });
 
+  console.log(data.customEndpoints);
+
   const tabs = [
     { title: 'Schemas' },
     { title: 'Data' },
