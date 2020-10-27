@@ -119,8 +119,7 @@ const CustomQueries = ({
   const getAvailableFieldsOfSchema = useCallback(
     (schemaSelected) => {
       if (schemaSelected) {
-        //TODO change to _id not name
-        const found = availableSchemas.find((schema) => schema.name === schemaSelected);
+        const found = availableSchemas.find((schema) => schema._id === schemaSelected);
         if (found) {
           return found.fields;
         }
@@ -166,8 +165,7 @@ const CustomQueries = ({
   };
 
   const handleCreateClick = () => {
-    //TODO remove this selectedSchema will be _id
-    const schema = availableSchemas.find((schema) => schema.name === selectedSchema);
+    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
     const data = {
       name: name,
       operation: Number(selectedOperation),
@@ -182,8 +180,7 @@ const CustomQueries = ({
   };
 
   const handleSaveClick = () => {
-    //TODO remove this selectedSchema will be _id
-    const schema = availableSchemas.find((schema) => schema.name === selectedSchema);
+    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
     const data = {
       name: name,
       operaton: Number(selectedOperation),
@@ -338,7 +335,7 @@ const CustomQueries = ({
   const disableSubmit = () => {
     if (!name) return true;
     if (!selectedSchema) return true;
-    if (!selectedOperation) return true;
+    if (selectedOperation === -1) return true;
     if (!selectedQueries || selectedQueries.length === 0) return true;
     const invalidQueries = selectedQueries.some(
       (query) =>
@@ -425,8 +422,8 @@ const CustomQueries = ({
               <option aria-label="None" value="" />
               {availableSchemas.map((schema, index) => (
                 <option
-                  key={`schema-${schema.name ? schema.name : index}`}
-                  value={schema.name}>
+                  key={`schema-${schema._id ? schema._id : index}`}
+                  value={schema._id}>
                   {schema.name}
                 </option>
               ))}
