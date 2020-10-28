@@ -3,7 +3,7 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
-const CONDUIT_API = 'http://localhost:3000';
+const CONDUIT_API = 'http://23.97.149.151:3000';
 const config = {
   masterkey: 'M4ST3RK3Y',
 };
@@ -148,11 +148,11 @@ export const getCustomEndpointsRequest = () => {
   return axios.get(`${CONDUIT_API}/admin/cms/customEndpoints`);
 };
 export const editCustomEndpointsRequest = (_id, endpointData) => {
-  return axios.put(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`, { endpointData });
+  return axios.put(`${CONDUIT_API}/admin/cms/customEndpoints/${_id}`, endpointData);
 };
 export const deleteCustomEndpointsRequest = (_id) => {
-  return axios.delete(`${CONDUIT_API}/admin/cms/customEndpoints${_id}`);
+  return axios.delete(`${CONDUIT_API}/admin/cms/customEndpoints/${_id}`);
 };
 export const createCustomEndpointsRequest = (endpointData) => {
-  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, { endpointData });
+  return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, endpointData);
 };
