@@ -40,6 +40,7 @@ export default class AdminModule extends IConduitAdmin {
         this.conduit.getRouter().registerDirectRouter('/admin/login',
             (req: Request, res: Response, next: NextFunction) => adminHandlers.loginAdmin(req, res, next).catch(next));
         // todo fix the middlewares
+        // @ts-ignore
         this.conduit.getRouter().registerRouteMiddleware('/admin', this.adminMiddleware);
         this.router.use((req, res, next) => this.authMiddleware(req, res, next));
         this.conduit.getRouter().registerExpressRouter('/admin', this.router);

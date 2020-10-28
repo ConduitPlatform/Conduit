@@ -41,6 +41,7 @@ export interface ConduitRouteOptions {
     path: string;
     name?: string;
     description?: string;
+    middlewares?: string[];
 }
 
 /**
@@ -108,13 +109,11 @@ export class ConduitRoute {
     private _returnType: ConduitRouteReturnDefinition;
     private _input: ConduitRouteOptions;
     private _handler: (request: ConduitRouteParameters) => Promise<any>;
-    private _isMiddleware: boolean = false;
 
-    constructor(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: (request: ConduitRouteParameters) => Promise<any>, isMiddleware?: boolean) {
+    constructor(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: (request: ConduitRouteParameters) => Promise<any>) {
         this._input = input;
         this._returnType = type;
         this._handler = handler;
-        this._isMiddleware = !!isMiddleware;
     }
 
     get returnTypeName(): string {
@@ -123,10 +122,6 @@ export class ConduitRoute {
 
     get input(): ConduitRouteOptions {
         return this._input;
-    }
-
-    get isMiddleware(): boolean {
-        return this._isMiddleware;
     }
 
     get returnTypeFields(): ConduitModel | string {
