@@ -4,6 +4,7 @@ export interface CustomEndpoint {
   enabled?: boolean;
   operation: number;
   selectedSchema: string;
+  selectedSchemaName: string;
   inputs: { name: string; type: string; location: number }[];
   queries: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }[];
   returns: any;

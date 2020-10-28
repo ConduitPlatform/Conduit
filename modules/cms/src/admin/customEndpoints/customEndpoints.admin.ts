@@ -110,8 +110,8 @@ export class CustomEndpointsAdmin {
       found[key] = value;
     });
     found.returns = findSchema.fields;
-    found.selectedSchema = findSchema.name;
-    
+    found.selectedSchemaName = findSchema.name;
+
     const updatedSchema = await this.database
       .findByIdAndUpdate("CustomEndpoints", found._id, found)
       .catch((e: any) => (errorMessage = e.message));
@@ -242,7 +242,8 @@ export class CustomEndpointsAdmin {
       .create("CustomEndpoints", {
         name,
         operation,
-        selectedSchema: findSchema.name,
+        selectedSchema,
+        selectedSchemaName: findSchema.name,
         inputs,
         queries,
         returns: findSchema.fields
