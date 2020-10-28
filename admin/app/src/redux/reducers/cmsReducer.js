@@ -9,30 +9,14 @@ import {
   START_CMS_LOADING,
   STOP_CMS_LOADING,
   UPDATE_SCHEMAS_STATUS,
+  SET_CUSTOM_ENDPOINTS,
 } from '../actions/actionTypes';
 
 const initialState = {
   data: {
     schemas: [],
     documents: [],
-    customEndpoints: [
-      {
-        name: 'Endpoint 1',
-        id: 1,
-        operation: 0,
-        schema: '5f4d14e7411ae6001cb32c06',
-        inputs: [{ name: 'Test', type: 'String', location: 0 }],
-        queries: [{ schemaField: 'test', operation: 0, comparisonField: { type: 'Schema', value: 'fullname' } }],
-      },
-      {
-        name: 'Endpoint 2',
-        id: 2,
-        operation: 0,
-        schema: '5f4d14e7411ae6001cb32c06',
-        inputs: [{ name: 'Test', type: 'String', location: 1 }],
-        queries: [{ schemaField: 'fullname', operation: 0, comparisonField: { type: 'Input', value: 'Test' } }],
-      },
-    ],
+    customEndpoints: [],
     count: 0,
     config: null,
     selectedSchema: null,
@@ -105,6 +89,14 @@ const cmsReducer = (state = initialState, action) => {
         data: {
           ...state.data,
           schemas: deleteSchemaStatusById(action.payload, state.data.schemas),
+        },
+      };
+    case SET_CUSTOM_ENDPOINTS:
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          customEndpoints: action.payload,
         },
       };
     default:

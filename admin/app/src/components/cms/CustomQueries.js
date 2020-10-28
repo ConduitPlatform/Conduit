@@ -123,6 +123,7 @@ const CustomQueries = ({
         if (found) {
           return found.fields;
         }
+        return {};
       }
     },
     [availableSchemas]
@@ -132,10 +133,12 @@ const CustomQueries = ({
     if (selectedEndpoint) {
       setName(selectedEndpoint.name);
       setSelectedOperation(selectedEndpoint.operation);
-      setSelectedSchema(selectedEndpoint.schema);
+      setSelectedSchema(selectedEndpoint.selectedSchema);
 
-      const fields = getAvailableFieldsOfSchema(selectedEndpoint.schema);
-      setAvailableFieldsOfSchema(Object.keys(fields));
+      const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
+      if (fields) {
+        setAvailableFieldsOfSchema(Object.keys(fields));
+      }
 
       const inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
       const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
@@ -162,26 +165,34 @@ const CustomQueries = ({
   };
 
   const handleCreateClick = () => {
+    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
     const data = {
       name: name,
-      operaton: selectedOperation,
-      schema: selectedSchema,
+      operation: Number(selectedOperation),
+      selectedSchema: schema._id,
       inputs: selectedInputs,
       queries: selectedQueries,
     };
     handleCreate(data);
+    setSelectedEndpoint(undefined);
+    setCreateMode(false);
+    setEditMode(false);
   };
 
   const handleSaveClick = () => {
+    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
     const data = {
       name: name,
-      operaton: selectedOperation,
-      schema: selectedSchema,
+      operaton: Number(selectedOperation),
+      selectedSchema: schema._id,
       inputs: selectedInputs,
       queries: selectedQueries,
     };
     const _id = selectedEndpoint._id;
     handleEdit(_id, data);
+    setSelectedEndpoint(undefined);
+    setCreateMode(false);
+    setEditMode(false);
   };
 
   const handleCancelClick = () => {
@@ -192,7 +203,8 @@ const CustomQueries = ({
 
   const handleDeleteConfirmed = () => {
     handleConfirmationDialogClose();
-    handleDelete(selectedEndpoint.id);
+    setSelectedEndpoint(undefined);
+    handleDelete(selectedEndpoint._id);
   };
 
   const handleListItemSelect = (endpoint) => {
@@ -249,7 +261,7 @@ const CustomQueries = ({
     const currentInputs = selectedInputs.slice();
     const input = currentInputs[index];
     if (input) {
-      input.location = value;
+      input.location = Number(value);
       setSelectedInputs(currentInputs);
     }
   };
@@ -258,7 +270,7 @@ const CustomQueries = ({
     const input = {
       name: '',
       type: '',
-      location: '',
+      location: -1,
     };
     setSelectedInputs([...selectedInputs, input]);
   };
@@ -266,7 +278,7 @@ const CustomQueries = ({
   const handleAddQuery = () => {
     const query = {
       schemaField: '',
-      operation: '',
+      operation: -1,
       comparisonField: {
         type: '',
         value: '',
@@ -290,7 +302,7 @@ const CustomQueries = ({
     const currentQueries = selectedQueries.slice();
     const input = currentQueries[index];
     if (input) {
-      input.operation = value;
+      input.operation = Number(value);
       setSelectedQueries(currentQueries);
     }
   };
@@ -320,6 +332,29 @@ const CustomQueries = ({
     }
   };
 
+  const disableSubmit = () => {
+    if (!name) return true;
+    if (!selectedSchema) return true;
+    if (selectedOperation === -1) return true;
+    if (!selectedQueries || selectedQueries.length === 0) return true;
+    const invalidQueries = selectedQueries.some(
+      (query) =>
+        query.schemaField === '' ||
+        query.operation === -1 ||
+        query.comparisonField.type === '' ||
+        query.comparisonField.value === ''
+    );
+    if (invalidQueries) {
+      return true;
+    }
+    const invalidInputs = selectedInputs.some(
+      (input) => input.name === '' || input.type === '' || input.location === -1
+    );
+    if (invalidInputs) {
+      return true;
+    }
+  };
+
   const renderSideList = () => {
     return (
       <Box className={classes.listBox}>
@@ -336,10 +371,10 @@ const CustomQueries = ({
           {endpoints.map((endpoint) => (
             <ListItem
               button
-              key={`endpoint-${endpoint.id}`}
+              key={`endpoint-${endpoint._id}`}
               className={classes.listItem}
               onClick={() => handleListItemSelect(endpoint)}
-              selected={selectedEndpoint?.id === endpoint?.id}>
+              selected={selectedEndpoint?._id === endpoint?._id}>
               <ListItemText primary={endpoint.name} />
             </ListItem>
           ))}
@@ -387,7 +422,7 @@ const CustomQueries = ({
               <option aria-label="None" value="" />
               {availableSchemas.map((schema, index) => (
                 <option
-                  key={`schema-${schema.id ? schema.id : index}`}
+                  key={`schema-${schema._id ? schema._id : index}`}
                   value={schema._id}>
                   {schema.name}
                 </option>
@@ -438,7 +473,7 @@ const CustomQueries = ({
               <option aria-label="None" value="" />
               <option value={InputLocationEnum.QUERY_PARAMS}>Query params</option>
               <option value={InputLocationEnum.BODY}>Body</option>
-              <option value={InputLocationEnum.URL_PARAMS}>Form Data</option>
+              <option value={InputLocationEnum.URL_PARAMS}>URL</option>
             </Select>
           </FormControl>
         </Grid>
@@ -564,6 +599,7 @@ const CustomQueries = ({
 
         <Grid item xs={4} md={2}>
           <Button
+            disabled={disableSubmit()}
             variant="contained"
             color="primary"
             onClick={createMode ? handleCreateClick : editMode ? handleSaveClick : ''}>
@@ -667,7 +703,7 @@ const CustomQueries = ({
         open={confirmationOpen}
         title={'Custom Endpoint Deletion'}
         description={`You are about to delete custom endpoint with name:${selectedEndpoint?.name}`}
-        buttonText={'Procceed'}
+        buttonText={'Delete'}
         handleClose={handleConfirmationDialogClose}
         buttonAction={handleDeleteConfirmed}
       />
