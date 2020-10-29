@@ -35,6 +35,7 @@ message RegisterConduitRouteRequest {
     repeated PathDefinition routes = 1;
     string protoFile = 2;
     string routerUrl = 3;
+
     message PathDefinition {
         ConduitRouteOptions options = 1;
         ConduitRouteReturnDefinition returns = 2;
@@ -50,6 +51,7 @@ message RegisterConduitRouteRequest {
         string path = 5;
         string name = 6;
         string description = 7;
+        repeated string middlewares = 8;
     }
 
     message ConduitRouteReturnDefinition {

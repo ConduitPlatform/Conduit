@@ -1,7 +1,7 @@
 import {Application, NextFunction, Router, Request, Response} from "express";
 import {RouterBuilder} from "./builders";
 import {ConduitRoutingController} from "./controllers/Routing";
-import {ConduitRoute, IConduitRouter} from '@quintessential-sft/conduit-sdk';
+import {ConduitRoute, IConduitRouter, ConduitMiddleware} from '@quintessential-sft/conduit-sdk';
 import * as grpc from "grpc";
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
@@ -32,10 +32,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
     registerGrpcRoute(call: any, callback: any) {
         try {
-            let routes: ConduitRoute[] = grpcToConduitRoute(call.request);
+            let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);
             routes.forEach(r => {
-                if (r.isMiddleware) {
-                    this.registerRouteMiddleware(r.input.path, r);
+                if (r instanceof ConduitMiddleware) {
+                    this.registerRouteMiddleware(r);
                 } else {
                     this.registerRoute(r);
                 }
@@ -90,8 +90,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
         this._internalRouter.registerConduitRoute(route);
     }
 
-    registerRouteMiddleware(path: string, middleware: ConduitRoute): void {
-        this._internalRouter.registerRouteMiddleware(path, middleware);
+    registerRouteMiddleware(middleware: ConduitMiddleware): void {
+        this._internalRouter.registerRouteMiddleware(middleware);
     }
 
 }

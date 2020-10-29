@@ -1,10 +1,11 @@
 import {LocalHandlers} from '../handlers/auth/local';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk, {
-    ConduitError,
+    ConduitMiddleware,
     ConduitRoute,
     ConduitRouteActions,
     ConduitRouteReturnDefinition, ConduitString,
+    constructMiddleware,
     constructRoute,
     TYPE
 } from '@quintessential-sft/conduit-grpc-sdk';
@@ -14,7 +15,6 @@ import {CommonHandlers} from '../handlers/auth/common';
 import {isNil} from 'lodash';
 import fs from "fs";
 import path from "path";
-import {ConduitRouteParameters} from '@quintessential-sft/conduit-grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 const PROTO_PATH = __dirname + '/router.proto';
@@ -201,19 +201,14 @@ export class AuthenticationRoutes {
 
             routesArray.push(constructRoute(new ConduitRoute({
                     path: '/authentication/logout',
-                    action: ConduitRouteActions.POST
+                    action: ConduitRouteActions.POST,
+                    middlewares: ['authMiddleware']
                 },
                 new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
                 'logOut'
             )));
 
-            routesArray.push(constructRoute(new ConduitRoute({
-                    path: '/authentication',
-                    action: ConduitRouteActions.POST
-                },
-                new ConduitRouteReturnDefinition('AuthMiddlewareResponse', 'String'),
-                'authMiddleware'
-            ), true));
+            routesArray.push(constructMiddleware(new ConduitMiddleware({path: '/authentication'},'authMiddleware')));
 
         }
         return routesArray;
@@ -222,9 +217,7 @@ export class AuthenticationRoutes {
     middleware(call: any, callback: any) {
         let context = JSON.parse(call.request.context)
         let headers = JSON.parse(call.request.headers)
-        if (call.request.path === '/authentication/local' || call.request.path === '/authentication/local/new') {
-            return callback(null, {result: "ok"});
-        }
+
         const header = (headers['Authorization'] || headers['authorization']) as string;
         if (isNil(header)) {
             return callback({
@@ -254,14 +247,14 @@ export class AuthenticationRoutes {
                 }
                 return this.grpcSdk.databaseProvider!.findOne('User', {_id: accessTokenDoc.userId})
             })
-            .then(user => {
+            .then((user:any) => {
                 if (isNil(user)) {
                     return callback({
                         code: grpc.status.UNAUTHENTICATED,
                         message: 'User no longer exists',
                     });
                 }
-                callback(null, {user: user});
+                callback(null, {result: JSON.stringify({user:user})});
             });
 
     }

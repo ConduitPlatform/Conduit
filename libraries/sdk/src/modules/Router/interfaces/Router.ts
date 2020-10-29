@@ -1,12 +1,12 @@
 import {NextFunction, Router, Request, Response} from "express";
 import {ConduitRouterBuilder} from "../classes";
-import {ConduitRoute, ConduitRouteParameters} from "../../../interfaces";
+import {ConduitMiddleware, ConduitRoute, ConduitRouteParameters} from "../../../interfaces";
 
 export interface IConduitRouter {
 
     registerGlobalMiddleware(name: string, middleware: any): void
 
-    registerRouteMiddleware(path: string, middleware: ConduitRoute): void
+    registerRouteMiddleware(middleware: ConduitMiddleware): void
 
     getGlobalMiddlewares(): string[]
 
