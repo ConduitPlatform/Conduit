@@ -1,6 +1,7 @@
 //CMS schemas actions
 import {
-  CLEAR_CMS_SELECTED_SCHEMA, CLEAR_SELECTED_SCHEMA,
+  CLEAR_CMS_SELECTED_SCHEMA,
+  CLEAR_SELECTED_SCHEMA,
   DELETE_CMS_SCHEMAS,
   SET_CMS_ERROR,
   SET_CMS_SCHEMA_DOCUMENTS,
@@ -9,6 +10,7 @@ import {
   START_CMS_LOADING,
   STOP_CMS_LOADING,
   UPDATE_SCHEMAS_STATUS,
+  SET_CUSTOM_ENDPOINTS,
 } from './actionTypes';
 
 export const setCmsSchemas = (data) => ({
@@ -51,4 +53,9 @@ export const setSchemaDocumentsByName = (data) => ({
 
 export const clearSelectedSchema = () => ({
   type: CLEAR_SELECTED_SCHEMA,
+});
+
+export const setCustomEndpoints = (endpoints) => ({
+  type: SET_CUSTOM_ENDPOINTS,
+  payload: endpoints,
 });

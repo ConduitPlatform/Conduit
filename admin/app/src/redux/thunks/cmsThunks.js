@@ -2,6 +2,7 @@ import {
   deletedSchemaById,
   setCmsError,
   setCmsSchemas,
+  setCustomEndpoints,
   setSchemaDocumentsByName,
   startCmsLoading,
   stopCmsLoading,
@@ -185,9 +186,13 @@ export const getCustomEndpoints = () => {
     dispatch(startCmsLoading());
     getCustomEndpointsRequest()
       .then((res) => {
-        console.log(res);
+        const customEndpoints = res.data.results;
+        dispatch(stopCmsLoading());
+        dispatch(setCustomEndpoints(customEndpoints));
       })
       .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
         console.log(err);
       });
   };
@@ -198,10 +203,13 @@ export const updateCustomEndpoints = (_id, endpointData) => {
     dispatch(startCmsLoading());
     editCustomEndpointsRequest(_id, endpointData)
       .then((res) => {
-        console.log(res);
+        dispatch(stopCmsLoading());
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
         console.log(err);
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
       });
   };
 };
@@ -211,9 +219,12 @@ export const deleteCustomEndpoints = (_id) => {
     dispatch(startCmsLoading());
     deleteCustomEndpointsRequest(_id)
       .then((res) => {
-        console.log(res);
+        dispatch(stopCmsLoading());
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
         console.log(err);
       });
   };
@@ -231,9 +242,12 @@ export const createCustomEndpoints = (endPointData) => {
     };
     createCustomEndpointsRequest(body)
       .then((res) => {
-        console.log(res);
+        dispatch(stopCmsLoading());
+        dispatch(getCustomEndpoints());
       })
       .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
         console.log(err);
       });
   };

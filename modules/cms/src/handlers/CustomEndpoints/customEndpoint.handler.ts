@@ -34,9 +34,9 @@ export class CustomEndpointHandler {
     let promise;
 
     if (endpoint.operation === 0) {
-      promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchema, JSON.parse(searchString));
+      promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchemaName, JSON.parse(searchString));
     } else if (endpoint.operation === 3) {
-      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchema, JSON.parse(searchString));
+      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, JSON.parse(searchString));
     } else {
       // todo for now
       promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchema, JSON.parse(searchString));
