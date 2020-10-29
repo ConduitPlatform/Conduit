@@ -254,7 +254,7 @@ export class AuthenticationRoutes {
                         message: 'User no longer exists',
                     });
                 }
-                callback(null, {result: user});
+                callback(null, {result: JSON.stringify({user:user})});
             });
 
     }
