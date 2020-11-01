@@ -27,6 +27,7 @@ export class GraphQLController {
   private _relationTypes: string[] = [];
   private _middlewares?: { [field: string]: ConduitMiddleware[] };
   private _registeredRoutes!: Map<string, ConduitRoute>;
+  private _scheduledTimeout: any = null;
 
   constructor(app: Application) {
     this._registeredRoutes = new Map();
@@ -52,7 +53,7 @@ export class GraphQLController {
   }
 
   generateType(name: string, fields: ConduitModel | string) {
-    if (this.typeDefs.includes(" " + name + " ")) {
+    if (this.typeDefs.includes("type " + name + " ")) {
       return;
     }
     const self = this;
@@ -224,7 +225,7 @@ export class GraphQLController {
       this.refreshRoutes();
     } else {
       this.addConduitRoute(route);
-      this.refreshGQLServer();
+      this._scheduleTimeout();
     }
   }
 
@@ -338,6 +339,22 @@ export class GraphQLController {
       // but it needs to be done carefully
       this.addConduitRoute(route);
     });
-    this.refreshGQLServer();
+    this._scheduleTimeout();
+  }
+
+  private _scheduleTimeout() {
+    if (this._scheduledTimeout) {
+      clearTimeout(this._scheduledTimeout);
+      this._scheduledTimeout = null;
+    }
+
+    this._scheduledTimeout = setTimeout(() => {
+      try{
+        this.refreshGQLServer();
+      }catch(err){
+        console.error(err);
+      }
+      this._scheduledTimeout = null;
+    });
   }
 }

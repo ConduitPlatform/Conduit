@@ -41,6 +41,8 @@ export class SchemaController {
               routeSchemas[schema.name] = schema;
             });
             this._registerRoutes(routeSchemas);
+            this.router.requestRefresh();
+            
           });
         }
       })
@@ -63,6 +65,7 @@ export class SchemaController {
             routeSchemas[schema.name] = schema;
           });
           this._registerRoutes(routeSchemas);
+          this.router.requestRefresh();
         } else {
           console.error("Something went wrong when loading schema for cms");
           console.error("No schemas emitted");

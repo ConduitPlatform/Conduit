@@ -41,6 +41,9 @@ export class CmsRoutes {
 
   addRoutes(routes: any[]){
     this._registeredRoutes.push(...routes);
+  }
+
+  requestRefresh(){
     this._refreshRoutes();
   }
 
