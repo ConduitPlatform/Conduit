@@ -159,8 +159,8 @@ export class MongooseAdapter {
                 // For a schema to be updated the caller must give the new schema after he gets the old one with getSchema
 
                 const oldType = oldSchemaFields[key].type ? oldSchemaFields[key].type : oldSchemaFields[key];
-                const newType = newSchemaFields[key].type ? newSchemaFields[key].type : newSchemaFields[key];
-
+                const newType = newSchemaFields[key] && newSchemaFields.type ? newSchemaFields[key].type : null;
+                if(!newType) return;
                 if (isArray(oldType) && isArray(newType)) {
                     if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0])) throw ConduitError.forbidden('Invalid schema types');
                 } else if (oldType !== newType) {
