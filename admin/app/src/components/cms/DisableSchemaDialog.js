@@ -28,7 +28,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const DisableSchemaDialog = ({ open, handleClose, handleToggle, handleDelete, selectedSchema }) => {
+const DisableSchemaDialog = ({
+  open,
+  handleClose,
+  handleToggle,
+  handleDelete,
+  selectedSchema,
+}) => {
   const classes = useStyles();
 
   const createDialogTitle = (action) => {
@@ -115,11 +121,16 @@ const DisableSchemaDialog = ({ open, handleClose, handleToggle, handleDelete, se
         {createDialogTitle(selectedSchema.action)}
       </DialogTitle>
       <DialogContent>
-        <span style={{ fontWeight: 'bold' }}>{selectedSchema ? selectedSchema.data.name : ''}</span>
+        <span style={{ fontWeight: 'bold' }}>
+          {selectedSchema ? selectedSchema.data.name : ''}
+        </span>
       </DialogContent>
       <DialogContent>{createDialogInfo(selectedSchema.action)}</DialogContent>
       <DialogActions>
-        <Button onClick={() => handleClose()} variant="contained" style={{ textTransform: 'none' }}>
+        <Button
+          onClick={() => handleClose()}
+          variant="contained"
+          style={{ textTransform: 'none' }}>
           Cancel
         </Button>
         <Button

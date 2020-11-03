@@ -76,10 +76,18 @@ const BuildTypesList = (props) => {
     <Draggable draggableId={item} index={index} isDraggingOver={false} {...rest}>
       {(provided, snapshot) => (
         <>
-          <Card className={classes.item} ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+          <Card
+            className={classes.item}
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}>
             {handleItem(item, index)}
           </Card>
-          {snapshot.isDragging && <Card className={clsx(classes.item, classes.itemClone)}>{handleItem(item, index)}</Card>}
+          {snapshot.isDragging && (
+            <Card className={clsx(classes.item, classes.itemClone)}>
+              {handleItem(item, index)}
+            </Card>
+          )}
         </>
       )}
     </Draggable>
