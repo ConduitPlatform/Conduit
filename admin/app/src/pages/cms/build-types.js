@@ -84,6 +84,7 @@ const BuildTypes = () => {
 
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
+  const [authentication, setAuthentication] = useState(false);
   const [drawerData, setDrawerData] = useState({
     open: false,
     type: '',
@@ -99,7 +100,12 @@ const BuildTypes = () => {
   useEffect(() => {
     if (data && data.selectedSchema) {
       setSchemaName(data.selectedSchema.name);
-
+      if (
+        data.selectedSchema.authentication !== null &&
+        data.selectedSchema.authentication !== undefined
+      ) {
+        setAuthentication(data.selectedSchema.authentication);
+      }
       const formattedFields = getSchemaFields(data.selectedSchema.fields);
       setSchemaFields({ newTypeFields: formattedFields });
     }
@@ -108,9 +114,6 @@ const BuildTypes = () => {
   useEffect(() => {
     if (router.query.name) {
       setSchemaName(router.query.name);
-    }
-    if (router.query.schema) {
-      console.log(JSON.parse(router.query.schemaId));
     }
   }, [router.query.name, router.query.schema, router.query.schemaId]);
 
@@ -179,7 +182,7 @@ const BuildTypes = () => {
           }
           if (item2.content) {
             let flag2 = false;
-            item2.content.some((item3) => {
+            item2.content.forEach((item3) => {
               if (item3.name === typeData.name) {
                 flag2 = true;
               }
@@ -340,13 +343,15 @@ const BuildTypes = () => {
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const editableSchema = { name: schemaName, fields: editableSchemaFields };
-      // console.log(editableSchemaFields);
+      const editableSchema = {
+        name: schemaName,
+        authentication,
+        fields: editableSchemaFields,
+      };
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: schemaName, fields: newSchemaFields };
-      // console.log(newSchemaFields);
+      const newSchema = { name: schemaName, authentication, fields: newSchemaFields };
       dispatch(createNewSchema(newSchema));
     }
 
@@ -356,7 +361,7 @@ const BuildTypes = () => {
 
   return (
     <Box className={classes.root}>
-      <Header name={schemaName} handleSave={handleSave} />
+      <Header name={schemaName} authentication={authentication} handleSave={handleSave} />
       <Box className={classes.cmsContainer}>
         <DragDropContext onDragEnd={onDragEnd}>
           <Box className={classes.contentContainer}>
