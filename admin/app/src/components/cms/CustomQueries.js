@@ -446,6 +446,7 @@ const CustomQueries = ({
           <FormControlLabel
             control={
               <Checkbox
+                disabled={!editMode}
                 color={'primary'}
                 checked={authentication}
                 onChange={handleAuthenticationChange}
