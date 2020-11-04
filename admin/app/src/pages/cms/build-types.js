@@ -339,19 +339,19 @@ const BuildTypes = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = (name, authentication) => {
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
       const editableSchema = {
-        name: schemaName,
+        name: name,
         authentication,
         fields: editableSchemaFields,
       };
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: schemaName, authentication, fields: newSchemaFields };
+      const newSchema = { name: name, authentication, fields: newSchemaFields };
       dispatch(createNewSchema(newSchema));
     }
 
