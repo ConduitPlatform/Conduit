@@ -37,6 +37,10 @@ const schema = new ConduitSchema('CustomEndpoints', {
             default: true,
             systemRequired: true
         },
+        authentication: {
+            type: TYPE.Boolean,
+            default: false
+        },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     }, {

@@ -51,6 +51,7 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
   let input = {
     path: `/customOperation/${endpoint.name}`,
     action: getOperation(endpoint.operation),
+    middlewares: endpoint.authentication ? ['authMiddleware'] : undefined
   };
   Object.assign(input, extractParams(endpoint.inputs));
   return constructRoute(
