@@ -26,9 +26,7 @@ axios.interceptors.request.use(
     return config;
   },
   (error) => {
-    // eslint-disable-next-line no-undef
     console.log(error);
-    // eslint-disable-next-line no-undef
     return Promise.reject(error.response);
   }
 );
@@ -38,7 +36,6 @@ axios.interceptors.response.use(
     return config;
   },
   (error) => {
-    // eslint-disable-next-line no-undef
     console.log(error);
     if (error.response.status === 401) {
       if (store) {
@@ -46,9 +43,7 @@ axios.interceptors.response.use(
         Router.replace('/login');
       }
     }
-    // eslint-disable-next-line no-undef
     console.log(error);
-    // eslint-disable-next-line no-undef
     return Promise.reject(error.response);
   }
 );
