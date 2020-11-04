@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 8080",
     "snyk-protect": "snyk protect",
-    "prepare": "yarn run snyk-protect"
+    "prepare": "yarn run snyk-protect",
+    "docker":"docker build -t quintessential.azurecr.io/conduit-admin:latest . && docker push quintessential.azurecr.io/conduit-admin:latest"
   },
   "dependencies": {
     "@date-io/moment": "1.x",
