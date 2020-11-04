@@ -8,6 +8,7 @@ export interface CustomEndpoint {
   inputs: { name: string; type: string; location: number }[];
   queries: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }[];
   returns: any;
+  authentication: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

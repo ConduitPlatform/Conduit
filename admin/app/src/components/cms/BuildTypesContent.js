@@ -102,18 +102,30 @@ const BuildTypesContent = (props) => {
               data[dataKey].map((item, index) => (
                 <Draggable key={item.name} draggableId={item.name} index={index}>
                   {(provided) => (
-                    <Box className={classes.item} ref={provided.innerRef} {...provided.draggableProps}>
+                    <Box
+                      className={classes.item}
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}>
                       <Box width={'99%'}>{handleItemContent(item, index)}</Box>
                       <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
-                        <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
+                        <Box
+                          display={'flex'}
+                          width={'100%'}
+                          justifyContent={'space-between'}>
                           <Box display={'flex'}>
                             <Typography variant={'body2'} style={{ marginRight: 8 }}>
                               Field name: <strong>{item.name}</strong>
                             </Typography>
                           </Box>
                           <Box display={'flex'}>
-                            <DeleteIcon className={classes.icon} onClick={() => handleDelete(index)} />
-                            <SettingsIcon className={classes.icon} onClick={() => handleDrawer(item, index)} />
+                            <DeleteIcon
+                              className={classes.icon}
+                              onClick={() => handleDelete(index)}
+                            />
+                            <SettingsIcon
+                              className={classes.icon}
+                              onClick={() => handleDrawer(item, index)}
+                            />
                             <Box {...provided.dragHandleProps} className={classes.icon}>
                               <DragHandleIcon />
                             </Box>
@@ -125,12 +137,18 @@ const BuildTypesContent = (props) => {
                 </Draggable>
               ))
             ) : (
-              <Box className={classes.listPlaceholder} style={snapshot.isDraggingOver ? { opacity: 0.4 } : {}}>
+              <Box
+                className={classes.listPlaceholder}
+                style={snapshot.isDraggingOver ? { opacity: 0.4 } : {}}>
                 <Content className={classes.listPlaceholderItems} />
-                <Typography variant={'subtitle2'} className={classes.listPlaceholderItems}>
+                <Typography
+                  variant={'subtitle2'}
+                  className={classes.listPlaceholderItems}>
                   Simply drag and drop
                 </Typography>
-                <Typography variant={'body2'}>The fields or elements you want in this custom type</Typography>
+                <Typography variant={'body2'}>
+                  The fields or elements you want in this custom type
+                </Typography>
               </Box>
             )}
             {provided.placeholder}

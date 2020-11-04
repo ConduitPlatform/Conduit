@@ -155,7 +155,7 @@ export class CustomEndpointsAdmin {
   }
 
   async createCustomEndpoints(call: any, callback: any) {
-    const { name, operation, selectedSchema, inputs, queries } = JSON.parse(call.request.params);
+    const { name, operation, selectedSchema, inputs, queries, authentication } = JSON.parse(call.request.params);
 
     if (isNil(name) || isNil(operation) || isNil(selectedSchema) || isNil(queries)) {
       return callback({
@@ -246,7 +246,8 @@ export class CustomEndpointsAdmin {
         selectedSchemaName: findSchema.name,
         inputs,
         queries,
-        returns: findSchema.fields
+        authentication,
+        returns: findSchema.fields,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {

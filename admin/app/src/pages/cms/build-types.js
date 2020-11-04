@@ -25,7 +25,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createNewSchema, editSchema } from '../../redux/thunks/cmsThunks';
 import { clearSelectedSchema } from '../../redux/actions';
 
-const items = ['Text', 'Number', 'Date', 'Boolean', 'Enum', 'ObjectId', 'Group', 'Relation'];
+const items = [
+  'Text',
+  'Number',
+  'Date',
+  'Boolean',
+  'Enum',
+  'ObjectId',
+  'Group',
+  'Relation',
+];
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -75,14 +84,28 @@ const BuildTypes = () => {
 
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
-  const [drawerData, setDrawerData] = useState({ open: false, type: '', destination: null });
+  const [authentication, setAuthentication] = useState(false);
+  const [drawerData, setDrawerData] = useState({
+    open: false,
+    type: '',
+    destination: null,
+  });
   const [duplicateId, setDuplicateId] = useState(false);
-  const [selectedProps, setSelectedProps] = useState({ item: undefined, index: undefined, type: 'standard' });
+  const [selectedProps, setSelectedProps] = useState({
+    item: undefined,
+    index: undefined,
+    type: 'standard',
+  });
 
   useEffect(() => {
     if (data && data.selectedSchema) {
       setSchemaName(data.selectedSchema.name);
-
+      if (
+        data.selectedSchema.authentication !== null &&
+        data.selectedSchema.authentication !== undefined
+      ) {
+        setAuthentication(data.selectedSchema.authentication);
+      }
       const formattedFields = getSchemaFields(data.selectedSchema.fields);
       setSchemaFields({ newTypeFields: formattedFields });
     }
@@ -92,10 +115,7 @@ const BuildTypes = () => {
     if (router.query.name) {
       setSchemaName(router.query.name);
     }
-    if (router.query.schema) {
-      console.log(JSON.parse(router.query.schemaId));
-    }
-  }, []);
+  }, [router.query.name, router.query.schema, router.query.schemaId]);
 
   const onDragEnd = (result) => {
     const { source, destination, draggableId } = result;
@@ -106,7 +126,11 @@ const BuildTypes = () => {
 
     if (source.droppableId === destination.droppableId) {
       setSchemaFields({
-        newTypeFields: reorderItems(schemaFields[source.droppableId], source.index, destination.index),
+        newTypeFields: reorderItems(
+          schemaFields[source.droppableId],
+          source.index,
+          destination.index
+        ),
       });
     }
 
@@ -118,7 +142,12 @@ const BuildTypes = () => {
     }
 
     if (source.droppableId === 'ITEMS') {
-      setDrawerData({ ...drawerData, open: true, type: items[source.index], destination: destination });
+      setDrawerData({
+        ...drawerData,
+        open: true,
+        type: items[source.index],
+        destination: destination,
+      });
     }
   };
 
@@ -153,7 +182,7 @@ const BuildTypes = () => {
           }
           if (item2.content) {
             let flag2 = false;
-            item2.content.some((item3) => {
+            item2.content.forEach((item3) => {
               if (item3.name === typeData.name) {
                 flag2 = true;
               }
@@ -185,32 +214,60 @@ const BuildTypes = () => {
     if (selectedProps.item) {
       if (selectedProps.type === 'standard') {
         setSchemaFields({
-          newTypeFields: updateItem(schemaFields.newTypeFields, typeData, selectedProps.index),
+          newTypeFields: updateItem(
+            schemaFields.newTypeFields,
+            typeData,
+            selectedProps.index
+          ),
         });
       }
 
       if (selectedProps.type === 'group') {
         setSchemaFields({
-          newTypeFields: updateGroupItem(schemaFields.newTypeFields, groupId, typeData, selectedProps.index),
+          newTypeFields: updateGroupItem(
+            schemaFields.newTypeFields,
+            groupId,
+            typeData,
+            selectedProps.index
+          ),
         });
       }
 
       if (selectedProps.type === 'group-child') {
         setSchemaFields({
-          newTypeFields: updateGroupChildItem(schemaFields.newTypeFields, groupId, typeData, selectedProps.index),
+          newTypeFields: updateGroupChildItem(
+            schemaFields.newTypeFields,
+            groupId,
+            typeData,
+            selectedProps.index
+          ),
         });
       }
     } else if (isGroup === 'group') {
       setSchemaFields({
-        newTypeFields: addToGroup(schemaFields.newTypeFields, groupId, typeData, drawerData.destination),
+        newTypeFields: addToGroup(
+          schemaFields.newTypeFields,
+          groupId,
+          typeData,
+          drawerData.destination
+        ),
       });
     } else if (isGroup === 'child') {
       setSchemaFields({
-        newTypeFields: addToChildGroup(schemaFields.newTypeFields, groupId, typeData, drawerData.destination),
+        newTypeFields: addToChildGroup(
+          schemaFields.newTypeFields,
+          groupId,
+          typeData,
+          drawerData.destination
+        ),
       });
     } else {
       setSchemaFields({
-        newTypeFields: cloneItem(schemaFields.newTypeFields, typeData, drawerData.destination),
+        newTypeFields: cloneItem(
+          schemaFields.newTypeFields,
+          typeData,
+          drawerData.destination
+        ),
       });
     }
 
@@ -223,7 +280,9 @@ const BuildTypes = () => {
     setDrawerData({
       ...drawerData,
       open: true,
-      type: schemaFields.newTypeFields[index].isEnum ? 'Enum' : schemaFields.newTypeFields[index].type,
+      type: schemaFields.newTypeFields[index].isEnum
+        ? 'Enum'
+        : schemaFields.newTypeFields[index].type,
     });
   };
 
@@ -261,7 +320,8 @@ const BuildTypes = () => {
     setDrawerData({
       ...drawerData,
       open: true,
-      type: schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].isEnum
+      type: schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index]
+        .isEnum
         ? 'Enum'
         : schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].type,
       destination: {
@@ -279,17 +339,19 @@ const BuildTypes = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = (name, authentication) => {
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const editableSchema = { name: schemaName, fields: editableSchemaFields };
-      // console.log(editableSchemaFields);
+      const editableSchema = {
+        name: name,
+        authentication,
+        fields: editableSchemaFields,
+      };
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: schemaName, fields: newSchemaFields };
-      // console.log(newSchemaFields);
+      const newSchema = { name: name, authentication, fields: newSchemaFields };
       dispatch(createNewSchema(newSchema));
     }
 
@@ -299,7 +361,7 @@ const BuildTypes = () => {
 
   return (
     <Box className={classes.root}>
-      <Header name={schemaName} handleSave={handleSave} />
+      <Header name={schemaName} authentication={authentication} handleSave={handleSave} />
       <Box className={classes.cmsContainer}>
         <DragDropContext onDragEnd={onDragEnd}>
           <Box className={classes.contentContainer}>

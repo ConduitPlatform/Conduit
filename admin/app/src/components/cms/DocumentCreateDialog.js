@@ -1,5 +1,5 @@
 import Box from '@material-ui/core/Box';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -34,35 +34,23 @@ const useStyles = makeStyles((theme) => ({
 
 const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
-
   const [document, setDocument] = useState([]);
 
-  useEffect(() => {
-    if (schema) {
-      initDocument();
-      if (document.length > 0) populateEditData();
-    }
-  }, [schema]);
+  const populateEditData = useCallback(
+    (documentsData) => {
+      if (!editData) return;
+      const keys = Object.keys(editData);
+      keys.forEach((k) => {
+        const found = documentsData.find((d) => d.name === k);
+        if (found) {
+          found.value = editData[k];
+        }
+      });
+    },
+    [editData]
+  );
 
-  const initDocument = () => {
-    const fields = schema.fields;
-    const documentFields = deconstructFields(fields);
-    populateEditData(documentFields);
-    setDocument(documentFields);
-  };
-
-  const populateEditData = (documentsData) => {
-    if (!editData) return;
-    const keys = Object.keys(editData);
-    keys.forEach((k) => {
-      const found = documentsData.find((d) => d.name === k);
-      if (found) {
-        found.value = editData[k];
-      }
-    });
-  };
-
-  const deconstructFields = (fields) => {
+  const deconstructFields = useCallback((fields) => {
     const documentKeys = Object.keys(fields);
     let documentFields = [];
     documentKeys.forEach((k) => {
@@ -76,7 +64,21 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
       }
     });
     return documentFields;
-  };
+  }, []);
+
+  const initDocument = useCallback(() => {
+    const fields = schema.fields;
+    const documentFields = deconstructFields(fields);
+    populateEditData(documentFields);
+    setDocument(documentFields);
+  }, [deconstructFields, populateEditData, schema.fields]);
+
+  useEffect(() => {
+    if (schema) {
+      initDocument();
+      if (document.length > 0) populateEditData();
+    }
+  }, [document.length, initDocument, populateEditData, schema]);
 
   const handleCancelClick = () => {
     handleCancel();
@@ -168,7 +170,12 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
         <Grid item xs={12}>
           {doc.fields.map((innerDoc, indexInner) => {
             return (
-              <Grid key={'key-' + innerDoc.name} container spacing={1} alignItems={'center'} justify={'flex-end'}>
+              <Grid
+                key={'key-' + innerDoc.name}
+                container
+                spacing={1}
+                alignItems={'center'}
+                justify={'flex-end'}>
                 <Grid item xs={1} />
                 <Grid item xs={2}>
                   <Typography variant={'body1'}>{`${innerDoc.name}`}</Typography>
@@ -255,8 +262,24 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
         <Select
           variant={'outlined'}
           size={'small'}
-          value={doc.value}
+          value={doc.value ? doc.value : ''}
           fullWidth
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}>
+          <option aria-label="None" value="">
+            None
+          </option>
+        </Select>
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
           onChange={(e) => {
             handleValueChange(index, innerIndex, e);
           }}
@@ -293,10 +316,18 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
 
       <Divider className={classes.divider} />
 
-      <Box padding={2} width={'100%'} display={'inline-flex'} justifyContent={'flex-end'} alignItems={'center'}>
+      <Box
+        padding={2}
+        width={'100%'}
+        display={'inline-flex'}
+        justifyContent={'flex-end'}
+        alignItems={'center'}>
         <Grid container>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button variant={'outlined'} style={{ marginRight: 16 }} onClick={handleCancelClick}>
+            <Button
+              variant={'outlined'}
+              style={{ marginRight: 16 }}
+              onClick={handleCancelClick}>
               Cancel
             </Button>
             <Button variant={'outlined'} onClick={handleSaveClick}>
