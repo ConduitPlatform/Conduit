@@ -21,6 +21,10 @@ const schema = new ConduitSchema('SchemaDefinitions', {
           default: true,
           systemRequired: true
         },
+        authentication: {
+            type: TYPE.Boolean,
+            default: false
+        },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     }, {

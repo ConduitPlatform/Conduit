@@ -23,6 +23,8 @@ import ConfirmationDialog from '../ConfirmationDialog';
 import OperationsEnum from '../../models/OperationsEnum';
 import ConditionsEnum from '../../models/ConditionsEnum';
 import InputLocationEnum from '../../models/InputLocationEnum';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
 
 const useStyles = makeStyles((theme) => ({
   listBox: {
@@ -110,6 +112,7 @@ const CustomQueries = ({
   const [name, setName] = useState('');
   const [selectedOperation, setSelectedOperation] = useState();
   const [selectedSchema, setSelectedSchema] = useState();
+  const [authentication, setAuthentication] = useState(false);
   const [selectedInputs, setSelectedInputs] = useState([]);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -134,6 +137,8 @@ const CustomQueries = ({
       setName(selectedEndpoint.name);
       setSelectedOperation(selectedEndpoint.operation);
       setSelectedSchema(selectedEndpoint.selectedSchema);
+      if (selectedEndpoint.authentication)
+        setAuthentication(selectedEndpoint.authentication);
 
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
       if (fields) {
@@ -170,6 +175,7 @@ const CustomQueries = ({
       name: name,
       operation: Number(selectedOperation),
       selectedSchema: schema._id,
+      authentication: authentication,
       inputs: selectedInputs,
       queries: selectedQueries,
     };
@@ -183,8 +189,9 @@ const CustomQueries = ({
     const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
     const data = {
       name: name,
-      operaton: Number(selectedOperation),
+      operation: Number(selectedOperation),
       selectedSchema: schema._id,
+      authentication: authentication,
       inputs: selectedInputs,
       queries: selectedQueries,
     };
@@ -224,6 +231,7 @@ const CustomQueries = ({
     setEditMode(true);
     setCreateMode(true);
     setName('');
+    setAuthentication(false);
     setSelectedOperation(-1);
     setSelectedSchema('');
     setSelectedInputs([]);
@@ -234,6 +242,10 @@ const CustomQueries = ({
     setSelectedSchema(event.target.value);
     const fields = getAvailableFieldsOfSchema(event.target.value);
     setAvailableFieldsOfSchema(Object.keys(fields));
+  };
+
+  const handleAuthenticationChange = (event) => {
+    setAuthentication(event.target.checked);
   };
 
   const handleInputNameChange = (event, index) => {
@@ -386,7 +398,7 @@ const CustomQueries = ({
   const renderOperationSection = () => {
     return (
       <>
-        <Grid item xs={6}>
+        <Grid item xs={4}>
           <FormControl className={classes.formControl}>
             <InputLabel htmlFor="select_operation">Select Operation</InputLabel>
             <Select
@@ -407,7 +419,7 @@ const CustomQueries = ({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={6}>
+        <Grid item xs={5}>
           <FormControl className={classes.formControl}>
             <InputLabel htmlFor="select_schema">Select Schema</InputLabel>
             <Select
@@ -429,6 +441,20 @@ const CustomQueries = ({
               ))}
             </Select>
           </FormControl>
+        </Grid>
+        <Grid item xs={3}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                disabled={!editMode}
+                color={'primary'}
+                checked={authentication}
+                onChange={handleAuthenticationChange}
+                name="authentication"
+              />
+            }
+            label="Requires authentication"
+          />
         </Grid>
       </>
     );

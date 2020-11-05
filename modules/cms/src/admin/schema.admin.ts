@@ -57,7 +57,7 @@ export class SchemaAdmin {
     }
 
     async createSchema(call: any, callback: any) {
-        const {name, fields, modelOptions, enabled} = JSON.parse(call.request.params);
+        const {name, fields, modelOptions, enabled, authentication} = JSON.parse(call.request.params);
 
         if (isNil(name) || isNil(fields)) {
             return callback({
@@ -87,7 +87,8 @@ export class SchemaAdmin {
             name,
             fields,
             modelOptions: options,
-            enabled
+            enabled,
+            authentication
         }).catch((e: any) => error = e);
         if (!isNil(error)) return callback({
             code: grpc.status.INTERNAL,
@@ -136,7 +137,7 @@ export class SchemaAdmin {
     }
 
     async editSchema(call: any, callback: any) {
-        const {id, name, fields, modelOptions} = JSON.parse(call.request.params);
+        const {id, name, fields, modelOptions, authentication} = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -166,6 +167,7 @@ export class SchemaAdmin {
         requestedSchema.name = name ? name : requestedSchema.name;
         requestedSchema.fields = fields ? fields : requestedSchema.fields;
         requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
+        requestedSchema.authentication = authentication !== null ? authentication : requestedSchema.authentication;
 
         const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});

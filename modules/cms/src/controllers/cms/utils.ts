@@ -54,7 +54,8 @@ export function getOps(schemaName: string, actualSchema: any) {
             action: ConduitRouteActions.GET,
             urlParams: {
                 id: TYPE.String
-            }
+            },
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`${schemaName}`, actualSchema.fields),
         'getDocumentById')));
 
@@ -64,7 +65,8 @@ export function getOps(schemaName: string, actualSchema: any) {
             queryParams: {
                 skip: TYPE.Number,
                 limit: TYPE.Number
-            }
+            },
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`get${schemaName}`, {
             documents: [actualSchema.fields],
             documentsCount: TYPE.Number
@@ -75,7 +77,8 @@ export function getOps(schemaName: string, actualSchema: any) {
     routesArray.push(constructRoute(new ConduitRoute({
             path: `/content/${schemaName}`,
             action: ConduitRouteActions.POST,
-            bodyParams: actualSchema.fields
+            bodyParams: actualSchema.fields,
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.fields),
         'createDocument')));
 
@@ -85,7 +88,8 @@ export function getOps(schemaName: string, actualSchema: any) {
             urlParams: {
                 id: TYPE.String,
             },
-            bodyParams: actualSchema.fields
+            bodyParams: actualSchema.fields,
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
         'editDocument')));
 
@@ -94,7 +98,8 @@ export function getOps(schemaName: string, actualSchema: any) {
             action: ConduitRouteActions.DELETE,
             urlParams: {
                 id: TYPE.String
-            }
+            },
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`delete${schemaName}`, TYPE.String),
         'deleteDocument')));
 

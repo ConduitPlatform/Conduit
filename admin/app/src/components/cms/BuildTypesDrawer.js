@@ -36,21 +36,77 @@ const BuildTypesDrawer = (props) => {
   const handleForm = (data) => {
     switch (data.type) {
       case 'Text':
-        return <SimpleForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <SimpleForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Number':
-        return <SimpleForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <SimpleForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Date':
-        return <SimpleForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <SimpleForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Enum':
-        return <EnumForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <EnumForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Boolean':
-        return <BooleanForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <BooleanForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'ObjectId':
-        return <ObjectIdForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <ObjectIdForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Group':
-        return <GroupForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <GroupForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       case 'Relation':
-        return <RelationForm onSubmit={onSubmit} drawerData={drawerData} onClose={onClose} selectedItem={selectedItem} />;
+        return (
+          <RelationForm
+            onSubmit={onSubmit}
+            drawerData={drawerData}
+            onClose={onClose}
+            selectedItem={selectedItem}
+          />
+        );
       default:
         return (
           <Box>
@@ -64,7 +120,12 @@ const BuildTypesDrawer = (props) => {
   };
 
   return (
-    <Drawer anchor="right" open={drawerData.open} classes={{ paper: classes.drawerPaper }} className={classes.drawer} {...rest}>
+    <Drawer
+      anchor="right"
+      open={drawerData.open}
+      classes={{ paper: classes.drawerPaper }}
+      className={classes.drawer}
+      {...rest}>
       <Typography variant={'subtitle1'} className={classes.title}>
         Configuration of {drawerData.type} field
       </Typography>

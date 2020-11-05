@@ -9,7 +9,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
 import Link from 'next/link';
 import { useDispatch } from 'react-redux';
-import { clearSelectedSchema } from "../../redux/actions";
+import { clearSelectedSchema } from '../../redux/actions';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
 
 export const headerHeight = 64;
 
@@ -29,11 +31,18 @@ const useStyles = makeStyles((theme) => ({
   input: {
     height: theme.spacing(5),
     padding: theme.spacing(1),
+    marginRight: theme.spacing(3),
     '&:hover': {
       border: '1px solid',
       borderColor: 'rgba(255,255,255,0.5)',
     },
     borderBottom: '1px solid rgba(255,255,255,0.5)',
+  },
+  checkbox: {
+    color: '#FFFFFF',
+    '&.Mui-checked': {
+      color: '#FFFFFF',
+    },
   },
   backIconContainer: {
     height: theme.spacing(8),
@@ -64,23 +73,26 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Header = (props) => {
-  const { name, handleSave, ...rest } = props;
+const Header = ({ name, authentication, handleSave, ...rest }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const [schemaName, setSchemaName] = useState(name);
+  const [schemaAuthentication, setSchemaAuthentication] = useState(false);
 
   useEffect(() => {
     setSchemaName(name);
-  }, [name]);
+    if (authentication !== null && authentication !== undefined) {
+      setSchemaAuthentication(authentication);
+    }
+  }, [authentication, name]);
 
   const handleDataName = (event) => {
     setSchemaName(event.target.value);
   };
 
   const handleData = () => {
-    handleSave(schemaName);
+    handleSave(schemaName, schemaAuthentication);
   };
 
   const handleBackButtonClick = () => {
@@ -106,9 +118,24 @@ const Header = (props) => {
           disableUnderline
           value={schemaName}
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              className={classes.checkbox}
+              checked={schemaAuthentication}
+              onChange={(event) => {
+                setSchemaAuthentication(event.target.checked);
+              }}
+              name="authentication"
+            />
+          }
+          label="Authentication required"
+        />
       </Box>
       <Box display={'flex'} alignItems={'center'}>
-        <Button className={clsx(classes.saveButton, classes.colorWhite)} onClick={() => handleData()}>
+        <Button
+          className={clsx(classes.saveButton, classes.colorWhite)}
+          onClick={() => handleData()}>
           <SaveIcon className={classes.saveIcon} />
           <Typography>Save</Typography>
         </Button>

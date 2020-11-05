@@ -34,7 +34,6 @@ const useStyles = makeStyles((theme) => ({
 
 const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
-
   const [document, setDocument] = useState([]);
 
   const populateEditData = useCallback(
@@ -277,6 +276,22 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
       return (
         <TextField
           type={'number'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}>
+          <option aria-label="None" value="">
+            None
+          </option>
+        </TextField>
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          type={'text'}
           variant={'outlined'}
           size={'small'}
           value={doc.value}

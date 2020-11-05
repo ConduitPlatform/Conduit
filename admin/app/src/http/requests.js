@@ -26,9 +26,7 @@ axios.interceptors.request.use(
     return config;
   },
   (error) => {
-    // eslint-disable-next-line no-undef
     console.log(error);
-    // eslint-disable-next-line no-undef
     return Promise.reject(error.response);
   }
 );
@@ -38,7 +36,6 @@ axios.interceptors.response.use(
     return config;
   },
   (error) => {
-    // eslint-disable-next-line no-undef
     console.log(error);
     if (error.response.status === 401) {
       if (store) {
@@ -46,9 +43,7 @@ axios.interceptors.response.use(
         Router.replace('/login');
       }
     }
-    // eslint-disable-next-line no-undef
     console.log(error);
-    // eslint-disable-next-line no-undef
     return Promise.reject(error.response);
   }
 );
@@ -110,29 +105,39 @@ export const putNotificationConfig = (projectId, productKey, clientEmail) =>
     clientEmail,
   });
 
-//CMS requests
+/** CMS requests **/
 export const getCmsSchemasRequest = (skip, limit) =>
   axios.get(`${CONDUIT_API}/admin/cms/schemas`, { params: { skip, limit } });
+
 export const getCmsSchemaByIdRequest = (_id) =>
   axios.get(`${CONDUIT_API}/admin/cms/schemas${_id}`);
+
 export const postCmsSchemaRequest = (data) =>
   axios.post(`${CONDUIT_API}/admin/cms/schemas`, { ...data });
+
 export const putCmsSchemaRequest = (_id, data) =>
   axios.put(`${CONDUIT_API}/admin/cms/schemas/${_id}`, { ...data });
+
 export const deleteCmsSchemaRequest = (_id) =>
   axios.delete(`${CONDUIT_API}/admin/cms/schemas/${_id}`);
+
 export const toggleSchemaByIdRequest = (_id) =>
   axios.put(`${CONDUIT_API}/admin/cms/schemas/toggle/${_id}`);
+
 export const getCmsDocumentsByNameRequest = (name) =>
   axios.get(`${CONDUIT_API}/admin/cms/content/${name}`);
+//-----------------------//
 
 /** Cloud storage requests **/
 export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
+
 export const putStorageSettings = (storageData) =>
   axios.put(`${CONDUIT_API}/admin/config/storage`, {
     ...storageData,
   });
+//-----------------------//
 
+/** Schemas requests **/
 export const createSchemaDocumentRequest = (schemaName, documentData) =>
   axios.post(`${CONDUIT_API}/admin/cms/content/${schemaName}`, { ...documentData });
 
@@ -143,7 +148,9 @@ export const editSchemaDocumentRequest = (schemaName, documentId, documentData) 
   axios.put(`${CONDUIT_API}/admin/cms/schemas/${schemaName}/${documentId}`, {
     ...documentData,
   });
+//-----------------------//
 
+/** Custom endpoints requests **/
 export const getCustomEndpointsRequest = () => {
   return axios.get(`${CONDUIT_API}/admin/cms/customEndpoints`);
 };
@@ -156,3 +163,4 @@ export const deleteCustomEndpointsRequest = (_id) => {
 export const createCustomEndpointsRequest = (endpointData) => {
   return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, endpointData);
 };
+//-----------------------//
