@@ -96,8 +96,12 @@ const BuildTypes = () => {
     index: undefined,
     type: 'standard',
   });
+  const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
+    if (data.selectedSchema) {
+      setReadOnly(true);
+    }
     if (data && data.selectedSchema) {
       setSchemaName(data.selectedSchema.name);
       if (
@@ -157,7 +161,7 @@ const BuildTypes = () => {
     setDuplicateId(false);
   };
 
-  const handleSubmit = (event, typeData) => {
+  const handleSubmit = (typeData) => {
     const array = schemaFields.newTypeFields;
     if (!Array.isArray(array)) {
       return;
@@ -272,7 +276,6 @@ const BuildTypes = () => {
     }
 
     handleDrawerClose();
-    event.preventDefault();
   };
 
   const handleDrawer = (item, index) => {
@@ -361,7 +364,12 @@ const BuildTypes = () => {
 
   return (
     <Box className={classes.root}>
-      <Header name={schemaName} authentication={authentication} handleSave={handleSave} />
+      <Header
+        name={schemaName}
+        authentication={authentication}
+        readOnly={readOnly}
+        handleSave={handleSave}
+      />
       <Box className={classes.cmsContainer}>
         <DragDropContext onDragEnd={onDragEnd}>
           <Box className={classes.contentContainer}>
@@ -396,6 +404,7 @@ const BuildTypes = () => {
         </DragDropContext>
       </Box>
       <BuildTypesDrawer
+        readOnly={readOnly}
         drawerData={drawerData}
         duplicateId={duplicateId}
         selectedItem={selectedProps.item}
