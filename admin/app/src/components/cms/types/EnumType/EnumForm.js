@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
-import Grid from '@material-ui/core/Grid';
 import FormControl from '@material-ui/core/FormControl';
-import InputLabel from '@material-ui/core/InputLabel';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormHelperText from '@material-ui/core/FormHelperText';
+import Grid from '@material-ui/core/Grid';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
+import { makeStyles } from '@material-ui/core/styles';
+import Switch from '@material-ui/core/Switch';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { useState } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -36,8 +36,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EnumForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function EnumForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
@@ -74,17 +80,6 @@ export default function EnumForm(props) {
     event.preventDefault();
   };
 
-  useEffect(() => {
-    setSimpleData({ ...simpleData, type: selectType() });
-  }, [drawerData.open]);
-
-  const selectType = () => {
-    if (selectedItem) {
-      return selectedItem.type ? selectedItem.type : '';
-    }
-    return '';
-  };
-
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
       <TextField
@@ -95,12 +90,23 @@ export default function EnumForm(props) {
         variant="outlined"
         className={classes.textField}
         fullWidth
-        required
+        requiredInputProps={{
+          readOnly: readOnly && !selectedItem,
+        }}
         helperText={'It will appear in the entry editor'}
       />
-      <FormControl className={classes.formControl} variant={'outlined'} fullWidth required>
+      <FormControl
+        className={classes.formControl}
+        variant={'outlined'}
+        fullWidth
+        required>
         <InputLabel id="field-type">Type</InputLabel>
-        <Select labelId="field-type" id="field type" label={'Type'} value={simpleData.type} onChange={handleFieldType}>
+        <Select
+          labelId="field-type"
+          id="field type"
+          label={'Type'}
+          value={simpleData.type}
+          onChange={handleFieldType}>
           <MenuItem value="">
             <em>None</em>
           </MenuItem>
@@ -126,12 +132,22 @@ export default function EnumForm(props) {
       <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Required
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.required} onChange={handleFieldRequired} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.required}
+                    onChange={handleFieldRequired}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -145,12 +161,22 @@ export default function EnumForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Select
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.select} onChange={handleFieldSelect} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.select}
+                    onChange={handleFieldSelect}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -164,7 +190,11 @@ export default function EnumForm(props) {
       </Box>
 
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>
