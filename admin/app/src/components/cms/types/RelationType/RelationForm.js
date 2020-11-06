@@ -109,7 +109,7 @@ export default function RelationForm({
         fullWidth
         required
         InputProps={{
-          readOnly: readOnly && !selectedItem,
+          readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
       />

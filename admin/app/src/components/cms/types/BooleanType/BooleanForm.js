@@ -105,7 +105,7 @@ export default function BooleanForm({
         fullWidth
         required
         InputProps={{
-          readOnly: readOnly && !selectedItem,
+          readOnly: readOnly && !!selectedItem,
         }}
         helperText={'This is the name of the field in the schema model'}
       />

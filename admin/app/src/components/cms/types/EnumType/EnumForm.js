@@ -91,7 +91,7 @@ export default function EnumForm({
         className={classes.textField}
         fullWidth
         requiredInputProps={{
-          readOnly: readOnly && !selectedItem,
+          readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
       />

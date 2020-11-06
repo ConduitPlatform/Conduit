@@ -86,7 +86,7 @@ export default function GroupForm({
         fullWidth
         required
         InputProps={{
-          readOnly: readOnly,
+          readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
       />

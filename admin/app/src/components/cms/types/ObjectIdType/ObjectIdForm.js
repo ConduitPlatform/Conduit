@@ -78,7 +78,7 @@ export default function ObjectIdForm({
         fullWidth
         required
         InputProps={{
-          readOnly: readOnly && !selectedItem,
+          readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
       />
