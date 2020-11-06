@@ -24,8 +24,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SelectForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function SelectForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const [selectData, setSelectData] = useState({
@@ -33,13 +39,13 @@ export default function SelectForm(props) {
     id: selectedItem ? selectedItem.id : '',
     placeholder: selectedItem ? selectedItem.placeholder : '',
     menuItems: selectedItem ? selectedItem.menuItems : '',
-    type: '',
+    type: selectedItem ? selectedItem.type : '',
   });
 
   useEffect(() => {
     const slug = slugify(selectData.name);
     setSelectData({ ...selectData, id: slug });
-  }, [selectData.name]);
+  }, [selectData, selectData.name]);
 
   const handleFieldName = (event) => {
     setSelectData({ ...selectData, name: event.target.value });
@@ -58,8 +64,8 @@ export default function SelectForm(props) {
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, selectData);
     event.preventDefault();
+    onSubmit(event, selectData);
 
     setSelectData({
       name: '',
@@ -69,10 +75,6 @@ export default function SelectForm(props) {
       type: '',
     });
   };
-
-  useEffect(() => {
-    setSelectData({ ...selectData, type: drawerData.type });
-  }, [drawerData.open]);
 
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
@@ -85,6 +87,9 @@ export default function SelectForm(props) {
         className={classes.textField}
         fullWidth
         required
+        InputProps={{
+          readOnly: readOnly && !!selectedItem,
+        }}
       />
       <Typography variant={'body2'} className={classes.info}>
         It will appear in the entry editor
@@ -100,7 +105,8 @@ export default function SelectForm(props) {
         required
       />
       <Typography variant={'body2'} className={classes.info}>
-        It's generated automatically based on the name and will appear in the API responses
+        It's generated automatically based on the name and will appear in the API
+        responses
       </Typography>
       <TextField
         id="Field Placeholder"
@@ -128,7 +134,11 @@ export default function SelectForm(props) {
         required
       />
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>
