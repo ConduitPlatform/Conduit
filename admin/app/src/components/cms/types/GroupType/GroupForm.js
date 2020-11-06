@@ -28,8 +28,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function GroupForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const [groupData, setGroupData] = useState({
@@ -42,10 +48,10 @@ export default function GroupForm(props) {
     isArray: selectedItem ? selectedItem.isArray : false,
   });
 
+  //TODO remove: produces maximum callstack
   // useEffect(() => {
-  //   const slug = slugify(groupData.name);
-  //   setGroupData({ ...groupData, id: slug });
-  // }, [groupData.name]);
+  //   setGroupData({ ...groupData, type: drawerData.type });
+  // }, [drawerData.open, drawerData.type, groupData]);
 
   const handleFieldName = (event) => {
     setGroupData({ ...groupData, name: event.target.value });
@@ -68,10 +74,6 @@ export default function GroupForm(props) {
     event.preventDefault();
   };
 
-  useEffect(() => {
-    setGroupData({ ...groupData, type: drawerData.type });
-  }, [drawerData.open]);
-
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
       <TextField
@@ -83,17 +85,30 @@ export default function GroupForm(props) {
         className={classes.textField}
         fullWidth
         required
+        InputProps={{
+          readOnly: readOnly,
+        }}
         helperText={'It will appear in the entry editor'}
       />
 
       <Grid container>
         <Grid item xs={12}>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'button'} style={{ width: '100%' }}>
               Required
             </Typography>
             <FormControlLabel
-              control={<Switch checked={groupData.required} onChange={handleFieldRequired} color="primary" />}
+              control={
+                <Switch
+                  checked={groupData.required}
+                  onChange={handleFieldRequired}
+                  color="primary"
+                />
+              }
               label=""
             />
           </Box>
@@ -107,12 +122,22 @@ export default function GroupForm(props) {
 
       <Grid container>
         <Grid item xs={12}>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'button'} style={{ width: '100%' }}>
               Select
             </Typography>
             <FormControlLabel
-              control={<Switch checked={groupData.select} onChange={handleFieldSelect} color="primary" />}
+              control={
+                <Switch
+                  checked={groupData.select}
+                  onChange={handleFieldSelect}
+                  color="primary"
+                />
+              }
               label=""
             />
           </Box>
@@ -126,12 +151,22 @@ export default function GroupForm(props) {
 
       <Grid container>
         <Grid item xs={12}>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'button'} style={{ width: '100%' }}>
               Array
             </Typography>
             <FormControlLabel
-              control={<Checkbox checked={groupData.isArray} onChange={handleFieldIsArray} color="primary" />}
+              control={
+                <Checkbox
+                  checked={groupData.isArray}
+                  onChange={handleFieldIsArray}
+                  color="primary"
+                />
+              }
               label=""
             />
           </Box>
@@ -144,7 +179,11 @@ export default function GroupForm(props) {
       </Grid>
 
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>
