@@ -9,7 +9,11 @@ import AuthUsers from '../components/AuthUsers';
 import { useDispatch, useSelector } from 'react-redux';
 import Snackbar from '@material-ui/core/Snackbar';
 import Alert from '@material-ui/lab/Alert';
-import { getAuthUsersData, getConfig, updateConfig } from '../redux/thunks/authenticationThunks';
+import {
+  getAuthUsersData,
+  getConfig,
+  updateConfig,
+} from '../redux/thunks/authenticationThunks';
 import AuthSettings from '../components/AuthSettings';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -30,9 +34,11 @@ const Authentication = () => {
   const { users, error: authUsersError, loading: usersLoading } = useSelector(
     (state) => state.authenticationPageReducer.authUsersState
   );
-  const { data: configData, error: authConfigError, loading: configLoading } = useSelector(
-    (state) => state.authenticationPageReducer.signInMethodsState
-  );
+  const {
+    data: configData,
+    error: authConfigError,
+    loading: configLoading,
+  } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const tabs = [
@@ -45,11 +51,11 @@ const Authentication = () => {
 
   useEffect(() => {
     dispatch(getAuthUsersData());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(getConfig());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (configData && !configData.active) {
@@ -110,18 +116,36 @@ const Authentication = () => {
       <Box p={2}>
         <Typography variant={'h4'}>Authentication</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
-        <Box role="tabpanel" hidden={selected !== 0 || (configData && !configData.active)} id={`tabpanel-0`}>
-          {users ? <AuthUsers users={users} /> : <Typography>No users available</Typography>}
+        <Box
+          role="tabpanel"
+          hidden={selected !== 0 || (configData && !configData.active)}
+          id={`tabpanel-0`}>
+          {users ? (
+            <AuthUsers users={users} />
+          ) : (
+            <Typography>No users available</Typography>
+          )}
         </Box>
-        <Box role="tabpanel" hidden={selected !== 1 || (configData && !configData.active)} id={`tabpanel-1`}>
+        <Box
+          role="tabpanel"
+          hidden={selected !== 1 || (configData && !configData.active)}
+          id={`tabpanel-1`}>
           {configData ? (
-            <AuthAccordion configData={configData} configDataError={authConfigError} handleData={handleConfigChange} />
+            <AuthAccordion
+              configData={configData}
+              configDataError={authConfigError}
+              handleData={handleConfigChange}
+            />
           ) : (
             <Typography>No config available</Typography>
           )}
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-          <AuthSettings handleSave={handleSettingsSave} settingsData={configData} error={authConfigError} />
+          <AuthSettings
+            handleSave={handleSettingsSave}
+            settingsData={configData}
+            error={authConfigError}
+          />
         </Box>
       </Box>
       <Snackbar

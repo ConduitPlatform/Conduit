@@ -52,7 +52,7 @@ const Emails = () => {
   useEffect(() => {
     dispatch(getEmailTemplates());
     dispatch(getEmailSettings());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (data.settings && !data.settings.active) {
@@ -139,7 +139,11 @@ const Emails = () => {
           <SendEmailForm handleSend={sendEmail} />
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-          <ProviderData settings={data.settings} handleSave={saveSettings} error={error} />
+          <ProviderData
+            settings={data.settings}
+            handleSave={saveSettings}
+            error={error}
+          />
         </Box>
       </Box>
       <Snackbar
