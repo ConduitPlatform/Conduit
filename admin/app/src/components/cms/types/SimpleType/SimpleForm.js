@@ -41,7 +41,7 @@ export default function SimpleForm({
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
     default: selectedItem ? selectedItem.default : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,

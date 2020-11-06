@@ -48,7 +48,7 @@ export default function EnumForm({
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     enumValues: selectedItem ? selectedItem.enumValues : '',

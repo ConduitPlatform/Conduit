@@ -39,7 +39,7 @@ export default function ObjectIdForm({
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,

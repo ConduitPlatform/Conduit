@@ -43,7 +43,7 @@ export default function BooleanForm({
     name: selectedItem ? selectedItem.name : '',
     placeholderFalse: selectedItem ? selectedItem.placeholderFalse : '',
     placeholderTrue: selectedItem ? selectedItem.placeholderTrue : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     default: selectedItem ? selectedItem.default : false,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,

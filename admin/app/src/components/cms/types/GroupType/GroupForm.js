@@ -41,7 +41,7 @@ export default function GroupForm({
   const [groupData, setGroupData] = useState({
     name: selectedItem ? selectedItem.name : '',
     content: selectedItem ? selectedItem.content : [],
-    type: '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,

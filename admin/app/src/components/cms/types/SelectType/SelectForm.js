@@ -39,7 +39,7 @@ export default function SelectForm({
     id: selectedItem ? selectedItem.id : '',
     placeholder: selectedItem ? selectedItem.placeholder : '',
     menuItems: selectedItem ? selectedItem.menuItems : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
   });
 
   useEffect(() => {
