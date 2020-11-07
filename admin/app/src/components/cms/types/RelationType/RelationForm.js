@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
 import Checkbox from '@material-ui/core/Checkbox';
+import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import FormHelperText from '@material-ui/core/FormHelperText';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormHelperText from '@material-ui/core/FormHelperText';
-import FormControl from '@material-ui/core/FormControl';
 import ListItemText from '@material-ui/core/ListItemText';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
+import { makeStyles } from '@material-ui/core/styles';
+import Switch from '@material-ui/core/Switch';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 
 const useStyles = makeStyles((theme) => ({
@@ -51,15 +51,21 @@ const MenuProps = {
   },
 };
 
-export default function RelationForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function RelationForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const { data } = useSelector((state) => state.cmsReducer);
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    type: selectedItem ? selectedItem.type : '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
@@ -91,10 +97,6 @@ export default function RelationForm(props) {
     event.preventDefault();
   };
 
-  useEffect(() => {
-    setSimpleData({ ...simpleData, type: drawerData.type });
-  }, [drawerData.open]);
-
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
       <TextField
@@ -106,17 +108,30 @@ export default function RelationForm(props) {
         className={classes.textField}
         fullWidth
         required
+        InputProps={{
+          readOnly: readOnly && !!selectedItem,
+        }}
         helperText={'It will appear in the entry editor'}
       />
       <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Required
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.required} onChange={handleFieldRequired} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.required}
+                    onChange={handleFieldRequired}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -130,12 +145,22 @@ export default function RelationForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Select
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.select} onChange={handleFieldSelect} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.select}
+                    onChange={handleFieldSelect}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -149,12 +174,22 @@ export default function RelationForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Array
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={simpleData.isArray} onChange={handleFieldIsArray} color="primary" />}
+                control={
+                  <Checkbox
+                    checked={simpleData.isArray}
+                    onChange={handleFieldIsArray}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -181,7 +216,10 @@ export default function RelationForm(props) {
               schema.enabled &&
               schema.name !== data.selectedSchema?.name && (
                 <MenuItem key={schema.name} value={schema.name}>
-                  <Checkbox checked={simpleData.relation.indexOf(schema.name) > -1} color={'primary'} />
+                  <Checkbox
+                    checked={simpleData.relation.indexOf(schema.name) > -1}
+                    color={'primary'}
+                  />
                   <ListItemText primary={schema.name} />
                 </MenuItem>
               )
@@ -191,7 +229,11 @@ export default function RelationForm(props) {
       </FormControl>
 
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

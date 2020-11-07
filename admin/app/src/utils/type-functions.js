@@ -22,9 +22,13 @@ export const addToChildGroup = (data, groupId, item, droppableDestination) => {
     }
   });
 
-  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
+  const idPosition2 = data[idPosition].content.findIndex(
+    (object2) => object2.name === groupId
+  );
 
-  clone[idPosition].content[idPosition2].content.splice(droppableDestination.index, 0, { ...item });
+  clone[idPosition].content[idPosition2].content.splice(droppableDestination.index, 0, {
+    ...item,
+  });
   return clone;
 };
 
@@ -50,7 +54,9 @@ export const updateGroupChildItem = (data, groupId, item, position) => {
     return object.content.find((content) => content.name === groupId);
   });
 
-  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
+  const idPosition2 = data[idPosition].content.findIndex(
+    (object2) => object2.name === groupId
+  );
 
   clone[idPosition].content[idPosition2].content.splice(position, 1, { ...item });
   return clone;
@@ -181,6 +187,8 @@ const prepareTypes = (type, isArray, content, enumType) => {
       return enumType === 'Text' ? 'String' : 'Number';
     case 'Group':
       return prepareFields(content);
+    default:
+      break;
   }
 };
 
@@ -199,20 +207,35 @@ export const prepareFields = (typeFields) => {
           select: clone.select ? clone.select : false,
           required: clone.required ? clone.required : false,
           type: [
-            prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null),
+            prepareTypes(
+              clone.isEnum ? 'Enum' : clone.type,
+              clone.isArray,
+              clone.content,
+              clone.isEnum ? clone.type : null
+            ),
           ],
         };
       } else {
         fields = {
           select: clone.select ? clone.select : false,
           required: clone.required ? clone.required : false,
-          type: prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null),
+          type: prepareTypes(
+            clone.isEnum ? 'Enum' : clone.type,
+            clone.isArray,
+            clone.content,
+            clone.isEnum ? clone.type : null
+          ),
         };
       }
     } else {
       fields = {
         type: clone.type
-          ? prepareTypes(clone.isEnum ? 'Enum' : clone.type, clone.isArray, clone.content, clone.isEnum ? clone.type : null)
+          ? prepareTypes(
+              clone.isEnum ? 'Enum' : clone.type,
+              clone.isArray,
+              clone.content,
+              clone.isEnum ? clone.type : null
+            )
           : '',
         unique: clone.unique ? clone.unique : false,
         select: clone.select ? clone.select : false,

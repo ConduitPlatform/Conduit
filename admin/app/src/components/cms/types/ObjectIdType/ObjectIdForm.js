@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
 import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import Switch from '@material-ui/core/Switch';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { useState } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -27,13 +27,19 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ObjectIdForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function ObjectIdForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
-    type: '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
@@ -60,10 +66,6 @@ export default function ObjectIdForm(props) {
     event.preventDefault();
   };
 
-  useEffect(() => {
-    setSimpleData({ ...simpleData, type: drawerData.type });
-  }, [drawerData.open]);
-
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
       <TextField
@@ -75,36 +77,59 @@ export default function ObjectIdForm(props) {
         className={classes.textField}
         fullWidth
         required
+        InputProps={{
+          readOnly: readOnly && !!selectedItem,
+        }}
         helperText={'It will appear in the entry editor'}
       />
       <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Unique field
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.unique} onChange={handleFieldUnique} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.unique}
+                    onChange={handleFieldUnique}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
           </Grid>
           <Grid item xs={12}>
             <Typography variant={'subtitle1'} className={classes.info}>
-              If active, this field's value must be unique
+              {"If active, this field's value must be unique"}
             </Typography>
           </Grid>
         </Grid>
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Required
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.required} onChange={handleFieldRequired} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.required}
+                    onChange={handleFieldRequired}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -118,12 +143,22 @@ export default function ObjectIdForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Select
               </Typography>
               <FormControlLabel
-                control={<Switch checked={simpleData.select} onChange={handleFieldSelect} color="primary" />}
+                control={
+                  <Switch
+                    checked={simpleData.select}
+                    onChange={handleFieldSelect}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -137,7 +172,11 @@ export default function ObjectIdForm(props) {
       </Box>
 
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>
