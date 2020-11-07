@@ -234,6 +234,34 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
         />
       );
     }
+    if (doc.type.toString().toLowerCase() === 'relation') {
+      return (
+        <TextField
+          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc.type.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
     if (doc.type.toString().toLowerCase() === 'date') {
       return (
         <CustomDatepicker
@@ -253,24 +281,11 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
           value={doc.value}
           onChange={(e) => {
             handleValueChange(index, innerIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc.type.toString().toLowerCase() === 'relation') {
-      return (
-        <Select
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value ? doc.value : ''}
-          fullWidth
-          onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
           }}>
           <option aria-label="None" value="">
             None
           </option>
-        </Select>
+        </TextField>
       );
     }
     if (doc.type.toString().toLowerCase() === 'objectid') {
