@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { DatePicker, MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
 import { makeStyles } from '@material-ui/core/styles';
 import { Today } from '@material-ui/icons';
+import { DatePicker, MuiPickersUtilsProvider } from '@material-ui/pickers';
+import React from 'react';
 
 const useStyles = makeStyles((theme) => ({
   dateInput: {

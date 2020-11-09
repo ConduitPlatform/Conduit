@@ -6,9 +6,20 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 
-const ConfirmationDialog = ({ open, buttonText, title, description, buttonAction, handleClose }) => {
+const ConfirmationDialog = ({
+  open,
+  buttonText,
+  title,
+  description,
+  buttonAction,
+  handleClose,
+}) => {
   return (
-    <Dialog open={open} onClose={handleClose} aria-labelledby="alert-dialog-title" aria-describedby="alert-dialog-description">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description">
       <DialogTitle id="alert-dialog-title">{title}</DialogTitle>
       <DialogContent>
         <DialogContentText id="alert-dialog-description">{description}</DialogContentText>
