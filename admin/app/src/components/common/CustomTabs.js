@@ -22,7 +22,7 @@ export default function CustomTabs({ tabs, selected, handleChange, ...rest }) {
       <Tabs
         indicatorColor={'primary'}
         textColor={'primary'}
-        value={selected}
+        value={selected === -1 ? false : selected}
         onChange={handleChange}>
         {tabs &&
           tabs.map((tab, index) => (
