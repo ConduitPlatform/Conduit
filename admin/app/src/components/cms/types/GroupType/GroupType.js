@@ -1,20 +1,20 @@
-import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import DeleteIcon from '@material-ui/icons/Delete';
-import SettingsIcon from '@material-ui/icons/Settings';
-import { SimpleGroupType } from '../SimpleType/SimpleType';
-import { BooleanGroupType } from '../BooleanType/BooleanType';
-import { GroupGroupType } from './GroupTypeChild';
-import FieldIndicators from '../../FieldIndicators';
 import GroupIcon from '@material-ui/icons/PlaylistAdd';
-import Tooltip from '@material-ui/core/Tooltip';
+import SettingsIcon from '@material-ui/icons/Settings';
+import React from 'react';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
+import FieldIndicators from '../../FieldIndicators';
+import { BooleanGroupType } from '../BooleanType/BooleanType';
 import { EnumGroupType } from '../EnumType/EnumType';
 import { ObjectIdGroupType } from '../ObjectIdType/ObjectIdType';
 import { RelationGroupType } from '../RelationType/RelationType';
-import Grid from '@material-ui/core/Grid';
+import { SimpleGroupType } from '../SimpleType/SimpleType';
+import { GroupGroupType } from './GroupTypeChild';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -50,16 +50,31 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupType(props) {
-  const { item, groupIndex, handleDelete, handleDrawer, handleGroupDelete, handleGroupDrawer, ...rest } = props;
+export default function GroupType({
+  item,
+  groupIndex,
+  handleDelete,
+  handleDrawer,
+  handleGroupDelete,
+  handleGroupDrawer,
+  ...rest
+}) {
   const classes = useStyles();
 
   const handleGroupContent = (item, index) => {
     switch (item.type) {
       case 'Text':
-        return item.isEnum ? <EnumGroupType item={item} /> : <SimpleGroupType item={item} />;
+        return item.isEnum ? (
+          <EnumGroupType item={item} />
+        ) : (
+          <SimpleGroupType item={item} />
+        );
       case 'Number':
-        return item.isEnum ? <EnumGroupType item={item} /> : <SimpleGroupType item={item} />;
+        return item.isEnum ? (
+          <EnumGroupType item={item} />
+        ) : (
+          <SimpleGroupType item={item} />
+        );
       case 'Date':
         return <SimpleGroupType item={item} />;
       case 'ObjectId':
@@ -103,10 +118,16 @@ export default function GroupType(props) {
       </Grid>
       <Droppable droppableId={groupId} isCombineEnabled>
         {(provided, snapshot) => (
-          <Box ref={provided.innerRef} className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
+          <Box
+            ref={provided.innerRef}
+            className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
             {item.content && Array.isArray(item.content) && item.content.length > 0 ? (
               item.content.map((groupItem, index) => (
-                <Draggable key={groupItem.name} draggableId={groupItem.name} index={index} isDragDisabled>
+                <Draggable
+                  key={groupItem.name}
+                  draggableId={groupItem.name}
+                  index={index}
+                  isDragDisabled>
                   {(provided) => (
                     <Box
                       className={classes.item}
@@ -115,15 +136,24 @@ export default function GroupType(props) {
                       {...provided.dragHandleProps}>
                       <Box width={'99%'}>{handleGroupContent(groupItem, index)}</Box>
                       <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
-                        <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
+                        <Box
+                          display={'flex'}
+                          width={'100%'}
+                          justifyContent={'space-between'}>
                           <Box display={'flex'}>
                             <Typography variant={'body2'} style={{ marginRight: 8 }}>
                               {groupItem.name}
                             </Typography>
                           </Box>
                           <Box display={'flex'}>
-                            <DeleteIcon className={classes.icon} onClick={() => handleDelete(index, groupIndex)} />
-                            <SettingsIcon className={classes.icon} onClick={() => handleDrawer(groupItem, index, groupIndex)} />
+                            <DeleteIcon
+                              className={classes.icon}
+                              onClick={() => handleDelete(index, groupIndex)}
+                            />
+                            <SettingsIcon
+                              className={classes.icon}
+                              onClick={() => handleDrawer(groupItem, index, groupIndex)}
+                            />
                           </Box>
                         </Box>
                       </Box>

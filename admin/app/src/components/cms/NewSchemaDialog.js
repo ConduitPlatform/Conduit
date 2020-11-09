@@ -65,9 +65,16 @@ const NewSchemaDialog = ({ open, handleClose }) => {
   };
 
   return (
-    <Dialog fullWidth={true} maxWidth={'sm'} open={open} onClose={handleCloseClick} classes={{ paper: classes.paper }}>
+    <Dialog
+      fullWidth={true}
+      maxWidth={'sm'}
+      open={open}
+      onClose={handleCloseClick}
+      classes={{ paper: classes.paper }}>
       <Box maxWidth={600}>
-        <DialogTitle id="new-custom-type" style={{ textAlign: 'center', marginBottom: 16 }}>
+        <DialogTitle
+          id="new-custom-type"
+          style={{ textAlign: 'center', marginBottom: 16 }}>
           Create new Schema
         </DialogTitle>
         <DialogContent style={{ marginBottom: 16 }}>
@@ -81,7 +88,9 @@ const NewSchemaDialog = ({ open, handleClose }) => {
           />
         </DialogContent>
         <DialogActions style={{ justifyContent: 'center' }}>
-          <Link href={{ pathname: '/cms/build-types', query: { name: typeName } }} as={'/cms/build-types'}>
+          <Link
+            href={{ pathname: '/cms/build-types', query: { name: typeName } }}
+            as={'/cms/build-types'}>
             <a style={{ textDecoration: 'none' }}>
               <Button
                 onClick={handleAddType}

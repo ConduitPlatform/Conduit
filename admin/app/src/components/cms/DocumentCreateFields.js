@@ -4,7 +4,7 @@ import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
-import CustomDatepicker from '../CustomDatepicker';
+import CustomDatepicker from '../common/CustomDatepicker';
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({

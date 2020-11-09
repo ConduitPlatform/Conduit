@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import DataTable from '../DataTable';
+import DataTable from '../common/DataTable';
 import Container from '@material-ui/core/Container';
 import Box from '@material-ui/core/Box';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
@@ -29,7 +29,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledActions, handleActions }) => {
+const SchemasTable = ({
+  activeSchemas,
+  disabledSchemas,
+  activeActions,
+  disabledActions,
+  handleActions,
+}) => {
   const classes = useStyles();
   const [active, setActive] = useState(true);
 
@@ -64,7 +70,12 @@ const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledA
 
   return (
     <Container maxWidth={'lg'}>
-      <Box width={'100%'} display={'inline-flex'} justifyContent={'center'} alignItems={'center'} margin={'10px'}>
+      <Box
+        width={'100%'}
+        display={'inline-flex'}
+        justifyContent={'center'}
+        alignItems={'center'}
+        margin={'10px'}>
         <ToggleButtonGroup size="large" value={active} exclusive onChange={handleChange}>
           <ToggleButton key={1} value={true} className={classes.toggleButton}>
             Active Schemas
@@ -74,7 +85,13 @@ const SchemasTable = ({ activeSchemas, disabledSchemas, activeActions, disabledA
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
-      {visibleData() && <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />}
+      {visibleData() && (
+        <DataTable
+          dsData={visibleData()}
+          actions={getActions()}
+          handleAction={handleActions}
+        />
+      )}
     </Container>
   );
 };

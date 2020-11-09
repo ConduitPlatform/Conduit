@@ -18,9 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ObjectIdType(props) {
-  const { item, ...rest } = props;
-
+export default function ObjectIdType({ item, ...rest }) {
   const classes = useStyles();
 
   return (
@@ -46,9 +44,7 @@ export default function ObjectIdType(props) {
   );
 }
 
-export function ObjectIdGroupType(props) {
-  const { item, ...rest } = props;
-
+export function ObjectIdGroupType({ item, ...rest }) {
   const classes = useStyles();
 
   return (

@@ -20,9 +20,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const handleIcon = (item) => {
-  const classes = useStyles();
-
+const handleIcon = (item, classes) => {
   switch (item) {
     case 'Text':
       return (
@@ -47,15 +45,15 @@ const handleIcon = (item) => {
   }
 };
 
-export default function SimpleType(props) {
-  const { item, ...rest } = props;
+export default function SimpleType({ item, ...rest }) {
+  const classes = useStyles();
 
   return (
     <Box {...rest}>
       <Grid container>
         <Grid item xs={6}>
           <Box display={'flex'} alignItems={'center'}>
-            {handleIcon(item.type)}
+            {handleIcon(item.type, classes)}
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
               {item.placeholder}
             </Typography>
@@ -71,15 +69,15 @@ export default function SimpleType(props) {
   );
 }
 
-export function SimpleGroupType(props) {
-  const { item, ...rest } = props;
+export function SimpleGroupType({ item, ...rest }) {
+  const classes = useStyles();
 
   return (
     <Box {...rest}>
       <Grid container>
         <Grid item xs={6}>
           <Box display={'flex'} alignItems={'center'}>
-            {handleIcon(item.type)}
+            {handleIcon(item.type, classes)}
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
               {item.placeholder}
             </Typography>
