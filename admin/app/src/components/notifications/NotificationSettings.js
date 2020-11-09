@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 
-import { Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Typography } from '@material-ui/core';
+import {
+  Container,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Typography,
+} from '@material-ui/core';
 import { Edit, Save, SettingsOutlined } from '@material-ui/icons';
 
 import makeStyles from '@material-ui/core/styles/makeStyles';
@@ -60,14 +69,25 @@ const NotificationSettings = ({ config, handleSave }) => {
     if (!config) {
       return;
     }
-    setFormData({
-      ...formData,
-      active: config.active,
-      providerName: config.providerName,
-      projectId: config[config.providerName].projectId,
-      privateKey: config[config.providerName].privateKey,
-      clientEmail: config[config.providerName].clientEmail,
-    });
+    let data;
+    if (config[config.providerName]) {
+      data = {
+        active: config.active,
+        providerName: config.providerName,
+        projectId: config[config.providerName].projectId,
+        privateKey: config[config.providerName].privateKey,
+        clientEmail: config[config.providerName].clientEmail,
+      };
+    } else {
+      data = {
+        active: config.active,
+        providerName: config.providerName,
+        projectId: '',
+        privateKey: '',
+        clientEmail: '',
+      };
+    }
+    setFormData({ ...data });
   }, [config]);
 
   const handleSelect = (event) => {
@@ -229,7 +249,11 @@ const NotificationSettings = ({ config, handleSave }) => {
     <Container>
       <Paper className={classes.paper} elevation={5}>
         <Grid container>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'h6'}>
               <SettingsOutlined fontSize={'small'} /> Notification settings
             </Typography>
@@ -259,7 +283,11 @@ const NotificationSettings = ({ config, handleSave }) => {
 
           {!formData.active && (
             <Grid item container xs={12} justify={'flex-end'}>
-              <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }} onClick={() => saveConfig()}>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ alignSelf: 'flex-end' }}
+                onClick={() => saveConfig()}>
                 Save
               </Button>
             </Grid>

@@ -57,7 +57,6 @@ const SendNotificationForm = ({ handleSend }) => {
             <Grid item xs={12}>
               <TextField
                 required
-                id="outlined-required"
                 label="Title"
                 value={formState.title}
                 onChange={handleTitleChange}
@@ -67,7 +66,6 @@ const SendNotificationForm = ({ handleSend }) => {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                id="outlined-multiline-static"
                 label="Body"
                 multiline
                 rows="10"
@@ -80,7 +78,6 @@ const SendNotificationForm = ({ handleSend }) => {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                id="outlined-multiline-static"
                 label="Data"
                 multiline
                 rows="10"
@@ -93,7 +90,11 @@ const SendNotificationForm = ({ handleSend }) => {
               />
             </Grid>
             <Grid item container justify="flex-end" xs={12}>
-              <Button variant="contained" color="primary" startIcon={<Send />} onClick={handleSendNotification}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Send />}
+                onClick={handleSendNotification}>
                 Send
               </Button>
             </Grid>
