@@ -49,18 +49,17 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesContent = (props) => {
-  const {
-    dataKey,
-    data,
-    handleDrawer,
-    handleDelete,
-    handleGroupDelete,
-    handleGroupDrawer,
-    handleGroupInGroupDelete,
-    handleGroupInGroupDrawer,
-    ...rest
-  } = props;
+const BuildTypesContent = ({
+  dataKey,
+  data,
+  handleDrawer,
+  handleDelete,
+  handleGroupDelete,
+  handleGroupDrawer,
+  handleGroupInGroupDelete,
+  handleGroupInGroupDrawer,
+  ...rest
+}) => {
   const classes = useStyles();
 
   const handleItemContent = (item, index) => {
