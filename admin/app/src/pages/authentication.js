@@ -30,7 +30,6 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Authentication = () => {
-  console.log('render');
   const classes = useStyles();
   const dispatch = useDispatch();
 
