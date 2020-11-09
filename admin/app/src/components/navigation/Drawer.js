@@ -6,12 +6,21 @@ import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
 import makeStyles from '@material-ui/styles/makeStyles';
-import { Email, ExitToApp, Home, Notifications, People, Settings, Toc, Cloud } from '@material-ui/icons';
+import {
+  Email,
+  ExitToApp,
+  Home,
+  Notifications,
+  People,
+  Settings,
+  Toc,
+  Cloud,
+} from '@material-ui/icons';
 import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
 import { useDispatch } from 'react-redux';
-import { logout } from '../redux/thunks/appAuthThunks';
+import { logout } from '../../redux/thunks/appAuthThunks';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -132,39 +141,76 @@ function CustomDrawer(props) {
 
         <List component="nav">
           <Link href="/">
-            <ListItem button key={'Home'} className={classes.listItem} style={itemStyle} selected={itemSelected === 0}>
+            <ListItem
+              button
+              key={'Home'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 0}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Home color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Home'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Home'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
           <Link href="/authentication">
-            <ListItem button key={'Authentication'} className={classes.listItem} style={itemStyle} selected={itemSelected === 1}>
+            <ListItem
+              button
+              key={'Authentication'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 1}>
               <ListItemIcon className={classes.listItemIcon}>
                 <People color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Authentication'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Authentication'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
           <Link href="/notification">
-            <ListItem button key={'Notification'} className={classes.listItem} style={itemStyle} selected={itemSelected === 2}>
+            <ListItem
+              button
+              key={'Notification'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 2}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Notifications color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Notification'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Notification'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
           <Link href="/emails">
-            <ListItem button key={'Emails'} className={classes.listItem} style={itemStyle} selected={itemSelected === 3}>
+            <ListItem
+              button
+              key={'Emails'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 3}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Email color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Emails'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Emails'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
           <Link href="/cms">
-            <ListItem button key={'CMS'} className={classes.listItem} style={itemStyle} selected={itemSelected === 4}>
+            <ListItem
+              button
+              key={'CMS'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 4}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Toc color={'inherit'} />
               </ListItemIcon>
@@ -172,29 +218,52 @@ function CustomDrawer(props) {
             </ListItem>
           </Link>
           <Link href="/storage">
-            <ListItem button key={'Storage'} className={classes.listItem} style={itemStyle} selected={itemSelected === 5}>
+            <ListItem
+              button
+              key={'Storage'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 5}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Cloud color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Storage'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
           <Link href="/settings">
-            <ListItem button key={'Settings'} className={classes.listItem} style={itemStyle} selected={itemSelected === 6}>
+            <ListItem
+              button
+              key={'Settings'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 6}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Settings color={'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
+              <ListItemText
+                primary={'Settings'}
+                classes={{ primary: classes.listItemText }}
+              />
             </ListItem>
           </Link>
         </List>
         <Divider />
         <List>
-          <ListItem button className={classes.listItem} style={itemStyle} onClick={handleLogout}>
+          <ListItem
+            button
+            className={classes.listItem}
+            style={itemStyle}
+            onClick={handleLogout}>
             <ListItemIcon className={classes.listItemIcon}>
               <ExitToApp color={'inherit'} />
             </ListItemIcon>
-            <ListItemText primary={'Log out'} classes={{ primary: classes.listItemText }} />
+            <ListItemText
+              primary={'Log out'}
+              classes={{ primary: classes.listItemText }}
+            />
           </ListItem>
         </List>
       </div>

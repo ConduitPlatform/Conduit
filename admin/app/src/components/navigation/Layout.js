@@ -53,10 +53,22 @@ export function Layout(props) {
 
   let appBar, drawer;
   if (!drawerDisabled()) {
-    appBar = <CustomAppBar className={classes.appBar} onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />;
+    appBar = (
+      <CustomAppBar
+        className={classes.appBar}
+        onMenuClick={() => menuClick()}
+        onLogoClick={() => logoClick()}
+      />
+    );
     drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
   } else {
-    appBar = <CustomAppBar className={classes.appBar} showMenuButton={false} onMenuClick={() => menuClick()} />;
+    appBar = (
+      <CustomAppBar
+        className={classes.appBar}
+        showMenuButton={false}
+        onMenuClick={() => menuClick()}
+      />
+    );
   }
 
   return (
