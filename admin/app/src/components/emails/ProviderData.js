@@ -46,11 +46,9 @@ const ProviderData = ({ settings, error, handleSave }) => {
       return;
     }
     setSettingsState({
-      ...settingsState,
       active: settings.active,
       transport: settings.transport,
       transportSettings: {
-        ...settingsState.transportSettings,
         apiKey:
           settings.transportSettings && settings.transportSettings[settings.transport]
             ? settings.transportSettings[settings.transport].apiKey
@@ -65,7 +63,7 @@ const ProviderData = ({ settings, error, handleSave }) => {
             : '',
       },
     });
-  }, [settings, error, settingsState]);
+  }, [settings, error]);
 
   const handleCancel = () => {
     setSettingsState({
