@@ -1,4 +1,9 @@
-import { setStorageError, startStorageLoading, stopStorageLoading, setStorageConfig } from '../actions';
+import {
+  setStorageError,
+  startStorageLoading,
+  stopStorageLoading,
+  setStorageConfig,
+} from '../actions';
 import { getStorageSettings, putStorageSettings } from '../../http/requests';
 
 export const getStorageConfig = () => {

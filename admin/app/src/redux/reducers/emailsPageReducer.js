@@ -46,7 +46,10 @@ const emailsPageReducer = (state = initialState, action) => {
         ...state,
         data: {
           ...state.data,
-          templateDocuments: updateTemplateByID(action.payload, state.data.templateDocuments),
+          templateDocuments: updateTemplateByID(
+            action.payload,
+            state.data.templateDocuments
+          ),
         },
       };
     case ADD_EMAIL_TEMPLATE:
