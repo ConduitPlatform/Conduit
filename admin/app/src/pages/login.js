@@ -10,7 +10,7 @@ import Container from '@material-ui/core/Container';
 import { Formik } from 'formik';
 import Snackbar from '@material-ui/core/Snackbar';
 import Alert from '@material-ui/lab/Alert';
-import { Layout } from '../components/Layout';
+import { Layout } from '../components/navigation/Layout';
 import { LockOutlined } from '@material-ui/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../redux/thunks/appAuthThunks';

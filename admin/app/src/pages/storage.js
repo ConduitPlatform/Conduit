@@ -1,11 +1,11 @@
-import { Layout } from '../components/Layout';
+import { Layout } from '../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import CustomTabs from '../components/CustomTabs';
+import CustomTabs from '../components/common/CustomTabs';
 import React, { useEffect, useState } from 'react';
 import { privateRoute } from '../components/utils/privateRoute';
-import StorageFiles from '../components/StorageFiles';
-import StorageSettings from '../components/StorageSettings';
+import StorageFiles from '../components/storage/StorageFiles';
+import StorageSettings from '../components/storage/StorageSettings';
 import { useDispatch, useSelector } from 'react-redux';
 import { saveStorageConfig } from '../redux/thunks/storageThunks';
 import { getStorageConfig } from '../redux/thunks/storageThunks';
@@ -35,7 +35,7 @@ const Storage = () => {
 
   useEffect(() => {
     dispatch(getStorageConfig());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (error) {

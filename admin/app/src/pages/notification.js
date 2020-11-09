@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { privateRoute } from '../components/utils/privateRoute';
-import { Layout } from '../components/Layout';
-import CustomTabs from '../components/CustomTabs';
-import DataTable from '../components/DataTable';
+import { Layout } from '../components/navigation/Layout';
+import CustomTabs from '../components/common/CustomTabs';
+import DataTable from '../components/common/DataTable';
 import SendNotificationForm from '../components/notifications/SendNotificationForm';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 import { useDispatch, useSelector } from 'react-redux';
-import { getConfig, saveConfig, sendNewNotification } from '../redux/thunks/notificationThunks';
+import {
+  getConfig,
+  saveConfig,
+  sendNewNotification,
+} from '../redux/thunks/notificationThunks';
 import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -26,7 +30,11 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Notification = () => {
-  const tabs = [{ title: 'Notifications' }, { title: 'Send Notifications' }, { title: 'Settings' }];
+  const tabs = [
+    { title: 'Notifications' },
+    { title: 'Send Notifications' },
+    { title: 'Settings' },
+  ];
   const dispatch = useDispatch();
   const classes = useStyles();
 
@@ -37,7 +45,7 @@ const Notification = () => {
 
   useEffect(() => {
     dispatch(getConfig());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (error) {
@@ -97,7 +105,10 @@ const Notification = () => {
           <SendNotificationForm handleSend={sendNotification} />
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-          <NotificationSettings handleSave={handleConfigSave} config={data ? data.config : null} />
+          <NotificationSettings
+            handleSave={handleConfigSave}
+            config={data ? data.config : null}
+          />
         </Box>
       </Box>
       <Snackbar
