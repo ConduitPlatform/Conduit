@@ -1,7 +1,8 @@
 import { getCookie } from '../utils/cookie';
 import { SET_AUTHENTICATION_TOKEN } from '../redux/actions/actionTypes';
 
-// checks if the page is being loaded on the server, and if so, get auth token from the cookie:
+// checks if the page is being loaded on the server, and if so, get auth
+//token from the cookie:
 export default function (ctx) {
   if (ctx.isServer) {
     const cookie = getCookie('JWT', ctx.req);

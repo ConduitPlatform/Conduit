@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import slugify from '../../../../utils/slugify';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
 import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import Switch from '@material-ui/core/Switch';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { useEffect, useState } from 'react';
+import slugify from '../../../../utils/slugify';
 
 const useStyles = makeStyles((theme) => ({
   textField: {
@@ -29,15 +29,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function BooleanForm(props) {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+export default function BooleanForm({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  ...rest
+}) {
   const classes = useStyles();
 
   const [booleanData, setBooleanData] = useState({
     name: selectedItem ? selectedItem.name : '',
     placeholderFalse: selectedItem ? selectedItem.placeholderFalse : '',
     placeholderTrue: selectedItem ? selectedItem.placeholderTrue : '',
-    type: '',
+    type: selectedItem ? selectedItem.type : drawerData.type,
     default: selectedItem ? selectedItem.default : false,
     unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
@@ -48,7 +54,7 @@ export default function BooleanForm(props) {
   useEffect(() => {
     const slug = slugify(booleanData.name);
     setBooleanData({ ...booleanData, id: slug });
-  }, [booleanData.name]);
+  }, [booleanData, booleanData.name]);
 
   const handleFieldName = (event) => {
     setBooleanData({ ...booleanData, name: event.target.value });
@@ -87,10 +93,6 @@ export default function BooleanForm(props) {
     event.preventDefault();
   };
 
-  useEffect(() => {
-    setBooleanData({ ...booleanData, type: drawerData.type });
-  }, [drawerData.open]);
-
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
       <TextField
@@ -102,6 +104,9 @@ export default function BooleanForm(props) {
         className={classes.textField}
         fullWidth
         required
+        InputProps={{
+          readOnly: readOnly && !!selectedItem,
+        }}
         helperText={'This is the name of the field in the schema model'}
       />
       <TextField
@@ -131,12 +136,22 @@ export default function BooleanForm(props) {
       <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Default Value
               </Typography>
               <FormControlLabel
-                control={<Switch checked={booleanData.default} onChange={handleFieldDefault} color="primary" />}
+                control={
+                  <Switch
+                    checked={booleanData.default}
+                    onChange={handleFieldDefault}
+                    color="primary"
+                  />
+                }
                 label={booleanData.default ? 'True' : 'False'}
               />
             </Box>
@@ -150,12 +165,22 @@ export default function BooleanForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Unique field
               </Typography>
               <FormControlLabel
-                control={<Switch checked={booleanData.unique} onChange={handleFieldUnique} color="primary" />}
+                control={
+                  <Switch
+                    checked={booleanData.unique}
+                    onChange={handleFieldUnique}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -169,12 +194,22 @@ export default function BooleanForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Required
               </Typography>
               <FormControlLabel
-                control={<Switch checked={booleanData.required} onChange={handleFieldRequired} color="primary" />}
+                control={
+                  <Switch
+                    checked={booleanData.required}
+                    onChange={handleFieldRequired}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -188,12 +223,22 @@ export default function BooleanForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Select
               </Typography>
               <FormControlLabel
-                control={<Switch checked={booleanData.select} onChange={handleFieldSelect} color="primary" />}
+                control={
+                  <Switch
+                    checked={booleanData.select}
+                    onChange={handleFieldSelect}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -207,12 +252,22 @@ export default function BooleanForm(props) {
 
         <Grid container>
           <Grid item xs={12}>
-            <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
               <Typography variant={'button'} style={{ width: '100%' }}>
                 Array
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={booleanData.isArray} onChange={handleFieldIsArray} color="primary" />}
+                control={
+                  <Checkbox
+                    checked={booleanData.isArray}
+                    onChange={handleFieldIsArray}
+                    color="primary"
+                  />
+                }
                 label=""
               />
             </Box>
@@ -225,7 +280,11 @@ export default function BooleanForm(props) {
         </Grid>
       </Box>
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

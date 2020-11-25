@@ -29,15 +29,25 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesDrawer = (props) => {
-  const { drawerData, onSubmit, onClose, selectedItem, duplicateId, ...rest } = props;
+const BuildTypesDrawer = ({
+  drawerData,
+  readOnly,
+  onSubmit,
+  onClose,
+  selectedItem,
+  duplicateId,
+  ...rest
+}) => {
   const classes = useStyles();
+
+  console.log(selectedItem);
 
   const handleForm = (data) => {
     switch (data.type) {
       case 'Text':
         return (
           <SimpleForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -47,6 +57,7 @@ const BuildTypesDrawer = (props) => {
       case 'Number':
         return (
           <SimpleForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -56,6 +67,7 @@ const BuildTypesDrawer = (props) => {
       case 'Date':
         return (
           <SimpleForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -65,6 +77,7 @@ const BuildTypesDrawer = (props) => {
       case 'Enum':
         return (
           <EnumForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -74,6 +87,7 @@ const BuildTypesDrawer = (props) => {
       case 'Boolean':
         return (
           <BooleanForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -83,6 +97,7 @@ const BuildTypesDrawer = (props) => {
       case 'ObjectId':
         return (
           <ObjectIdForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -92,6 +107,7 @@ const BuildTypesDrawer = (props) => {
       case 'Group':
         return (
           <GroupForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}
@@ -101,6 +117,7 @@ const BuildTypesDrawer = (props) => {
       case 'Relation':
         return (
           <RelationForm
+            readOnly={readOnly}
             onSubmit={onSubmit}
             drawerData={drawerData}
             onClose={onClose}

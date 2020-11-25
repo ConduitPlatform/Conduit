@@ -73,7 +73,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Header = ({ name, authentication, handleSave, ...rest }) => {
+const Header = ({ name, authentication, readOnly, handleSave, ...rest }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -117,6 +117,7 @@ const Header = ({ name, authentication, handleSave, ...rest }) => {
           onChange={handleDataName}
           disableUnderline
           value={schemaName}
+          readOnly={readOnly}
         />
         <FormControlLabel
           control={
