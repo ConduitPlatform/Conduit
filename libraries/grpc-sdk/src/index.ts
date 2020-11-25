@@ -34,17 +34,6 @@ export default class ConduitGrpcSdk {
         this._admin = new Admin(this.serverUrl);
         this._router = new Router(this.serverUrl);
         this.initializeModules().then(() => {});
-        this.watchModules();
-    }
-
-    watchModules() {
-        this.config.watchModules().on('module-registered', (modules: any) => {
-            modules.forEach((m: any) => {
-                if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-                    this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-                }
-            })
-        })
     }
 
     /**
@@ -71,8 +60,10 @@ export default class ConduitGrpcSdk {
     }
 
     async waitForExistence(moduleName: string) {
+        await this.initializeModules();
         while (!this._modules[moduleName]) {
             await this.sleep(1000);
+            await this.initializeModules();
         }
         return true;
     }
