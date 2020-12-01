@@ -15,7 +15,7 @@
     "@types/nodemailer": "^6.4.0",
     "@types/nodemailer-mailgun-transport": "^1.4.1",
     "lodash": "^4.17.20",
-    "nodemailer": "^6.4.6",
+    "nodemailer": "^6.4.16",
     "nodemailer-mailgun-transport": "^2.0.0",
     "snyk": "^1.321.0"
   },
