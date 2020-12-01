@@ -70,7 +70,7 @@ export default function GroupForm({
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, groupData);
+    onSubmit(groupData);
     event.preventDefault();
   };
 
