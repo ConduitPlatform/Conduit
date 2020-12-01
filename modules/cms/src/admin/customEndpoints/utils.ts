@@ -73,3 +73,39 @@ export function inputValidation(name: string, type: any, location: number): bool
     }
     return true;
 }
+
+/**
+ * Assignment schema:
+ * {
+ * schemaField: String 
+ * assignmentField: {type: String, value: String}
+ * }
+ */
+export function assignmentValidation(findSchema: any, inputs: any, schemaField: string, assignmentField: any): boolean | string {
+    if (isNil(schemaField) || isNil(assignmentField)) {
+        return "schemaField and assignmentField must be present in the input";
+    }
+    if (schemaField.length === 0) {
+        return "schemaField cannot be empty";
+    }
+
+    if (Object.keys(assignmentField).length === 0 || isNil(assignmentField.type) || isNil(assignmentField.value)) {
+        return "assignmentField cannot be empty and should contain type and value";
+    }
+
+    if (!Object.keys(findSchema.fields).includes(schemaField)) {
+        return "schemaField is not present in selected schema!";
+    }
+
+    if (assignmentField.type === 'Input') {
+        let inputNames = inputs.map((r: any) => r.name);
+        if (!inputNames.includes(assignmentField.value)) {
+            return "assignmentField value is not present in provided inputs!";
+        }
+    }
+    else if (assignmentField.type !== 'Custom') {
+        return "assignmentField type is invalid!";
+    }
+
+    return true;
+}
