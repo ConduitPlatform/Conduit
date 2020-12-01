@@ -40,8 +40,6 @@ const BuildTypesDrawer = ({
 }) => {
   const classes = useStyles();
 
-  console.log(selectedItem);
-
   const handleForm = (data) => {
     switch (data.type) {
       case 'Text':

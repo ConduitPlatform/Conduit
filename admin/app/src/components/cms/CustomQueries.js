@@ -19,7 +19,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EditIcon from '@material-ui/icons/Edit';
 import React, { Fragment, useEffect, useState, useCallback } from 'react';
-import ConfirmationDialog from '../ConfirmationDialog';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 import OperationsEnum from '../../models/OperationsEnum';
 import ConditionsEnum from '../../models/ConditionsEnum';
 import InputLocationEnum from '../../models/InputLocationEnum';
@@ -106,9 +106,6 @@ const CustomQueries = ({
   const [selectedEndpoint, setSelectedEndpoint] = useState();
   const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
 
-  /**
-   * @description Custom endpoint data local state fields
-   */
   const [name, setName] = useState('');
   const [selectedOperation, setSelectedOperation] = useState();
   const [selectedSchema, setSelectedSchema] = useState();

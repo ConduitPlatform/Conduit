@@ -1,6 +1,15 @@
-import { setNotificationConfig, setNotificationError, startNotificationLoading, stopNotificationLoading } from '../actions';
+import {
+  setNotificationConfig,
+  setNotificationError,
+  startNotificationLoading,
+  stopNotificationLoading,
+} from '../actions';
 
-import { getNotificationConfig, putNotificationConfig, sendNotification } from '../../http/requests';
+import {
+  getNotificationConfig,
+  putNotificationConfig,
+  sendNotification,
+} from '../../http/requests';
 
 export const sendNewNotification = (data) => {
   return (dispatch) => {

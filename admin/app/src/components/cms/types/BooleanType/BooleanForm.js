@@ -187,7 +187,7 @@ export default function BooleanForm({
           </Grid>
           <Grid item xs={12}>
             <Typography variant={'subtitle1'} className={classes.info}>
-              If active, this field's value must be unique
+              {"If active, this field's value must be unique"}
             </Typography>
           </Grid>
         </Grid>

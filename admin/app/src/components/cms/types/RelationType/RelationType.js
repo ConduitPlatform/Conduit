@@ -18,9 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function RelationType(props) {
-  const { item, ...rest } = props;
-
+export default function RelationType({ item, ...rest }) {
   const classes = useStyles();
 
   return (
@@ -46,9 +44,7 @@ export default function RelationType(props) {
   );
 }
 
-export function RelationGroupType(props) {
-  const { item, ...rest } = props;
-
+export function RelationGroupType({ item, ...rest }) {
   const classes = useStyles();
 
   return (

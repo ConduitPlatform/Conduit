@@ -34,7 +34,6 @@ export const logout = () => {
     dispatch(clearEmailPageStore());
     dispatch(clearNotificationPageStore());
     dispatch(clearStoragePageStore());
-    // todo dispatch cmsPage when merge with master
     dispatch(clearAuthenticationToken());
   };
 };

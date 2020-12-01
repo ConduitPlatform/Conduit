@@ -1,9 +1,7 @@
-import DataTable from './DataTable';
+import DataTable from '../common/DataTable';
 import React from 'react';
 
-const AuthUsers = (props) => {
-  const { users } = props;
-
+const AuthUsers = ({ users }) => {
   const formatData = (users) => {
     return users.map((u) => {
       return {

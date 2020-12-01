@@ -37,7 +37,7 @@ export default function ColorForm(props) {
   useEffect(() => {
     const slug = slugify(colorData.name);
     setColorData({ ...colorData, id: slug });
-  }, [colorData.name]);
+  }, [colorData, colorData.name]);
 
   const handleFieldName = (event) => {
     setColorData({ ...colorData, name: event.target.value });
@@ -54,7 +54,7 @@ export default function ColorForm(props) {
 
   useEffect(() => {
     setColorData({ ...colorData, type: drawerData.type });
-  }, [drawerData.open]);
+  }, [colorData, drawerData.open, drawerData.type]);
 
   return (
     <form autoComplete="off" onSubmit={handleSubmit} className={classes.form} {...rest}>
@@ -82,10 +82,15 @@ export default function ColorForm(props) {
         required
       />
       <Typography variant={'body2'} className={classes.info}>
-        It's generated automatically based on the name and will appear in the API responses
+        {`It's generated automatically based on the name and will appear in the API
+        responses`}
       </Typography>
       <Box display={'flex'} width={'100%'}>
-        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

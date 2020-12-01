@@ -32,6 +32,7 @@ const useStyles = makeStyles((theme) => ({
 const AuthSettings = ({ handleSave, settingsData, error }) => {
   const classes = useStyles();
 
+  const [edit, setEdit] = useState(false);
   const [settingsState, setSettingsSate] = useState({
     enabled: false,
     generateRefreshToken: false,
@@ -47,7 +48,6 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
       return;
     }
     setSettingsSate({
-      ...settingsState,
       enabled: settingsData.active,
       generateRefreshToken: settingsData.generateRefreshToken,
       rateLimit: settingsData.rateLimit,
@@ -58,15 +58,20 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
   }, [settingsData, error]);
 
   const handleCancel = () => {
+    setEdit(false);
     setSettingsSate({
-      ...settingsState,
       enabled: settingsData.active,
       generateRefreshToken: settingsData.generateRefreshToken,
       rateLimit: settingsData.rateLimit,
       tokenInvalidationPeriod: settingsData.tokenInvalidationPeriod,
       refreshTokenInvalidationPeriod: settingsData.refreshTokenInvalidationPeriod,
       jwtSecret: settingsData.jwtSecret,
+      showSecret: false,
     });
+  };
+
+  const handleEditClick = () => {
+    setEdit(true);
   };
 
   const save = () => {
@@ -78,6 +83,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
       refreshTokenInvalidationPeriod: settingsState.refreshTokenInvalidationPeriod,
       jwtSecret: settingsState.jwtSecret,
     };
+    setEdit(false);
     handleSave(data);
   };
 
@@ -93,10 +99,13 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
     return (
       <>
         <Grid item xs={12}>
-          <Typography variant={'h6'}>Limit the authentication tries/requests of clients</Typography>
+          <Typography variant={'h6'}>
+            Limit the authentication tries/requests of clients
+          </Typography>
         </Grid>
         <Grid item xs={12}>
           <TextField
+            disabled={!edit}
             id="outlined-number"
             label="Retries Limit"
             type="number"
@@ -114,15 +123,23 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
           />
         </Grid>
         <Grid item xs={6}>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'h6'}>Allow Refresh Token generation</Typography>
             <FormControlLabel
               label={''}
               control={
                 <Switch
+                  disabled={!edit}
                   checked={settingsState.generateRefreshToken}
                   onChange={() => {
-                    setSettingsSate({ ...settingsState, generateRefreshToken: !settingsState.generateRefreshToken });
+                    setSettingsSate({
+                      ...settingsState,
+                      generateRefreshToken: !settingsState.generateRefreshToken,
+                    });
                   }}
                   value={'accountLinking'}
                   color="primary"
@@ -143,6 +160,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
         </Grid>
         <Grid item xs={6}>
           <TextField
+            disabled={!edit}
             required
             id="tokenPeriod"
             type={'number'}
@@ -159,6 +177,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
         </Grid>
         <Grid item xs={6}>
           <TextField
+            disabled={!edit}
             required
             id="refreshTokenPeriod"
             type={'number'}
@@ -182,6 +201,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
         <Grid item xs={6} />
         <Grid item xs={6}>
           <TextField
+            disabled={!edit}
             required
             id="jwtSecret"
             type={settingsState.showSecret ? 'text' : 'password'}
@@ -217,11 +237,16 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
     <Container>
       <Paper className={classes.paper}>
         <Grid container>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'h6'}>Activate Authentication Module</Typography>
             <FormControlLabel
               control={
                 <Switch
+                  disabled={!edit}
                   checked={settingsState.enabled}
                   onChange={() =>
                     setSettingsSate({
@@ -242,14 +267,33 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
           <Grid container spacing={2} className={classes.innerGrid}>
             {settingsState.enabled && renderSettingsFields()}
           </Grid>
-          <Grid item container xs={12} justify={'flex-end'}>
-            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
-              Cancel
-            </Button>
-            <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }} onClick={() => save()}>
-              Save
-            </Button>
-          </Grid>
+          {edit && (
+            <Grid item container xs={12} justify={'flex-end'}>
+              <Button
+                onClick={() => handleCancel()}
+                style={{ marginRight: 16 }}
+                color={'primary'}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ alignSelf: 'flex-end' }}
+                onClick={() => save()}>
+                Save
+              </Button>
+            </Grid>
+          )}
+          {!edit && (
+            <Grid item container xs={12} justify={'flex-end'}>
+              <Button
+                onClick={() => handleEditClick()}
+                style={{ marginRight: 16 }}
+                color={'primary'}>
+                Edit
+              </Button>
+            </Grid>
+          )}
         </Grid>
       </Paper>
     </Container>

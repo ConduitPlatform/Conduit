@@ -142,7 +142,9 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
             },
           }}>
           {actions.map((action, i) => (
-            <MenuItem key={`${action.type}-${i}`} onClick={() => onMenuItemClick(action, selectedRow)}>
+            <MenuItem
+              key={`${action.type}-${i}`}
+              onClick={() => onMenuItemClick(action, selectedRow)}>
               {action.title}
             </MenuItem>
           ))}

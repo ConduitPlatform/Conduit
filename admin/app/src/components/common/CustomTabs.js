@@ -19,10 +19,20 @@ export default function CustomTabs({ tabs, selected, handleChange, ...rest }) {
 
   return (
     <Box {...rest}>
-      <Tabs indicatorColor={'primary'} textColor={'primary'} value={selected} onChange={handleChange}>
+      <Tabs
+        indicatorColor={'primary'}
+        textColor={'primary'}
+        value={selected === -1 ? false : selected}
+        onChange={handleChange}>
         {tabs &&
           tabs.map((tab, index) => (
-            <Tab key={`tab-${index}`} label={tab.title} className={classes.tab} disabled={tab.isDisabled} href={tab.href}/>
+            <Tab
+              key={`tab-${index}`}
+              label={tab.title}
+              className={classes.tab}
+              disabled={tab.isDisabled}
+              href={tab.href}
+            />
           ))}
       </Tabs>
       <Divider className={classes.divider} />

@@ -22,7 +22,11 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import CreateDialog from './DocumentCreateDialog';
-import { createSchemaDocument, deleteSchemaDocument, editSchemaDocument } from '../../redux/thunks/cmsThunks';
+import {
+  createSchemaDocument,
+  deleteSchemaDocument,
+  editSchemaDocument,
+} from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -196,19 +200,27 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
         nodeId={nodes.id}
         label={
           <Typography variant={'subtitle2'}>
-            <Typography component={'span'} className={classes.bold}>{`${nodes.id}: `}</Typography>
+            <Typography
+              component={'span'}
+              className={classes.bold}>{`${nodes.id}: `}</Typography>
             {Array.isArray(nodes.data)
               ? nodes.data.length > 0
                 ? '[...]'
                 : '[ ]'
-              : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
+              : typeof nodes.data !== 'string' &&
+                nodes.data &&
+                Object.keys(nodes.data).length > 0
               ? '{...}'
               : `${nodes.data}`}
           </Typography>
         }>
         {Array.isArray(nodes.data)
-          ? nodes.data.map((node, index) => renderTree({ id: index.toString(), data: node }))
-          : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
+          ? nodes.data.map((node, index) =>
+              renderTree({ id: index.toString(), data: node })
+            )
+          : typeof nodes.data !== 'string' &&
+            nodes.data &&
+            Object.keys(nodes.data).length > 0
           ? createDocumentArray(nodes.data).map((node) => renderTree(node))
           : null}
       </TreeItem>
@@ -235,12 +247,17 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
             <>
               {documents.map((doc, index) => {
                 return (
-                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
+                  <Card
+                    key={`card${index}`}
+                    className={classes.card}
+                    variant={'outlined'}>
                     <CardHeader
                       title={doc._id}
                       action={
                         <>
-                          <IconButton aria-label="settings" onClick={(event) => handleClick(event, index)}>
+                          <IconButton
+                            aria-label="settings"
+                            onClick={(event) => handleClick(event, index)}>
                             <MoreVert />
                           </IconButton>
                         </>
@@ -264,7 +281,10 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
                 );
               })}
               <Box className={classes.addDocBox}>
-                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => addNewDocument()}>
                   Add Document
                 </Button>
               </Box>
@@ -273,7 +293,10 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
             <>
               <Box className={classes.emptyDocuments}>
                 <p>No documents are availables.</p>
-                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => addNewDocument()}>
                   Add Document
                 </Button>
               </Box>
@@ -281,7 +304,11 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
           )}
         </TabPanel>
       </Box>
-      <Dialog open={createDocument} onClose={() => handleCreateDialog(false)} maxWidth={'md'} fullWidth={true}>
+      <Dialog
+        open={createDocument}
+        onClose={() => handleCreateDialog(false)}
+        maxWidth={'md'}
+        fullWidth={true}>
         <CreateDialog
           schema={schemas[selectedSchema]}
           handleCreate={handleCreateDocument}
@@ -290,15 +317,26 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
           editData={selectedDocument}
         />
       </Dialog>
-      <Dialog fullWidth maxWidth={'sm'} open={deleteDialogOpen} onClose={handleConfirmationDialogClose}>
+      <Dialog
+        fullWidth
+        maxWidth={'sm'}
+        open={deleteDialogOpen}
+        onClose={handleConfirmationDialogClose}>
         <DialogTitle id="new-custom-type" style={{ marginBottom: 16 }}>
           Delete document : {documents[docIndex]?._id}
         </DialogTitle>
         <DialogActions>
-          <Button onClick={handleCloseDeleteConfirmationDialog} variant="contained" style={{ textTransform: 'none' }}>
+          <Button
+            onClick={handleCloseDeleteConfirmationDialog}
+            variant="contained"
+            style={{ textTransform: 'none' }}>
             Cancel
           </Button>
-          <Button onClick={handleDelete} className={classes.deleteButton} variant="contained" style={{ textTransform: 'none' }}>
+          <Button
+            onClick={handleDelete}
+            className={classes.deleteButton}
+            variant="contained"
+            style={{ textTransform: 'none' }}>
             Delete
           </Button>
         </DialogActions>

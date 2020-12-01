@@ -1,8 +1,8 @@
 import { privateRoute } from '../components/utils/privateRoute';
-import { Layout } from '../components/Layout';
+import { Layout } from '../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import CustomTabs from '../components/CustomTabs';
+import CustomTabs from '../components/common/CustomTabs';
 import React, { useState } from 'react';
 import Button from '@material-ui/core/Button';
 import { GetApp } from '@material-ui/icons';
@@ -26,7 +26,10 @@ const Settings = () => {
             color="primary"
             startIcon={<GetApp />}
             onClick={() => {
-              window.open('https://tenor.com/view/handgesturesmyt-ok-okay-gif-14118577', '_blank');
+              window.open(
+                'https://tenor.com/view/handgesturesmyt-ok-okay-gif-14118577',
+                '_blank'
+              );
             }}>
             GraphQL client
           </Button>

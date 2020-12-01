@@ -46,11 +46,9 @@ const ProviderData = ({ settings, error, handleSave }) => {
       return;
     }
     setSettingsState({
-      ...settingsState,
       active: settings.active,
       transport: settings.transport,
       transportSettings: {
-        ...settingsState.transportSettings,
         apiKey:
           settings.transportSettings && settings.transportSettings[settings.transport]
             ? settings.transportSettings[settings.transport].apiKey
@@ -183,7 +181,11 @@ const ProviderData = ({ settings, error, handleSave }) => {
     <Container>
       <Paper className={classes.paper}>
         <Grid container>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'h6'}>Email Settings Module</Typography>
             <FormControlLabel
               control={
@@ -209,10 +211,17 @@ const ProviderData = ({ settings, error, handleSave }) => {
             {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
+            <Button
+              onClick={() => handleCancel()}
+              style={{ marginRight: 16 }}
+              color={'primary'}>
               Cancel
             </Button>
-            <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }} onClick={() => onSaveClick()}>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ alignSelf: 'flex-end' }}
+              onClick={() => onSaveClick()}>
               Save
             </Button>
           </Grid>

@@ -6,7 +6,6 @@ import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import theme from '../../utils/theme';
 
 const useStyles = makeStyles((theme) => ({
   closeIcon: {

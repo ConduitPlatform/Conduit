@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Layout } from '../../components/Layout';
+import { Layout } from '../../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
-import CustomTabs from '../../components/CustomTabs';
+import CustomTabs from '../../components/common/CustomTabs';
 import { privateRoute } from '../../components/utils/privateRoute';
 import SchemasTable from '../../components/cms/SchemasTable';
 import NewSchemaDialog from '../../components/cms/NewSchemaDialog';

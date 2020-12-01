@@ -1,5 +1,14 @@
-import { addAuthUsers, setAuthUsersError, startAuthUsersLoading, stopAuthUsersLoading } from '../actions/authenticationActions';
-import { getAuthenticationConfig, getAuthUsersDataReq, putAuthenticationConfig } from '../../http/requests';
+import {
+  addAuthUsers,
+  setAuthUsersError,
+  startAuthUsersLoading,
+  stopAuthUsersLoading,
+} from '../actions/authenticationActions';
+import {
+  getAuthenticationConfig,
+  getAuthUsersDataReq,
+  putAuthenticationConfig,
+} from '../../http/requests';
 import {
   setAuthenticationConfig,
   setAuthenticationConfigError,

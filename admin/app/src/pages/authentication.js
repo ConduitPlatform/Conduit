@@ -1,23 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import AuthAccordion from '../components/AuthAccordion';
+import Backdrop from '@material-ui/core/Backdrop';
 import Box from '@material-ui/core/Box';
-import Typography from '@material-ui/core/Typography';
-import { Layout } from '../components/Layout';
-import CustomTabs from '../components/CustomTabs';
-import { privateRoute } from '../components/utils/privateRoute';
-import AuthUsers from '../components/AuthUsers';
-import { useDispatch, useSelector } from 'react-redux';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import Snackbar from '@material-ui/core/Snackbar';
+import { makeStyles } from '@material-ui/core/styles';
+import Typography from '@material-ui/core/Typography';
 import Alert from '@material-ui/lab/Alert';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import AuthAccordion from '../components/authentication/AuthAccordion';
+import AuthSettings from '../components/authentication/AuthSettings';
+import AuthUsers from '../components/authentication/AuthUsers';
+import CustomTabs from '../components/common/CustomTabs';
+import { Layout } from '../components/navigation/Layout';
+import { privateRoute } from '../components/utils/privateRoute';
 import {
   getAuthUsersData,
   getConfig,
   updateConfig,
 } from '../redux/thunks/authenticationThunks';
-import AuthSettings from '../components/AuthSettings';
-import Backdrop from '@material-ui/core/Backdrop';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -31,29 +31,25 @@ const useStyles = makeStyles((theme) => ({
 
 const Authentication = () => {
   const classes = useStyles();
-  const { users, error: authUsersError, loading: usersLoading } = useSelector(
-    (state) => state.authenticationPageReducer.authUsersState
-  );
+  const dispatch = useDispatch();
+
+  const [selected, setSelected] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  const {
+    users: availableUsers,
+    error: authUsersError,
+    loading: usersLoading,
+  } = useSelector((state) => state.authenticationPageReducer.authUsersState);
+
   const {
     data: configData,
     error: authConfigError,
     loading: configLoading,
   } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  const tabs = [
-    { title: 'Users', isDisabled: configData ? !configData.active : true },
-    { title: 'Sign-In Method', isDisabled: configData ? !configData.active : true },
-    { title: 'Settings', isDisabled: false },
-  ];
-
-  const dispatch = useDispatch();
 
   useEffect(() => {
     dispatch(getAuthUsersData());
-  }, [dispatch]);
-
-  useEffect(() => {
     dispatch(getConfig());
   }, [dispatch]);
 
@@ -69,7 +65,11 @@ const Authentication = () => {
     }
   }, [authUsersError, authConfigError]);
 
-  const [selected, setSelected] = useState(0);
+  const tabs = [
+    { title: 'Users', isDisabled: configData ? !configData.active : true },
+    { title: 'Sign-In Method', isDisabled: configData ? !configData.active : true },
+    { title: 'Settings', isDisabled: false },
+  ];
 
   const handleChange = (event, newValue) => {
     setSelected(newValue);
@@ -120,8 +120,8 @@ const Authentication = () => {
           role="tabpanel"
           hidden={selected !== 0 || (configData && !configData.active)}
           id={`tabpanel-0`}>
-          {users ? (
-            <AuthUsers users={users} />
+          {availableUsers ? (
+            <AuthUsers users={availableUsers} />
           ) : (
             <Typography>No users available</Typography>
           )}

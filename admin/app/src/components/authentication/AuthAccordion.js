@@ -42,8 +42,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function AuthAccordion(props) {
-  const { configData, configDataError, handleData, ...rest } = props;
+export default function AuthAccordion({
+  configData,
+  configDataError,
+  handleData,
+  ...rest
+}) {
   const classes = useStyles();
   const [expanded, setExpanded] = useState([]);
 
@@ -70,27 +74,24 @@ export default function AuthAccordion(props) {
     if (configData) {
       if (configData.local) {
         setLocal({
-          ...local,
-          identifier: configData.local.identifier,
           enabled: configData.local.enabled,
           sendVerificationEmail: configData.local.sendVerificationEmail,
           verificationRequired: configData.local.verificationRequired,
+          identifier: configData.local.identifier,
         });
       }
       if (configData.google) {
         setGoogle({
-          ...google,
           enabled: configData.google.enabled,
-          clientId: configData.google.clientId,
           accountLinking: configData.google.accountLinking,
+          clientId: configData.google.clientId,
         });
       }
       if (configData.facebook) {
         setFacebook({
-          ...facebook,
           enabled: configData.facebook.enabled,
-          clientId: configData.facebook.clientId,
           accountLinking: configData.facebook.accountLinking,
+          clientId: configData.facebook.clientId,
         });
       }
     }
@@ -185,8 +186,18 @@ export default function AuthAccordion(props) {
                 justifyContent={'space-between'}
                 alignItems={'center'}
                 width={'100%'}>
-                <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                <Box
+                  mb={2}
+                  maxWidth={800}
+                  display={'flex'}
+                  width={'100%'}
+                  flexDirection={'column'}
+                  alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'button'} style={{ width: '100%' }}>
                       Allow users to sign up using their identifier and password.
                     </Typography>
@@ -207,7 +218,11 @@ export default function AuthAccordion(props) {
                       label={providerData.enabled ? 'Enabled' : 'Disabled'}
                     />
                   </Box>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'overline'} style={{ width: '100%' }}>
                       Send Verification Email
                     </Typography>
@@ -229,7 +244,11 @@ export default function AuthAccordion(props) {
                       disabled={!local.enabled}
                     />
                   </Box>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'overline'} style={{ width: '100%' }}>
                       Verification Required
                     </Typography>
@@ -267,7 +286,10 @@ export default function AuthAccordion(props) {
                   </Box>
                 </Box>
                 <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('local')} style={{ marginRight: 16 }} color={'primary'}>
+                  <Button
+                    onClick={() => handleCancel('local')}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
                     Cancel
                   </Button>
                   <Button
@@ -288,7 +310,9 @@ export default function AuthAccordion(props) {
           return;
         }
         return (
-          <Accordion expanded={expanded.includes('google')} onChange={() => openExpanded('google')}>
+          <Accordion
+            expanded={expanded.includes('google')}
+            onChange={() => openExpanded('google')}>
             <AccordionSummary id={'google'}>
               <Box display={'flex'} alignItems={'center'} flex={1}>
                 <Typography variant={'subtitle2'} className={classes.typography}>
@@ -312,8 +336,18 @@ export default function AuthAccordion(props) {
                 justifyContent={'space-between'}
                 alignItems={'center'}
                 width={'100%'}>
-                <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                <Box
+                  mb={2}
+                  maxWidth={800}
+                  display={'flex'}
+                  width={'100%'}
+                  flexDirection={'column'}
+                  alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'button'} style={{ width: '100%' }}>
                       Allow users to sign up using their google account
                     </Typography>
@@ -334,7 +368,11 @@ export default function AuthAccordion(props) {
                       label={providerData.enabled ? 'Enabled' : 'Disabled'}
                     />
                   </Box>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'overline'} style={{ width: '100%' }}>
                       Allow account linking
                     </Typography>
@@ -371,7 +409,10 @@ export default function AuthAccordion(props) {
                   </Box>
                 </Box>
                 <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('google')} style={{ marginRight: 16 }} color={'primary'}>
+                  <Button
+                    onClick={() => handleCancel('google')}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
                     Cancel
                   </Button>
                   <Button
@@ -392,7 +433,9 @@ export default function AuthAccordion(props) {
           return;
         }
         return (
-          <Accordion expanded={expanded.includes('facebook')} onChange={() => openExpanded('facebook')}>
+          <Accordion
+            expanded={expanded.includes('facebook')}
+            onChange={() => openExpanded('facebook')}>
             <AccordionSummary id={'email'}>
               <Box display={'flex'} alignItems={'center'} flex={1}>
                 <Typography variant={'subtitle2'} className={classes.typography}>
@@ -416,8 +459,18 @@ export default function AuthAccordion(props) {
                 justifyContent={'space-between'}
                 alignItems={'center'}
                 width={'100%'}>
-                <Box mb={2} maxWidth={800} display={'flex'} width={'100%'} flexDirection={'column'} alignItems={'center'}>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                <Box
+                  mb={2}
+                  maxWidth={800}
+                  display={'flex'}
+                  width={'100%'}
+                  flexDirection={'column'}
+                  alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'button'} style={{ width: '100%' }}>
                       Allow users to sign up using their facebook account.
                     </Typography>
@@ -438,7 +491,11 @@ export default function AuthAccordion(props) {
                       label={facebook.enabled ? 'Enabled' : 'Disabled'}
                     />
                   </Box>
-                  <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
                     <Typography variant={'overline'} style={{ width: '100%' }}>
                       Allow account linking
                     </Typography>
@@ -475,7 +532,10 @@ export default function AuthAccordion(props) {
                   </Box>
                 </Box>
                 <Box alignSelf={'flex-end'}>
-                  <Button onClick={() => handleCancel('facebook')} style={{ marginRight: 16 }} color={'primary'}>
+                  <Button
+                    onClick={() => handleCancel('facebook')}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
                     Cancel
                   </Button>
                   <Button
@@ -497,7 +557,11 @@ export default function AuthAccordion(props) {
 
   return (
     <Box className={classes.root} {...rest}>
-      <Box display={'flex'} alignItems={'center'} className={classes.titleContent} boxShadow={2}>
+      <Box
+        display={'flex'}
+        alignItems={'center'}
+        className={classes.titleContent}
+        boxShadow={2}>
         <Typography variant={'subtitle2'} style={{ width: '50%', paddingLeft: 24 }}>
           Provider
         </Typography>

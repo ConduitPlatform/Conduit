@@ -1,12 +1,12 @@
-import { Layout } from '../components/Layout';
+import { Layout } from '../components/navigation/Layout';
 import React, { useEffect, useState } from 'react';
 import Typography from '@material-ui/core/Typography';
-import CustomTabs from '../components/CustomTabs';
+import CustomTabs from '../components/common/CustomTabs';
 import Box from '@material-ui/core/Box';
-import SendEmailForm from '../components/SendEmailForm';
-import EmailTemplate from '../components/EmailTemplate';
+import SendEmailForm from '../components/emails/SendEmailForm';
+import EmailTemplate from '../components/emails/EmailTemplate';
 import { privateRoute } from '../components/utils/privateRoute';
-import ProviderData from '../components/ProviderData';
+import ProviderData from '../components/emails/ProviderData';
 import { useDispatch, useSelector } from 'react-redux';
 import { getEmailTemplates } from '../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';

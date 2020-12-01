@@ -101,10 +101,19 @@ const SendEmailForm = ({ handleSend }) => {
               />
             </Grid>
             <Grid item container justify="flex-end" xs={12}>
-              <Button variant="outlined" color="primary" startIcon={<Clear />} style={{ marginRight: 16 }} onClick={clearEmail}>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<Clear />}
+                style={{ marginRight: 16 }}
+                onClick={clearEmail}>
                 Clear
               </Button>
-              <Button variant="contained" color="primary" startIcon={<Send />} onClick={sendEmail}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Send />}
+                onClick={sendEmail}>
                 Send
               </Button>
             </Grid>
