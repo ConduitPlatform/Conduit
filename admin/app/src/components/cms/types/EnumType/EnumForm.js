@@ -76,7 +76,7 @@ export default function EnumForm({
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, simpleData);
+    onSubmit(simpleData);
     event.preventDefault();
   };
 
