@@ -48,7 +48,7 @@ export default function ColorForm(props) {
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, colorData);
+    onSubmit(colorData);
     event.preventDefault();
   };
 
