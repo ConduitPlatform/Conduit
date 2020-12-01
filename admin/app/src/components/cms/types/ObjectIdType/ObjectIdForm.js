@@ -62,7 +62,7 @@ export default function ObjectIdForm({
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, simpleData);
+    onSubmit(simpleData);
     event.preventDefault();
   };
 
