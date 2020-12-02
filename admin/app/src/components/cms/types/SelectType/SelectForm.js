@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import slugify from '../../../../utils/slugify';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { useState } from 'react';
+import slugify from '../../../../utils/slugify';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -42,13 +42,9 @@ export default function SelectForm({
     type: selectedItem ? selectedItem.type : drawerData.type,
   });
 
-  useEffect(() => {
-    const slug = slugify(selectData.name);
-    setSelectData({ ...selectData, id: slug });
-  }, [selectData, selectData.name]);
-
   const handleFieldName = (event) => {
-    setSelectData({ ...selectData, name: event.target.value });
+    const slug = slugify(event.target.value);
+    setSelectData({ ...selectData, name: event.target.value, id: slug });
   };
 
   const handleApiId = (event) => {
@@ -65,7 +61,7 @@ export default function SelectForm({
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onSubmit(event, selectData);
+    onSubmit(selectData);
 
     setSelectData({
       name: '',

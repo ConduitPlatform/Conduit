@@ -69,7 +69,7 @@ export default function RelationForm({
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
-    relation: selectedItem ? selectedItem.model : '',
+    model: selectedItem ? selectedItem.model : '',
   });
 
   const handleFieldName = (event) => {
@@ -89,11 +89,11 @@ export default function RelationForm({
   };
 
   const handleFieldRelation = (event) => {
-    setSimpleData({ ...simpleData, relation: event.target.value });
+    setSimpleData({ ...simpleData, model: event.target.value });
   };
 
   const handleSubmit = (event) => {
-    onSubmit(event, simpleData);
+    onSubmit(simpleData);
     event.preventDefault();
   };
 
@@ -207,7 +207,7 @@ export default function RelationForm({
           labelId="field-relation"
           id="field relation"
           label={'Relation'}
-          value={simpleData.relation}
+          value={simpleData.model}
           onChange={handleFieldRelation}
           renderValue={(selected) => selected}
           MenuProps={MenuProps}>
@@ -217,7 +217,7 @@ export default function RelationForm({
               schema.name !== data.selectedSchema?.name && (
                 <MenuItem key={schema.name} value={schema.name}>
                   <Checkbox
-                    checked={simpleData.relation.indexOf(schema.name) > -1}
+                    checked={simpleData.model.indexOf(schema.name) > -1}
                     color={'primary'}
                   />
                   <ListItemText primary={schema.name} />
