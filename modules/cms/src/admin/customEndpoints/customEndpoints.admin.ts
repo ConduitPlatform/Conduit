@@ -115,7 +115,7 @@ export class CustomEndpointsAdmin {
 
     if (found.operation !== OperationsEnum.POST) {
       errorMessage = null;
-      queries.forEach((r) => {
+      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
         let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -125,7 +125,7 @@ export class CustomEndpointsAdmin {
 
     if (found.operation === OperationsEnum.POST || found.operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r) => {
+      assignments.forEach((r: {findSchema: any, inputs: any, schemaField: string, assignmentField: any}) => {
         let error = assignmentValidation(findSchema, inputs, r.schemaField, r.assignmentField);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -288,7 +288,7 @@ export class CustomEndpointsAdmin {
     if (operation !== OperationsEnum.POST)
     {
       errorMessage = null;
-      queries.forEach((r) => {
+      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
         let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -305,7 +305,7 @@ export class CustomEndpointsAdmin {
 
     if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r) => {
+      assignments.forEach((r: {schemaField: any, assignmentField: String}) => {
         let error = assignmentValidation(findSchema, inputs, r.schemaField, r.assignmentField);
         if (error !== true) {
           return (errorMessage = error as string);
