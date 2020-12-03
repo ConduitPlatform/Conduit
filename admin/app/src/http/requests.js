@@ -3,7 +3,7 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
-const CONDUIT_API = process.env.CONDUIT_API || 'http://23.97.149.151:3000';
+const CONDUIT_API = 'https://conduit-core.dev.quintessential.gr';
 const config = {
   masterkey: 'M4ST3RK3Y',
 };
