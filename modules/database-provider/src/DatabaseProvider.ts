@@ -61,7 +61,7 @@ export class DatabaseProvider {
                 console.log("bound on:", this._url);
                 server.start();
                 resolve();
-            }).catch(() => reject());
+            }).catch(reject);
         });
 
     }
