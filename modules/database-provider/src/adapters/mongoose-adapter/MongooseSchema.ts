@@ -28,6 +28,10 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.findByIdAndUpdate(id, query, {new: true}).lean().exec();
     }
 
+    updateMany(filterQuery: any, query: any): Promise<any> {
+        return this.model.updateMany(filterQuery, query).exec();
+    }
+
     deleteOne(query: any): Promise<any> {
         return this.model.deleteOne(query).exec();
     }
