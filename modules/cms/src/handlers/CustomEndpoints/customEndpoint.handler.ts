@@ -71,7 +71,12 @@ export class CustomEndpointHandler {
 
     promise
       .then((r: any) => {
-        if (endpoint.operation === 1) r = [r];
+        if (endpoint.operation === 1) {
+          r = [r];
+        } else if (endpoint.operation === 2) {
+          // find a way to return updated documents
+          r = ["Ok"];
+        }
         callback(null, { result: JSON.stringify({ result: r }) });
       })
       .catch((err: any) => {
