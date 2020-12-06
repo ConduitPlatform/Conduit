@@ -52,6 +52,12 @@ message UpdateRequest {
     string query = 3;
 }
 
+message UpdateManyRequest {
+    string schemaName = 1;
+    string filterQuery = 2;
+    string query = 3;
+}
+
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter (CreateSchemaRequest) returns (CreateSchemaResponse);
     rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
@@ -62,6 +68,7 @@ service DatabaseProvider {
     rpc deleteOne (QueryRequest) returns (QueryResponse);
     rpc deleteMany (QueryRequest) returns (QueryResponse);
     rpc findByIdAndUpdate (UpdateRequest) returns (QueryResponse);
+    rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments (QueryRequest) returns (QueryResponse);
 
 }

@@ -16,6 +16,9 @@ if (process.env.CONDUIT_SERVER) {
             process.exit(-1);
         });
         
+    }).catch((err: any) => {
+        console.error(err)
+        process.exit(-1);
     });
 } else {
     throw new Error("Conduit server URL not provided");

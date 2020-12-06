@@ -67,12 +67,14 @@ export function createController(endpoint: CustomEndpoint) {
   });
 
   let searchString = "";
-  endpoint.queries.forEach(
-    (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
-      if (searchString.length !== 0) searchString += ",";
-      searchString += constructQuery(r.schemaField, r.operation, r.comparisonField);
-    }
-  );
+  if (endpoint.operation !== 1) {
+    endpoint.queries!.forEach(
+      (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
+        if (searchString.length !== 0) searchString += ",";
+        searchString += constructQuery(r.schemaField, r.operation, r.comparisonField);
+      }
+    );
+  }
 
   try {
     return new Function(

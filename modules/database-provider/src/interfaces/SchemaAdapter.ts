@@ -39,6 +39,8 @@ export interface SchemaAdapter {
 
     findByIdAndUpdate(id:any, document: any): Promise<any>;
 
+    updateMany(filterQuery: any, query: any): Promise<any>;
+
     countDocuments(query: any): Promise<number>;
 
 }

@@ -24,10 +24,6 @@ const schema = new ConduitSchema('CustomEndpoints', {
             type: TYPE.JSON,
             required: true
         },
-        queries: {
-            type: TYPE.JSON,
-            required: true
-        },
         returns: {
             type: TYPE.JSON,
             required: true
@@ -41,6 +37,8 @@ const schema = new ConduitSchema('CustomEndpoints', {
             type: TYPE.Boolean,
             default: false
         },
+        queries: TYPE.JSON,
+        assignments: TYPE.JSON,
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     }, {

@@ -1,9 +1,16 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { inputValidation, queryValidation } from "./utils";
+import { inputValidation, queryValidation, assignmentValidation } from "./utils";
 import grpc from "grpc";
 import { isNil } from "lodash";
 import schema from "../../models/customEndpoint.schema";
 import { CustomEndpointController } from "../../controllers/customEndpoints/customEndpoint.controller";
+
+const OperationsEnum = {
+  GET: 0, //'FIND/GET'
+  POST: 1, //'CREATE'
+  PUT: 2, //'UPDATE/EDIT'
+  DELETE: 3, //'DELETE'
+};
 
 export class CustomEndpointsAdmin {
   private database: any;
@@ -36,7 +43,7 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: any, callback: any) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, queries, selectedSchema } = params;
+    const { inputs, queries, selectedSchema, assignments } = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -76,10 +83,19 @@ export class CustomEndpointsAdmin {
         message: "Inputs must be an array, even if empty!",
       });
     }
-    if (!Array.isArray(queries) || queries.length === 0) {
+    if (found.operation !== OperationsEnum.POST && (!Array.isArray(queries) || queries.length === 0)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: "The queries field must be an array, and not empty!",
+      });
+    }
+    if (
+      (found.operation === OperationsEnum.POST || found.operation === OperationsEnum.PUT) &&
+      (!Array.isArray(assignments) || assignments.length === 0)
+    ) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "The assignments field must be an array, and not empty!",
       });
     }
 
@@ -97,13 +113,25 @@ export class CustomEndpointsAdmin {
       });
     }
 
-    errorMessage = null;
-    queries.forEach((r) => {
-      let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
-      if (error !== true) {
-        return (errorMessage = error as string);
-      }
-    });
+    if (found.operation !== OperationsEnum.POST) {
+      errorMessage = null;
+      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
+        let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
+        if (error !== true) {
+          return (errorMessage = error as string);
+        }
+      });
+    }
+
+    if (found.operation === OperationsEnum.POST || found.operation === OperationsEnum.PUT) {
+      errorMessage = null;
+      assignments.forEach((r: {findSchema: any, inputs: any, schemaField: string, assignmentField: any}) => {
+        let error = assignmentValidation(findSchema, inputs, r.schemaField, r.assignmentField);
+        if (error !== true) {
+          return (errorMessage = error as string);
+        }
+      });
+    }
 
     Object.keys(params).forEach((key) => {
       const value = params[key];
@@ -155,9 +183,9 @@ export class CustomEndpointsAdmin {
   }
 
   async createCustomEndpoints(call: any, callback: any) {
-    const { name, operation, selectedSchema, inputs, queries, authentication } = JSON.parse(call.request.params);
+    const { name, operation, selectedSchema, inputs, queries, authentication, assignments } = JSON.parse(call.request.params);
 
-    if (isNil(name) || isNil(operation) || isNil(selectedSchema) || isNil(queries)) {
+    if (isNil(name) || isNil(operation) || isNil(selectedSchema)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: "Required fields are missing",
@@ -173,6 +201,18 @@ export class CustomEndpointsAdmin {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: "Operation is not valid",
+      });
+    }
+    if (operation !== OperationsEnum.POST && isNil(queries)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Required fields are missing",
+      });
+    }
+    if ((operation === OperationsEnum.POST || operation === OperationsEnum.PUT) && isNil(assignments)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Required fields are missing",
       });
     }
 
@@ -201,10 +241,19 @@ export class CustomEndpointsAdmin {
         message: "Inputs must be an array, even if empty!",
       });
     }
-    if (!Array.isArray(queries) || queries.length === 0) {
+    if (operation !== OperationsEnum.POST && (!Array.isArray(queries) || queries.length === 0)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: "The queries field must be an array, and not empty!",
+      });
+    }
+    if (
+      (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) &&
+      (!Array.isArray(assignments) || assignments.length === 0)
+    ) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "The assigment field must be an array, and not empty!",
       });
     }
 
@@ -224,31 +273,56 @@ export class CustomEndpointsAdmin {
       }
     }
 
-    errorMessage = null;
-    queries.forEach((r) => {
-      let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
-      if (error !== true) {
-        return (errorMessage = error as string);
-      }
-    });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: errorMessage,
+    let endpoint = {
+      name,
+      operation,
+      selectedSchema,
+      selectedSchemaName: findSchema.name,
+      inputs,
+      authentication,
+      returns: findSchema.fields,
+      queries: null,
+      assignments: null
+    };
+
+    if (operation !== OperationsEnum.POST)
+    {
+      errorMessage = null;
+      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
+        let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
+        if (error !== true) {
+          return (errorMessage = error as string);
+        }
       });
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: errorMessage,
+        });
+      }
+      endpoint.queries = queries;
     }
+
+    if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {
+      errorMessage = null;
+      assignments.forEach((r: {schemaField: any, assignmentField: String}) => {
+        let error = assignmentValidation(findSchema, inputs, r.schemaField, r.assignmentField);
+        if (error !== true) {
+          return (errorMessage = error as string);
+        }
+      });
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: errorMessage,
+        });
+      }
+      endpoint.assignments = assignments;
+    }
+
     errorMessage = null;
     const newSchema = await this.database
-      .create("CustomEndpoints", {
-        name,
-        operation,
-        selectedSchema,
-        selectedSchemaName: findSchema.name,
-        inputs,
-        queries,
-        authentication,
-        returns: findSchema.fields,
-      })
+      .create("CustomEndpoints", endpoint)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({

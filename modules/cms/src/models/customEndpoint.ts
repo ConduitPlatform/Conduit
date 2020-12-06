@@ -6,7 +6,8 @@ export interface CustomEndpoint {
   selectedSchema: string;
   selectedSchemaName: string;
   inputs: { name: string; type: string; location: number }[];
-  queries: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }[];
+  queries?: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }[];
+  assignments?: { schemaField: string; assignmentField: { type: String, value: any } }[];
   returns: any;
   authentication: boolean;
   createdAt?: Date;

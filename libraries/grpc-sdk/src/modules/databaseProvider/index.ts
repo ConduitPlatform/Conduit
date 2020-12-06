@@ -120,6 +120,19 @@ export default class DatabaseProvider {
 
     }
 
+    updateMany(schemaName: string, filterQuery: any, query: any) {
+        return new Promise((resolve, reject) => {
+            this.client.updateMany({schemaName, filterQuery: JSON.stringify(filterQuery), query: JSON.stringify(query)},
+                (err: any, res: any) => {
+                    if (err || !res) {
+                        reject(err || 'something went wrong');
+                    } else {
+                        resolve(JSON.parse(res.result));
+                    }
+                });
+        });
+    }
+
     deleteOne(schemaName: string, query: any) {
         return new Promise((resolve, reject) => {
             this.client.deleteOne({schemaName, query: JSON.stringify(query)},
