@@ -1,10 +1,17 @@
-FROM node:dubnium
+FROM node:dubnium-alpine
 
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/libraries /app/libraries
 COPY --from=conduit-base:latest /app/modules/cms /app/modules/cms
-COPY --from=conduit-base:latest /app/node_modules /app/node_modules
+COPY --from=conduit-base:latest /app/package.json .
+COPY --from=conduit-base:latest /app/yarn.lock .
+
+RUN apk add --no-cache --virtual .gyp python make g++ 
+
+RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
+
+RUN apk del .gyp
 
 WORKDIR /app/modules/cms
 

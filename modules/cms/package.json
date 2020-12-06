@@ -8,7 +8,7 @@
     "prepare": "npm run build",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit-cms:latest . && docker push quintessential.azurecr.io/conduit-cms:latest"
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-cms:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-cms:latest"
   },
   "license": "ISC",
   "dependencies": {
