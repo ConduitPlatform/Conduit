@@ -20,14 +20,15 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - name: Build and push
-        uses: docker/build-push-action@v1
+      - name: Docker Login
+        uses: docker/login-action@v1.6.0
         with:
+          registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-          registry: ${{ secrets.REGISTRY }}
-          repository: conduit
-          tags: latest
+      - name: Build conduit modules
+        run: |
+          sh ./scripts/docker-build.sh;
   document:
     runs-on: ubuntu-18.04
     steps:
