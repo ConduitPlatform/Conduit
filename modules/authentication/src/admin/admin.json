@@ -4,6 +4,16 @@
       "path": "/users",
       "method": "GET",
       "protoName": "getUsers"
+    },
+    {
+      "path": "/services",
+      "method": "GET",
+      "protoName": "getServices"
+    },
+    {
+      "path": "/services",
+      "method": "POST",
+      "protoName": "createService"
     }
   ]
 }

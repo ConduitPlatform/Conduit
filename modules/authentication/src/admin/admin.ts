@@ -2,6 +2,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';
+import {ServiceAdmin} from './service';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -26,10 +27,13 @@ export class AdminHandlers {
             }
         );
         let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        let serviceAdmin = new ServiceAdmin(this.grpcSdk);
         // @ts-ignore
         let admin = protoDescriptor.authentication.admin.Admin;
         server.addService(admin.service, {
-            getUsers: this.getUsers.bind(this)
+            getUsers: this.getUsers.bind(this),
+            getServices: serviceAdmin.getServices.bind(serviceAdmin),
+            createService: serviceAdmin.createService.bind(serviceAdmin)
         });
     }
 

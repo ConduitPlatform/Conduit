@@ -3,6 +3,8 @@ package authentication.admin;
 
 service Admin {
   rpc GetUsers(AdminRequest) returns (AdminResponse);
+  rpc GetServices(AdminRequest) returns (AdminResponse);
+  rpc CreateService(AdminRequest) returns (AdminResponse);
 }
 
 // all admin requests accept the params,headers and context objects as stringified json
