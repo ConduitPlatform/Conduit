@@ -94,10 +94,18 @@ const CustomQueries = ({
         setAvailableFieldsOfSchema(Object.keys(fields));
       }
 
-      const inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
-      const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
-      setSelectedInputs(inputs);
-      setSelectedQueries(queries);
+      if (selectedEndpoint.queries) {
+        const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
+        setSelectedQueries(queries);
+      }
+      if (selectedEndpoint.assignments) {
+        const assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
+        setSelectedAssignments(assignments);
+      }
+      if (selectedEndpoint.inputs) {
+        const inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
+        setSelectedInputs(inputs);
+      }
     }
   }, [getAvailableFieldsOfSchema, selectedEndpoint]);
 
@@ -144,6 +152,7 @@ const CustomQueries = ({
       authentication: authentication,
       inputs: selectedInputs,
       queries: selectedQueries,
+      assignments: selectedAssignments,
     };
     const _id = selectedEndpoint._id;
     handleEdit(_id, data);
@@ -385,15 +394,60 @@ const CustomQueries = ({
     if (!name) return true;
     if (!selectedSchema) return true;
     if (selectedOperation === -1) return true;
-    if (!selectedQueries || selectedQueries.length === 0) return true;
-    const invalidQueries = selectedQueries.some(
-      (query) =>
-        query.schemaField === '' ||
-        query.operation === -1 ||
-        query.comparisonField.type === '' ||
-        query.comparisonField.value === ''
-    );
-    if (invalidQueries) {
+
+    let invalidQueries;
+    let invalidAssignments;
+
+    if (selectedOperation === OperationsEnum.POST) {
+      if (!selectedAssignments || selectedAssignments.length === 0) return true;
+      invalidAssignments = selectedAssignments.some(
+        (assignment) =>
+          assignment.schemaField === '' ||
+          assignment.action === -1 ||
+          assignment.assignmentField.type === '' ||
+          assignment.assignmentField.value === ''
+      );
+    }
+    if (selectedOperation === OperationsEnum.PUT) {
+      if (!selectedQueries || selectedQueries.length === 0) return true;
+      invalidQueries = selectedQueries.some(
+        (query) =>
+          query.schemaField === '' ||
+          query.operation === -1 ||
+          query.comparisonField.type === '' ||
+          query.comparisonField.value === ''
+      );
+      if (!selectedAssignments || selectedAssignments.length === 0) return true;
+      invalidAssignments = selectedAssignments.some(
+        (assignment) =>
+          assignment.schemaField === '' ||
+          assignment.action === -1 ||
+          assignment.assignmentField.type === '' ||
+          assignment.assignmentField.value === ''
+      );
+    }
+    if (selectedOperation === OperationsEnum.DELETE) {
+      if (!selectedQueries || selectedQueries.length === 0) return true;
+      invalidQueries = selectedQueries.some(
+        (query) =>
+          query.schemaField === '' ||
+          query.operation === -1 ||
+          query.comparisonField.type === '' ||
+          query.comparisonField.value === ''
+      );
+    }
+    if (selectedOperation === OperationsEnum.GET) {
+      if (!selectedQueries || selectedQueries.length === 0) return true;
+      invalidQueries = selectedQueries.some(
+        (query) =>
+          query.schemaField === '' ||
+          query.operation === -1 ||
+          query.comparisonField.type === '' ||
+          query.comparisonField.value === ''
+      );
+    }
+
+    if (invalidQueries || invalidAssignments) {
       return true;
     }
     const invalidInputs = selectedInputs.some(
@@ -463,7 +517,7 @@ const CustomQueries = ({
             </Grid>
             <OperationSection
               availableSchemas={availableSchemas}
-              selectedSchemaselectedSchema
+              selectedSchema={selectedSchema}
               selectedOperation={selectedOperation}
               editMode={editMode}
               handleOperationChange={handleOperationChange}
