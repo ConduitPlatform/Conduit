@@ -13,7 +13,7 @@ export class CustomEndpointController {
   }
 
   refreshRoutes() {
-    this._adapter
+    return this._adapter
       .findMany("CustomEndpoints", { enabled: true })
       .then((r: CustomEndpoint[]) => {
         if (!r || r.length == 0) {
@@ -24,7 +24,7 @@ export class CustomEndpointController {
           routes.push(createCustomEndpointRoute(schema));
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
-        
+
         this.router.addRoutes(routes);
       })
       .catch((err: Error) => {
@@ -34,6 +34,8 @@ export class CustomEndpointController {
   }
 
   refreshEndpoints(): void {
-    this.refreshRoutes();
+    this.refreshRoutes().then((r:any) => {
+      this.router.requestRefresh();
+    });
   }
 }

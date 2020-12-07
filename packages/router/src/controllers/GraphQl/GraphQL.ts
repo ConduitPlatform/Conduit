@@ -355,6 +355,6 @@ export class GraphQLController {
         console.error(err);
       }
       this._scheduledTimeout = null;
-    });
+    }, 3000);
   }
 }
