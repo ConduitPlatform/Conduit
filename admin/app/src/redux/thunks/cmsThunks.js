@@ -239,6 +239,7 @@ export const createCustomEndpoints = (endPointData) => {
       selectedSchema: endPointData.selectedSchema,
       inputs: endPointData.inputs,
       queries: endPointData.queries,
+      assignments: endPointData.assignments,
     };
     createCustomEndpointsRequest(body)
       .then((res) => {
