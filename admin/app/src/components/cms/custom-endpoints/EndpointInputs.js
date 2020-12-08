@@ -6,9 +6,11 @@ import {
   FormControl,
   InputLabel,
   Select,
+  IconButton,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import InputLocationEnum from '../../../models/InputLocationEnum';
+import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -23,6 +25,7 @@ const EndpointInputs = ({
   handleInputNameChange,
   handleInputTypeChange,
   handleInputLocationChange,
+  handleRemoveInput,
 }) => {
   const classes = useStyles();
   return selectedInputs.map((input, index) => (
@@ -53,7 +56,7 @@ const EndpointInputs = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={4}>
+      <Grid item xs={3}>
         <FormControl className={classes.formControl}>
           <Select
             disabled={!editMode}
@@ -66,6 +69,14 @@ const EndpointInputs = ({
             <option value={InputLocationEnum.URL_PARAMS}>URL</option>
           </Select>
         </FormControl>
+      </Grid>
+      <Grid item xs={1}>
+        <IconButton
+          disabled={!editMode}
+          size="small"
+          onClick={() => handleRemoveInput(index)}>
+          <RemoveCircleOutlineIcon />
+        </IconButton>
       </Grid>
     </Fragment>
   ));
