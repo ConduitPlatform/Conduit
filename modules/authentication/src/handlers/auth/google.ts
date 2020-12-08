@@ -26,7 +26,7 @@ export class GoogleHandlers {
     async validate(): Promise<Boolean> {
         return this.grpcSdk.config.get('authentication')
             .then((authConfig: any) => {
-                if(!authConfig.google.active){
+                if(!authConfig.google.enabled){
                     throw ConduitError.forbidden('Google auth is deactivated');
                 }
                 if (!authConfig.google || !authConfig.google.clientId) {
