@@ -57,6 +57,12 @@ export default {
             default: true
         }
     },
+    service: {
+        enabled: {
+            format: 'Boolean',
+            default: true
+        }
+    },
     generateRefreshToken: {
         doc: 'If the module should generate refresh tokens along with the access tokens',
         format: 'Boolean',

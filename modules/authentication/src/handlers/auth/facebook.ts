@@ -24,7 +24,7 @@ export class FacebookHandlers {
     async validate(): Promise<Boolean> {
         return this.grpcSdk.config.get('authentication')
             .then((authConfig: any) => {
-                if (!authConfig.facebook.active) {
+                if (!authConfig.facebook.enabled) {
                     throw ConduitError.forbidden('Facebook auth is deactivated');
                 }
                 if (!authConfig.facebook || !authConfig.facebook.clientId) {

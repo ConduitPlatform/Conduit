@@ -9,6 +9,7 @@ service Router {
   rpc VerifyEmail(RouterRequest) returns (RouterResponse);
   rpc AuthenticateGoogle(RouterRequest) returns (RouterResponse);
   rpc AuthenticateFacebook(RouterRequest) returns (RouterResponse);
+  rpc AuthenticateService(RouterRequest) returns (RouterResponse);
   rpc RenewAuth(RouterRequest) returns (RouterResponse);
   rpc LogOut(RouterRequest) returns (RouterResponse);
   rpc AuthMiddleware(RouterRequest) returns (RouterResponse);
