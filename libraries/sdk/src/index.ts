@@ -189,6 +189,45 @@ export class ConduitSDK {
         }
     }
 
+    async addFieldstoConfig(newConfig: any, moduleName?: string) {
+        const Config = this.getDatabase().getSchema('Config');
+        const dbConfig = await Config.findOne({});
+        if (isNil(dbConfig)) {
+            throw new Error('Config not set');
+        }
+        const appConfig = (this as any).config as ConvictConfig<any>;
+        let currentConfig: any;
+        if (isNil(moduleName)) {
+            currentConfig = dbConfig;
+        }
+        else {
+            currentConfig = dbConfig[moduleName];
+        }
+        if (isNil(currentConfig)) currentConfig = {};
+
+        // keep only new keys
+        const final = {...newConfig, ...currentConfig};
+
+        if (isNil(moduleName)) {
+            Object.assign(dbConfig, final);
+        } else {
+            if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
+            Object.assign(dbConfig[moduleName], final);
+        }
+        const saved = await Config.findByIdAndUpdate(dbConfig._id, dbConfig);
+        delete saved._id;
+        delete saved.createdAt;
+        delete saved.updatedAt;
+        delete saved.__v;
+        appConfig.load(saved);
+
+        if (isNil(moduleName)) {
+            return saved;
+        } else {
+            return saved[moduleName];
+        }
+    }
+
     // this validator doesn't support custom convict types
     static validateConfig(configInput: any, configSchema: any): Boolean {
         if (isNil(configInput)) return false;
