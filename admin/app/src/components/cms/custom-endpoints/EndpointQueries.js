@@ -1,12 +1,20 @@
-import React, { Fragment } from 'react';
-import { Grid, Typography, FormControl, Select, TextField } from '@material-ui/core';
+import {
+  FormControl,
+  Grid,
+  IconButton,
+  Select,
+  TextField,
+  Typography,
+} from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import React, { Fragment } from 'react';
 import ConditionsEnum from '../../../models/ConditionsEnum';
+import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
     margin: theme.spacing(1),
-    minWidth: 180,
+    minWidth: 120,
   },
 }));
 
@@ -19,6 +27,7 @@ const EndpointQueries = ({
   handleQueryConditionChange,
   handleQueryComparisonFieldChange,
   handleCustomValueChange,
+  handleRemoveQuery,
 }) => {
   const classes = useStyles();
 
@@ -73,7 +82,7 @@ const EndpointQueries = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
+      <Grid item xs={2}>
         <FormControl className={classes.formControl}>
           <Select
             fullWidth
@@ -119,8 +128,16 @@ const EndpointQueries = ({
           />
         </Grid>
       ) : (
-        <Grid item xs={2} />
+        <Grid item xs={1}></Grid>
       )}
+      <Grid item xs={1}>
+        <IconButton
+          disabled={!editMode}
+          size="small"
+          onClick={() => handleRemoveQuery(index)}>
+          <RemoveCircleOutlineIcon />
+        </IconButton>
+      </Grid>
     </Fragment>
   ));
 };
