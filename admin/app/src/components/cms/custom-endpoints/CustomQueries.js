@@ -270,6 +270,44 @@ const CustomQueries = ({
     }
   };
 
+  const handleRemoveInput = (index) => {
+    const input = selectedInputs[index];
+    const currentInputs = selectedInputs.slice();
+    currentInputs.splice(index, 1);
+
+    const updatedQueries = selectedQueries.slice().map((q) => {
+      const comparisonField = q.comparisonField;
+      if (comparisonField.name === input.value) {
+        return {
+          ...q,
+          comparisonField: {
+            type: '',
+            value: '',
+          },
+        };
+      } else {
+        return q;
+      }
+    });
+    const updatedAssignments = selectedAssignments.slice().map((a) => {
+      const assignmentField = a.assignmentField;
+      if (assignmentField.name === input.value) {
+        return {
+          ...a,
+          assignmentField: {
+            type: '',
+            value: '',
+          },
+        };
+      } else {
+        return a;
+      }
+    });
+    setSelectedInputs(currentInputs);
+    setSelectedQueries(updatedQueries);
+    setSelectedAssignments(updatedAssignments);
+  };
+
   const handleAddInput = () => {
     const input = {
       name: '',
@@ -309,6 +347,12 @@ const CustomQueries = ({
       input.operation = Number(value);
       setSelectedQueries(currentQueries);
     }
+  };
+
+  const handleRemoveQuery = (index) => {
+    const currentQueries = selectedQueries.slice();
+    currentQueries.splice(index, 1);
+    setSelectedQueries(currentQueries);
   };
 
   const handleQueryComparisonFieldChange = (event, index) => {
@@ -388,6 +432,12 @@ const CustomQueries = ({
       assignment.assignmentField.value = value;
       setSelectedAssignments(currentAssignments);
     }
+  };
+
+  const handleRemoveAssignment = (index) => {
+    const currentAssignments = selectedAssignments.slice();
+    currentAssignments.splice(index, 1);
+    setSelectedAssignments(currentAssignments);
   };
 
   const disableSubmit = () => {
@@ -548,6 +598,7 @@ const CustomQueries = ({
               handleInputNameChange={handleInputNameChange}
               handleInputTypeChange={handleInputTypeChange}
               handleInputLocationChange={handleInputLocationChange}
+              handleRemoveInput={handleRemoveInput}
             />
             <Grid item xs={12} style={{ padding: '0' }}>
               <Divider></Divider>
@@ -580,6 +631,7 @@ const CustomQueries = ({
                   handleQueryComparisonFieldChange={handleQueryComparisonFieldChange}
                   handleCustomValueChange={handleCustomValueChange}
                   handleQueryConditionChange={handleQueryConditionChange}
+                  handleRemoveQuery={handleRemoveQuery}
                 />
               </>
             )}
@@ -612,6 +664,7 @@ const CustomQueries = ({
                   handleAssignmentActionChange={handleAssignmentActionChange}
                   handleAssignmentValueFieldChange={handleAssignmentValueFieldChange}
                   handleAssignmentCustomValueChange={handleAssignmentCustomValueChange}
+                  handleRemoveAssignment={handleRemoveAssignment}
                 />
               </>
             )}
