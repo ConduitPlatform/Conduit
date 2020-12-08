@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { constructQuery, getOpName } from "./utils";
+import { constructQuery, constructAssignment, getOpName } from "./utils";
 import grpc from "grpc";
 import { CustomEndpoint } from "../../models/customEndpoint";
 
@@ -39,12 +39,12 @@ export class CustomEndpointHandler {
     }
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
-      endpoint.assignments!.forEach((r: { schemaField: String; assignmentField: { type: String; value: any } }) => {
+      endpoint.assignments!.forEach((r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
         if (createString.length !== 0) createString += ",";
         if (r.assignmentField.type === "Input") {
-          createString += `\"${r.schemaField}\": ${JSON.stringify(params[r.assignmentField.value])}`;
+          createString += constructAssignment(r.schemaField, r.action, JSON.stringify(params[r.assignmentField.value]));
         } else {
-          createString += `\"${r.schemaField}\": ${JSON.stringify(r.assignmentField.value)}`;
+          createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
         }
       });
     }
