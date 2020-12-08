@@ -33,7 +33,8 @@ export class AdminHandlers {
         server.addService(admin.service, {
             getUsers: this.getUsers.bind(this),
             getServices: serviceAdmin.getServices.bind(serviceAdmin),
-            createService: serviceAdmin.createService.bind(serviceAdmin)
+            createService: serviceAdmin.createService.bind(serviceAdmin),
+            renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin)
         });
     }
 

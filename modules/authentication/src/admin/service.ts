@@ -72,4 +72,33 @@ export class ServiceAdmin {
 
     return callback(null, {result: JSON.stringify({ name, token })});
   }
+
+  async renewToken(call: any, callback: any) {
+    const { serviceId } = JSON.parse(call.request.params);
+
+    if (isNil(serviceId)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Service id is required"
+      });
+    }
+
+    let errorMessage = null;
+    const token = AuthUtils.randomToken();
+    const hashedToken = await AuthUtils.hashPassword(token).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+    let service = await this.database
+      .findByIdAndUpdate("Service", serviceId, {hashedToken}, {new: true})
+      .catch((e: any) => errorMessage = e.message);
+
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Service update failed"
+      });
+    }
+
+    return callback(null, {result: JSON.stringify({ name: service.name, token })});
+  }
 }
