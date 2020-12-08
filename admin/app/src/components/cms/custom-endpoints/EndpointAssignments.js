@@ -1,7 +1,15 @@
-import { FormControl, Grid, Select, TextField, Typography } from '@material-ui/core';
+import {
+  FormControl,
+  Grid,
+  Select,
+  TextField,
+  Typography,
+  IconButton,
+} from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import React, { Fragment } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
+import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
 const useStyles = makeStyles((theme) => ({}));
 
@@ -14,6 +22,7 @@ const EndpointAssignments = ({
   handleAssignmentActionChange,
   handleAssignmentValueFieldChange,
   handleAssignmentCustomValueChange,
+  handleRemoveAssignment,
 }) => {
   const classes = useStyles();
 
@@ -56,7 +65,7 @@ const EndpointAssignments = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
+      <Grid item xs={2}>
         <FormControl className={classes.formControl}>
           <Select
             fullWidth
@@ -95,8 +104,16 @@ const EndpointAssignments = ({
           />
         </Grid>
       ) : (
-        <Grid item xs={2} />
+        <Grid item xs={1}></Grid>
       )}
+      <Grid item xs={1}>
+        <IconButton
+          disabled={!editMode}
+          size="small"
+          onClick={() => handleRemoveAssignment(index)}>
+          <RemoveCircleOutlineIcon />
+        </IconButton>
+      </Grid>
     </Fragment>
   ));
 };
