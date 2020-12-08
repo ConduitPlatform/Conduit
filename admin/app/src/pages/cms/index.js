@@ -10,7 +10,6 @@ import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
-import CustomQueries from '../../components/cms/CustomQueries';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCmsSchemas } from '../../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -28,6 +27,7 @@ import {
   updateCustomEndpoints,
   getCustomEndpoints,
 } from '../../redux/thunks/cmsThunks';
+import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
