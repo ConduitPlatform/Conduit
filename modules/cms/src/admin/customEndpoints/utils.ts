@@ -124,9 +124,11 @@ export function assignmentValidation(
         return "assignmentField type is invalid!";
     }
 
-    // TODO check if schema field is array
-    // if (action === 3 || action === 4) {
-    // }
+    if (action === 3 || action === 4) {
+        if (findSchema.fields[schemaField].type !== 'Array') {
+            return "append and remove actions are valid only for array schema fields";
+        }
+    }
 
     return true;
 }
