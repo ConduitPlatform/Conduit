@@ -125,7 +125,7 @@ export class CustomEndpointsAdmin {
 
     if (found.operation === OperationsEnum.POST || found.operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r: {schemaField: string, action: number, assignmentField: any}) => {
+      assignments.forEach((r: {schemaField: string, action: number, assignmentField: { type: string, value: any }}) => {
         let error = assignmentValidation(findSchema, inputs, found.operation, r.schemaField, r.assignmentField, r.action);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -305,7 +305,7 @@ export class CustomEndpointsAdmin {
 
     if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r: {schemaField: any, action: number, assignmentField: string}) => {
+      assignments.forEach((r: {schemaField: any, action: number, assignmentField: { type: string, value: any }}) => {
         let error = assignmentValidation(findSchema, inputs, operation, r.schemaField, r.assignmentField, r.action);
         if (error !== true) {
           return (errorMessage = error as string);
