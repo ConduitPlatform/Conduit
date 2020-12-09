@@ -10,6 +10,7 @@ service Admin {
   rpc DeleteSchema(AdminRequest) returns (AdminResponse);
   rpc GetDocuments(AdminRequest) returns (AdminResponse);
   rpc CreateDocument(AdminRequest) returns (AdminResponse);
+  rpc CreateManyDocuments(AdminRequest) returns (AdminResponse);
   rpc EditDocument(AdminRequest) returns (AdminResponse);
   rpc DeleteDocument(AdminRequest) returns (AdminResponse);
   rpc GetCustomEndpoints(AdminRequest) returns (AdminResponse);

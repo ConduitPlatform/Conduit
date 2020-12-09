@@ -41,6 +41,7 @@ export class AdminHandlers {
             getDocuments: documentsAdmin.getDocuments.bind(documentsAdmin),
             getDocumentById: documentsAdmin.getDocumentById.bind(documentsAdmin),
             createDocument: documentsAdmin.createDocument.bind(documentsAdmin),
+            createManyDocuments: documentsAdmin.createManyDocuments.bind(documentsAdmin),
             editDocument: documentsAdmin.editDocument.bind(documentsAdmin),
             deleteDocument: documentsAdmin.deleteDocument.bind(documentsAdmin),
             getCustomEndpoints: customEndpointsAdmin.getCustomEndpoints.bind(customEndpointsAdmin),

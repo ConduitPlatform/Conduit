@@ -83,6 +83,14 @@ export function getOps(schemaName: string, actualSchema: any) {
         'createDocument')));
 
     routesArray.push(constructRoute(new ConduitRoute({
+            path: `/content/${schemaName}/many`,
+            action: ConduitRouteActions.POST,
+            bodyParams: {"docs": [actualSchema.fields]},
+            middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
+        }, new ConduitRouteReturnDefinition(`createMany${schemaName}`, {"docs": [actualSchema.fields]}),
+        'createManyDocuments')));
+
+    routesArray.push(constructRoute(new ConduitRoute({
             path: `/content/${schemaName}/:id`,
             action: ConduitRouteActions.UPDATE,
             urlParams: {

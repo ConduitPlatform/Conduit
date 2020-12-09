@@ -101,6 +101,27 @@ export class CmsHandlers {
         return callback(null, {result: JSON.stringify(newDocument)});
     }
 
+    async createManyDocuments(call: any, callback: any) {
+        const inputDocuments = JSON.parse(call.request.params).params.docs;
+        const schemaName = call.request.path.split('/')[2];
+
+        let errorMessage: any = null;
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (isNil(schema)) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: 'Requested cms schema not found',
+            });
+        }
+
+        const newDocuments = await this.database.createMany(schemaName, inputDocuments).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {result: JSON.stringify({docs: newDocuments})});
+    }
+
     async editDocument(call: any, callback: any) {
         const {id, params} = JSON.parse(call.request.params);
         const schemaName = call.request.path.split('/')[2];
