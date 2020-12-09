@@ -33,7 +33,9 @@ export class CmsRoutes {
       getDocuments: this.handlers.getDocuments.bind(this.handlers),
       getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
       createDocument: this.handlers.createDocument.bind(this.handlers),
+      createManyDocuments: this.handlers.createManyDocuments.bind(this.handlers),
       editDocument: this.handlers.editDocument.bind(this.handlers),
+      editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
       deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
       customOperation: this.customEndpointHandler.entryPoint.bind(this.customEndpointHandler),
     });

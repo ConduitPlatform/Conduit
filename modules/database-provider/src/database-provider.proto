@@ -65,6 +65,7 @@ service DatabaseProvider {
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);
     rpc create (QueryRequest) returns (QueryResponse);
+    rpc createMany(QueryRequest) returns (QueryResponse);
     rpc deleteOne (QueryRequest) returns (QueryResponse);
     rpc deleteMany (QueryRequest) returns (QueryResponse);
     rpc findByIdAndUpdate (UpdateRequest) returns (QueryResponse);

@@ -49,6 +49,7 @@ export class DatabaseProvider {
                     findOne: this.findOne.bind(this),
                     findMany: this.findMany.bind(this),
                     create: this.create.bind(this),
+                    createMany: this.createMany.bind(this),
                     findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
                     updateMany: this.updateMany.bind(this),
                     deleteOne: this.deleteOne.bind(this),
@@ -165,6 +166,22 @@ export class DatabaseProvider {
         this._activeAdapter.getSchemaModel(call.request.schemaName)
             .then((schemaAdapter: { model: any }) => {
                 return schemaAdapter.model.create(JSON.parse(call.request.query));
+            })
+            .then(result => {
+                callback(null, {result: JSON.stringify(result)});
+            })
+            .catch((err: any) => {
+                callback({
+                    code: grpc.status.INTERNAL,
+                    message: err.message,
+                });
+            });
+    }
+
+    createMany(call: any, callback: any) {
+        this._activeAdapter.getSchemaModel(call.request.schemaName)
+            .then((schemaAdapter: { model: any }) => {
+                return schemaAdapter.model.createMany(JSON.parse(call.request.query));
             })
             .then(result => {
                 callback(null, {result: JSON.stringify(result)});
