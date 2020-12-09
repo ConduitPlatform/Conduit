@@ -77,16 +77,33 @@ export function inputValidation(name: string, type: any, location: number): bool
 /**
  * Assignment schema:
  * {
- * schemaField: String 
+ * schemaField: String
+ * action: Number
  * assignmentField: {type: String, value: String}
  * }
  */
-export function assignmentValidation(findSchema: any, inputs: any, schemaField: string, assignmentField: any): boolean | string {
-    if (isNil(schemaField) || isNil(assignmentField)) {
-        return "schemaField and assignmentField must be present in the input";
+export function assignmentValidation(
+    findSchema: any,
+    inputs: any,
+    operation: number,
+    schemaField: string,
+    assignmentField: any,
+    action: number
+): boolean | string {
+    if (isNil(schemaField) || isNil(assignmentField) || isNil(action)) {
+        return "schemaField, assignmentField and action must be present in the input";
     }
     if (schemaField.length === 0) {
         return "schemaField cannot be empty";
+    }
+
+    if (action < 0 || action > 4) {
+        return "action is invalid!";
+    }
+
+    // action are available only for PUT (update) operations
+    if (operation !== 2 && action !== 0) {
+        return "action is invalid";
     }
 
     if (Object.keys(assignmentField).length === 0 || isNil(assignmentField.type) || isNil(assignmentField.value)) {
@@ -105,6 +122,12 @@ export function assignmentValidation(findSchema: any, inputs: any, schemaField: 
     }
     else if (assignmentField.type !== 'Custom') {
         return "assignmentField type is invalid!";
+    }
+
+    if (action === 3 || action === 4) {
+        if (findSchema.fields[schemaField].type !== 'Array') {
+            return "append and remove actions are valid only for array schema fields";
+        }
     }
 
     return true;

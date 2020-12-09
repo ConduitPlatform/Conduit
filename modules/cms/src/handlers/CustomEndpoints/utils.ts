@@ -25,7 +25,7 @@ export function getOpName(name: string, op: number) {
 }
 
 export function constructQuery(schemaField: string, operation: number, comparisonField: any) {
-  //     EQUAL: 0, //'equal to'
+  //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
   //   GREATER: 2, //'greater than'
   //   GREATER_EQ: 3, //'greater that or equal to'
@@ -56,6 +56,28 @@ export function constructQuery(schemaField: string, operation: number, compariso
       return `\'${schemaField}\':{ $in: ${comparisonField}}`;
     default:
       return `\'${schemaField}\':${comparisonField}`;
+  }
+}
+
+export function constructAssignment(schemaField: string, action: number, assignmentValue: any) {
+  //   SET: 0,
+  //   INCREMENT: 1,
+  //   DECREMENT: 2,
+  //   APPEND: 3,
+  //   REMOVE: 4
+  switch (action) {
+    case 0:
+      return `\"${schemaField}\": ${assignmentValue}`;
+    case 1:
+      return `\"$inc\": { \"${schemaField}\": ${assignmentValue} }`;
+    case 2:
+      return `\"$inc\": { \"${schemaField}\": -${assignmentValue} }`;
+    case 3:
+      return `\"$push\": { \"${schemaField}\": ${assignmentValue} }`
+    case 4:
+      return `\"$pull\": { \"${schemaField}\": ${assignmentValue} }`
+    default:
+      return `\"${schemaField}\": ${assignmentValue}`;
   }
 }
 
