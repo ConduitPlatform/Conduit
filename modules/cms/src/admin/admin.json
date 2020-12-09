@@ -51,6 +51,11 @@
       "protoName": "createManyDocuments"
     },
     {
+      "path": "/cms/schemas/:schemaName/many",
+      "method": "PUT",
+      "protoName": "editManyDocuments"
+    },
+    {
       "path": "/cms/schemas/:schemaName/:id",
       "method": "PUT",
       "protoName": "editDocument"

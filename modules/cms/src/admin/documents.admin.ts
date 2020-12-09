@@ -140,6 +140,37 @@ export class DocumentsAdmin {
         return callback(null, {result: JSON.stringify(updatedDocument)});
     }
 
+    async editManyDocuments(call: any, callback: any) {
+        const {schemaName, changedDocuments} = JSON.parse(call.request.params);
+
+        let errorMessage: any = null;
+        const schema = await this.database.findOne('SchemaDefinitions', {name: schemaName}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (isNil(schema)) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: 'Requested cms schema not found',
+            });
+        }
+
+        let updatedDocuments: any[] = [];
+
+        for (const doc of changedDocuments) {
+            const dbDocument = await this.database.findOne(schemaName, {_id: doc._id}).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) continue; // TODO create new?
+
+            Object.assign(dbDocument, doc);
+
+            const updatedDocument = await this.database.findByIdAndUpdate(schemaName, dbDocument._id, dbDocument).catch((e: any) => errorMessage = e.message);
+            if (isNil(errorMessage)) {
+                updatedDocuments.push(updatedDocument);
+            }
+        }
+
+        return callback(null, {result: JSON.stringify({docs: updatedDocuments})});
+    }
+
     async deleteDocument(call: any, callback: any) {
         const {schemaName, id} = JSON.parse(call.request.params);
 

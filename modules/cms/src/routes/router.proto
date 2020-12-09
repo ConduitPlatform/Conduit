@@ -9,6 +9,7 @@ service Router {
   rpc CreateDocument(RouterRequest) returns (RouterResponse);
   rpc CreateManyDocuments(RouterRequest) returns (RouterResponse);
   rpc EditDocument(RouterRequest) returns (RouterResponse);
+  rpc EditManyDocuments(RouterRequest) returns (RouterResponse);
   rpc DeleteDocument(RouterRequest) returns (RouterResponse);
 
   //Custom Endpoints route
