@@ -33,6 +33,8 @@ export interface SchemaAdapter {
      */
     create(query: any): Promise<any>;
 
+    createMany(query: any): Promise<any>;
+
     deleteOne(query: any): Promise<any>
 
     deleteMany(query: any): Promise<any>;

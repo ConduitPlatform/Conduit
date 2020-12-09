@@ -17,6 +17,16 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.create(query).then(r => r.toObject());
     }
 
+    createMany(query: any): Promise<any> {
+        let date = new Date();
+        query.forEach((doc: any) => {
+            doc.createdAt = date;
+            doc.updatedAt = date;
+        });
+        
+        return this.model.insertMany(query).then(r => r);
+    }
+
     findByIdAndUpdate(id: any, query: any): Promise<any> {
         // check if it is a document
         if (!query['$set']) {
