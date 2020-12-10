@@ -24,6 +24,7 @@ export default class ConfigManager implements IConfigManager {
         server.addService(config.service, {
             get: this.getGrpc.bind(this),
             updateConfig: this.updateConfig.bind(this),
+            addFieldstoConfig: this.addFieldstoConfig.bind(this),
             moduleExists: this.moduleExists.bind(this),
             registerModule: this.registerModule.bind(this),
             moduleList: this.moduleList.bind(this),
@@ -109,6 +110,45 @@ export default class ConfigManager implements IConfigManager {
             callback({
                 code: grpc.status.FAILED_PRECONDITION,
                 message: "Database provider not set",
+            });
+        }
+    }
+
+    addFieldstoConfig(call: any, callback: any) {
+        let newFields = JSON.parse(call.request.config);
+
+        if (!isNil(this.grpcSdk.databaseProvider)) {
+            this.grpcSdk.databaseProvider!.findOne('Config', {})
+                .then(dbConfig => {
+                    if (isNil(dbConfig)) throw new Error('Config not found in the database');
+                    if (!dbConfig['moduleConfigs']) {
+                        dbConfig['moduleConfigs'] = {};
+                    }
+                    let modName = "moduleConfigs." + call.request.moduleName;
+                    this.grpcSdk.databaseProvider!.findOne('Config', {_id: dbConfig._id})
+                        .then(savedConfig => {
+                            // keep only new fields
+                            newFields = {...newFields, ...savedConfig};
+                            return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {$set: {[modName]: newFields}})
+                                .then((updatedConfig: any) => {
+                                    delete updatedConfig._id;
+                                    delete updatedConfig.createdAt;
+                                    delete updatedConfig.updatedAt;
+                                    delete updatedConfig.__v;
+                                    return callback(null, {result: JSON.stringify(updatedConfig['moduleConfigs'][call.request.moduleName])})
+                                });
+                        });
+                })
+                .catch(err => {
+                    callback({
+                        code: grpc.status.INTERNAL,
+                        message: err.message ? err.message : err
+                    });
+                });
+        } else {
+            callback({
+                code: grpc.status.FAILED_PRECONDITION,
+                message: "Database provider not set"
             });
         }
     }

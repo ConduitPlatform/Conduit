@@ -56,6 +56,23 @@ export default class Config {
         });
     }
 
+    addFieldstoConfig(config: any, name: string): Promise<any> {
+        let request = {
+            config: JSON.stringify(config),
+            moduleName: name
+        };
+
+        return new Promise((resolve, reject) => {
+            this.client.addFieldstoConfig(request, (err: any, res: any) => {
+                if (err || !res) {
+                    reject(err || 'Something went wrong');
+                } else {
+                    resolve(JSON.parse(res.result));
+                }
+            })
+        });
+    }
+
     moduleExists(name: string): Promise<any> {
         let request = {
             moduleName: name

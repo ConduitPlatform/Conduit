@@ -53,6 +53,12 @@ export default class EmailModule {
                 return this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email');
             })
             .then((emailConfig: any) => {
+                return this.grpcSdk.config.addFieldstoConfig(EmailConfigSchema.getProperties(), 'email');
+            })
+            .catch(() => {
+                console.log("email config did not update");
+            })
+            .then((emailConfig: any) => {
                 if (emailConfig.active) {
                     return this.enableModule();
                 }
