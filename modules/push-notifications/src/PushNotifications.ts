@@ -58,6 +58,12 @@ export default class PushNotificationsModule {
                 return this.grpcSdk.config.updateConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
             })
             .then((notificationsConfig: any) => {
+                return this.grpcSdk.config.addFieldstoConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
+            })
+            .catch(() => {
+                console.log("pushNotifications config did not update");
+            })
+            .then((notificationsConfig: any) => {
                 if (notificationsConfig.active) {
                     return this.enableModule()
                 } else {

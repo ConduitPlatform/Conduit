@@ -53,6 +53,12 @@ export class StorageModule {
                 return this.grpcSdk.config.updateConfig(StorageConfigSchema.getProperties(), 'storage');
             })
             .then((storageConfig: any) => {
+                return this.grpcSdk.config.addFieldstoConfig(StorageConfigSchema.getProperties(), 'storage');
+            })
+            .catch(() => {
+                console.log('storage config did not update');
+            })
+            .then((storageConfig: any) => {
                 if (storageConfig.active) {
                     return this.enableModule();
                 }

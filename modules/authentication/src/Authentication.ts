@@ -50,6 +50,12 @@ export default class AuthenticationModule {
                 return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema.getProperties(), 'authentication');
             })
             .then((authConfig: any) => {
+                return this.grpcSdk.config.addFieldstoConfig(AuthenticationConfigSchema.getProperties(), 'authentication');
+            })
+            .catch(() => {
+                console.log('authentication config did not update');
+            })
+            .then((authConfig: any) => {
                 if (authConfig.active) {
                     return this.enableModule();
                 }
