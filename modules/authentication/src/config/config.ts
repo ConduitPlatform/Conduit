@@ -72,6 +72,24 @@ export default {
             default: ''
         }
     },
+    twitch: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
+        clientId: {
+            format: 'String',
+            default: ''
+        },
+        clientSecret: {
+            format: 'String',
+            default: ''
+        },
+        redirect_uri: {
+            format: 'String',
+            default: ''
+        }
+    },
     service: {
         enabled: {
             format: 'Boolean',

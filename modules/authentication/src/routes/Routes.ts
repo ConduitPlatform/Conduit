@@ -14,6 +14,7 @@ import {GoogleHandlers} from '../handlers/auth/google';
 import {CommonHandlers} from '../handlers/auth/common';
 import {ServiceHandler} from '../handlers/auth/service';
 import {KakaoHandlers} from '../handlers/auth/kakao';
+import {TwitchHandlers} from '../handlers/auth/twitch';
 import {isNil} from 'lodash';
 import fs from "fs";
 import path from "path";
@@ -28,6 +29,7 @@ export class AuthenticationRoutes {
     private readonly serviceHandler: ServiceHandler;
     private readonly commonHandlers: CommonHandlers;
     private readonly kakaoHandlers: KakaoHandlers;
+    private readonly twitchHandlers: TwitchHandlers;
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
         this.localHandlers = new LocalHandlers(grpcSdk);
@@ -35,6 +37,7 @@ export class AuthenticationRoutes {
         this.googleHandlers = new GoogleHandlers(grpcSdk);
         this.serviceHandler = new ServiceHandler(grpcSdk);
         this.kakaoHandlers = new KakaoHandlers(grpcSdk);
+        this.twitchHandlers = new TwitchHandlers(grpcSdk);
         this.commonHandlers = new CommonHandlers(grpcSdk);
 
         const packageDefinition = protoLoader.loadSync(
@@ -62,6 +65,7 @@ export class AuthenticationRoutes {
             authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
             authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
             authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
+            authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
             renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
             logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
             authMiddleware: this.middleware.bind(this)
@@ -248,6 +252,27 @@ export class AuthenticationRoutes {
                     refreshToken: ConduitString.Required
                 }),
                 'authenticateKakao'
+            )));
+
+            enabled = true;
+        }
+
+        errorMessage = null;
+        authActive = await this.twitchHandlers.validate().catch((e: any) => errorMessage = e);
+        if (!errorMessage && authActive) {
+            routesArray.push(constructRoute(new ConduitRoute({
+                    path: '/hook/authentication/twitch',
+                    action: ConduitRouteActions.GET,
+                    urlParams: {
+                        code: TYPE.String
+                    }
+                },
+                new ConduitRouteReturnDefinition('TwitchResponse', {
+                    userId: ConduitString.Required,
+                    accessToken: ConduitString.Required,
+                    refreshToken: ConduitString.Required
+                }),
+                'authenticateTwitch'
             )));
 
             enabled = true;

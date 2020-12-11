@@ -11,6 +11,7 @@ service Router {
   rpc AuthenticateFacebook(RouterRequest) returns (RouterResponse);
   rpc AuthenticateService(RouterRequest) returns (RouterResponse);
   rpc AuthenticateKakao(RouterRequest) returns (RouterResponse);
+  rpc AuthenticateTwitch(RouterRequest) returns (RouterResponse);
   rpc RenewAuth(RouterRequest) returns (RouterResponse);
   rpc LogOut(RouterRequest) returns (RouterResponse);
   rpc AuthMiddleware(RouterRequest) returns (RouterResponse);
