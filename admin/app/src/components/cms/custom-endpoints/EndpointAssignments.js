@@ -7,7 +7,7 @@ import {
   IconButton,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import React, { Fragment } from 'react';
+import React, { Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
@@ -26,6 +26,28 @@ const EndpointAssignments = ({
 }) => {
   const classes = useStyles();
 
+  const isArrayType = useCallback(
+    (fieldName) => {
+      const field = availableFieldsOfSchema.find((f) => f.name === fieldName);
+      if (field) {
+        return field.type === 'Array';
+      }
+      return false;
+    },
+    [availableFieldsOfSchema]
+  );
+
+  const isNumberType = useCallback(
+    (fieldName) => {
+      const field = availableFieldsOfSchema.find((f) => f.name === fieldName);
+      if (field) {
+        return field.type === 'Number';
+      }
+      return false;
+    },
+    [availableFieldsOfSchema]
+  );
+
   return selectedAssignments.map((assignment, index) => (
     <Fragment key={`assignment-${index}`}>
       <Grid item xs={1}>
@@ -41,8 +63,8 @@ const EndpointAssignments = ({
             onChange={(event) => handleAssignmentFieldChange(event, index)}>
             <option aria-label="None" value="" />
             {availableFieldsOfSchema.map((field, index) => (
-              <option key={`idx-${index}-field`} value={field}>
-                {field}
+              <option key={`idx-${index}-field`} value={field.name}>
+                {field.name}
               </option>
             ))}
           </Select>
@@ -51,17 +73,33 @@ const EndpointAssignments = ({
       <Grid item xs={3}>
         <FormControl className={classes.formControl}>
           <Select
-            disabled
+            disabled={!editMode}
             native
             fullWidth
             value={assignment.action}
             onChange={(event) => handleAssignmentActionChange(event, index)}>
             <option aria-label="None" value="" />
             <option value={ActionTypes.SET}>SET</option>
-            <option value={ActionTypes.INCREMENT}>INCREMENT</option>
-            <option value={ActionTypes.DECREMENT}>DECREMENT</option>
-            <option value={ActionTypes.APPEND}>APPEND</option>
-            <option value={ActionTypes.REMOVE}>REMOVE</option>
+            <option
+              disabled={!isNumberType(assignment.schemaField)}
+              value={ActionTypes.INCREMENT}>
+              INCREMENT
+            </option>
+            <option
+              disabled={!isNumberType(assignment.schemaField)}
+              value={ActionTypes.DECREMENT}>
+              DECREMENT
+            </option>
+            <option
+              disabled={!isArrayType(assignment.schemaField)}
+              value={ActionTypes.APPEND}>
+              APPEND
+            </option>
+            <option
+              disabled={!isArrayType(assignment.schemaField)}
+              value={ActionTypes.REMOVE}>
+              REMOVE
+            </option>
           </Select>
         </FormControl>
       </Grid>
@@ -104,7 +142,7 @@ const EndpointAssignments = ({
           />
         </Grid>
       ) : (
-        <Grid item xs={1}></Grid>
+        <Grid item xs={2}></Grid>
       )}
       <Grid item xs={1}>
         <IconButton
