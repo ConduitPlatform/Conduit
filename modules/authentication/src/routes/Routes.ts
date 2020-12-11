@@ -13,6 +13,7 @@ import {FacebookHandlers} from '../handlers/auth/facebook';
 import {GoogleHandlers} from '../handlers/auth/google';
 import {CommonHandlers} from '../handlers/auth/common';
 import {ServiceHandler} from '../handlers/auth/service';
+import {KakaoHandlers} from '../handlers/auth/kakao';
 import {isNil} from 'lodash';
 import fs from "fs";
 import path from "path";
@@ -26,12 +27,14 @@ export class AuthenticationRoutes {
     private readonly googleHandlers: GoogleHandlers;
     private readonly serviceHandler: ServiceHandler;
     private readonly commonHandlers: CommonHandlers;
+    private readonly kakaoHandlers: KakaoHandlers;
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
         this.localHandlers = new LocalHandlers(grpcSdk);
         this.facebookHandlers = new FacebookHandlers(grpcSdk);
         this.googleHandlers = new GoogleHandlers(grpcSdk);
         this.serviceHandler = new ServiceHandler(grpcSdk);
+        this.kakaoHandlers = new KakaoHandlers(grpcSdk);
         this.commonHandlers = new CommonHandlers(grpcSdk);
 
         const packageDefinition = protoLoader.loadSync(
@@ -58,6 +61,7 @@ export class AuthenticationRoutes {
             authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
             authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
             authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
+            authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
             renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
             logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
             authMiddleware: this.middleware.bind(this)
@@ -223,6 +227,27 @@ export class AuthenticationRoutes {
                     refreshToken: ConduitString.Required
                 }),
                 'authenticateService'
+            )));
+
+            enabled = true;
+        }
+
+        errorMessage = null;
+        authActive = await this.kakaoHandlers.validate().catch((e: any) => errorMessage = e);
+        if (!errorMessage && authActive) {
+            routesArray.push(constructRoute(new ConduitRoute({
+                    path: '/hook/authentication/kakao',
+                    action: ConduitRouteActions.GET,
+                    urlParams: {
+                        code: TYPE.String
+                    }
+                },
+                new ConduitRouteReturnDefinition('KakaoResponse', {
+                    userId: ConduitString.Required,
+                    accessToken: ConduitString.Required,
+                    refreshToken: ConduitString.Required
+                }),
+                'authenticateKakao'
             )));
 
             enabled = true;

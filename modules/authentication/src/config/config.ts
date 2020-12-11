@@ -57,6 +57,21 @@ export default {
             default: true
         }
     },
+    kakao: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
+        clientId: {
+            doc: 'Kakao client id',
+            format: 'String',
+            default: ''
+        },
+        redirect_uri: {
+            format: 'String',
+            default: ''
+        }
+    },
     service: {
         enabled: {
             format: 'Boolean',
