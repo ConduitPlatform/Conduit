@@ -125,19 +125,17 @@ export default class ConfigManager implements IConfigManager {
                         dbConfig['moduleConfigs'] = {};
                     }
                     let modName = "moduleConfigs." + call.request.moduleName;
-                    this.grpcSdk.databaseProvider!.findOne('Config', {_id: dbConfig._id})
-                        .then(savedConfig => {
-                            // keep only new fields
-                            newFields = {...newFields, ...savedConfig};
-                            return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {$set: {[modName]: newFields}})
-                                .then((updatedConfig: any) => {
-                                    delete updatedConfig._id;
-                                    delete updatedConfig.createdAt;
-                                    delete updatedConfig.updatedAt;
-                                    delete updatedConfig.__v;
-                                    return callback(null, {result: JSON.stringify(updatedConfig['moduleConfigs'][call.request.moduleName])})
-                                });
-                        });
+                  // keep only new fields
+                  let existing = dbConfig.moduleConfigs[call.request.moduleName];
+                  newFields = {...newFields, ...existing};
+                  return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {$set: {[modName]: newFields}})    ;   
+                })
+                .then((updatedConfig: any) => {
+                    delete updatedConfig._id;
+                    delete updatedConfig.createdAt;
+                    delete updatedConfig.updatedAt;
+                    delete updatedConfig.__v;
+                    return callback(null, {result: JSON.stringify(updatedConfig['moduleConfigs'][call.request.moduleName])})
                 })
                 .catch(err => {
                     callback({
