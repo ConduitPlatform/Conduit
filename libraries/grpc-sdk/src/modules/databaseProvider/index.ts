@@ -18,7 +18,7 @@ export default class DatabaseProvider {
         let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         // @ts-ignore
         const dbProvider = protoDescriptor.databaseprovider.DatabaseProvider;
-        this.client = new dbProvider(url, grpc.credentials.createInsecure());
+        this.client = new dbProvider(url, grpc.credentials.createInsecure(),  { 'grpc.max_receive_message_length': 15 * 1024 * 1024});
     }
 
     getSchema(schemaName: string): Promise<any> {
