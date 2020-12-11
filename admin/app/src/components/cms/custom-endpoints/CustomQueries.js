@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Container,
   Divider,
   Grid,
   IconButton,
@@ -22,6 +21,10 @@ import OperationSection from './OperationSection';
 import Sidelist from './Sidelist';
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    marginLeft: theme.spacing(4),
+    marginRight: theme.spacing(4),
+  },
   mainContent: {
     display: 'flex',
     justifyContent: 'center',
@@ -452,6 +455,11 @@ const CustomQueries = ({
     setSelectedAssignments(currentAssignments);
   };
 
+  const maxInputs = () => {
+    const max = selectedInputs.length === availableFieldsOfSchema.length;
+    return max;
+  };
+
   const disableSubmit = () => {
     if (!name) return true;
     if (!selectedSchema) return true;
@@ -550,11 +558,13 @@ const CustomQueries = ({
     return (
       <>
         <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-          <Typography>Inputs</Typography>
+          <Typography>
+            <strong>Inputs</strong>
+          </Typography>
         </Grid>
         <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
           <Button
-            disabled={!editMode}
+            disabled={!editMode || maxInputs()}
             variant="text"
             color={'primary'}
             className={classes.button}
@@ -580,7 +590,9 @@ const CustomQueries = ({
         {selectedOperation !== OperationsEnum.POST && (
           <>
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-              <Typography>Query</Typography>
+              <Typography>
+                <strong>Query</strong>
+              </Typography>
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
               <Button
@@ -613,11 +625,13 @@ const CustomQueries = ({
           selectedOperation === OperationsEnum.POST) && (
           <>
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-              <Typography>Assigments</Typography>
+              <Typography>
+                <strong>Assigments</strong>
+              </Typography>
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
               <Button
-                disabled={!editMode}
+                disabled={!editMode || selectedOperation === OperationsEnum.POST}
                 variant="text"
                 color={'primary'}
                 className={classes.button}
@@ -630,6 +644,7 @@ const CustomQueries = ({
               <Divider></Divider>
             </Grid>
             <EndpointAssignments
+              operationType={selectedOperation}
               selectedAssignments={selectedAssignments}
               editMode={editMode}
               availableFieldsOfSchema={availableFieldsOfSchema}
@@ -697,9 +712,9 @@ const CustomQueries = ({
   };
 
   return (
-    <Container>
+    <Box className={classes.root}>
       <Grid container spacing={2} className={classes.grid}>
-        <Grid item xs={2}>
+        <Grid item xs={3}>
           <Sidelist
             endpoints={endpoints}
             selectedEndpoint={selectedEndpoint}
@@ -707,7 +722,7 @@ const CustomQueries = ({
             handleListItemSelect={handleListItemSelect}
           />
         </Grid>
-        <Grid item xs={10}>
+        <Grid item xs={9}>
           {renderMainContent()}
         </Grid>
       </Grid>
@@ -720,7 +735,7 @@ const CustomQueries = ({
         handleClose={handleConfirmationDialogClose}
         buttonAction={handleDeleteConfirmed}
       />
-    </Container>
+    </Box>
   );
 };
 

@@ -10,10 +10,12 @@ import { makeStyles } from '@material-ui/core/styles';
 import React, { Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
+import OperationEnum from '../../../models/OperationsEnum';
 
 const useStyles = makeStyles((theme) => ({}));
 
 const EndpointAssignments = ({
+  operationType,
   selectedAssignments,
   editMode,
   availableFieldsOfSchema,
@@ -145,12 +147,14 @@ const EndpointAssignments = ({
         <Grid item xs={2}></Grid>
       )}
       <Grid item xs={1}>
-        <IconButton
-          disabled={!editMode}
-          size="small"
-          onClick={() => handleRemoveAssignment(index)}>
-          <RemoveCircleOutlineIcon />
-        </IconButton>
+        {operationType !== OperationEnum.POST && (
+          <IconButton
+            disabled={!editMode}
+            size="small"
+            onClick={() => handleRemoveAssignment(index)}>
+            <RemoveCircleOutlineIcon />
+          </IconButton>
+        )}
       </Grid>
     </Fragment>
   ));
