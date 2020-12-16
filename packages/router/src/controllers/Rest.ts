@@ -7,6 +7,7 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
 } from "@quintessential-sft/conduit-sdk";
+const swaggerUi = require('swagger-ui-express');
 
 function extractRequestData(req: Request) {
   const context = (req as any).conduit;
@@ -42,9 +43,37 @@ export class RestController {
   private _router!: Router;
   private _middlewares?: { [field: string]: ConduitMiddleware[] };
   private _registeredRoutes: Map<string, Handler | ConduitRoute>;
+  private _swaggerDoc: any;
 
   constructor() {
     this._registeredRoutes = new Map();
+    this._swaggerDoc = {
+      openapi: "3.0.0",
+      info: {
+        version: "1.0.0",
+        title: "Conduit"
+      },
+      paths: {},
+      components: {
+        securitySchemes: {
+          clientid: {
+            type: "apiKey",
+            in: "header",
+            name: "clientid"
+          },
+          clientSecret: {
+            type: "apiKey",
+            in: "header",
+            name: "clientSecret"
+          },
+          tokenAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT"
+          }
+        }
+      }
+    }
     this.initializeRouter();
   }
 
@@ -198,6 +227,97 @@ export class RestController {
           }
         });
     });
+
+    this.addRouteSwaggerDocumentation(route);
+  }
+
+  private addRouteSwaggerDocumentation(route: ConduitRoute) {
+    let method = '';
+    switch (route.input.action) {
+      case ConduitRouteActions.GET: {
+        method = 'get';
+        break;
+      }
+      case ConduitRouteActions.POST: {
+        method = 'post';
+        break;
+      }
+      case ConduitRouteActions.DELETE: {
+        method = 'delete';
+        break;
+      }
+      case ConduitRouteActions.UPDATE: {
+        method = 'put';
+        break;
+      }
+      default: {
+        method = 'get';
+      }
+    }
+
+    let routeDoc: any = {
+      summary: route.input.description,
+      parameters: [],
+      responses: {},
+      security: [{
+        clientid: [],
+        clientSecret: []
+      }]
+    };
+
+    if (route.input.urlParams !== undefined) {
+      for (const name in route.input.urlParams) {
+        routeDoc.parameters.push({
+          name,
+          in: 'path',
+          required: true,
+          type: route.input.urlParams[name]
+        });
+      }
+    }
+
+    if (route.input.queryParams !== undefined) {
+      for (const name in route.input.queryParams) {
+        routeDoc.parameters.push({
+          name,
+          in: 'query',
+          type: route.input.queryParams[name]
+        });
+      }
+    }
+
+    if (route.input.bodyParams !== undefined) {
+      for (const name in route.input.bodyParams) {
+        let type = '';
+        if (typeof route.input.bodyParams[name] === 'object') {
+          // @ts-ignore
+          type = route.input.bodyParams[name]?.type.toLowerCase() || 'object';
+          if (!['string', 'number', 'array', 'object'].includes(type)) {
+            type = 'string';
+          }
+        } else {
+          type = route.input.bodyParams[name].toString().toLowerCase();
+        }
+        routeDoc.parameters.push({
+          name,
+          in: 'body',
+          type
+        });
+      }
+    }
+
+    if (route.input.middlewares?.includes('authMiddleware')) {
+      routeDoc.security[0].tokenAuth = [];
+    }
+
+    let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
+    if (this._swaggerDoc.paths.hasOwnProperty(path)) {
+      this._swaggerDoc.paths[path][method] = routeDoc;
+    } else {
+      this._swaggerDoc.paths[path] = {};
+      this._swaggerDoc.paths[path][method] = routeDoc;
+    }
+    this._swaggerDoc.paths[path] = {...this._swaggerDoc.paths[path], method};
   }
 
   private refreshRouter() {
@@ -214,6 +334,11 @@ export class RestController {
 
   private initializeRouter() {
     this._router = Router();
+    this._router.use('/swagger', swaggerUi.serve);
+    this._router.get('/swagger', swaggerUi.setup(this._swaggerDoc));
+    this._router.get('/swagger.json', (req, res) => {
+      res.send(JSON.stringify(this._swaggerDoc));
+    });
     this._router.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });

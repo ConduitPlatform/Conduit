@@ -43,7 +43,7 @@ class SecurityModule extends IConduitSecurity {
             return next();
         }
 
-        if (req.url === '/graphql' && req.method === 'GET') {
+        if ((req.url === '/graphql' || req.url.startsWith('/swagger')) && req.method === 'GET') {
             return next();
         }
 
