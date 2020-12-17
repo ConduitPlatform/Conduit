@@ -5,13 +5,15 @@ export class TwilioProvider implements ISmsProvider {
     private readonly phoneNumber: string;
     private readonly accountSID: string;
     private readonly authToken: string;
+    private readonly serviceSid: string | undefined;
     private client: twilio.Twilio;
 
-    constructor(settings: {phoneNumber: string, accountSID: string, authToken: string}) {
+    constructor(settings: {phoneNumber: string, accountSID: string, authToken: string, serviceSid: string | undefined}) {
         ({
             phoneNumber: this.phoneNumber,
             accountSID: this.accountSID,
-            authToken: this.authToken
+            authToken: this.authToken,
+            serviceSid: this.serviceSid
         } = settings);
 
         this.client = twilio(this.accountSID, this.authToken);
@@ -23,5 +25,38 @@ export class TwilioProvider implements ISmsProvider {
             to,
             from: this.phoneNumber
         });
+    }
+
+    async sendVerificationCode(to: string): Promise<string> {
+        if (this.serviceSid === undefined) {
+            return Promise.reject(Error('no service sid specified'));
+        }
+
+        let verification = await this.client.verify.services(this.serviceSid)
+            .verifications
+            .create({to, channel: 'sms'})
+            .catch(console.error);
+        
+        if (!verification) {
+            return Promise.reject(Error('could not send verication code'));
+        }
+
+        return Promise.resolve(verification.sid);
+    }
+
+    async verifyTwoFACode(verificationSid: string, code: string): Promise<boolean> {
+        if (this.serviceSid === undefined) {
+            return Promise.reject(Error('no service sid specified'));
+        }
+        let verificationCheck = await this.client.verify.services(this.serviceSid)
+            .verificationChecks
+            .create({verificationSid, code})
+            .catch(console.error);
+
+        if (!verificationCheck) {
+            return Promise.reject(Error('could not verify code'))
+        }
+
+        return Promise.resolve(verificationCheck.status === 'approved');
     }
 }
