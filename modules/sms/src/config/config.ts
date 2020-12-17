@@ -20,6 +20,16 @@ export default {
         authToken: {
             format: 'String',
             default: undefined
+        },
+        verify: {
+            active: {
+                format: 'Boolean',
+                default: false
+            },
+            serviceSid: {
+                format: 'String',
+                default: undefined
+            }
         }
     }
 }

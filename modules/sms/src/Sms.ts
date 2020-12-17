@@ -33,7 +33,9 @@ export default class SmsModule {
         this.grpcServer = new grpcModule.Server();
 
         this.grpcServer.addService(sms.service, {
-            setConfig: this.setConfig.bind(this)
+            setConfig: this.setConfig.bind(this),
+            sendVerificationCode: this.sendVerificationCode.bind(this),
+            verify: this.verify.bind(this)
         });
 
         this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
@@ -94,6 +96,50 @@ export default class SmsModule {
         }
 
         return callback(null, {updateConfig: JSON.stringify(updateResult)});
+    }
+
+    async sendVerificationCode(call: any, callback: any) {
+        const to = call.request.to;
+
+        if (isNil(this._provider)) {
+            return callback({code: grpc.status.INTERNAL, message: 'No sms provider'});
+        }
+        if (isNil(to)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No sms recipient'});
+        }
+
+        let errorMessage: string | null = null;
+
+        let verificationSid = await this._provider.sendVerificationCode(to)
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) callback({
+            code: grpc.status.INTERNAL,
+            message: errorMessage
+        });
+
+        return callback(null, {verificationSid});
+    }
+
+    async verify(call: any, callback: any) {
+        const { verificationSid, code } = call.request;
+
+        if (isNil(this._provider)) {
+            return callback({code: grpc.status.INTERNAL, message: 'No sms provider'});
+        }
+        if (isNil(verificationSid) || isNil(code)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification id or code provided'})
+        }
+
+        let errorMessage: string | null = null;
+
+        let verified = await this._provider.verify(verificationSid, code)
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({
+            code: grpc.status.INTERNAL,
+            message: errorMessage
+        });
+
+        return callback(null, {verified});
     }
 
     private async enableModule() {

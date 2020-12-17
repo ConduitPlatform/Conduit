@@ -37,4 +37,36 @@ export default class SMS {
       );
     });
   }
+
+  sendVerificationCode(params: {to: string}) {
+    return new Promise((resolve, reject) => {
+      this.client.sendVerificationCode(
+        {to: params.to},
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve(res.verificationSid)
+          }
+        }
+
+      )
+    });
+  }
+
+  verify(params: {verificationSid: string, code: string}) {
+    return new Promise((resolve, reject) => {
+      this.client.verify(
+        {verificationSid: params.verificationSid, code: params.code},
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve(res.verified)
+          }
+        }
+
+      )
+    });
+  }
 }
