@@ -21,7 +21,8 @@
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "convict": "^6.0.0",
     "grpc": "^1.24.2",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "twilio": "3.52.0"
   },
   "devDependencies": {
     "@types/convict": "^4.2.1",
