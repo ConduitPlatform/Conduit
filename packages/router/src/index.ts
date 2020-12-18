@@ -41,6 +41,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
                 }
             })
         } catch (err) {
+            console.error(err);
             return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"})
         }
 
