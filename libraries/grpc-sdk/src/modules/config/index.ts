@@ -1,154 +1,167 @@
-import * as grpc from 'grpc';
+import * as grpc from "grpc";
 import path from "path";
-import {EventEmitter} from "events";
+import { EventEmitter } from "events";
 
-let protoLoader = require('@grpc/proto-loader');
-
+let protoLoader = require("@grpc/proto-loader");
 
 export default class Config {
-    private readonly client: grpc.Client | any;
+  private client: grpc.Client | any;
+  private readonly _url: string;
+  active: boolean = false;
 
-    constructor(url: string) {
-        var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, '../../proto/core.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            });
-        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // @ts-ignore
-        var config = protoDescriptor.conduit.core.Config;
-        this.client = new config(url, grpc.credentials.createInsecure());
-    }
+  constructor(url: string) {
+    this._url = url;
+    this.initializeClient();
+  }
 
-    get(name: string): Promise<any> {
-        let request = {
-            key: name
-        };
-        return new Promise((resolve, reject) => {
-            this.client.get(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(JSON.parse(res.data));
-                }
-            })
-        });
-    }
+  initializeClient() {
+    if (this.client) return;
+    var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/core.proto"), {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+    });
+    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    // @ts-ignore
+    var config = protoDescriptor.conduit.core.Config;
+    this.client = new config(this._url, grpc.credentials.createInsecure());
+    this.active = true;
+  }
 
-    updateConfig(config: any, name: string): Promise<any> {
-        let request = {
-            config: JSON.stringify(config),
-            moduleName: name
-        };
+  closeConnection() {
+    this.client.close();
+    this.client = null;
+    this.active = false;
+  }
 
-        return new Promise((resolve, reject) => {
-            this.client.updateConfig(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(JSON.parse(res.result));
-                }
-            })
-        });
-    }
+  get(name: string): Promise<any> {
+    let request = {
+      key: name,
+    };
+    return new Promise((resolve, reject) => {
+      this.client.get(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(JSON.parse(res.data));
+        }
+      });
+    });
+  }
 
-    addFieldstoConfig(config: any, name: string): Promise<any> {
-        let request = {
-            config: JSON.stringify(config),
-            moduleName: name
-        };
+  updateConfig(config: any, name: string): Promise<any> {
+    let request = {
+      config: JSON.stringify(config),
+      moduleName: name,
+    };
 
-        return new Promise((resolve, reject) => {
-            this.client.addFieldstoConfig(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(JSON.parse(res.result));
-                }
-            })
-        });
-    }
+    return new Promise((resolve, reject) => {
+      this.client.updateConfig(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(JSON.parse(res.result));
+        }
+      });
+    });
+  }
 
-    moduleExists(name: string): Promise<any> {
-        let request = {
-            moduleName: name
-        };
-        return new Promise((resolve, reject) => {
-            this.client.moduleExists(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.modules);
-                }
-            })
-        });
-    }
+  addFieldstoConfig(config: any, name: string): Promise<any> {
+    let request = {
+      config: JSON.stringify(config),
+      moduleName: name,
+    };
 
-    moduleList(): Promise<any[]> {
-        let request = {};
-        return new Promise((resolve, reject) => {
-            this.client.moduleList(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.modules);
-                }
-            })
-        });
-    }
+    return new Promise((resolve, reject) => {
+      this.client.addFieldstoConfig(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(JSON.parse(res.result));
+        }
+      });
+    });
+  }
 
-    registerModule(name: string, url: string): Promise<any> {
-        // TODO make newConfigSchema required when all modules provide their config schema
-        let request: {[key: string]: any} = {
-            moduleName: name.toString(),
-            url: url.toString()
-        };
-        return new Promise((resolve, reject) => {
-            this.client.registerModule(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve(res.modules);
-                }
-            })
-        });
-    }
+  moduleExists(name: string): Promise<any> {
+    let request = {
+      moduleName: name,
+    };
+    return new Promise((resolve, reject) => {
+      this.client.moduleExists(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(res.modules);
+        }
+      });
+    });
+  }
 
-    watchModules() {
-        let emitter = new EventEmitter();
-        let call = this.client.watchModules({})
-        call.on('data', function (data: any) {
-            emitter.emit('module-registered', data.modules);
-        });
-        // call.on('end', function() {
-        //     // The server has finished sending
-        // });
-        // call.on('error', function(e) {
-        //     // An error has occurred and the stream has been closed.
-        // });
-        // call.on('status', function(status) {
-        //     // process status
-        // });
+  moduleList(): Promise<any[]> {
+    let request = {};
+    return new Promise((resolve, reject) => {
+      this.client.moduleList(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(res.modules);
+        }
+      });
+    });
+  }
 
-        return emitter;
+  registerModule(name: string, url: string): Promise<any> {
+    // TODO make newConfigSchema required when all modules provide their config schema
+    let request: { [key: string]: any } = {
+      moduleName: name.toString(),
+      url: url.toString(),
+    };
+    return new Promise((resolve, reject) => {
+      this.client.registerModule(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(res.modules);
+        }
+      });
+    });
+  }
 
-    }
+  watchModules() {
+    let emitter = new EventEmitter();
+    let call = this.client.watchModules({});
+    call.on("data", function (data: any) {
+      emitter.emit("module-registered", data.modules);
+    });
+    call.on("end", function () {
+      // The server has finished sending
+      console.log("Stream ended");
+    });
+    call.on("error", function (e: any) {
+      // An error has occurred and the stream has been closed.
+      console.error("Connection to grpc server closed");
+      console.error(e);
+    });
+    call.on("status", function (status: any) {
+      console.error("Connection status changed to : ", status);
+    });
 
-    registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
-        let request = {moduleName, newModulesConfigSchema: JSON.stringify(newModulesConfigSchema)};
-        return new Promise((resolve, reject) => {
-            this.client.registerModulesConfig(request, (err: any, res: any) => {
-                if (err || !res) {
-                    reject(err || 'Something went wrong');
-                } else {
-                    resolve({});
-                }
-            })
-        });
-    }
+    return emitter;
+  }
 
+  registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
+    let request = { moduleName, newModulesConfigSchema: JSON.stringify(newModulesConfigSchema) };
+    return new Promise((resolve, reject) => {
+      this.client.registerModulesConfig(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve({});
+        }
+      });
+    });
+  }
 }
