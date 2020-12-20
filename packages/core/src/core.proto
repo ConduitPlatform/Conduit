@@ -9,6 +9,7 @@ service Config {
     rpc ModuleList (Empty) returns (ModuleListResponse);
     rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+    rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
     rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
 }
 
@@ -63,6 +64,12 @@ message RegisterConduitRouteRequest {
 
 message Empty {
 }
+
+message ModuleHealthRequest {
+    string moduleName = 1;
+    string url = 2;
+}
+
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;

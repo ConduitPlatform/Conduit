@@ -119,6 +119,7 @@ export default class Config {
       moduleName: name.toString(),
       url: url.toString(),
     };
+    const self = this;
     return new Promise((resolve, reject) => {
       this.client.registerModule(request, (err: any, res: any) => {
         if (err || !res) {
@@ -127,7 +128,26 @@ export default class Config {
           resolve(res.modules);
         }
       });
+    }).then(r=>{
+      setInterval(()=>self.moduleHealthProbe.bind(self)(name,url),2000);
+      return r;
     });
+  }
+
+  moduleHealthProbe(name: string, url: string): Promise<any> {
+      let request: { [key: string]: any } = {
+        moduleName: name.toString(),
+        url: url.toString(),
+      };
+      return new Promise((resolve, reject) => {
+        this.client.moduleHealthProbe(request, (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve('done');
+          }
+        });
+      });
   }
 
   watchModules() {
