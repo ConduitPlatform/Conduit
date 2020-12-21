@@ -13,6 +13,7 @@ service Router {
   rpc RenewAuth(RouterRequest) returns (RouterResponse);
   rpc LogOut(RouterRequest) returns (RouterResponse);
   rpc AuthMiddleware(RouterRequest) returns (RouterResponse);
+  rpc Verify(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

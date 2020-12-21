@@ -1,4 +1,4 @@
-import {isNil} from 'lodash';
+import {isEmpty, isNil} from 'lodash';
 import {AuthUtils} from '../../utils/auth';
 import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
@@ -11,6 +11,7 @@ import * as templates from '../../templates';
 export class LocalHandlers {
     private database: any;
     private emailModule: any;
+    private sms: any;
     private initialized: boolean = false;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -51,6 +52,20 @@ export class LocalHandlers {
         await this.grpcSdk.waitForExistence('email');
         this.database = this.grpcSdk.databaseProvider;
         this.emailModule = this.grpcSdk.emailProvider;
+        
+        let errorMessage = null;
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) {
+            console.error('Could not get authentication config sms 2fa will not be enabled');
+            return;
+        }
+        if (config.twofa.enabled) {
+            // maybe check if verify is enabled in sms module
+            await this.grpcSdk.waitForExistence('sms');
+            this.sms = this.grpcSdk.sms;
+        } else {
+            console.log('sms 2fa not active');
+        }
         this.registerTemplates();
         this.initialized = true;
     }
@@ -150,6 +165,19 @@ export class LocalHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (config.local.verificationRequired && !user.isVerified) {
             return callback({code: grpc.status.PERMISSION_DENIED, message: 'You must verify your account to login'});
+        }
+
+        if (user.hasTwoFA) {
+            const verificationSid = await this.sendVerificationCode(user.phoneNumber);
+            if (verificationSid === '') {
+                return callback({code: grpc.status.INTERNAL, message: 'Could not send verification code'})
+            }
+
+            return callback(null, {
+                result: JSON.stringify({
+                    verificationSid
+                })
+            });
         }
 
         const promise1 = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
@@ -315,4 +343,74 @@ export class LocalHandlers {
         return callback(null, {result: JSON.stringify({message: 'Email verified'})});
     }
 
+    private async sendVerificationCode(to: string) {
+        const verificationSid = await this.sms.sendVerificationCode({to})
+            .catch(console.error);
+        return verificationSid || '';
+    }
+
+    async verify(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
+
+        const clientId = context.clientId;
+
+        const { verificationSid, code, email } = JSON.parse(call.request.params).params;
+        if (isNil(verificationSid) || isNil(code)) return callback({
+            code: grpc.status.INVALID_ARGUMENT, message: 'No verification sid or 2fa code provided'
+        });
+
+        let errorMessage = null;
+        const user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (isNil(user)) return callback({code: grpc.status.INTERNAL, message: 'User not found'});
+
+        const verified = await this.sms.verify({verificationSid, code}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (!verified) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'verification sid and code do not match'});
+        }
+
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const promise1 = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
+        const promise2 = this.database.deleteMany('RefreshToken', {userId: user._id, clientId});
+        await Promise.all([promise1, promise2]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const signTokenOptions: ISignTokenOptions = {
+            secret: config.jwtSecret,
+            expiresIn: config.tokenInvalidationPeriod
+        };
+
+        const accessToken = await this.database.create('AccessToken', {
+            userId: user._id,
+            clientId,
+            token: AuthUtils.signToken({id: user._id}, signTokenOptions),
+            expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const refreshToken = await this.database.create('RefreshToken', {
+            userId: user._id,
+            clientId,
+            token: AuthUtils.randomToken(),
+            expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {
+            result: JSON.stringify({
+                userId: user._id.toString(),
+                accessToken: accessToken.token,
+                refreshToken: refreshToken.token
+            })
+        });
+    }
 }
