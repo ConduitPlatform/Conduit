@@ -31,6 +31,14 @@ export class CustomEndpointHandler {
           if (searchString.length !== 0) searchString += ",";
           if (r.comparisonField.type === "Input") {
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
+          } else if (r.comparisonField.type === 'Context') {
+            let context: any = call.request.context;
+            for (const key of r.comparisonField.value.split('.')) {
+              if (context.hasOwnProperty(key)) {
+                context = context[key];
+              }
+            }
+            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(context));
           } else {
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(r.comparisonField.value));
           }
@@ -43,6 +51,14 @@ export class CustomEndpointHandler {
         if (createString.length !== 0) createString += ",";
         if (r.assignmentField.type === "Input") {
           createString += constructAssignment(r.schemaField, r.action, JSON.stringify(params[r.assignmentField.value]));
+        } else if (r.assignmentField.type === 'Context') {
+          let context: any = call.request.context;
+          for (const key of r.assignmentField.value.split('.')) {
+            if (context.hasOwnProperty(key)) {
+              context = context[key];
+            }
+          }
+          searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
         } else {
           createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
         }
