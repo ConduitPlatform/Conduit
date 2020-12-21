@@ -229,7 +229,6 @@ export class RestController {
     });
 
     this.addRouteSwaggerDocumentation(route);
-    this.initializeRouter();
   }
 
   private addRouteSwaggerDocumentation(route: ConduitRoute) {
@@ -343,8 +342,9 @@ export class RestController {
 
   private initializeRouter() {
     this._router = Router();
+    const self = this;
     this._router.use("/swagger", swaggerUi.serve);
-    this._router.get("/swagger", swaggerUi.setup(this._swaggerDoc));
+    this._router.get("/swagger",(req,res,next) => swaggerUi.setup(self._swaggerDoc)(req,res,next));
     this._router.get("/swagger.json", (req, res) => {
       res.send(JSON.stringify(this._swaggerDoc));
     });
