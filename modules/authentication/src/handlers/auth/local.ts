@@ -173,9 +173,18 @@ export class LocalHandlers {
                 return callback({code: grpc.status.INTERNAL, message: 'Could not send verification code'})
             }
 
+            await this.database.deleteMany('VerificationRecord', {userId: user._id, clientId}).catch(console.error);
+
+            await this.database.create('VerificationRecord', {
+                userId: user._id,
+                clientId,
+                verificationSid
+            }).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
             return callback(null, {
                 result: JSON.stringify({
-                    verificationSid
+                    message: 'Verification code sent'
                 })
             });
         }
@@ -358,23 +367,31 @@ export class LocalHandlers {
 
         const clientId = context.clientId;
 
-        const { verificationSid, code, email } = JSON.parse(call.request.params).params;
-        if (isNil(verificationSid) || isNil(code)) return callback({
-            code: grpc.status.INVALID_ARGUMENT, message: 'No verification sid or 2fa code provided'
+        const { email, code } = JSON.parse(call.request.params).params;
+        if (isNil(email) || isNil(code)) return callback({
+            code: grpc.status.INVALID_ARGUMENT, message: 'No email or 2fa code provided'
         });
 
         let errorMessage = null;
         const user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        if (isNil(user)) return callback({code: grpc.status.INTERNAL, message: 'User not found'});
+        if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'User not found'});
 
-        const verified = await this.sms.verify({verificationSid, code}).catch((e: any) => errorMessage = e.message);
+        const verificationRecord = await this.database.findOne('VerificationRecord', {userId: user._id, clientId})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(verificationRecord)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification record for this user'});
+
+        const verified = await this.sms.verify({verificationSid: verificationRecord.verificationSid, code})
+            .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         if (!verified) {
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'verification sid and code do not match'});
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'email and code do not match'});
         }
+
+        await this.database.deleteMany('VerificationRecord', {userId: user._id, clientId}).catch(console.error);
 
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
