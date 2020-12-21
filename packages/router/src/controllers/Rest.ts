@@ -229,6 +229,7 @@ export class RestController {
     });
 
     this.addRouteSwaggerDocumentation(route);
+    this.initializeRouter();
   }
 
   private addRouteSwaggerDocumentation(route: ConduitRoute) {
