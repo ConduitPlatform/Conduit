@@ -11,7 +11,7 @@ export default {
         },
         tokenExpirationTime: {
             type: Number,
-            default: 21600
+            default: 72000
         },
         masterkey: {
             type: String,
