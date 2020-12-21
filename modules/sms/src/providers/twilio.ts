@@ -44,7 +44,7 @@ export class TwilioProvider implements ISmsProvider {
         return Promise.resolve(verification.sid);
     }
 
-    async verifyTwoFACode(verificationSid: string, code: string): Promise<boolean> {
+    async verify(verificationSid: string, code: string): Promise<boolean> {
         if (this.serviceSid === undefined) {
             return Promise.reject(Error('no service sid specified'));
         }
