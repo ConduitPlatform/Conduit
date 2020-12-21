@@ -66,7 +66,7 @@ export default {
     twofa: {
         enabled: {
             format: 'Boolean',
-            default: true
+            default: false
         }
     },
     generateRefreshToken: {
