@@ -108,6 +108,7 @@ export class AuthenticationRoutes {
                     userId: ConduitString.Optional,
                     accessToken: ConduitString.Optional,
                     refreshToken: ConduitString.Optional,
+                    message: ConduitString.Optional
                 }), 'authenticateLocal')));
 
             routesArray.push(constructRoute(new ConduitRoute({
