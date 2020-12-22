@@ -2,6 +2,7 @@ import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { constructQuery, constructAssignment, getOpName } from "./utils";
 import grpc from "grpc";
 import { CustomEndpoint } from "../../models/customEndpoint";
+import { isNil } from "lodash";
 
 export class CustomEndpointHandler {
   private static routeControllers: { [name: string]: any } = {};
@@ -32,10 +33,15 @@ export class CustomEndpointHandler {
           if (r.comparisonField.type === "Input") {
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
           } else if (r.comparisonField.type === 'Context') {
+            if (isNil(call.request.context)) {
+              return callback({code: grpc.status.INTERNAL, message: `Field ${r.comparisonField.value} is missing from context`});
+            }
             let context: any = call.request.context;
             for (const key of r.comparisonField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
+              } else {
+                return callback({code: grpc.status.INTERNAL, message: `Field ${r.comparisonField.value} is missing from context`});
               }
             }
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(context));
@@ -52,10 +58,15 @@ export class CustomEndpointHandler {
         if (r.assignmentField.type === "Input") {
           createString += constructAssignment(r.schemaField, r.action, JSON.stringify(params[r.assignmentField.value]));
         } else if (r.assignmentField.type === 'Context') {
+          if (isNil(call.request.context)) {
+            return callback({code: grpc.status.INTERNAL, message: `Field ${r.assignmentField.value} is missing from context`});
+          }
           let context: any = call.request.context;
           for (const key of r.assignmentField.value.split('.')) {
             if (context.hasOwnProperty(key)) {
               context = context[key];
+            } else {
+              return callback({code: grpc.status.INTERNAL, message: `Field ${r.assignmentField.value} is missing from context`});
             }
           }
           searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
