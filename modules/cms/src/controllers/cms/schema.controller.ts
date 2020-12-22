@@ -88,6 +88,8 @@ export class SchemaController {
     if (Object.keys(schemaCopy).length === 0) {
       return;
     }
-    this.router.addRoutes(sortAndConstructRoutes(schemaCopy));
+    if (schemaCopy.crudOperations) {
+      this.router.addRoutes(sortAndConstructRoutes(schemaCopy));
+    }
   }
 }

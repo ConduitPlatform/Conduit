@@ -25,6 +25,10 @@ const schema = new ConduitSchema('SchemaDefinitions', {
             type: TYPE.Boolean,
             default: false
         },
+        crudOperations: {
+            type: TYPE.Boolean,
+            default: true
+        },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     }, {
