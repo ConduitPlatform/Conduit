@@ -53,6 +53,12 @@ export const UserSchema = new ConduitSchema('User',
       default: false,
       systemRequired: true
     },
+    hasTwoFA: {
+      type: TYPE.Boolean,
+      default: false,
+      systemRequired: true
+    },
+    phoneNumber: TYPE.String,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },

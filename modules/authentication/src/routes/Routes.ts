@@ -54,6 +54,7 @@ export class AuthenticationRoutes {
             forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
             resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
             verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
+            verify: this.localHandlers.verify.bind(this.localHandlers),
             authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
             authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
             authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
@@ -104,9 +105,10 @@ export class AuthenticationRoutes {
                     }
                 },
                 new ConduitRouteReturnDefinition('LoginResponse', {
-                    userId: ConduitString.Required,
-                    accessToken: ConduitString.Required,
-                    refreshToken: ConduitString.Required
+                    userId: ConduitString.Optional,
+                    accessToken: ConduitString.Optional,
+                    refreshToken: ConduitString.Optional,
+                    message: ConduitString.Optional
                 }), 'authenticateLocal')));
 
             routesArray.push(constructRoute(new ConduitRoute({
@@ -141,6 +143,22 @@ export class AuthenticationRoutes {
                 }, new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
                 'verifyEmail'
             )));
+
+            const authConfig = await this.grpcSdk.config.get('authentication').catch(console.error);
+            if (authConfig?.twofa.enabled) {
+                routesArray.push(constructRoute(new ConduitRoute({
+                        path: '/authentication/twofa',
+                        action: ConduitRouteActions.POST,
+                        bodyParams: {
+                            email: TYPE.String,
+                            code: TYPE.String
+                        },
+                        middlewares: ['authMiddleware']
+                    },
+                    new ConduitRouteReturnDefinition('VerifyTwoFaResponse', 'String'),
+                    'verify'
+                )));
+            }
             enabled = true;
         }
         errorMessage = null;
