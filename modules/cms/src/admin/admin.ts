@@ -28,7 +28,7 @@ export class AdminHandlers {
         let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         // @ts-ignore
         let admin = protoDescriptor.cms.admin.Admin;
-        let schemaAdmin = new SchemaAdmin(this.grpcSdk, this.schemaController);
+        let schemaAdmin = new SchemaAdmin(this.grpcSdk, this.schemaController, this.customEndpointController);
         let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
         let customEndpointsAdmin = new CustomEndpointsAdmin(this.grpcSdk, this.customEndpointController);
         server.addService(admin.service, {
