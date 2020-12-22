@@ -55,15 +55,15 @@ export class MongooseSchema implements SchemaAdapter {
 
   async updateMany(filterQuery: any, query: any): Promise<any> {
     await this.createWithPopulations(query);
-    return this.model.updateMany(filterQuery, query).exec();
+    return this.model.updateMany(this.parseQuery(filterQuery), query).exec();
   }
 
   deleteOne(query: any): Promise<any> {
-    return this.model.deleteOne(query).exec();
+    return this.model.deleteOne(this.parseQuery(query)).exec();
   }
 
   deleteMany(query: any): Promise<any> {
-    return this.model.deleteMany(query).exec();
+    return this.model.deleteMany(this.parseQuery(query)).exec();
   }
 
   calculatePopulates(queryObj: any, population: string[]) {
@@ -97,7 +97,7 @@ export class MongooseSchema implements SchemaAdapter {
     sort?: string,
     populate?: string[]
   ): Promise<any> {
-    let finalQuery = this.model.find(query);
+    let finalQuery = this.model.find(this.parseQuery(query));
     if (skip !== null) {
       finalQuery = finalQuery.skip(skip!);
     }
@@ -117,7 +117,7 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   findOne(query: any, select?: string, populate?: string[]): Promise<any> {
-    let finalQuery = this.model.findOne(query, select);
+    let finalQuery = this.model.findOne(this.parseQuery(query), select);
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
@@ -125,6 +125,20 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   countDocuments(query: any) {
-    return this.model.find(query).countDocuments().exec();
+    return this.model.find(this.parseQuery(query)).countDocuments().exec();
+  }
+
+  private parseQuery(query: any) {
+    let parsed: any = {};
+
+    for (const key in query) {
+      if (query[key].hasOwnProperty('$contains')) {
+        parsed[key] = { $in: query[key]['$contains'] };
+      } else {
+        parsed[key] = query[key];
+      }
+    }
+
+    return parsed;
   }
 }
