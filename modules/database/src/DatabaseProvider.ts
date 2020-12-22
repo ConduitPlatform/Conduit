@@ -1,4 +1,5 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
+import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { DatabaseAdapter, SchemaAdapter } from './interfaces';
 import ConduitGrpcSdk, {
   ConduitSchema,
@@ -30,6 +31,8 @@ export class DatabaseProvider {
 
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
+    } else if (dbType === 'sequelize') {
+      this._activeAdapter = new SequelizeAdapter(databaseUrl);  
     } else {
       throw new Error('Arguments not supported');
     }
