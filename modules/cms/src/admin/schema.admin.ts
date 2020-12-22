@@ -133,6 +133,7 @@ export class SchemaAdmin {
             .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        this.schemaController.refreshRoutes();
         return callback(null, {result: JSON.stringify({name: updatedSchema.name, enabled: updatedSchema.enabled})});
     }
 
