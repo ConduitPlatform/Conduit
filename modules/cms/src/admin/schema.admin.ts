@@ -3,12 +3,17 @@ import {isNil} from "lodash";
 import grpc from "grpc";
 import {validateSchemaInput} from "../utils/utilities";
 import {SchemaController} from "../controllers/cms/schema.controller";
+import { CustomEndpointController } from "../controllers/customEndpoints/customEndpoint.controller";
 
 export class SchemaAdmin {
 
     private database: any;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController) {
+    constructor(
+        private readonly grpcSdk: ConduitGrpcSdk,
+        private readonly schemaController: SchemaController,
+        private readonly customEndpointController: CustomEndpointController
+    ) {
         this.database = this.grpcSdk.databaseProvider;
     }
 
@@ -134,6 +139,7 @@ export class SchemaAdmin {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         this.schemaController.refreshRoutes();
+        this.customEndpointController.refreshEndpoints();
         return callback(null, {result: JSON.stringify({name: updatedSchema.name, enabled: updatedSchema.enabled})});
     }
 
@@ -212,6 +218,7 @@ export class SchemaAdmin {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         this.schemaController.refreshRoutes();
+        this.customEndpointController.refreshEndpoints();
         return callback(null, {result: 'Schema successfully deleted'});
     }
 
