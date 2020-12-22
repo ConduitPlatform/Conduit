@@ -39,7 +39,7 @@ export function queryValidation(findSchema: any, inputs: any, schemaField: strin
         if (!inputNames.includes(comparisonField.value)) {
             return "comparisonField value is not present in provided inputs!";
         }
-    } else if (comparisonField.type !== 'Custom') {
+    } else if (comparisonField.type !== 'Custom' && comparisonField.type !== 'Context') {
         return "comparisonField type is invalid!";
     }
     return true;
@@ -119,8 +119,7 @@ export function assignmentValidation(
         if (!inputNames.includes(assignmentField.value)) {
             return "assignmentField value is not present in provided inputs!";
         }
-    }
-    else if (assignmentField.type !== 'Custom') {
+    } else if (assignmentField.type !== 'Custom' && assignmentField.type !== 'Context') {
         return "assignmentField type is invalid!";
     }
 
