@@ -38,7 +38,11 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema);
-    return Promise.resolve({ schema: this.models![schema.name] });
+    return this.syncDb().then(() => {return { schema: this.models![schema.name] }});
+  }
+
+  private async syncDb() {
+    await this.sequelize.sync().catch(console.error);
   }
 
   async getSchema(schemaName: string): Promise<{ schema: any; }> {

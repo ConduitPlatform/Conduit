@@ -25,7 +25,8 @@
     "mongodb-extended-json": "^1.11.0",
     "mongoose": "^5.11.18",
     "mongoose-deep-populate": "^3.2.0",
-    "sequelize": "6.3.5"
+    "sequelize": "6.3.5",
+    "pg": "8.3.3"
   },
   "directories": {
     "lib": "src"
