@@ -175,7 +175,7 @@ export class CustomEndpointHandler {
       });
     }
 
-    createString = '{' + createString + '}';
+    let createObj = this.parseCreateQuery(createString);
     let promise;
     if (endpoint.operation === 0) {
       if (endpoint.paginated) {
@@ -206,15 +206,12 @@ export class CustomEndpointHandler {
         );
       }
     } else if (endpoint.operation === 1) {
-      promise = this.grpcSdk.databaseProvider!.create(
-        endpoint.selectedSchemaName,
-        JSON.parse(createString)
-      );
+      promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, createObj);
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
         searchQuery,
-        JSON.parse(createString)
+        createObj
       );
     } else if (endpoint.operation === 3) {
       promise = this.grpcSdk.databaseProvider!.deleteMany(
@@ -244,5 +241,19 @@ export class CustomEndpointHandler {
       .catch((err: any) => {
         callback({ code: grpc.status.INTERNAL, message: err.message });
       });
+  }
+
+  private parseCreateQuery(query: string): any {
+    // add brackets to each field
+    let arr = query.split(',').map(val => `{${val}}`);
+    let res: any = {};
+    for (const el of arr) {
+      let tmp = JSON.parse(el);
+      let key = Object.keys(tmp)[0];
+      let innerKey = Object.keys(tmp[key])[0];
+      if (!res.hasOwnProperty(key)) res[key] = tmp[key];
+      else res[key][innerKey] = tmp[key][innerKey];
+    }
+    return res;
   }
 }
