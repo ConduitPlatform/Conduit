@@ -3,7 +3,7 @@ import {
   setAuthUsersError,
   startAuthUsersLoading,
   stopAuthUsersLoading,
-} from '../actions/authenticationActions';
+} from '../actions';
 import {
   getAuthenticationConfig,
   getAuthUsersDataReq,
