@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Container,
   Divider,
   Grid,
   IconButton,
@@ -22,6 +21,10 @@ import OperationSection from './OperationSection';
 import Sidelist from './Sidelist';
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    marginLeft: theme.spacing(4),
+    marginRight: theme.spacing(4),
+  },
   mainContent: {
     display: 'flex',
     justifyContent: 'center',
@@ -91,7 +94,9 @@ const CustomQueries = ({
 
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
       if (fields) {
-        setAvailableFieldsOfSchema(Object.keys(fields));
+        const fieldsWithTypes = findFieldsWithTypes(fields);
+        setAvailableFieldsOfSchema(fieldsWithTypes);
+        setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
       }
 
       if (selectedEndpoint.queries) {
@@ -215,10 +220,20 @@ const CustomQueries = ({
     setSelectedQueries([]);
   };
 
+  const findFieldsWithTypes = (fields) => {
+    const fieldKeys = Object.keys(fields);
+    const fieldsWithTypes = [];
+    fieldKeys.forEach((field) => {
+      fieldsWithTypes.push({ name: field, type: fields[field].type });
+    });
+    return fieldsWithTypes;
+  };
+
   const handleSchemaChange = (event) => {
     setSelectedSchema(event.target.value);
     const fields = getAvailableFieldsOfSchema(event.target.value);
-    setAvailableFieldsOfSchema(Object.keys(fields));
+    const fieldsWithTypes = findFieldsWithTypes(fields);
+    setAvailableFieldsOfSchema(fieldsWithTypes);
     if (selectedOperation && selectedOperation === OperationsEnum.POST) {
       const fieldKeys = Object.keys(fields);
       let assignments = [];
@@ -440,6 +455,11 @@ const CustomQueries = ({
     setSelectedAssignments(currentAssignments);
   };
 
+  const maxInputs = () => {
+    const max = selectedInputs.length === availableFieldsOfSchema.length;
+    return max;
+  };
+
   const disableSubmit = () => {
     if (!name) return true;
     if (!selectedSchema) return true;
@@ -533,6 +553,114 @@ const CustomQueries = ({
     );
   };
 
+  const renderDetails = () => {
+    if (!selectedSchema || selectedOperation === -1) return null;
+    return (
+      <>
+        <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
+          <Typography>
+            <strong>Inputs</strong>
+          </Typography>
+        </Grid>
+        <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
+          <Button
+            disabled={!editMode || maxInputs()}
+            variant="text"
+            color={'primary'}
+            className={classes.button}
+            startIcon={<AddCircleOutlineIcon />}
+            onClick={handleAddInput}>
+            Add another
+          </Button>
+        </Grid>
+        <Grid item xs={12} style={{ padding: '0' }}>
+          <Divider></Divider>
+        </Grid>
+        <EndpointInputs
+          selectedInputs={selectedInputs}
+          editMode={editMode}
+          handleInputNameChange={handleInputNameChange}
+          handleInputTypeChange={handleInputTypeChange}
+          handleInputLocationChange={handleInputLocationChange}
+          handleRemoveInput={handleRemoveInput}
+        />
+        <Grid item xs={12} style={{ padding: '0' }}>
+          <Divider></Divider>
+        </Grid>
+        {selectedOperation !== OperationsEnum.POST && (
+          <>
+            <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
+              <Typography>
+                <strong>Query</strong>
+              </Typography>
+            </Grid>
+            <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
+              <Button
+                disabled={!editMode}
+                variant="text"
+                color={'primary'}
+                className={classes.button}
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={handleAddQuery}>
+                Add another
+              </Button>
+            </Grid>
+            <Grid item xs={12} style={{ padding: '0' }}>
+              <Divider></Divider>
+            </Grid>
+            <EndpointQueries
+              selectedQueries={selectedQueries}
+              availableFieldsOfSchema={availableFieldsOfSchema}
+              selectedInputs={selectedInputs}
+              editMode={editMode}
+              handleQueryFieldChange={handleQueryFieldChange}
+              handleQueryComparisonFieldChange={handleQueryComparisonFieldChange}
+              handleCustomValueChange={handleCustomValueChange}
+              handleQueryConditionChange={handleQueryConditionChange}
+              handleRemoveQuery={handleRemoveQuery}
+            />
+          </>
+        )}
+        {(selectedOperation === OperationsEnum.PUT ||
+          selectedOperation === OperationsEnum.POST) && (
+          <>
+            <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
+              <Typography>
+                <strong>Assigments</strong>
+              </Typography>
+            </Grid>
+            <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
+              <Button
+                disabled={!editMode || selectedOperation === OperationsEnum.POST}
+                variant="text"
+                color={'primary'}
+                className={classes.button}
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={handleAddAssignment}>
+                Add another
+              </Button>
+            </Grid>
+            <Grid item xs={12} style={{ padding: '0' }}>
+              <Divider></Divider>
+            </Grid>
+            <EndpointAssignments
+              operationType={selectedOperation}
+              selectedAssignments={selectedAssignments}
+              editMode={editMode}
+              availableFieldsOfSchema={availableFieldsOfSchema}
+              selectedInputs={selectedInputs}
+              handleAssignmentFieldChange={handleAssignmentFieldChange}
+              handleAssignmentActionChange={handleAssignmentActionChange}
+              handleAssignmentValueFieldChange={handleAssignmentValueFieldChange}
+              handleAssignmentCustomValueChange={handleAssignmentCustomValueChange}
+              handleRemoveAssignment={handleRemoveAssignment}
+            />
+          </>
+        )}
+      </>
+    );
+  };
+
   const renderMainContent = () => {
     if (!selectedEndpoint && !createMode) {
       return (
@@ -575,100 +703,7 @@ const CustomQueries = ({
               authentication={authentication}
               handleAuthenticationChange={handleAuthenticationChange}
             />
-            <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-              <Typography>Inputs</Typography>
-            </Grid>
-            <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-              <Button
-                disabled={!editMode}
-                variant="text"
-                color={'primary'}
-                className={classes.button}
-                startIcon={<AddCircleOutlineIcon />}
-                onClick={handleAddInput}>
-                Add another
-              </Button>
-            </Grid>
-            <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider></Divider>
-            </Grid>
-            <EndpointInputs
-              selectedInputs={selectedInputs}
-              editMode={editMode}
-              handleInputNameChange={handleInputNameChange}
-              handleInputTypeChange={handleInputTypeChange}
-              handleInputLocationChange={handleInputLocationChange}
-              handleRemoveInput={handleRemoveInput}
-            />
-            <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider></Divider>
-            </Grid>
-            {selectedOperation !== OperationsEnum.POST && (
-              <>
-                <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-                  <Typography>Query</Typography>
-                </Grid>
-                <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-                  <Button
-                    disabled={!editMode}
-                    variant="text"
-                    color={'primary'}
-                    className={classes.button}
-                    startIcon={<AddCircleOutlineIcon />}
-                    onClick={handleAddQuery}>
-                    Add another
-                  </Button>
-                </Grid>
-                <Grid item xs={12} style={{ padding: '0' }}>
-                  <Divider></Divider>
-                </Grid>
-                <EndpointQueries
-                  selectedQueries={selectedQueries}
-                  availableFieldsOfSchema={availableFieldsOfSchema}
-                  selectedInputs={selectedInputs}
-                  editMode={editMode}
-                  handleQueryFieldChange={handleQueryFieldChange}
-                  handleQueryComparisonFieldChange={handleQueryComparisonFieldChange}
-                  handleCustomValueChange={handleCustomValueChange}
-                  handleQueryConditionChange={handleQueryConditionChange}
-                  handleRemoveQuery={handleRemoveQuery}
-                />
-              </>
-            )}
-            {(selectedOperation === OperationsEnum.PUT ||
-              selectedOperation === OperationsEnum.POST) && (
-              <>
-                <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-                  <Typography>Assigments</Typography>
-                </Grid>
-                <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-                  <Button
-                    disabled={!editMode}
-                    variant="text"
-                    color={'primary'}
-                    className={classes.button}
-                    startIcon={<AddCircleOutlineIcon />}
-                    onClick={handleAddAssignment}>
-                    Add another
-                  </Button>
-                </Grid>
-                <Grid item xs={12} style={{ padding: '0' }}>
-                  <Divider></Divider>
-                </Grid>
-                <EndpointAssignments
-                  selectedAssignments={selectedAssignments}
-                  editMode={editMode}
-                  availableFieldsOfSchema={availableFieldsOfSchema}
-                  selectedInputs={selectedInputs}
-                  handleAssignmentFieldChange={handleAssignmentFieldChange}
-                  handleAssignmentActionChange={handleAssignmentActionChange}
-                  handleAssignmentValueFieldChange={handleAssignmentValueFieldChange}
-                  handleAssignmentCustomValueChange={handleAssignmentCustomValueChange}
-                  handleRemoveAssignment={handleRemoveAssignment}
-                />
-              </>
-            )}
-
+            {renderDetails()}
             {renderSaveSection()}
           </Grid>
         </Box>
@@ -677,9 +712,9 @@ const CustomQueries = ({
   };
 
   return (
-    <Container>
+    <Box className={classes.root}>
       <Grid container spacing={2} className={classes.grid}>
-        <Grid item xs={2}>
+        <Grid item xs={3}>
           <Sidelist
             endpoints={endpoints}
             selectedEndpoint={selectedEndpoint}
@@ -687,7 +722,7 @@ const CustomQueries = ({
             handleListItemSelect={handleListItemSelect}
           />
         </Grid>
-        <Grid item xs={10}>
+        <Grid item xs={9}>
           {renderMainContent()}
         </Grid>
       </Grid>
@@ -700,7 +735,7 @@ const CustomQueries = ({
         handleClose={handleConfirmationDialogClose}
         buttonAction={handleDeleteConfirmed}
       />
-    </Container>
+    </Box>
   );
 };
 
