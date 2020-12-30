@@ -77,6 +77,7 @@ const Authentication = () => {
 
   const handleConfigChange = (type, newValue) => {
     const data = {
+      ...configData,
       [type]: {
         ...newValue,
       },
@@ -108,7 +109,11 @@ const Authentication = () => {
   };
 
   const handleSettingsSave = (data) => {
-    dispatch(updateConfig(data));
+    const body = {
+      ...configData,
+      ...data,
+    };
+    dispatch(updateConfig(body));
   };
 
   return (
