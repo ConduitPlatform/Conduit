@@ -353,8 +353,9 @@ export class LocalHandlers {
 
         if(config.local.verification_redirect_uri){
             return callback(null, {redirect: config.local.verification_redirect_uri});    
-        }
-        return callback(null, {result: JSON.stringify({message: 'Email verified'})});
+        }else{
+            return callback(null, {result: JSON.stringify({message: 'Email verified'})});
+        }      
     }
 
     private async sendVerificationCode(to: string) {
