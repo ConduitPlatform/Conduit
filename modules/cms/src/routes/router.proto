@@ -25,5 +25,6 @@ message RouterRequest {
 
 message RouterResponse {
   string result = 1;
+  string redirect = 2;
 }
 

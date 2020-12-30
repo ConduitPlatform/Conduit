@@ -23,6 +23,14 @@ export default {
             doc: 'Defines if email verification is required for login',
             format: 'Boolean',
             default: true
+        },
+        verification_redirect_uri: {
+            format: 'String',
+            default: null
+        },
+        forgot_password_redirect_uri: {
+            format: 'String',
+            default: null
         }
     },
     google: {

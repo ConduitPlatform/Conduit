@@ -16,6 +16,7 @@ service Router {
   rpc LogOut(RouterRequest) returns (RouterResponse);
   rpc AuthMiddleware(RouterRequest) returns (RouterResponse);
   rpc Verify(RouterRequest) returns (RouterResponse);
+  rpc GetUser(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {
@@ -27,5 +28,6 @@ message RouterRequest {
 
 message RouterResponse {
   string result = 1;
+  string redirect = 2;
 }
 

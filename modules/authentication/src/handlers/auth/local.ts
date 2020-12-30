@@ -110,6 +110,10 @@ export class LocalHandlers {
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        let url = serverConfig.url;
+
         if (config.local.sendVerificationEmail) {
             this.database.create('Token', {
                 type: TokenType.VERIFICATION_TOKEN,
@@ -117,10 +121,10 @@ export class LocalHandlers {
                 token: uuid()
             })
                 .then((verificationToken: any) => {
-                    return {verificationToken, hostUrl: this.grpcSdk.config.get('hostUrl')};
+                    return {verificationToken, hostUrl: url};
                 })
                 .then((result: { hostUrl: Promise<any>, verificationToken: any }) => {
-                    const link = `${result.hostUrl}/hook/verify-email/${result.verificationToken.token}`;
+                    const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
                     return this.emailModule.sendEmail('EmailVerification', {
                         email: user.email,
                         sender: 'conduit@gmail.com',
@@ -140,7 +144,7 @@ export class LocalHandlers {
 
     async authenticate(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const {email, password} = JSON.parse(call.request.params).params;
+        const {email, password} = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
         let errorMessage = null;
 
@@ -253,21 +257,17 @@ export class LocalHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        this.grpcSdk.config.get('hostUrl')
-            .then((hostUrl: any) => {
-                const link = `${hostUrl}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-                return this.emailModule.sendEmail('ForgotPassword', {
-                    email: user.email,
-                    sender: 'conduit@gmail.com',
-                    variables: {
-                        applicationName: 'Conduit',
-                        link
-                    }
-                });
-            })
-            .catch((e: any) => errorMessage = e.message);
+        let appUrl = config.local.forgot_password_redirect_uri;
+        const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
+        await this.emailModule.sendEmail('ForgotPassword', {
+            email: user.email,
+            sender: 'conduit@gmail.com',
+            variables: {
+                applicationName: 'Conduit',
+                link
+            }
+        }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-
         return callback(null, {result: JSON.stringify({message: 'Ok'})});
     }
 
@@ -327,6 +327,8 @@ export class LocalHandlers {
         });
 
         let errorMessage = null;
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const verificationTokenDoc = await this.database.findOne('Token', {
             type: TokenType.VERIFICATION_TOKEN,
@@ -343,12 +345,15 @@ export class LocalHandlers {
         if (isNil(user)) return callback({code: grpc.status.NOT_FOUND, message: 'User not found'});
 
         user.isVerified = true;
-        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
         const tokenPromise = this.database.deleteOne('Token', verificationTokenDoc);
 
         await Promise.all([userPromise, tokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        if(config.local.verification_redirect_uri){
+            return callback(null, {redirect: config.local.verification_redirect_uri});    
+        }
         return callback(null, {result: JSON.stringify({message: 'Email verified'})});
     }
 

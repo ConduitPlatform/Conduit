@@ -179,7 +179,13 @@ export class RestController {
           Object.assign(context.context, r);
           return route.executeRequest(context);
         })
-        .then((r: any) => res.status(200).json(JSON.parse(r.result)))
+        .then((r: any) => {
+          if(r.redirect){
+            res.redirect(r.redirect);
+          }else{
+            res.status(200).json(JSON.parse(r.result))
+          }
+        })
         .catch((err: Error | ConduitError | any) => {
           if (err.hasOwnProperty("status")) {
             console.log(err);
