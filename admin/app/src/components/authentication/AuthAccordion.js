@@ -733,7 +733,7 @@ export default function AuthAccordion({
                       ? clsx(classes.typography, classes.statusEnabled)
                       : clsx(classes.typography, classes.statusDisabled)
                   }>
-                  {facebook.enabled ? 'Enabled' : 'Disabled'}
+                  {twitch.enabled ? 'Enabled' : 'Disabled'}
                 </Typography>
               </Box>
             </AccordionSummary>
