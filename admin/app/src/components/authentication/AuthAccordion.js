@@ -56,6 +56,8 @@ export default function AuthAccordion({
     sendVerificationEmail: false,
     verificationRequired: false,
     identifier: '',
+    verification_redirect_uri: '',
+    forgot_password_redirect_uri: '',
   });
 
   const [google, setGoogle] = useState({
@@ -91,6 +93,8 @@ export default function AuthAccordion({
           sendVerificationEmail: configData.local.sendVerificationEmail,
           verificationRequired: configData.local.verificationRequired,
           identifier: configData.local.identifier,
+          verification_redirect_uri: configData.local.verification_redirect_uri,
+          forgot_password_redirect_uri: configData.local.forgot_password_redirect_uri,
         });
       }
       if (configData.google) {
@@ -155,6 +159,14 @@ export default function AuthAccordion({
 
   const handleIdentifier = (event) => {
     setLocal({ ...local, identifier: event.target.value });
+  };
+
+  const handleVerificationUriChange = (event) => {
+    setLocal({ ...local, verification_redirect_uri: event.target.value });
+  };
+
+  const handleForgotPasswordUriChange = (event) => {
+    setLocal({ ...local, forgot_password_redirect_uri: event.target.value });
   };
 
   const openExpanded = (type) => {
@@ -334,6 +346,34 @@ export default function AuthAccordion({
                         value={local.identifier}
                         onChange={handleIdentifier}
                         placeholder={'email'}
+                        disabled={!local.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="verification_redirect_uri"
+                        label="Verification Redirect Uri"
+                        variant="outlined"
+                        value={local.verification_redirect_uri}
+                        onChange={handleVerificationUriChange}
+                        placeholder={'verification_redirect_uri'}
+                        disabled={!local.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="forgot_password_redirect_uri"
+                        label="Forgot Password Uri"
+                        variant="outlined"
+                        value={local.forgot_password_redirect_uri}
+                        onChange={handleForgotPasswordUriChange}
+                        placeholder={'forgot_password_redirect_uri'}
                         disabled={!local.enabled}
                       />
                     </Grid>
