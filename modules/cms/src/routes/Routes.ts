@@ -13,7 +13,8 @@ export class CmsRoutes {
   private readonly customEndpointHandler: CustomEndpointHandler;
   //todo change this since now routes are getting appended
   //while the conduit router handles duplicates we should clean them up on this end as well
-  private _registeredRoutes: any[] = [];
+  private crudRoutes: any[] = [];
+  private customRoutes: any[] = [];
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly url: string) {
     this.handlers = new CmsHandlers(grpcSdk);
@@ -41,19 +42,27 @@ export class CmsRoutes {
     });
   }
 
-  addRoutes(routes: any[]){
-    this._registeredRoutes.push(...routes);
+  addRoutes(routes: any[], crud: boolean = true) {
+    if (crud) {
+      this.crudRoutes = routes;
+    } else {
+      this.customRoutes = routes;
+    }
   }
 
-  requestRefresh(){
-    this._refreshRoutes();
+  requestRefresh() {
+    if (this.crudRoutes && this.crudRoutes.length !== 0) {
+      this._refreshRoutes();
+    }
   }
 
   private _refreshRoutes() {
     let routesProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
-    this.grpcSdk.router.register(this._registeredRoutes, routesProtoFile.toString("utf-8"), this.url).catch((err: Error) => {
-      console.log("Failed to register routes for CMS module!");
-      console.error(err);
-    });
+    this.grpcSdk.router
+      .register(this.crudRoutes.concat(this.customRoutes), routesProtoFile.toString("utf-8"), this.url)
+      .catch((err: Error) => {
+        console.log("Failed to register routes for CMS module!");
+        console.error(err);
+      });
   }
 }

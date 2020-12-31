@@ -3,6 +3,7 @@ import schema from "../../models/schemaDefinitions.schema";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { CmsRoutes } from "../../routes/Routes";
 import { compareFunction, getOps, sortAndConstructRoutes } from "./utils";
+import { isNil } from "lodash";
 
 export class SchemaController {
   private _schemas: { [name: string]: any } = {}; // used to be SchemaAdapter
@@ -19,7 +20,7 @@ export class SchemaController {
       .findMany("SchemaDefinitions", { enabled: true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
-          resolve();
+          resolve('ok');
         });
         if (r) {
           r.forEach((r: any) => {
@@ -38,7 +39,12 @@ export class SchemaController {
           promise.then((p) => {
             let routeSchemas: any = {};
             r.forEach((schema: any) => {
-              routeSchemas[schema.name] = schema;
+              if (typeof schema.modelOptions === "string") {
+                schema.modelOptions = JSON.parse(schema.modelOptions);
+              }
+              if(schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+                routeSchemas[schema.name] = schema;
+              }
             });
             this._registerRoutes(routeSchemas);
             this.router.requestRefresh();
@@ -59,10 +65,12 @@ export class SchemaController {
         if (r) {
           let routeSchemas: any = {};
           r.forEach((schema: any) => {
-            if (typeof r.modelOptions === "string") {
-              r.modelOptions = JSON.parse(r.modelOptions);
+            if (typeof schema.modelOptions === "string") {
+              schema.modelOptions = JSON.parse(schema.modelOptions);
             }
-            routeSchemas[schema.name] = schema;
+            if(schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+              routeSchemas[schema.name] = schema;
+            }
           });
           this._registerRoutes(routeSchemas);
           this.router.requestRefresh();
@@ -82,14 +90,7 @@ export class SchemaController {
     this.refreshRoutes();
   }
 
-  private _registerRoutes(schemas: { [name: string]: any }) {
-    let schemaCopy = Object.assign({}, schemas);
-    delete schemaCopy["SchemaDefinitions"];
-    if (Object.keys(schemaCopy).length === 0) {
-      return;
-    }
-    if (schemaCopy.crudOperations) {
-      this.router.addRoutes(sortAndConstructRoutes(schemaCopy));
-    }
+  private _registerRoutes(schemas: { [name: string]: any }[]) {
+    this.router.addRoutes(sortAndConstructRoutes(schemas));
   }
 }
