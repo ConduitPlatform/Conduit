@@ -15,7 +15,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
   constructor(connectionUri: string) {
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
-    this.sequelize = new Sequelize(this.connectionUri);
+    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
   createSchemaFromAdapter(schema: any): Promise<{ schema: any; }> {
