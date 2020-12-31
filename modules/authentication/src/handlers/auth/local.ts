@@ -259,7 +259,7 @@ export class LocalHandlers {
 
         let appUrl = config.local.forgot_password_redirect_uri;
         const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-        await this.emailModule.sendEmail('ForgotPassword', {
+        let mail = await this.emailModule.sendEmail('ForgotPassword', {
             email: user.email,
             sender: 'conduit@gmail.com',
             variables: {
@@ -306,7 +306,7 @@ export class LocalHandlers {
         user.hashedPassword = await AuthUtils.hashPassword(newPassword).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
         const tokenPromise = this.database.deleteOne('Token', passwordResetTokenDoc);
         const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
         const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id});
