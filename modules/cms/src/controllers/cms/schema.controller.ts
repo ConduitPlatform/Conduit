@@ -90,7 +90,7 @@ export class SchemaController {
     this.refreshRoutes();
   }
 
-  private _registerRoutes(schemas: { [name: string]: any }[]) {
+  private _registerRoutes(schemas: { [name: string]: any }) {
     this.router.addRoutes(sortAndConstructRoutes(schemas));
   }
 }
