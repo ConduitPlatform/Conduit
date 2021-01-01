@@ -35,7 +35,8 @@
     "passport-github": "^1.0.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
-    "uuid": "^7.0.2"
+    "uuid": "^7.0.2",
+    "axios": "0.20.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^3.0.0",

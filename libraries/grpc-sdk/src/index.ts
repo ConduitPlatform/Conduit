@@ -9,6 +9,7 @@ import PushNotifications from "./modules/pushNotifications";
 import Authentication from "./modules/authentication";
 import * as grpc from "grpc";
 import CMS from "./modules/cms";
+import SMS from "./modules/sms";
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -19,11 +20,12 @@ export default class ConduitGrpcSdk {
   private readonly _availableModules: any = {
     "in-memory-store": InMemoryStore,
     "database-provider": DatabaseProvider,
-    storage: Storage,
-    email: Email,
+    "storage": Storage,
+    "email": Email,
     "push-notifications": PushNotifications,
-    authentication: Authentication,
-    cms: CMS,
+    "authentication": Authentication,
+    "cms": CMS,
+    "sms": SMS
   };
   private lastSearch: number = Date.now();
 
@@ -179,6 +181,16 @@ export default class ConduitGrpcSdk {
       return null;
     }
   }
+
+
+    get sms(): SMS | null {
+        if (this._modules["sms"]) {
+            return this._modules["sms"];
+        } else {
+            console.warn("SMS module not up yet!");
+            return null
+        }
+    }
 }
 export let grpcModule: any = grpc;
 export * from "./interfaces";

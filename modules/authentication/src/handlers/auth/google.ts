@@ -103,7 +103,7 @@ export class GoogleHandlers {
                     tokenExpires: moment().add(expires_in as number, 'milliseconds')
                 };
                 if (!user.isVerified) user.isVerified = true;
-                user = await this.database.findByIdAndUpdate('User', user).catch((e: any) => errorMessage = e.message);
+                user = await this.database.findByIdAndUpdate('User', user._id, user).catch((e: any) => errorMessage = e.message);
                 if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
             }
         } else {

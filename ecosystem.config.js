@@ -69,5 +69,14 @@ module.exports = {
         REGISTER_NAME: false,
       },
     },
+    {
+      name: "sms-provider",
+      script: "./modules/sms/dist/index.js",
+      env: {
+        CONDUIT_SERVER: "0.0.0.0:55152",
+        SERVICE_URL: "0.0.0.0:55160",
+        REGISTER_NAME: false,
+      },
+    }
   ],
 };

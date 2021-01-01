@@ -1,4 +1,4 @@
-import {isNil} from 'lodash';
+import {isEmpty, isNil} from 'lodash';
 import {AuthUtils} from '../../utils/auth';
 import {TokenType} from '../../constants/TokenType';
 import {v4 as uuid} from 'uuid';
@@ -11,6 +11,7 @@ import * as templates from '../../templates';
 export class LocalHandlers {
     private database: any;
     private emailModule: any;
+    private sms: any;
     private initialized: boolean = false;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -51,6 +52,20 @@ export class LocalHandlers {
         await this.grpcSdk.waitForExistence('email');
         this.database = this.grpcSdk.databaseProvider;
         this.emailModule = this.grpcSdk.emailProvider;
+        
+        let errorMessage = null;
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) {
+            console.error('Could not get authentication config sms 2fa will not be enabled');
+            return;
+        }
+        if (config.twofa.enabled) {
+            // maybe check if verify is enabled in sms module
+            await this.grpcSdk.waitForExistence('sms');
+            this.sms = this.grpcSdk.sms;
+        } else {
+            console.log('sms 2fa not active');
+        }
         this.registerTemplates();
         this.initialized = true;
     }
@@ -95,6 +110,10 @@ export class LocalHandlers {
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
+        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        let url = serverConfig.url;
+
         if (config.local.sendVerificationEmail) {
             this.database.create('Token', {
                 type: TokenType.VERIFICATION_TOKEN,
@@ -102,10 +121,10 @@ export class LocalHandlers {
                 token: uuid()
             })
                 .then((verificationToken: any) => {
-                    return {verificationToken, hostUrl: this.grpcSdk.config.get('hostUrl')};
+                    return {verificationToken, hostUrl: url};
                 })
                 .then((result: { hostUrl: Promise<any>, verificationToken: any }) => {
-                    const link = `${result.hostUrl}/hook/verify-email/${result.verificationToken.token}`;
+                    const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
                     return this.emailModule.sendEmail('EmailVerification', {
                         email: user.email,
                         sender: 'conduit@gmail.com',
@@ -125,7 +144,7 @@ export class LocalHandlers {
 
     async authenticate(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const {email, password} = JSON.parse(call.request.params).params;
+        const {email, password} = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
         let errorMessage = null;
 
@@ -150,6 +169,28 @@ export class LocalHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (config.local.verificationRequired && !user.isVerified) {
             return callback({code: grpc.status.PERMISSION_DENIED, message: 'You must verify your account to login'});
+        }
+
+        if (user.hasTwoFA) {
+            const verificationSid = await this.sendVerificationCode(user.phoneNumber);
+            if (verificationSid === '') {
+                return callback({code: grpc.status.INTERNAL, message: 'Could not send verification code'})
+            }
+
+            await this.database.deleteMany('VerificationRecord', {userId: user._id, clientId}).catch(console.error);
+
+            await this.database.create('VerificationRecord', {
+                userId: user._id,
+                clientId,
+                verificationSid
+            }).catch((e: any) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+            return callback(null, {
+                result: JSON.stringify({
+                    message: 'Verification code sent'
+                })
+            });
         }
 
         const promise1 = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
@@ -216,21 +257,17 @@ export class LocalHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        this.grpcSdk.config.get('hostUrl')
-            .then((hostUrl: any) => {
-                const link = `${hostUrl}/authentication/reset-password/${passwordResetTokenDoc.token}`;
-                return this.emailModule.sendEmail('ForgotPassword', {
-                    email: user.email,
-                    sender: 'conduit@gmail.com',
-                    variables: {
-                        applicationName: 'Conduit',
-                        link
-                    }
-                });
-            })
-            .catch((e: any) => errorMessage = e.message);
+        let appUrl = config.local.forgot_password_redirect_uri;
+        const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
+        let mail = await this.emailModule.sendEmail('ForgotPassword', {
+            email: user.email,
+            sender: 'conduit@gmail.com',
+            variables: {
+                applicationName: 'Conduit',
+                link
+            }
+        }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-
         return callback(null, {result: JSON.stringify({message: 'Ok'})});
     }
 
@@ -269,7 +306,7 @@ export class LocalHandlers {
         user.hashedPassword = await AuthUtils.hashPassword(newPassword).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
         const tokenPromise = this.database.deleteOne('Token', passwordResetTokenDoc);
         const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
         const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id});
@@ -290,6 +327,8 @@ export class LocalHandlers {
         });
 
         let errorMessage = null;
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         const verificationTokenDoc = await this.database.findOne('Token', {
             type: TokenType.VERIFICATION_TOKEN,
@@ -306,13 +345,95 @@ export class LocalHandlers {
         if (isNil(user)) return callback({code: grpc.status.NOT_FOUND, message: 'User not found'});
 
         user.isVerified = true;
-        const userPromise = this.database.findByIdAndUpdate('User', user);
+        const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
         const tokenPromise = this.database.deleteOne('Token', verificationTokenDoc);
 
         await Promise.all([userPromise, tokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        return callback(null, {result: JSON.stringify({message: 'Email verified'})});
+        if(config.local.verification_redirect_uri){
+            return callback(null, {redirect: config.local.verification_redirect_uri});    
+        }else{
+            return callback(null, {result: JSON.stringify({message: 'Email verified'})});
+        }      
     }
 
+    private async sendVerificationCode(to: string) {
+        const verificationSid = await this.sms.sendVerificationCode({to})
+            .catch(console.error);
+        return verificationSid || '';
+    }
+
+    async verify(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
+
+        const clientId = context.clientId;
+
+        const { email, code } = JSON.parse(call.request.params).params;
+        if (isNil(email) || isNil(code)) return callback({
+            code: grpc.status.INVALID_ARGUMENT, message: 'No email or 2fa code provided'
+        });
+
+        let errorMessage = null;
+        const user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (isNil(user)) return callback({code: grpc.status.UNAUTHENTICATED, message: 'User not found'});
+
+        const verificationRecord = await this.database.findOne('VerificationRecord', {userId: user._id, clientId})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(verificationRecord)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification record for this user'});
+
+        const verified = await this.sms.verify({verificationSid: verificationRecord.verificationSid, code})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (!verified) {
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'email and code do not match'});
+        }
+
+        await this.database.deleteMany('VerificationRecord', {userId: user._id, clientId}).catch(console.error);
+
+        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const promise1 = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
+        const promise2 = this.database.deleteMany('RefreshToken', {userId: user._id, clientId});
+        await Promise.all([promise1, promise2]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const signTokenOptions: ISignTokenOptions = {
+            secret: config.jwtSecret,
+            expiresIn: config.tokenInvalidationPeriod
+        };
+
+        const accessToken = await this.database.create('AccessToken', {
+            userId: user._id,
+            clientId,
+            token: AuthUtils.signToken({id: user._id}, signTokenOptions),
+            expiresOn: moment().add(config.tokenInvalidationPeriod as number, 'milliseconds').toDate()
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        const refreshToken = await this.database.create('RefreshToken', {
+            userId: user._id,
+            clientId,
+            token: AuthUtils.randomToken(),
+            expiresOn: moment().add(config.refreshTokenInvalidationPeriod as number, 'milliseconds').toDate()
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {
+            result: JSON.stringify({
+                userId: user._id.toString(),
+                accessToken: accessToken.token,
+                refreshToken: refreshToken.token
+            })
+        });
+    }
 }

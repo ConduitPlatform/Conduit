@@ -7,3 +7,4 @@ export * from './config';
 export * from './admin';
 export * from './pushNotifications';
 export * from './cms';
+export * from './sms';

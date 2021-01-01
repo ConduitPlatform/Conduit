@@ -23,6 +23,14 @@ export default {
             doc: 'Defines if email verification is required for login',
             format: 'Boolean',
             default: true
+        },
+        verification_redirect_uri: {
+            format: 'String',
+            default: null
+        },
+        forgot_password_redirect_uri: {
+            format: 'String',
+            default: null
         }
     },
     google: {
@@ -57,10 +65,49 @@ export default {
             default: true
         }
     },
+    kakao: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
+        clientId: {
+            doc: 'Kakao client id',
+            format: 'String',
+            default: ''
+        },
+        redirect_uri: {
+            format: 'String',
+            default: ''
+        }
+    },
+    twitch: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
+        clientId: {
+            format: 'String',
+            default: ''
+        },
+        clientSecret: {
+            format: 'String',
+            default: ''
+        },
+        redirect_uri: {
+            format: 'String',
+            default: ''
+        }
+    },
     service: {
         enabled: {
             format: 'Boolean',
             default: true
+        }
+    },
+    twofa: {
+        enabled: {
+            format: 'Boolean',
+            default: false
         }
     },
     generateRefreshToken: {

@@ -30,6 +30,19 @@ export default class Config {
     this.active = true;
   }
 
+  getServerConfig(): Promise<any> {
+    let request = {};
+    return new Promise((resolve, reject) => {
+      this.client.getServerConfig(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(JSON.parse(res.data));
+        }
+      });
+    });
+  }
+
   closeConnection() {
     this.client.close();
     this.client = null;
@@ -128,26 +141,26 @@ export default class Config {
           resolve(res.modules);
         }
       });
-    }).then(r=>{
-      setInterval(()=>self.moduleHealthProbe.bind(self)(name,url),2000);
+    }).then((r) => {
+      setInterval(() => self.moduleHealthProbe.bind(self)(name, url), 2000);
       return r;
     });
   }
 
   moduleHealthProbe(name: string, url: string): Promise<any> {
-      let request: { [key: string]: any } = {
-        moduleName: name.toString(),
-        url: url.toString(),
-      };
-      return new Promise((resolve, reject) => {
-        this.client.moduleHealthProbe(request, (err: any, res: any) => {
-          if (err || !res) {
-            reject(err || "Something went wrong");
-          } else {
-            resolve('done');
-          }
-        });
+    let request: { [key: string]: any } = {
+      moduleName: name.toString(),
+      url: url.toString(),
+    };
+    return new Promise((resolve, reject) => {
+      this.client.moduleHealthProbe(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve("done");
+        }
       });
+    });
   }
 
   watchModules() {

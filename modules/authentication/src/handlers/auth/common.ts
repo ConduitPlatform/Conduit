@@ -105,5 +105,17 @@ export class CommonHandlers {
 
         return callback(null, {result: JSON.stringify({message: 'Logged out'})});
     }
+    
+    async getUser(call: any, callback: any) {
+
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
+        const user = context.user;
+
+        return callback(null, {result: JSON.stringify(user)});
+    }
 
 }

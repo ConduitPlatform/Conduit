@@ -7,6 +7,7 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
 } from "@quintessential-sft/conduit-sdk";
+const swaggerUi = require("swagger-ui-express");
 
 function extractRequestData(req: Request) {
   const context = (req as any).conduit;
@@ -42,9 +43,37 @@ export class RestController {
   private _router!: Router;
   private _middlewares?: { [field: string]: ConduitMiddleware[] };
   private _registeredRoutes: Map<string, Handler | ConduitRoute>;
+  private _swaggerDoc: any;
 
   constructor() {
     this._registeredRoutes = new Map();
+    this._swaggerDoc = {
+      openapi: "3.0.0",
+      info: {
+        version: "1.0.0",
+        title: "Conduit",
+      },
+      paths: {},
+      components: {
+        securitySchemes: {
+          clientid: {
+            type: "apiKey",
+            in: "header",
+            name: "clientid",
+          },
+          clientSecret: {
+            type: "apiKey",
+            in: "header",
+            name: "clientSecret",
+          },
+          tokenAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+        },
+      },
+    };
     this.initializeRouter();
   }
 
@@ -150,7 +179,13 @@ export class RestController {
           Object.assign(context.context, r);
           return route.executeRequest(context);
         })
-        .then((r: any) => res.status(200).json(JSON.parse(r.result)))
+        .then((r: any) => {
+          if(r.redirect){
+            res.redirect(r.redirect);
+          }else{
+            res.status(200).json(JSON.parse(r.result))
+          }
+        })
         .catch((err: Error | ConduitError | any) => {
           if (err.hasOwnProperty("status")) {
             console.log(err);
@@ -198,6 +233,105 @@ export class RestController {
           }
         });
     });
+
+    this.addRouteSwaggerDocumentation(route);
+  }
+
+  private addRouteSwaggerDocumentation(route: ConduitRoute) {
+    let method = "";
+    switch (route.input.action) {
+      case ConduitRouteActions.GET: {
+        method = "get";
+        break;
+      }
+      case ConduitRouteActions.POST: {
+        method = "post";
+        break;
+      }
+      case ConduitRouteActions.DELETE: {
+        method = "delete";
+        break;
+      }
+      case ConduitRouteActions.UPDATE: {
+        method = "put";
+        break;
+      }
+      default: {
+        method = "get";
+      }
+    }
+
+    let routeDoc: any = {
+      summary: route.input.description,
+      parameters: [],
+      responses: {},
+      security: [
+        {
+          clientid: [],
+          clientSecret: [],
+        },
+      ],
+    };
+
+    if (route.input.urlParams !== undefined) {
+      for (const name in route.input.urlParams) {
+        routeDoc.parameters.push({
+          name,
+          in: "path",
+          required: true,
+          type: route.input.urlParams[name],
+        });
+      }
+    }
+
+    if (route.input.queryParams !== undefined) {
+      for (const name in route.input.queryParams) {
+        routeDoc.parameters.push({
+          name,
+          in: "query",
+          type: route.input.queryParams[name],
+        });
+      }
+    }
+
+    if (route.input.bodyParams !== undefined) {
+      for (const name in route.input.bodyParams) {
+        let type = "";
+        if (typeof route.input.bodyParams[name] === "object") {
+          // @ts-ignore
+          if (route.input.bodyParams[name] && route.input.bodyParams[name].type && typeof route.input.bodyParams[name].type !== "object") {
+            // @ts-ignore
+            type = route.input.bodyParams[name].type.toLowerCase();
+          } else {
+            type = "object";
+          }
+
+          if (!["string", "number", "array", "object"].includes(type)) {
+            type = "string";
+          }
+        } else {
+          type = route.input.bodyParams[name].toString().toLowerCase();
+        }
+        routeDoc.parameters.push({
+          name,
+          in: "body",
+          type,
+        });
+      }
+    }
+
+    if (route.input.middlewares?.includes("authMiddleware")) {
+      routeDoc.security[0].tokenAuth = [];
+    }
+
+    let path = route.input.path.replace(/(:)(\w+)/g, "{$2}");
+    if (this._swaggerDoc.paths.hasOwnProperty(path)) {
+      this._swaggerDoc.paths[path][method] = routeDoc;
+    } else {
+      this._swaggerDoc.paths[path] = {};
+      this._swaggerDoc.paths[path][method] = routeDoc;
+    }
+    this._swaggerDoc.paths[path] = { ...this._swaggerDoc.paths[path], method };
   }
 
   private refreshRouter() {
@@ -214,6 +348,12 @@ export class RestController {
 
   private initializeRouter() {
     this._router = Router();
+    const self = this;
+    this._router.use("/swagger", swaggerUi.serve);
+    this._router.get("/swagger",(req,res,next) => swaggerUi.setup(self._swaggerDoc)(req,res,next));
+    this._router.get("/swagger.json", (req, res) => {
+      res.send(JSON.stringify(this._swaggerDoc));
+    });
     this._router.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });

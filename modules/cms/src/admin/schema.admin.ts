@@ -3,12 +3,17 @@ import {isNil} from "lodash";
 import grpc from "grpc";
 import {validateSchemaInput} from "../utils/utilities";
 import {SchemaController} from "../controllers/cms/schema.controller";
+import { CustomEndpointController } from "../controllers/customEndpoints/customEndpoint.controller";
 
 export class SchemaAdmin {
 
     private database: any;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController) {
+    constructor(
+        private readonly grpcSdk: ConduitGrpcSdk,
+        private readonly schemaController: SchemaController,
+        private readonly customEndpointController: CustomEndpointController
+    ) {
         this.database = this.grpcSdk.databaseProvider;
     }
 
@@ -57,7 +62,7 @@ export class SchemaAdmin {
     }
 
     async createSchema(call: any, callback: any) {
-        const {name, fields, modelOptions, enabled, authentication} = JSON.parse(call.request.params);
+        const {name, fields, modelOptions, enabled, authentication, crudOperations} = JSON.parse(call.request.params);
 
         if (isNil(name) || isNil(fields)) {
             return callback({
@@ -88,7 +93,8 @@ export class SchemaAdmin {
             fields,
             modelOptions: options,
             enabled,
-            authentication
+            authentication,
+            crudOperations: crudOperations !== null ? crudOperations : true
         }).catch((e: any) => error = e);
         if (!isNil(error)) return callback({
             code: grpc.status.INTERNAL,
@@ -125,14 +131,21 @@ export class SchemaAdmin {
         requestedSchema.enabled = !requestedSchema.enabled;
         this.schemaController.createSchema(new ConduitSchema(requestedSchema.name, requestedSchema.fields, requestedSchema.modelOptions));
 
-        const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema).catch((e: any) => errorMessage = e.message);
+        const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema)
+            .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        await this.database.updateMany('CustomEndpoints', {selectedSchema: id}, {enabled: requestedSchema.enabled})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        this.schemaController.refreshRoutes();
+        this.customEndpointController.refreshEndpoints();
         return callback(null, {result: JSON.stringify({name: updatedSchema.name, enabled: updatedSchema.enabled})});
     }
 
     async editSchema(call: any, callback: any) {
-        const {id, name, fields, modelOptions, authentication} = JSON.parse(call.request.params);
+        const {id, name, fields, modelOptions, authentication, crudOperations } = JSON.parse(call.request.params);
         if (isNil(id)) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
@@ -163,6 +176,7 @@ export class SchemaAdmin {
         requestedSchema.fields = fields ? fields : requestedSchema.fields;
         requestedSchema.modelOptions = modelOptions ? JSON.stringify(modelOptions) : requestedSchema.modelOptions;
         requestedSchema.authentication = authentication !== null ? authentication : requestedSchema.authentication;
+        requestedSchema.crudOperations = crudOperations !== null ? crudOperations : requestedSchema.crudOperations;
 
         const updatedSchema = await this.database.findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -202,7 +216,11 @@ export class SchemaAdmin {
         await this.database.deleteOne('SchemaDefinitions', requestedSchema).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        await this.database.deleteMany('CustomEndpoints', {selectedSchema: id}).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
         this.schemaController.refreshRoutes();
+        this.customEndpointController.refreshEndpoints();
         return callback(null, {result: 'Schema successfully deleted'});
     }
 

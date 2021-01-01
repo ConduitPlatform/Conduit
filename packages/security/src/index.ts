@@ -39,11 +39,12 @@ class SecurityModule extends IConduitSecurity {
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {
+        if (isNil((req as any).conduit)) (req as any).conduit = {};
         if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
             return next();
         }
 
-        if (req.url === '/graphql' && req.method === 'GET') {
+        if ((req.url === '/graphql' || req.url.startsWith('/swagger')) && req.method === 'GET') {
             return next();
         }
 
@@ -59,7 +60,6 @@ class SecurityModule extends IConduitSecurity {
                     throw ConduitError.unauthorized();
                 }
                 delete req.headers.clientsecret;
-                if (isNil((req as any).conduit)) (req as any).conduit = {};
                 (req as any).conduit.clientId = clientid;
                 next();
             })

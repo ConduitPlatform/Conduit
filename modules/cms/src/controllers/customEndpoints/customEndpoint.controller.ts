@@ -25,7 +25,7 @@ export class CustomEndpointController {
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
 
-        this.router.addRoutes(routes);
+        this.router.addRoutes(routes, false);
       })
       .catch((err: Error) => {
         console.error("Something went wrong when loading custom endpoints to the router");

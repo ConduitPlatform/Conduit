@@ -56,6 +56,8 @@ export default function AuthAccordion({
     sendVerificationEmail: false,
     verificationRequired: false,
     identifier: '',
+    verification_redirect_uri: '',
+    forgot_password_redirect_uri: '',
   });
 
   const [google, setGoogle] = useState({
@@ -70,6 +72,19 @@ export default function AuthAccordion({
     clientId: '',
   });
 
+  const [kakao, setKakao] = useState({
+    enabled: false,
+    clientId: '',
+    redirect_uri: '',
+  });
+
+  const [twitch, setTwitch] = useState({
+    enabled: false,
+    clientId: '',
+    redirect_uri: '',
+    clientSecret: '',
+  });
+
   useEffect(() => {
     if (configData) {
       if (configData.local) {
@@ -78,6 +93,8 @@ export default function AuthAccordion({
           sendVerificationEmail: configData.local.sendVerificationEmail,
           verificationRequired: configData.local.verificationRequired,
           identifier: configData.local.identifier,
+          verification_redirect_uri: configData.local.verification_redirect_uri,
+          forgot_password_redirect_uri: configData.local.forgot_password_redirect_uri,
         });
       }
       if (configData.google) {
@@ -94,6 +111,21 @@ export default function AuthAccordion({
           clientId: configData.facebook.clientId,
         });
       }
+      if (configData.twitch) {
+        setTwitch({
+          enabled: configData.twitch.enabled,
+          clientId: configData.twitch.clientId,
+          redirect_uri: configData.twitch.redirect_uri,
+          clientSecret: configData.twitch.clientSecret,
+        });
+      }
+      if (configData.kakao) {
+        setKakao({
+          enabled: configData.kakao.enabled,
+          clientId: configData.kakao.clientId,
+          redirect_uri: configData.kakao.redirect_uri,
+        });
+      }
     }
   }, [configData, configDataError]);
 
@@ -105,8 +137,36 @@ export default function AuthAccordion({
     setFacebook({ ...facebook, clientId: event.target.value });
   };
 
+  const handleKakaoTalkClientId = (event) => {
+    setKakao({ ...kakao, clientId: event.target.value });
+  };
+
+  const handleKakaoTalkRedirectUri = (event) => {
+    setKakao({ ...kakao, redirect_uri: event.target.value });
+  };
+
+  const handleTwitchClientId = (event) => {
+    setTwitch({ ...twitch, clientId: event.target.value });
+  };
+
+  const handleTwitchRedirectUri = (event) => {
+    setTwitch({ ...twitch, redirect_uri: event.target.value });
+  };
+
+  const handleTwitchClientSecret = (event) => {
+    setTwitch({ ...twitch, clientSecret: event.target.value });
+  };
+
   const handleIdentifier = (event) => {
     setLocal({ ...local, identifier: event.target.value });
+  };
+
+  const handleVerificationUriChange = (event) => {
+    setLocal({ ...local, verification_redirect_uri: event.target.value });
+  };
+
+  const handleForgotPasswordUriChange = (event) => {
+    setLocal({ ...local, forgot_password_redirect_uri: event.target.value });
   };
 
   const openExpanded = (type) => {
@@ -134,13 +194,19 @@ export default function AuthAccordion({
   const handleCancel = (type) => {
     switch (type) {
       case 'local':
-        setLocal(configData.local);
+        if (configData && configData.local) setLocal(configData.local);
         break;
       case 'google':
-        setGoogle(configData.google);
+        if (configData && configData.google) setGoogle(configData.google);
         break;
       case 'facebook':
-        setFacebook(configData.facebook);
+        if (configData && configData.facebook) setFacebook(configData.facebook);
+        break;
+      case 'twitch':
+        if (configData && configData.twitch) setTwitch(configData.twitch);
+        break;
+      case 'kakao':
+        if (configData && configData.kakao) setKakao(configData.kakao);
         break;
       default:
         return null;
@@ -280,6 +346,34 @@ export default function AuthAccordion({
                         value={local.identifier}
                         onChange={handleIdentifier}
                         placeholder={'email'}
+                        disabled={!local.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="verification_redirect_uri"
+                        label="Verification Redirect Uri"
+                        variant="outlined"
+                        value={local.verification_redirect_uri}
+                        onChange={handleVerificationUriChange}
+                        placeholder={'verification_redirect_uri'}
+                        disabled={!local.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="forgot_password_redirect_uri"
+                        label="Forgot Password Uri"
+                        variant="outlined"
+                        value={local.forgot_password_redirect_uri}
+                        onChange={handleForgotPasswordUriChange}
+                        placeholder={'forgot_password_redirect_uri'}
                         disabled={!local.enabled}
                       />
                     </Grid>
@@ -550,6 +644,237 @@ export default function AuthAccordion({
             </AccordionDetails>
           </Accordion>
         );
+      case 'kakao':
+        if (!kakao) {
+          return;
+        }
+        return (
+          <Accordion
+            expanded={expanded.includes('kakao')}
+            onChange={() => openExpanded('kakao')}>
+            <AccordionSummary id={'kakao'}>
+              <Box display={'flex'} alignItems={'center'} flex={1}>
+                <Typography variant={'subtitle2'} className={classes.typography}>
+                  Kakao Talk
+                </Typography>
+                <Typography
+                  variant={'subtitle2'}
+                  className={
+                    kakao.enabled
+                      ? clsx(classes.typography, classes.statusEnabled)
+                      : clsx(classes.typography, classes.statusDisabled)
+                  }>
+                  {kakao.enabled ? 'Enabled' : 'Disabled'}
+                </Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails classes={{ root: classes.details }}>
+              <Box
+                display={'flex'}
+                flexDirection={'column'}
+                justifyContent={'space-between'}
+                alignItems={'center'}
+                width={'100%'}>
+                <Box
+                  mb={2}
+                  maxWidth={800}
+                  display={'flex'}
+                  width={'100%'}
+                  flexDirection={'column'}
+                  alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
+                    <Typography variant={'button'} style={{ width: '100%' }}>
+                      Allow users to sign up using their Kakao Talk account.
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={kakao.enabled}
+                          onChange={() =>
+                            setKakao({
+                              ...kakao,
+                              enabled: !kakao.enabled,
+                            })
+                          }
+                          value={'kakao'}
+                          color="primary"
+                        />
+                      }
+                      label={kakao.enabled ? 'Enabled' : 'Disabled'}
+                    />
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="kakao-id"
+                        label="Client ID"
+                        variant="outlined"
+                        value={kakao.clientId}
+                        onChange={handleKakaoTalkClientId}
+                        disabled={!kakao.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="kakao-redirectUri-id"
+                        label="Redirect Uri"
+                        variant="outlined"
+                        value={kakao.redirect_uri}
+                        onChange={handleKakaoTalkRedirectUri}
+                        disabled={!kakao.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                </Box>
+                <Box alignSelf={'flex-end'}>
+                  <Button
+                    onClick={() => handleCancel('kakao')}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end' }}
+                    onClick={() => handleSubmit('kakao', kakao)}>
+                    Save
+                  </Button>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        );
+      case 'twitch':
+        if (!twitch) {
+          return;
+        }
+        return (
+          <Accordion
+            expanded={expanded.includes('twitch')}
+            onChange={() => openExpanded('twitch')}>
+            <AccordionSummary id={'twitch'}>
+              <Box display={'flex'} alignItems={'center'} flex={1}>
+                <Typography variant={'subtitle2'} className={classes.typography}>
+                  Twitch
+                </Typography>
+                <Typography
+                  variant={'subtitle2'}
+                  className={
+                    twitch.enabled
+                      ? clsx(classes.typography, classes.statusEnabled)
+                      : clsx(classes.typography, classes.statusDisabled)
+                  }>
+                  {twitch.enabled ? 'Enabled' : 'Disabled'}
+                </Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails classes={{ root: classes.details }}>
+              <Box
+                display={'flex'}
+                flexDirection={'column'}
+                justifyContent={'space-between'}
+                alignItems={'center'}
+                width={'100%'}>
+                <Box
+                  mb={2}
+                  maxWidth={800}
+                  display={'flex'}
+                  width={'100%'}
+                  flexDirection={'column'}
+                  alignItems={'center'}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
+                    <Typography variant={'button'} style={{ width: '100%' }}>
+                      Allow users to sign up using their Twitch account.
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={twitch.enabled}
+                          onChange={() =>
+                            setTwitch({
+                              ...twitch,
+                              enabled: !twitch.enabled,
+                            })
+                          }
+                          value={'twitch'}
+                          color="primary"
+                        />
+                      }
+                      label={twitch.enabled ? 'Enabled' : 'Disabled'}
+                    />
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="twitch-id"
+                        label="Client ID"
+                        variant="outlined"
+                        value={twitch.clientId}
+                        onChange={handleTwitchClientId}
+                        disabled={!twitch.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="twitch-redirectUri-id"
+                        label="Redirect Uri"
+                        variant="outlined"
+                        value={twitch.redirect_uri}
+                        onChange={handleTwitchRedirectUri}
+                        disabled={!twitch.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                  <Box width={'100%'} mt={2}>
+                    <Grid container item xs={8}>
+                      <TextField
+                        style={{ width: '100%', marginBottom: 8 }}
+                        id="twitch-clientSecret"
+                        label="Client Secret"
+                        variant="outlined"
+                        value={twitch.clientSecret}
+                        onChange={handleTwitchClientSecret}
+                        disabled={!twitch.enabled}
+                      />
+                    </Grid>
+                  </Box>
+                </Box>
+                <Box alignSelf={'flex-end'}>
+                  <Button
+                    onClick={() => handleCancel('twitch')}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end' }}
+                    onClick={() => handleSubmit('twitch', twitch)}>
+                    Save
+                  </Button>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        );
       default:
         return null;
     }
@@ -572,6 +897,8 @@ export default function AuthAccordion({
       {AccordionGenerator('local')}
       {AccordionGenerator('google')}
       {AccordionGenerator('facebook')}
+      {AccordionGenerator('kakao')}
+      {AccordionGenerator('twitch')}
     </Box>
   );
 }

@@ -29,6 +29,7 @@ export default class ConfigManager implements IConfigManager {
     var config = protoDescriptor.conduit.core.Config;
     server.addService(config.service, {
       get: this.getGrpc.bind(this),
+      getServerConfig: this.getServerConfig.bind(this),
       updateConfig: this.updateConfig.bind(this),
       addFieldstoConfig: this.addFieldstoConfig.bind(this),
       moduleExists: this.moduleExists.bind(this),
@@ -43,6 +44,21 @@ export default class ConfigManager implements IConfigManager {
     setInterval(() => {
       self.monitorModuleHealth();
     }, 5000);
+  }
+  getServerConfig(call: any, callback: any) {
+    if (!isNil(this.grpcSdk.databaseProvider)) {
+      return this.grpcSdk.databaseProvider!.findOne("Config", {}).then(async (dbConfig: any) => {
+        if (isNil(dbConfig)) throw new Error("Config not found in the database");
+        callback(null, {
+          data: JSON.stringify({ url: dbConfig.hostUrl, env: dbConfig.env, modules: dbConfig.activatedModules }),
+        });
+      });
+    } else {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: "Database provider not set",
+      });
+    }
   }
 
   initConfigAdminRoutes() {
@@ -271,7 +287,6 @@ export default class ConfigManager implements IConfigManager {
     if (call.request.moduleName === "database-provider") {
       this.databaseCallback();
     }
-
     this.updateModuleHealth(call.request.moduleName, call.getPeer());
     this.moduleRegister.emit("module-registered");
     callback(null, { result: true });

@@ -7,7 +7,7 @@ export const UserSchema = new ConduitSchema('User',
     email: {
       type: TYPE.String,
       unique: true,
-      required: true,
+      required: false,
       systemRequired: true
     },
     hashedPassword: {
@@ -43,6 +43,37 @@ export const UserSchema = new ConduitSchema('User',
         systemRequired: true
       }
     },
+    kakao: {
+      id: {
+        type: TYPE.String,
+        systemRequired: true
+      },
+      token: {
+        type: TYPE.String,
+        systemRequired: true,
+      },
+      tokenExpires: {
+        type: TYPE.String,
+        systemRequired: true
+      },
+      profile_image_url: TYPE.String,
+      thumbnail_image_url: TYPE.String
+    },
+    twitch: {
+      id: {
+        type: TYPE.String,
+        systemRequired: true
+      },
+      token: {
+        type: TYPE.String,
+        systemRequired: true,
+      },
+      tokenExpires: {
+        type: TYPE.String,
+        systemRequired: true
+      },
+      profile_image_url: TYPE.String
+    },
     active: {
       type: TYPE.Boolean,
       default: true,
@@ -53,6 +84,12 @@ export const UserSchema = new ConduitSchema('User',
       default: false,
       systemRequired: true
     },
+    hasTwoFA: {
+      type: TYPE.Boolean,
+      default: false,
+      systemRequired: true
+    },
+    phoneNumber: TYPE.String,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },
