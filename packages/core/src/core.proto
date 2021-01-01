@@ -12,6 +12,7 @@ service Config {
     rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
     rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
     rpc GetServerConfig (Empty) returns (GetConfigResponse);
+    rpc GetEventBus (Empty) returns (GetEventBusResponse);
 }
 
 service Admin {
@@ -100,6 +101,11 @@ message ModuleExistsResponse {
 
 message GetConfigRequest {
     string key = 1;
+}
+
+message GetEventBusResponse {
+    string redisHost = 1;
+    int32 redisPort = 2;
 }
 
 message GetConfigResponse {

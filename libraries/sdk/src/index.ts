@@ -14,6 +14,7 @@ import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
 import {Config as ConvictConfig} from 'convict';
 import {IConfigManager} from './modules/Config';
+import { EventBus } from "./EventBus";
 
 export class ConduitSDK {
 
@@ -30,14 +31,26 @@ export class ConduitSDK {
     private _authentication?: IConduitAuthentication;
     private _cms?: IConduitCMS;
     private _configManager?: IConfigManager;
+    private _eventBus: EventBus;
 
     private constructor(app: Application) {
         this._app = app;
+        if(process.env.REDIS_HOST && process.env.REDIS_PORT){
+            this._eventBus = new EventBus(process.env.REDIS_HOST, process.env.REDIS_PORT);
+        }else{
+            console.error("Redis IP not defined");
+            process.exit(-1);
+        }
+        
     }
 
     registerRouter(router: IConduitRouter) {
         if (this._router) throw new Error("Cannot register a second router!")
         this._router = router;
+    }
+
+    getBus(){
+        return this._eventBus;
     }
 
     getRouter(): IConduitRouter {

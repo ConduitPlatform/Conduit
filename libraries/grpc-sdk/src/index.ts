@@ -10,6 +10,7 @@ import Authentication from "./modules/authentication";
 import * as grpc from "grpc";
 import CMS from "./modules/cms";
 import SMS from "./modules/sms";
+import { EventBus } from "./EventBus";
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -25,8 +26,9 @@ export default class ConduitGrpcSdk {
     "push-notifications": PushNotifications,
     "authentication": Authentication,
     "cms": CMS,
-    "sms": SMS
+    "sms": SMS,
   };
+  private _eventBus?: EventBus;
   private lastSearch: number = Date.now();
 
   constructor(serverUrl: string) {
@@ -55,6 +57,19 @@ export default class ConduitGrpcSdk {
       });
     });
   }
+
+  initializeEventBus(): Promise<any>{
+    return this.config.getEventBus()
+    .then((r:any)=>{
+      this._eventBus = new EventBus(r.redisHost, r.redisPort);
+      return this._eventBus;
+    }).catch((err: any)=>{
+      console.error("Failed to initialize event bus");
+      return err;
+    });
+  }
+
+
 
   /**
    * Gets all the registered modules from the config and creates clients for them.
@@ -105,6 +120,15 @@ export default class ConduitGrpcSdk {
       return this.initializeModules();
     }
     return "ok";
+  }
+
+  get bus(): EventBus | null {
+    if (this._eventBus) {
+      return this._eventBus
+    } else {
+      console.warn("Event bus not initialized");
+      return null;
+    }
   }
 
   get config(): Config {

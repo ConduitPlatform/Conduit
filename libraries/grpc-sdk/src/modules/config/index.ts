@@ -126,6 +126,20 @@ export default class Config {
     });
   }
 
+  getEventBus(): Promise<any>{
+    let request: { [key: string]: any } = {};
+    return new Promise((resolve, reject) => {
+      this.client.getEventBus(request, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  } 
+
+
   registerModule(name: string, url: string): Promise<any> {
     // TODO make newConfigSchema required when all modules provide their config schema
     let request: { [key: string]: any } = {

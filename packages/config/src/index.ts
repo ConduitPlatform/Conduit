@@ -30,6 +30,7 @@ export default class ConfigManager implements IConfigManager {
     server.addService(config.service, {
       get: this.getGrpc.bind(this),
       getServerConfig: this.getServerConfig.bind(this),
+      getEventBus: this.getEventBus.bind(this),
       updateConfig: this.updateConfig.bind(this),
       addFieldstoConfig: this.addFieldstoConfig.bind(this),
       moduleExists: this.moduleExists.bind(this),
@@ -59,6 +60,13 @@ export default class ConfigManager implements IConfigManager {
         message: "Database provider not set",
       });
     }
+  }
+
+  getEventBus(call: any, callback: any) {
+    callback(null, {
+     redisHost: process.env.REDIS_HOST,
+     redisPort: process.env.REDIS_PORT,
+    });
   }
 
   initConfigAdminRoutes() {
@@ -283,8 +291,12 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModule(call: any, callback: any) {
+    let dbInit = false;
+    if (call.request.moduleName === "database-provider" && this.registeredModules.has("database-provider")) {
+      dbInit = true;
+    }
     this.registeredModules.set(call.request.moduleName, call.request.url);
-    if (call.request.moduleName === "database-provider") {
+    if (call.request.moduleName === "database-provider" && !dbInit) {
       this.databaseCallback();
     }
     this.updateModuleHealth(call.request.moduleName, call.getPeer());

@@ -11,6 +11,9 @@ if (process.env.CONDUIT_SERVER) {
             url = 'database-provider:'+url.split(':')[1];
         }
         grpcSdk.config.registerModule('database-provider', url)
+        .then(r=>{
+            databaseProvider.initBus();
+        })
         .catch((err: any) => {
             console.error(err)
             process.exit(-1);

@@ -1,5 +1,8 @@
-export interface DatabaseAdapter {
+import { ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
 
+export interface DatabaseAdapter {
+    registeredSchemas: Map<string, ConduitSchema>;
+    
     /**
      * Should accept a JSON schema and output a .ts interface for the adapter
      * @param schema
