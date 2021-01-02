@@ -14,11 +14,11 @@ import validator from "validator";
 import isNaturalNumber from "is-natural-number";
 import { Config as ConvictConfig } from "convict";
 import { IConfigManager } from "./modules/Config";
-import { EventBus } from "./EventBus";
 import { StateManager } from "./utilities/StateManager";
 import { RedisManager } from "./utilities/RedisManager";
-import Crypto from "crypto";
 import { EventBus } from "./utilities/EventBus";
+import Crypto from "crypto";
+
 export class ConduitSDK {
   private static _instance: ConduitSDK;
   private _app: Application;
