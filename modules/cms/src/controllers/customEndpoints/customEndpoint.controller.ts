@@ -7,9 +7,19 @@ import { createCustomEndpointRoute } from "./utils";
 export class CustomEndpointController {
   private _adapter: any;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: CmsRoutes) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: CmsRoutes, private readonly stateActive: boolean) {
     this._adapter = this.grpcSdk.databaseProvider!;
     this.refreshRoutes();
+    if (stateActive) {
+      this.initializeState();
+    }
+  }
+  initializeState() {
+    this.grpcSdk.bus?.subscribe("cms", (channel: string, message: string) => {
+      if(message === "customEndpoint"){
+        this.refreshRoutes();
+      }
+    });
   }
 
   refreshRoutes() {
@@ -34,6 +44,9 @@ export class CustomEndpointController {
   }
 
   refreshEndpoints(): void {
+    if(this.stateActive){
+      this.grpcSdk.bus?.publish('cms', 'customEndpoint');
+    }
     this.refreshRoutes().then((r:any) => {
       this.router.requestRefresh();
     });
