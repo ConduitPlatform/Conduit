@@ -35,27 +35,19 @@ export class DatabaseProvider {
           try{
             let receivedSchema = JSON.parse(message);
             if(receivedSchema.name){
-              self._activeAdapter.getSchema(receivedSchema.name)
-              .then(r=>{
-                console.log("Schema present no need for action");
-              })
-              .catch(err=>{
-                console.log("Schema not present, creating...");
-                let schema = {
-                  name: receivedSchema.name,
-                  modelSchema: receivedSchema.modelSchema,
-                  modelOptions: receivedSchema.modelOptions,
-                };
-                self._activeAdapter
-                  .createSchemaFromAdapter(schema)
-                  .then((schemaAdapter: any) => {
-                    let schema = schemaAdapter.schema;
-                    console.log("Schema created");
-                  })
-                  .catch((err) => {
-                    console.log("Failed to create schema");
-                  });
-              })
+              let schema = {
+                name: receivedSchema.name,
+                modelSchema: receivedSchema.modelSchema,
+                modelOptions: receivedSchema.modelOptions,
+              };
+              self._activeAdapter
+                .createSchemaFromAdapter(schema)
+                .then((schemaAdapter: any) => {
+                  let schema = schemaAdapter.schema;
+                })
+                .catch((err) => {
+                  console.log("Failed to create/update schema");
+                });
             }
           }catch(err){
             console.error("Something was wrong with the message");
