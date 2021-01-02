@@ -8,9 +8,12 @@ import Storage from "./modules/storage";
 import PushNotifications from "./modules/pushNotifications";
 import Authentication from "./modules/authentication";
 import * as grpc from "grpc";
+import Crypto from "crypto";
 import CMS from "./modules/cms";
 import SMS from "./modules/sms";
-import { EventBus } from "./EventBus";
+import { EventBus } from "./utilities/EventBus";
+import { RedisManager } from "./utilities/RedisManager";
+import { StateManager } from "./utilities/StateManager";
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -29,9 +32,16 @@ export default class ConduitGrpcSdk {
     "sms": SMS,
   };
   private _eventBus?: EventBus;
+  private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
+  private readonly name: string;
 
-  constructor(serverUrl: string) {
+  constructor(serverUrl: string, name?:string) {
+    if(!name){
+      this.name = 'module_'+ Crypto.randomBytes(16).toString("hex");
+    }else{
+      this.name = name;
+    }
     this.serverUrl = serverUrl;
     this._config = new Config(this.serverUrl);
     this._admin = new Admin(this.serverUrl);
@@ -59,17 +69,17 @@ export default class ConduitGrpcSdk {
   }
 
   initializeEventBus(): Promise<any>{
-    return this.config.getEventBus()
+    return this.config.getRedisDetails()
     .then((r:any)=>{
-      this._eventBus = new EventBus(r.redisHost, r.redisPort);
+      let redisManager = new RedisManager(r.redisHost, r.redisPort);
+      this._eventBus = new EventBus(redisManager);
+      this._stateManager = new StateManager(redisManager, this.name);
       return this._eventBus;
     }).catch((err: any)=>{
       console.error("Failed to initialize event bus");
       return err;
     });
   }
-
-
 
   /**
    * Gets all the registered modules from the config and creates clients for them.
@@ -127,6 +137,15 @@ export default class ConduitGrpcSdk {
       return this._eventBus
     } else {
       console.warn("Event bus not initialized");
+      return null;
+    }
+  }
+
+  get state(): StateManager | null {
+    if (this._stateManager) {
+      return this._stateManager
+    } else {
+      console.warn("State Manager not initialized");
       return null;
     }
   }

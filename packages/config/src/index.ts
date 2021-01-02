@@ -30,7 +30,7 @@ export default class ConfigManager implements IConfigManager {
     server.addService(config.service, {
       get: this.getGrpc.bind(this),
       getServerConfig: this.getServerConfig.bind(this),
-      getEventBus: this.getEventBus.bind(this),
+      getRedisDetails: this.getRedisDetails.bind(this),
       updateConfig: this.updateConfig.bind(this),
       addFieldstoConfig: this.addFieldstoConfig.bind(this),
       moduleExists: this.moduleExists.bind(this),
@@ -62,7 +62,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getEventBus(call: any, callback: any) {
+  getRedisDetails(call: any, callback: any) {
     callback(null, {
      redisHost: process.env.REDIS_HOST,
      redisPort: process.env.REDIS_PORT,

@@ -21,20 +21,21 @@ export class DatabaseProvider {
     }
   }
 
-  initBus(){
+  initBus() {
     const self = this;
-      this.conduit.initializeEventBus()
-      .then((r:any)=>{
-        self.conduit.bus?.subscribe('database_provider', (channel:string, message:string)=>{
-          if(message === 'request'){
-            self._activeAdapter.registeredSchemas.forEach((k,v)=>{
+    this.conduit
+      .initializeEventBus()
+      .then((r: any) => {
+        self.conduit.bus?.subscribe("database_provider", (channel: string, message: string) => {
+          if (message === "request") {
+            self._activeAdapter.registeredSchemas.forEach((k, v) => {
               self.publishSchema(k);
-            })
+            });
             return;
           }
-          try{
+          try {
             let receivedSchema = JSON.parse(message);
-            if(receivedSchema.name){
+            if (receivedSchema.name) {
               let schema = {
                 name: receivedSchema.name,
                 modelSchema: receivedSchema.modelSchema,
@@ -49,20 +50,56 @@ export class DatabaseProvider {
                   console.log("Failed to create/update schema");
                 });
             }
-          }catch(err){
+          } catch (err) {
             console.error("Something was wrong with the message");
           }
         });
-        self.conduit.bus!.publish('database_provider','request');
+        this.conduit.state?.getState().then((r: any) => {
+          if (!r || r.length === 0) return;
+          let state = JSON.parse(r);
+          state.schemas.forEach((schema: any) => {
+            self._activeAdapter
+              .createSchemaFromAdapter(schema)
+              .then((schemaAdapter: any) => {
+                let schema = schemaAdapter.schema;
+              })
+              .catch((err) => {
+                console.log("Failed to create/update schema");
+              });
+          });
+        })
+        .catch((err:any)=>{
+          console.log("Failed to recover state");
+          console.error(err);
+        });
       })
-      .catch((err:any)=>{
+      .catch((err: any) => {
         console.log("Database provider running without HA");
-      })
+      });
   }
 
-  publishSchema(schema:any){
+  publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
-    this.conduit.bus!.publish('database_provider',sendingSchema);
+    this.conduit.state?.getState().then((r:any)=>{
+      let state = !r || r.length === 0 ? {} : JSON.parse(r);
+      if(!state.schemas){
+        state['schemas'] = [];
+      }
+      if(state.schemas.indexOf(schema.name)!==-1){
+        state.schemas[state.schemas.indexOf(schema.name)] = schema;
+      }else{
+        state.schemas.push(schema);
+      }
+      return this.conduit.state?.setState(JSON.stringify(state));
+    })
+    .then((r:any)=>{
+      console.log('Updated state');
+    })
+    .catch((err:any)=>{
+      console.log("Failed to update state");
+      console.error(err);
+    })
+    this.conduit.bus!.publish("database_provider", sendingSchema);
   }
 
   ensureIsRunning() {
@@ -126,7 +163,7 @@ export class DatabaseProvider {
           name: schema.originalSchema.name,
           modelSchema: JSON.stringify(schema.originalSchema.modelSchema),
           modelOptions: JSON.stringify(schema.originalSchema.modelOptions),
-        }
+        };
         this.publishSchema({
           name: call.request.schema.name,
           modelSchema: JSON.parse(call.request.schema.modelSchema),

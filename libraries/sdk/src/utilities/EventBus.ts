@@ -1,20 +1,13 @@
 import { RedisClient } from "redis";
+import { RedisManager } from "./RedisManager";
 
 export class EventBus {
   private _clientSubscriber: RedisClient;
   private _clientPublisher: RedisClient;
 
-  constructor(redisIp: string, redisPort: any) {
-    this._clientSubscriber = new RedisClient({
-      host: redisIp,
-      port: parseInt(redisPort),
-      prefix: "_bus",
-    });
-    this._clientPublisher = new RedisClient({
-        host: redisIp,
-        port: parseInt(redisPort),
-        prefix: "_bus",
-      });
+  constructor(redisManager: RedisManager) {
+    this._clientSubscriber = redisManager.getClient({prefix: "_bus",});
+    this._clientPublisher = redisManager.getClient({prefix: "_bus",});
     this._clientSubscriber.on("ready", () => {
       console.log("The Bus is in the station...hehe");
     });

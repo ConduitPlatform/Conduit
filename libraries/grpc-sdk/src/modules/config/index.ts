@@ -8,7 +8,7 @@ export default class Config {
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
-
+  
   constructor(url: string) {
     this._url = url;
     this.initializeClient();
@@ -126,10 +126,10 @@ export default class Config {
     });
   }
 
-  getEventBus(): Promise<any>{
+  getRedisDetails(): Promise<any>{
     let request: { [key: string]: any } = {};
     return new Promise((resolve, reject) => {
-      this.client.getEventBus(request, (err: any, res: any) => {
+      this.client.getRedisDetails(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || "Something went wrong");
         } else {
@@ -161,20 +161,12 @@ export default class Config {
     });
   }
 
-  moduleHealthProbe(name: string, url: string): Promise<any> {
+  moduleHealthProbe(name: string, url: string) {
     let request: { [key: string]: any } = {
       moduleName: name.toString(),
       url: url.toString(),
     };
-    return new Promise((resolve, reject) => {
-      this.client.moduleHealthProbe(request, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || "Something went wrong");
-        } else {
-          resolve("done");
-        }
-      });
-    });
+    this.client.moduleHealthProbe(request, (err: any, res: any) => {});
   }
 
   watchModules() {
@@ -190,7 +182,6 @@ export default class Config {
     call.on("error", function (e: any) {
       // An error has occurred and the stream has been closed.
       console.error("Connection to grpc server closed");
-      console.error(e);
     });
     call.on("status", function (status: any) {
       console.error("Connection status changed to : ", status);

@@ -3,7 +3,7 @@ import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import process from "process";
 
 if (process.env.CONDUIT_SERVER) {
-    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'database-provider');
     let databaseProvider = new DatabaseProvider(grpcSdk);
     databaseProvider.ensureIsRunning().then(() => {
         let url = databaseProvider.url;
