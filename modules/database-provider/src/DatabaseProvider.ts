@@ -26,7 +26,7 @@ export class DatabaseProvider {
     this.conduit
       .initializeEventBus()
       .then((r: any) => {
-        self.conduit.bus?.subscribe("database_provider", (channel: string, message: string) => {
+        self.conduit.bus?.subscribe("database_provider", (message: string) => {
           if (message === "request") {
             self._activeAdapter.registeredSchemas.forEach((k, v) => {
               self.publishSchema(k);

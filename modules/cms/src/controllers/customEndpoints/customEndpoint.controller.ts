@@ -15,7 +15,7 @@ export class CustomEndpointController {
     }
   }
   initializeState() {
-    this.grpcSdk.bus?.subscribe("cms", (channel: string, message: string) => {
+    this.grpcSdk.bus?.subscribe("cms", ( message: string) => {
       if(message === "customEndpoint"){
         this.refreshRoutes();
       }

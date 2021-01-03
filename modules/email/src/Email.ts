@@ -50,7 +50,7 @@ export default class EmailModule {
       })
       .then(() => {
         const self = this;
-        this.grpcSdk.bus?.subscribe("email-provider", (channel: string, message: string) => {
+        this.grpcSdk.bus?.subscribe("email-provider", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
               .then((r) => {

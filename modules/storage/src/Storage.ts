@@ -51,7 +51,7 @@ export class StorageModule {
           })
           .then(() => {
             const self = this;
-            this.grpcSdk.bus?.subscribe("storage", (channel: string, message: string) => {
+            this.grpcSdk.bus?.subscribe("storage", (message: string) => {
               if (message === "config-update") {
                 this.enableModule()
                   .then((r) => {

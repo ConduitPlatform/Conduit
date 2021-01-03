@@ -2,7 +2,6 @@ import * as grpc from "grpc";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { isNil } from "lodash";
 import { DatabaseConfigUtility } from "./utils/config";
-import { Config } from "convict";
 import AppConfigSchema from "./utils/config/schema/config";
 import { ConduitSDK, IConfigManager } from "@quintessential-sft/conduit-sdk";
 import { EventEmitter } from "events";
@@ -66,7 +65,7 @@ export default class ConfigManager implements IConfigManager {
         console.log("Failed to recover state");
       });
 
-    this.sdk.getBus().subscribe("config", (channel: string, message: string) => {
+    this.sdk.getBus().subscribe("config", (message: string) => {
       let messageParsed = JSON.parse(message);
       if (messageParsed.type === "module-register") {
         self._registerModule(messageParsed.name, messageParsed.url, messageParsed.instance);

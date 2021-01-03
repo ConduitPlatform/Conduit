@@ -47,7 +47,7 @@ export default class AuthenticationModule {
       })
       .then(() => {
         const self = this;
-        this.grpcSdk.bus?.subscribe("authentication", (channel: string, message: string) => {
+        this.grpcSdk.bus?.subscribe("authentication", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
               .then((r) => {
@@ -58,7 +58,7 @@ export default class AuthenticationModule {
               });
           }
         });
-        this.grpcSdk.bus?.subscribe("email-provider", (channel: string, message: string) => {
+        this.grpcSdk.bus?.subscribe("email-provider", (message: string) => {
             if (message === "enabled") {
               this.enableModule()
                 .then((r) => {

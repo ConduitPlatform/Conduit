@@ -49,7 +49,7 @@ export default class SmsModule {
       })
       .then(() => {
         const self = this;
-        this.grpcSdk.bus?.subscribe("sms", (channel: string, message: string) => {
+        this.grpcSdk.bus?.subscribe("sms", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
               .then((r) => {

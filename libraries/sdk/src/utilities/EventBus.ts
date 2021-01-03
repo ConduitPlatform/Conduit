@@ -13,9 +13,12 @@ export class EventBus {
     });
   }
 
-  subscribe(channelName: string, callback: (channel: string, message: string) => void): void {
+  subscribe(channelName: string, callback: (message: string) => void): void {
     this._clientSubscriber.subscribe(channelName);
-    this._clientSubscriber.on("message", callback);
+    this._clientSubscriber.on("message", (channel:string, message:string)=>{
+      if(channel !== channelName) return;
+      callback(message);
+    });
   }
 
   publish(channelName: string, message: any) {
