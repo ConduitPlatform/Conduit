@@ -46,6 +46,26 @@ export class StorageModule {
         console.log("bound on:", this._url);
         this.grpcServer.start();
         this.grpcSdk.waitForExistence('database-provider')
+        .then(() => {
+            return this.grpcSdk.initializeEventBus();
+          })
+          .then(() => {
+            const self = this;
+            this.grpcSdk.bus?.subscribe("storage", (channel: string, message: string) => {
+              if (message === "config-update") {
+                this.enableModule()
+                  .then((r) => {
+                    console.log("Updated storage configuration");
+                  })
+                  .catch((e: Error) => {
+                    console.log("Failed to update email config");
+                  });
+              }
+            });
+          })
+          .catch(() => {
+            console.log("Bus did not initialize!");
+          })
             .then(() => {
                 return this.grpcSdk.config.get('storage')
             })
@@ -89,6 +109,8 @@ export class StorageModule {
         const storageConfig = await this.grpcSdk.config.get('storage');
         if (storageConfig.active) {
             await this.enableModule().catch((e: Error) => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+            this.grpcSdk.bus?.publish("storage", "config-update");
         } else {
             return callback({code: grpc.status.FAILED_PRECONDITION, message: 'Module is not active'});
         }
