@@ -46,21 +46,9 @@ export default class EmailModule {
     this.grpcSdk
       .waitForExistence("database-provider")
       .then(() => {
-        return this.grpcSdk.config.get("email");
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), "email");
-      })
-      .then((emailConfig: any) => {
-        return this.grpcSdk.config.addFieldstoConfig(EmailConfigSchema.getProperties(), "email");
-      })
-      .catch(() => {
-        console.log("email config did not update");
-      })
-      .then((emailConfig: any) => {
         return this.grpcSdk.initializeEventBus();
       })
-      .then((emailConfig: any) => {
+      .then(() => {
         const self = this;
         this.grpcSdk.bus?.subscribe("email-provider", (channel: string, message: string) => {
           if (message === "config-update") {
@@ -76,6 +64,18 @@ export default class EmailModule {
       })
       .catch(() => {
         console.log("Bus did not initialize");
+      })
+      .then(() => {
+        return this.grpcSdk.config.get("email");
+      })
+      .catch(() => {
+        return this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), "email");
+      })
+      .then((emailConfig: any) => {
+        return this.grpcSdk.config.addFieldstoConfig(EmailConfigSchema.getProperties(), "email");
+      })
+      .catch(() => {
+        console.log("email config did not update");
       })
       .then((emailConfig: any) => {
         if (emailConfig.active) {

@@ -6,7 +6,7 @@ import AuthenticationModule from './Authentication';
 let paths = require("./admin/admin.json")
 
 if (process.env.CONDUIT_SERVER) {
-    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'authentication');
     let authentication = new AuthenticationModule(grpcSdk);
     let url = authentication.url;
     if(process.env.REGISTER_NAME === 'true'){
