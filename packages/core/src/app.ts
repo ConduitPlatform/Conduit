@@ -37,7 +37,7 @@ export class App {
 
     private initializeSdk() {
         const expressApp = express();
-        const conduitSDK = ConduitSDK.getInstance(expressApp);
+        const conduitSDK = ConduitSDK.getInstance(expressApp, 'core');
 
         const conduitExtras = {
             conduit: conduitSDK,

@@ -172,10 +172,10 @@ export class ConduitSDK {
     throw new Error("Config manager not assigned yet");
   }
 
-  static getInstance(app: Application) {
+  static getInstance(app: Application, name: string) {
     if (!this._instance && !app) throw new Error("No settings provided to initialize");
     if (!this._instance) {
-      this._instance = new ConduitSDK(app);
+      this._instance = new ConduitSDK(app,name);
     }
     return this._instance;
   }
