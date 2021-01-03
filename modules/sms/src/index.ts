@@ -5,7 +5,7 @@ import SmsModule from './Sms';
 let paths = require("./admin/admin.json");
 
 if (process.env.CONDUIT_SERVER) {
-    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'sms');
     let sms = new SmsModule(grpcSdk);
     let url = sms.url;
     if (process.env.REGISTER_NAME === 'true') {
