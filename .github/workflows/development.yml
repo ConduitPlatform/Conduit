@@ -57,10 +57,16 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-node@v1
       with:
-        node-version: '10'
-        registry-url: 'https://npm.pkg.github.com'
+        node-version: 10
+        registry-url: https://npm.pkg.github.com
         scope: '@quintessential-sft'
     - run: npm config set allow-same-version true
+    - name: Authenticate with GitHub package registry
+      run: |
+          echo "//npm.pkg.github.com:_authToken=${{ secrets.PACKAGE_TOKEN }}" >> .npmrc
+      working-directory: ./libraries/grpc-sdk    
+    - run: cat .npmrc
+      working-directory: ./libraries/grpc-sdk  
     - name: actually_publish
       run: npm install && npm publish
       working-directory: ./libraries/grpc-sdk
