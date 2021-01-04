@@ -61,6 +61,7 @@ jobs:
         node-version: '10.x'
         registry-url: 'https://npm.pkg.github.com'
     - run: |
-        cd libraries/grpc-sdk && npm publish
+        cd libraries/grpc-sdk && npm install
+    - run: npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
