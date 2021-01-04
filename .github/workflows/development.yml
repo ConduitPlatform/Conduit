@@ -60,9 +60,10 @@ jobs:
       with:
         node-version: '10.x'
         registry-url: 'https://npm.pkg.github.com'
+    - run: npm config set allow-same-version true
     - run: |
         cd libraries/grpc-sdk && npm install
     - run: |
-        cd libraries/grpc-sdk && npm version minor && npm publish
+        cd libraries/grpc-sdk && npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
