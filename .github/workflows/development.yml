@@ -55,16 +55,14 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    # Setup .npmrc file to publish to GitHub Packages
     - uses: actions/setup-node@v1
       with:
-        node-version: '10.x'
+        node-version: '10'
         registry-url: 'https://npm.pkg.github.com'
         scope: '@quintessential-sft'
     - run: npm config set allow-same-version true
-    - run: npm install
+    - name: actually_publish
+      run: npm install && npm publish
       working-directory: ./libraries/grpc-sdk
-    - run: npm publish
-      working-directory: ./libraries/grpc-sdk  
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
