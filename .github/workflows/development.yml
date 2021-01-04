@@ -51,3 +51,16 @@ jobs:
           with:
             github_token: ${{ secrets.GIT_TOKEN }}
             publish_dir: ./docs
+  publish_sdk:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    # Setup .npmrc file to publish to GitHub Packages
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
+        registry-url: 'https://npm.pkg.github.com'
+    - run: |
+        cd libraries/grpc-sdk && npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

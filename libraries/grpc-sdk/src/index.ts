@@ -54,14 +54,14 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().on("module-registered", (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
         let found = modules.filter((m: any) => m.moduleName === r);
-        if (!found || found.length === 0) {
+        if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r].closeConnection();
         }
       });
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
           this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-        } else {
+        } else if(this._availableModules[m.moduleName]){
           this._modules[m.moduleName].initializeClient();
         }
       });
