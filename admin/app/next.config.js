@@ -10,14 +10,14 @@ module.exports = (phase) => {
     CONDUIT_URL: (() => {
       if (isDev) return 'https://conduit-core.dev.quintessential.gr';
       if (isProd) {
-        return 'https://conduit-core.dev.quintessential.gr';
+        return process.env.CONDUIT_URL;
       }
       return 'CONDUIT_URL:not (isDev,isProd && isProd)';
     })(),
     MASTER_KEY: (() => {
       if (isDev) return 'M4ST3RK3Y';
       if (isProd) {
-        return 'M4ST3RK3Y';
+        return process.env.MASTER_KEY;
       }
       return 'MASTER_KEY:not (isDev,isProd && isProd)';
     })(),
