@@ -3,9 +3,10 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
-const CONDUIT_API = 'https://conduit-core.dev.quintessential.gr';
+const CONDUIT_API = process.env['CONDUIT_API'];
+
 const config = {
-  masterkey: 'M4ST3RK3Y',
+  masterkey: process.env['MASTERKEY'],
 };
 
 const JWT_CONFIG = (token) => ({
