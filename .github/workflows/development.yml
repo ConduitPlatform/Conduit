@@ -62,7 +62,7 @@ jobs:
         scope: '@quintessential-sft'
     - run: npm config set allow-same-version true
     - name: actually_publish
-      run: npm ci && npm publish
+      run: npm install && npm publish
       working-directory: ./libraries/grpc-sdk
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
