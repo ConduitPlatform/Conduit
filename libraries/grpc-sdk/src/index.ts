@@ -5,162 +5,226 @@ import DatabaseProvider from "./modules/databaseProvider";
 import InMemoryStore from "./modules/inMemoryStore";
 import Email from "./modules/email";
 import Storage from "./modules/storage";
-import PushNotifications from './modules/pushNotifications';
-import Authentication from './modules/authentication';
+import PushNotifications from "./modules/pushNotifications";
+import Authentication from "./modules/authentication";
 import * as grpc from "grpc";
-import CMS from './modules/cms';
-import SMS from './modules/sms';
+import Crypto from "crypto";
+import CMS from "./modules/cms";
+import SMS from "./modules/sms";
+import { EventBus } from "./utilities/EventBus";
+import { RedisManager } from "./utilities/RedisManager";
+import { StateManager } from "./utilities/StateManager";
 
 export default class ConduitGrpcSdk {
+  private readonly serverUrl: string;
+  private readonly _config: Config;
+  private readonly _admin: Admin;
+  private readonly _router: Router;
+  private readonly _modules: any = {};
+  private readonly _availableModules: any = {
+    "in-memory-store": InMemoryStore,
+    "database-provider": DatabaseProvider,
+    "storage": Storage,
+    "email": Email,
+    "push-notifications": PushNotifications,
+    "authentication": Authentication,
+    "cms": CMS,
+    "sms": SMS,
+  };
+  private _eventBus?: EventBus;
+  private _stateManager?: StateManager;
+  private lastSearch: number = Date.now();
+  private readonly name: string;
 
-    private readonly serverUrl: string;
-    private readonly _config: Config;
-    private readonly _admin: Admin;
-    private readonly _router: Router;
-    private readonly _modules: any = {};
-    private readonly _availableModules: any = {
-        "in-memory-store": InMemoryStore,
-        "database-provider": DatabaseProvider,
-        "storage": Storage,
-        "email": Email,
-        "push-notifications": PushNotifications,
-        "authentication": Authentication,
-        "cms": CMS,
-        "sms": SMS
+  constructor(serverUrl: string, name?:string) {
+    if(!name){
+      this.name = 'module_'+ Crypto.randomBytes(16).toString("hex");
+    }else{
+      this.name = name;
     }
-    private lastSearch: number = Date.now();
+    this.serverUrl = serverUrl;
+    this._config = new Config(this.serverUrl);
+    this._admin = new Admin(this.serverUrl);
+    this._router = new Router(this.serverUrl);
+    this.initializeModules().then(() => {});
+    this.watchModules();
+  }
 
-    constructor(serverUrl: string) {
-        this.serverUrl = serverUrl;
-        this._config = new Config(this.serverUrl);
-        this._admin = new Admin(this.serverUrl);
-        this._router = new Router(this.serverUrl);
-        this.initializeModules().then(() => {});
-    }
-
-    /**
-     * Gets all the registered modules from the config and creates clients for them.
-     * This will only work on known modules, since the primary usage for the sdk is internal
-     */
-    initializeModules() {
-        return this._config
-            .moduleList()
-            .then(r => {
-                this.lastSearch = Date.now();
-                r.forEach(m => {
-                    if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-                        this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-                    }
-                })
-                return "ok"
-            })
-            .catch(err => {
-                if (err.code !== 5) {
-                    console.error(err);
-                }
-            })
-    }
-
-    async waitForExistence(moduleName: string) {
-        await this.initializeModules();
-        while (!this._modules[moduleName]) {
-            await this.sleep(1000);
-            await this.initializeModules();
+  watchModules() {
+    this.config.watchModules().on("module-registered", (modules: any) => {
+      Object.keys(this._modules).forEach((r) => {
+        let found = modules.filter((m: any) => m.moduleName === r);
+        if (!found || found.length === 0) {
+          this._modules[r].closeConnection();
         }
-        return true;
-    }
+      });
+      modules.forEach((m: any) => {
+        if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+        } else {
+          this._modules[m.moduleName].initializeClient();
+        }
+      });
+    });
+  }
 
-    sleep(ms: number) {
-        return new Promise((resolve) => {
-            setTimeout(resolve, ms);
+  initializeEventBus(): Promise<any>{
+    return this.config.getRedisDetails()
+    .then((r:any)=>{
+      let redisManager = new RedisManager(r.redisHost, r.redisPort);
+      this._eventBus = new EventBus(redisManager);
+      this._stateManager = new StateManager(redisManager, this.name);
+      return this._eventBus;
+    }).catch((err: any)=>{
+      console.error("Failed to initialize event bus");
+      return err;
+    });
+  }
+
+  /**
+   * Gets all the registered modules from the config and creates clients for them.
+   * This will only work on known modules, since the primary usage for the sdk is internal
+   */
+  initializeModules() {
+    return this._config
+      .moduleList()
+      .then((r) => {
+        this.lastSearch = Date.now();
+        r.forEach((m) => {
+          if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+          }
         });
-    }
-
-    /**
-     * Used to refresh all modules to check for new registrations
-     * @param force If true will check for new modules no matter the interval
-     */
-    async refreshModules(force?: boolean) {
-        if (this.lastSearch < (Date.now() - 3000) || force) {
-            return this.initializeModules();
-        }
         return "ok";
-    }
-
-    get config(): Config {
-        return this._config;
-    }
-
-    get admin(): Admin {
-        return this._admin;
-    }
-
-    get router(): Router {
-        return this._router;
-    }
-
-    get inMemoryStore(): InMemoryStore | null {
-        if (this._modules["in-memory-store"]) {
-            return this._modules["in-memory-store"];
-        } else {
-            console.warn("In memory store not up yet!")
-            return null;
+      })
+      .catch((err) => {
+        if (err.code !== 5) {
+          console.error(err);
         }
-    }
+      });
+  }
 
-    get databaseProvider(): DatabaseProvider | null {
-        if (this._modules["database-provider"]) {
-            return this._modules["database-provider"];
-        } else {
-            console.warn("Database provider not up yet!")
-            return null;
-        }
-    }
+  isAvailable(moduleName: string) {
+    return this._modules[moduleName] && this._modules[moduleName].active ? true : false;
+  }
 
-    get storage(): Storage | null {
-        if (this._modules["storage"]) {
-            return this._modules["storage"];
-        } else {
-            console.warn("Storage module not up yet!");
-            return null;
-        }
+  async waitForExistence(moduleName: string) {
+    while (!this._modules[moduleName]) {
+      await this.sleep(1000);
     }
+    return true;
+  }
 
-    get emailProvider(): Email | null {
-        if (this._modules["email"]) {
-            return this._modules["email"];
-        } else {
-            console.warn("Email provider not up yet!")
-            return null;
-        }
-    }
+  sleep(ms: number) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
 
-    get pushNotifications(): PushNotifications | null {
-        if (this._modules["push-notifications"]) {
-            return this._modules["push-notifications"];
-        } else {
-            console.warn("Push notifications module not up yet!");
-            return null;
-        }
+  /**
+   * Used to refresh all modules to check for new registrations
+   * @param force If true will check for new modules no matter the interval
+   */
+  async refreshModules(force?: boolean) {
+    if (this.lastSearch < Date.now() - 3000 || force) {
+      return this.initializeModules();
     }
+    return "ok";
+  }
 
-    get authentication(): Authentication | null {
-        if (this._modules["authentication"]) {
-            return this._modules["authentication"];
-        } else {
-            console.warn("Authentication module not up yet!");
-            return null;
-        }
+  get bus(): EventBus | null {
+    if (this._eventBus) {
+      return this._eventBus
+    } else {
+      console.warn("Event bus not initialized");
+      return null;
     }
+  }
 
-    get cms(): CMS | null {
-        if (this._modules["cms"]) {
-            return this._modules["cms"];
-        } else {
-            console.warn("Cms module not up yet!");
-            return null;
-        }
+  get state(): StateManager | null {
+    if (this._stateManager) {
+      return this._stateManager
+    } else {
+      console.warn("State Manager not initialized");
+      return null;
     }
+  }
+
+  get config(): Config {
+    return this._config;
+  }
+
+  get admin(): Admin {
+    return this._admin;
+  }
+
+  get router(): Router {
+    return this._router;
+  }
+
+  get inMemoryStore(): InMemoryStore | null {
+    if (this._modules["in-memory-store"]) {
+      return this._modules["in-memory-store"];
+    } else {
+      console.warn("In memory store not up yet!");
+      return null;
+    }
+  }
+
+  get databaseProvider(): DatabaseProvider | null {
+    if (this._modules["database-provider"]) {
+      return this._modules["database-provider"];
+    } else {
+      console.warn("Database provider not up yet!");
+      return null;
+    }
+  }
+
+  get storage(): Storage | null {
+    if (this._modules["storage"]) {
+      return this._modules["storage"];
+    } else {
+      console.warn("Storage module not up yet!");
+      return null;
+    }
+  }
+
+  get emailProvider(): Email | null {
+    if (this._modules["email"]) {
+      return this._modules["email"];
+    } else {
+      console.warn("Email provider not up yet!");
+      return null;
+    }
+  }
+
+  get pushNotifications(): PushNotifications | null {
+    if (this._modules["push-notifications"]) {
+      return this._modules["push-notifications"];
+    } else {
+      console.warn("Push notifications module not up yet!");
+      return null;
+    }
+  }
+
+  get authentication(): Authentication | null {
+    if (this._modules["authentication"]) {
+      return this._modules["authentication"];
+    } else {
+      console.warn("Authentication module not up yet!");
+      return null;
+    }
+  }
+
+  get cms(): CMS | null {
+    if (this._modules["cms"]) {
+      return this._modules["cms"];
+    } else {
+      console.warn("Cms module not up yet!");
+      return null;
+    }
+  }
+
 
     get sms(): SMS | null {
         if (this._modules["sms"]) {
@@ -176,4 +240,4 @@ export * from "./interfaces";
 export * from "./models";
 export * from "./modules";
 export * from "./helpers";
-export * from './constants';
+export * from "./constants";

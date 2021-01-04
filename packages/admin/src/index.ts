@@ -47,6 +47,69 @@ export default class AdminModule extends IConduitAdmin {
     this.conduit.getRouter().registerRouteMiddleware("/admin", this.adminMiddleware);
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
     this.conduit.getRouter().registerExpressRouter("/admin", this.router);
+    this.highAvailability();
+  }
+
+  highAvailability() {
+    const self = this;
+    this.conduit
+      .getState()
+      .getKey("admin")
+      .then((r) => {
+        if (!r || r.length === 0) return;
+        let state = JSON.parse(r);
+        if (state.routes) {
+          state.routes.forEach((r: any) => {
+            self
+              ._registerGprcRoute(r.protofile, r.routes, r.url)
+              .then()
+              .catch((err) => {
+                console.log("Failed to register recovered route");
+              });
+          });
+        }
+      })
+      .catch((err) => {
+        console.log("Failed to recover state");
+      });
+
+    this.conduit.getBus().subscribe("admin", (message: string) => {
+      let messageParsed = JSON.parse(message);
+      self._registerGprcRoute(messageParsed.protofile, messageParsed.routes, messageParsed.url);
+    });
+  }
+
+  updateState(protofile: string, routes: any, url: string) {
+    this.conduit
+      .getState()
+      .getKey("admin")
+      .then((r) => {
+        let state = !r || r.length === 0 ? {} : JSON.parse(r);
+        if (!state.routes) state.routes = [];
+        state.routes.push({
+          protofile,
+          routes,
+          url,
+        });
+        return this.conduit.getState().setKey("admin", JSON.stringify(state));
+      })
+      .then((r) => {
+        console.log("Updated state");
+      })
+      .catch((err) => {
+        console.log("Failed to recover state");
+      });
+  }
+
+  publishAdminRouteData(protofile: string, routes: any, url: string) {
+    this.conduit.getBus().publish(
+      "admin",
+      JSON.stringify({
+        protofile,
+        routes,
+        url,
+      })
+    );
   }
 
   // @ts-ignore
@@ -93,7 +156,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   //grpc
-  registerAdminRoute(call: any, callback: any) {
+  async registerAdminRoute(call: any, callback: any) {
     let protofile = call.request.protoFile;
     let routes: [{ path: string; method: string; grpcFunction: string }] = call.request.routes;
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
@@ -113,10 +176,36 @@ export default class AdminModule extends IConduitAdmin {
         message: "Did not receive proper .proto file - missing Admin service",
       });
     }
+    let error;
+    let done = await this._registerGprcRoute(protofile, routes, call.request.adminUrl).catch((err) => (error = err));
+    if (error) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: "Error when registering routs",
+      });
+    } else {
+      this.publishAdminRouteData(protofile, routes, call.request.adminUrl);
+      this.updateState(protofile, routes, call.request.adminUrl);
+      //perhaps wrong(?) we send an empty response
+      callback(null, null);
+    }
+  }
 
-    let serverIp = call.request.adminUrl;
+  private async _registerGprcRoute(adminProtofile: any, routes: any, serverIp: string) {
+    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+    fs.writeFileSync(protoPath, adminProtofile);
+    var packageDefinition = protoLoader.loadSync(protoPath, {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+    });
+    let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+    adminDescriptor = this.findAdmin(adminDescriptor);
+
     let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure());
-    routes.forEach((r) => {
+    routes.forEach((r: any) => {
       let handler = (req: any, res: any, next: any) => {
         const context = (req as any).conduit;
         let params: any = {};
@@ -156,8 +245,6 @@ export default class AdminModule extends IConduitAdmin {
       };
       this.registerRoute(r.method, r.path, handler);
     });
-    //perhaps wrong(?) we send an empty response
-    callback(null, null);
   }
 
   registerRoute(method: string, route: string, handler: Handler) {

@@ -9,8 +9,10 @@ service Config {
     rpc ModuleList (Empty) returns (ModuleListResponse);
     rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+    rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
     rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
     rpc GetServerConfig (Empty) returns (GetConfigResponse);
+    rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
 }
 
 service Admin {
@@ -64,6 +66,12 @@ message RegisterConduitRouteRequest {
 
 message Empty {
 }
+
+message ModuleHealthRequest {
+    string moduleName = 1;
+    string url = 2;
+}
+
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
@@ -93,6 +101,11 @@ message ModuleExistsResponse {
 
 message GetConfigRequest {
     string key = 1;
+}
+
+message GetRedisDetailsResponse {
+    string redisHost = 1;
+    int32 redisPort = 2;
 }
 
 message GetConfigResponse {

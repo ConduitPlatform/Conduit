@@ -3,6 +3,7 @@ import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
 import {ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@quintessential-sft/conduit-sdk';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Admin } from './admin';
 
 class SecurityModule extends IConduitSecurity {
 
@@ -16,22 +17,7 @@ class SecurityModule extends IConduitSecurity {
         this.database = grpcSdk.databaseProvider!;
         this.database.createSchemaFromAdapter(ClientModel);
 
-        conduit.getAdmin().registerRoute('POST', '/client',
-            async (req: Request, res: Response, next: NextFunction) => {
-                const {clientId, clientSecret, platform} = req.body;
-
-                if (!Object.values(PlatformTypesEnum).includes(platform)) {
-                    return res.status(401).json({error: 'Invalid platform'});
-                }
-
-                await this.database.create('Client', {
-                    clientId,
-                    clientSecret,
-                    platform
-                });
-
-                return res.json({message: 'Client created'});
-            });
+        new Admin(this.conduit, grpcSdk);
 
         const router = conduit.getRouter();
 

@@ -4,8 +4,13 @@ import fs from "fs";
 import path from "path";
 
 if (process.env.CONDUIT_SERVER) {
-    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'storage');
     let storage = new StorageModule(grpcSdk);
+    let url = storage.url;
+    if (process.env.REGISTER_NAME === 'true') {
+        url = 'storage:' + url.split(':')[1];
+    }
+
     grpcSdk.config.registerModule('storage', storage.url).catch(err => {
         console.error(err)
         process.exit(-1);

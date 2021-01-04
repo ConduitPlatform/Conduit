@@ -12,6 +12,7 @@
     "convict": "^5.2.0",
     "is-natural-number": "^4.0.1",
     "lodash": "^4.17.15",
+    "redis": "^3.0.2",
     "validator": "^13.0.0"
   },
   "directories": {

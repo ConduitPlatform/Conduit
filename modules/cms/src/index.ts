@@ -7,7 +7,7 @@ import * as process from "process";
 let paths = require("./admin/admin.json")
 
 if (process.env.CONDUIT_SERVER) {
-    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+    let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'cms');
     let cms = new CMS(grpcSdk);
     let url = cms.url;
     if (process.env.REGISTER_NAME === 'true') {

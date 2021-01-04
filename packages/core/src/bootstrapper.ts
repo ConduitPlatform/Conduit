@@ -16,7 +16,7 @@ export class CoreBootstrapper {
         let primary: App;
         let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
 
-        const grpcSdk = new ConduitGrpcSdk(_url);
+        const grpcSdk = new ConduitGrpcSdk(_url, 'core');
         var server = new grpc.Server();
         var packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './core.proto'),

@@ -2,7 +2,6 @@ import * as grpc from "grpc";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { isNil } from "lodash";
 import { DatabaseConfigUtility } from "./utils/config";
-import { Config } from "convict";
 import AppConfigSchema from "./utils/config/schema/config";
 import { ConduitSDK, IConfigManager } from "@quintessential-sft/conduit-sdk";
 import { EventEmitter } from "events";
@@ -12,6 +11,7 @@ import { NextFunction, Request, Response } from "express";
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
   registeredModules: Map<string, string> = new Map<string, string>();
+  moduleHealth: any = {};
   grpcSdk: ConduitGrpcSdk;
   moduleRegister: EventEmitter;
 
@@ -29,23 +29,84 @@ export default class ConfigManager implements IConfigManager {
     server.addService(config.service, {
       get: this.getGrpc.bind(this),
       getServerConfig: this.getServerConfig.bind(this),
+      getRedisDetails: this.getRedisDetails.bind(this),
       updateConfig: this.updateConfig.bind(this),
       addFieldstoConfig: this.addFieldstoConfig.bind(this),
       moduleExists: this.moduleExists.bind(this),
       registerModule: this.registerModule.bind(this),
       moduleList: this.moduleList.bind(this),
       watchModules: this.watchModules.bind(this),
+      moduleHealthProbe: this.moduleHealthProbe.bind(this),
     });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
+    this.highAvailability();
+    const self = this;
+    setInterval(() => {
+      self.monitorModuleHealth();
+    }, 5000);
   }
 
-  initConfigAdminRoutes() {
-    this.registerAdminRoutes();
+  highAvailability() {
+    const self = this;
+    this.sdk
+      .getState()
+      .getKey("config")
+      .then((r) => {
+        if (!r || r.length === 0) return;
+        let state = JSON.parse(r);
+        if (state.modules) {
+          state.modules.forEach((r: any) => {
+            self._registerModule(r.name, r.url, r.instance);
+          });
+        }
+      })
+      .catch((err) => {
+        console.log("Failed to recover state");
+      });
+
+    this.sdk.getBus().subscribe("config", (message: string) => {
+      let messageParsed = JSON.parse(message);
+      if (messageParsed.type === "module-register") {
+        self._registerModule(messageParsed.name, messageParsed.url, messageParsed.instance);
+      } else if (messageParsed.type === "module-health") {
+        self.updateModuleHealth(messageParsed.name, messageParsed.instance);
+      }
+    });
   }
 
-  async registerAppConfig() {
-    await this.getDatabaseConfigUtility().registerConfigSchemas(AppConfigSchema);
+  updateState(name: string, url: string, instance: string) {
+    this.sdk
+      .getState()
+      .getKey("config")
+      .then((r) => {
+        let state = !r || r.length === 0 ? {} : JSON.parse(r);
+        if (!state.modules) state.modules = [];
+        state.modules.push({
+          name,
+          instance,
+          url,
+        });
+        return this.sdk.getState().setKey("config", JSON.stringify(state));
+      })
+      .then((r) => {
+        console.log("Updated state");
+      })
+      .catch((err) => {
+        console.log("Failed to recover state");
+      });
+  }
+
+  publishModuleData(type: string, name: string, instance: string, url?: string) {
+    this.sdk.getBus().publish(
+      "config",
+      JSON.stringify({
+        type,
+        name,
+        url,
+        instance,
+      })
+    );
   }
 
   getServerConfig(call: any, callback: any) {
@@ -62,6 +123,21 @@ export default class ConfigManager implements IConfigManager {
         message: "Database provider not set",
       });
     }
+  }
+
+  getRedisDetails(call: any, callback: any) {
+    callback(null, {
+      redisHost: process.env.REDIS_HOST,
+      redisPort: process.env.REDIS_PORT,
+    });
+  }
+
+  initConfigAdminRoutes() {
+    this.registerAdminRoutes();
+  }
+
+  async registerAppConfig() {
+    await this.getDatabaseConfigUtility().registerConfigSchemas(AppConfigSchema);
   }
 
   getDatabaseConfigUtility() {
@@ -207,6 +283,44 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
+  moduleHealthProbe(call: any, callback: any) {
+    this.updateModuleHealth(call.request.moduleName, call.getPeer());
+    this.publishModuleData("module-health", call.request.moduleName, call.getPeer());
+    callback(null, null);
+  }
+
+  monitorModuleHealth() {
+    let removedCount = 0;
+    Object.keys(this.moduleHealth).forEach((r) => {
+      let module = this.moduleHealth[r];
+      let unhealthyInstances = Object.keys(module).filter((instance) => module[instance] + 5000 < Date.now());
+      if (unhealthyInstances && unhealthyInstances.length > 0) {
+        removedCount += unhealthyInstances.length;
+        unhealthyInstances.forEach((instance) => {
+          delete module[instance];
+        });
+      }
+    });
+    if (removedCount > 0) {
+      let unhealthyModules = Object.keys(this.moduleHealth).filter((module) => Object.keys(module).length === 0);
+      if (unhealthyModules && unhealthyModules.length > 0) {
+        unhealthyModules.forEach((r) => {
+          delete this.moduleHealth[r];
+        });
+        this.moduleRegister.emit("module-registered");
+      }
+    }
+  }
+
+  updateModuleHealth(moduleName: string, moduleAddress: string) {
+    if (!this.moduleHealth[moduleName]) {
+      this.moduleHealth[moduleName] = {};
+    }
+    let instanceName = moduleName + "-" + moduleAddress;
+    let moduleInstances = this.moduleHealth[moduleName];
+    moduleInstances[instanceName] = Date.now();
+  }
+
   moduleList(call: any, callback: any) {
     if (this.registeredModules.size !== 0) {
       let modules: any[] = [];
@@ -241,12 +355,23 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModule(call: any, callback: any) {
-    this.registeredModules.set(call.request.moduleName, call.request.url);
-    if (call.request.moduleName === "database-provider") {
+    await this._registerModule(call.request.moduleName, call.request.url, call.getPeer());
+    this.updateState(call.request.moduleName, call.request.url, call.getPeer());
+    this.publishModuleData("mpdule-register", call.request.moduleName, call.getPeer(), call.request.url);
+    callback(null, { result: true });
+  }
+
+  private async _registerModule(moduleName: string, moduleUrl: string, instancePeer: string) {
+    let dbInit = false;
+    if (moduleName === "database-provider" && this.registeredModules.has("database-provider")) {
+      dbInit = true;
+    }
+    this.registeredModules.set(moduleName, moduleUrl);
+    if (moduleName === "database-provider" && !dbInit) {
       this.databaseCallback();
     }
+    this.updateModuleHealth(moduleName, instancePeer);
     this.moduleRegister.emit("module-registered");
-    callback(null, { result: true });
   }
 
   private registerAdminRoutes() {

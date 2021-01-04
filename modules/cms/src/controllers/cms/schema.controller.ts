@@ -6,21 +6,35 @@ import { compareFunction, getOps, sortAndConstructRoutes } from "./utils";
 import { isNil } from "lodash";
 
 export class SchemaController {
-  private _schemas: { [name: string]: any } = {}; // used to be SchemaAdapter
   private _adapter: any;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: CmsRoutes) {
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private router: CmsRoutes,
+    private readonly stateActive: boolean
+  ) {
     this._adapter = this.grpcSdk.databaseProvider!;
     this.loadExistingSchemas();
+    if (stateActive) {
+      this.initializeState();
+    }
+  }
+
+  initializeState() {
+    this.grpcSdk.bus?.subscribe("cms", (message: string) => {
+      if(message === "schema"){
+        this.refreshRoutes();
+      }
+    });
   }
 
   private async loadExistingSchemas() {
-    this._schemas["SchemaDefinitions"] = await this._adapter.createSchemaFromAdapter(schema);
+    let schemaDefinitions = await this._adapter.createSchemaFromAdapter(schema);
     this._adapter
       .findMany("SchemaDefinitions", { enabled: true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
-          resolve('ok');
+          resolve("ok");
         });
         if (r) {
           r.forEach((r: any) => {
@@ -32,9 +46,6 @@ export class SchemaController {
               .then((r) => {
                 return this._adapter.createSchemaFromAdapter(schema);
               })
-              .then((p) => {
-                this._schemas[r.name] = p;
-              });
           });
           promise.then((p) => {
             let routeSchemas: any = {};
@@ -42,13 +53,12 @@ export class SchemaController {
               if (typeof schema.modelOptions === "string") {
                 schema.modelOptions = JSON.parse(schema.modelOptions);
               }
-              if(schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+              if (schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
                 routeSchemas[schema.name] = schema;
               }
             });
             this._registerRoutes(routeSchemas);
             this.router.requestRefresh();
-            
           });
         }
       })
@@ -68,7 +78,7 @@ export class SchemaController {
             if (typeof schema.modelOptions === "string") {
               schema.modelOptions = JSON.parse(schema.modelOptions);
             }
-            if(schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+            if (schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
               routeSchemas[schema.name] = schema;
             }
           });
@@ -86,7 +96,9 @@ export class SchemaController {
   }
 
   createSchema(schema: ConduitSchema): void {
-    this._schemas[schema.name] = this._adapter.createSchemaFromAdapter(schema);
+    if(this.stateActive){
+      this.grpcSdk.bus?.publish('cms', 'schema');
+    }
     this.refreshRoutes();
   }
 
