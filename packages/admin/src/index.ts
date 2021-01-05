@@ -42,7 +42,7 @@ export default class AdminModule extends IConduitAdmin {
       .registerDirectRouter("/admin/login", (req: Request, res: Response, next: NextFunction) =>
         adminHandlers.loginAdmin(req, res, next).catch(next)
       );
-    this.conduit.getRouter().registerDirectRouter("/admin/login", (req: Request, res: Response, next: NextFunction) => {
+    this.conduit.getRouter().registerDirectRouter("/admin/modules", (req: Request, res: Response, next: NextFunction) => {
       let response: any[] = [];
       // this is used here as such, because the config manager is simply the config package
       // todo update the config manager interface so that we don't need these castings
