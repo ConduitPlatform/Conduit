@@ -85,6 +85,7 @@ const BuildTypes = () => {
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
   const [authentication, setAuthentication] = useState(false);
+  const [crudOperations, setCrudOperations] = useState(false);
   const [drawerData, setDrawerData] = useState({
     open: false,
     type: '',
@@ -109,6 +110,12 @@ const BuildTypes = () => {
         data.selectedSchema.authentication !== undefined
       ) {
         setAuthentication(data.selectedSchema.authentication);
+      }
+      if (
+        data.selectedSchema.crudOperations !== null &&
+        data.selectedSchema.crudOperations !== undefined
+      ) {
+        setCrudOperations(data.selectedSchema.crudOperations);
       }
       const formattedFields = getSchemaFields(data.selectedSchema.fields);
       setSchemaFields({ newTypeFields: formattedFields });
@@ -367,6 +374,7 @@ const BuildTypes = () => {
       <Header
         name={schemaName}
         authentication={authentication}
+        crudOperations={crudOperations}
         readOnly={readOnly}
         handleSave={handleSave}
       />
