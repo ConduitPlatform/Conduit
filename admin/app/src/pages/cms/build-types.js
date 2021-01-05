@@ -91,6 +91,7 @@ const BuildTypes = () => {
     destination: null,
   });
   const [duplicateId, setDuplicateId] = useState(false);
+  const [invalidName, setInvalidName] = useState(false);
   const [selectedProps, setSelectedProps] = useState({
     item: undefined,
     index: undefined,
@@ -166,6 +167,13 @@ const BuildTypes = () => {
     if (!Array.isArray(array)) {
       return;
     }
+    const hasInvalidName = typeData.name === 'type';
+    if (hasInvalidName) {
+      setInvalidName(true);
+      return;
+    }
+    setInvalidName(false);
+
     const hasDuplicate = array.some((item) => {
       if (selectedProps.item) {
         if (selectedProps.item.name === item.name) {
@@ -407,6 +415,7 @@ const BuildTypes = () => {
         readOnly={readOnly}
         drawerData={drawerData}
         duplicateId={duplicateId}
+        invalidName={invalidName}
         selectedItem={selectedProps.item}
         onClose={handleDrawerClose}
         onSubmit={handleSubmit}
