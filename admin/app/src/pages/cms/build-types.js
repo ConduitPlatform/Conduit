@@ -103,6 +103,9 @@ const BuildTypes = () => {
     if (data.selectedSchema) {
       setReadOnly(true);
     }
+    if (!data.selectedSchema) {
+      setCrudOperations(true);
+    }
     if (data && data.selectedSchema) {
       setSchemaName(data.selectedSchema.name);
       if (
@@ -356,12 +359,13 @@ const BuildTypes = () => {
       const editableSchema = {
         name: name,
         authentication,
+        crudOperations,
         fields: editableSchemaFields,
       };
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: name, authentication, fields: newSchemaFields };
+      const newSchema = { name: name, authentication, crudOperations, fields: newSchemaFields };
       dispatch(createNewSchema(newSchema));
     }
 
