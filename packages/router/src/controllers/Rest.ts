@@ -317,7 +317,9 @@ export class RestController {
           // @ts-ignore
           if (
             route.input.bodyParams[name] &&
+            // @ts-ignore
             route.input.bodyParams[name].type &&
+            // @ts-ignore
             typeof route.input.bodyParams[name].type !== "object"
           ) {
             // @ts-ignore
