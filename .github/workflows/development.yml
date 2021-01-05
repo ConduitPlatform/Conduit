@@ -65,8 +65,6 @@ jobs:
       run: |
           echo "//npm.pkg.github.com:_authToken=${{ secrets.PACKAGE_TOKEN }}" >> .npmrc
       working-directory: ./libraries/grpc-sdk    
-    - run: cat .npmrc
-      working-directory: ./libraries/grpc-sdk  
     - name: actually_publish
       run: npm install && npm publish
       working-directory: ./libraries/grpc-sdk
