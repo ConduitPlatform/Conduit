@@ -167,53 +167,8 @@ const BuildTypes = () => {
     if (!Array.isArray(array)) {
       return;
     }
-    const hasInvalidName = typeData.name === 'type';
-    if (hasInvalidName) {
-      setInvalidName(true);
-      return;
-    }
-    setInvalidName(false);
-
-    const hasDuplicate = array.some((item) => {
-      if (selectedProps.item) {
-        if (selectedProps.item.name === item.name) {
-          return false;
-        }
-      }
-      if (item.content) {
-        let flag = false;
-        item.content.forEach((item2) => {
-          if (selectedProps.item) {
-            if (selectedProps.item.name === typeData.name) {
-              flag = false;
-            } else if (item2.name === typeData.name) {
-              flag = true;
-            }
-          } else if (item2.name === typeData.name) {
-            flag = true;
-          }
-          if (item2.content) {
-            let flag2 = false;
-            item2.content.forEach((item3) => {
-              if (item3.name === typeData.name) {
-                flag2 = true;
-              }
-            });
-            if (flag2) flag = true;
-          }
-        });
-        if (flag) return true;
-      }
-      return item.name === typeData.name;
-    });
-
-    if (hasDuplicate) {
-      setDuplicateId(true);
-      return;
-    }
-
-    setDuplicateId(false);
-
+    let hasDuplicate = false;
+    let hasInvalidName = false;
     let droppableIdString = '';
     let isGroup = '';
     let groupId = '';
@@ -222,6 +177,64 @@ const BuildTypes = () => {
       isGroup = droppableIdString.slice(0, 5);
       groupId = droppableIdString.substr(6);
     }
+
+    hasInvalidName = typeData.name === 'type';
+    if (hasInvalidName) {
+      setInvalidName(true);
+      return;
+    }
+    setInvalidName(false);
+
+    if (isGroup !== 'group' && isGroup !== 'child') {
+      hasDuplicate = array.some((item) => {
+        if (selectedProps.item) {
+          if (selectedProps.item.name === item.name) {
+            return false;
+          }
+        }
+        return item.name === typeData.name;
+      });
+    } else if (isGroup === 'group') {
+      const group = array.find((s) => s.name === groupId);
+      if (!group) {
+        return;
+      }
+      const content = group.content;
+      hasDuplicate = content.some((item) => {
+        if (selectedProps.item) {
+          if (selectedProps.item.name === item.name) {
+            return false;
+          }
+        }
+        return item.name === typeData.name;
+      });
+    } else if (isGroup === 'child') {
+      const allGroups = array.filter((s) => s.type === 'Group');
+      const parentGroup = allGroups.find((object) => {
+        if (object.content) {
+          return object.content.find((content) => content.name === groupId);
+        }
+        return false;
+      });
+      if (!parentGroup) return;
+      const innerGroup = parentGroup.content.find((object2) => object2.name === groupId);
+      if (!innerGroup) return;
+      const content = innerGroup.content;
+      hasDuplicate = content.some((item) => {
+        if (selectedProps.item) {
+          if (selectedProps.item.name === item.name) {
+            return false;
+          }
+        }
+        return item.name === typeData.name;
+      });
+    }
+
+    if (hasDuplicate) {
+      setDuplicateId(true);
+      return;
+    }
+    setDuplicateId(false);
 
     if (selectedProps.item) {
       if (selectedProps.type === 'standard') {
