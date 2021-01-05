@@ -3,10 +3,10 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 
-const CONDUIT_API = process.env['CONDUIT_API'];
+const CONDUIT_API = process.env.CONDUIT_URL;
 
 const config = {
-  masterkey: process.env['MASTERKEY'],
+  masterkey: process.env.MASTER_KEY,
 };
 
 const JWT_CONFIG = (token) => ({
