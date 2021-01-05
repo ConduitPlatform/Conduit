@@ -159,7 +159,7 @@ const BuildTypesDrawer = ({
           <Typography variant={'button'} className={classes.duplicateId}>
             Warning! Invalid Field name
           </Typography>
-          <Typography variant={'body1'}>Field name type is not allowed</Typography>
+          <Typography variant={'body1'}>Field name type is forbidden</Typography>
         </Box>
       )}
     </Drawer>
