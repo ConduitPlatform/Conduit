@@ -42,11 +42,13 @@ function extractRequestData(req: Request) {
 export class RestController {
   private _router!: Router;
   private _middlewares?: { [field: string]: ConduitMiddleware[] };
-  private _registeredRoutes: Map<string, Handler | ConduitRoute>;
+  private _registeredRoutes: Map<string, ConduitRoute>;
+  private _registeredLocalRoutes: Map<string, Handler>;
   private _swaggerDoc: any;
 
   constructor() {
     this._registeredRoutes = new Map();
+    this._registeredLocalRoutes = new Map();
     this._swaggerDoc = {
       openapi: "3.0.0",
       info: {
@@ -81,10 +83,24 @@ export class RestController {
     this._router(req, res, next);
   }
 
+  cleanupRoutes(routes: any[]) {
+    let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
+    routes.forEach((route: any) => {
+      let key = `${route.action}-${route.path}`;
+      if (this._registeredRoutes.has(key)) {
+        newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
+      }
+    });
+
+    this._registeredRoutes.clear();
+    this._registeredRoutes = newRegisteredRoutes;
+    this.refreshRouter();
+  }
+
   registerRoute(path: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
     const key = `*-${path}`;
-    const registered = this._registeredRoutes.has(key);
-    this._registeredRoutes.set(key, router);
+    const registered = this._registeredLocalRoutes.has(key);
+    this._registeredLocalRoutes.set(key, router);
     if (registered) {
       this.refreshRouter();
     } else {
@@ -180,10 +196,10 @@ export class RestController {
           return route.executeRequest(context);
         })
         .then((r: any) => {
-          if(r.redirect){
+          if (r.redirect) {
             res.redirect(r.redirect);
-          }else{
-            res.status(200).json(JSON.parse(r.result))
+          } else {
+            res.status(200).json(JSON.parse(r.result));
           }
         })
         .catch((err: Error | ConduitError | any) => {
@@ -299,7 +315,11 @@ export class RestController {
         let type = "";
         if (typeof route.input.bodyParams[name] === "object") {
           // @ts-ignore
-          if (route.input.bodyParams[name] && route.input.bodyParams[name].type && typeof route.input.bodyParams[name].type !== "object") {
+          if (
+            route.input.bodyParams[name] &&
+            route.input.bodyParams[name].type &&
+            typeof route.input.bodyParams[name].type !== "object"
+          ) {
             // @ts-ignore
             type = route.input.bodyParams[name].type.toLowerCase();
           } else {
@@ -336,13 +356,12 @@ export class RestController {
 
   private refreshRouter() {
     this.initializeRouter();
+    this._registeredLocalRoutes.forEach((route, key) => {
+      const [method, path] = key.split("-");
+      this.addRoute(path, route);
+    });
     this._registeredRoutes.forEach((route, key) => {
-      if (route instanceof ConduitRoute) {
-        this.addConduitRoute(route);
-      } else {
-        const [method, path] = key.split("-");
-        this.addRoute(path, route);
-      }
+      this.addConduitRoute(route);
     });
   }
 
@@ -350,7 +369,7 @@ export class RestController {
     this._router = Router();
     const self = this;
     this._router.use("/swagger", swaggerUi.serve);
-    this._router.get("/swagger",(req,res,next) => swaggerUi.setup(self._swaggerDoc)(req,res,next));
+    this._router.get("/swagger", (req, res, next) => swaggerUi.setup(self._swaggerDoc)(req, res, next));
     this._router.get("/swagger.json", (req, res) => {
       res.send(JSON.stringify(this._swaggerDoc));
     });

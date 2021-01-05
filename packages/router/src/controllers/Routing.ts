@@ -57,5 +57,9 @@ export class ConduitRoutingController {
         this._restRouter.registerConduitRoute(route);
     }
 
+    cleanupRoutes(routes: any[]){
+        this._graphQLRouter?.cleanupRoutes(routes);
+        this._restRouter.cleanupRoutes(routes);
+    }
 
 }

@@ -12,6 +12,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _internalRouter: ConduitRoutingController;
   private _globalMiddlewares: string[];
   private _routes: any[];
+  private _grpcRoutes: any = {};
   grpcSdk: ConduitGrpcSdk;
 
   constructor(app: Application, grpcSdk: ConduitGrpcSdk, packageDefinition: any, server: grpc.Server) {
@@ -42,21 +43,22 @@ export class ConduitDefaultRouter implements IConduitRouter {
         if (state.routes) {
           state.routes.forEach((r: any) => {
             try {
-                let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute({
-                  protoFile: r.protofile,
-                  routes: r.routes,
-                  routerUrl: r.url,
-                });
-                routes.forEach((r) => {
-                  if (r instanceof ConduitMiddleware) {
-                    this.registerRouteMiddleware(r);
-                  } else {
-                    this.registerRoute(r);
-                  }
-                });
-              } catch (err) {
-                console.error(err);
-              }
+              let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute({
+                protoFile: r.protofile,
+                routes: r.routes,
+                routerUrl: r.url,
+              });
+              this._grpcRoutes[r.url] = r.routes;
+              routes.forEach((r) => {
+                if (r instanceof ConduitMiddleware) {
+                  this.registerRouteMiddleware(r);
+                } else {
+                  this.registerRoute(r);
+                }
+              });
+            } catch (err) {
+              console.error(err);
+            }
           });
         }
       })
@@ -72,6 +74,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           routes: messageParsed.routes,
           routerUrl: messageParsed.url,
         });
+        this._grpcRoutes[messageParsed.url] = messageParsed.routes;
         routes.forEach((r) => {
           if (r instanceof ConduitMiddleware) {
             this.registerRouteMiddleware(r);
@@ -79,6 +82,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
             this.registerRoute(r);
           }
         });
+        this.cleanupRoutes();
       } catch (err) {
         console.error(err);
       }
@@ -130,6 +134,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
           this.registerRoute(r);
         }
       });
+      this._grpcRoutes[call.request.routerUrl] = call.request.routes;
+      this.cleanupRoutes();
       this.publishAdminRouteData(call.request.protoFile, call.request.routes, call.request.routerUrl);
       this.updateState(call.request.protoFile, call.request.routes, call.request.routerUrl);
     } catch (err) {
@@ -140,6 +146,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
     //todo definitely missing an error handler here
     //perhaps wrong(?) we send an empty response
     callback(null, null);
+  }
+
+  cleanupRoutes(){
+    let routes:{action: string, path:string}[] = Object.keys(this._grpcRoutes).map(route=>{action: route.options.action, path: route.options.path});
+    this._internalRouter.cleanupRoutes;
   }
 
   initGraphQL() {

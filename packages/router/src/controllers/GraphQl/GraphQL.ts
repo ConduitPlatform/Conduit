@@ -217,6 +217,19 @@ export class GraphQLController {
     return primaryPromise;
   }
 
+  cleanupRoutes(routes: any[]){
+    let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
+    routes.forEach((route:any)=>{
+      let key = `${route.action}-${route.path}`;
+      if(this._registeredRoutes.has(key)){
+        newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
+      }
+    });
+    this._registeredRoutes.clear();
+    this._registeredRoutes = newRegisteredRoutes;
+    this.refreshRoutes();
+  }
+
   registerConduitRoute(route: ConduitRoute) {
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
