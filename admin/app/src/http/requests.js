@@ -2,11 +2,14 @@ import axios from 'axios';
 import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
+import getConfig from 'next/config';
 
-const CONDUIT_API = process.env.CONDUIT_URL;
+const { publicRuntimeConfig } = getConfig();
+
+const CONDUIT_API = publicRuntimeConfig.CONDUIT_URL;
 
 const config = {
-  masterkey: process.env.MASTER_KEY,
+  masterkey: publicRuntimeConfig.MASTER_KEY,
 };
 
 const JWT_CONFIG = (token) => ({

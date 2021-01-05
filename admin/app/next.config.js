@@ -1,4 +1,5 @@
-const { PHASE_PRODUCTION_BUILD, PHASE_DEVELOPMENT_SERVER } = require('next/constants');
+const { PHASE_PRODUCTION_BUILD } = require('next/constants');
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 
 module.exports = (phase) => {
   // when started in development mode `next dev` or `npm run dev`
@@ -23,5 +24,11 @@ module.exports = (phase) => {
     })(),
   };
 
-  return { env };
+  const publicRuntimeConfig = {
+    // Will only be available on the server side
+    CONDUIT_URL: process.env.CONDUIT_URL,
+    MASTER_KEY: process.env.MASTER_KEY,
+  };
+
+  return { env, publicRuntimeConfig };
 };
