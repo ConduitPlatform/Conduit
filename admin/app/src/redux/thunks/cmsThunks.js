@@ -237,6 +237,8 @@ export const createCustomEndpoints = (endPointData) => {
       name: endPointData.name,
       operation: endPointData.operation,
       selectedSchema: endPointData.selectedSchema,
+      authentication: endPointData.authentication,
+      paginated: endPointData.paginated,
       inputs: endPointData.inputs,
       queries: endPointData.queries,
       assignments: endPointData.assignments,

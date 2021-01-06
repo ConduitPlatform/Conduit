@@ -251,7 +251,7 @@ export const prepareFields = (typeFields) => {
     }
 
     if (clone.type === 'Relation') {
-      fields.model = clone.relation.toString();
+      fields.model = clone.model.toString();
     }
 
     delete clone.name;

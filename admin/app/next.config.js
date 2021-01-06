@@ -22,6 +22,8 @@ module.exports = (phase) => {
       }
       return 'MASTER_KEY:not (isDev,isProd && isProd)';
     })(),
+    IS_DEV: isDev,
+    IS_PROD: isProd,
   };
 
   const publicRuntimeConfig = {

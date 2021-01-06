@@ -4,12 +4,14 @@ import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 import getConfig from 'next/config';
 
-const { publicRuntimeConfig } = getConfig();
+const {
+  publicRuntimeConfig: { CONDUIT_URL, MASTER_KEY },
+} = getConfig();
 
-const CONDUIT_API = publicRuntimeConfig.CONDUIT_URL;
+const CONDUIT_API = process.env.IS_DEV ? process.env.CONDUIT_URL : CONDUIT_URL;
 
 const config = {
-  masterkey: publicRuntimeConfig.MASTER_KEY,
+  masterkey: process.env.IS_DEV ? process.env.MASTER_KEY : MASTER_KEY,
 };
 
 const JWT_CONFIG = (token) => ({
