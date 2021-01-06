@@ -46,8 +46,8 @@ const EndpointQueries = ({
             onChange={(event) => handleQueryFieldChange(event, index)}>
             <option aria-label="None" value="" />
             {availableFieldsOfSchema.map((field, index) => (
-              <option key={`idx-${index}-field`} value={field}>
-                {field}
+              <option key={`idx-${index}-field`} value={field.name}>
+                {field.name}
               </option>
             ))}
           </Select>
@@ -100,8 +100,8 @@ const EndpointQueries = ({
             </optgroup>
             <optgroup label="Schema Fields">
               {availableFieldsOfSchema.map((field, index) => (
-                <option key={`idx-${index}-field`} value={'Schema-' + field}>
-                  {field}
+                <option key={`idx-${index}-field`} value={'Schema-' + field.name}>
+                  {field.name}
                 </option>
               ))}
             </optgroup>
