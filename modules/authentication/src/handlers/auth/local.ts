@@ -48,8 +48,12 @@ export class LocalHandlers {
     }
 
     private async initDbAndEmail() {
+        await this.grpcSdk.config.moduleExists('database-provider');
+        await this.grpcSdk.config.moduleExists('email');
+
         await this.grpcSdk.waitForExistence('database-provider');
         await this.grpcSdk.waitForExistence('email');
+        
         this.database = this.grpcSdk.databaseProvider;
         this.emailModule = this.grpcSdk.emailProvider;
         
