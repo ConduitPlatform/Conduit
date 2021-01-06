@@ -20,11 +20,7 @@ export class CustomEndpointHandler {
     let params = JSON.parse(call.request.params);
     let searchString = "";
     let createString = "";
-
-    if ('params' in params) {
-      params = params.params;
-    }
-
+    
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       endpoint.queries!.forEach(
@@ -32,16 +28,22 @@ export class CustomEndpointHandler {
           if (searchString.length !== 0) searchString += ",";
           if (r.comparisonField.type === "Input") {
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
-          } else if (r.comparisonField.type === 'Context') {
+          } else if (r.comparisonField.type === "Context") {
             if (isNil(call.request.context)) {
-              return callback({code: grpc.status.INTERNAL, message: `Field ${r.comparisonField.value} is missing from context`});
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.comparisonField.value} is missing from context`,
+              });
             }
             let context: any = call.request.context;
-            for (const key of r.comparisonField.value.split('.')) {
+            for (const key of r.comparisonField.value.split(".")) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
-                return callback({code: grpc.status.INTERNAL, message: `Field ${r.comparisonField.value} is missing from context`});
+                return callback({
+                  code: grpc.status.INTERNAL,
+                  message: `Field ${r.comparisonField.value} is missing from context`,
+                });
               }
             }
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(context));
@@ -53,34 +55,62 @@ export class CustomEndpointHandler {
     }
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
-      endpoint.assignments!.forEach((r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
-        if (createString.length !== 0) createString += ",";
-        if (r.assignmentField.type === "Input") {
-          createString += constructAssignment(r.schemaField, r.action, JSON.stringify(params[r.assignmentField.value]));
-        } else if (r.assignmentField.type === 'Context') {
-          if (isNil(call.request.context)) {
-            return callback({code: grpc.status.INTERNAL, message: `Field ${r.assignmentField.value} is missing from context`});
-          }
-          let context: any = call.request.context;
-          for (const key of r.assignmentField.value.split('.')) {
-            if (context.hasOwnProperty(key)) {
-              context = context[key];
-            } else {
-              return callback({code: grpc.status.INTERNAL, message: `Field ${r.assignmentField.value} is missing from context`});
+      endpoint.assignments!.forEach(
+        (r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
+          if (createString.length !== 0) createString += ",";
+          if (r.assignmentField.type === "Input") {
+            createString += constructAssignment(
+              r.schemaField,
+              r.action,
+              JSON.stringify(params[r.assignmentField.value])
+            );
+          } else if (r.assignmentField.type === "Context") {
+            if (isNil(call.request.context)) {
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.assignmentField.value} is missing from context`,
+              });
             }
+            let context: any = call.request.context;
+            for (const key of r.assignmentField.value.split(".")) {
+              if (context.hasOwnProperty(key)) {
+                context = context[key];
+              } else {
+                return callback({
+                  code: grpc.status.INTERNAL,
+                  message: `Field ${r.assignmentField.value} is missing from context`,
+                });
+              }
+            }
+            searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
+          } else {
+            createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
           }
-          searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
-        } else {
-          createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
         }
-      });
+      );
     }
 
     searchString = "{" + searchString + "}";
     createString = "{" + createString + "}";
     let promise;
     if (endpoint.operation === 0) {
-      promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchemaName, JSON.parse(searchString));
+      if (endpoint.paginated) {
+        const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
+          endpoint.selectedSchemaName,
+          JSON.parse(searchString),
+          null,
+          params["skip"],
+          params["limit"]
+        );
+        const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
+          endpoint.selectedSchemaName,
+          JSON.parse(searchString)
+        );
+
+        promise = Promise.all([documentsPromise, countPromise]);
+      } else {
+        promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchemaName, JSON.parse(searchString));
+      }
     } else if (endpoint.operation === 1) {
       promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, JSON.parse(createString));
     } else if (endpoint.operation === 2) {
@@ -103,6 +133,11 @@ export class CustomEndpointHandler {
         } else if (endpoint.operation === 2) {
           // find a way to return updated documents
           r = ["Ok"];
+        } else if (endpoint.operation === 0 && endpoint.paginated) {
+          r = {
+            documents: r[0],
+            documentsCount: r[1],
+          };
         }
         callback(null, { result: JSON.stringify({ result: r }) });
       })

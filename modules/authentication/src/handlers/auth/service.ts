@@ -49,7 +49,7 @@ export class ServiceHandler {
 
     async authenticate(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const { serviceName, token } = JSON.parse(call.request.params).params;
+        const { serviceName, token } = JSON.parse(call.request.params);
 
         if (isNil(serviceName) || isNil(token)) return callback({
             code: grpc.status.INVALID_ARGUMENT,

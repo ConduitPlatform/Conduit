@@ -373,7 +373,7 @@ export class LocalHandlers {
 
         const clientId = context.clientId;
 
-        const { email, code } = JSON.parse(call.request.params).params;
+        const { email, code } = JSON.parse(call.request.params);
         if (isNil(email) || isNil(code)) return callback({
             code: grpc.status.INVALID_ARGUMENT, message: 'No email or 2fa code provided'
         });

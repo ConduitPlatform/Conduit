@@ -36,6 +36,7 @@ export class CustomEndpointController {
         });
 
         this.router.addRoutes(routes, false);
+        this.router.requestRefresh();
       })
       .catch((err: Error) => {
         console.error("Something went wrong when loading custom endpoints to the router");
@@ -48,7 +49,7 @@ export class CustomEndpointController {
       this.grpcSdk.bus?.publish('cms', 'customEndpoint');
     }
     this.refreshRoutes().then((r:any) => {
-      this.router.requestRefresh();
+      console.log("Refreshed routes");
     });
   }
 }

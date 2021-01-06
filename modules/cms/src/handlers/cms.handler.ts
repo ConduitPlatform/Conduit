@@ -81,7 +81,7 @@ export class CmsHandlers {
     }
 
     async createDocument(call: any, callback: any) {
-        const inputDocument = JSON.parse(call.request.params).params;
+        const inputDocument = JSON.parse(call.request.params);
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
@@ -102,7 +102,7 @@ export class CmsHandlers {
     }
 
     async createManyDocuments(call: any, callback: any) {
-        const inputDocuments = JSON.parse(call.request.params).params.docs;
+        const inputDocuments = JSON.parse(call.request.params).docs;
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
@@ -123,7 +123,8 @@ export class CmsHandlers {
     }
 
     async editDocument(call: any, callback: any) {
-        const {id, params} = JSON.parse(call.request.params);
+        const params = JSON.parse(call.request.params);
+        const id = params.id
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
@@ -149,7 +150,7 @@ export class CmsHandlers {
     }
 
     async editManyDocuments(call: any, callback: any) {
-        const {params} = JSON.parse(call.request.params);
+        const params = JSON.parse(call.request.params);
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;

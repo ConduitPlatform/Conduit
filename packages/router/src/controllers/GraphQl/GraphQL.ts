@@ -292,7 +292,10 @@ export class GraphQLController {
           .checkMiddlewares(context, route.input.middlewares)
           .then((r: any) => {
             Object.assign(context.context, r);
-            return route.executeRequest.bind(route)({ ...context, params: args });
+
+            let params = Object.assign(args, args.params);
+            delete params.params;
+            return route.executeRequest.bind(route)({ ...context, params });
           })
           .then((r: any) => {
             let result = r.result ? r.result : r;

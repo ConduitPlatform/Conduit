@@ -1,9 +1,6 @@
 import {
-  ConduitError,
-  ConduitMiddleware,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteParameters,
 } from "@quintessential-sft/conduit-sdk";
 
 export class SwaggerGenerator {
@@ -141,5 +138,7 @@ export class SwaggerGenerator {
     this._swaggerDoc.paths[path] = { ...this._swaggerDoc.paths[path], method };
   }
 
-  getSwaggerDoc() {}
+  get swaggerDoc() {
+      return this._swaggerDoc;
+  }
 }

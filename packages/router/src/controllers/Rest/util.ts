@@ -15,9 +15,6 @@ export function extractRequestData(req: Request) {
     Object.assign(params, req.params);
   }
 
-  if (req.headers) {
-    Object.assign(params, req.headers);
-  }
   if (params.populate) {
     if (params.populate.includes(",")) {
       params.populate = params.populate.split(",");

@@ -214,9 +214,9 @@ export class RestController {
     this._router = Router();
     const self = this;
     this._router.use("/swagger", swaggerUi.serve);
-    this._router.get("/swagger", (req, res, next) => swaggerUi.setup(self._swagger.getSwaggerDoc())(req, res, next));
+    this._router.get("/swagger", (req, res, next) => swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next));
     this._router.get("/swagger.json", (req, res) => {
-      res.send(JSON.stringify(this._swagger.getSwaggerDoc()));
+      res.send(JSON.stringify(this._swagger.swaggerDoc));
     });
     this._router.use((req: Request, res: Response, next: NextFunction) => {
       next();
