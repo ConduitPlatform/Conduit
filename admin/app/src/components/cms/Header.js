@@ -73,19 +73,30 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Header = ({ name, authentication, readOnly, handleSave, ...rest }) => {
+const Header = ({
+  name,
+  authentication,
+  crudOperations,
+  readOnly,
+  handleSave,
+  ...rest
+}) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const [schemaName, setSchemaName] = useState(name);
   const [schemaAuthentication, setSchemaAuthentication] = useState(false);
+  const [schemaCrudOperations, setSchemaCrudOperations] = useState(false);
 
   useEffect(() => {
     setSchemaName(name);
     if (authentication !== null && authentication !== undefined) {
       setSchemaAuthentication(authentication);
     }
-  }, [authentication, name]);
+    if (crudOperations !== null && crudOperations !== undefined) {
+      setSchemaCrudOperations(crudOperations);
+    }
+  }, [authentication, crudOperations, name]);
 
   const handleDataName = (event) => {
     setSchemaName(event.target.value);
@@ -131,6 +142,19 @@ const Header = ({ name, authentication, readOnly, handleSave, ...rest }) => {
             />
           }
           label="Authentication required"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              className={classes.checkbox}
+              checked={schemaCrudOperations}
+              onChange={(event) => {
+                setSchemaCrudOperations(event.target.checked);
+              }}
+              name="crudOperations"
+            />
+          }
+          label="Allow Crud Operations"
         />
       </Box>
       <Box display={'flex'} alignItems={'center'}>

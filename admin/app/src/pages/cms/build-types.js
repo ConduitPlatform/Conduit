@@ -85,6 +85,7 @@ const BuildTypes = () => {
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
   const [authentication, setAuthentication] = useState(false);
+  const [crudOperations, setCrudOperations] = useState(false);
   const [drawerData, setDrawerData] = useState({
     open: false,
     type: '',
@@ -103,6 +104,9 @@ const BuildTypes = () => {
     if (data.selectedSchema) {
       setReadOnly(true);
     }
+    if (!data.selectedSchema) {
+      setCrudOperations(true);
+    }
     if (data && data.selectedSchema) {
       setSchemaName(data.selectedSchema.name);
       if (
@@ -110,6 +114,12 @@ const BuildTypes = () => {
         data.selectedSchema.authentication !== undefined
       ) {
         setAuthentication(data.selectedSchema.authentication);
+      }
+      if (
+        data.selectedSchema.crudOperations !== null &&
+        data.selectedSchema.crudOperations !== undefined
+      ) {
+        setCrudOperations(data.selectedSchema.crudOperations);
       }
       const formattedFields = getSchemaFields(data.selectedSchema.fields);
       setSchemaFields({ newTypeFields: formattedFields });
@@ -370,12 +380,13 @@ const BuildTypes = () => {
       const editableSchema = {
         name: name,
         authentication,
+        crudOperations,
         fields: editableSchemaFields,
       };
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: name, authentication, fields: newSchemaFields };
+      const newSchema = { name: name, authentication, crudOperations, fields: newSchemaFields };
       dispatch(createNewSchema(newSchema));
     }
 
@@ -388,6 +399,7 @@ const BuildTypes = () => {
       <Header
         name={schemaName}
         authentication={authentication}
+        crudOperations={crudOperations}
         readOnly={readOnly}
         handleSave={handleSave}
       />
