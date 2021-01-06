@@ -94,7 +94,7 @@ const OperationSection = ({
               name="authentication"
             />
           }
-          label="Requires authentication"
+          label="Authenticated"
         />
       </Grid>
       {selectedOperation === OperationsEnum.GET && (
