@@ -33,6 +33,8 @@ const OperationSection = ({
   handleSchemaChange,
   authentication,
   handleAuthenticationChange,
+  paginated,
+  handlePaginatedChange,
 }) => {
   const classes = useStyles();
   return (
@@ -58,7 +60,7 @@ const OperationSection = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={5}>
+      <Grid item xs={4}>
         <FormControl className={classes.formControl}>
           <InputLabel htmlFor="select_schema">Select Schema</InputLabel>
           <Select
@@ -81,7 +83,7 @@ const OperationSection = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
+      <Grid item xs={selectedOperation === OperationsEnum.GET ? 2 : 4}>
         <FormControlLabel
           control={
             <Checkbox
@@ -92,9 +94,25 @@ const OperationSection = ({
               name="authentication"
             />
           }
-          label="Requires authentication"
+          label="Authenticated"
         />
       </Grid>
+      {selectedOperation === OperationsEnum.GET && (
+        <Grid item xs={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                disabled={!editMode}
+                color={'primary'}
+                checked={paginated}
+                onChange={handlePaginatedChange}
+                name="paginated"
+              />
+            }
+            label="Paginated"
+          />
+        </Grid>
+      )}
     </>
   );
 };

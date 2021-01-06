@@ -12,7 +12,7 @@ import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
 
-const useStyles = makeStyles((theme) => ({}));
+const useStyles = makeStyles(() => ({}));
 
 const EndpointAssignments = ({
   operationType,
@@ -144,7 +144,7 @@ const EndpointAssignments = ({
           />
         </Grid>
       ) : (
-        <Grid item xs={2}></Grid>
+        <Grid item xs={2} />
       )}
       <Grid item xs={1}>
         {operationType !== OperationEnum.POST && (
