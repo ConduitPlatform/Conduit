@@ -149,7 +149,12 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   cleanupRoutes(){
-    let routes: {action: string, path:string}[] = Object.keys(this._grpcRoutes).map((route:any)=>{return {action: route.options.action, path: route.options.path}});
+    let routes: {action: string, path:string}[] = [];
+     Object.keys(this._grpcRoutes)
+     .forEach((grpcRoute:string)=>{
+      let routesArray = this._grpcRoutes[grpcRoute];
+      routes.push(...routesArray.map((route:any)=>{return {action: route.options.action, path: route.options.path}}));
+     })
     this._internalRouter.cleanupRoutes;
   }
 
