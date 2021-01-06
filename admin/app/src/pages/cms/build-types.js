@@ -386,10 +386,14 @@ const BuildTypes = () => {
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
-      const newSchema = { name: name, authentication, crudOperations, fields: newSchemaFields };
+      const newSchema = {
+        name: name,
+        authentication,
+        crudOperations,
+        fields: newSchemaFields,
+      };
       dispatch(createNewSchema(newSchema));
     }
-
     dispatch(clearSelectedSchema());
     router.push({ pathname: '/cms' });
   };

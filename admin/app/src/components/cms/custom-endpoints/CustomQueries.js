@@ -65,6 +65,7 @@ const CustomQueries = ({
   const [selectedSchema, setSelectedSchema] = useState();
   const [authentication, setAuthentication] = useState(false);
   const [paginated, setPaginated] = useState(false);
+  const [sorted, setSorted] = useState(false);
   const [selectedInputs, setSelectedInputs] = useState([]);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [selectedAssignments, setSelectedAssignments] = useState([]);
@@ -93,6 +94,7 @@ const CustomQueries = ({
       if (selectedEndpoint.authentication)
         setAuthentication(selectedEndpoint.authentication);
       if (selectedEndpoint.paginated) setPaginated(selectedEndpoint.paginated);
+      if (selectedEndpoint.sorted) setSorted(selectedEndpoint.sorted);
 
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
       if (fields) {
@@ -141,6 +143,7 @@ const CustomQueries = ({
       selectedSchema: schema._id,
       authentication: authentication,
       paginated: paginated,
+      sorted: sorted,
       inputs: selectedInputs,
       queries: selectedQueries,
       assignments: selectedAssignments,
@@ -159,6 +162,7 @@ const CustomQueries = ({
       selectedSchema: schema._id,
       authentication: authentication,
       paginated: paginated,
+      sorted: sorted,
       inputs: selectedInputs,
       queries: selectedQueries,
       assignments: selectedAssignments,
@@ -261,6 +265,10 @@ const CustomQueries = ({
 
   const handlePaginatedChange = (event) => {
     setPaginated(event.target.checked);
+  };
+
+  const handleSortedChange = (event) => {
+    setSorted(event.target.checked);
   };
 
   const handleInputNameChange = (event, index) => {
@@ -712,6 +720,8 @@ const CustomQueries = ({
               handleAuthenticationChange={handleAuthenticationChange}
               paginated={paginated}
               handlePaginatedChange={handlePaginatedChange}
+              sorted={sorted}
+              handleSortedChange={handleSortedChange}
             />
             {renderDetails()}
             {renderSaveSection()}
