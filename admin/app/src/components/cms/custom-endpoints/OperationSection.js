@@ -35,11 +35,13 @@ const OperationSection = ({
   handleAuthenticationChange,
   paginated,
   handlePaginatedChange,
+  sorted,
+  handleSortedChange,
 }) => {
   const classes = useStyles();
   return (
     <>
-      <Grid item xs={4}>
+      <Grid item xs={3}>
         <FormControl className={classes.formControl}>
           <InputLabel htmlFor="select_operation">Select Operation</InputLabel>
           <Select
@@ -60,7 +62,7 @@ const OperationSection = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={4}>
+      <Grid item xs={3}>
         <FormControl className={classes.formControl}>
           <InputLabel htmlFor="select_schema">Select Schema</InputLabel>
           <Select
@@ -110,6 +112,22 @@ const OperationSection = ({
               />
             }
             label="Paginated"
+          />
+        </Grid>
+      )}
+      {selectedOperation === OperationsEnum.GET && (
+        <Grid item xs={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                disabled={!editMode}
+                color={'primary'}
+                checked={sorted}
+                onChange={handleSortedChange}
+                name="sorted"
+              />
+            }
+            label="Sorted"
           />
         </Grid>
       )}
