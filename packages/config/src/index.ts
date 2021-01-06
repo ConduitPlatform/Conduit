@@ -114,7 +114,7 @@ export default class ConfigManager implements IConfigManager {
       return this.grpcSdk.databaseProvider!.findOne("Config", {}).then(async (dbConfig: any) => {
         if (isNil(dbConfig)) throw new Error("Config not found in the database");
         callback(null, {
-          data: JSON.stringify({ url: dbConfig.hostUrl, env: dbConfig.env, modules: dbConfig.activatedModules }),
+          data: JSON.stringify({ url: dbConfig["moduleConfigs"]["core"].hostUrl, env: dbConfig["moduleConfigs"]["core"].env}),
         });
       });
     } else {
