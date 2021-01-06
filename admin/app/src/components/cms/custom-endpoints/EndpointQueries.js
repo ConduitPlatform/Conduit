@@ -128,7 +128,7 @@ const EndpointQueries = ({
           />
         </Grid>
       ) : (
-        <Grid item xs={1}></Grid>
+        <Grid item xs={1} />
       )}
       <Grid item xs={1}>
         <IconButton
