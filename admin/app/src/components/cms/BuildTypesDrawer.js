@@ -36,6 +36,7 @@ const BuildTypesDrawer = ({
   onClose,
   selectedItem,
   duplicateId,
+  invalidName,
   ...rest
 }) => {
   const classes = useStyles();
@@ -151,6 +152,14 @@ const BuildTypesDrawer = ({
             Warning! Duplicate Field name
           </Typography>
           <Typography variant={'body1'}>Please provide a unique field name</Typography>
+        </Box>
+      )}
+      {invalidName && (
+        <Box textAlign={'center'}>
+          <Typography variant={'button'} className={classes.duplicateId}>
+            Warning! Invalid Field name
+          </Typography>
+          <Typography variant={'body1'}>Field name type is forbidden</Typography>
         </Box>
       )}
     </Drawer>
