@@ -10,7 +10,6 @@ service Config {
     rpc WatchModules (Empty) returns (stream ModuleListResponse);
     rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
     rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
-    rpc RegisterModulesConfig (RegisterModulesConfigRequest) returns (Empty);
     rpc GetServerConfig (Empty) returns (GetConfigResponse);
     rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
 }

@@ -22,7 +22,7 @@ export class SchemaController {
 
   initializeState() {
     this.grpcSdk.bus?.subscribe("cms", (message: string) => {
-      if(message === "schema"){
+      if (message === "schema") {
         this.refreshRoutes();
       }
     });
@@ -42,10 +42,9 @@ export class SchemaController {
               r.modelOptions = JSON.parse(r.modelOptions);
             }
             const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
-            promise = promise
-              .then((r) => {
-                return this._adapter.createSchemaFromAdapter(schema);
-              })
+            promise = promise.then((r) => {
+              return this._adapter.createSchemaFromAdapter(schema);
+            });
           });
           promise.then((p) => {
             let routeSchemas: any = {};
@@ -96,10 +95,18 @@ export class SchemaController {
   }
 
   createSchema(schema: ConduitSchema): void {
-    if(this.stateActive){
-      this.grpcSdk.bus?.publish('cms', 'schema');
-    }
-    this.refreshRoutes();
+    this._adapter
+      .createSchemaFromAdapter(schema)
+      .then((r:any) => {
+        if (this.stateActive) {
+          this.grpcSdk.bus?.publish("cms", "schema");
+        }
+        this.refreshRoutes();
+      })
+      .catch((err: any) => {
+        console.log("Failed to create schema for cms");
+        console.log(err);
+      });
   }
 
   private _registerRoutes(schemas: { [name: string]: any }) {
