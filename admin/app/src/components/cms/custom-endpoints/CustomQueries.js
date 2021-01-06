@@ -64,6 +64,7 @@ const CustomQueries = ({
   const [selectedOperation, setSelectedOperation] = useState();
   const [selectedSchema, setSelectedSchema] = useState();
   const [authentication, setAuthentication] = useState(false);
+  const [paginated, setPaginated] = useState(false);
   const [selectedInputs, setSelectedInputs] = useState([]);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [selectedAssignments, setSelectedAssignments] = useState([]);
@@ -91,6 +92,7 @@ const CustomQueries = ({
       setSelectedSchema(selectedEndpoint.selectedSchema);
       if (selectedEndpoint.authentication)
         setAuthentication(selectedEndpoint.authentication);
+      if (selectedEndpoint.paginated) setPaginated(selectedEndpoint.paginated);
 
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
       if (fields) {
@@ -138,6 +140,7 @@ const CustomQueries = ({
       operation: Number(selectedOperation),
       selectedSchema: schema._id,
       authentication: authentication,
+      paginated: paginated,
       inputs: selectedInputs,
       queries: selectedQueries,
       assignments: selectedAssignments,
@@ -155,6 +158,7 @@ const CustomQueries = ({
       operation: Number(selectedOperation),
       selectedSchema: schema._id,
       authentication: authentication,
+      paginated: paginated,
       inputs: selectedInputs,
       queries: selectedQueries,
       assignments: selectedAssignments,
@@ -253,6 +257,10 @@ const CustomQueries = ({
 
   const handleAuthenticationChange = (event) => {
     setAuthentication(event.target.checked);
+  };
+
+  const handlePaginatedChange = (event) => {
+    setPaginated(event.target.checked);
   };
 
   const handleInputNameChange = (event, index) => {
@@ -456,8 +464,7 @@ const CustomQueries = ({
   };
 
   const maxInputs = () => {
-    const max = selectedInputs.length === availableFieldsOfSchema.length;
-    return max;
+    return selectedInputs.length === availableFieldsOfSchema.length;
   };
 
   const disableSubmit = () => {
@@ -574,7 +581,7 @@ const CustomQueries = ({
           </Button>
         </Grid>
         <Grid item xs={12} style={{ padding: '0' }}>
-          <Divider></Divider>
+          <Divider />
         </Grid>
         <EndpointInputs
           selectedInputs={selectedInputs}
@@ -585,7 +592,7 @@ const CustomQueries = ({
           handleRemoveInput={handleRemoveInput}
         />
         <Grid item xs={12} style={{ padding: '0' }}>
-          <Divider></Divider>
+          <Divider />
         </Grid>
         {selectedOperation !== OperationsEnum.POST && (
           <>
@@ -606,7 +613,7 @@ const CustomQueries = ({
               </Button>
             </Grid>
             <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider></Divider>
+              <Divider />
             </Grid>
             <EndpointQueries
               selectedQueries={selectedQueries}
@@ -626,7 +633,7 @@ const CustomQueries = ({
           <>
             <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
               <Typography>
-                <strong>Assigments</strong>
+                <strong>Assignments</strong>
               </Typography>
             </Grid>
             <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
@@ -641,7 +648,7 @@ const CustomQueries = ({
               </Button>
             </Grid>
             <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider></Divider>
+              <Divider />
             </Grid>
             <EndpointAssignments
               operationType={selectedOperation}
@@ -679,7 +686,8 @@ const CustomQueries = ({
                 className={classes.textField}
                 label={'Name'}
                 value={name}
-                onChange={handleNameChange}></TextField>
+                onChange={handleNameChange}
+              />
             </Grid>
             <Grid item xs={5} style={{ textAlign: 'end' }}>
               {!editMode && (
@@ -702,6 +710,8 @@ const CustomQueries = ({
               handleSchemaChange={handleSchemaChange}
               authentication={authentication}
               handleAuthenticationChange={handleAuthenticationChange}
+              paginated={paginated}
+              handlePaginatedChange={handlePaginatedChange}
             />
             {renderDetails()}
             {renderSaveSection()}
