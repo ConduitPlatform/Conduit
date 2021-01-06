@@ -2,7 +2,7 @@ import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError } from "@quintessential-sft/conduit-sdk";
 import { NextFunction, Request, Response } from "express";
 import { isNil } from "lodash";
-
+import {randomBytes} from "crypto";
 export class Admin {
   constructor(private readonly conduit: ConduitSDK, private readonly grpcSdk: ConduitGrpcSdk) {
     this.createClientRoutes();
@@ -10,17 +10,20 @@ export class Admin {
 
   createClientRoutes() {
     this.conduit.getAdmin().registerRoute("POST", "/security/client", this.createClient.bind(this));
-    this.conduit.getAdmin().registerRoute("PUT", "/security/client/:id", this.editClient.bind(this));
+    this.conduit.getAdmin().registerRoute("DELETE", "/security/client/:id", this.deleteClient.bind(this));
     this.conduit.getAdmin().registerRoute("GET", "/security/client", this.getClients.bind(this));
   }
 
   async createClient(req: Request, res: Response, next: NextFunction) {
-    const { clientId, clientSecret, platform } = req.body;
-
+    const {platform } = req.body;
     if (!Object.values(PlatformTypesEnum).includes(platform)) {
       return res.status(401).json({ error: "Invalid platform" });
     }
+
+    let clientId = Math.random().toString(36).substring(10);
+    let clientSecret = randomBytes(64).toString('hex');
     let error;
+    
     await this.grpcSdk.databaseProvider
       ?.create("Client", {
         clientId,
@@ -36,12 +39,12 @@ export class Admin {
     return res.json({ message: "Client created" });
   }
 
-  async editClient(req: Request, res: Response, next: NextFunction) {
+  async deleteClient(req: Request, res: Response, next: NextFunction) {
     if (!req.params.id) res.status(400).json({ message: "Client parameter missing" });
     this.grpcSdk.databaseProvider
-      ?.findByIdAndUpdate("Client", req.params.id, req.body)
+      ?.deleteOne("Client", {_id:req.params.id})
       .then((client: any) => {
-        return res.json({ message: "Client updatd" });
+        return res.json({ message: "Client deleted" });
       })
       .catch((e) => {
         return res.status(500).json({ message: "Client update failed!" });

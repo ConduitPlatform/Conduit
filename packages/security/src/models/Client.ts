@@ -12,6 +12,7 @@ export const ClientModel = new ConduitSchema('Client',
     clientSecret: {
       type: TYPE.String,
       required: true,
+      select: false,
       systemRequired: true
     },
     platform: {
