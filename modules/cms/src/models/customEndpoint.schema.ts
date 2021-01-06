@@ -37,6 +37,10 @@ const schema = new ConduitSchema('CustomEndpoints', {
             type: TYPE.Boolean,
             default: false
         },
+        paginated: {
+            type: TYPE.Boolean,
+            default: false
+        },
         queries: TYPE.JSON,
         assignments: TYPE.JSON,
         createdAt: TYPE.Date,

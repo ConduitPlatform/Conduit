@@ -4,6 +4,7 @@ import grpc from "grpc";
 import { isNil } from "lodash";
 import schema from "../../models/customEndpoint.schema";
 import { CustomEndpointController } from "../../controllers/customEndpoints/customEndpoint.controller";
+import e from "express";
 
 const OperationsEnum = {
   GET: 0, //'FIND/GET'
@@ -43,7 +44,7 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: any, callback: any) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, queries, selectedSchema, assignments } = params;
+    const { inputs, queries, selectedSchema, assignments, paginated } = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -115,7 +116,7 @@ export class CustomEndpointsAdmin {
 
     if (found.operation !== OperationsEnum.POST) {
       errorMessage = null;
-      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
+      queries.forEach((r: { schemaField: any; operation: number; comparisonField: any }) => {
         let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -125,11 +126,27 @@ export class CustomEndpointsAdmin {
 
     if (found.operation === OperationsEnum.POST || found.operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r: {schemaField: string, action: number, assignmentField: { type: string, value: any }}) => {
-        let error = assignmentValidation(findSchema, inputs, found.operation, r.schemaField, r.assignmentField, r.action);
-        if (error !== true) {
-          return (errorMessage = error as string);
+      assignments.forEach(
+        (r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
+          let error = assignmentValidation(
+            findSchema,
+            inputs,
+            found.operation,
+            r.schemaField,
+            r.assignmentField,
+            r.action
+          );
+          if (error !== true) {
+            return (errorMessage = error as string);
+          }
         }
+      );
+    }
+
+    if(paginated && found.operation !== OperationsEnum.GET){
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Cannot add pagination to a non-get endpoint",
       });
     }
 
@@ -183,7 +200,9 @@ export class CustomEndpointsAdmin {
   }
 
   async createCustomEndpoints(call: any, callback: any) {
-    const { name, operation, selectedSchema, inputs, queries, authentication, assignments } = JSON.parse(call.request.params);
+    const { name, operation, selectedSchema, inputs, queries, authentication, assignments, paginated } = JSON.parse(
+      call.request.params
+    );
 
     if (isNil(name) || isNil(operation) || isNil(selectedSchema)) {
       return callback({
@@ -280,15 +299,24 @@ export class CustomEndpointsAdmin {
       selectedSchemaName: findSchema.name,
       inputs,
       authentication,
+      paginated: false,
       returns: findSchema.fields,
       queries: null,
-      assignments: null
+      assignments: null,
     };
 
-    if (operation !== OperationsEnum.POST)
-    {
+    if (paginated && operation !== OperationsEnum.GET) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Cannot add pagination to non-get endpoint",
+      });
+    }else if(paginated){
+      endpoint.paginated = paginated
+    }
+
+    if (operation !== OperationsEnum.POST) {
       errorMessage = null;
-      queries.forEach((r: {schemaField: any, operation: number, comparisonField: any}) => {
+      queries.forEach((r: { schemaField: any; operation: number; comparisonField: any }) => {
         let error = queryValidation(findSchema, inputs, r.schemaField, r.operation, r.comparisonField);
         if (error !== true) {
           return (errorMessage = error as string);
@@ -305,7 +333,7 @@ export class CustomEndpointsAdmin {
 
     if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {
       errorMessage = null;
-      assignments.forEach((r: {schemaField: any, action: number, assignmentField: { type: string, value: any }}) => {
+      assignments.forEach((r: { schemaField: any; action: number; assignmentField: { type: string; value: any } }) => {
         let error = assignmentValidation(findSchema, inputs, operation, r.schemaField, r.assignmentField, r.action);
         if (error !== true) {
           return (errorMessage = error as string);

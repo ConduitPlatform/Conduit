@@ -10,6 +10,7 @@ export interface CustomEndpoint {
   assignments?: { schemaField: string; action: number; assignmentField: { type: string, value: any } }[];
   returns: any;
   authentication: boolean;
+  paginated: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
