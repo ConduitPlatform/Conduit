@@ -1,6 +1,6 @@
 // todo create the controller that should construct both REST & GraphQL routes
 import {Application, NextFunction, Request, Response, Router} from "express";
-import {RestController} from "./Rest";
+import {RestController} from "./Rest/Rest";
 import {ConduitRoute, ConduitMiddleware} from '@quintessential-sft/conduit-sdk';
 import {GraphQLController} from "./GraphQl/GraphQL";
 
@@ -20,7 +20,6 @@ export class ConduitRoutingController {
         });
 
         const self = this;
-        // this should be the only thing on your app
         app.use((req, res, next) => {
             self._middlewareRouter(req, res, next)
         });
