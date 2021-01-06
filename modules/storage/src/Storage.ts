@@ -41,7 +41,10 @@ export class StorageModule {
         let files = new FileRoutes(this.grpcServer, grpcSdk, this.storageProvider);
         this._routes = files.registeredRoutes;
         this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
+            "grpc.max_receive_message_length": 1024 * 1024 * 100,
+            "grpc.max_send_message_length": 1024 * 1024 * 100
+          });
         this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
         console.log("bound on:", this._url);
         this.grpcServer.start();

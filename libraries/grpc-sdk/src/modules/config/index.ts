@@ -26,7 +26,10 @@ export default class Config {
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     // @ts-ignore
     var config = protoDescriptor.conduit.core.Config;
-    this.client = new config(this._url, grpc.credentials.createInsecure());
+    this.client = new config(this._url, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
     this.active = true;
   }
 

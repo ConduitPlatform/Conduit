@@ -92,7 +92,7 @@ export class SchemaAdmin {
             name,
             fields,
             modelOptions: options,
-            enabled,
+            enabled: isNil(enabled) ? true : enabled,
             authentication,
             crudOperations: crudOperations !== null ? crudOperations : true
         }).catch((e: any) => error = e);

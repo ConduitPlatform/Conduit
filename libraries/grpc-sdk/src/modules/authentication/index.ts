@@ -25,7 +25,10 @@ export default class Authentication {
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     // @ts-ignore
     var authentication = protoDescriptor.authentication.Authentication;
-    this.client = new authentication(this._url, grpc.credentials.createInsecure());
+    this.client = new authentication(this._url, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
     this.active = true;
   }
 

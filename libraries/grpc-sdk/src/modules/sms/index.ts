@@ -20,7 +20,10 @@ export default class SMS {
     let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     // @ts-ignore
     const sms = protoDescriptor.sms.Sms;
-    this.client = new sms(url, grpc.credentials.createInsecure());
+    this.client = new sms(url, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
   }
 
   setConfig(newConfig: any) {

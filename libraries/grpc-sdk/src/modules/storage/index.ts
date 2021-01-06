@@ -25,7 +25,10 @@ export default class Storage {
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     // @ts-ignore
     var storage = protoDescriptor.storage.Storage;
-    this.client = new storage(this._url, grpc.credentials.createInsecure());
+    this.client = new storage(this._url, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
     this.active = true;
   }
 

@@ -69,6 +69,13 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
       documentsCount: TYPE.Number,
     };
   }
+  if(endpoint.sorted){
+    inputs.push({
+      name: "sort",
+      type: TYPE.String,
+      location: 1
+    })
+  }
   Object.assign(input, extractParams(endpoint.inputs));
   return constructRoute(
     new ConduitRoute(

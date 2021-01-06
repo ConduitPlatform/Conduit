@@ -64,7 +64,8 @@ export function getOps(schemaName: string, actualSchema: any) {
             action: ConduitRouteActions.GET,
             queryParams: {
                 skip: TYPE.Number,
-                limit: TYPE.Number
+                limit: TYPE.Number,
+                sort: TYPE.String
             },
             middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined
         }, new ConduitRouteReturnDefinition(`get${schemaName}`, {

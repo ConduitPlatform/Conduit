@@ -20,7 +20,7 @@ export class CustomEndpointHandler {
     let params = JSON.parse(call.request.params);
     let searchString = "";
     let createString = "";
-    
+
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       endpoint.queries!.forEach(
@@ -89,6 +89,19 @@ export class CustomEndpointHandler {
         }
       );
     }
+    let sortObj: any = null;
+    if (endpoint.sorted && params.sort) {
+      let sort = params.sort;
+      sortObj = {};
+      sort.split(",").forEach((sortVal: string) => {
+        sortVal = sortVal.trim();
+        if (sortVal.indexOf("-") !== -1) {
+          sortObj[sortVal.substr(1)] = -1;
+        } else {
+          sortObj[sortVal] = 1;
+        }
+      });
+    }
 
     searchString = "{" + searchString + "}";
     createString = "{" + createString + "}";
@@ -100,7 +113,8 @@ export class CustomEndpointHandler {
           JSON.parse(searchString),
           null,
           params["skip"],
-          params["limit"]
+          params["limit"],
+          sortObj
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
@@ -109,7 +123,14 @@ export class CustomEndpointHandler {
 
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
-        promise = this.grpcSdk.databaseProvider!.findMany(endpoint.selectedSchemaName, JSON.parse(searchString));
+        promise = this.grpcSdk.databaseProvider!.findMany(
+          endpoint.selectedSchemaName,
+          JSON.parse(searchString),
+          undefined,
+          undefined,
+          undefined,
+          sortObj
+        );
       }
     } else if (endpoint.operation === 1) {
       promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, JSON.parse(createString));

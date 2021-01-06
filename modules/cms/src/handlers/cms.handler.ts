@@ -15,7 +15,7 @@ export class CmsHandlers {
     }
 
     async getDocuments(call: any, callback: any) {
-        const {skip, limit} = JSON.parse(call.request.params);
+        const {skip, limit, sort} = JSON.parse(call.request.params);
         const schemaName = call.request.path.split('/')[2];
 
         let errorMessage: any = null;
@@ -29,7 +29,7 @@ export class CmsHandlers {
             });
         }
 
-        let skipNumber = 0, limitNumber = 25;
+        let skipNumber = 0, limitNumber = 25, sortObj: any = null;
 
         if (!isNil(skip)) {
             skipNumber = Number.parseInt(skip as string);
@@ -38,7 +38,20 @@ export class CmsHandlers {
             limitNumber = Number.parseInt(limit as string);
         }
 
-        const documentsPromise = this.database.findMany(schemaName, {}, null, skipNumber, limitNumber);
+        if (!isNil(sort)) {
+            sortObj = {};
+            sort.split(',').forEach((sortVal:string)=>{
+                sortVal = sortVal.trim();
+                if(sortVal.indexOf('-')!==-1){
+                    sortObj[sortVal.substr(1)] = -1
+                }else{
+                    sortObj[sortVal] = 1
+                }
+            })
+        }
+
+
+        const documentsPromise = this.database.findMany(schemaName, {}, null, skipNumber, limitNumber, sortObj);
         const countPromise = this.database.countDocuments(schemaName, {});
 
         const [documents, documentsCount] = await Promise.all([documentsPromise, countPromise]).catch((e: any) => errorMessage = e.message);

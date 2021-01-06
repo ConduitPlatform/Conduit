@@ -155,7 +155,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       let routesArray = this._grpcRoutes[grpcRoute];
       routes.push(...routesArray.map((route:any)=>{return {action: route.options.action, path: route.options.path}}));
      })
-    this._internalRouter.cleanupRoutes;
+    this._internalRouter.cleanupRoutes(routes);
   }
 
   initGraphQL() {

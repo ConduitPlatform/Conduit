@@ -17,7 +17,7 @@ export class CoreBootstrapper {
         let _url = process.env.SERVICE_URL || '0.0.0.0:55152';
 
         const grpcSdk = new ConduitGrpcSdk(_url, 'core');
-        var server = new grpc.Server();
+        var server: grpc.Server = new grpc.Server();
         var packageDefinition = protoLoader.loadSync(
             path.resolve(__dirname, './core.proto'),
             {
@@ -40,7 +40,11 @@ export class CoreBootstrapper {
         app.conduit.registerAdmin(new AdminModule(grpcSdk, app.conduit, server, packageDefinition));
         app.conduit.registerRouter(new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server));
 
-        server.bind(_url, grpc.ServerCredentials.createInsecure());
+        //@ts-ignore
+        server.bind(_url, grpc.ServerCredentials.createInsecure(), {
+            "grpc.max_receive_message_length": 1024 * 1024 * 100,
+            "grpc.max_send_message_length": 1024 * 1024 * 100
+          });
         server.start();
         console.log("grpc server listening on:", _url);
         return app;

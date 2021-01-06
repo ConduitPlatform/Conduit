@@ -25,7 +25,10 @@ export default class Email {
     let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     // @ts-ignore
     let email = protoDescriptor.email.Email;
-    this.client = new email(this._url, grpc.credentials.createInsecure());
+    this.client = new email(this._url, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
     this.active = true;
   }
 

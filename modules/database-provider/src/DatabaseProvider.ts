@@ -132,7 +132,10 @@ export class DatabaseProvider {
         countDocuments: this.countDocuments.bind(this),
       });
       this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-      let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure());
+      let result = server.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
+        "grpc.max_receive_message_length": 1024 * 1024 * 100,
+        "grpc.max_send_message_length": 1024 * 1024 * 100
+      });
       this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
       console.log("bound on:", this._url);
       server.start();

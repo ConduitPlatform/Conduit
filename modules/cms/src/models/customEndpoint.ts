@@ -11,6 +11,7 @@ export interface CustomEndpoint {
   returns: any;
   authentication: boolean;
   paginated: boolean;
+  sorted: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

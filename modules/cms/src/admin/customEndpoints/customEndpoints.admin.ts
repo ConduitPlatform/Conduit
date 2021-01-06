@@ -44,7 +44,7 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: any, callback: any) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, queries, selectedSchema, assignments, paginated } = params;
+    const { inputs, queries, selectedSchema, assignments, paginated, sorted} = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -149,6 +149,12 @@ export class CustomEndpointsAdmin {
         message: "Cannot add pagination to a non-get endpoint",
       });
     }
+    if (sorted && found.operation !== OperationsEnum.GET) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Cannot add sorting to non-get endpoint",
+      });
+    }
 
     Object.keys(params).forEach((key) => {
       const value = params[key];
@@ -200,7 +206,7 @@ export class CustomEndpointsAdmin {
   }
 
   async createCustomEndpoints(call: any, callback: any) {
-    const { name, operation, selectedSchema, inputs, queries, authentication, assignments, paginated } = JSON.parse(
+    const { name, operation, selectedSchema, inputs, queries, authentication, assignments, sorted, paginated } = JSON.parse(
       call.request.params
     );
 
@@ -300,6 +306,7 @@ export class CustomEndpointsAdmin {
       inputs,
       authentication,
       paginated: false,
+      sorted: false,
       returns: findSchema.fields,
       queries: null,
       assignments: null,
@@ -313,6 +320,16 @@ export class CustomEndpointsAdmin {
     }else if(paginated){
       endpoint.paginated = paginated
     }
+
+    if (sorted && operation !== OperationsEnum.GET) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Cannot add sorting to non-get endpoint",
+      });
+    }else if(sorted){
+      endpoint.sorted = sorted
+    }
+
 
     if (operation !== OperationsEnum.POST) {
       errorMessage = null;
