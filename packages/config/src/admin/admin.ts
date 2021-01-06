@@ -65,6 +65,9 @@ export class AdminHandlers {
         if (!registeredModules.has(module)) return res.json({ message: "Module not available" });
         finalConfig = dbConfig.moduleConfigs.inMemoryStore;
         break;
+      case "core":
+          finalConfig = dbConfig.moduleConfigs.core;
+          break;  
       default:
         return res.status(404).json({ error: "Resource not found" });
     }
@@ -134,6 +137,9 @@ export class AdminHandlers {
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
+      case "core":
+        updatedConfig = await this.sdk.getConfigManager().set("core", newConfig).catch((e: Error) => (errorMessage = e.message))
+          break;
       default:
         return res.status(404).json({ error: "Resource not found" });
     }
