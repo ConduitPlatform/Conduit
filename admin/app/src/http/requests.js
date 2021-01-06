@@ -170,3 +170,16 @@ export const createCustomEndpointsRequest = (endpointData) => {
   return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, endpointData);
 };
 //-----------------------//
+
+//Settings
+export const getAvailableClientsRequest = () => {
+  return axios.get(`${CONDUIT_API}/admin/security/client`);
+};
+
+export const generateNewClientRequest = (platform) => {
+  return axios.post(`${CONDUIT_API}/admin/security/client`, { platform });
+};
+
+export const deleteClientRequest = (_id) => {
+  return axios.delete(`${CONDUIT_API}/admin/security/client/${_id}`);
+};
