@@ -8,6 +8,10 @@ export default {
       format: 'String',
       default: 'smtp'
     },
+    sendingDomain:{
+      format: 'String',
+      default:'conduit.com'
+    },
     transportSettings: {
       doc: 'The settings for the transport',
       mailgun: {

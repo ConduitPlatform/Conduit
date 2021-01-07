@@ -131,9 +131,8 @@ export class LocalHandlers {
                     const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
                     return this.emailModule.sendEmail('EmailVerification', {
                         email: user.email,
-                        sender: 'conduit@gmail.com',
+                        sender: 'no-reply',
                         variables: {
-                            applicationName: 'Conduit',
                             link
                         }
                     });
@@ -265,9 +264,8 @@ export class LocalHandlers {
         const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
         let mail = await this.emailModule.sendEmail('ForgotPassword', {
             email: user.email,
-            sender: 'conduit@gmail.com',
+            sender: 'no-reply',
             variables: {
-                applicationName: 'Conduit',
                 link
             }
         }).catch((e: any) => errorMessage = e.message);
