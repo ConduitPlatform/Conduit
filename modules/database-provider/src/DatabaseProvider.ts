@@ -29,7 +29,7 @@ export class DatabaseProvider {
         self.conduit.bus?.subscribe("database_provider", (message: string) => {
           if (message === "request") {
             self._activeAdapter.registeredSchemas.forEach((k, v) => {
-              self.publishSchema(k);
+              this.conduit.bus!.publish("database_provider", JSON.stringify(k));
             });
             return;
           }
@@ -57,9 +57,9 @@ export class DatabaseProvider {
         this.conduit.state?.getState().then((r: any) => {
           if (!r || r.length === 0) return;
           let state = JSON.parse(r);
-          state.schemas.forEach((schema: any) => {
+          Object.keys(state).forEach((schema: any) => {
             self._activeAdapter
-              .createSchemaFromAdapter(schema)
+              .createSchemaFromAdapter(state[schema])
               .then((schemaAdapter: any) => {
                 let schema = schemaAdapter.schema;
               })
@@ -80,16 +80,13 @@ export class DatabaseProvider {
 
   publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
+    const self = this;
     this.conduit.state?.getState().then((r:any)=>{
       let state = !r || r.length === 0 ? {} : JSON.parse(r);
-      if(!state.schemas){
-        state['schemas'] = [];
-      }
-      if(state.schemas.indexOf(schema.name)!==-1){
-        state.schemas[state.schemas.indexOf(schema.name)] = schema;
-      }else{
-        state.schemas.push(schema);
-      }
+      self._activeAdapter.registeredSchemas.forEach((k, v) => {
+        state[k.name] = k;
+      });
+      
       return this.conduit.state?.setState(JSON.stringify(state));
     })
     .then((r:any)=>{
