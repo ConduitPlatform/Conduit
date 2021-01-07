@@ -39,7 +39,7 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
     }
 
     if (isObject(value) && !value.hasOwnProperty('type')) return true;
-    else if (isString(value)) {
+    else if (isString(value) && key !== 'default') {
       fieldsErrorFlag = !Object.keys(TYPE).includes(value);
       return false;
     }
@@ -77,10 +77,10 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value[0]);
       return false;
     }
-    else if (key === 'select') {
+    else if (key === 'select' || key === 'required' || key === 'unique') {
       fieldsErrorFlag = !isBoolean(value);
-    } else if (key === 'required') {
-      fieldsErrorFlag = !isBoolean(value);
+    } else if (key === 'default') {
+        fieldsErrorFlag = !isString(value);
     } else if (key === 'type') return true;
     else {
       fieldsErrorFlag = true;
