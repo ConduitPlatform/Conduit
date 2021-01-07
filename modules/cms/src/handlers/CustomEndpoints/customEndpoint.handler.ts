@@ -90,7 +90,7 @@ export class CustomEndpointHandler {
       );
     }
     let sortObj: any = null;
-    if (endpoint.sorted && params.sort) {
+    if (endpoint.sorted && (params.sort && params.sort.length > 0 )) {
       let sort = params.sort;
       sortObj = {};
       sort.split(",").forEach((sortVal: string) => {
@@ -114,7 +114,8 @@ export class CustomEndpointHandler {
           null,
           params["skip"],
           params["limit"],
-          sortObj
+          sortObj,
+          params["populate"]
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
@@ -129,7 +130,8 @@ export class CustomEndpointHandler {
           undefined,
           undefined,
           undefined,
-          sortObj
+          sortObj,
+          params["populate"]
         );
       }
     } else if (endpoint.operation === 1) {

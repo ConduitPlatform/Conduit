@@ -75,11 +75,12 @@ export default class DatabaseProvider {
     });
   }
 
-  findOne(schemaName: string, query: any, select?: any): Promise<any> {
+  findOne(schemaName: string, query: any, select?: any, populate?: any): Promise<any> {
     return new Promise((resolve, reject) => {
       // @ts-ignore
       const selectStr = select ? JSON.stringify(select) : null;
-      this.client.findOne({ schemaName, query: JSON.stringify(query), select: selectStr }, (err: any, res: any) => {
+      const populateStr = populate ? JSON.stringify(populate) : null;
+      this.client.findOne({ schemaName, query: JSON.stringify(query), select: selectStr, populate: populateStr}, (err: any, res: any) => {
         if (err || !res) {
           reject(err || "Something went wrong");
         } else {
@@ -89,10 +90,11 @@ export default class DatabaseProvider {
     });
   }
 
-  findMany(schemaName: string, query: any, select?: any, skip?: number, limit?: number, sort?: any) {
+  findMany(schemaName: string, query: any, select?: any, skip?: number, limit?: number, sort?: any, populate?: any) {
     return new Promise((resolve, reject) => {
       const selectStr = select ? JSON.stringify(select) : null;
       const sortStr = sort ? JSON.stringify(sort) : null;
+      const populateStr = populate ? JSON.stringify(populate) : null;
       this.client.findMany(
         {
           schemaName,
@@ -101,6 +103,7 @@ export default class DatabaseProvider {
           skip,
           limit,
           sort: sortStr,
+          populate: populateStr
         },
         (err: any, res: any) => {
           if (err || !res) {

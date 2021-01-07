@@ -212,7 +212,8 @@ export class DatabaseProvider {
       .then((schemaAdapter: { model: any }) => {
         return schemaAdapter.model.findOne(
           JSON.parse(call.request.query),
-          call.request.select ? JSON.parse(call.request.select) : null
+          call.request.select ? JSON.parse(call.request.select) : null,
+          call.request.populate ? JSON.parse(call.request.populate) : null,
         );
       })
       .then((doc: any) => {
@@ -234,8 +235,9 @@ export class DatabaseProvider {
         const limit = call.request.limit ? Number.parseInt(call.request.limit) : null;
         const select = call.request.select ? JSON.parse(call.request.select) : null;
         const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
+        const populate = call.request.populate ? JSON.parse(call.request.populate) : null;
 
-        return schemaAdapter.model.findMany(JSON.parse(call.request.query), skip, limit, select, sort);
+        return schemaAdapter.model.findMany(JSON.parse(call.request.query), skip, limit, select, sort, populate) ;
       })
       .then((docs: any) => {
         callback(null, { result: JSON.stringify(docs) });

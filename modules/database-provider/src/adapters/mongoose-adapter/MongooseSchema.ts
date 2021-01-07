@@ -50,13 +50,16 @@ export class MongooseSchema implements SchemaAdapter {
         return this.model.deleteMany(query).exec();
     }
 
-    findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any): Promise<any> {
+    findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any, populate?: any): Promise<any> {
         let finalQuery = this.model.find(query);
         if (skip !== null) {
             finalQuery = finalQuery.skip(skip!);
         }
         if (limit !== null) {
             finalQuery = finalQuery.limit(limit!);
+        }
+        if (populate !== null) {
+            finalQuery = finalQuery.populate(populate!);
         }
         if (sort !== null) {
             finalQuery = finalQuery.sort(sort);
@@ -66,8 +69,8 @@ export class MongooseSchema implements SchemaAdapter {
         return finalQuery.lean().exec();
     }
 
-    findOne(query: any, select?: string): Promise<any> {
-        return this.model.findOne(query, select).lean().exec();
+    findOne(query: any, select?: string, populate?: any): Promise<any> {
+        return this.model.findOne(query, select).populate(populate).lean().exec();
     }
 
     countDocuments(query: any) {
