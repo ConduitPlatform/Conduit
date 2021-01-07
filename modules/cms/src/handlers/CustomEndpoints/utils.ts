@@ -38,22 +38,22 @@ export function constructQuery(schemaField: string, operation: number, compariso
     case 0:
       return `\"${schemaField}\":${comparisonField}`;
     case 1:
-      return `\"${schemaField}\":{ $ne: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$ne\": ${comparisonField}}`;
     case 2:
-      return `\"${schemaField}\":{ $gt: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$gt\": ${comparisonField}}`;
     case 3:
-      return `\"${schemaField}\":{ $gte: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$gte\": ${comparisonField}}`;
     case 4:
-      return `\"${schemaField}\":{ $lt: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$lt\": ${comparisonField}}`;
     case 5:
-      return `\"${schemaField}\":{ $lte: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$lte\": ${comparisonField}}`;
     case 6:
-      return `\"${schemaField}\":{ $in: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$in\": ${comparisonField}}`;
     case 7:
-      return `\"${schemaField}\":{ $nin: ${comparisonField}}`;
+      return `\"${schemaField}\":{ \"$nin\": ${comparisonField}}`;
     // maybe something else??
     case 8:
-      return `\'${schemaField}\':{ $in: ${comparisonField}}`;
+      return `\'${schemaField}\':{ \"$in\": ${comparisonField}}`;
     default:
       return `\'${schemaField}\':${comparisonField}`;
   }
