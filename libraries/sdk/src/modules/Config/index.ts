@@ -6,12 +6,13 @@ export abstract class IConfigManager {
   abstract registerAppConfig(): Promise<any>;
   abstract registerModulesConfig(name: string, newModulesConfigSchemaFields: any): Promise<any>;
   abstract get(name: string): Promise<any>;
+  abstract addFieldsToModule(name: string, newModulesConfigSchemaFields: any): Promise<any>;
   abstract set(name: string, newModulesConfigSchemaFields: any): Promise<any>;
 
 }
 
 export abstract class IDatabaseConfigUtility {
-  abstract async registerConfigSchemas(newConfig: string): Promise<any>;
+  abstract registerConfigSchemas(newConfig: string): Promise<any>;
 }
 
 export abstract class IAppConfig {

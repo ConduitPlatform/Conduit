@@ -210,38 +210,45 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
+  async addFieldsToModule(name: string, config: any){
+    return this.grpcSdk
+    .databaseProvider!.findOne("Config", {})
+    .then((dbConfig) => {
+      if (isNil(dbConfig)) throw new Error("Config not found in the database");
+      if (!dbConfig["moduleConfigs"]) {
+        dbConfig["moduleConfigs"] = {};
+      }
+      let modName = "moduleConfigs." +name;
+      // keep only new fields
+      let existing = dbConfig.moduleConfigs[name];
+      config = { ...config, ...existing };
+      return this.grpcSdk.databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
+        $set: { [modName]: config },
+      });
+    })
+    .then((updatedConfig: any) => {
+      delete updatedConfig._id;
+      delete updatedConfig.createdAt;
+      delete updatedConfig.updatedAt;
+      delete updatedConfig.__v;
+      return updatedConfig["moduleConfigs"][name];
+    })
+   
+  }
+
   addFieldstoConfig(call: any, callback: any) {
     let newFields = JSON.parse(call.request.config);
-
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      this.grpcSdk
-        .databaseProvider!.findOne("Config", {})
-        .then((dbConfig) => {
-          if (isNil(dbConfig)) throw new Error("Config not found in the database");
-          if (!dbConfig["moduleConfigs"]) {
-            dbConfig["moduleConfigs"] = {};
-          }
-          let modName = "moduleConfigs." + call.request.moduleName;
-          // keep only new fields
-          let existing = dbConfig.moduleConfigs[call.request.moduleName];
-          newFields = { ...newFields, ...existing };
-          return this.grpcSdk.databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
-            $set: { [modName]: newFields },
-          });
-        })
-        .then((updatedConfig: any) => {
-          delete updatedConfig._id;
-          delete updatedConfig.createdAt;
-          delete updatedConfig.updatedAt;
-          delete updatedConfig.__v;
-          return callback(null, { result: JSON.stringify(updatedConfig["moduleConfigs"][call.request.moduleName]) });
-        })
-        .catch((err) => {
-          callback({
-            code: grpc.status.INTERNAL,
-            message: err.message ? err.message : err,
-          });
+      this.addFieldsToModule(call.request.moduleName, newFields)
+      .then(r=>{
+        return callback(null, { result: JSON.stringify(r) });
+      })
+      .catch((err) => {
+        callback({
+          code: grpc.status.INTERNAL,
+          message: err.message ? err.message : err,
         });
+      });
     } else {
       callback({
         code: grpc.status.FAILED_PRECONDITION,
