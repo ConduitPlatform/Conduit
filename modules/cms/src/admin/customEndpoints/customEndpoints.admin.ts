@@ -160,7 +160,7 @@ export class CustomEndpointsAdmin {
       const value = params[key];
       found[key] = value;
     });
-    found.returns = findSchema.fields;
+    found.returns = findSchema.name;
     found.selectedSchemaName = findSchema.name;
 
     const updatedSchema = await this.database
@@ -307,7 +307,7 @@ export class CustomEndpointsAdmin {
       authentication,
       paginated: false,
       sorted: false,
-      returns: findSchema.fields,
+      returns: findSchema.name,
       queries: null,
       assignments: null,
     };

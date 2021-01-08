@@ -113,7 +113,7 @@ export function extractTypes(name: string, fields: ConduitModel | string, _input
             if (value[0].type === 'Relation') {
                 addToRelation(value[0].model);
                 constructResolver(name, field, true);
-                typeString += field + ': ' + (input ? 'ID' : value[0].model) + (value[0].required ? '!' : '') + ' ';
+                typeString += field + ': [' + (input ? 'ID' : value[0].model)+']' + (value[0].required ? '!' : '') + ' ';
             } else if (typeof value[0].type === 'string') {
                 typeString += field + ': [' + getGraphQLType(value[0].type) + (value[0].required ? '!' : '') + '] ';
             } else if (Array.isArray(value[0].type)) {

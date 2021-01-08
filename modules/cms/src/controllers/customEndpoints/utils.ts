@@ -52,7 +52,7 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
     middlewares: endpoint.authentication ? ["authMiddleware"] : undefined,
   };
   let inputs = endpoint.inputs;
-  let returns: any = [endpoint.returns];
+  let returns: any = { result: [endpoint.returns] };
   if (endpoint.paginated) {
     inputs.push({
       name: "skip",
@@ -69,19 +69,15 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
       documentsCount: TYPE.Number,
     };
   }
-  if(endpoint.sorted){
+  if (endpoint.sorted) {
     inputs.push({
       name: "sort",
       type: TYPE.String,
-      location: 1
-    })
+      location: 1,
+    });
   }
   Object.assign(input, extractParams(endpoint.inputs));
   return constructRoute(
-    new ConduitRoute(
-      input,
-      new ConduitRouteReturnDefinition(input.action + endpoint.name, { result: returns }),
-      "customOperation"
-    )
+    new ConduitRoute(input, new ConduitRouteReturnDefinition(input.action + endpoint.name, returns), "customOperation")
   );
 }
