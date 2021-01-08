@@ -161,6 +161,7 @@ export class CustomEndpointHandler {
             documents: r[0],
             documentsCount: r[1],
           };
+          return callback(null, { result: JSON.stringify(r)});
         }
         callback(null, { result: JSON.stringify({ result: r }) });
       })
