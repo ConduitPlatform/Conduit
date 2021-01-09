@@ -7,6 +7,7 @@ import { ConduitSDK, IConfigManager } from "@quintessential-sft/conduit-sdk";
 import { EventEmitter } from "events";
 import { AdminHandlers } from "./admin/admin";
 import { NextFunction, Request, Response } from "express";
+import * as request from "request-promise";
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -55,9 +56,27 @@ export default class ConfigManager implements IConfigManager {
       .then((r) => {
         if (!r || r.length === 0) return;
         let state = JSON.parse(r);
+        let success: any[] = [];
         if (state.modules) {
+          let promise = Promise.resolve();
           state.modules.forEach((r: any) => {
-            self._registerModule(r.name, r.url, r.instance);
+            let error;
+            promise = promise
+              .then(() => self._registerModule(r.name, r.url, r.instance))
+              .then(() => {
+                success.push({
+                  name: r.name,
+                  url: r.url,
+                  instance: r.instance,
+                });
+              })
+              .catch((err) => {
+                // do nothing
+              });
+          });
+          promise.then((r) => {
+            state.modules = success;
+            self.setState(state);
           });
         }
       })
@@ -73,6 +92,18 @@ export default class ConfigManager implements IConfigManager {
         self.updateModuleHealth(messageParsed.name, messageParsed.instance);
       }
     });
+  }
+
+  setState(state: any) {
+    this.sdk
+      .getState()
+      .setKey("config", JSON.stringify(state))
+      .then((r) => {
+        console.log("Updated state");
+      })
+      .catch((err) => {
+        console.log("Failed to recover state");
+      });
   }
 
   updateState(name: string, url: string, instance: string) {
@@ -114,7 +145,10 @@ export default class ConfigManager implements IConfigManager {
       return this.grpcSdk.databaseProvider!.findOne("Config", {}).then(async (dbConfig: any) => {
         if (isNil(dbConfig)) throw new Error("Config not found in the database");
         callback(null, {
-          data: JSON.stringify({ url: dbConfig["moduleConfigs"]["core"].hostUrl, env: dbConfig["moduleConfigs"]["core"].env}),
+          data: JSON.stringify({
+            url: dbConfig["moduleConfigs"]["core"].hostUrl,
+            env: dbConfig["moduleConfigs"]["core"].env,
+          }),
         });
       });
     } else {
@@ -210,45 +244,44 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async addFieldsToModule(name: string, config: any){
+  async addFieldsToModule(name: string, config: any) {
     return this.grpcSdk
-    .databaseProvider!.findOne("Config", {})
-    .then((dbConfig) => {
-      if (isNil(dbConfig)) throw new Error("Config not found in the database");
-      if (!dbConfig["moduleConfigs"]) {
-        dbConfig["moduleConfigs"] = {};
-      }
-      let modName = "moduleConfigs." +name;
-      // keep only new fields
-      let existing = dbConfig.moduleConfigs[name];
-      config = { ...config, ...existing };
-      return this.grpcSdk.databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
-        $set: { [modName]: config },
+      .databaseProvider!.findOne("Config", {})
+      .then((dbConfig) => {
+        if (isNil(dbConfig)) throw new Error("Config not found in the database");
+        if (!dbConfig["moduleConfigs"]) {
+          dbConfig["moduleConfigs"] = {};
+        }
+        let modName = "moduleConfigs." + name;
+        // keep only new fields
+        let existing = dbConfig.moduleConfigs[name];
+        config = { ...config, ...existing };
+        return this.grpcSdk.databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
+          $set: { [modName]: config },
+        });
+      })
+      .then((updatedConfig: any) => {
+        delete updatedConfig._id;
+        delete updatedConfig.createdAt;
+        delete updatedConfig.updatedAt;
+        delete updatedConfig.__v;
+        return updatedConfig["moduleConfigs"][name];
       });
-    })
-    .then((updatedConfig: any) => {
-      delete updatedConfig._id;
-      delete updatedConfig.createdAt;
-      delete updatedConfig.updatedAt;
-      delete updatedConfig.__v;
-      return updatedConfig["moduleConfigs"][name];
-    })
-   
   }
 
   addFieldstoConfig(call: any, callback: any) {
     let newFields = JSON.parse(call.request.config);
     if (!isNil(this.grpcSdk.databaseProvider)) {
       this.addFieldsToModule(call.request.moduleName, newFields)
-      .then(r=>{
-        return callback(null, { result: JSON.stringify(r) });
-      })
-      .catch((err) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message ? err.message : err,
+        .then((r) => {
+          return callback(null, { result: JSON.stringify(r) });
+        })
+        .catch((err) => {
+          callback({
+            code: grpc.status.INTERNAL,
+            message: err.message ? err.message : err,
+          });
         });
-      });
     } else {
       callback({
         code: grpc.status.FAILED_PRECONDITION,
@@ -362,14 +395,23 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModule(call: any, callback: any) {
-    await this._registerModule(call.request.moduleName, call.request.url, call.getPeer());
+    await this._registerModule(call.request.moduleName, call.request.url, call.getPeer(), true);
     this.updateState(call.request.moduleName, call.request.url, call.getPeer());
     this.publishModuleData("mpdule-register", call.request.moduleName, call.getPeer(), call.request.url);
     callback(null, { result: true });
   }
 
-  private async _registerModule(moduleName: string, moduleUrl: string, instancePeer: string) {
+  private async _registerModule(moduleName: string, moduleUrl: string, instancePeer: string, fromGrpc = false) {
     let dbInit = false;
+    if (!fromGrpc) {
+      let failed: any;
+      let success = await request.get("http://" + moduleUrl).catch((err) => {
+        failed = err;
+      });
+      if (failed && failed.message !== "Error: Parse Error") {
+        throw new Error("Failed to register dead module");
+      }
+    }
     if (moduleName === "database-provider" && this.registeredModules.has("database-provider")) {
       dbInit = true;
     }
