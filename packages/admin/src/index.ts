@@ -216,7 +216,10 @@ export default class AdminModule extends IConduitAdmin {
     let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
     adminDescriptor = this.findAdmin(adminDescriptor);
 
-    let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure());
+    let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure(), {
+      "grpc.max_receive_message_length": 1024 * 1024 * 100,
+      "grpc.max_send_message_length": 1024 * 1024 * 100
+    });
     routes.forEach((r: any) => {
       let handler = (req: any, res: any, next: any) => {
         const context = (req as any).conduit;

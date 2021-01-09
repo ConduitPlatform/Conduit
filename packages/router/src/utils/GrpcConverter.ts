@@ -25,7 +25,10 @@ export function grpcToConduitRoute(request: any): (ConduitRoute | ConduitMiddlew
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   let serverIp = request.routerUrl;
-  let client = new routerDescriptor(serverIp, grpc.credentials.createInsecure());
+  let client = new routerDescriptor(serverIp, grpc.credentials.createInsecure(), {
+    "grpc.max_receive_message_length": 1024 * 1024 * 100,
+    "grpc.max_send_message_length": 1024 * 1024 * 100
+  });
   routes.forEach((r) => {
     let handler = (req: ConduitRouteParameters) => {
       let request = {
