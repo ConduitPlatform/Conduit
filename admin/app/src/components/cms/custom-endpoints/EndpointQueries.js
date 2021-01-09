@@ -2,6 +2,8 @@ import {
   FormControl,
   Grid,
   IconButton,
+  ListSubheader,
+  MenuItem,
   Select,
   TextField,
   Typography,
@@ -89,12 +91,16 @@ const EndpointQueries = ({
             disabled={!editMode}
             native
             value={
-              query.comparisonField.type === 'Custom'
+              query.comparisonField.type === 'Custom' ||
+              query.comparisonField.type === 'Context'
                 ? query.comparisonField.type
                 : query.comparisonField.type + '-' + query.comparisonField.value
             }
             onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
             <option aria-label="None" value="" />
+            <optgroup label="System Values">
+              <option value={'Context'}>Add value from context</option>
+            </optgroup>
             <optgroup label="Custom Value">
               <option value={'Custom'}>Add a custom value</option>
             </optgroup>
@@ -115,20 +121,28 @@ const EndpointQueries = ({
           </Select>
         </FormControl>
       </Grid>
-      {query.comparisonField.type === 'Custom' ? (
+      {query.comparisonField.type === 'Custom' ||
+      query.comparisonField.type === 'Context' ? (
         <Grid item xs={2}>
           <TextField
-            label={'Custom Value'}
-            variant={'outlined'}
+            label={
+              query.comparisonField.type === 'Custom'
+                ? 'Custom value'
+                : 'Select from context'
+            }
+            variant={'filled'}
             disabled={!editMode}
+            size={'small'}
             fullWidth
-            placeholder={'Value'}
+            placeholder={
+              query.comparisonField.type === 'Custom' ? 'ex. John Snow' : 'ex. user._id'
+            }
             value={query.comparisonField.value}
             onChange={(event) => handleCustomValueChange(event, index)}
           />
         </Grid>
       ) : (
-        <Grid item xs={1} />
+        <Grid item xs={2} />
       )}
       <Grid item xs={1}>
         <IconButton
