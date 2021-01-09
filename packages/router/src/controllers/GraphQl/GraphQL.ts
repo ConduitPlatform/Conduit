@@ -92,12 +92,16 @@ export class GraphQLController {
       if (typeof paramObj[k] === "string") {
         if (paramObj[k] === "Number") {
           params += "Int";
+        } else if (paramObj[k] === "ObjectId") {
+          params += "ID";
         } else {
           params += paramObj[k];
         }
       } else {
         if ((paramObj[k] as ConduitRouteOptionExtended).type === "Number") {
           params += "Int" + ((paramObj[k] as ConduitRouteOptionExtended).required ? "!" : "");
+        }else if ((paramObj[k] as ConduitRouteOptionExtended).type === "ObjectId") {
+          params += "ID" + ((paramObj[k] as ConduitRouteOptionExtended).required ? "!" : "");
         } else {
           params +=
             (paramObj[k] as ConduitRouteOptionExtended).type +

@@ -35,7 +35,7 @@ export class CustomEndpointHandler {
                 message: `Field ${r.comparisonField.value} is missing from context`,
               });
             }
-            let context: any = call.request.context;
+            let context: any = JSON.parse(call.request.context);
             for (const key of r.comparisonField.value.split(".")) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
@@ -71,7 +71,7 @@ export class CustomEndpointHandler {
                 message: `Field ${r.assignmentField.value} is missing from context`,
               });
             }
-            let context: any = call.request.context;
+            let context: any = JSON.parse(call.request.context);
             for (const key of r.assignmentField.value.split(".")) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
@@ -82,7 +82,7 @@ export class CustomEndpointHandler {
                 });
               }
             }
-            searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
+            createString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
           } else {
             createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
           }
