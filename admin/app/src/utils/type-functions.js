@@ -78,7 +78,12 @@ export const reorderItems = (list, startIndex, endIndex) => {
 };
 
 export const getSchemaFields = (schemaFields) => {
-  const keys = Object.keys(schemaFields);
+  let keys;
+  if (Array.isArray(schemaFields)) {
+    keys = Object.keys(schemaFields[0]);
+  } else {
+    keys = Object.keys(schemaFields);
+  }
   const fields = [];
   keys.forEach((k) => {
     if (typeof schemaFields[k] !== 'string') {
@@ -123,8 +128,16 @@ const constructFieldType = (field) => {
     typeField.unique = field.unique ? field.unique : false;
   }
 
-  typeField.select = field.select ? field.select : false;
-  typeField.required = field.required ? field.required : false;
+  if (field.type === 'Relation' && typeField.isArray) {
+    typeField.relation = field.relation;
+    typeField.type = field.type[0].type;
+    typeField.select = field.type[0].select;
+    typeField.required = field.type[0].required;
+    typeField.model = field.type[0].model;
+  } else {
+    typeField.select = field.select ? field.select : false;
+    typeField.required = field.required ? field.required : false;
+  }
 
   if (field.default !== undefined && field.default !== null) {
     typeField.default = field.default;
@@ -133,11 +146,6 @@ const constructFieldType = (field) => {
   if (field.enum !== undefined && field.enum !== null) {
     typeField.enumValues = field.enum;
     typeField.isEnum = true;
-  }
-
-  if (field.type === 'Relation') {
-    typeField.model = field.model;
-    typeField.relation = field.relation;
   }
 
   return typeField;
@@ -167,7 +175,7 @@ const typeTransformer = (type) => {
   }
 };
 
-const prepareTypes = (type, isArray, content, enumType) => {
+const prepareTypes = (type, isArray, content, enumType, select, required, model) => {
   switch (type) {
     case 'Text':
       return isArray ? ['String'] : 'String';
@@ -180,7 +188,16 @@ const prepareTypes = (type, isArray, content, enumType) => {
     case 'ObjectId':
       return 'ObjectId';
     case 'Relation':
-      return 'Relation';
+      return isArray
+        ? [
+            {
+              select,
+              required,
+              type: 'Relation',
+              model: model ? model.toString() : '',
+            },
+          ]
+        : 'Relation';
     case 'JSON':
       return 'JSON';
     case 'Enum':
@@ -211,7 +228,10 @@ export const prepareFields = (typeFields) => {
               clone.isEnum ? 'Enum' : clone.type,
               clone.isArray,
               clone.content,
-              clone.isEnum ? clone.type : null
+              clone.isEnum ? clone.type : null,
+              clone.select,
+              clone.required,
+              clone.model
             ),
           ],
         };
@@ -223,25 +243,43 @@ export const prepareFields = (typeFields) => {
             clone.isEnum ? 'Enum' : clone.type,
             clone.isArray,
             clone.content,
-            clone.isEnum ? clone.type : null
+            clone.isEnum ? clone.type : null,
+            clone.select,
+            clone.required,
+            clone.model
           ),
         };
       }
     } else {
-      fields = {
-        type: clone.type
-          ? prepareTypes(
-              clone.isEnum ? 'Enum' : clone.type,
-              clone.isArray,
-              clone.content,
-              clone.isEnum ? clone.type : null
-            )
-          : '',
-        unique: clone.unique ? clone.unique : false,
-        select: clone.select ? clone.select : false,
-        required: clone.required ? clone.required : false,
-      };
+      if (clone.type === 'Relation' && clone.isArray) {
+        fields = {
+          type: prepareTypes(
+            clone.isEnum ? 'Enum' : clone.type,
+            clone.isArray,
+            clone.content,
+            clone.isEnum ? clone.type : null,
+            clone.select,
+            clone.required,
+            clone.model
+          ),
+        };
+      } else {
+        fields = {
+          type: clone.type
+            ? prepareTypes(
+                clone.isEnum ? 'Enum' : clone.type,
+                clone.isArray,
+                clone.content,
+                clone.isEnum ? clone.type : null
+              )
+            : '',
+          unique: clone.unique ? clone.unique : false,
+          select: clone.select ? clone.select : false,
+          required: clone.required ? clone.required : false,
+        };
+      }
     }
+
     if (clone.default !== undefined && clone.default !== null) {
       fields.default = clone.default;
     }
@@ -250,7 +288,7 @@ export const prepareFields = (typeFields) => {
       fields.enum = clone.enumValues;
     }
 
-    if (clone.type === 'Relation') {
+    if (clone.type === 'Relation' && !clone.isArray) {
       fields.model = clone.model.toString();
     }
 
