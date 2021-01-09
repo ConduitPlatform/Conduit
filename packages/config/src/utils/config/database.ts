@@ -12,9 +12,6 @@ export class DatabaseConfigUtility {
             .then(r => {
                 return database!.findOne('Config', {});
             })
-            .catch(err=>{
-                return database!.create('Config', {});
-            })
             .then(r => {
                 if (!r) database!.create('Config', {});
             });
