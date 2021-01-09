@@ -465,6 +465,16 @@ const CustomQueries = ({
     }
   };
 
+  const handleAssignmentContextValueChange = (event, index) => {
+    const value = event.target.value;
+    const currentAssignments = selectedAssignments.slice();
+    const assignment = currentAssignments[index];
+    if (assignment) {
+      assignment.assignmentField.value = value;
+      setSelectedAssignments(currentAssignments);
+    }
+  };
+
   const handleRemoveAssignment = (index) => {
     const currentAssignments = selectedAssignments.slice();
     currentAssignments.splice(index, 1);
@@ -668,6 +678,7 @@ const CustomQueries = ({
               handleAssignmentActionChange={handleAssignmentActionChange}
               handleAssignmentValueFieldChange={handleAssignmentValueFieldChange}
               handleAssignmentCustomValueChange={handleAssignmentCustomValueChange}
+              handleAssignmentContextValueChange={handleAssignmentContextValueChange}
               handleRemoveAssignment={handleRemoveAssignment}
             />
           </>

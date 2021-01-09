@@ -24,6 +24,7 @@ const EndpointAssignments = ({
   handleAssignmentActionChange,
   handleAssignmentValueFieldChange,
   handleAssignmentCustomValueChange,
+  handleAssignmentContextValueChange,
   handleRemoveAssignment,
 }) => {
   const classes = useStyles();
@@ -112,7 +113,8 @@ const EndpointAssignments = ({
             disabled={!editMode}
             native
             value={
-              assignment.assignmentField.type === 'Custom'
+              assignment.assignmentField.type === 'Custom' ||
+              assignment.assignmentField.type === 'Context'
                 ? assignment.assignmentField.type
                 : assignment.assignmentField.type + '-' + assignment.assignmentField.value
             }
@@ -120,6 +122,9 @@ const EndpointAssignments = ({
             <option aria-label="None" value="" />
             <optgroup label="Custom Value">
               <option value={'Custom'}>Add a custom value</option>
+            </optgroup>
+            <optgroup label="Context Value">
+              <option value={'Context'}>Add a value from context</option>
             </optgroup>
             <optgroup label="Input Fields">
               {selectedInputs.map((input, index) => (
@@ -131,16 +136,21 @@ const EndpointAssignments = ({
           </Select>
         </FormControl>
       </Grid>
-      {assignment.assignmentField.type === 'Custom' ? (
+      {assignment.assignmentField.type === 'Custom' ||
+      assignment.assignmentField.type === 'Context' ? (
         <Grid item xs={2}>
           <TextField
-            label={'Custom Value'}
+            label={assignment.assignmentField.type + ' Value'}
             variant={'outlined'}
             disabled={!editMode}
             fullWidth
             placeholder={'Value'}
             value={assignment.assignmentField.value}
-            onChange={(event) => handleAssignmentCustomValueChange(event, index)}
+            onChange={(event) =>
+              assignment.assignmentField.type === 'Custom'
+                ? handleAssignmentCustomValueChange(event, index)
+                : handleAssignmentContextValueChange(event, index)
+            }
           />
         </Grid>
       ) : (
