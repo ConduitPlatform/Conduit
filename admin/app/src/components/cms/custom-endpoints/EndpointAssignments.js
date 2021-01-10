@@ -33,7 +33,7 @@ const EndpointAssignments = ({
     (fieldName) => {
       const field = availableFieldsOfSchema.find((f) => f.name === fieldName);
       if (field) {
-        return field.type === 'Array';
+        return Array.isArray(field.type);
       }
       return false;
     },
