@@ -87,13 +87,13 @@ export class RestController {
           this._middlewares[k].forEach((m) => {
             primaryPromise = primaryPromise.then((r) => {
               return m.executeRequest
-                .bind(m)(params)
-                .then((p: any) => {
-                  if (p.result) {
-                    Object.assign(r, JSON.parse(p.result));
-                  }
-                  return p;
-                });
+              .bind(m)(params)
+              .then((p: any) => {
+                if (p.result) {
+                  Object.assign(r, JSON.parse(p.result));
+                }
+                return r;
+              });
             });
           });
         }

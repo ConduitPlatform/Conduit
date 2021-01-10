@@ -124,7 +124,7 @@ export function assignmentValidation(
     }
 
     if (action === 3 || action === 4) {
-        if (findSchema.fields[schemaField].type !== 'Array') {
+        if (!Array.isArray(findSchema.fields[schemaField].type)) {
             return "append and remove actions are valid only for array schema fields";
         }
     }

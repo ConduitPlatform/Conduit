@@ -412,7 +412,7 @@ export class AuthenticationRoutes {
       })
       .then((accessTokenDoc: any) => {
         if (isNil(accessTokenDoc)) {
-          callback({
+          return callback({
             code: grpc.status.UNAUTHENTICATED,
             message: "Token is expired or otherwise not valid",
           });
