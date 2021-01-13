@@ -239,10 +239,11 @@ export class DatabaseProvider {
   async findOne(call: FindOneRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const doc = await schemaAdapter.findOne(
+      const doc = await schemaAdapter.model.findOne(
         EJSON.parse(call.request.query),
         call.request.select,
-        call.request.populate
+        call.request.populate,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -263,13 +264,14 @@ export class DatabaseProvider {
 
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
 
-      const docs = await schemaAdapter.findMany(
+      const docs = await schemaAdapter.model.findMany(
         EJSON.parse(call.request.query),
         skip,
         limit,
         select,
         sort,
-        populate
+        populate,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -283,7 +285,7 @@ export class DatabaseProvider {
   async create(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const doc = await schemaAdapter.create(EJSON.parse(call.request.query));
+      const doc = await schemaAdapter.model.create(EJSON.parse(call.request.query));
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
       callback({
@@ -296,7 +298,7 @@ export class DatabaseProvider {
   async createMany(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const docs = await schemaAdapter.createMany(EJSON.parse(call.request.query));
+      const docs = await schemaAdapter.model.createMany(EJSON.parse(call.request.query));
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
       callback({
@@ -309,7 +311,7 @@ export class DatabaseProvider {
   async findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.findByIdAndUpdate(
+      const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         EJSON.parse(call.request.query)
       );
@@ -325,7 +327,7 @@ export class DatabaseProvider {
   async updateMany(call: UpdateManyRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.updateMany(
+      const result = await schemaAdapter.model.updateMany(
         EJSON.parse(call.request.filterQuery),
         EJSON.parse(call.request.query)
       );
@@ -341,7 +343,7 @@ export class DatabaseProvider {
   async deleteOne(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.deleteOne(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.deleteOne(EJSON.parse(call.request.query));
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({
@@ -354,7 +356,7 @@ export class DatabaseProvider {
   async deleteMany(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.deleteMany(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.deleteMany(EJSON.parse(call.request.query));
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({
@@ -367,7 +369,7 @@ export class DatabaseProvider {
   async countDocuments(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.countDocuments(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.countDocuments(EJSON.parse(call.request.query));
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({

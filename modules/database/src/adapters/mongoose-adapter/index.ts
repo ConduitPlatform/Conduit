@@ -113,9 +113,9 @@ export class MongooseAdapter implements DatabaseAdapter {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  getSchemaModel(schemaName: string): MongooseSchema {
+  getSchemaModel(schemaName: string): { model: MongooseSchema, relations: any } {
     if (this.models && this.models![schemaName]) {
-      return this.models![schemaName];
+      return { model: this.models![schemaName], relations: null };
     }
     throw new Error(`Schema ${schemaName} not defined yet`);
   }

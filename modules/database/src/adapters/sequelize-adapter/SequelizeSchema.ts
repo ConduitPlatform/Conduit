@@ -7,10 +7,12 @@ export class SequelizeSchema implements SchemaAdapter {
     model: ModelCtor<any>;
     originalSchema: any;
     excludedFields: any[];
+    relations: any;
 
-    constructor(sequelize: Sequelize, schema: any) {
-        this.originalSchema = schema;
+    constructor(sequelize: Sequelize, schema: any, originalSchema: any) {
+        this.originalSchema = originalSchema;
         this.excludedFields = [];
+        this.relations = {};
         const self = this;
 
         deepdash.eachDeep(this.originalSchema.modelSchema, (value: any, key: any, parentValue: any, context: any) => {
@@ -23,6 +25,10 @@ export class SequelizeSchema implements SchemaAdapter {
                     self.excludedFields.push(key);
                 }
             }
+
+            if (parentValue[key].hasOwnProperty('type') && parentValue[key].type === 'Relation') {
+                this.relations[key] = parentValue[key].model;
+            }
         })
 
         schema.modelSchema._id = {
@@ -30,6 +36,7 @@ export class SequelizeSchema implements SchemaAdapter {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         };
+
         this.model = sequelize.define(schema.name, schema.modelSchema as any, {
             ...schema.modelOptions,
             freezeTableName: true,
@@ -52,7 +59,7 @@ export class SequelizeSchema implements SchemaAdapter {
         return this.model.bulkCreate(query);
     }
 
-    findOne(query: any, select?: string): Promise<any> {
+    async findOne(query: any, select?: string, populate?: any, relations?: any): Promise<any> {
         let options: FindOptions = { where: this.parseQuery(query), raw: true };
         options.attributes = {exclude: [...this.excludedFields]};
         if (!isNil(select)) {
@@ -69,10 +76,23 @@ export class SequelizeSchema implements SchemaAdapter {
                 }
             }
         }
-        return this.model.findOne(options);
+
+        let document = await this.model.findOne(options);
+
+        if (!isNil(populate) && !isNil(relations)) {
+            for (const relation of populate.split(' ')) {
+                if (this.relations.hasOwnProperty(relation)) {
+                    if (relations.hasOwnProperty(this.relations[relation])) {
+                        document[relation] = await relations[this.relations[relation]].findOne({ _id: document[relation] });
+                    }
+                }
+            }
+        }
+
+        return document;
     }
 
-    findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any): Promise<any> {
+    async findMany(query: any, skip?: number, limit?: number, select?: string, sort?: any, populate?: any, relations?: any): Promise<any> {
         let options: FindOptions = { where: this.parseQuery(query), raw: true };
         options.attributes = {exclude: [...this.excludedFields]};
         if (!isNil(skip)) {
@@ -98,7 +118,26 @@ export class SequelizeSchema implements SchemaAdapter {
         if (!isNil(sort)) {
             options.order = sort;
         }
-        return this.model.findAll(options);
+
+        const documents = await this.model.findAll(options);
+
+        if (!isNil(populate) && !isNil(relations)) {
+            for (const relation of populate.split(' ')) {
+                let cache: any = {};
+                for (const document of documents) {
+                    if (this.relations.hasOwnProperty(relation)) {
+                        if (relations.hasOwnProperty(this.relations[relation])) {
+                            if (!cache.hasOwnProperty(document[relation])) {
+                                cache[document[relation]] = await relations[this.relations[relation]].findOne({ _id: document[relation] });
+                            }
+                            document[relation] = cache[document[relation]];
+                        }
+                    }
+                }
+            }
+        }
+
+        return documents;
     }
 
     deleteOne(query: any): Promise<any> {

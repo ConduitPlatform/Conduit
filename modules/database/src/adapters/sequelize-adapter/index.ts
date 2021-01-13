@@ -4,6 +4,7 @@ import { SequelizeSchema } from "./SequelizeSchema";
 import { schemaConverter } from "./SchemaConverter";
 import { ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
 import { systemRequiredValidator } from "../utils/validateSchemas";
+import { SchemaAdapter } from '../../interfaces';
 
 export class SequelizeAdapter implements DatabaseAdapter {
   connected: boolean = false;
@@ -18,7 +19,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
-  createSchemaFromAdapter(schema: any): Promise<{ schema: any; }> {
+  createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter> {
     if (!this.models) {
       this.models = {};
     }
@@ -37,24 +38,29 @@ export class SequelizeAdapter implements DatabaseAdapter {
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
-    this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema);
-    return this.syncDb().then(() => {return { schema: this.models![schema.name] }});
+    this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
+    return this.syncDb().then(() => { return this.models![schema.name] });
   }
 
   private async syncDb() {
     await this.sequelize.sync().catch(console.error);
   }
 
-  async getSchema(schemaName: string): Promise<{ schema: any; }> {
+  getSchema(schemaName: string): ConduitSchema {
     if (this.models) {
-      return { schema: this.models[schemaName].originalSchema };
+      return this.models[schemaName].originalSchema;
     }
     throw new Error("Schema not defined yet");
   }
 
-  async getSchemaModel(schemaName: string): Promise<{ model: any; }> {
+  getSchemaModel(schemaName: string): { model: SchemaAdapter, relations: any } {
     if (this.models) {
-      return { model: this.models[schemaName] };
+      const self = this;
+      let relations: any = {};
+      for (const key in this.models[schemaName].relations) {
+        relations[this.models[schemaName].relations[key]] = self.models[this.models[schemaName].relations[key]];
+      }
+      return { model: this.models[schemaName], relations };
     }
     throw new Error("Schema not defined yet");
   }
