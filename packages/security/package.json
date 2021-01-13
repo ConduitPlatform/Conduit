@@ -29,6 +29,7 @@
   "dependencies": {
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@quintessential-sft/conduit-sdk": "^1.0.0",
+    "helmet": "^4.3.1",
     "lodash": "^4.17.15"
   }
 }

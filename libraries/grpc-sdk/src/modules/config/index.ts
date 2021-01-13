@@ -174,6 +174,7 @@ export default class Config {
 
   watchModules() {
     let emitter = new EventEmitter();
+    emitter.setMaxListeners(150);
     let call = this.client.watchModules({});
     call.on("data", function (data: any) {
       emitter.emit("module-registered", data.modules);

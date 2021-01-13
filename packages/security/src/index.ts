@@ -1,9 +1,10 @@
 import {NextFunction, Request, Response} from 'express';
 import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
-import {ConduitSDK, IConduitSecurity, PlatformTypesEnum, ConduitError} from '@quintessential-sft/conduit-sdk';
+import {ConduitSDK, IConduitSecurity, ConduitError} from '@quintessential-sft/conduit-sdk';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { Admin } from './admin';
+import helmet from "helmet";
 
 class SecurityModule extends IConduitSecurity {
 
@@ -22,6 +23,7 @@ class SecurityModule extends IConduitSecurity {
         const router = conduit.getRouter();
 
         router.registerGlobalMiddleware('clientMiddleware', this.clientMiddleware.bind(this));
+        router.registerGlobalMiddleware('helmetMiddleware',helmet());
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {

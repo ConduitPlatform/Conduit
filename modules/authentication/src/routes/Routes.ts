@@ -417,16 +417,22 @@ export class AuthenticationRoutes {
             message: "Token is expired or otherwise not valid",
           });
         }
-        return this.grpcSdk.databaseProvider!.findOne("User", { _id: accessTokenDoc.userId });
+        return this.grpcSdk.databaseProvider!.findOne("User", { _id: accessTokenDoc.userId }).then((user: any) => {
+          if (isNil(user)) {
+            callback({
+              code: grpc.status.UNAUTHENTICATED,
+              message: "User no longer exists",
+            });
+          } else {
+            callback(null, { result: JSON.stringify({ user: user }) });
+          }
+        });
       })
-      .then((user: any) => {
-        if (isNil(user)) {
-          return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: "User no longer exists",
-          });
-        }
-        callback(null, { result: JSON.stringify({ user: user }) });
+      .catch((err) => {
+        callback({
+          code: grpc.status.INTERNAL,
+          message: err?.message ? err.message : "Something went wrong",
+        });
       });
   }
 }
