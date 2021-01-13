@@ -27,6 +27,12 @@ export class CustomEndpointHandler {
         (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
           if (searchString.length !== 0) searchString += ",";
           if (r.comparisonField.type === "Input") {
+            if(isNil(params[r.comparisonField.value])){
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.comparisonField.value} is missing from input`,
+              });
+            }
             searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
           } else if (r.comparisonField.type === "Context") {
             if (isNil(call.request.context)) {
@@ -59,6 +65,12 @@ export class CustomEndpointHandler {
         (r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
           if (createString.length !== 0) createString += ",";
           if (r.assignmentField.type === "Input") {
+            if(isNil(params[r.assignmentField.value])){
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.assignmentField.value} is missing from input`,
+              });
+            }
             createString += constructAssignment(
               r.schemaField,
               r.action,
