@@ -3,8 +3,9 @@ import {ClientModel} from './models/Client';
 import {isNil} from 'lodash';
 import {ConduitSDK, IConduitSecurity, ConduitError} from '@quintessential-sft/conduit-sdk';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { Admin } from './admin';
+import {Admin} from './admin';
 import helmet from "helmet";
+import {RateLimiter} from "./handlers/rate-limiter";
 
 class SecurityModule extends IConduitSecurity {
 
@@ -22,8 +23,11 @@ class SecurityModule extends IConduitSecurity {
 
         const router = conduit.getRouter();
 
+        router.registerGlobalMiddleware('rateLimiter', (new RateLimiter(process.env.REDIS_HOST as string,
+            parseInt(process.env.REDIS_PORT as string))).limiter);
         router.registerGlobalMiddleware('clientMiddleware', this.clientMiddleware.bind(this));
-        router.registerGlobalMiddleware('helmetMiddleware',helmet());
+        router.registerGlobalMiddleware('helmetMiddleware', helmet());
+
     }
 
     clientMiddleware(req: Request, res: Response, next: NextFunction) {
