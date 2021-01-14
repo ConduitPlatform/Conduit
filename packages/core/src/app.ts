@@ -11,7 +11,6 @@ import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { ConduitLogger } from "./utils/logging/logger";
-var bodyParser = require('body-parser');
 export class App {
   private app: ConduitApp;
   private conduitRouter: IConduitRouter;
@@ -46,10 +45,8 @@ export class App {
   private registerGlobalMiddleware() {
     this.conduitRouter.registerGlobalMiddleware("cors", cors());
     this.conduitRouter.registerGlobalMiddleware("logger", this.logger.middleware);
-    
-    this.conduitRouter.registerGlobalMiddleware("jsonParser", bodyParser.json({limit: '50mb'}));
-    this.conduitRouter.registerGlobalMiddleware("urlParser", bodyParser.urlencoded({limit: '50mb', extended: true}));
-    this.conduitRouter.registerGlobalMiddleware("urlEncoding", express.urlencoded({ extended: false }));
+    this.conduitRouter.registerGlobalMiddleware("jsonParser", express.json({limit: '50mb'}));
+    this.conduitRouter.registerGlobalMiddleware("urlParser", express.urlencoded({limit: '50mb', extended: false}));
     this.conduitRouter.registerGlobalMiddleware("cookieParser", cookieParser());
     this.conduitRouter.registerGlobalMiddleware("staticResources", express.static(path.join(__dirname, "public")));
 

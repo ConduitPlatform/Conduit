@@ -41,6 +41,7 @@ export default class ConfigManager implements IConfigManager {
     });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
+    this.moduleRegister.setMaxListeners(150);
     this.highAvailability();
     const self = this;
     setInterval(() => {
