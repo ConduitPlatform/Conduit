@@ -122,7 +122,7 @@ export class CustomEndpointHandler {
       if (endpoint.paginated) {
         const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString),
+            searchString === "{}" ? {} : JSON.parse(searchString),
           null,
           params["skip"],
           params["limit"],
@@ -131,14 +131,14 @@ export class CustomEndpointHandler {
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString)
+            searchString === "{}" ? {} : JSON.parse(searchString)
         );
 
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
         promise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString),
+            searchString === "{}" ? {} : JSON.parse(searchString),
           undefined,
           undefined,
           undefined,
@@ -151,11 +151,11 @@ export class CustomEndpointHandler {
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
-        JSON.parse(searchString),
+          searchString === "{}" ? {} : JSON.parse(searchString),
         JSON.parse(createString)
       );
     } else if (endpoint.operation === 3) {
-      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, JSON.parse(searchString));
+      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, searchString === "{}" ? {} : JSON.parse(searchString));
     } else {
       console.error("Niko eisai malakas");
       process.exit(-1);
