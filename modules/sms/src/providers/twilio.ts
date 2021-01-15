@@ -8,14 +8,14 @@ export class TwilioProvider implements ISmsProvider {
     private readonly serviceSid: string | undefined;
     private client: twilio.Twilio;
 
-    constructor(settings: {phoneNumber: string, accountSID: string, authToken: string, serviceSid: string | undefined}) {
+    constructor(settings: {phoneNumber: string, accountSID: string, authToken: string, verify: { active: boolean, serviceSid: string | undefined}}) {
         ({
             phoneNumber: this.phoneNumber,
             accountSID: this.accountSID,
-            authToken: this.authToken,
-            serviceSid: this.serviceSid
+            authToken: this.authToken
         } = settings);
 
+        this.serviceSid = settings.verify.serviceSid;
         this.client = twilio(this.accountSID, this.authToken);
     }
 
