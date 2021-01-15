@@ -1,10 +1,11 @@
 import * as grpc from "grpc";
 import path from "path";
 import { EventEmitter } from "events";
+import {ConduitModule} from "../../interfaces/ConduitModule";
 
 let protoLoader = require("@grpc/proto-loader");
 
-export default class Config {
+export default class Config implements ConduitModule{
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;

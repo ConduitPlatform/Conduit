@@ -1,9 +1,11 @@
 import * as grpc from "grpc";
 import path from "path";
+import {ConduitModule} from "../../interfaces/ConduitModule";
 
 let protoLoader = require("@grpc/proto-loader");
 
-export default class Admin {
+export default class Admin implements ConduitModule{
+  
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
