@@ -80,9 +80,9 @@ export default class SmsModule {
         console.log("sms config did not update");
       })
       .then((smsConfig: any) => {
-        // if (smsConfig.active) {
-        return this.enableModule();
-        // }
+        if (smsConfig.active) {
+          return this.enableModule();
+        }
       })
       .catch(console.log);
   }
