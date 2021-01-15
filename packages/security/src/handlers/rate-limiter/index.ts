@@ -18,7 +18,7 @@ export class RateLimiter {
             points: 50, // 10 requests
             duration: 1, // per 1 second by IP
             blockDuration: 10,
-            inmemoryBlockOnConsumed: 10,
+            // inmemoryBlockOnConsumed: 10,
             execEvenly: false
         });
 
