@@ -183,13 +183,12 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
-                path: "/authentication/twofa",
+                path: "/authentication/local/twofa",
                 action: ConduitRouteActions.POST,
                 bodyParams: {
                   email: TYPE.String,
                   code: TYPE.String,
-                },
-                middlewares: ["authMiddleware"],
+                }
               },
               new ConduitRouteReturnDefinition("VerifyTwoFaResponse", "String"),
               "verify"
