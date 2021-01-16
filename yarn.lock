@@ -3535,13 +3535,6 @@
   dependencies:
     "@types/unist" "*"
 
-"@types/memjs@^1.2.1":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@types/memjs/-/memjs-1.2.1.tgz#dc50ae4ae2571e77ba67b74180abf04e4eb2415a"
-  integrity sha512-HewjWEwkWYUhbACwqbBfrirVDEDWJodeb3+0vEITB92VDqlOH9EYH5g7B4iwKb7Yw02oqpBgWQ3dEQZE3SMx+Q==
-  dependencies:
-    "@types/node" "*"
-
 "@types/mime@*":
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@types/mime/-/mime-2.0.2.tgz#857a118d8634c84bba7ae14088e4508490cd5da5"
@@ -3684,13 +3677,6 @@
   dependencies:
     "@types/prop-types" "*"
     csstype "^2.2.0"
-
-"@types/redis@^2.8.17":
-  version "2.8.25"
-  resolved "https://registry.yarnpkg.com/@types/redis/-/redis-2.8.25.tgz#046bfff24b82effa59d74744c6fcf8995be17479"
-  integrity sha512-e5N5Dg712aZ1CPi1Li0XalukPSWd2RTLYzmrMsQ84NkYQ7cqKHC+HroXM1WP65O1zRGfzld72/u9ikumEe+ylA==
-  dependencies:
-    "@types/node" "*"
 
 "@types/redis@^2.8.28":
   version "2.8.28"
@@ -14040,11 +14026,6 @@ media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
-
-memjs@^1.2.2:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/memjs/-/memjs-1.2.2.tgz#f7c7276c7016ba1b8ad800df09cecc32522a536c"
-  integrity sha512-j6I5cQsjT8izm0FcBZrwga4VmlhTMsBTPKdyKolQenLulHNvKuNcDgDmBhQvScqNLy4tjpCCFwiqFK+5l6J20g==
 
 memoize-one@^5.1.1:
   version "5.1.1"
