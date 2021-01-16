@@ -2,7 +2,6 @@ import Config from "./modules/config";
 import Admin from "./modules/admin";
 import Router from "./modules/router";
 import DatabaseProvider from "./modules/databaseProvider";
-import InMemoryStore from "./modules/inMemoryStore";
 import Email from "./modules/email";
 import Storage from "./modules/storage";
 import PushNotifications from "./modules/pushNotifications";
@@ -22,7 +21,6 @@ export default class ConduitGrpcSdk {
   private readonly _router: Router;
   private readonly _modules: any = {};
   private readonly _availableModules: any = {
-    "in-memory-store": InMemoryStore,
     "database-provider": DatabaseProvider,
     "storage": Storage,
     "email": Email,
@@ -160,15 +158,6 @@ export default class ConduitGrpcSdk {
 
   get router(): Router {
     return this._router;
-  }
-
-  get inMemoryStore(): InMemoryStore | null {
-    if (this._modules["in-memory-store"]) {
-      return this._modules["in-memory-store"];
-    } else {
-      console.warn("In memory store not up yet!");
-      return null;
-    }
   }
 
   get databaseProvider(): DatabaseProvider | null {

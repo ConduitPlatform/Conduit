@@ -67,7 +67,7 @@ export class AdminHandlers {
         break;
       case "core":
           finalConfig = dbConfig.moduleConfigs.core;
-          break;  
+          break;
       default:
         return res.status(404).json({ error: "Resource not found" });
     }
@@ -111,13 +111,6 @@ export class AdminHandlers {
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.emailProvider))
           return res.json({ message: "Module not available" });
         updatedConfig = await this.grpcSdk.emailProvider
-          .setConfig(newConfig)
-          .catch((e: Error) => (errorMessage = e.message));
-        break;
-      case "in-memory-store":
-        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.inMemoryStore))
-          return res.json({ message: "Module not available" });
-        updatedConfig = await this.grpcSdk.inMemoryStore
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;

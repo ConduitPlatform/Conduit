@@ -1,19 +1,18 @@
 import { Application } from "express";
-import { IConduitRouter } from "./modules/Router/interfaces";
-import { IConduitDatabase } from "./modules/Database/interfaces";
-import { IConduitAdmin } from "./modules/Admin";
-import { IConduitEmail } from "./modules/Email";
-import { IConduitPushNotifications } from "./modules/PushNotifications";
-import { IConduitInMemoryStore } from "./modules/InMemoryStore";
-import { IConduitStorage } from "./modules/Storage";
-import { IConduitSecurity } from "./modules/Security";
-import { IConduitAuthentication } from "./modules/Authentication";
-import { IConduitCMS } from "./modules/Cms";
+import { IConduitRouter } from "./modules";
+import { IConduitDatabase } from "./modules";
+import { IConduitAdmin } from "./modules";
+import { IConduitEmail } from "./modules";
+import { IConduitPushNotifications } from "./modules";
+import { IConduitStorage } from "./modules";
+import { IConduitSecurity } from "./modules";
+import { IConduitAuthentication } from "./modules";
+import { IConduitCMS } from "./modules";
 import { isNil, isPlainObject, merge } from "lodash";
 import validator from "validator";
 import isNaturalNumber from "is-natural-number";
 import { Config as ConvictConfig } from "convict";
-import { IConfigManager } from "./modules/Config";
+import { IConfigManager } from "./modules";
 import { StateManager } from "./utilities/StateManager";
 import { RedisManager } from "./utilities/RedisManager";
 import { EventBus } from "./utilities/EventBus";
@@ -27,7 +26,6 @@ export class ConduitSDK {
   private _admin?: IConduitAdmin;
   private _email?: IConduitEmail;
   private _pushNotifications?: IConduitPushNotifications;
-  private _inMemoryStore?: IConduitInMemoryStore;
   private _storage?: IConduitStorage;
   private _security?: IConduitSecurity;
   private _authentication?: IConduitAuthentication;
@@ -120,16 +118,6 @@ export class ConduitSDK {
   getPushNotifications(): IConduitPushNotifications {
     if (this._pushNotifications) return this._pushNotifications;
     throw new Error("Push notifications not assigned yet!");
-  }
-
-  registerInMemoryStore(inMemoryStore: IConduitInMemoryStore) {
-    if (this._inMemoryStore) throw new Error("Cannot register a second in-memory-store module");
-    this._inMemoryStore = inMemoryStore;
-  }
-
-  getInMemoryStore(): IConduitInMemoryStore {
-    if (this._inMemoryStore) return this._inMemoryStore;
-    throw new Error("In-memory-store module not assigned yet");
   }
 
   registerStorage(storage: IConduitStorage) {
