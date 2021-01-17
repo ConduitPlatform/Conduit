@@ -1,13 +1,15 @@
-import { IStorageProvider } from "./interfaces/IStorageProvider";
+import { IStorageProvider, StorageConfig } from "./interfaces";
 import { GoogleCloudStorage } from "./providers/google";
-import { StorageConfig } from "./interfaces/StorageConfig";
 import { LocalStorage } from "./providers/local";
+import {AzureStorage} from "./providers/azure";
 
 
 export function createStorageProvider(provider: string, options: StorageConfig): IStorageProvider {
     if (provider === 'google') {
         return new GoogleCloudStorage(options);
-    } else {
+    }else if (provider === 'azure') {
+        return new AzureStorage(options);
+    }  else {
         return new LocalStorage();
     }
 }
