@@ -1,7 +1,7 @@
-import { IStorageProvider } from "../../interfaces/IStorageProvider";
-import { StorageConfig } from "../../interfaces/StorageConfig";
-import { existsSync, writeFile, readFile, mkdir, unlink, rename } from "fs";
-import { resolve } from "path";
+import {IStorageProvider} from "../../interfaces/IStorageProvider";
+import {StorageConfig} from "../../interfaces/StorageConfig";
+import {existsSync, writeFile, readFile, mkdir, unlink, rename} from "fs";
+import {resolve} from "path";
 
 export class LocalStorage implements IStorageProvider {
 
@@ -26,7 +26,6 @@ export class LocalStorage implements IStorageProvider {
                 else res(data);
             });
         });
-
     }
 
     store(fileName: string, data: any): Promise<boolean | Error> {
@@ -63,6 +62,7 @@ export class LocalStorage implements IStorageProvider {
             });
         });
     }
+
     exists(fileName: string): Promise<boolean | Error> {
         const self = this;
         return new Promise(function (res) {
@@ -74,6 +74,7 @@ export class LocalStorage implements IStorageProvider {
         });
 
     }
+
     rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
         const self = this;
         return new Promise(function (res, reject) {
@@ -83,6 +84,7 @@ export class LocalStorage implements IStorageProvider {
             });
         });
     }
+
     moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
         const self = this;
         return new Promise(function (res, reject) {
@@ -92,14 +94,23 @@ export class LocalStorage implements IStorageProvider {
             });
         });
     }
+
     moveToFolderAndRename(currentFilename: string, newFilename: string, newFolder: string): Promise<boolean | Error> {
-         const self = this;
+        const self = this;
         return new Promise(function (res, reject) {
             rename(resolve(self._storagePath, currentFilename), resolve(self._rootStoragePath, newFolder, newFilename), function (err) {
                 if (err) reject(err);
                 else res(true);
             });
         });
+    }
+
+    getPublicUrl(fileName: string): Promise<any | Error> {
+        throw new Error("Method not implemented!");
+    }
+
+    getSignedUrl(fileName: string): Promise<any> {
+        throw new Error("Method not implemented!| Error");
     }
 
 }

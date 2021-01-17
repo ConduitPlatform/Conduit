@@ -6,6 +6,7 @@ service Router {
     rpc CreateFile (RouterRequest) returns (RouterResponse);
     rpc UpdateFile (RouterRequest) returns (RouterResponse);
     rpc DeleteFile (RouterRequest) returns (RouterResponse);
+    rpc GetFileUrl (RouterRequest) returns (RouterResponse);
 }
 // all admin requests accept the params,headers and context objects as stringified json
 message RouterRequest {
@@ -16,4 +17,5 @@ message RouterRequest {
 // all admin responses return their results as stringified json
 message RouterResponse {
     string result = 1;
+    string redirect = 2;
 }

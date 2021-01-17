@@ -36,7 +36,8 @@ export class StorageModule {
         this.grpcServer.addService(storage.service, {
             setConfig: this.setConfig.bind(this),
             getFile: this.getFileGrpc.bind(this),
-            createFile: this.createFileGrpc.bind(this)
+            createFile: this.createFileGrpc.bind(this),
+            updateFileGrpc: this.updateFileGrpc.bind(this)
         });
         let files = new FileRoutes(this.grpcServer, grpcSdk, this.storageProvider);
         this._routes = files.registeredRoutes;
@@ -142,11 +143,26 @@ export class StorageModule {
     async createFileGrpc(call: any, callback: any) {
         if (!this._fileHandlers) return callback({code: grpc.status.INTERNAL, message: 'File handlers not initiated'});
 
-        const {name, mimeType, data, folder} = call.request;
+        const {name, mimeType, data, folder, isPublic} = call.request;
         let errorMessage: string | null = null;
         const response = await this._fileHandlers.createFile(JSON.stringify({
             request: {
-                params: {name, mimeType, data, folder},
+                params: {name, mimeType, data, folder, isPublic},
+                headers: {}
+            }
+        }), callback).catch(e => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        return callback(null, {fileDocument: JSON.stringify(response)});
+    }
+
+    async updateFileGrpc(call: any, callback: any) {
+        if (!this._fileHandlers) return callback({code: grpc.status.INTERNAL, message: 'File handlers not initiated'});
+
+        const {id, data, name, folder, mimeType} = call.request;
+        let errorMessage: string | null = null;
+        const response = await this._fileHandlers.updateFile(JSON.stringify({
+            request: {
+                params: {id, data, name, folder, mimeType},
                 headers: {}
             }
         }), callback).catch(e => errorMessage = e.message);

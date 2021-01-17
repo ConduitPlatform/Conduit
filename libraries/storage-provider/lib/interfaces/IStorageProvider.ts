@@ -1,6 +1,6 @@
 export interface IStorageProvider {
 
-    store(fileName: string, data: any): Promise<boolean | Error>;
+    store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error>;
 
     get(fileName: string, downloadPath?: string): Promise<any | Error>
 
@@ -15,7 +15,7 @@ export interface IStorageProvider {
      * Ex. storage.folder('photos').file('test')
      * @param name For the folder
      */
-    folder(name: string): IStorageProvider 
+    folder(name: string): IStorageProvider
 
     delete(fileName: string): Promise<boolean | Error>
 
@@ -23,10 +23,14 @@ export interface IStorageProvider {
 
     get(fileName: string, downloadPath?: string): Promise<any | Error>
 
-    rename(currentFilename: string, newFilename: string): Promise<boolean | Error> 
+    getSignedUrl(fileName: string): Promise<any | Error>
+
+    getPublicUrl(fileName: string): Promise<any | Error>
+
+    rename(currentFilename: string, newFilename: string): Promise<boolean | Error>
 
     moveToFolder(filename: string, newFolder: string): Promise<boolean | Error>
 
-    moveToFolderAndRename(currentFilename: string, newFilename: string, newFolder: string): Promise<boolean | Error>  
+    moveToFolderAndRename(currentFilename: string, newFilename: string, newFolder: string): Promise<boolean | Error>
 
 }

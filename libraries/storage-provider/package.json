@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc"
+    "build": "rimraf dist && tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -26,6 +26,7 @@
     "directory": "libraries/storage-provider"
   },
   "devDependencies": {
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "rimraf": "^3.0.2"
   }
 }
