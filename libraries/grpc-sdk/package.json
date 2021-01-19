@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/conduit-grpc-sdk",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -39,10 +39,10 @@
     "@types/convict": "^4.2.1",
     "@types/express": "~4.16.1",
     "@types/google-protobuf": "^3.2.7",
-    "@types/redis": "^2.8.28",
     "@types/is-natural-number": "^4.0.0",
     "@types/lodash": "^4.14.150",
     "@types/node": "^13.9.8",
+    "@types/redis": "^2.8.28",
     "@types/validator": "^13.0.0",
     "copyfiles": "^2.2.0",
     "express": "~4.16.1",
