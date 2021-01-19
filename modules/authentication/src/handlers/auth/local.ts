@@ -440,13 +440,20 @@ export class LocalHandlers {
     }
 
     async enableTwoFa(call: any, callback: any) {
+        const { phoneNumber } = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
+
         if (isNil(context) || isNil(context.user)) {
             return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
         }
 
+        if (isNil(phoneNumber)) {
+            return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Phone number is required'});
+        }
+
         let errorMessage: string | null = null;
         await this.database.findByIdAndUpdate('User', context.user._id, {
+            phoneNumber,
             hasTwoFA: true
         }).catch((e: any) => {
             errorMessage = e.message;

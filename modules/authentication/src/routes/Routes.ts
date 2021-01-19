@@ -210,6 +210,9 @@ export class AuthenticationRoutes {
                         path: "/authentication/local/enable-twofa",
                         action: ConduitRouteActions.UPDATE,
                         middlewares: ["authMiddleware"],
+                        bodyParams: {
+                            phoneNumber: TYPE.String
+                        }
                     },
                     new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
                     "enableTwoFa"
