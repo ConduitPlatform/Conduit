@@ -18,6 +18,7 @@ service Router {
   rpc Verify(RouterRequest) returns (RouterResponse);
   rpc GetUser(RouterRequest) returns (RouterResponse);
   rpc EnableTwoFa(RouterRequest) returns (RouterResponse);
+  rpc VerifyPhoneNumber(RouterRequest) returns (RouterResponse);
   rpc DisableTwoFa(RouterRequest) returns (RouterResponse);
 }
 

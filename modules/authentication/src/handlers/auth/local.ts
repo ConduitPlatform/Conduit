@@ -451,9 +451,69 @@ export class LocalHandlers {
             return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Phone number is required'});
         }
 
+        const clientId = context.clientId;
+
         let errorMessage: string | null = null;
+        const verificationSid = await this.sendVerificationCode(phoneNumber);
+        if (verificationSid === '') {
+            return callback({code: grpc.status.INTERNAL, message: 'Could not send verification code'})
+        }
+
+        await this.database.deleteMany('VerificationRecord', {userId: context.user._id, clientId}).catch(console.error);
+
+        await this.database.create('VerificationRecord', {
+            userId: context.user._id,
+            clientId,
+            verificationSid,
+            phoneNumber
+        }).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        return callback(null, {
+            result: JSON.stringify({
+                message: 'Verification code sent'
+            })
+        });
+    }
+
+    async verifyPhoneNumber(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        const { code } = JSON.parse(call.request.params);
+
+        if (isNil(context) || isEmpty(context)) {
+            return callback({
+                code: grpc.status.UNAUTHENTICATED,
+                message: 'No headers provided'
+            });
+        }
+
+        const clientId = context.clientId;
+
+        if (isNil(code)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'code is required'
+            });
+        }
+
+        let errorMessage: string | null = null;
+        const verificationRecord = await this.database.findOne('VerificationRecord', {userId: context.user._id, clientId})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        if (isNil(verificationRecord)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification record for this user'});
+
+        const verified = await this.sms.verify({verificationSid: verificationRecord.verificationSid, code})
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+
+        if (!verified) {
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'email and code do not match'});
+        }
+
+        await this.database.deleteMany('VerificationRecord', {userId: context.user._id, clientId}).catch(console.error);
+
         await this.database.findByIdAndUpdate('User', context.user._id, {
-            phoneNumber,
+            phoneNumber: verificationRecord.phoneNumber,
             hasTwoFA: true
         }).catch((e: any) => {
             errorMessage = e.message;

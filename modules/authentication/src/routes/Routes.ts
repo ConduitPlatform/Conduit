@@ -61,6 +61,7 @@ export class AuthenticationRoutes {
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
       verify: this.localHandlers.verify.bind(this.localHandlers),
       enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
+      verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
       disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
       authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
       authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
@@ -216,6 +217,23 @@ export class AuthenticationRoutes {
                     },
                     new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
                     "enableTwoFa"
+                )
+            )
+        );
+
+        routesArray.push(
+            constructRoute(
+                new ConduitRoute(
+                    {
+                        path: "/authentication/local/verifyPhoneNumber",
+                        action: ConduitRouteActions.POST,
+                        middlewares: ["authMiddleware"],
+                        bodyParams: {
+                            code: TYPE.String
+                        }
+                    },
+                    new ConduitRouteReturnDefinition("VerifyPhoneNumberResponse", "String"),
+                    "verifyPhoneNumber"
                 )
             )
         );
