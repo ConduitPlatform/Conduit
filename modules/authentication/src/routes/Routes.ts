@@ -60,6 +60,8 @@ export class AuthenticationRoutes {
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
       verify: this.localHandlers.verify.bind(this.localHandlers),
+      enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
+      disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
       authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
       authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
       authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
@@ -200,6 +202,34 @@ export class AuthenticationRoutes {
             )
           )
         );
+
+        routesArray.push(
+            constructRoute(
+                new ConduitRoute(
+                    {
+                        path: "/authentication/local/enable-twofa",
+                        action: ConduitRouteActions.UPDATE,
+                        middlewares: ["authMiddleware"],
+                    },
+                    new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
+                    "enableTwoFa"
+                )
+            )
+        );
+
+          routesArray.push(
+              constructRoute(
+                  new ConduitRoute(
+                      {
+                          path: "/authentication/local/disable-twofa",
+                          action: ConduitRouteActions.UPDATE,
+                          middlewares: ["authMiddleware"],
+                      },
+                      new ConduitRouteReturnDefinition("DisableTwoFaResponse", "String"),
+                      "disableTwoFa"
+                  )
+              )
+          );
       }
       enabled = true;
     }

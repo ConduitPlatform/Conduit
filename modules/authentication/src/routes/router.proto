@@ -17,6 +17,8 @@ service Router {
   rpc AuthMiddleware(RouterRequest) returns (RouterResponse);
   rpc Verify(RouterRequest) returns (RouterResponse);
   rpc GetUser(RouterRequest) returns (RouterResponse);
+  rpc EnableTwoFa(RouterRequest) returns (RouterResponse);
+  rpc DisableTwoFa(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

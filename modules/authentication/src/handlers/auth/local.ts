@@ -438,4 +438,46 @@ export class LocalHandlers {
             })
         });
     }
+
+    async enableTwoFa(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isNil(context.user)) {
+            return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+        }
+
+        let errorMessage: string | null = null;
+        await this.database.findByIdAndUpdate('User', context.user._id, {
+            hasTwoFA: true
+        }).catch((e: any) => {
+            errorMessage = e.message;
+        })
+        if (!isNil(errorMessage)) {
+            return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        }
+
+        return callback(null, { result: JSON.stringify({
+                message: "twofa enabled"
+        })});
+    }
+
+    async disableTwoFa(call: any, callback: any) {
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isNil(context.user)) {
+            return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+        }
+
+        let errorMessage: string | null = null;
+        await this.database.findByIdAndUpdate('User', context.user._id, {
+            hasTwoFA: false
+        }).catch((e: any) => {
+            errorMessage = e.message;
+        })
+        if (!isNil(errorMessage)) {
+            return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        }
+
+        return callback(null, { result: JSON.stringify({
+                message: "twofa disabled"
+            })});
+    }
 }
