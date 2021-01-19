@@ -18,6 +18,7 @@ export const VerificationRecordSchema = new ConduitSchema('VerificationRecord',
         required: true,
         systemRequired: true
     },
+    phoneNumber: TYPE.String,
     expiresOn: TYPE.Date,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date

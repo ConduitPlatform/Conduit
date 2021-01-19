@@ -60,6 +60,9 @@ export class AuthenticationRoutes {
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
       verify: this.localHandlers.verify.bind(this.localHandlers),
+      enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
+      verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
+      disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
       authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
       authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
       authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
@@ -190,11 +193,64 @@ export class AuthenticationRoutes {
                   code: TYPE.String,
                 }
               },
-              new ConduitRouteReturnDefinition("VerifyTwoFaResponse", "String"),
+              new ConduitRouteReturnDefinition("VerifyTwoFaResponse", {
+                  userId: ConduitString.Optional,
+                  accessToken: ConduitString.Optional,
+                  refreshToken: ConduitString.Optional,
+                  message: ConduitString.Optional,
+              }),
               "verify"
             )
           )
         );
+
+        routesArray.push(
+            constructRoute(
+                new ConduitRoute(
+                    {
+                        path: "/authentication/local/enable-twofa",
+                        action: ConduitRouteActions.UPDATE,
+                        middlewares: ["authMiddleware"],
+                        bodyParams: {
+                            phoneNumber: TYPE.String
+                        }
+                    },
+                    new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
+                    "enableTwoFa"
+                )
+            )
+        );
+
+        routesArray.push(
+            constructRoute(
+                new ConduitRoute(
+                    {
+                        path: "/authentication/local/verifyPhoneNumber",
+                        action: ConduitRouteActions.POST,
+                        middlewares: ["authMiddleware"],
+                        bodyParams: {
+                            code: TYPE.String
+                        }
+                    },
+                    new ConduitRouteReturnDefinition("VerifyPhoneNumberResponse", "String"),
+                    "verifyPhoneNumber"
+                )
+            )
+        );
+
+          routesArray.push(
+              constructRoute(
+                  new ConduitRoute(
+                      {
+                          path: "/authentication/local/disable-twofa",
+                          action: ConduitRouteActions.UPDATE,
+                          middlewares: ["authMiddleware"],
+                      },
+                      new ConduitRouteReturnDefinition("DisableTwoFaResponse", "String"),
+                      "disableTwoFa"
+                  )
+              )
+          );
       }
       enabled = true;
     }
