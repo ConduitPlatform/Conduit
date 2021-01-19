@@ -190,7 +190,12 @@ export class AuthenticationRoutes {
                   code: TYPE.String,
                 }
               },
-              new ConduitRouteReturnDefinition("VerifyTwoFaResponse", "String"),
+              new ConduitRouteReturnDefinition("VerifyTwoFaResponse", {
+                  userId: ConduitString.Optional,
+                  accessToken: ConduitString.Optional,
+                  refreshToken: ConduitString.Optional,
+                  message: ConduitString.Optional,
+              }),
               "verify"
             )
           )
