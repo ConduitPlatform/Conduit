@@ -3,6 +3,7 @@ package authentication.router;
 
 service Router {
   rpc Register(RouterRequest) returns (RouterResponse);
+  rpc DeleteUser(RouterRequest) returns (RouterResponse);
   rpc AuthenticateLocal(RouterRequest) returns (RouterResponse);
   rpc ForgotPassword(RouterRequest) returns (RouterResponse);
   rpc ResetPassword(RouterRequest) returns (RouterResponse);

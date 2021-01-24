@@ -71,6 +71,7 @@ export class AuthenticationRoutes {
       renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
       logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
       getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
+      deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
       authMiddleware: this.middleware.bind(this),
     });
   }
@@ -399,6 +400,19 @@ export class AuthenticationRoutes {
             },
             new ConduitRouteReturnDefinition("UserResponse", UserSchema.fields),
             "getUser"
+          )
+        )
+      );
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/authentication/user",
+              action: ConduitRouteActions.DELETE,
+              middlewares: ["authMiddleware"],
+            },
+            new ConduitRouteReturnDefinition("DeleteUserResponse", "String"),
+            "deleteUser"
           )
         )
       );

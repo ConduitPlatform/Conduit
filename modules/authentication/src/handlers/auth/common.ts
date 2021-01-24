@@ -105,7 +105,7 @@ export class CommonHandlers {
 
         return callback(null, {result: JSON.stringify({message: 'Logged out'})});
     }
-    
+
     async getUser(call: any, callback: any) {
 
         const context = JSON.parse(call.request.context);
@@ -116,6 +116,26 @@ export class CommonHandlers {
         const user = context.user;
 
         return callback(null, {result: JSON.stringify(user)});
+    }
+
+    async deleteUser(call: any, callback: any) {
+
+        const context = JSON.parse(call.request.context);
+        if (isNil(context) || isEmpty(context)) return callback({
+            code: grpc.status.UNAUTHENTICATED,
+            message: 'No headers provided'
+        });
+        const user = context.user;
+        let errorMessage = null;
+        await this.database.deleteOne("User", {_id: user._id}).catch((e: any) => errorMessage = e.message);;
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        callback(null, {result: "done"});
+
+        const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
+        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id});
+        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) console.log("Failed to delete all access tokens");
+
     }
 
 }
