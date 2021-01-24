@@ -9,6 +9,15 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message SendSmsRequest {
+  string to = 1;
+  string message = 2;
+}
+
+message SendSmsResponse {
+  string message = 1;
+}
+
 message SendVerificationCodeRequest {
   string to = 1;
 }
@@ -28,6 +37,7 @@ message VerifyResponse {
 
 service Sms {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc SendSms(SendSmsRequest) returns (SendSmsResponse);
   rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
   rpc Verify(VerifyRequest) returns (VerifyResponse);
 }

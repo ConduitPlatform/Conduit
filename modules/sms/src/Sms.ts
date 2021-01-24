@@ -123,6 +123,24 @@ export default class SmsModule {
     return callback(null, { updateConfig: JSON.stringify(updateResult) });
   }
 
+  async sendSms(call: any, callback: any) {
+    const { to, message } = JSON.parse(call.request.params);
+    let errorMessage: string | null = null;
+
+    if (isNil(this._provider)) {
+        return callback({code: grpc.status.INTERNAL, message: 'No sms provider'});
+    }
+
+    await this._provider.sendSms(to, message)
+        .catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage)) return callback({
+        code: grpc.status.INTERNAL,
+        message: errorMessage
+    });
+
+    return callback(null, {result: JSON.stringify({message: 'SMS sent'})});
+  }
+
   async sendVerificationCode(call: any, callback: any) {
     const to = call.request.to;
 
