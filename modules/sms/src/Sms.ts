@@ -124,7 +124,8 @@ export default class SmsModule {
   }
 
   async sendSms(call: any, callback: any) {
-    const { to, message } = JSON.parse(call.request.params);
+    const to = call.request.to;
+    const message = call.request.message;
     let errorMessage: string | null = null;
 
     if (isNil(this._provider)) {
