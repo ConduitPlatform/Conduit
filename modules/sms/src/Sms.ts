@@ -156,7 +156,7 @@ export default class SmsModule {
 
     let verificationSid = await this._provider.sendVerificationCode(to).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      callback({
+      return callback({
         code: grpc.status.INTERNAL,
         message: errorMessage,
       });
