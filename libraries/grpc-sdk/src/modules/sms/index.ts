@@ -57,6 +57,20 @@ export default class SMS implements ConduitModule{
     });
   }
 
+  sendSms(params: {to: string, message: string}) {
+      return new Promise((resolve, reject) => {
+        this.client.sendSms(
+          { to: params.to, message: params.message },
+          (err: any, res: any) => {
+            if (err || !res) {
+              reject(err || "Something went wrong");
+            } else {
+              resolve(res.message)
+            }
+          })
+      })
+  }
+
   sendVerificationCode(params: {to: string}) {
     return new Promise((resolve, reject) => {
       this.client.sendVerificationCode(
@@ -68,7 +82,6 @@ export default class SMS implements ConduitModule{
             resolve(res.verificationSid)
           }
         }
-
       )
     });
   }
@@ -84,7 +97,6 @@ export default class SMS implements ConduitModule{
             resolve(res.verified)
           }
         }
-
       )
     });
   }

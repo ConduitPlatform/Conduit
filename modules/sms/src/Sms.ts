@@ -139,7 +139,7 @@ export default class SmsModule {
         message: errorMessage
     });
 
-    return callback(null, {result: JSON.stringify({message: 'SMS sent'})});
+    return callback(null, {message: 'SMS sent'});
   }
 
   async sendVerificationCode(call: any, callback: any) {
