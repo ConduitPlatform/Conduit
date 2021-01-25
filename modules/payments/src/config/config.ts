@@ -9,10 +9,6 @@ export default {
         default: 'stripe'
     },
     stripe: {
-        publishable_key: {
-            format: 'String',
-            default: undefined
-        },
         secret_key: {
             format: 'String',
             default: undefined
