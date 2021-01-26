@@ -4,6 +4,7 @@ import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk
 import path from "path";
 import * as grpc from "grpc";
 import { IPaymentProvider } from "./interfaces/IPaymentProvider";
+import { StripeProvider } from "./providers/stripe";
 
 let protoLoader = require("@grpc/proto-loader");
 
@@ -149,6 +150,12 @@ export default class PaymentsModule {
     const name = paymentsConfig.providerName;
     const settings = paymentsConfig[name];
 
+    if (name === 'stripe') {
+      this._provider = new StripeProvider(settings.secret_key, this.grpcSdk);
+    } else {
+      console.error("Payment provider not supported");
+      process.exit(-1);
+    }
   }
 
 }
