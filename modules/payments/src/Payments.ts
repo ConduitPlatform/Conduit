@@ -215,7 +215,7 @@ export default class PaymentsModule {
     const settings = paymentsConfig[this.providerName];
 
     if (this.providerName === 'stripe') {
-      this._provider = new StripeProvider(settings.secret_key, this.grpcSdk);
+      this._provider = new StripeProvider(settings.secret_key, this.grpcSdk, this.database);
     } else {
       console.error("Payment provider not supported");
       process.exit(-1);
