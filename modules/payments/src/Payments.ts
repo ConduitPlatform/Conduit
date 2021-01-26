@@ -3,10 +3,12 @@ import { isNil } from "lodash";
 import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
+import { IPaymentProvider } from "./interfaces/IPaymentProvider";
 
 let protoLoader = require("@grpc/proto-loader");
 
 export default class PaymentsModule {
+  private _provider: IPaymentProvider | undefined;
   private isRunning: boolean = false;
   private readonly _url: string;
   private readonly grpcServer: any;
@@ -25,6 +27,7 @@ export default class PaymentsModule {
 
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
+      createPayment: this.createPayment.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -112,6 +115,28 @@ export default class PaymentsModule {
     }
 
     return callback(null, { updateConfig: JSON.stringify(updateResult) });
+  }
+
+  async createPayment(call: any, callback: any) {
+    const currency = call.request.currency;
+    const unitAmount = call.request.unitAmount;
+
+    if (isNil(this._provider)) {
+      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
+    }
+    if (isNil(currency) || isNil(unitAmount)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "currency and unit amount are required" });
+    }
+
+    let errorMessage: string | null = null;
+
+    let clientSecret = await this._provider.createPayment(currency, unitAmount)
+      .catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { clientSecret });
   }
 
   private async enableModule() {

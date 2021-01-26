@@ -9,6 +9,16 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message CreatePaymentRequest {
+  string currency = 1;
+  uint32 unitAmount = 2;
+}
+
+message CreatePaymentResponse {
+  string clientSecret = 1;
+}
+
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
 }
