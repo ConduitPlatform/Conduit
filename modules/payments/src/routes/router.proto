@@ -1,0 +1,18 @@
+syntax = "proto3";
+package payments.router;
+
+service Router {
+  rpc CompletePayment(RouterRequest) returns (RouterResponse);
+}
+
+message RouterRequest {
+  string params = 1;
+  string path = 2;
+  string headers = 3;
+  string context = 4;
+}
+
+message RouterResponse {
+  string result = 1;
+  string redirect = 2;
+}

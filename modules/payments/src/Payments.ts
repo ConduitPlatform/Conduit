@@ -5,6 +5,7 @@ import path from "path";
 import * as grpc from "grpc";
 import { IPaymentProvider } from "./interfaces/IPaymentProvider";
 import { StripeProvider } from "./providers/stripe";
+import { PaymentsRoutes } from "./routes/Routes";
 
 let protoLoader = require("@grpc/proto-loader");
 
@@ -13,6 +14,7 @@ export default class PaymentsModule {
   private isRunning: boolean = false;
   private readonly _url: string;
   private readonly grpcServer: any;
+  private _router: PaymentsRoutes;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./payments.proto"), {
@@ -38,7 +40,6 @@ export default class PaymentsModule {
     });
     this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
     console.log("bound on: ", this._url);
-    this.grpcServer.start();
 
     this.grpcSdk
       .waitForExistence("database-provider")
@@ -141,8 +142,17 @@ export default class PaymentsModule {
   }
 
   private async enableModule() {
-    await this.initProvider();
-    this.isRunning = true;
+    if (!this.isRunning) {
+      await this.initProvider();
+      this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
+      this.grpcServer.start();
+      this.isRunning = true;
+    }
+    let url = this._url;
+    if (process.env.REGISTER_NAME === "true") {
+      url = "payments:" + this._url.split(":"[1]);
+    }
+    this._router.registerRoutes(url);
   }
 
   private async initProvider() {
