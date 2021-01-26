@@ -69,7 +69,7 @@ export default class Payments implements ConduitModule {
           if (err || !res) {
             reject(err || "Something went wrong");
           } else {
-            resolve(res.clientSecret)
+            resolve({ clientSecret: res.clientSecret, paymentId: res.paymentId });
           }
         }
       )

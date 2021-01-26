@@ -159,13 +159,13 @@ export default class PaymentsModule {
       });
     }
 
-    let clientSecret = await this._provider.createPayment(product.name, product.currency, product.value)
+    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value)
       .catch((e: Error) => errorMessage = e.message);
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { clientSecret });
+    return callback(null, { clientSecret, paymentId });
   }
 
   private async enableModule() {

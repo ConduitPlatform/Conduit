@@ -32,6 +32,6 @@ export class StripeProvider implements IPaymentProvider {
       }
     });
 
-    return Promise.resolve(intent.client_secret);
+    return Promise.resolve({ clientSecret: intent.client_secret, paymentId: intent.id });
   }
 }

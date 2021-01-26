@@ -15,6 +15,7 @@ message CreatePaymentRequest {
 
 message CreatePaymentResponse {
   string clientSecret = 1;
+  string paymentId = 2;
 }
 
 service Payments {
