@@ -53,4 +53,23 @@ export class StripeProvider implements IPaymentProvider {
 
     return Promise.resolve(true)
   }
+
+  async refundPayment(paymentId: string): Promise<boolean> {
+    let errorMessage: string | null = null;
+    const intent = await this.client.refunds.create({
+      payment_intent: paymentId
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return Promise.reject(errorMessage);
+    }
+
+    await this.database.create('Transaction', {
+      provider: 'stripe',
+      data: intent
+    })
+
+    return Promise.resolve(true);
+  }
 }

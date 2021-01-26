@@ -26,8 +26,17 @@ message CancelPaymentResponse {
   bool success = 1;
 }
 
+message RefundPaymentRequest {
+  string paymentId = 1;
+}
+
+message RefundPaymentResponse {
+  bool success = 1;
+}
+
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
+  rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
 }

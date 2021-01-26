@@ -6,4 +6,6 @@ export interface IPaymentProvider {
   ): Promise<any>;
 
   cancelPayment(paymentId: string): Promise<boolean>;
+
+  refundPayment(paymentId: string): Promise<boolean>;
 }
