@@ -4,4 +4,6 @@ export interface IPaymentProvider {
     currency: string,
     unitAmount: number
   ): Promise<any>;
+
+  cancelPayment(paymentId: string): Promise<boolean>;
 }

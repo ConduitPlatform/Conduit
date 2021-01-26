@@ -75,4 +75,23 @@ export default class Payments implements ConduitModule {
       )
     });
   }
+
+  cancelPayment(params: {
+    paymentId: string
+  }) {
+    return new Promise((resolve, reject) => {
+      this.client.cancelPayment(
+        {
+          paymentId: params.paymentId
+        },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve(res.success);
+          }
+        }
+      )
+    });
+  }
 }

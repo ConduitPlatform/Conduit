@@ -36,6 +36,7 @@ export default class PaymentsModule {
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
       createPayment: this.createPayment.bind(this),
+      cancelPayment: this.cancelPayment.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -167,6 +168,28 @@ export default class PaymentsModule {
     }
 
     return callback(null, { clientSecret, paymentId });
+  }
+
+  async cancelPayment(call: any, callback: any) {
+    const paymentId = call.request.paymentId;
+
+    if (isNil(this._provider)) {
+      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
+    }
+    if (isNil(paymentId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "paymentId is required" });
+    }
+
+    let errorMessage: string | null = null;
+    await this._provider.cancelPayment(paymentId)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { success: true });
   }
 
   private async enableModule() {

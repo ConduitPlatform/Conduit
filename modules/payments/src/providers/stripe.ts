@@ -19,10 +19,6 @@ export class StripeProvider implements IPaymentProvider {
     currency: string,
     unitAmount: number,
   ): Promise<any> {
-    let errorMessage: string | null = null;
-    let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return Promise.reject(errorMessage);
-    let url = serverConfig.url;
 
     const intent = await this.client.paymentIntents.create({
       amount: unitAmount,
@@ -33,5 +29,18 @@ export class StripeProvider implements IPaymentProvider {
     });
 
     return Promise.resolve({ clientSecret: intent.client_secret, paymentId: intent.id });
+  }
+
+  async cancelPayment(paymentId: string): Promise<boolean> {
+    let errorMessage: string | null = null;
+    await this.client.paymentIntents.cancel(paymentId)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return Promise.reject(errorMessage);
+    }
+
+    return Promise.resolve(true)
   }
 }
