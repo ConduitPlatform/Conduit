@@ -6,10 +6,12 @@ import * as grpc from "grpc";
 import { IPaymentProvider } from "./interfaces/IPaymentProvider";
 import { StripeProvider } from "./providers/stripe";
 import { PaymentsRoutes } from "./routes/Routes";
+import * as models from "./models";
 
 let protoLoader = require("@grpc/proto-loader");
 
 export default class PaymentsModule {
+  private database: any
   private _provider: IPaymentProvider | undefined;
   private isRunning: boolean = false;
   private readonly _url: string;
@@ -143,6 +145,8 @@ export default class PaymentsModule {
 
   private async enableModule() {
     if (!this.isRunning) {
+      this.database = this.grpcSdk.databaseProvider;
+      await this.registerSchemas();
       await this.initProvider();
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
       this.grpcServer.start();
@@ -166,6 +170,13 @@ export default class PaymentsModule {
       console.error("Payment provider not supported");
       process.exit(-1);
     }
+  }
+
+  private registerSchemas() {
+    const promises = Object.values(models).map((model) => {
+      return this.database.createSchemaFromAdapter(model);
+    });
+    return Promise.all(promises);
   }
 
 }
