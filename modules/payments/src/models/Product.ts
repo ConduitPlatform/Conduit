@@ -8,6 +8,8 @@ export const ProductSchema = new ConduitSchema('Product',
     currency: TYPE.String,
     isSubscription: TYPE.Boolean,
     renewEvery: TYPE.String,
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date
   },
   {
     timestamps: true,
