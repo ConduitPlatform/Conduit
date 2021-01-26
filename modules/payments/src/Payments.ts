@@ -124,19 +124,42 @@ export default class PaymentsModule {
   }
 
   async createPayment(call: any, callback: any) {
-    const currency = call.request.currency;
-    const unitAmount = call.request.unitAmount;
+    const productId = call.request.productId;
 
     if (isNil(this._provider)) {
       return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
     }
-    if (isNil(currency) || isNil(unitAmount)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "currency and unit amount are required" });
+    if (isNil(productId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "productId is required" });
     }
 
     let errorMessage: string | null = null;
 
-    let clientSecret = await this._provider.createPayment(currency, unitAmount)
+    const product = await this.database.findOne("Product", { _id: productId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: errorMessage
+      });
+    }
+    if (isNil(product)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "product doesn't exist"
+      });
+    }
+
+    if (product.isSubscription) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "product can't be a subscription"
+      });
+    }
+
+    let clientSecret = await this._provider.createPayment(product.name, product.currency, product.value)
       .catch((e: Error) => errorMessage = e.message);
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });

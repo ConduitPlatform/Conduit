@@ -15,6 +15,7 @@ export class StripeProvider implements IPaymentProvider {
   }
 
   async createPayment(
+    productName: string,
     currency: string,
     unitAmount: number,
   ): Promise<any> {
@@ -26,6 +27,9 @@ export class StripeProvider implements IPaymentProvider {
     const intent = await this.client.paymentIntents.create({
       amount: unitAmount,
       currency,
+      metadata: {
+        product: productName
+      }
     });
 
     return Promise.resolve(intent.client_secret);

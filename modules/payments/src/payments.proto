@@ -10,8 +10,7 @@ message SetConfigResponse {
 }
 
 message CreatePaymentRequest {
-  string currency = 1;
-  uint32 unitAmount = 2;
+  string productId = 1;
 }
 
 message CreatePaymentResponse {

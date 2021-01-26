@@ -58,14 +58,12 @@ export default class Payments implements ConduitModule {
   }
 
   createPayment(params: {
-    currency: string,
-    unitAmount: number
+    productId: string
   }) {
     return new Promise((resolve, reject) => {
       this.client.createPayment(
         {
-          currency: params.currency,
-          unitAmount: params.unitAmount
+          productId: params.productId
         },
         (err: any, res: any) => {
           if (err || !res) {
