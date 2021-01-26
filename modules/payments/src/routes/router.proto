@@ -2,6 +2,7 @@ syntax = "proto3";
 package payments.router;
 
 service Router {
+  rpc GetProducts(RouterRequest) returns (RouterResponse);
   rpc CompletePayment(RouterRequest) returns (RouterResponse);
 }
 
