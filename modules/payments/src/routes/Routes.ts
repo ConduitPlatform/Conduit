@@ -17,7 +17,7 @@ const PROTO_PATH = __dirname + "/router.proto";
 export class PaymentsRoutes {
   private database: any;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly providerName: string) {
     const self = this;
 
     grpcSdk.waitForExistence('database-provider')
@@ -58,7 +58,21 @@ export class PaymentsRoutes {
     return callback(null, { result: JSON.stringify({ products }) });
   }
 
-  completePayment(call: any, callback: any) {
+  async completePayment(call: any, callback: any) {
+    let errorMessage: string | null = null;
+    await this.database.create('Transaction', {
+      provider: this.providerName,
+      data: JSON.parse(call.request.params)
+    }).catch((e: Error) => {
+      console.error(e);
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: errorMessage
+      });
+    }
     return callback(null, { result: JSON.stringify("ok") });
   }
 

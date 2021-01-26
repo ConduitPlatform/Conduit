@@ -15,6 +15,7 @@ export default class PaymentsModule {
   private database: any
   private _admin: AdminHandlers;
   private _provider: IPaymentProvider | undefined;
+  private providerName: string;
   private isRunning: boolean = false;
   private readonly _url: string;
   private readonly grpcServer: any;
@@ -174,7 +175,7 @@ export default class PaymentsModule {
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       await this.initProvider();
-      this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
+      this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk, this.providerName);
       this.grpcServer.start();
       this.isRunning = true;
     }
@@ -187,10 +188,10 @@ export default class PaymentsModule {
 
   private async initProvider() {
     const paymentsConfig = await this.grpcSdk.config.get("payments");
-    const name = paymentsConfig.providerName;
-    const settings = paymentsConfig[name];
+    this.providerName = paymentsConfig.providerName;
+    const settings = paymentsConfig[this.providerName];
 
-    if (name === 'stripe') {
+    if (this.providerName === 'stripe') {
       this._provider = new StripeProvider(settings.secret_key, this.grpcSdk);
     } else {
       console.error("Payment provider not supported");
