@@ -145,7 +145,13 @@ export class RestController {
           if (r.redirect) {
             res.redirect(r.redirect);
           } else {
-            res.status(200).json(JSON.parse(r.result));
+            let result = r.result ? r.result : r;
+            if (r.result && !(typeof route.returnTypeFields === "string")) {
+              result = JSON.parse(result);
+            } else {
+              result = { result: result };
+            }
+            res.status(200).json(result);
           }
         })
         .catch((err: Error | ConduitError | any) => {
