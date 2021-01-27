@@ -36,6 +36,7 @@ export default class PaymentsModule {
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
       createPayment: this.createPayment.bind(this),
+      createPaymentWithSavedCard: this.createPaymentWithSavedCard.bind(this),
       cancelPayment: this.cancelPayment.bind(this),
       refundPayment: this.refundPayment.bind(this),
     });
@@ -129,6 +130,7 @@ export default class PaymentsModule {
   async createPayment(call: any, callback: any) {
     const productId = call.request.productId;
     const userId = call.request.userId;
+    const saveCard = call.request.saveCard;
 
     if (isNil(this._provider)) {
       return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
@@ -163,13 +165,60 @@ export default class PaymentsModule {
       });
     }
 
-    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value, userId)
+    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value, userId, saveCard)
       .catch((e: Error) => errorMessage = e.message);
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { clientSecret, paymentId });
+  }
+
+  async createPaymentWithSavedCard(call: any, callback: any) {
+    const productId = call.request.productId;
+    const userId = call.request.userId;
+    const cardId = call.request.cardId;
+
+    if (isNil(this._provider)) {
+      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
+    }
+    if (isNil(productId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "productId is required" });
+    }
+
+    let errorMessage: string | null = null;
+
+    const product = await this.database.findOne("Product", { _id: productId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: errorMessage
+      });
+    }
+    if (isNil(product)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "product doesn't exist"
+      });
+    }
+
+    if (product.isSubscription) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "product can't be a subscription"
+      });
+    }
+
+    const payment = await this._provider.createPaymentWithSavedCard(product.name, product.currency, product.value, userId, cardId)
+      .catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, payment);
   }
 
   async cancelPayment(call: any, callback: any) {

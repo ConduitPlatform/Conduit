@@ -59,19 +59,49 @@ export default class Payments implements ConduitModule {
 
   createPayment(params: {
     productId: string,
-    userId?: string
+    userId?: string,
+    saveCard?: boolean
   }) {
     return new Promise((resolve, reject) => {
       this.client.createPayment(
         {
           productId: params.productId,
-          userId: params.userId
+          userId: params.userId,
+          saveCard: params.saveCard
         },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || "Something went wrong");
           } else {
             resolve({ clientSecret: res.clientSecret, paymentId: res.paymentId });
+          }
+        }
+      )
+    });
+  }
+
+  createPaymentWithSavedCard(params: {
+    productId: string,
+    userId: string,
+    cardId: string
+  }) {
+    return new Promise((resolve, reject) => {
+      this.client.createPaymentWithSavedCard(
+        {
+          productId: params.productId,
+          userId: params.userId,
+          cardId: params.cardId
+        },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve({
+              clientSecret: res.clientSecret,
+              paymentId: res.paymentId,
+              paymentMethod: res.paymentMethod,
+              error: res.error
+            });
           }
         }
       )

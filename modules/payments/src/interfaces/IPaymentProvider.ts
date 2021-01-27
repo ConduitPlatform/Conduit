@@ -3,7 +3,16 @@ export interface IPaymentProvider {
     productName: string,
     currency: string,
     unitAmount: number,
-    userId?: string
+    userId?: string,
+    saveCard?: boolean
+  ): Promise<any>;
+
+  createPaymentWithSavedCard(
+    productName: string,
+    currency: string,
+    unitAmount: number,
+    userId: string,
+    cardId: string
   ): Promise<any>;
 
   cancelPayment(paymentId: string, userId?: string): Promise<boolean>;
