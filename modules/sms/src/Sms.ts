@@ -124,7 +124,8 @@ export default class SmsModule {
   }
 
   async sendSms(call: any, callback: any) {
-    const { to, message } = JSON.parse(call.request.params);
+    const to = call.request.to;
+    const message = call.request.message;
     let errorMessage: string | null = null;
 
     if (isNil(this._provider)) {
@@ -138,7 +139,7 @@ export default class SmsModule {
         message: errorMessage
     });
 
-    return callback(null, {result: JSON.stringify({message: 'SMS sent'})});
+    return callback(null, {message: 'SMS sent'});
   }
 
   async sendVerificationCode(call: any, callback: any) {
@@ -155,7 +156,7 @@ export default class SmsModule {
 
     let verificationSid = await this._provider.sendVerificationCode(to).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      callback({
+      return callback({
         code: grpc.status.INTERNAL,
         message: errorMessage,
       });
