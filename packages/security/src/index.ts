@@ -18,6 +18,12 @@ class SecurityModule extends IConduitSecurity {
         router.registerGlobalMiddleware('rateLimiter', (new RateLimiter(process.env.REDIS_HOST as string,
             parseInt(process.env.REDIS_PORT as string))).limiter);
         router.registerGlobalMiddleware('helmetMiddleware', helmet());
+        router.registerGlobalMiddleware('helmetGqlFix', (req:any,res:any,next:any)=>{
+            if ((req.url === '/graphql' || req.url.startsWith('/swagger')) && req.method === 'GET') {
+                res.removeHeader("Content-Security-Policy");
+            }
+            next()
+        })
         router.registerGlobalMiddleware('clientMiddleware', clientValidator.middleware.bind(clientValidator));
     }
 
