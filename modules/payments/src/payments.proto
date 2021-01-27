@@ -11,6 +11,7 @@ message SetConfigResponse {
 
 message CreatePaymentRequest {
   string productId = 1;
+  string userId = 2;
 }
 
 message CreatePaymentResponse {
@@ -20,6 +21,7 @@ message CreatePaymentResponse {
 
 message CancelPaymentRequest {
   string paymentId = 1;
+  string userId = 2;
 }
 
 message CancelPaymentResponse {
@@ -28,6 +30,7 @@ message CancelPaymentResponse {
 
 message RefundPaymentRequest {
   string paymentId = 1;
+  string userId = 2;
 }
 
 message RefundPaymentResponse {

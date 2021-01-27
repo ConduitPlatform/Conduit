@@ -18,17 +18,20 @@ export class StripeProvider implements IPaymentProvider {
     productName: string,
     currency: string,
     unitAmount: number,
+    userId?: string
   ): Promise<any> {
 
     const intent = await this.client.paymentIntents.create({
       amount: unitAmount,
       currency,
       metadata: {
-        product: productName
+        product: productName,
+        userId: isNil(userId) ? null : userId
       }
     });
 
     await this.database.create('Transaction', {
+      userId,
       provider: 'stripe',
       data: intent
     });
@@ -36,7 +39,7 @@ export class StripeProvider implements IPaymentProvider {
     return Promise.resolve({ clientSecret: intent.client_secret, paymentId: intent.id });
   }
 
-  async cancelPayment(paymentId: string): Promise<boolean> {
+  async cancelPayment(paymentId: string, userId?: string): Promise<boolean> {
     let errorMessage: string | null = null;
     const intent = await this.client.paymentIntents.cancel(paymentId)
       .catch((e: Error) => {
@@ -47,6 +50,7 @@ export class StripeProvider implements IPaymentProvider {
     }
 
     await this.database.create('Transaction', {
+      userId,
       provider: 'stripe',
       data: intent
     });
@@ -54,10 +58,13 @@ export class StripeProvider implements IPaymentProvider {
     return Promise.resolve(true)
   }
 
-  async refundPayment(paymentId: string): Promise<boolean> {
+  async refundPayment(paymentId: string, userId?: string): Promise<boolean> {
     let errorMessage: string | null = null;
     const intent = await this.client.refunds.create({
-      payment_intent: paymentId
+      payment_intent: paymentId,
+      metadata: {
+        userId: isNil(userId) ? null : userId
+      }
     }).catch((e: Error) => {
       errorMessage = e.message;
     });
@@ -66,6 +73,7 @@ export class StripeProvider implements IPaymentProvider {
     }
 
     await this.database.create('Transaction', {
+      userId,
       provider: 'stripe',
       data: intent
     })

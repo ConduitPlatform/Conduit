@@ -128,6 +128,7 @@ export default class PaymentsModule {
 
   async createPayment(call: any, callback: any) {
     const productId = call.request.productId;
+    const userId = call.request.userId;
 
     if (isNil(this._provider)) {
       return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
@@ -162,7 +163,7 @@ export default class PaymentsModule {
       });
     }
 
-    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value)
+    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value, userId)
       .catch((e: Error) => errorMessage = e.message);
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -173,6 +174,7 @@ export default class PaymentsModule {
 
   async cancelPayment(call: any, callback: any) {
     const paymentId = call.request.paymentId;
+    const userId = call.request.userId;
 
     if (isNil(this._provider)) {
       return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
@@ -182,7 +184,7 @@ export default class PaymentsModule {
     }
 
     let errorMessage: string | null = null;
-    await this._provider.cancelPayment(paymentId)
+    await this._provider.cancelPayment(paymentId, userId)
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -195,6 +197,7 @@ export default class PaymentsModule {
 
   async refundPayment(call: any, callback: any) {
     const paymentId = call.request.paymentId;
+    const userId = call.request.userId;
 
     if (isNil(this._provider)) {
       return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
@@ -204,7 +207,7 @@ export default class PaymentsModule {
     }
 
     let errorMessage: string | null = null;
-    await this._provider.refundPayment(paymentId)
+    await this._provider.refundPayment(paymentId, userId)
       .catch((e: Error) => {
         errorMessage = e.message;
       });

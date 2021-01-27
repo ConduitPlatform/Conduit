@@ -58,12 +58,14 @@ export default class Payments implements ConduitModule {
   }
 
   createPayment(params: {
-    productId: string
+    productId: string,
+    userId?: string
   }) {
     return new Promise((resolve, reject) => {
       this.client.createPayment(
         {
-          productId: params.productId
+          productId: params.productId,
+          userId: params.userId
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -77,12 +79,14 @@ export default class Payments implements ConduitModule {
   }
 
   cancelPayment(params: {
-    paymentId: string
+    paymentId: string,
+    userId?: string
   }) {
     return new Promise((resolve, reject) => {
       this.client.cancelPayment(
         {
-          paymentId: params.paymentId
+          paymentId: params.paymentId,
+          userId: params.userId
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -96,12 +100,14 @@ export default class Payments implements ConduitModule {
   }
 
   refundPayment(params: {
-    paymentId: string
+    paymentId: string,
+    userId?: string
   }) {
     return new Promise((resolve, reject) => {
       this.client.refundPayment(
         {
-          paymentId: params.paymentId
+          paymentId: params.paymentId,
+          userId: params.userId
         },
         (err: any, res: any) => {
           if (err || !res) {

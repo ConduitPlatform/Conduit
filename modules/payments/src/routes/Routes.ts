@@ -59,10 +59,16 @@ export class PaymentsRoutes {
   }
 
   async completePayment(call: any, callback: any) {
+    const data = JSON.parse(call.request.params);
+    let userId;
+    if (this.providerName === 'stripe') {
+      userId = data.data.object.metadata?.userId;
+    }
     let errorMessage: string | null = null;
     await this.database.create('Transaction', {
+      userId,
       provider: this.providerName,
-      data: JSON.parse(call.request.params)
+      data
     }).catch((e: Error) => {
       console.error(e);
       errorMessage = e.message;
