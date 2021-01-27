@@ -149,4 +149,21 @@ export default class Payments implements ConduitModule {
       )
     });
   }
+
+  getPaymentMethods(params: {
+    userId: string
+  }) {
+    return new Promise((resolve, reject) => {
+      this.client.getPaymentMethods(
+        { userId: params.userId },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve(JSON.parse(res.paymentMethods));
+          }
+        }
+      )
+    })
+  }
 }

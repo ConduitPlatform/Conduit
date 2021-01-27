@@ -167,4 +167,24 @@ export class StripeProvider implements IPaymentProvider {
 
     return Promise.resolve(true);
   }
+
+  async getPaymentMethods(userId: string): Promise<any> {
+    let errorMessage: string | null = null;
+    const customer = await this.database.findOne('PaymentsCustomer', {
+      userId,
+      provider: PROVIDER_NAME
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return Promise.reject("customer not found");
+    }
+
+    const paymentMethods = await this.client.paymentMethods.list({
+      customer: customer.customerId,
+      type: 'card'
+    });
+
+    return Promise.resolve(paymentMethods);
+  }
 }

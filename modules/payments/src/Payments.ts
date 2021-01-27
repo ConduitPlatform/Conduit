@@ -39,6 +39,7 @@ export default class PaymentsModule {
       createPaymentWithSavedCard: this.createPaymentWithSavedCard.bind(this),
       cancelPayment: this.cancelPayment.bind(this),
       refundPayment: this.refundPayment.bind(this),
+      getPaymentMethods: this.getPaymentMethods.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -265,6 +266,29 @@ export default class PaymentsModule {
     }
 
     return callback(null, { success: true });
+  }
+
+  async getPaymentMethods(call: any, callback: any) {
+    const userId = call.request.userId;
+
+    if (isNil(this._provider)) {
+      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
+    }
+    if (isNil(userId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "userId is required" });
+    }
+
+    let errorMessage: string | null = null;
+
+    const paymentMethods = await this._provider.getPaymentMethods(userId)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { paymentMethods: JSON.stringify(paymentMethods) });
   }
 
   private async enableModule() {

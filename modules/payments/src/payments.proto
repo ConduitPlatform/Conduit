@@ -51,10 +51,19 @@ message RefundPaymentResponse {
   bool success = 1;
 }
 
+message GetPaymentMethodsRequest {
+  string userId = 1;
+}
+
+message GetPaymentMethodsResponse {
+  string paymentMethods = 1;
+}
+
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
   rpc CreatePaymentWithSavedCard(CreatePaymentWithSavedCardRequest) returns (CreatePaymentWithSavedCardResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
   rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
+  rpc GetPaymentMethods(GetPaymentMethodsRequest) returns (GetPaymentMethodsResponse);
 }
