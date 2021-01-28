@@ -99,7 +99,7 @@ export class StripeHandlers {
       }
     }
 
-    const intent = await this.client.paymentIntents.create({
+    let options: Stripe.PaymentIntentCreateParams = {
       amount: product.value,
       currency: product.currency,
       metadata: {
@@ -108,8 +108,13 @@ export class StripeHandlers {
         saveCard: saveCard ? 'true' : 'false'
       },
       customer: customerId,
-      setup_future_usage: saveCard ? 'off_session' : 'on_session'
-    });
+    }
+
+    if (!isNil(userId) && saveCard) {
+      options.setup_future_usage = "off_session";
+    }
+
+    const intent = await this.client.paymentIntents.create(options);
 
     await this.database.create('Transaction', {
       userId,
