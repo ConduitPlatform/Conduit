@@ -67,7 +67,12 @@ export class StripeProvider implements IPaymentProvider {
       userId,
       provider: PROVIDER_NAME,
       data: intent
+    }).catch((e: Error) => {
+      errorMessage = e.message;
     });
+    if (!isNil(errorMessage)) {
+      return Promise.reject(errorMessage);
+    }
 
     return Promise.resolve({ clientSecret: intent.client_secret, paymentId: intent.id });
   }
@@ -111,7 +116,12 @@ export class StripeProvider implements IPaymentProvider {
         userId,
         provider: PROVIDER_NAME,
         data: intent
+      }).catch((e: Error) => {
+        errorMessage = e.message;
       });
+      if (!isNil(errorMessage)) {
+        return Promise.reject(errorMessage);
+      }
 
       res.clientSecret = intent.client_secret;
       res.paymentId = intent.id;
@@ -140,7 +150,12 @@ export class StripeProvider implements IPaymentProvider {
       userId,
       provider: PROVIDER_NAME,
       data: intent
+    }).catch((e: Error) => {
+      errorMessage = e.message;
     });
+    if (!isNil(errorMessage)) {
+      return Promise.reject(errorMessage);
+    }
 
     return Promise.resolve(true)
   }
@@ -163,7 +178,12 @@ export class StripeProvider implements IPaymentProvider {
       userId,
       provider: PROVIDER_NAME,
       data: intent
-    })
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return Promise.reject(errorMessage);
+    }
 
     return Promise.resolve(true);
   }
