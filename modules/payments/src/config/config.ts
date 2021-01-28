@@ -19,6 +19,10 @@ export default {
             format: 'Boolean',
             default: false
         },
+        api_key: {
+            format: 'String',
+            default: undefined
+        },
         secret_key: {
             format: 'String',
             default: undefined

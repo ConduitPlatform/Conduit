@@ -3,14 +3,15 @@ import ConduitGrpcSdk, {
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  ConduitString,
   constructRoute,
-  TYPE,
-  ConduitString
+  TYPE
 } from "@quintessential-sft/conduit-grpc-sdk";
 import fs from "fs";
 import path from "path";
 import { isNil } from "lodash";
 import { StripeHandlers } from "../handlers/stripe";
+import { IamportHandlers } from "../handlers/iamport";
 
 const protoLoader = require("@grpc/proto-loader");
 const PROTO_PATH = __dirname + "/router.proto";
@@ -18,9 +19,11 @@ const PROTO_PATH = __dirname + "/router.proto";
 export class PaymentsRoutes {
   private database: any;
   private readonly stripeHandlers: StripeHandlers;
+  private readonly iamportHandler: IamportHandlers;
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
     this.stripeHandlers = new StripeHandlers(grpcSdk);
+    this.iamportHandler = new IamportHandlers(grpcSdk);
     const self = this;
 
     grpcSdk.waitForExistence('database-provider')
@@ -47,6 +50,8 @@ export class PaymentsRoutes {
       refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
       getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
       completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
+      addIamportCard: this.iamportHandler.addCard.bind(this.iamportHandler),
+      completeIamportPayment: this.iamportHandler.completePayment.bind(this.iamportHandler),
     });
   }
 
@@ -77,8 +82,6 @@ export class PaymentsRoutes {
 
   async getRegisteredRoutes(): Promise<any[]> {
     let routesArray: any[] = [];
-
-    let enabled = false;
 
     let errorMessage = null;
     let paymentsActive = await this.stripeHandlers.validate().catch((e: any) => (errorMessage = e));
@@ -185,8 +188,53 @@ export class PaymentsRoutes {
               path: "/hook/payments/stripe/completePayment",
               action: ConduitRouteActions.POST,
             },
-            new ConduitRouteReturnDefinition('CompletePaymentResponse', 'String'),
+            new ConduitRouteReturnDefinition('CompleteStripePaymentResponse', 'String'),
             "completeStripePayment"
+          )
+        )
+      );
+    }
+
+    errorMessage = null;
+    paymentsActive = await this.iamportHandler.validate().catch((e: any) => (errorMessage = e));
+    if (!errorMessage && paymentsActive) {
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/addCard",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                email: TYPE.String,
+                buyerName: TYPE.String,
+                phoneNumber: TYPE.String,
+                address: TYPE.String,
+                postCode: TYPE.String
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("AddIamportCardResponse", {
+              customerId: ConduitString.Required,
+              merchantId: ConduitString.Required
+            }),
+            "addIamportCard"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/completePayment",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                data: TYPE.JSON,
+                userId: TYPE.String
+              }
+            },
+            new ConduitRouteReturnDefinition("completeIamportPaymentResponse", 'String'),
+            "completeIamportPayment"
           )
         )
       );

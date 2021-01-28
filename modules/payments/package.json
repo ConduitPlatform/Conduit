@@ -23,7 +23,9 @@
     "convict": "^6.0.0",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15",
-    "stripe": "^8.132.0"
+    "stripe": "^8.132.0",
+    "axios": "^0.21.1",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "rimraf": "^3.0.2",
