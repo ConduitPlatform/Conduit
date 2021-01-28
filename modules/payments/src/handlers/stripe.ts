@@ -75,14 +75,14 @@ export class StripeHandlers {
     }
 
     if (!isNil(userId)) {
-      const customerDb = await this.database.findOne('PaymentsCustomer', { userId, provider: PROVIDER_NAME })
+      const customerDb = await this.database.findOne('PaymentsCustomer', { userId })
         .catch((e: Error) => {
           errorMessage = e.message;
         });
       if (!isNil(errorMessage)) {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
       }
-      if (isNil(customerDb)) {
+      if (isNil(customerDb) || isNil(customerDb.stripe)) {
         const customer = await this.client.customers.create({
           metadata: {
             userId: userId
@@ -90,12 +90,13 @@ export class StripeHandlers {
         });
         customerId = customer.id;
         await this.database.create('PaymentsCustomer', {
-          customerId: customerId,
+          stripe: {
+            customerId
+          },
           userId,
-          provider: PROVIDER_NAME
         })
       } else {
-        customerId = customerDb.customerId;
+        customerId = customerDb.stripe.customerId;
       }
     }
 
@@ -155,15 +156,15 @@ export class StripeHandlers {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'product not found'});
     }
 
-    const customer = await this.database.findOne('PaymentsCustomer', { userId: context.user._id, provider: PROVIDER_NAME })
+    const customer = await this.database.findOne('PaymentsCustomer', { userId: context.user._id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
-    if (isNil(customer)) {
-      return callback({ code: grpc.status.INTERNAL, message:'customer not found' });
+    if (isNil(customer) || isNil(customer.stripe)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
     }
 
     let res: any = {}
@@ -176,7 +177,7 @@ export class StripeHandlers {
           product: product.name,
           userId: context.user._id,
         },
-        customer: customer.customerId,
+        customer: customer.stripe.customerId,
         payment_method: cardId,
         off_session: true,
         confirm: true
@@ -273,18 +274,20 @@ export class StripeHandlers {
     if (isNil(context)) {
       return callback({ code: grpc.status.UNAUTHENTICATED, message: 'No headers provided' });
     }
-    const customer = await this.database.findOne('PaymentsCustomer', {
-      userId: context.user._id,
-      provider: PROVIDER_NAME
-    }).catch((e: Error) => {
-      errorMessage = e.message;
-    });
+    const customer = await this.database.findOne('PaymentsCustomer', { userId: context.user._id })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: "customer not found"});
     }
 
+    if (isNil(customer) || isNil(customer.stripe)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'customer not found'})
+    }
+
     const paymentMethods = await this.client.paymentMethods.list({
-      customer: customer.customerId,
+      customer: customer.stripe.customerId,
       type: 'card'
     });
 
