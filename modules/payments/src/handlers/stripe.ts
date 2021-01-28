@@ -25,7 +25,7 @@ export class StripeHandlers {
     return this.grpcSdk.config.get('payments')
       .then((paymentsConfig: any) => {
         if (!paymentsConfig.stripe.enabled) {
-          throw ConduitError.forbidden('Stripe if deactivated');
+          throw ConduitError.forbidden('Stripe is deactivated');
         }
         if (!paymentsConfig.stripe || !paymentsConfig.stripe.secret_key) {
           throw ConduitError.forbidden('Cannot enable stripe due to missing api key');
