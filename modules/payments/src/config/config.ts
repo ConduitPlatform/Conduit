@@ -4,11 +4,21 @@ export default {
         format: 'Boolean',
         default: false
     },
-    providerName: {
-        format: 'String',
-        default: 'stripe'
-    },
     stripe: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
+        secret_key: {
+            format: 'String',
+            default: undefined
+        }
+    },
+    iamport: {
+        enabled: {
+            format: 'Boolean',
+            default: false
+        },
         secret_key: {
             format: 'String',
             default: undefined

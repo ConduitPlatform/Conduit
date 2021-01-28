@@ -10,14 +10,17 @@ import ConduitGrpcSdk, {
 import fs from "fs";
 import path from "path";
 import { isNil } from "lodash";
+import { StripeHandlers } from "../handlers/stripe";
 
 const protoLoader = require("@grpc/proto-loader");
 const PROTO_PATH = __dirname + "/router.proto";
 
 export class PaymentsRoutes {
   private database: any;
+  private readonly stripeHandlers: StripeHandlers;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly providerName: string) {
+  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+    this.stripeHandlers = new StripeHandlers(grpcSdk);
     const self = this;
 
     grpcSdk.waitForExistence('database-provider')
@@ -38,7 +41,12 @@ export class PaymentsRoutes {
     const router = protoDescriptor.payments.router.Router;
     server.addService(router.service, {
       getProducts: this.getProducts.bind(this),
-      completePayment: this.completePayment.bind(this),
+      createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
+      createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(this.stripeHandlers),
+      cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
+      refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
+      getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
+      completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
     });
   }
 
@@ -58,47 +66,137 @@ export class PaymentsRoutes {
     return callback(null, { result: JSON.stringify({ products }) });
   }
 
-  async completePayment(call: any, callback: any) {
-    const data = JSON.parse(call.request.params);
-    let userId;
-    if (this.providerName === 'stripe') {
-      userId = data.data.object.metadata?.userId;
-    }
-    let errorMessage: string | null = null;
-    await this.database.create('Transaction', {
-      userId,
-      provider: this.providerName,
-      data
-    }).catch((e: Error) => {
-      console.error(e);
-      errorMessage = e.message;
-    });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage
-      });
-    }
-    return callback(null, { result: JSON.stringify("ok") });
-  }
-
-  registerRoutes(url: string) {
+  async registerRoutes(url: string) {
     let routerProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
-    let activeRoutes = this.getRegisteredRoutes();
+    let activeRoutes = await this.getRegisteredRoutes();
     this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8"), url).catch((err: Error) => {
       console.log("Failed to register routes for payments module");
       console.log(err);
     });
   }
 
-  getRegisteredRoutes(): any[] {
+  async getRegisteredRoutes(): Promise<any[]> {
     let routesArray: any[] = [];
+
+    let enabled = false;
+
+    let errorMessage = null;
+    let paymentsActive = await this.stripeHandlers.validate().catch((e: any) => (errorMessage = e));
+    if (!errorMessage && paymentsActive) {
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/stripe/createPayment",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                productId: TYPE.String,
+                userId: TYPE.String,
+                saveCard: TYPE.Boolean
+              }
+            },
+            new ConduitRouteReturnDefinition("CreateStripePaymentResponse", {
+              clientSecret: ConduitString.Required,
+              paymentId: ConduitString.Required
+            }),
+            "createStripePayment"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/stripe/createPaymentWithSavedCard",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                productId: TYPE.String,
+                cardId: TYPE.Boolean
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("CreatePaymentWithSavedCardResponse", {
+              clientSecret: ConduitString.Required,
+              paymentId: ConduitString.Optional,
+              paymentMethod: ConduitString.Optional
+            }),
+            "createStripePaymentWithSavedCard"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/stripe/cancelPayment",
+              action: ConduitRouteActions.UPDATE,
+              bodyParams: {
+                paymentId: TYPE.String,
+                userId: TYPE.String
+              }
+            },
+            new ConduitRouteReturnDefinition("CancelPaymentWithSavedCardResponse", 'Boolean'),
+            "cancelStripePayment"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/stripe/refundPayment",
+              action: ConduitRouteActions.UPDATE,
+              bodyParams: {
+                paymentId: TYPE.String,
+                userId: TYPE.String
+              },
+              middlewares: ["authMiddleware"]
+            },
+            new ConduitRouteReturnDefinition("RefundStripePaymentResponse", 'Boolean'),
+            "refundStripePayment"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/stripe/getPaymentMethods",
+              action: ConduitRouteActions.GET,
+              bodyParams: {
+                paymentId: TYPE.String,
+                userId: TYPE.String
+              }
+            },
+            new ConduitRouteReturnDefinition("GetStripePaymentMethodsResponse", 'Boolean'),
+            "getStripePaymentMethods"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/hook/payments/stripe/completePayment",
+              action: ConduitRouteActions.POST,
+            },
+            new ConduitRouteReturnDefinition('CompletePaymentResponse', 'String'),
+            "completeStripePayment"
+          )
+        )
+      );
+    }
 
     routesArray.push(
       constructRoute(
         new ConduitRoute(
           {
-            path: "/hook/payments/products",
+            path: "/payments/products",
             action: ConduitRouteActions.GET,
           },
           new ConduitRouteReturnDefinition('GetProductsResponse', {
@@ -112,19 +210,6 @@ export class PaymentsRoutes {
             }]
           }),
           "getProducts"
-        )
-      )
-    );
-
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
-          {
-            path: "/hook/payments/completePayment",
-            action: ConduitRouteActions.POST,
-          },
-          new ConduitRouteReturnDefinition('CompletePaymentResponse', 'String'),
-          "completePayment"
         )
       )
     );

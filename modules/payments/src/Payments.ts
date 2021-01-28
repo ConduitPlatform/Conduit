@@ -3,8 +3,6 @@ import { isNil } from "lodash";
 import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
-import { IPaymentProvider } from "./interfaces/IPaymentProvider";
-import { StripeProvider } from "./providers/stripe";
 import { PaymentsRoutes } from "./routes/Routes";
 import * as models from "./models";
 import { AdminHandlers } from "./admin/admin";
@@ -14,8 +12,6 @@ let protoLoader = require("@grpc/proto-loader");
 export default class PaymentsModule {
   private database: any
   private _admin: AdminHandlers;
-  private _provider: IPaymentProvider | undefined;
-  private providerName: string;
   private isRunning: boolean = false;
   private readonly _url: string;
   private readonly grpcServer: any;
@@ -35,11 +31,6 @@ export default class PaymentsModule {
 
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
-      createPayment: this.createPayment.bind(this),
-      createPaymentWithSavedCard: this.createPaymentWithSavedCard.bind(this),
-      cancelPayment: this.cancelPayment.bind(this),
-      refundPayment: this.refundPayment.bind(this),
-      getPaymentMethods: this.getPaymentMethods.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -128,176 +119,12 @@ export default class PaymentsModule {
     return callback(null, { updateConfig: JSON.stringify(updateResult) });
   }
 
-  async createPayment(call: any, callback: any) {
-    const productId = call.request.productId;
-    const userId = call.request.userId;
-    const saveCard = call.request.saveCard;
-
-    if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
-    }
-    if (isNil(productId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "productId is required" });
-    }
-
-    let errorMessage: string | null = null;
-
-    const product = await this.database.findOne("Product", { _id: productId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage
-      });
-    }
-    if (isNil(product)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: "product doesn't exist"
-      });
-    }
-
-    if (product.isSubscription) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: "product can't be a subscription"
-      });
-    }
-
-    const { clientSecret, paymentId } = await this._provider.createPayment(product.name, product.currency, product.value, userId, saveCard)
-      .catch((e: Error) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { clientSecret, paymentId });
-  }
-
-  async createPaymentWithSavedCard(call: any, callback: any) {
-    const productId = call.request.productId;
-    const userId = call.request.userId;
-    const cardId = call.request.cardId;
-
-    if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
-    }
-    if (isNil(productId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "productId is required" });
-    }
-
-    let errorMessage: string | null = null;
-
-    const product = await this.database.findOne("Product", { _id: productId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage
-      });
-    }
-    if (isNil(product)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: "product doesn't exist"
-      });
-    }
-
-    if (product.isSubscription) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: "product can't be a subscription"
-      });
-    }
-
-    const payment = await this._provider.createPaymentWithSavedCard(product.name, product.currency, product.value, userId, cardId)
-      .catch((e: Error) => errorMessage = e.message);
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, payment);
-  }
-
-  async cancelPayment(call: any, callback: any) {
-    const paymentId = call.request.paymentId;
-    const userId = call.request.userId;
-
-    if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
-    }
-    if (isNil(paymentId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "paymentId is required" });
-    }
-
-    let errorMessage: string | null = null;
-    await this._provider.cancelPayment(paymentId, userId)
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { success: true });
-  }
-
-  async refundPayment(call: any, callback: any) {
-    const paymentId = call.request.paymentId;
-    const userId = call.request.userId;
-
-    if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
-    }
-    if (isNil(paymentId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "paymentId is required" });
-    }
-
-    let errorMessage: string | null = null;
-    await this._provider.refundPayment(paymentId, userId)
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { success: true });
-  }
-
-  async getPaymentMethods(call: any, callback: any) {
-    const userId = call.request.userId;
-
-    if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: "Payments provider not initialized"});
-    }
-    if (isNil(userId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "userId is required" });
-    }
-
-    let errorMessage: string | null = null;
-
-    const paymentMethods = await this._provider.getPaymentMethods(userId)
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { paymentMethods: JSON.stringify(paymentMethods) });
-  }
-
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
-      await this.initProvider();
-      this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk, this.providerName);
+      this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
       this.grpcServer.start();
       this.isRunning = true;
     }
@@ -305,20 +132,7 @@ export default class PaymentsModule {
     if (process.env.REGISTER_NAME === "true") {
       url = "payments:" + this._url.split(":"[1]);
     }
-    this._router.registerRoutes(url);
-  }
-
-  private async initProvider() {
-    const paymentsConfig = await this.grpcSdk.config.get("payments");
-    this.providerName = paymentsConfig.providerName;
-    const settings = paymentsConfig[this.providerName];
-
-    if (this.providerName === 'stripe') {
-      this._provider = new StripeProvider(settings.secret_key, this.grpcSdk, this.database);
-    } else {
-      console.error("Payment provider not supported");
-      process.exit(-1);
-    }
+    await this._router.registerRoutes(url);
   }
 
   private registerSchemas() {

@@ -3,7 +3,12 @@ package payments.router;
 
 service Router {
   rpc GetProducts(RouterRequest) returns (RouterResponse);
-  rpc CompletePayment(RouterRequest) returns (RouterResponse);
+  rpc CreateStripePayment(RouterRequest) returns (RouterResponse);
+  rpc CreateStripePaymentWithSavedCard(RouterRequest) returns (RouterResponse);
+  rpc CancelStripePayment(RouterRequest) returns (RouterResponse);
+  rpc RefundStripePayment(RouterRequest) returns (RouterResponse);
+  rpc GetStripePaymentMethods(RouterRequest) returns (RouterResponse);
+  rpc CompleteStripePayment(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

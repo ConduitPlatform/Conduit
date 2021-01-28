@@ -9,61 +9,6 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
-message CreatePaymentRequest {
-  string productId = 1;
-  string userId = 2;
-  bool saveCard = 3;
-}
-
-message CreatePaymentResponse {
-  string clientSecret = 1;
-  string paymentId = 2;
-}
-
-message CreatePaymentWithSavedCardRequest {
-  string productId = 1;
-  string userId = 2;
-  string cardId = 3;
-}
-
-message CreatePaymentWithSavedCardResponse {
-  string clientSecret = 1;
-  string paymentId = 2;
-  string paymentMethod = 3;
-  string error = 4;
-}
-
-message CancelPaymentRequest {
-  string paymentId = 1;
-  string userId = 2;
-}
-
-message CancelPaymentResponse {
-  bool success = 1;
-}
-
-message RefundPaymentRequest {
-  string paymentId = 1;
-  string userId = 2;
-}
-
-message RefundPaymentResponse {
-  bool success = 1;
-}
-
-message GetPaymentMethodsRequest {
-  string userId = 1;
-}
-
-message GetPaymentMethodsResponse {
-  string paymentMethods = 1;
-}
-
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
-  rpc CreatePaymentWithSavedCard(CreatePaymentWithSavedCardRequest) returns (CreatePaymentWithSavedCardResponse);
-  rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
-  rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
-  rpc GetPaymentMethods(GetPaymentMethodsRequest) returns (GetPaymentMethodsResponse);
 }
