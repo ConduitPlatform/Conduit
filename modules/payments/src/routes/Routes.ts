@@ -171,7 +171,9 @@ export class PaymentsRoutes {
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware']
             },
-            new ConduitRouteReturnDefinition("GetStripePaymentMethodsResponse", 'Boolean'),
+            new ConduitRouteReturnDefinition("GetStripePaymentMethodsResponse", {
+              paymentMethods: TYPE.JSON
+            }),
             "getStripePaymentMethods"
           )
         )

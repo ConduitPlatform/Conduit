@@ -291,7 +291,7 @@ export class StripeHandlers {
       type: 'card'
     });
 
-    return callback(null, { result: JSON.stringify(paymentMethods) });
+    return callback(null, { result: JSON.stringify({ paymentMethods }) });
   }
 
   async completePayment(call: any, callback: any) {
