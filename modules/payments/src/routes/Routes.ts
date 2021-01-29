@@ -156,7 +156,6 @@ export class PaymentsRoutes {
                 paymentId: TYPE.String,
                 userId: TYPE.String
               },
-              middlewares: ["authMiddleware"]
             },
             new ConduitRouteReturnDefinition("RefundStripePaymentResponse", 'Boolean'),
             "refundStripePayment"
@@ -170,10 +169,7 @@ export class PaymentsRoutes {
             {
               path: "/payments/stripe/getPaymentMethods",
               action: ConduitRouteActions.GET,
-              bodyParams: {
-                paymentId: TYPE.String,
-                userId: TYPE.String
-              }
+              middlewares: ['authMiddleware']
             },
             new ConduitRouteReturnDefinition("GetStripePaymentMethodsResponse", 'Boolean'),
             "getStripePaymentMethods"
