@@ -138,6 +138,35 @@ export class IamportHandlers {
     return callback(null, { result: JSON.stringify({ customerId: customer._id, merchantId }) });
   }
 
+  async validateCard(call: any, callback: any) {
+    const { customerId } = JSON.parse(call.request.params);
+
+    if (isNil(customerId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'customerId is required' });
+    }
+
+    let errorMessage: string | null = null;
+
+    const customer = await this.database.findOne('PaymentsCustomer', { _id: customerId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    customer.iamport.isCardVerified = true;
+    await this.database.findByIdAndUpdate('PaymentsCustomer', customerId, customer)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { result: JSON.stringify({ message: 'card validate successfully'})});
+  }
+
   async completePayment(call: any, callback: any) {
     const { data, userId } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;

@@ -15,7 +15,12 @@ export const PaymentsCustomerSchema = new ConduitSchema('PaymentsCustomer',
       buyerName: TYPE.String,
       phoneNumber: TYPE.String,
       address: TYPE.String,
-      postCode: TYPE.String
+      postCode: TYPE.String,
+      isCardVerified: {
+        type: TYPE.Boolean,
+        default: false,
+        systemRequired: true
+      }
     },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date

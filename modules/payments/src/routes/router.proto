@@ -10,6 +10,7 @@ service Router {
   rpc GetStripePaymentMethods(RouterRequest) returns (RouterResponse);
   rpc CompleteStripePayment(RouterRequest) returns (RouterResponse);
   rpc AddIamportCard(RouterRequest) returns (RouterResponse);
+  rpc ValidateIamportCard(RouterRequest) returns (RouterResponse);
   rpc CompleteIamportPayment(RouterRequest) returns (RouterResponse);
 }
 

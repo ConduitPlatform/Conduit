@@ -51,6 +51,7 @@ export class PaymentsRoutes {
       getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
       completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
       addIamportCard: this.iamportHandler.addCard.bind(this.iamportHandler),
+      validateIamportCard: this.iamportHandler.validateCard.bind(this.iamportHandler),
       completeIamportPayment: this.iamportHandler.completePayment.bind(this.iamportHandler),
     });
   }
@@ -216,6 +217,23 @@ export class PaymentsRoutes {
               merchantId: ConduitString.Required
             }),
             "addIamportCard"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/validateCard/:customerId",
+              action: ConduitRouteActions.POST,
+              urlParams: {
+                customerId: TYPE.String
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("ValidateIamportCardResponse", 'String'),
+            "validateIamportCard"
           )
         )
       );
