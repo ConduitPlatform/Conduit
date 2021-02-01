@@ -53,6 +53,9 @@ export class PaymentsRoutes {
       addIamportCard: this.iamportHandler.addCard.bind(this.iamportHandler),
       validateIamportCard: this.iamportHandler.validateCard.bind(this.iamportHandler),
       completeIamportPayment: this.iamportHandler.completePayment.bind(this.iamportHandler),
+      subscribeToProductIamport: this.iamportHandler.subscribeToProduct.bind(this.iamportHandler),
+      cancelIamportSubscription: this.iamportHandler.cancelSubscription.bind(this.iamportHandler),
+      iamportSubscriptionCallback: this.iamportHandler.subscriptionCallback.bind(this.iamportHandler),
     });
   }
 
@@ -254,6 +257,61 @@ export class PaymentsRoutes {
           )
         )
       );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/subscribe",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                productId: TYPE.String,
+                customerId: TYPE.String // this is need because iamport uses customer id as the billing method
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("SubscribeToProductIamportResponse", {
+              subscription: TYPE.String
+            }),
+            "subscribeToProductIamport"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/cancelSubscription/:subscriptionId",
+              action: ConduitRouteActions.UPDATE,
+              urlParams: {
+                subscriptionId: TYPE.String
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("CancelIamportSubscriptionResponse", 'String'),
+            "cancelIamportSubscription"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/hook/payments/iamport/subscriptionCallback",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                imp_uid: TYPE.String,
+                merchant_uid: TYPE.String
+              },
+            },
+            new ConduitRouteReturnDefinition("IamportSubscriptionCallbackResponse", 'String'),
+            "iamportSubscriptionCallback"
+          )
+        )
+      );
+
     }
 
     routesArray.push(

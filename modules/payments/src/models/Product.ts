@@ -7,7 +7,14 @@ export const ProductSchema = new ConduitSchema('Product',
     value: TYPE.Number,
     currency: TYPE.String,
     isSubscription: TYPE.Boolean,
-    renewEvery: TYPE.String,
+    recurring: TYPE.String,
+    recurringCount: {
+      type: TYPE.Number,
+      default: 1
+    },
+    subscriptionId: TYPE.String,
+    priceId: TYPE.String,
+    provider: TYPE.String,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },

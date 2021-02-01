@@ -12,6 +12,9 @@ service Router {
   rpc AddIamportCard(RouterRequest) returns (RouterResponse);
   rpc ValidateIamportCard(RouterRequest) returns (RouterResponse);
   rpc CompleteIamportPayment(RouterRequest) returns (RouterResponse);
+  rpc SubscribeToProductIamport(RouterRequest) returns (RouterResponse);
+  rpc CancelIamportSubscription(RouterRequest) returns (RouterResponse);
+  rpc IamportSubscriptionCallback(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

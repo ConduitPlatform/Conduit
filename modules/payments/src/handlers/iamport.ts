@@ -1,10 +1,11 @@
 import Stripe from 'stripe';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import {ConduitError} from "@quintessential-sft/conduit-sdk";
+import { ConduitError } from "@quintessential-sft/conduit-sdk";
 import * as grpc from "grpc";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
+import { calculateRenewDate, dateToUnixTimestamp } from "../utils/subscriptions";
 
 const PROVIDER_NAME = 'iamport';
 const BASE_URL = 'https://api.iamport.kr';
@@ -120,7 +121,7 @@ export class IamportHandlers {
         amount: 0
       }, {
         headers: {
-          Authorization: `Bearer ${access_token}`
+          Authorization: `${access_token}`
         }
       });
     } catch (e) {
@@ -183,5 +184,284 @@ export class IamportHandlers {
     }
 
     return callback(null, { result: JSON.stringify('ok') });
+  }
+
+  async subscribeToProduct(call: any, callback: any) {
+    const { productId, customerId } = JSON.parse(call.request.params);
+    const context = JSON.parse(call.request.context);
+
+    if (isNil(context)) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'No headers provided' });
+    }
+
+    if (isNil(productId) || isNil(customerId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'productId and customerId are required'});
+    }
+
+    let errorMessage: string | null = null;
+
+    const product = await this.database.findOne('Product', { _id: productId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(product) || !product.isSubscription) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'productId not found or its not a subscription'});
+    }
+
+    const customer = await this.database.findOne('PaymentsCustomer', { _id: customerId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
+    }
+    if (isNil(customer) || !customer.iamport.isCardVerified) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'customerId not found or customer has not verified card'});
+    }
+
+    let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let url = serverConfig.url;
+
+    const access_token = await this.getToken()
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    let merchantId = uuidv4();
+    let paymentStatus;
+
+    try {
+      const { code, status } = await axios.post(`${BASE_URL}/subscribe/again`, {
+        customer_uid: customer._id,
+        merchant_uid: merchantId,
+        amount: product.value,
+        name: `Recurring payments for ${product.name}`
+      }, {
+        headers: {
+          Authorization: access_token
+        }
+      });
+
+      if (code === 0) {
+        if (status === "paid") {
+          paymentStatus = "paid";
+        } else {
+          paymentStatus = "Failed to approve the payment (e.g. Customer card limit exceeded, suspended card, insufficient balance, etc.)"
+        }
+      } else {
+        paymentStatus = "The payment was not approved by the card company";
+      }
+    } catch (e) {
+      return callback({ code: grpc.status.INTERNAL, message: e});
+    }
+
+    const transaction = await this.database.create('Transaction', {
+      userId: context.user._id,
+      provider: PROVIDER_NAME,
+      data: {
+        status: paymentStatus
+      },
+      iamport: {
+        merchantId
+      }
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (paymentStatus !== "paid") {
+      return callback({ code: grpc.status.INTERNAL, message: paymentStatus });
+    }
+
+    let renewDate = calculateRenewDate(product.recurring, product.recurringCount);
+
+    merchantId = uuidv4();
+
+    try {
+      await axios.post(`${BASE_URL}/subscribe/payments/schedule`, {
+        customer_uid: customer._id,
+        schedules: [
+          {
+            merchant_uid: merchantId,
+            schedule_at: dateToUnixTimestamp(renewDate),
+            amount: product.value,
+            notice_url: `${url}/hook/payments/iamport/subscriptionCallback`
+          }
+        ]
+      });
+    } catch(e) {
+      console.error('could not schedule next payment');
+    }
+
+    const subscription = await this.database.create('Subscription', {
+      productId: product._id,
+      userId: context.user._id,
+      customerId,
+      iamport: {
+        merchantId
+      },
+      activeUntil: renewDate,
+      transactions: [transaction._id],
+      provider: PROVIDER_NAME
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { result: JSON.stringify({ subscription: subscription._id })})
+  }
+
+  async cancelSubscription(call: any, callback: any) {
+    const { subscriptionId } = JSON.parse(call.request.params);
+    const context = JSON.parse(call.request.context);
+
+    if (isNil(context)) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'No headers provided' });
+    }
+
+    if (isNil(subscriptionId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'subscriptionId is required' });
+    }
+
+    let errorMessage: string | null = null;
+
+    const subscription = await this.database.findOne('Subscription', {
+      _id: subscriptionId,
+      userId: context.user._id,
+      provider: PROVIDER_NAME
+    }).catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(subscription)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'subscription not found' });
+    }
+    if (!subscription.active) {
+      return callback( { code: grpc.status.INVALID_ARGUMENT, message: 'subscription is inactive' });
+    }
+
+    const customer = await this.database.findOne('PaymentsCustomer', { userId: context.user._id })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage })
+    }
+    if (isNil(customer) || isNil(customer.iamport)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
+    }
+
+    const access_token = await this.getToken()
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    try {
+      await axios.post(`${BASE_URL}/subscribe/payments/unschedule`, {
+        customer_uid: customer._id,
+        merchant_uid: subscription.iamport.merchantId
+      }, {
+        headers: {
+          Authorization: access_token
+        }
+      });
+    } catch (e) {
+      return callback({ code: grpc.status.INTERNAL, message: e});
+    }
+
+    // subscription.activeUntil = subscription.renewAt;
+    // subscription.renewAt = null;
+    // await this.database.findByIdAndUpdate('Subscription', subscriptionId, subscription)
+    //   .catch((e: Error) => {
+    //     errorMessage = e.message;
+    //   });
+    // if (!isNil(errorMessage)) {
+    //   return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    // }
+
+    return callback(null, { result: JSON.stringify({ message: 'Subscription cancelled' })});
+  }
+
+  async subscriptionCallback(call: any, callback: any) {
+    const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
+
+    let errorMessage: string | null = null;
+
+    const access_token = await this.getToken()
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      console.error(errorMessage);
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let url = serverConfig.url;
+
+    const subscription = await this.database.findOne('Subscription', { "iamport.merchantId": merchant_uid }, null, 'productId')
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      console.error(errorMessage);
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    try {
+      const paymentData = await axios.get(`${BASE_URL}/payments/${imp_uid}`, {
+        headers: {
+          Authorization: `${access_token}`
+        }
+      });
+
+      if (paymentData.data.response.status === 'paid') {
+        const transaction = await this.database.create('Transaction', {
+          provider: PROVIDER_NAME,
+          data: paymentData.data.response,
+          iamport: {
+            merchantId: merchant_uid
+          }
+        });
+
+        const merchantId = uuidv4();
+        let renewDate = calculateRenewDate(subscription.productId.recurring, subscription.productId.recurringCount);
+
+        await axios.post(`${BASE_URL}/subscribe/payments/schedule`, {
+          customer_uid: subscription.iamport.customer_uid,
+          schedules: [
+            {
+              merchant_uid: merchantId,
+              schedule_at: dateToUnixTimestamp(renewDate),
+              amount: subscription.productId.value,
+              notice_url: `${url}/hook/payments/iamport/subscriptionCallback`
+            }
+          ]
+        });
+
+        subscription.activeUntil = renewDate;
+        subscription.iamport.merchantId = merchantId;
+        await this.database.findByIdAndUpdate('Subscription', subscription._id, subscription);
+
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
