@@ -12,9 +12,10 @@ export const ProductSchema = new ConduitSchema('Product',
       type: TYPE.Number,
       default: 1
     },
-    subscriptionId: TYPE.String,
-    priceId: TYPE.String,
-    provider: TYPE.String,
+    stripe: {
+      subscriptionId: TYPE.String,
+      priceId: TYPE.String,
+    },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },

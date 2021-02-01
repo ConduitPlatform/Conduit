@@ -59,6 +59,15 @@ export class PaymentsRoutes {
     });
   }
 
+  async getStripe(): Promise<StripeHandlers | null> {
+    let errorMessage = null;
+    let paymentsActive = await this.stripeHandlers.validate().catch((e: any) => (errorMessage = e));
+    if (!errorMessage && paymentsActive) {
+      return Promise.resolve(this.stripeHandlers);
+    }
+    return Promise.resolve(null);
+  }
+
   async getProducts(call: any, callback: any) {
     let errorMessage: string | null = null;
     const products = await this.database.findMany('Product', {})

@@ -122,9 +122,9 @@ export default class PaymentsModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
-      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      await this.registerSchemas();
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
+      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, await this._router.getStripe());
+      await this.registerSchemas();
       this.grpcServer.start();
       this.isRunning = true;
     }

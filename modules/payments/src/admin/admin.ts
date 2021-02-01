@@ -2,13 +2,14 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';
+import { StripeHandlers } from '../handlers/stripe';
 
 const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
   private database: any;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly stripeHandlers: StripeHandlers | null) {
     const self = this;
     grpcSdk.waitForExistence('database-provider')
       .then(r => {
@@ -35,7 +36,7 @@ export class AdminHandlers {
   }
 
   async createProduct(call: any, callback: any) {
-    const { name, value, currency, isSubscription, renewEvery } = JSON.parse(call.request.params);
+    const { name, value, currency, isSubscription, recurring, recurringCount } = JSON.parse(call.request.params);
 
     if (isNil(name) || isNil(value) || isNil(currency)) {
       return callback({
@@ -44,25 +45,57 @@ export class AdminHandlers {
       });
     }
 
-    if (isSubscription && isNil(renewEvery)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: "renewEvery is required for subscription products"
-      });
-    }
-
     let errorMessage: string | null = null;
 
-    const product = await this.database.create('Product', {
+    let productDoc: any = {
       name,
       value,
       currency,
       isSubscription,
-      renewEvery
-    }).catch((e: Error) => {
-      errorMessage = e.message;
-    });
+      recurring,
+      recurringCount
+    };
 
+    if (isSubscription) {
+      if (isNil(recurring)) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'recurring is required for subscription products'
+        });
+      }
+      if (recurring !== 'day' &&
+          recurring !== 'week' &&
+          recurring !== 'month' &&
+          recurring !== 'year'
+      ) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'recurring must be one of [day, week, month, year]'
+        });
+      }
+
+      if (!isNil(this.stripeHandlers)) {
+        const res = await this.stripeHandlers.createSubscriptionProduct(
+          name,
+          currency,
+          value,
+          recurring,
+          recurringCount
+        ).catch((e: Error) => {
+          errorMessage = e.message;
+        });
+        if (!isNil(errorMessage)) {
+          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        }
+        productDoc.subscriptionId = res.subscriptionId;
+        productDoc.priceId = res.priceId;
+      }
+    }
+
+    const product = await this.database.create('Product', productDoc)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
     if (!isNil(errorMessage)) {
       return callback({
         code: grpc.status.INTERNAL,

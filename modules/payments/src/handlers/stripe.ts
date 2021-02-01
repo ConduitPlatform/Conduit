@@ -315,4 +315,29 @@ export class StripeHandlers {
     }
     return callback(null, { result: JSON.stringify("ok") });
   }
+
+  async createSubscriptionProduct(
+    name: string,
+    currency: string,
+    unitAmount: number,
+    recurring: 'day' | 'week' | 'month' | 'year',
+    recurringCount?: number
+  ): Promise<any> {
+    const product = await this.client.products.create({
+      name,
+    });
+  
+    const price = await this.client.prices.create({
+      product: product.id,
+      currency,
+      unit_amount: unitAmount,
+      recurring: {
+        interval: recurring,
+        interval_count: recurringCount || 1
+      }
+    });
+  
+    return Promise.resolve({ subscriptionId: product.id, priceId: price.id });
+  }
+
 }
