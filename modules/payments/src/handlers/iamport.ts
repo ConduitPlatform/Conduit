@@ -432,7 +432,7 @@ export class IamportHandlers {
       });
 
       if (paymentData.data.response.status === 'paid') {
-        const transaction = await this.database.create('Transaction', {
+        await this.database.create('Transaction', {
           provider: PROVIDER_NAME,
           data: paymentData.data.response,
           iamport: {
@@ -459,6 +459,13 @@ export class IamportHandlers {
         subscription.iamport.merchantId = merchantId;
         await this.database.findByIdAndUpdate('Subscription', subscription._id, subscription);
 
+      } else {
+        await this.database.create('Transaction', {
+          provider: PROVIDER_NAME,
+          data: {
+            ...paymentData.data.response, status: 'Failed'
+          }
+        });
       }
     } catch (e) {
       console.error(e);
