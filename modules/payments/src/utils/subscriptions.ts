@@ -1,7 +1,9 @@
+import moment from "moment";
 
-export function calculateRenewDate(recurring: 'day' | 'week' | 'month' | 'year', recurringCount: number): Date {
-  let renewDate = new Date();
+export function calculateRenewDate(recurring: 'day' | 'week' | 'month' | 'year', recurringCount: number): moment.Moment {
+  let renewDate = moment();
   let days;
+
   switch (recurring) {
     case 'day':
       days = recurringCount;
@@ -16,11 +18,12 @@ export function calculateRenewDate(recurring: 'day' | 'week' | 'month' | 'year',
       days = recurringCount * 365;
       break;
   }
-  renewDate.setDate(renewDate.getDate() + days);
+
+  renewDate.add(days, 'days');
 
   return renewDate;
 }
 
-export function dateToUnixTimestamp(date: Date): number {
-  return parseInt((date.getTime() / 1000).toFixed(0));
+export function dateToUnixTimestamp(date: moment.Moment): number {
+  return parseInt((date.valueOf() / 1000).toFixed(0));
 }
