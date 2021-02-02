@@ -19,11 +19,11 @@ const PROTO_PATH = __dirname + "/router.proto";
 export class PaymentsRoutes {
   private database: any;
   private readonly stripeHandlers: StripeHandlers;
-  private readonly iamportHandler: IamportHandlers;
+  private readonly iamportHandlers: IamportHandlers;
 
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
     this.stripeHandlers = new StripeHandlers(grpcSdk);
-    this.iamportHandler = new IamportHandlers(grpcSdk);
+    this.iamportHandlers = new IamportHandlers(grpcSdk);
     const self = this;
 
     grpcSdk.waitForExistence('database-provider')
@@ -50,12 +50,12 @@ export class PaymentsRoutes {
       refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
       getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
       completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
-      addIamportCard: this.iamportHandler.addCard.bind(this.iamportHandler),
-      validateIamportCard: this.iamportHandler.validateCard.bind(this.iamportHandler),
-      completeIamportPayment: this.iamportHandler.completePayment.bind(this.iamportHandler),
-      subscribeToProductIamport: this.iamportHandler.subscribeToProduct.bind(this.iamportHandler),
-      cancelIamportSubscription: this.iamportHandler.cancelSubscription.bind(this.iamportHandler),
-      iamportSubscriptionCallback: this.iamportHandler.subscriptionCallback.bind(this.iamportHandler),
+      addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
+      validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
+      completeIamportPayment: this.iamportHandlers.completePayment.bind(this.iamportHandlers),
+      subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(this.iamportHandlers),
+      cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(this.iamportHandlers),
+      iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(this.iamportHandlers),
     });
   }
 
@@ -207,7 +207,7 @@ export class PaymentsRoutes {
     }
 
     errorMessage = null;
-    paymentsActive = await this.iamportHandler.validate().catch((e: any) => (errorMessage = e));
+    paymentsActive = await this.iamportHandlers.validate().catch((e: any) => (errorMessage = e));
     if (!errorMessage && paymentsActive) {
       routesArray.push(
         constructRoute(
