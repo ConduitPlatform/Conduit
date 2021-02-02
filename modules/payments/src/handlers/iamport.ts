@@ -170,18 +170,30 @@ export class IamportHandlers {
   }
 
   async completePayment(call: any, callback: any) {
-    const { data, userId } = JSON.parse(call.request.params);
+    const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
 
-    await this.database.create('Transaction', {
-      userId,
-      provider: PROVIDER_NAME,
-      data
-    }).catch((e: Error) => {
+    const access_token = await this.getToken()
+      .catch((e: Error) => {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    try {
+      const paymentData = await axios.get(`${BASE_URL}/payments/${imp_uid}`, {
+        headers: {
+          Authorization: access_token
+        }
+      });
+
+      await this.database.create('Transaction', {
+        provide: PROVIDER_NAME,
+        data: { ...paymentData.data.response, merchant_uid }
+      });
+    } catch (e) {
+      console.error(e);
     }
 
     return callback(null, { result: JSON.stringify('ok') });

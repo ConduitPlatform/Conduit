@@ -255,11 +255,11 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: "/payments/iamport/completePayment",
+              path: "/hook/payments/iamport/completePayment",
               action: ConduitRouteActions.POST,
               bodyParams: {
-                data: TYPE.JSON,
-                userId: TYPE.String
+                imp_uid: TYPE.String,
+                merchant_uid: TYPE.String
               }
             },
             new ConduitRouteReturnDefinition("completeIamportPaymentResponse", 'String'),
