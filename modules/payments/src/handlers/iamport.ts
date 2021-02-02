@@ -492,4 +492,24 @@ export class IamportHandlers {
       console.error(e);
     }
   }
+
+  async getPaymentMethods(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
+
+    if (isNil(context)) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'No headers provided' });
+    }
+
+    let errorMessage: string | null = null;
+
+    const paymentMethods = await this.database.findMany('PaymentsCustomer', { userId: context.user._id, 'iamport.isCardVerified': true }, '_id')
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { result: JSON.stringify({ paymentMethods })});
+  }
 }

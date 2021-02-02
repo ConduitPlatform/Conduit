@@ -15,6 +15,7 @@ service Router {
   rpc SubscribeToProductIamport(RouterRequest) returns (RouterResponse);
   rpc CancelIamportSubscription(RouterRequest) returns (RouterResponse);
   rpc IamportSubscriptionCallback(RouterRequest) returns (RouterResponse);
+  rpc GetIamportPaymentMethods(RouterRequest) returns (RouterResponse);
 }
 
 message RouterRequest {

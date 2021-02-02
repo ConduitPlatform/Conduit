@@ -56,6 +56,7 @@ export class PaymentsRoutes {
       subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(this.iamportHandlers),
       cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(this.iamportHandlers),
       iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(this.iamportHandlers),
+      getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(this.iamportHandlers),
     });
   }
 
@@ -321,6 +322,21 @@ export class PaymentsRoutes {
         )
       );
 
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: "/payments/iamport/getPaymentMethods",
+              action: ConduitRouteActions.GET,
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition("GetIamportPaymentMethodsResponse", {
+              paymentMethods: TYPE.JSON
+            }),
+            "getIamportPaymentMethods"
+          )
+        )
+      );
     }
 
     routesArray.push(
