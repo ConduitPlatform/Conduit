@@ -7,15 +7,15 @@ export const PaymentsCustomerSchema = new ConduitSchema('PaymentsCustomer',
       type: TYPE.Relation,
       model: 'User'
     },
+    email: TYPE.String,
+    buyerName: TYPE.String,
+    phoneNumber: TYPE.String,
+    address: TYPE.String,
+    postCode: TYPE.String,
     stripe: {
       customerId: TYPE.String
     },
     iamport: {
-      email: TYPE.String,
-      buyerName: TYPE.String,
-      phoneNumber: TYPE.String,
-      address: TYPE.String,
-      postCode: TYPE.String,
       isCardVerified: {
         type: TYPE.Boolean,
         default: false,

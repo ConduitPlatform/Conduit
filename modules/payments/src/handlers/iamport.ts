@@ -91,13 +91,11 @@ export class IamportHandlers {
 
     const customer = await this.database.create('PaymentsCustomer', {
       userId: context.user._id,
-      iamport: {
         email,
         buyerName,
         phoneNumber,
         address,
         postCode
-      }
     }).catch((e: Error) => {
       errorMessage = e.message;
     });
