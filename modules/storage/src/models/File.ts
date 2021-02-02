@@ -14,6 +14,7 @@ export default new ConduitSchema(
       required: true,
       systemRequired: true
     },
+      url: TYPE.String,
     mimeType: { type: TYPE.String, systemRequired: true },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date

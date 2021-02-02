@@ -60,11 +60,32 @@ export class GoogleCloudStorage implements IStorageProvider {
             }
             return r;
         })
-
     }
 
-    async store(fileName: string, data: any): Promise<boolean | Error> {
+    async getSignedUrl(fileName: string): Promise<any | Error> {
+        this._storage.bucket(this._activeBucket).file(fileName)
+            .getSignedUrl({
+                action: "read",
+                expires: Date.now() + 14400000
+            })
+            .then((r: any) => {
+                if (r.data && r.data[0]) {
+                    return r.data[0];
+                }
+                return r;
+            })
+    }
+
+    async getPublicUrl(fileName: string): Promise<any | Error> {
+        await this._storage.bucket(this._activeBucket).file(fileName).isPublic();
+        return this._storage.bucket(this._activeBucket).file(fileName).publicUrl();
+    }
+
+    async store(fileName: string, data: any, isPublic: boolean = false): Promise<boolean | Error> {
         await this._storage.bucket(this._activeBucket).file(fileName).save(data);
+        if(isPublic){
+            await this._storage.bucket(this._activeBucket).file(fileName).makePublic();
+        }
         return true;
     }
 

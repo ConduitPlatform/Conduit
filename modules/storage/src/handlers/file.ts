@@ -24,7 +24,7 @@ export class FileHandlers {
 
     async createFile(call: any, callback: any) {
 
-        const {name, data, folder, mimeType} = JSON.parse(call.request.params);
+        const {name, data, folder, mimeType, isPublic} = JSON.parse(call.request.params);
 
         if (!isString(data)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid data provided'});
@@ -37,6 +37,7 @@ export class FileHandlers {
         const buffer = Buffer.from(data, 'base64');
 
         let errorMessage = null;
+
         await this.storageProvider.folder(folder).exists('')
             .then(exists => {
                 if (!exists) {
@@ -49,10 +50,18 @@ export class FileHandlers {
             .catch(e => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
+        let publicUrl = null;
+        if (isPublic) {
+            publicUrl = await this.storageProvider.folder(folder).getPublicUrl(name).catch(e => errorMessage = e.message);
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+        }
+
+
         const newFile = await this.database.create('File', {
             name,
             mimeType,
-            folder
+            folder,
+            url: publicUrl
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
@@ -87,6 +96,24 @@ export class FileHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         return callback(null, {result: JSON.stringify(result)});
+    }
+
+    async getFileUrl(call: any, callback: any) {
+        const {id} = JSON.parse(call.request.params);
+        if (!isString(id)) {
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'The provided id is invalid'});
+        }
+
+        let errorMessage = null;
+        const result = await this.database.findOne('File', {_id: id})
+            .then((found: any) => {
+                if (isNil(found)) {
+                    throw new Error('File not found');
+                }
+                return callback(null, {redirect: this.storageProvider.folder(found.folder).getSignedUrl(found.name)})
+            })
+            .catch((e: any) => errorMessage = e.message);
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
     }
 
     async deleteFile(call: any, callback: any) {

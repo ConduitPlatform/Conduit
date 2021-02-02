@@ -1,6 +1,6 @@
 ---
-name: SDK
-route: /sdk
+name: Grpc-SDK
+route: /grpc-sdk
 menu: Development
 ---
 
