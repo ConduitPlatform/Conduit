@@ -175,8 +175,8 @@ export class IamportHandlers {
 
     const access_token = await this.getToken()
       .catch((e: Error) => {
-      errorMessage = e.message;
-    });
+        errorMessage = e.message;
+      });
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
@@ -457,7 +457,7 @@ export class IamportHandlers {
     try {
       const paymentData = await axios.get(`${BASE_URL}/payments/${imp_uid}`, {
         headers: {
-          Authorization: `${access_token}`
+          Authorization: access_token
         }
       });
 
