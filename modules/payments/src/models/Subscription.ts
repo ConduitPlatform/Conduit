@@ -16,7 +16,7 @@ export const SubscriptionSchema = new ConduitSchema('Subscription',
       model: 'PaymentsCustomer'
     },
     iamport: {
-      merchantId: TYPE.String
+      nextPaymentId: TYPE.String
     },
     activeUntil: TYPE.Date,
     transactions: TYPE.ObjectId,

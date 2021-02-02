@@ -9,9 +9,6 @@ export const TransactionSchema = new ConduitSchema('Transaction',
     },
     provider: TYPE.String,
     data: TYPE.JSON,
-    iamport: {
-      merchantId: TYPE.String
-    },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
   },

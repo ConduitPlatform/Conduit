@@ -226,7 +226,7 @@ export class PaymentsRoutes {
             },
             new ConduitRouteReturnDefinition("AddIamportCardResponse", {
               customerId: ConduitString.Required,
-              merchantId: ConduitString.Required
+              merchant_uid: ConduitString.Required
             }),
             "addIamportCard"
           )

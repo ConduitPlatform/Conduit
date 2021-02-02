@@ -111,11 +111,22 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const merchantId = uuidv4();
+    const transaction = await this.database.create('Transaction', {
+      userId: context.user._id,
+      provider: PROVIDER_NAME,
+      data: {
+        status: "add card"
+      }
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
 
     try {
       await axios.post(`${BASE_URL}/payments/prepare`, {
-        merchant_uid: merchantId,
+        merchant_uid: transaction._id,
         amount: 0
       }, {
         headers: {
@@ -126,15 +137,7 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    await this.database.create('Transaction', {
-      userId: context.user._id,
-      provider: PROVIDER_NAME,
-      iamport: {
-        merchantId
-      }
-    })
-
-    return callback(null, { result: JSON.stringify({ customerId: customer._id, merchantId }) });
+    return callback(null, { result: JSON.stringify({ customerId: customer._id, merchant_uid: transaction._id }) });
   }
 
   async validateCard(call: any, callback: any) {
@@ -232,13 +235,22 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    let merchantId = uuidv4();
+    const transaction = await this.database.create('Transaction', {
+      userId: context.user._id,
+      provider: PROVIDER_NAME,
+    }).catch((e: Error) => {
+      errorMessage = e.message;
+    });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
     let paymentStatus;
 
     try {
       const { code, status } = await axios.post(`${BASE_URL}/subscribe/again`, {
         customer_uid: customer._id,
-        merchant_uid: merchantId,
+        merchant_uid: transaction._id,
         amount: product.value,
         name: `Recurring payments for ${product.name}`
       }, {
@@ -260,14 +272,29 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: e});
     }
 
-    const transaction = await this.database.create('Transaction', {
+    transaction.data = {
+      status: paymentStatus
+    };
+
+    await this.database.findByIdAndUpdate('Transaction', transaction._id, transaction)
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (paymentStatus !== "paid") {
+      return callback({ code: grpc.status.INTERNAL, message: paymentStatus });
+    }
+
+    let renewDate = calculateRenewDate(product.recurring, product.recurringCount);
+
+    const futureTransaction = await this.database.create('Transaction', {
       userId: context.user._id,
       provider: PROVIDER_NAME,
       data: {
-        status: paymentStatus
-      },
-      iamport: {
-        merchantId
+        status: `Scheduled payments for ${renewDate.format()}`
       }
     }).catch((e: Error) => {
       errorMessage = e.message;
@@ -275,20 +302,13 @@ export class IamportHandlers {
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
-    if (paymentStatus !== "paid") {
-      return callback({ code: grpc.status.INTERNAL, message: paymentStatus });
-    }
-
-    let renewDate = calculateRenewDate(product.recurring, product.recurringCount);
-
-    merchantId = uuidv4();
 
     try {
       await axios.post(`${BASE_URL}/subscribe/payments/schedule`, {
         customer_uid: customer._id,
         schedules: [
           {
-            merchant_uid: merchantId,
+            merchant_uid: futureTransaction._id,
             schedule_at: dateToUnixTimestamp(renewDate),
             amount: product.value,
             notice_url: `${url}/hook/payments/iamport/subscriptionCallback`
@@ -304,7 +324,7 @@ export class IamportHandlers {
       userId: context.user._id,
       customerId,
       iamport: {
-        merchantId
+        nextPaymentId: futureTransaction._id
       },
       activeUntil: renewDate,
       transactions: [transaction._id],
@@ -372,7 +392,7 @@ export class IamportHandlers {
     try {
       await axios.post(`${BASE_URL}/subscribe/payments/unschedule`, {
         customer_uid: customer._id,
-        merchant_uid: subscription.iamport.merchantId
+        merchant_uid: subscription.iamport.nextPaymentId
       }, {
         headers: {
           Authorization: access_token
@@ -413,7 +433,7 @@ export class IamportHandlers {
     if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
-    const subscription = await this.database.findOne('Subscription', { "iamport.merchantId": merchant_uid }, null, 'productId')
+    const subscription = await this.database.findOne('Subscription', { "iamport.nextPaymentId": merchant_uid }, null, 'productId')
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -433,19 +453,22 @@ export class IamportHandlers {
         await this.database.create('Transaction', {
           provider: PROVIDER_NAME,
           data: paymentData.data.response,
-          iamport: {
-            merchantId: merchant_uid
-          }
         });
 
-        const merchantId = uuidv4();
         let renewDate = calculateRenewDate(subscription.productId.recurring, subscription.productId.recurringCount);
+        const transaction = this.database.create('Transaction', {
+          userId: subscription.userId,
+          provider: PROVIDER_NAME,
+          data: {
+            status: `Scheduled payments for ${renewDate.format()}`
+          }
+        })
 
         await axios.post(`${BASE_URL}/subscribe/payments/schedule`, {
           customer_uid: subscription.iamport.customer_uid,
           schedules: [
             {
-              merchant_uid: merchantId,
+              merchant_uid: transaction._id,
               schedule_at: dateToUnixTimestamp(renewDate),
               amount: subscription.productId.value,
               notice_url: `${url}/hook/payments/iamport/subscriptionCallback`
@@ -454,7 +477,7 @@ export class IamportHandlers {
         });
 
         subscription.activeUntil = renewDate;
-        subscription.iamport.merchantId = merchantId;
+        subscription.iamport.nextPaymentId = transaction._id;
         await this.database.findByIdAndUpdate('Subscription', subscription._id, subscription);
 
       } else {
