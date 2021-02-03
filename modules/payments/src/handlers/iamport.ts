@@ -1,9 +1,7 @@
-import Stripe from 'stripe';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import { ConduitError } from "@quintessential-sft/conduit-sdk";
 import * as grpc from "grpc";
-import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { calculateRenewDate, dateToUnixTimestamp } from "../utils/subscriptions";
 
