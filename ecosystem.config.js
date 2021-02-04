@@ -77,6 +77,15 @@ module.exports = {
         SERVICE_URL: "0.0.0.0:55160",
         REGISTER_NAME: false,
       },
+    },
+    {
+      name: "payments-provider",
+      script: "./modules/payments/dist/index.js",
+      env: {
+        CONDUIT_SERVER: "0.0.0.0:55152",
+        SERVICE_URL: "0.0.0.0:55161",
+        REGISTER_NAME: false,
+      },
     }
   ],
 };

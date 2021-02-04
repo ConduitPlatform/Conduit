@@ -10,6 +10,7 @@ import * as grpc from "grpc";
 import Crypto from "crypto";
 import CMS from "./modules/cms";
 import SMS from "./modules/sms";
+import Payments from "./modules/payments";
 import { EventBus } from "./utilities/EventBus";
 import { RedisManager } from "./utilities/RedisManager";
 import { StateManager } from "./utilities/StateManager";
@@ -28,6 +29,7 @@ export default class ConduitGrpcSdk {
     "authentication": Authentication,
     "cms": CMS,
     "sms": SMS,
+    "payments": Payments,
   };
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
@@ -215,14 +217,23 @@ export default class ConduitGrpcSdk {
   }
 
 
-    get sms(): SMS | null {
-        if (this._modules["sms"]) {
-            return this._modules["sms"];
-        } else {
-            console.warn("SMS module not up yet!");
-            return null
-        }
+  get sms(): SMS | null {
+      if (this._modules["sms"]) {
+          return this._modules["sms"];
+      } else {
+          console.warn("SMS module not up yet!");
+          return null
+      }
+  }
+
+  get payments(): Payments | null {
+    if (this._modules["payments"]) {
+      return this._modules["payments"];
+    } else {
+      console.warn("Payments module not up yet!");
+      return null;
     }
+  }
 }
 export let grpcModule: any = grpc;
 export * from "./interfaces";
