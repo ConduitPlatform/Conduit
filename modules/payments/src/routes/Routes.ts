@@ -44,6 +44,7 @@ export class PaymentsRoutes {
     const router = protoDescriptor.payments.router.Router;
     server.addService(router.service, {
       getProducts: this.getProducts.bind(this),
+      getSubscriptions: this.getSubscriptions.bind(this),
       createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
       createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(this.stripeHandlers),
       cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
@@ -83,6 +84,26 @@ export class PaymentsRoutes {
     }
 
     return callback(null, { result: JSON.stringify({ products }) });
+  }
+
+  async getSubscriptions(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
+
+    if (isNil(context)) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'No headers provided' });
+    }
+
+    let errorMessage: string | null = null;
+
+    const subscriptions = await this.database.findMany('Subscription', { userId: context.user._id, activeUntil: { $gte: new Date()} })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { result: JSON.stringify({ subscriptions })});
   }
 
   async registerRoutes(url: string) {
@@ -357,6 +378,31 @@ export class PaymentsRoutes {
             }]
           }),
           "getProducts"
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            path: "/payments/subscriptions",
+            action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware']
+          },
+          new ConduitRouteReturnDefinition('GetProductsResponse', {
+            subscriptions: [{
+              _id: TYPE.String,
+              productId: TYPE.String,
+              userId: TYPE.Number,
+              customerId: TYPE.String,
+              iamport: TYPE.JSON,
+              activeUntil: TYPE.Date,
+              transactions: TYPE.JSON,
+              provider: TYPE.String
+            }]
+          }),
+          "getSubscriptions"
         )
       )
     );
