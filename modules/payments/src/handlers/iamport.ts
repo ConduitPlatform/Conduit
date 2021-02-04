@@ -349,7 +349,7 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { result: JSON.stringify({ subscription: subscription._id })})
+    return callback(null, { result: JSON.stringify({ ...subscription })})
   }
 
   async cancelSubscription(call: any, callback: any) {

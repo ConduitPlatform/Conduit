@@ -103,6 +103,6 @@ export class AdminHandlers {
       });
     }
 
-    return callback(null, { result: JSON.stringify({ product }) });
+    return callback(null, { result: JSON.stringify({ ...product }) });
   }
 }
