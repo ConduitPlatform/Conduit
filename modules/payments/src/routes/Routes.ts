@@ -95,7 +95,7 @@ export class PaymentsRoutes {
 
     let errorMessage: string | null = null;
 
-    const subscriptions = await this.database.findMany('Subscription', { userId: context.user._id, activeUntil: { $gte: new Date()} })
+    const subscriptions = await this.database.findMany('Subscription', { userId: context.user._id, activeUntil: { $gte: new Date()} }, null, null, null, null, 'productId')
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -393,7 +393,7 @@ export class PaymentsRoutes {
           new ConduitRouteReturnDefinition('GetProductsResponse', {
             subscriptions: [{
               _id: TYPE.String,
-              productId: TYPE.String,
+              productId: TYPE.JSON,
               userId: TYPE.Number,
               customerId: TYPE.String,
               iamport: TYPE.JSON,
