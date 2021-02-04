@@ -63,7 +63,9 @@ export class LocalHandlers {
             console.error('Could not get authentication config sms 2fa will not be enabled');
             return;
         }
-        if (config.twofa.enabled) {
+        errorMessage = null;
+        await this.grpcSdk.config.moduleExists('sms').catch((e: any) => errorMessage = e.message);
+        if (config.twofa.enabled && !errorMessage) {
             // maybe check if verify is enabled in sms module
             await this.grpcSdk.waitForExistence('sms');
             this.sms = this.grpcSdk.sms;

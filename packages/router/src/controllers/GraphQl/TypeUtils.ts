@@ -50,7 +50,7 @@ function getGraphQLType(conduitType: any) {
         case 'ObjectId':
             return 'ID';
         case  'JSON':
-            return 'JsonObject';
+            return 'JSONObject';
         default:
             return conduitType;
     }
