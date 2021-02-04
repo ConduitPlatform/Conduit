@@ -56,7 +56,7 @@ export default class AdminModule extends IConduitAdmin {
 
     // todo fix the middlewares
     //@ts-ignore
-    this.conduit.getRouter().registerRouteMiddleware("/admin", this.adminMiddleware);
+    this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
     this.conduit.getRouter().registerExpressRouter("/admin", this.router);
     this.highAvailability();
@@ -322,10 +322,10 @@ export default class AdminModule extends IConduitAdmin {
       });
   }
 
-  async adminMiddleware(context: ConduitRouteParameters) {
+  async adminMiddleware(req: Request, res: Response, next: NextFunction) {
     const adminConfig = await this.conduit.getConfigManager().get("admin");
     return new Promise((resolve, reject) => {
-      const masterkey = context.headers.masterkey;
+      const masterkey = req.headers.masterkey;
       if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
         throw new ConduitError("UNAUTHORIZED", 401, "Unauthorized");
       resolve("ok");
