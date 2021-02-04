@@ -20,5 +20,8 @@ export default {
             type: String,
             default: 'conduit'
         }
+    },
+    azure:{
+        connectionString: {type: String}
     }
 }

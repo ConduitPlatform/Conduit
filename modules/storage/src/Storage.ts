@@ -172,14 +172,14 @@ export class StorageModule {
 
     private async enableModule(): Promise<any> {
         const storageConfig = await this.grpcSdk.config.get('storage');
-        const {provider, storagePath, google} = storageConfig;
+        const {provider, storagePath, google, azure} = storageConfig;
 
         if (!this.isRunning) {
-            this.storageProvider = createStorageProvider(provider, {storagePath, google});
+            this.storageProvider = createStorageProvider(provider, {storagePath, google, azure});
             this.registerModels();
             this.isRunning = true;
         } else {
-            this.storageProvider = createStorageProvider(provider, {storagePath, google});
+            this.storageProvider = createStorageProvider(provider, {storagePath, google, azure});
             this._fileHandlers.updateProvider(this.storageProvider);
         }
     }
