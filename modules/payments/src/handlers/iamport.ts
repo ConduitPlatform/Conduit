@@ -379,7 +379,7 @@ export class IamportHandlers {
     if (isNil(subscription)) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'subscription not found' });
     }
-    if (!subscription.active) {
+    if (Date.parse(subscription.activeUntil) < new Date().getTime()) {
       return callback( { code: grpc.status.INVALID_ARGUMENT, message: 'subscription is inactive' });
     }
 
