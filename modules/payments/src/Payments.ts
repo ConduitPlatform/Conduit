@@ -130,7 +130,7 @@ export default class PaymentsModule {
     }
     let url = this._url;
     if (process.env.REGISTER_NAME === "true") {
-      url = "payments:" + this._url.split(":"[1]);
+      url = "payments-provider:" + this._url.split(":")[1];
     }
     await this._router.registerRoutes(url);
   }
