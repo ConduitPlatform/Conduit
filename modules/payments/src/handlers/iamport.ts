@@ -336,7 +336,7 @@ export class IamportHandlers {
       iamport: {
         nextPaymentId: futureTransaction._id
       },
-      activeUntil: renewDate,
+      activeUntil: renewDate.toDate(),
       transactions: [transaction._id],
       provider: PROVIDER_NAME
     }).catch((e: Error) => {
@@ -486,7 +486,7 @@ export class IamportHandlers {
           ]
         });
 
-        subscription.activeUntil = renewDate;
+        subscription.activeUntil = renewDate.toDate();
         subscription.iamport.nextPaymentId = transaction._id;
         await this.database.findByIdAndUpdate('Subscription', subscription._id, subscription);
 
