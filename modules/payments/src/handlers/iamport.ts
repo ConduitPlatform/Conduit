@@ -221,6 +221,9 @@ export class IamportHandlers {
     if (isNil(product) || !product.isSubscription) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'productId not found or its not a subscription'});
     }
+    if (product.currency !== 'KRW') {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'iamport supports only products with KRW currency'});
+    }
 
     const customer = await this.database.findOne('PaymentsCustomer', { _id: customerId })
       .catch((e: Error) => {
