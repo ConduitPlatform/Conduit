@@ -25,7 +25,7 @@ export class GraphQLController {
   private _internalRoute: any;
   private _apollo?: any;
   private _relationTypes: string[] = [];
-  private _middlewares?: { [field: string]: ConduitMiddleware[] };
+  private _middlewares?: { [field: string]: ConduitMiddleware };
   private _registeredRoutes!: Map<string, ConduitRoute>;
   private _scheduledTimeout: any = null;
 
@@ -186,36 +186,28 @@ export class GraphQLController {
     if (!this._middlewares) {
       this._middlewares = {};
     }
-    if (!this._middlewares[middleware.name]) {
-      this._middlewares[middleware.name] = [];
-    }
-    this._middlewares[middleware.name].push(middleware);
+    this._middlewares[middleware.name] = middleware;
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
     let primaryPromise = new Promise((resolve, reject) => {
       resolve({});
     });
+    const self = this;
     if (this._middlewares && middlewares) {
-      for (let k in this._middlewares) {
-        if (!this._middlewares.hasOwnProperty(k)) continue;
-        if (middlewares.indexOf(k) === 0) {
-          this._middlewares[k].forEach((m) => {
-            // execute the middleware and get the middleware return and apply it to the object
-            // so that it can be added to the request context
-            primaryPromise = primaryPromise.then((r) => {
-              return m.executeRequest
-                .bind(m)(params)
-                .then((p: any) => {
-                  if (p.result) {
-                    Object.assign(r, JSON.parse(p.result));
-                  }
-                  return r;
-                });
-            });
-          });
-        }
-      }
+      middlewares.forEach(m => {
+        if (!this._middlewares?.hasOwnProperty(m)) primaryPromise = Promise.reject("Middleware does not exist");
+        primaryPromise = primaryPromise.then((r) => {
+          return this._middlewares![m].executeRequest
+              .bind(self._middlewares![m])(params)
+              .then((p: any) => {
+                if (p.result) {
+                  Object.assign(r, JSON.parse(p.result));
+                }
+                return r;
+              });
+        });
+      })
     }
 
     return primaryPromise;
