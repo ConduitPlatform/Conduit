@@ -515,7 +515,7 @@ export class IamportHandlers {
 
     let errorMessage: string | null = null;
 
-    const paymentMethods = await this.database.findMany('PaymentsCustomer', { userId: context.user._id, 'iamport.isCardVerified': true }, '_id')
+    const paymentMethods = await this.database.findMany('PaymentsCustomer', { userId: context.user._id, 'iamport.isCardVerified': true })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
