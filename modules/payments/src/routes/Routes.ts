@@ -244,7 +244,8 @@ export class PaymentsRoutes {
               }
             },
             new ConduitRouteReturnDefinition("CreateIamportPaymentResponse", {
-              subscription: TYPE.String
+              merchant_uid: TYPE.String,
+              amount: TYPE.Number
             }),
             "createIamportPayment"
           )

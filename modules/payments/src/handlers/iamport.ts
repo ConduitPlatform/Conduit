@@ -130,7 +130,7 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { result: JSON.stringify({ merchant_uid: transaction._id }) });
+    return callback(null, { result: JSON.stringify({ merchant_uid: transaction._id, amount: product.value }) });
   }
 
   async addCard(call: any, callback: any) {
