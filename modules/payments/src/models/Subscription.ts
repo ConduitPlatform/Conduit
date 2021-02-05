@@ -3,7 +3,7 @@ import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
 export const SubscriptionSchema = new ConduitSchema('Subscription',
   {
     _id: TYPE.ObjectId,
-    productId: {
+    product: {
       type: TYPE.Relation,
       model: 'Product'
     },
