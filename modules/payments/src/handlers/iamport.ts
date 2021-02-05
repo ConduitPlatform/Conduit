@@ -458,7 +458,7 @@ export class IamportHandlers {
           data: paymentData.data.response,
         });
 
-        let renewDate = calculateRenewDate(subscription.productId.recurring, subscription.product.recurringCount);
+        let renewDate = calculateRenewDate(subscription.product.recurring, subscription.product.recurringCount);
         const transaction = this.database.create('Transaction', {
           userId: subscription.userId,
           provider: PROVIDER_NAME,
