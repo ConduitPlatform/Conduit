@@ -333,7 +333,7 @@ export class IamportHandlers {
     }
 
     const subscription = await this.database.create('Subscription', {
-      productId: product._id,
+      product: product._id,
       userId: context.user._id,
       customerId,
       iamport: {
@@ -415,16 +415,6 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: e});
     }
 
-    // subscription.activeUntil = subscription.renewAt;
-    // subscription.renewAt = null;
-    // await this.database.findByIdAndUpdate('Subscription', subscriptionId, subscription)
-    //   .catch((e: Error) => {
-    //     errorMessage = e.message;
-    //   });
-    // if (!isNil(errorMessage)) {
-    //   return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    // }
-
     return callback(null, { result: JSON.stringify({ message: 'Subscription cancelled' })});
   }
 
@@ -446,7 +436,7 @@ export class IamportHandlers {
     if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
-    const subscription = await this.database.findOne('Subscription', { "iamport.nextPaymentId": merchant_uid }, null, 'productId')
+    const subscription = await this.database.findOne('Subscription', { "iamport.nextPaymentId": merchant_uid }, null, 'product')
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -468,7 +458,7 @@ export class IamportHandlers {
           data: paymentData.data.response,
         });
 
-        let renewDate = calculateRenewDate(subscription.productId.recurring, subscription.productId.recurringCount);
+        let renewDate = calculateRenewDate(subscription.product.recurring, subscription.product.recurringCount);
         const transaction = this.database.create('Transaction', {
           userId: subscription.userId,
           provider: PROVIDER_NAME,
@@ -483,7 +473,7 @@ export class IamportHandlers {
             {
               merchant_uid: transaction._id,
               schedule_at: dateToUnixTimestamp(renewDate),
-              amount: subscription.productId.value,
+              amount: subscription.product.value,
               notice_url: `${url}/hook/payments/iamport/subscriptionCallback`
             }
           ]

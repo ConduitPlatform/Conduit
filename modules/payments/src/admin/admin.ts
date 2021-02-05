@@ -87,8 +87,9 @@ export class AdminHandlers {
         if (!isNil(errorMessage)) {
           return callback({ code: grpc.status.INTERNAL, message: errorMessage });
         }
-        productDoc.subscriptionId = res.subscriptionId;
-        productDoc.priceId = res.priceId;
+        productDoc.stripe = {};
+        productDoc.stripe.subscriptionId = res.subscriptionId;
+        productDoc.stripe.priceId = res.priceId;
       }
     }
 
