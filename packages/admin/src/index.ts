@@ -327,8 +327,8 @@ export default class AdminModule extends IConduitAdmin {
     return new Promise((resolve, reject) => {
       const masterkey = req.headers.masterkey;
       if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
-        throw new ConduitError("UNAUTHORIZED", 401, "Unauthorized");
-      resolve("ok");
+        res.status(401).json({ error: "Unauthorized" });
+      next();
     });
   }
 }
