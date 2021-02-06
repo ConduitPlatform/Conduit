@@ -69,7 +69,7 @@ jobs:
           echo "always-auth: true" >> .npmrc
       working-directory: ./libraries/grpc-sdk
     - name: actually_publish
-      run: npm install && npm publish
+      run: npm config set allow-same-version true && npm install && npm publish
       working-directory: ./libraries/grpc-sdk
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
