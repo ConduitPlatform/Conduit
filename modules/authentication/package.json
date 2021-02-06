@@ -23,7 +23,6 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "bcrypt": "^3.0.7",
     "convict": "^6.0.0",
     "google-auth-library": "^5.10.1",
