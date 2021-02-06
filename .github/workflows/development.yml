@@ -62,6 +62,12 @@ jobs:
         scope: '@quintessential-sft'
         always-auth: true
     - run: npm config set allow-same-version true
+    - name: Authenticate with GitHub package registry
+      run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > .npmrc
+          echo "@quintessential-sft:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "always-auth: true" >> .npmrc
+      working-directory: ./libraries/grpc-sdk
     - name: actually_publish
       run: npm install && npm publish
       working-directory: ./libraries/grpc-sdk
