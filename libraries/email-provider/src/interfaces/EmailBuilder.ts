@@ -30,4 +30,8 @@ export interface EmailBuilder {
     setContent(content: string): EmailBuilder;
 
     getContent(): string | undefined
+
+    addAttachments(attachments: string[]): EmailBuilder;
+
+    getAttachments(): string[] | undefined
 }

@@ -71,7 +71,7 @@ export default class Email implements ConduitModule{
     });
   }
 
-  sendEmail(templateName: string, params: { email: string; variables: any; sender: string }) {
+  sendEmail(templateName: string, params: { email: string; variables: any; sender: string, replyTo?: string, cc?: string[], attachments?: string[] }) {
     return new Promise((resolve, reject) => {
       this.client.sendEmail(
         {
@@ -80,6 +80,9 @@ export default class Email implements ConduitModule{
             email: params.email,
             variables: JSON.stringify(params.variables),
             sender: params.sender,
+            replyTo: params.replyTo,
+            cc: params.cc,
+            attachments: params.attachments
           },
         },
         (err: any, res: any) => {

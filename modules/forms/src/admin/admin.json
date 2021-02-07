@@ -1,0 +1,24 @@
+{
+  "functions": [
+    {
+      "path": "/forms/get",
+      "method": "GET",
+      "protoName": "getForms"
+    },
+    {
+      "path": "/forms/replies/:formId",
+      "method": "GET",
+      "protoName": "getRepliesByFormId"
+    },
+    {
+      "path": "/forms/new",
+      "method": "POST",
+      "protoName": "createForm"
+    },
+    {
+      "path": "/forms/update/:formId",
+      "method": "PUT",
+      "protoName": "editFormById"
+    }
+  ]
+}

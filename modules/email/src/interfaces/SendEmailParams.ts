@@ -3,5 +3,6 @@ export interface ISendEmailParams {
   variables: { [key: string]: any };
   sender: string;
   cc?: string[];
-  replyto?: string;
+  replyTo?: string;
+  attachments?: string[];
 }

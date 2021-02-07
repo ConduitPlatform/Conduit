@@ -216,4 +216,12 @@ export class NodemailerBuilder implements EmailBuilder {
         return finalObject;
     }
 
+    addAttachments(attachments: string[]): EmailBuilder {
+        return this;
+    }
+
+    getAttachments(): string[] | undefined {
+        return undefined;
+    }
+
 }
