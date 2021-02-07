@@ -58,6 +58,14 @@ export class EmailService {
         builder.setReceiver(email);
         builder.setSubject(subjectString);
 
+        if(params.cc){
+            builder.setCC(params.cc);
+        }
+
+        if(params.replyto){
+            builder.setReplyTo(params.replyto);
+        }
+
         return this.emailer.sendEmail(builder);
     }
 
