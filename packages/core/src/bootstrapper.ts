@@ -31,7 +31,7 @@ export class CoreBootstrapper {
 
     let manager = new ConfigManager(grpcSdk, app.conduit, server, packageDefinition, (url: string) => {
       primary?.initialize();
-      CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app, packageDefinition, server).catch(console.log);
+      CoreBootstrapper.bootstrapSdkComponents(grpcSdk, app).catch(console.log);
     });
 
     app.conduit.registerConfigManager(manager);
@@ -48,12 +48,7 @@ export class CoreBootstrapper {
     return app;
   }
 
-  private static async bootstrapSdkComponents(
-    grpcSdk: ConduitGrpcSdk,
-    app: ConduitApp,
-    packageDefinition: string,
-    server: any
-  ) {
+  private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp) {
     await app.conduit.getConfigManager().registerAppConfig();
     let error;
     let existingConfig = app.conduit

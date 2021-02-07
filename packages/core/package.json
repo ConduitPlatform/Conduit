@@ -26,7 +26,6 @@
     "@quintessential-sft/conduit-router": "^1.0.0",
     "@quintessential-sft/conduit-sdk": "^1.0.0",
     "@quintessential-sft/conduit-security": "^1.0.0",
-    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "convict": "^6.0.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",

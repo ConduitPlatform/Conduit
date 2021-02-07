@@ -1,13 +1,7 @@
 import { Application } from "express";
 import { IConduitRouter } from "./modules";
-import { IConduitDatabase } from "./modules";
 import { IConduitAdmin } from "./modules";
-import { IConduitEmail } from "./modules";
-import { IConduitPushNotifications } from "./modules";
-import { IConduitStorage } from "./modules";
 import { IConduitSecurity } from "./modules";
-import { IConduitAuthentication } from "./modules";
-import { IConduitCMS } from "./modules";
 import { isNil, isPlainObject, merge } from "lodash";
 import validator from "validator";
 import isNaturalNumber from "is-natural-number";
@@ -22,14 +16,8 @@ export class ConduitSDK {
   private static _instance: ConduitSDK;
   private _app: Application;
   private _router?: IConduitRouter;
-  private _database?: IConduitDatabase;
   private _admin?: IConduitAdmin;
-  private _email?: IConduitEmail;
-  private _pushNotifications?: IConduitPushNotifications;
-  private _storage?: IConduitStorage;
   private _security?: IConduitSecurity;
-  private _authentication?: IConduitAuthentication;
-  private _cms?: IConduitCMS;
   private _configManager?: IConfigManager;
   private _eventBus: EventBus;
   private _stateManager: StateManager;
@@ -70,26 +58,6 @@ export class ConduitSDK {
     throw new Error("Router not assigned yet!");
   }
 
-  registerDatabase(database: IConduitDatabase) {
-    if (this._database) throw new Error("Cannot register a second database!");
-    this._database = database;
-  }
-
-  getDatabase(): IConduitDatabase {
-    if (this._database) return this._database;
-    throw new Error("Database not assigned yet!");
-  }
-
-  registerCMS(cms: IConduitCMS) {
-    if (this._cms) throw new Error("Cannot register a second CMS!");
-    this._cms = cms;
-  }
-
-  getCMS(): IConduitCMS {
-    if (this._cms) return this._cms;
-    throw new Error("CMS not assigned yet!");
-  }
-
   registerAdmin(admin: IConduitAdmin) {
     if (this._admin) throw new Error("Cannot register a second admin!");
     this._admin = admin;
@@ -100,36 +68,6 @@ export class ConduitSDK {
     throw new Error("Admin not assigned yet!");
   }
 
-  registerEmail(email: IConduitEmail) {
-    this._email = email;
-  }
-
-  getEmail() {
-    if (this._email) return this._email;
-    throw new Error("Email module not assigned yet!");
-  }
-
-  registerPushNotifications(pushNotifications: IConduitPushNotifications) {
-    if (this._pushNotifications) throw new Error("Cannot register a second push notifications module");
-    this._pushNotifications = pushNotifications;
-  }
-
-  // TODO is this needed?
-  getPushNotifications(): IConduitPushNotifications {
-    if (this._pushNotifications) return this._pushNotifications;
-    throw new Error("Push notifications not assigned yet!");
-  }
-
-  registerStorage(storage: IConduitStorage) {
-    if (this._storage) throw new Error("Cannot register a second storage module");
-    this._storage = storage;
-  }
-
-  getStorage(): IConduitStorage {
-    if (this._storage) return this._storage;
-    throw new Error("Storage module not assigned yet");
-  }
-
   registerSecurity(security: IConduitSecurity) {
     if (this._security) throw new Error("Cannot register a second security module");
     this._security = security;
@@ -138,16 +76,6 @@ export class ConduitSDK {
   getSecurity(): IConduitSecurity {
     if (this._security) return this._security;
     throw new Error("Security module not assigned yet");
-  }
-
-  registerAuthentication(authentication: IConduitAuthentication) {
-    if (this._authentication) throw new Error("Cannot register a second authentication module");
-    this._authentication = authentication;
-  }
-
-  getAuthentication(): IConduitAuthentication {
-    if (this._authentication) return this._authentication;
-    throw new Error("Authentication module not assigned yet");
   }
 
   registerConfigManager(configManager: IConfigManager) {
@@ -166,80 +94,6 @@ export class ConduitSDK {
       this._instance = new ConduitSDK(app,name);
     }
     return this._instance;
-  }
-
-  async updateConfig(newConfig: any, moduleName?: string) {
-    const Config = this.getDatabase().getSchema("Config");
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      throw new Error("Config not set");
-    }
-    const appConfig = (this as any).config as ConvictConfig<any>;
-    let currentConfig: any;
-    if (isNil(moduleName)) {
-      currentConfig = dbConfig;
-    } else {
-      currentConfig = dbConfig[moduleName];
-    }
-
-    if (isNil(currentConfig)) currentConfig = {};
-    const final = merge(currentConfig, newConfig);
-    if (isNil(moduleName)) {
-      Object.assign(dbConfig, final);
-    } else {
-      if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
-      Object.assign(dbConfig[moduleName], final);
-    }
-    const saved = await Config.findByIdAndUpdate(dbConfig._id, dbConfig);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
-    appConfig.load(saved);
-
-    if (isNil(moduleName)) {
-      return saved;
-    } else {
-      return saved[moduleName];
-    }
-  }
-
-  async addFieldstoConfig(newConfig: any, moduleName?: string) {
-    const Config = this.getDatabase().getSchema("Config");
-    const dbConfig = await Config.findOne({});
-    if (isNil(dbConfig)) {
-      throw new Error("Config not set");
-    }
-    const appConfig = (this as any).config as ConvictConfig<any>;
-    let currentConfig: any;
-    if (isNil(moduleName)) {
-      currentConfig = dbConfig;
-    } else {
-      currentConfig = dbConfig[moduleName];
-    }
-    if (isNil(currentConfig)) currentConfig = {};
-
-    // keep only new keys
-    const final = { ...newConfig, ...currentConfig };
-
-    if (isNil(moduleName)) {
-      Object.assign(dbConfig, final);
-    } else {
-      if (isNil(dbConfig[moduleName])) dbConfig[moduleName] = {};
-      Object.assign(dbConfig[moduleName], final);
-    }
-    const saved = await Config.findByIdAndUpdate(dbConfig._id, dbConfig);
-    delete saved._id;
-    delete saved.createdAt;
-    delete saved.updatedAt;
-    delete saved.__v;
-    appConfig.load(saved);
-
-    if (isNil(moduleName)) {
-      return saved;
-    } else {
-      return saved[moduleName];
-    }
   }
 
   // this validator doesn't support custom convict types

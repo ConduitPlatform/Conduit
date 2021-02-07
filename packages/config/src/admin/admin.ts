@@ -93,13 +93,13 @@ export class AdminHandlers {
     await this.grpcSdk.initializeModules().catch((err) => console.log("Failed to refresh modules"));
     switch (moduleName) {
       case undefined:
-        // TODO changing module settings through this endpoint completely bypasses the running check and is not secure
+        return res.status(400).json({ error: "Module Name missing" });
         // if (!ConduitUtilities.validateConfigFields(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
         //   errorMessage = 'Invalid configuration fields';
         //   break;
         // }
-        updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => (errorMessage = e.message));
-        break;
+        // updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => (errorMessage = e.message));
+        // break;
       case "authentication":
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.authentication))
           return res.json({ message: "Module not available" });
@@ -117,16 +117,14 @@ export class AdminHandlers {
       case "push-notifications":
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.pushNotifications))
           return res.json({ message: "Module not available" });
-        updatedConfig = await this.sdk
-          .getPushNotifications()
+        updatedConfig = this.grpcSdk.pushNotifications
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
       case "storage":
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.storage))
           return res.json({ message: "Module not available" });
-        updatedConfig = await this.sdk
-          .getStorage()
+        updatedConfig = this.grpcSdk.storage
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;

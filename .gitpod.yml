@@ -1,5 +1,0 @@
-tasks:
-  - init: npm install
-    command: lerna bootstrap
-image:
-  file: .gitpod.Dockerfile
