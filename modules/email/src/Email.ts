@@ -151,8 +151,11 @@ export default class EmailModule {
       email: call.request.params.email,
       variables: JSON.parse(call.request.params.variables),
       sender: call.request.params.sender,
+      cc: call.request.params.cc,
+      replyTo: call.request.params.replyTo,
+      attachments: call.request.params.attachments,
     };
-    let emailConfig: any = await this.grpcSdk.config.get("email").catch(err=>console.log("failed to get sending domain"));
+    let emailConfig: any = await this.grpcSdk.config.get("email").catch((err:any)=>console.log("failed to get sending domain"));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`
     let errorMessage: string | null = null;
     const sentMessageInfo = await this.emailService

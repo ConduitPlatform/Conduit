@@ -1,6 +1,7 @@
 import {EmailBuilder} from "../../interfaces/EmailBuilder";
 import {EmailOptions} from "../../interfaces/EmailOptions";
 import {checkIfHTML} from "../../utils";
+import {isNil} from "lodash";
 
 export class MailgunMailBuilder implements EmailBuilder {
 
@@ -9,7 +10,8 @@ export class MailgunMailBuilder implements EmailBuilder {
     private _subject?: string;
     private _cc?: string | string[];
     private _bcc?: string | string[];
-    private 'h:Reply-To'?: string;
+    private _attachments?: string[];
+    private _replyTo?: string;
     private _html?: string;
     private _text?: string;
 
@@ -138,12 +140,12 @@ export class MailgunMailBuilder implements EmailBuilder {
     }
 
     setReplyTo(replyTo: string): EmailBuilder {
-        this["h:Reply-To"] = replyTo;
+        this._replyTo = replyTo;
         return this;
     }
 
     getReplyTo() {
-        return this["h:Reply-To"];
+        return this._replyTo;
     }
 
     checkIfHTML(text: string): boolean {
@@ -174,8 +176,7 @@ export class MailgunMailBuilder implements EmailBuilder {
     }
 
     nullOrEmptyCheck(prop: any) {
-
-        return !prop || prop.length === 0;
+        return isNil(prop) || prop.length === 0;
     }
 
     getMailObject(): EmailOptions {
@@ -217,11 +218,28 @@ export class MailgunMailBuilder implements EmailBuilder {
             finalObject['bcc'] = this._bcc;
         }
 
-        if (!this.nullOrEmptyCheck(this["h:Reply-To"])) {
-            finalObject['h:Reply-To'] = this["h:Reply-To"];
+        if (!this.nullOrEmptyCheck(this._replyTo)) {
+            finalObject['replyTo'] = this._replyTo;
+        }
+
+        if (!this.nullOrEmptyCheck(this._attachments)) {
+            finalObject['attachments'] = this._attachments?.map(r => {
+                return {
+                    path: r
+                }
+            })
         }
 
         return finalObject;
+    }
+
+    addAttachments(attachments: string[]): EmailBuilder {
+        this._attachments = attachments;
+        return this;
+    }
+
+    getAttachments(): string[] | undefined {
+        return this._attachments;
     }
 
 }

@@ -62,8 +62,12 @@ export class EmailService {
             builder.setCC(params.cc);
         }
 
-        if(params.replyto){
-            builder.setReplyTo(params.replyto);
+        if(params.replyTo){
+            builder.setReplyTo(params.replyTo);
+        }
+
+        if(params.attachments){
+            builder.addAttachments(params.attachments);
         }
 
         return this.emailer.sendEmail(builder);
