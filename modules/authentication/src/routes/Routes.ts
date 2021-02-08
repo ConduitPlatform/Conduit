@@ -20,6 +20,7 @@ import { isNil } from "lodash";
 import fs from "fs";
 import path from "path";
 import { UserSchema } from "../models";
+import moment from "moment";
 
 const protoLoader = require("@grpc/proto-loader");
 const PROTO_PATH = __dirname + "/router.proto";
@@ -480,7 +481,7 @@ export class AuthenticationRoutes {
         clientId: context.clientId,
       })
       .then((accessTokenDoc: any) => {
-        if (isNil(accessTokenDoc)) {
+        if (isNil(accessTokenDoc) || moment().isAfter(moment(accessTokenDoc.expiresOn))) {
           return callback({
             code: grpc.status.UNAUTHENTICATED,
             message: "Token is expired or otherwise not valid",
