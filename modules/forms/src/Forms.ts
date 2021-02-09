@@ -137,7 +137,7 @@ export default class FormsModule {
     private async enableModule() {
         let url = this._url;
         if (process.env.REGISTER_NAME === "true") {
-            url = "authentication:" + this._url.split(":")[1];
+            url = "forms:" + this._url.split(":")[1];
         }
         if (!this.isRunning) {
             this.database = this.grpcSdk.databaseProvider;
