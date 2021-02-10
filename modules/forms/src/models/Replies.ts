@@ -14,6 +14,10 @@ export const RepliesSchema = new ConduitSchema('FormReplies',
             required: true,
             systemRequired: true
         },
+        possibleSpam: {
+            type: TYPE.Boolean,
+            default:false
+        },
         createdAt: TYPE.Date,
         updatedAt: TYPE.Date
     },

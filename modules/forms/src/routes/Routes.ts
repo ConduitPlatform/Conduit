@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import {isNil} from "lodash";
+import axios from "axios";
 
 var protoLoader = require("@grpc/proto-loader");
 var PROTO_PATH = __dirname + "/router.proto";
@@ -42,12 +43,43 @@ export class FormRoutes {
 
         let data = JSON.parse(call.request.params);
         let fileData: any = {};
+        let honeyPot: boolean = false;
+        let possibleSpam: boolean = false;
         Object.keys(data).forEach(r => {
             if (form.fields[r] === "File") {
                 fileData[r] = data[r]
                 delete data[r];
             }
+            if(isNil(form.fields[r])){
+                honeyPot = true;
+            }
         });
+
+        errorMessage = null;
+        if(form.emailField && data[form.emailField]){
+            const response = await axios.get('http://api.stopforumspam.org/api',
+                {
+                    params: {
+                        'json': true,
+                        email: data[form.emailField]
+                    }
+                }).catch((e: any) => (errorMessage = e.message));
+            if (!errorMessage && response.data?.email?.blacklisted === 1) {
+                possibleSpam = true;
+            }
+        }
+
+        errorMessage = null;
+        if(honeyPot && possibleSpam){
+            await this.grpcSdk.databaseProvider!.create("FormReplies", {
+                form: form._id,
+                data,
+                possibleSpam: true
+            }).catch((e: any) => (errorMessage = e.message));
+            if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+            // we respond OK, but we don't send the email
+            return callback(null, {result: "OK"});
+        }
 
         errorMessage = null;
         await this.grpcSdk.databaseProvider!.create("FormReplies", {
@@ -66,7 +98,7 @@ export class FormRoutes {
         await this.grpcSdk.emailProvider!.sendEmail('FormSubmission', {
             email: form.forwardTo,
             sender: 'forms',
-            replyTo: data[form.emailField],
+            replyTo: form.emailField ? data[form.emailField] : null,
             variables: {
                 data: text
             },
