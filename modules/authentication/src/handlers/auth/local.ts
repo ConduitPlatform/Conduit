@@ -53,10 +53,10 @@ export class LocalHandlers {
 
         await this.grpcSdk.waitForExistence('database-provider');
         await this.grpcSdk.waitForExistence('email');
-        
+
         this.database = this.grpcSdk.databaseProvider;
         this.emailModule = this.grpcSdk.emailProvider;
-        
+
         let errorMessage = null;
         const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) {
@@ -94,13 +94,22 @@ export class LocalHandlers {
 
     async register(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const {email, password} = JSON.parse(call.request.params);
+        let {email, password} = JSON.parse(call.request.params);
         let errorMessage = null;
 
         if (isNil(email) || isNil(password)) return callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'Email and password required'
         });
+
+        if(email.contains('+')){
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Email contains unsupported characters'
+            });
+        }
+
+        email = email.toLowerCase();
 
         let user = await this.database.findOne('User', {email}).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -117,7 +126,7 @@ export class LocalHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         let url = serverConfig.url;
 
         if (config.local.sendVerificationEmail) {
@@ -149,7 +158,7 @@ export class LocalHandlers {
 
     async authenticate(call: any, callback: any) {
         if (!this.initialized) return callback({code: grpc.status.NOT_FOUND, message: 'Requested resource not found'});
-        const {email, password} = JSON.parse(call.request.params);
+        let {email, password} = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
         let errorMessage = null;
 
@@ -160,6 +169,15 @@ export class LocalHandlers {
             code: grpc.status.INVALID_ARGUMENT,
             message: 'Email and password required'
         });
+
+        if(email.contains('+')){
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: 'Email contains unsupported characters'
+            });
+        }
+
+        email = email.toLowerCase();
 
         const user = await this.database.findOne('User', {email}, '+hashedPassword').catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
@@ -355,11 +373,11 @@ export class LocalHandlers {
         await Promise.all([userPromise, tokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        if(config.local.verification_redirect_uri){
-            return callback(null, {redirect: config.local.verification_redirect_uri});    
-        }else{
+        if (config.local.verification_redirect_uri) {
+            return callback(null, {redirect: config.local.verification_redirect_uri});
+        } else {
             return callback(null, {result: JSON.stringify({message: 'Email verified'})});
-        }      
+        }
     }
 
     private async sendVerificationCode(to: string) {
@@ -377,7 +395,7 @@ export class LocalHandlers {
 
         const clientId = context.clientId;
 
-        const { email, code } = JSON.parse(call.request.params);
+        const {email, code} = JSON.parse(call.request.params);
         if (isNil(email) || isNil(code)) return callback({
             code: grpc.status.INVALID_ARGUMENT, message: 'No email or 2fa code provided'
         });
@@ -391,7 +409,10 @@ export class LocalHandlers {
         const verificationRecord = await this.database.findOne('VerificationRecord', {userId: user._id, clientId})
             .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(verificationRecord)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification record for this user'});
+        if (isNil(verificationRecord)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'No verification record for this user'
+        });
 
         const verified = await this.sms.verify({verificationSid: verificationRecord.verificationSid, code})
             .catch((e: any) => errorMessage = e.message);
@@ -442,15 +463,15 @@ export class LocalHandlers {
     }
 
     async enableTwoFa(call: any, callback: any) {
-        const { phoneNumber } = JSON.parse(call.request.params);
+        const {phoneNumber} = JSON.parse(call.request.params);
         const context = JSON.parse(call.request.context);
 
         if (isNil(context) || isNil(context.user)) {
-            return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized'});
         }
 
         if (isNil(phoneNumber)) {
-            return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Phone number is required'});
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Phone number is required'});
         }
 
         const clientId = context.clientId;
@@ -480,7 +501,7 @@ export class LocalHandlers {
 
     async verifyPhoneNumber(call: any, callback: any) {
         const context = JSON.parse(call.request.context);
-        const { code } = JSON.parse(call.request.params);
+        const {code} = JSON.parse(call.request.params);
 
         if (isNil(context) || isEmpty(context)) {
             return callback({
@@ -499,10 +520,16 @@ export class LocalHandlers {
         }
 
         let errorMessage: string | null = null;
-        const verificationRecord = await this.database.findOne('VerificationRecord', {userId: context.user._id, clientId})
+        const verificationRecord = await this.database.findOne('VerificationRecord', {
+            userId: context.user._id,
+            clientId
+        })
             .catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(verificationRecord)) return callback({code: grpc.status.INVALID_ARGUMENT, message: 'No verification record for this user'});
+        if (isNil(verificationRecord)) return callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'No verification record for this user'
+        });
 
         const verified = await this.sms.verify({verificationSid: verificationRecord.verificationSid, code})
             .catch((e: any) => errorMessage = e.message);
@@ -521,18 +548,20 @@ export class LocalHandlers {
             errorMessage = e.message;
         })
         if (!isNil(errorMessage)) {
-            return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+            return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
-        return callback(null, { result: JSON.stringify({
+        return callback(null, {
+            result: JSON.stringify({
                 message: "twofa enabled"
-        })});
+            })
+        });
     }
 
     async disableTwoFa(call: any, callback: any) {
         const context = JSON.parse(call.request.context);
         if (isNil(context) || isNil(context.user)) {
-            return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+            return callback({code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized'});
         }
 
         let errorMessage: string | null = null;
@@ -542,11 +571,13 @@ export class LocalHandlers {
             errorMessage = e.message;
         })
         if (!isNil(errorMessage)) {
-            return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+            return callback({code: grpc.status.INTERNAL, message: errorMessage});
         }
 
-        return callback(null, { result: JSON.stringify({
+        return callback(null, {
+            result: JSON.stringify({
                 message: "twofa disabled"
-            })});
+            })
+        });
     }
 }
