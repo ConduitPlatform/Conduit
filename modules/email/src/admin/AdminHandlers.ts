@@ -86,8 +86,8 @@ export class AdminHandlers {
 
 
     async editTemplate(call: any, callback: any) {
-        const {id, template: params} = JSON.parse(call.request.params);
-
+        const params = JSON.parse(call.request.params);
+        const id = params.id;
         const allowedFields = ['name', 'subject', 'body', 'variables'];
 
         const flag = Object.keys(params).some(key => {
@@ -113,8 +113,10 @@ export class AdminHandlers {
             });
         }
 
-        Object.keys(params).forEach(key => {
-            templateDocument[key] = params[key];
+        ['name', 'subject', 'body', 'variables'].forEach(key => {
+            if (params[key]) {
+                templateDocument[key] = params[key];
+            }
         });
 
         const updatedTemplate = await this.database.findByIdAndUpdate('EmailTemplate', templateDocument).catch((e: any) => errorMessage = e.message);
