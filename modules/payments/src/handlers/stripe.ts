@@ -120,6 +120,7 @@ export class StripeHandlers {
     await this.database.create('Transaction', {
       userId,
       provider: PROVIDER_NAME,
+      product: productId,
       data: intent
     }).catch((e: Error) => {
       errorMessage = e.message;
@@ -186,6 +187,7 @@ export class StripeHandlers {
       await this.database.create('Transaction', {
         userId: context.user._id,
         provider: PROVIDER_NAME,
+        product: productId,
         data: intent
       }).catch((e: Error) => {
         errorMessage = e.message;
