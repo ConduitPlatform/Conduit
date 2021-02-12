@@ -39,19 +39,29 @@ export class EmailService {
     async sendEmail(template: string, params: ISendEmailParams) {
         const {
             email,
+            body,
+            subject,
             variables,
             sender
         } = params;
 
         const builder = this.emailer.emailBuilder();
 
-        const templateFound = await this.database.findOne('EmailTemplate', {name: template});
-        if (isNil(templateFound)) {
-            throw new Error(`Template ${template} not found`);
+        if(!template && (!body || !subject)){
+            throw new Error(`Template/body+subject not provided`);
         }
 
-        const bodyString = this.replaceVars(templateFound.body, variables);
-        const subjectString = this.replaceVars(templateFound.subject, variables);
+        let templateFound;
+        if(template){
+            templateFound = await this.database.findOne('EmailTemplate', {name: template});
+            if (isNil(templateFound)) {
+                throw new Error(`Template ${template} not found`);
+            }
+        }
+
+
+        const bodyString = templateFound ? this.replaceVars(templateFound.body, variables) : body!;
+        const subjectString = templateFound ? this.replaceVars(templateFound.subject, variables) : subject!;
 
         builder.setSender(sender);
         builder.setContent(bodyString);

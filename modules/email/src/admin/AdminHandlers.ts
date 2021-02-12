@@ -8,8 +8,9 @@ const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
     private database: any;
+    private emailService: EmailService;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly emailService: EmailService) {
+    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
         const self = this;
         grpcSdk.waitForExistence('database-provider').then(r => {
             self.database = self.grpcSdk.databaseProvider
@@ -34,6 +35,10 @@ export class AdminHandlers {
             editTemplate: this.editTemplate.bind(this),
             sendEmail: this.sendEmail.bind(this)
         });
+    }
+
+    setEmailService(emailService: EmailService) {
+        this.emailService = emailService;
     }
 
     async getTemplates(call: any, callback: any) {
@@ -88,17 +93,19 @@ export class AdminHandlers {
     async editTemplate(call: any, callback: any) {
         const params = JSON.parse(call.request.params);
         const id = params.id;
-        const allowedFields = ['name', 'subject', 'body', 'variables'];
 
-        const flag = Object.keys(params).some(key => {
-            if (!allowedFields.includes(key)) {
-                return true;
-            }
-        });
-        if (flag) return callback({
-            code: grpc.status.INVALID_ARGUMENT,
-            message: "Invalid given parameters",
-        });
+        // WHY THE FUCK
+        // const allowedFields = ['name', 'subject', 'body', 'variables'];
+
+        // const flag = Object.keys(params).some(key => {
+        //     if (!allowedFields.includes(key)) {
+        //         return true;
+        //     }
+        // });
+        // if (flag) return callback({
+        //     code: grpc.status.INVALID_ARGUMENT,
+        //     message: "Invalid given parameters",
+        // });
 
         let errorMessage: string | null = null;
         const templateDocument = await this.database.findOne('EmailTemplate', {_id: id}).catch((e: any) => errorMessage = e.message);
@@ -119,7 +126,7 @@ export class AdminHandlers {
             }
         });
 
-        const updatedTemplate = await this.database.findByIdAndUpdate('EmailTemplate', templateDocument).catch((e: any) => errorMessage = e.message);
+        const updatedTemplate = await this.database.findByIdAndUpdate('EmailTemplate', id, templateDocument).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({
             code: grpc.status.INTERNAL,
             message: errorMessage,
@@ -129,18 +136,38 @@ export class AdminHandlers {
     }
 
     async sendEmail(call: any, callback: any) {
-        const {
+        let {
             templateName,
+            body,
+            subject,
             email,
             variables,
             sender
         } = JSON.parse(call.request.params);
 
+        if (!templateName && (!body || !subject)) {
+            return callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `Template/body+subject not provided`,
+            });
+        }
+
         let errorMessage: string | null = null;
+        if (!sender) {
+            sender = "conduit";
+        }
+
+        if (sender.indexOf("@") === -1) {
+            let emailConfig: any = await this.grpcSdk.config.get("email").catch((err: any) => console.log("failed to get sending domain"));
+            sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`
+        }
+
         await this.emailService.sendEmail(templateName, {
+            body,
+            subject,
             email,
             variables,
-            sender
+            sender: sender ? sender : "conduit"
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({
             code: grpc.status.INTERNAL,
