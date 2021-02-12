@@ -6,8 +6,14 @@ export const ProductSchema = new ConduitSchema('Product',
     name: TYPE.String,
     value: TYPE.Number,
     currency: TYPE.String,
-    isSubscription: TYPE.Boolean,
-    recurring: TYPE.String,
+    isSubscription: {
+      type: TYPE.Boolean,
+      default: false
+    },
+    recurring: {
+      type: TYPE.String,
+      default: ''
+    },
     recurringCount: {
       type: TYPE.Number,
       default: 1

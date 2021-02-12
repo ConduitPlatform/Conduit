@@ -51,6 +51,7 @@ export class PaymentsRoutes {
       refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
       getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
       completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
+      createIamportPayment: this.iamportHandlers.createPayment.bind(this.iamportHandlers),
       addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
       validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
       completeIamportPayment: this.iamportHandlers.completePayment.bind(this.iamportHandlers),
@@ -235,6 +236,26 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
+              path: "/payments/iamport/createPayment",
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                productId: TYPE.String,
+                userId: TYPE.String
+              }
+            },
+            new ConduitRouteReturnDefinition("CreateIamportPaymentResponse", {
+              merchant_uid: TYPE.String,
+              amount: TYPE.Number
+            }),
+            "createIamportPayment"
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
               path: "/payments/iamport/addCard",
               action: ConduitRouteActions.POST,
               bodyParams: {
@@ -276,7 +297,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: "/hook/payments/iamport/completePayment",
+              path: "/payments/iamport/completePayment",
               action: ConduitRouteActions.POST,
               bodyParams: {
                 imp_uid: TYPE.String,

@@ -8,6 +8,10 @@ export const TransactionSchema = new ConduitSchema('Transaction',
       model: 'User'
     },
     provider: TYPE.String,
+    product: {
+      type: TYPE.Relation,
+      model: 'Product'
+    },
     data: TYPE.JSON,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
