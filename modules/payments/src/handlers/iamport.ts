@@ -74,7 +74,7 @@ export class IamportHandlers {
   }
 
   async createPayment(call: any, callback: any) {
-    const { productId, userId } = JSON.parse(call.request.params);
+    const { productId, quantity, userId } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
 
     if (isNil(productId)) {
@@ -99,6 +99,7 @@ export class IamportHandlers {
       userId: userId,
       provider: PROVIDER_NAME,
       product: productId,
+      quantity: quantity || 1,
       data: {
         status: "prepared"
       }
@@ -117,10 +118,12 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    const amount = product.value * (quantity || 1);
+
     try {
       await axios.post(`${BASE_URL}/payments/prepare`, {
         merchant_uid: transaction._id,
-        amount: product.value
+        amount
       }, {
         headers: {
           Authorization: `${access_token}`
@@ -130,7 +133,7 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { result: JSON.stringify({ merchant_uid: transaction._id, amount: product.value }) });
+    return callback(null, { result: JSON.stringify({ merchant_uid: transaction._id, amount }) });
   }
 
   async addCard(call: any, callback: any) {
@@ -262,7 +265,7 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: e.message });
     }
 
-    if (paymentData.amount === transaction.product.value) {
+    if (paymentData.amount === (transaction.product.value * transaction.quantity)) {
       if (status === 'paid') {
         transaction.data.status = 'paid';
         await this.database.findByIdAndUpdate('Transaction', transaction._id, transaction)

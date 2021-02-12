@@ -12,6 +12,10 @@ export const TransactionSchema = new ConduitSchema('Transaction',
       type: TYPE.Relation,
       model: 'Product'
     },
+    quantity: {
+      type: TYPE.Number,
+      default: 1
+    },
     data: TYPE.JSON,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date
