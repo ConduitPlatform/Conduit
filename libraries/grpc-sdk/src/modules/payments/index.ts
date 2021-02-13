@@ -56,4 +56,17 @@ export default class Payments implements ConduitModule {
       )
     });
   }
+
+  createIamportPayment(productId: string, quantity: number, userId: string | null) {
+    return new Promise((resolve, reject) => {
+      this.client.createIamportPayment({ productId, quantity, userId },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || "Something went wrong");
+          } else {
+            resolve({ merchant_uid: res.merchant_uid, amount: res.amount });
+          }
+        })
+    });
+  }
 }

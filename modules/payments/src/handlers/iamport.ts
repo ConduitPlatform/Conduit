@@ -73,26 +73,27 @@ export class IamportHandlers {
     return Promise.resolve(access_token);
   }
 
-  async createPayment(call: any, callback: any) {
-    const { productId, quantity, userId } = JSON.parse(call.request.params);
+  async createPayment(productId: string, quantity?: number, userId?: string): Promise<{ merchant_uid: string, amount: number }> {
     let errorMessage: string | null = null;
-
-    if (isNil(productId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'productId is required' });
-    }
 
     const product = await this.database.findOne('Product', { _id: productId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
+      return Promise.reject(errorMessage);
     }
     if (isNil(product)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'product not found'});
+      return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'product not found' });
     }
     if (product.currency !== 'KRW') {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'iamport supports only products with KRW currency'});
+      return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'iamport supports only products with KRW currency' });
+    }
+    if (product.isSubscription) {
+      return Promise.reject({code: grpc.status.INVALID_ARGUMENT, message: 'product cant be a subscription' });
+    }
+    if (!isNil(quantity) && quantity <= 0) {
+      return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'quantity must be greater than 0' });
     }
 
     const transaction = await this.database.create('Transaction', {
@@ -107,7 +108,7 @@ export class IamportHandlers {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
     const access_token = await this.getToken()
@@ -115,7 +116,7 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
     const amount = product.value * (quantity || 1);
@@ -130,10 +131,10 @@ export class IamportHandlers {
         }
       });
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: grpc.status.INTERNAL, message: e.message });
     }
 
-    return callback(null, { result: JSON.stringify({ merchant_uid: transaction._id, amount }) });
+    return Promise.resolve({ merchant_uid: transaction._id, amount });
   }
 
   async addCard(call: any, callback: any) {

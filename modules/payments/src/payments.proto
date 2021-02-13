@@ -9,6 +9,18 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message CreateIamportPaymentRequest {
+  string productId = 1;
+  int32 quantity = 2;
+  string userId = 3;
+}
+
+message CreateIamportPaymentResponse {
+  string merchant_uid = 1;
+  int32 amount = 2;
+}
+
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc CreateIamportPayment(CreateIamportPaymentRequest) returns (CreateIamportPaymentResponse);
 }
