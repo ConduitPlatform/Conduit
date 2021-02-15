@@ -4,9 +4,9 @@ import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
 export const UserSchema = new ConduitSchema('User',
   {
     _id: TYPE.ObjectId,
+    // do not add unique again, since this will fail due to emails being null
     email: {
       type: TYPE.String,
-      unique: true,
       required: false,
       systemRequired: true
     },
