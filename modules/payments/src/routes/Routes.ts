@@ -240,6 +240,7 @@ export class PaymentsRoutes {
               action: ConduitRouteActions.POST,
               bodyParams: {
                 productId: TYPE.String,
+                quantity: TYPE.Number,
                 userId: TYPE.String
               }
             },
