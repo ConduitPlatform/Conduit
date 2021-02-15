@@ -33,7 +33,8 @@ export default class PaymentsModule {
 
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
-      createIamportPayment: this.createIamportPayment.bind(this)
+      createIamportPayment: this.createIamportPayment.bind(this),
+      completeIamportPayment: this.completeIamportPayment.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -135,6 +136,26 @@ export default class PaymentsModule {
       const res = await this.iamportHandlers.createPayment(productId, quantity, userId);
 
       return callback(null, res);
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+  }
+
+  async completeIamportPayment(call: any, callback: any) {
+    const imp_uid = call.request.imp_uid;
+    const merchant_uid = call.request.merchant_uid;
+
+    if (isNil(this.iamportHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Iamport is deactivated' });
+    }
+
+    if (isNil(imp_uid) || isNil(merchant_uid) || imp_uid === '' || merchant_uid === '') {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'imp_uid and merchant_uid are required' });
+    }
+
+    try {
+      const success = await this.iamportHandlers.completePayment(imp_uid, merchant_uid);
+      return callback(null, { success });
     } catch (e) {
       return callback({ code: e.code, message: e.message });
     }

@@ -137,6 +137,59 @@ export class IamportHandlers {
     return Promise.resolve({ merchant_uid: transaction._id, amount });
   }
 
+  async completePayment(imp_uid: string, merchant_uid: string) {
+    let errorMessage: string | null = null;
+
+    const access_token = await this.getToken()
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    const transaction = await this.database.findOne('Transaction', { _id: merchant_uid }, null, 'product')
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(transaction)) {
+      return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: 'transaction not found'});
+    }
+
+    let paymentData;
+    try {
+      paymentData = await axios.get(`${BASE_URL}/payments/${imp_uid}`, {
+        headers: {
+          Authorization: access_token
+        }
+      });
+      paymentData = paymentData.data.response;
+    } catch(e) {
+      return Promise.reject({ code: grpc.status.INTERNAL, message: e.message });
+    }
+
+    if (paymentData.amount === (transaction.product.value * transaction.quantity)) {
+      if (paymentData.status === 'paid') {
+        transaction.data.status = 'paid';
+        await this.database.findByIdAndUpdate('Transaction', transaction._id, transaction)
+          .catch((e: Error) => {
+            errorMessage = e.message;
+          });
+        if (!isNil(errorMessage)) {
+          return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+        }
+        return Promise.resolve(true);
+      }
+    } else {
+      return Promise.reject({ code: grpc.status.ABORTED, message: 'Forged payment attempted' });
+    }
+
+    return Promise.reject({ code: grpc.status.ABORTED, message: 'Payment failed' });
+  }
+
   async addCard(call: any, callback: any) {
     const { email, buyerName, phoneNumber, address, postCode } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
@@ -229,60 +282,6 @@ export class IamportHandlers {
     }
 
     return callback(null, { result: JSON.stringify({ message: 'card validate successfully'})});
-  }
-
-  async completePayment(call: any, callback: any) {
-    const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
-    let errorMessage: string | null = null;
-
-    const access_token = await this.getToken()
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    const transaction = await this.database.findOne('Transaction', { _id: merchant_uid }, null, 'product')
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-    if (isNil(transaction)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'transaction not found'});
-    }
-
-    let paymentData;
-    try {
-      paymentData = await axios.get(`${BASE_URL}/payments/${imp_uid}`, {
-        headers: {
-          Authorization: access_token
-        }
-      });
-      paymentData = paymentData.data.response;
-    } catch(e) {
-      return callback({ code: grpc.status.INTERNAL, message: e.message });
-    }
-
-    if (paymentData.amount === (transaction.product.value * transaction.quantity)) {
-      if (status === 'paid') {
-        transaction.data.status = 'paid';
-        await this.database.findByIdAndUpdate('Transaction', transaction._id, transaction)
-          .catch((e: Error) => {
-            errorMessage = e.message;
-          });
-        if (!isNil(errorMessage)) {
-          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-        }
-        return callback(null, { result: JSON.stringify('Payment succeeded') });
-      }
-    } else {
-      return callback({ code: grpc.status.ABORTED, message: 'Forged payment attempted' });
-    }
-
-    return callback({ code: grpc.status.ABORTED, message: 'Payment failed' });
   }
 
   async subscribeToProduct(call: any, callback: any) {
