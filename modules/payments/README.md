@@ -269,6 +269,7 @@ These routes will be available ony if iamport handler is enabled.
 - Required
     - productId
 - Optional
+    - quantity: How many products the user wants to buy. Defaults to 1.
     - userId
 
 ### Returns
