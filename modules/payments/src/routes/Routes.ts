@@ -51,10 +51,10 @@ export class PaymentsRoutes {
       refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
       getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
       completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
-      createIamportPayment: this.iamportHandlers.createPayment.bind(this.iamportHandlers),
+      createIamportPayment: this.createIamportPayment.bind(this),
+      completeIamportPayment: this.completeIamportPayment.bind(this),
       addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
       validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
-      completeIamportPayment: this.iamportHandlers.completePayment.bind(this.iamportHandlers),
       subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(this.iamportHandlers),
       cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(this.iamportHandlers),
       iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(this.iamportHandlers),
@@ -67,6 +67,15 @@ export class PaymentsRoutes {
     let paymentsActive = await this.stripeHandlers.validate().catch((e: any) => (errorMessage = e));
     if (!errorMessage && paymentsActive) {
       return Promise.resolve(this.stripeHandlers);
+    }
+    return Promise.resolve(null);
+  }
+
+  async getIamport(): Promise<IamportHandlers | null> {
+    let errorMessage = null;
+    let paymentsActive = await this.iamportHandlers.validate().catch((e: any) => (errorMessage = e));
+    if (!errorMessage && paymentsActive) {
+      return Promise.resolve(this.iamportHandlers);
     }
     return Promise.resolve(null);
   }
@@ -105,6 +114,42 @@ export class PaymentsRoutes {
     }
 
     return callback(null, { result: JSON.stringify({ subscriptions })});
+  }
+
+  async createIamportPayment(call: any, callback: any) {
+    const { productId, quantity, userId } = JSON.parse(call.request.params);
+
+    if (isNil(productId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'productId is required'});
+    }
+
+    try {
+      const res = await this.iamportHandlers.createPayment(productId, quantity, userId);
+
+      return callback(null, { result: JSON.stringify(res)});
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+
+  }
+
+  async completeIamportPayment(call: any, callback: any) {
+    const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
+
+    if (isNil(imp_uid) || isNil(merchant_uid)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'imp_uid and merchant_uid are required' });
+    }
+
+    try {
+      const success = await this.iamportHandlers.completePayment(imp_uid, merchant_uid);
+      if (success) {
+        return callback(null, { result: JSON.stringify({ message: 'Payment succeeded' }) });
+      }
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+
+    return callback({ code: grpc.status.INTERNAL, message: 'Something went wrong' });
   }
 
   async registerRoutes(url: string) {

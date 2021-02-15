@@ -6,6 +6,7 @@ import * as grpc from "grpc";
 import { PaymentsRoutes } from "./routes/Routes";
 import * as models from "./models";
 import { AdminHandlers } from "./admin/admin";
+import { IamportHandlers } from "./handlers/iamport";
 
 let protoLoader = require("@grpc/proto-loader");
 
@@ -16,6 +17,7 @@ export default class PaymentsModule {
   private readonly _url: string;
   private readonly grpcServer: any;
   private _router: PaymentsRoutes;
+  private iamportHandlers: IamportHandlers | null;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./payments.proto"), {
@@ -31,6 +33,8 @@ export default class PaymentsModule {
 
     this.grpcServer.addService(payments.service, {
       setConfig: this.setConfig.bind(this),
+      createIamportPayment: this.createIamportPayment.bind(this),
+      completeIamportPayment: this.completeIamportPayment.bind(this),
     });
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
@@ -119,11 +123,50 @@ export default class PaymentsModule {
     return callback(null, { updateConfig: JSON.stringify(updateResult) });
   }
 
+  async createIamportPayment(call: any, callback: any) {
+    const productId = call.request.productId;
+    const quantity = call.request.quantity;
+    const userId = call.request.userId === '' ? undefined : call.request.userId;
+
+    if (isNil(this.iamportHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Iamport is deactivated' });
+    }
+
+    try {
+      const res = await this.iamportHandlers.createPayment(productId, quantity, userId);
+
+      return callback(null, res);
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+  }
+
+  async completeIamportPayment(call: any, callback: any) {
+    const imp_uid = call.request.imp_uid;
+    const merchant_uid = call.request.merchant_uid;
+
+    if (isNil(this.iamportHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Iamport is deactivated' });
+    }
+
+    if (isNil(imp_uid) || isNil(merchant_uid) || imp_uid === '' || merchant_uid === '') {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'imp_uid and merchant_uid are required' });
+    }
+
+    try {
+      const success = await this.iamportHandlers.completePayment(imp_uid, merchant_uid);
+      return callback(null, { success });
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+  }
+
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, await this._router.getStripe());
+      this.iamportHandlers = await this._router.getIamport();
       await this.registerSchemas();
       this.grpcServer.start();
       this.isRunning = true;
