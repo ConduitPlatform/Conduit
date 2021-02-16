@@ -189,11 +189,21 @@ export default class AdminModule extends IConduitAdmin {
       });
     }
     let error;
-    let done = await this._registerGprcRoute(protofile, routes, call.request.adminUrl).catch((err) => (error = err));
+    let url = call.request.adminUrl;
+    if(!url){
+      url = await this.grpcSdk.config.getModuleUrlByInstance(call.getPeer()).catch((err) => (error = err));
+      if(error){
+        callback({
+          code: grpc.status.INTERNAL,
+          message: "Error when registering routes",
+        });
+      }
+    }
+    let done = await this._registerGprcRoute(protofile, routes, url ).catch((err) => (error = err));
     if (error) {
       callback({
         code: grpc.status.INTERNAL,
-        message: "Error when registering routs",
+        message: "Error when registering routes",
       });
     } else {
       this.publishAdminRouteData(protofile, routes, call.request.adminUrl);

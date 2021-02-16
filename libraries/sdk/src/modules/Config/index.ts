@@ -8,6 +8,7 @@ export abstract class IConfigManager {
   abstract get(name: string): Promise<any>;
   abstract addFieldsToModule(name: string, newModulesConfigSchemaFields: any): Promise<any>;
   abstract set(name: string, newModulesConfigSchemaFields: any): Promise<any>;
+  abstract getModuleUrlByInstance(instancePeer: string): string | undefined;
 
 }
 

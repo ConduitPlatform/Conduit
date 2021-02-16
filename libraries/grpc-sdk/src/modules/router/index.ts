@@ -8,7 +8,7 @@ export default class Router implements ConduitModule{
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
-  
+
   constructor(url: string) {
     this._url = url;
     this.initializeClient();
@@ -39,7 +39,7 @@ export default class Router implements ConduitModule{
     this.active = false;
   }
 
-  register(paths: any[], protoFile: string, url: string): Promise<any> {
+  register(paths: any[], protoFile: string, url?: string): Promise<any> {
     let request = {
       routes: paths,
       protoFile: protoFile,

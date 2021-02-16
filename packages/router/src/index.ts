@@ -124,8 +124,21 @@ export class ConduitDefaultRouter implements IConduitRouter {
     );
   }
 
-  registerGrpcRoute(call: any, callback: any) {
+  async registerGrpcRoute(call: any, callback: any) {
     try {
+      let url = call.request.routerUrl;
+      let error;
+      if (!url) {
+        url = await this.grpcSdk.config.getModuleUrlByInstance(call.getPeer()).catch((err) => (error = err));
+        if (error) {
+          callback({
+            code: grpc.status.INTERNAL,
+            message: "Error when registering routes",
+          });
+        }
+        call.request.routerUrl = url;
+      }
+
       let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
@@ -140,7 +153,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       this.updateState(call.request.protoFile, call.request.routes, call.request.routerUrl);
     } catch (err) {
       console.error(err);
-      return callback({ code: grpc.status.INTERNAL, message: "Well that failed :/" });
+      return callback({code: grpc.status.INTERNAL, message: "Well that failed :/"});
     }
 
     //todo definitely missing an error handler here

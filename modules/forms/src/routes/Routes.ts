@@ -123,7 +123,7 @@ export class FormRoutes {
     private _refreshRoutes() {
         let routesProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
         this.grpcSdk.router
-            .register(this.forms, routesProtoFile.toString("utf-8"), this.url)
+            .register(this.forms, routesProtoFile.toString("utf-8"))
             .catch((err: Error) => {
                 console.log("Failed to register routes for CMS module!");
                 console.error(err);

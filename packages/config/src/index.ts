@@ -38,6 +38,7 @@ export default class ConfigManager implements IConfigManager {
       moduleList: this.moduleList.bind(this),
       watchModules: this.watchModules.bind(this),
       moduleHealthProbe: this.moduleHealthProbe.bind(this),
+      getModuleUrlByInstance: this.getModuleUrlByInstanceGrpc.bind(this),
     });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
@@ -422,6 +423,38 @@ export default class ConfigManager implements IConfigManager {
     }
     this.updateModuleHealth(moduleName, instancePeer);
     this.moduleRegister.emit("module-registered");
+  }
+
+  getModuleUrlByInstanceGrpc(call:any, callback:any){
+      let instance = call.request.instancePeer;
+      let result = this.getModuleUrlByInstance(instance);
+      if(result){
+          callback(null, {moduleUrl:result});
+      }else{
+          callback({
+              code: grpc.status.NOT_FOUND,
+              message: "Module not found",
+          });
+      }
+    }
+
+  getModuleUrlByInstance(instancePeer: string): string | undefined{
+    let found = null;
+      Object.keys(this.moduleHealth)
+          .forEach(r=>{
+            Object.keys(this.moduleHealth[r]).forEach(i=>{
+              if(i.indexOf(instancePeer)!==-1){
+                found = r;
+                return;
+              }
+            })
+
+      });
+      if(found){
+          return this.registeredModules.get(found);
+      }else{
+          return undefined;
+      }
   }
 
   private registerAdminRoutes() {

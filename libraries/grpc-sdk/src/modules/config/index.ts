@@ -9,7 +9,7 @@ export default class Config implements ConduitModule{
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
-  
+
   constructor(url: string) {
     this._url = url;
     this.initializeClient();
@@ -51,6 +51,18 @@ export default class Config implements ConduitModule{
     this.client.close();
     this.client = null;
     this.active = false;
+  }
+
+  getModuleUrlByInstance(instancePeer:string): Promise<any>{
+    return new Promise((resolve, reject) => {
+      this.client.getModuleUrlByInstance({instancePeer}, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || "Something went wrong");
+        } else {
+          resolve(res.moduleUrl);
+        }
+      });
+    });
   }
 
   get(name: string): Promise<any> {
@@ -141,7 +153,7 @@ export default class Config implements ConduitModule{
         }
       });
     });
-  } 
+  }
 
 
   registerModule(name: string, url: string): Promise<any> {

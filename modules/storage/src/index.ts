@@ -14,12 +14,15 @@ if (process.env.CONDUIT_SERVER) {
     grpcSdk.config.registerModule('storage', storage.url).catch(err => {
         console.error(err)
         process.exit(-1);
-    });
-    let protofile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'))
-    grpcSdk.router.register(storage.routes, protofile.toString('utf-8'), storage.url).catch((err: Error) => {
-        console.log("Failed to register routes for storage module!")
-        console.error(err);
-    });
+    })
+        .then(r => {
+            let protofile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'))
+            grpcSdk.router.register(storage.routes, protofile.toString('utf-8'))
+        })
+        .catch((err: Error) => {
+            console.log("Failed to register routes for storage module!")
+            console.error(err);
+        });
 } else {
     throw new Error("Conduit server URL not provided");
 }

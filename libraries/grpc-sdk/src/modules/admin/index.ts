@@ -5,7 +5,7 @@ import {ConduitModule} from "../../interfaces/ConduitModule";
 let protoLoader = require("@grpc/proto-loader");
 
 export default class Admin implements ConduitModule{
-  
+
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
@@ -40,7 +40,7 @@ export default class Admin implements ConduitModule{
     this.active = false;
   }
 
-  register(paths: any[], protoFile: string, serverUrl: string): Promise<any> {
+  register(paths: any[], protoFile: string, serverUrl?: string): Promise<any> {
     let grpcPathArray: any[] = [];
     paths.forEach((r) => {
       let obj = {

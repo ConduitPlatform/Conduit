@@ -155,7 +155,7 @@ export class PaymentsRoutes {
   async registerRoutes(url: string) {
     let routerProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
     let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8"), url).catch((err: Error) => {
+    this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8")).catch((err: Error) => {
       console.log("Failed to register routes for payments module");
       console.log(err);
     });
