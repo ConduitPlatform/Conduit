@@ -44,11 +44,18 @@ export class CommonHandlers {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
         }
 
-        const oldAccessToken = await this.database.findOne('AccessToken', {clientId}).catch((e: any) => errorMessage = e.message);
+        // delete the old tokens before generating new ones
+        const accessTokenPromise = this.database.deleteMany('AccessToken', {
+            userId: oldRefreshToken.userId,
+            clientId
+        });
+        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
+            userId: oldRefreshToken.userId,
+            clientId
+        });
+
+        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(oldAccessToken)) {
-            return callback({code: grpc.status.NOT_FOUND, message: 'No access token found'});
-        }
 
         const signTokenOptions: ISignTokenOptions = {
             secret: config.jwtSecret,
@@ -63,18 +70,12 @@ export class CommonHandlers {
         }).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
-        const newRefreshToken = await this.database.create('AccessToken', {
+        const newRefreshToken = await this.database.create('RefreshToken', {
             userId: oldRefreshToken.userId,
             clientId,
             token: AuthUtils.randomToken(),
             expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
         }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-
-        const accessTokenPromise = this.database.deleteOne('AccessToken', oldAccessToken);
-        const refreshTokenPromise = this.database.deleteOne('RefreshToken', oldRefreshToken);
-
-        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
 
         return callback(null, {
@@ -96,8 +97,8 @@ export class CommonHandlers {
         const clientId = context.clientId;
         const user = context.user;
 
-        const accessTokenPromise = this.database.deleteOne('AccessToken', {userId: user._id, clientId});
-        const refreshTokenPromise = this.database.deleteOne('RefreshToken', {userId: user._id, clientId});
+        const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
+        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id, clientId});
 
         let errorMessage = null;
         await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
@@ -127,7 +128,8 @@ export class CommonHandlers {
         });
         const user = context.user;
         let errorMessage = null;
-        await this.database.deleteOne("User", {_id: user._id}).catch((e: any) => errorMessage = e.message);;
+        await this.database.deleteOne("User", {_id: user._id}).catch((e: any) => errorMessage = e.message);
+
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         callback(null, {result: "done"});
 
