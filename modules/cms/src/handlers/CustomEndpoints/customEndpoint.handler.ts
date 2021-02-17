@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { constructQuery, constructAssignment, getOpName } from "./utils";
+import { constructQuery, constructAssignment, mergeQueries } from "./utils";
 import grpc from "grpc";
 import { CustomEndpoint } from "../../models/customEndpoint";
 import { isNil } from "lodash";
@@ -18,14 +18,14 @@ export class CustomEndpointHandler {
     let path = call.request.path.split("/")[2];
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
     let params = JSON.parse(call.request.params);
-    let searchString = "";
+    let searchQuery: any = {};
+    let searchStrings: string[] = [];
     let createString = "";
 
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       endpoint.queries!.forEach(
         (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
-          if (searchString.length !== 0) searchString += ",";
           if (r.comparisonField.type === "Input") {
             if(isNil(params[r.comparisonField.value])){
               return callback({
@@ -33,7 +33,7 @@ export class CustomEndpointHandler {
                 message: `Field ${r.comparisonField.value} is missing from input`,
               });
             }
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
+            searchStrings.push(constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value])));
           } else if (r.comparisonField.type === "Context") {
             if (isNil(call.request.context)) {
               return callback({
@@ -52,12 +52,14 @@ export class CustomEndpointHandler {
                 });
               }
             }
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(context));
+            searchStrings.push(constructQuery(r.schemaField, r.operation, JSON.stringify(context)));
           } else {
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(r.comparisonField.value));
+            searchStrings.push(constructQuery(r.schemaField, r.operation, JSON.stringify(r.comparisonField.value)));
           }
         }
       );
+
+      searchQuery = mergeQueries(searchStrings);
     }
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
@@ -115,14 +117,13 @@ export class CustomEndpointHandler {
       });
     }
 
-    searchString = "{" + searchString + "}";
     createString = "{" + createString + "}";
     let promise;
     if (endpoint.operation === 0) {
       if (endpoint.paginated) {
         const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-            searchString === "{}" ? {} : JSON.parse(searchString),
+            searchQuery,
           null,
           params["skip"],
           params["limit"],
@@ -131,14 +132,14 @@ export class CustomEndpointHandler {
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
-            searchString === "{}" ? {} : JSON.parse(searchString)
+          searchQuery
         );
 
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
         promise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-            searchString === "{}" ? {} : JSON.parse(searchString),
+          searchQuery,
           undefined,
           undefined,
           undefined,
@@ -151,11 +152,11 @@ export class CustomEndpointHandler {
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
-          searchString === "{}" ? {} : JSON.parse(searchString),
+        searchQuery,
         JSON.parse(createString)
       );
     } else if (endpoint.operation === 3) {
-      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, searchString === "{}" ? {} : JSON.parse(searchString));
+      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, searchQuery);
     } else {
       console.error("Niko eisai malakas");
       process.exit(-1);
