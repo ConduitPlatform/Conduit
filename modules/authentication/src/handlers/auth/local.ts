@@ -102,7 +102,7 @@ export class LocalHandlers {
             message: 'Email and password required'
         });
 
-        if(email.contains('+')){
+        if (email.indexOf('+') !== -1) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
                 message: 'Email contains unsupported characters'
@@ -170,7 +170,7 @@ export class LocalHandlers {
             message: 'Email and password required'
         });
 
-        if(email.contains('+')){
+        if (email.indexOf('+') !== -1) {
             return callback({
                 code: grpc.status.INVALID_ARGUMENT,
                 message: 'Email contains unsupported characters'
