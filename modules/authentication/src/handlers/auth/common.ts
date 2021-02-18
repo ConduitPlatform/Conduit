@@ -19,10 +19,6 @@ export class CommonHandlers {
 
     async renewAuth(call: any, callback: any) {
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'No headers provided'
-        });
 
         const clientId = context.clientId;
 
@@ -42,6 +38,9 @@ export class CommonHandlers {
         if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
         if (isNil(oldRefreshToken)) {
             return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
+        }
+        if(moment().isAfter(moment(oldRefreshToken.expiresOn))){
+            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Token expired'});
         }
 
         // delete the old tokens before generating new ones
@@ -87,12 +86,7 @@ export class CommonHandlers {
     }
 
     async logOut(call: any, callback: any) {
-
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'No headers provided'
-        });
 
         const clientId = context.clientId;
         const user = context.user;
@@ -108,24 +102,16 @@ export class CommonHandlers {
     }
 
     async getUser(call: any, callback: any) {
-
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'No headers provided'
-        });
+
         const user = context.user;
 
         return callback(null, {result: JSON.stringify(user)});
     }
 
     async deleteUser(call: any, callback: any) {
-
         const context = JSON.parse(call.request.context);
-        if (isNil(context) || isEmpty(context)) return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'No headers provided'
-        });
+
         const user = context.user;
         let errorMessage = null;
         await this.database.deleteOne("User", {_id: user._id}).catch((e: any) => errorMessage = e.message);
