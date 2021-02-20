@@ -1,5 +1,5 @@
 syntax = "proto3";
-package authentication.admin;
+package forms.admin;
 
 service Admin {
   rpc GetForms(AdminRequest) returns (AdminResponse);

@@ -8,22 +8,21 @@ let paths = require("./admin/admin.json")
 if (!process.env.CONDUIT_SERVER) {
     throw new Error("Conduit server URL not provided");
 }
-let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER);
+let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, "pushnotifications");
 let notifications = new PushNotifications(grpcSdk);
 grpcSdk.config.registerModule("push-notifications", notifications.url)
     .catch(err => {
         console.error(err)
         process.exit(-1);
     })
-    .then(r => {
-        let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-        grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'))
+    .then(() => {
+        grpcSdk.admin.register(paths.functions)
     })
     .catch((err: Error) => {
         console.log("Failed to register admin routes for push-notifications module!")
         console.error(err);
     })
-    .then(r => {
+    .then(() => {
         let routerProtoFile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'));
         grpcSdk.router.register(notifications.routes, routerProtoFile.toString('utf-8'))
     })

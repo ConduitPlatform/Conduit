@@ -1,6 +1,4 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import fs from "fs";
-import path from "path";
 import SmsModule from './Sms';
 
 let paths = require("./admin/admin.json");
@@ -18,9 +16,8 @@ if (process.env.REGISTER_NAME === 'true') {
 grpcSdk.config.registerModule('sms', url).catch((err: any) => {
     console.error(err);
     process.exit(-1);
-}).then(r => {
-    let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-    grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'))
+}).then(() => {
+    grpcSdk.admin.register(paths.functions)
 }).catch((err: Error) => {
     console.log('Failed to register admin routes for sms module!');
     console.error(err);

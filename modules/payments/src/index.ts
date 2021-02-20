@@ -1,6 +1,4 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import fs from "fs";
-import path from "path";
 import PaymentsModule from './Payments';
 
 let paths = require("./admin/admin.json")
@@ -19,9 +17,8 @@ grpcSdk.config.registerModule('payments', url).catch((err: any) => {
     console.error(err);
     process.exit(-1);
 })
-    .then(r => {
-        let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-        grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'))
+    .then(() => {
+        grpcSdk.admin.register(paths.functions)
     }).catch((err: Error) => {
     console.log("Failed to register admin routes for payments module!");
     console.error(err);

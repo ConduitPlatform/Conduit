@@ -4,13 +4,35 @@ import {ConduitModule} from "../../interfaces/ConduitModule";
 
 let protoLoader = require("@grpc/proto-loader");
 
+let protofile_template = `
+syntax = "proto3";
+package MODULE_NAME.admin;
+
+service Admin {
+ MODULE_FUNCTIONS
+}
+
+// all admin requests accept the params,headers and context objects as stringified json
+message AdminRequest {
+  string params = 1;
+  string headers = 2;
+  string context = 3;
+}
+// all admin responses return their results as stringified json
+message AdminResponse {
+  string result = 1;
+}
+
+`
+
 export default class Admin implements ConduitModule{
 
   private client: grpc.Client | any;
   private readonly _url: string;
   active: boolean = false;
 
-  constructor(url: string) {
+
+  constructor(url: string, readonly moduleName: string) {
     this._url = url;
     this.initializeClient();
   }
@@ -40,16 +62,25 @@ export default class Admin implements ConduitModule{
     this.active = false;
   }
 
-  register(paths: any[], protoFile: string, serverUrl?: string): Promise<any> {
+  register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
     let grpcPathArray: any[] = [];
+    let protoFunctions = "";
     paths.forEach((r) => {
       let obj = {
         path: r.path,
         method: r.method,
         grpcFunction: r.protoName,
       };
+      if(!protoFile){
+        protoFunctions+= `rpc ${r.protoName.charAt(0).toUpperCase() +r.protoName.slice(1) }(AdminRequest) returns (AdminResponse);\n`;
+      }
       grpcPathArray.push(obj);
     });
+    if(!protoFile){
+      protoFile =  protofile_template.toString().replace("MODULE_FUNCTIONS", protoFunctions);
+      protoFile =  protoFile.replace("MODULE_NAME", this.moduleName);
+    }
+
     let request = {
       routes: grpcPathArray,
       protoFile: protoFile,

@@ -44,7 +44,7 @@ export default class ConduitGrpcSdk {
     }
     this.serverUrl = serverUrl;
     this._config = new Config(this.serverUrl);
-    this._admin = new Admin(this.serverUrl);
+    this._admin = new Admin(this.serverUrl, this.name);
     this._router = new Router(this.serverUrl);
     this.initializeModules().then(() => {});
     this.watchModules();
@@ -105,7 +105,7 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    return this._modules[moduleName] && this._modules[moduleName].active ? true : false;
+    return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
   async waitForExistence(moduleName: string) {

@@ -1,6 +1,4 @@
-import fs from "fs";
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import * as path from 'path';
 import AuthenticationModule from './Authentication';
 
 let paths = require("./admin/admin.json")
@@ -21,9 +19,8 @@ grpcSdk.config
         console.error(err)
         process.exit(-1);
     })
-    .then((r: any) => {
-        let protofile = fs.readFileSync(path.resolve(__dirname, './admin/admin.proto'))
-        return grpcSdk.admin.register(paths.functions, protofile.toString('utf-8'))
+    .then(() => {
+        return grpcSdk.admin.register(paths.functions)
     })
     .catch((err: Error) => {
         console.log("Failed to register admin routes for authentication module!")
