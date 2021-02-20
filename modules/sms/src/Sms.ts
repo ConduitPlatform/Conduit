@@ -3,11 +3,9 @@ import { TwilioProvider } from "./providers/twilio";
 import SmsConfigSchema from "./config";
 import { AdminHandlers } from "./admin/admin";
 import { isNil } from "lodash";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
-
-let protoLoader = require("@grpc/proto-loader");
 
 export default class SmsModule {
   private _provider: ISmsProvider | undefined;
@@ -17,32 +15,22 @@ export default class SmsModule {
   private readonly grpcServer: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./sms.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-    let sms = protoDescriptor.sms.Sms;
-    this.grpcServer = new grpcModule.Server();
 
-    this.grpcServer.addService(sms.service, {
+
+    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
+    let serverResult = createServer(this._url);
+    this.grpcServer = serverResult.server;
+    this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
+    console.log("bound on:", this._url);
+
+    addServiceToServer(this.grpcServer, path.resolve(__dirname, "./sms.proto"), "sms.Sms", {
       setConfig: this.setConfig.bind(this),
       sendVerificationCode: this.sendVerificationCode.bind(this),
       verify: this.verify.bind(this),
-    });
+    })
 
     this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
 
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
-    console.log("bound on:", this._url);
     this.grpcServer.start();
 
     this.grpcSdk
@@ -51,14 +39,13 @@ export default class SmsModule {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
-        const self = this;
         this.grpcSdk.bus?.subscribe("sms", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
-              .then((r) => {
+              .then(() => {
                 console.log("Updated sms configuration");
               })
-              .catch((e: Error) => {
+              .catch(() => {
                 console.log("Failed to update email config");
               });
           }
@@ -73,7 +60,7 @@ export default class SmsModule {
       .catch(() => {
         return this.grpcSdk.config.updateConfig(SmsConfigSchema.getProperties(), "sms");
       })
-      .then((smsConfig: any) => {
+      .then(() => {
         return this.grpcSdk.config.addFieldstoConfig(SmsConfigSchema.getProperties(), "sms");
       })
       .catch(() => {

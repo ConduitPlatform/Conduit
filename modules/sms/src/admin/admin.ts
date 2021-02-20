@@ -1,10 +1,8 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {isNil} from 'lodash';
 import path from "path";
 import {ISmsProvider} from '../interfaces/ISmsProvider';
-
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
 
@@ -12,23 +10,10 @@ export class AdminHandlers {
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, provider: ISmsProvider | undefined) {
         this.provider = provider;
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // The protoDescriptor object has the full package hierarchy
-        // @ts-ignore
-        let admin = protoDescriptor.sms.admin.Admin;
-        server.addService(admin.service, {
+
+        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "sms.admin.Admin", {
             sendSms: this.sendSms.bind(this)
-        });
+        })
     }
 
     updateProvider(provider: ISmsProvider) {
@@ -36,7 +21,7 @@ export class AdminHandlers {
     }
 
     async sendSms(call: any, callback: any) {
-        const { to, message } = JSON.parse(call.request.params);
+        const {to, message} = JSON.parse(call.request.params);
         let errorMessage: string | null = null;
 
         if (isNil(this.provider)) {

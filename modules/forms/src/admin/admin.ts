@@ -1,10 +1,8 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';
 import {FormsController} from "../controllers/forms.controller";
-
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
     private database: any;
@@ -12,29 +10,15 @@ export class AdminHandlers {
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly formsController: FormsController) {
         const self = this;
         grpcSdk.waitForExistence('database-provider')
-            .then(r => {
+            .then(() => {
                 self.database = self.grpcSdk.databaseProvider;
             })
-
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // @ts-ignore
-        let admin = protoDescriptor.authentication.admin.Admin;
-        server.addService(admin.service, {
+        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "authentication.admin.Admin", {
             getForms: this.getForms.bind(this),
             getRepliesByFormId: this.getRepliesByFormId.bind(this),
             createForm: this.createForm.bind(this),
             editFormById: this.editFormById.bind(this)
-        });
+        })
     }
 
     async getForms(call: any, callback: any) {

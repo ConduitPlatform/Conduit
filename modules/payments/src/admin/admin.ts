@@ -1,10 +1,9 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
   private database: any;
@@ -12,27 +11,12 @@ export class AdminHandlers {
   constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly stripeHandlers: StripeHandlers | null) {
     const self = this;
     grpcSdk.waitForExistence('database-provider')
-      .then(r => {
+      .then(() => {
         self.database = self.grpcSdk.databaseProvider;
       });
-
-    let packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, './admin.proto'),
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true
-      }
-    );
-
-    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    let admin = protoDescriptor.payments.admin.Admin;
-    server.addService(admin.service, {
+    addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "payments.admin.Admin", {
       createProduct: this.createProduct.bind(this),
-    });
+    })
   }
 
   async createProduct(call: any, callback: any) {

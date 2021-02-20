@@ -1,10 +1,8 @@
 import {isNil} from 'lodash';
 import {EmailService} from '../services/email.service';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
-
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
     private database: any;
@@ -12,29 +10,16 @@ export class AdminHandlers {
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
         const self = this;
-        grpcSdk.waitForExistence('database-provider').then(r => {
+        grpcSdk.waitForExistence('database-provider').then(() => {
             self.database = self.grpcSdk.databaseProvider
         })
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // The protoDescriptor object has the full package hierarchy
-        // @ts-ignore
-        let admin = protoDescriptor.email.admin.Admin;
-        server.addService(admin.service, {
+
+        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "email.admin.Admin", {
             getTemplates: this.getTemplates.bind(this),
             createTemplate: this.createTemplate.bind(this),
             editTemplate: this.editTemplate.bind(this),
             sendEmail: this.sendEmail.bind(this)
-        });
+        })
     }
 
     setEmailService(emailService: EmailService) {
@@ -158,7 +143,7 @@ export class AdminHandlers {
         }
 
         if (sender.indexOf("@") === -1) {
-            let emailConfig: any = await this.grpcSdk.config.get("email").catch((err: any) => console.log("failed to get sending domain"));
+            let emailConfig: any = await this.grpcSdk.config.get("email").catch(() => console.log("failed to get sending domain"));
             sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`
         }
 

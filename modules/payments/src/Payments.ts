@@ -1,14 +1,12 @@
 import PaymentsConfigSchema from "./config";
 import { isNil } from "lodash";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 import { PaymentsRoutes } from "./routes/Routes";
 import * as models from "./models";
 import { AdminHandlers } from "./admin/admin";
 import { IamportHandlers } from "./handlers/iamport";
-
-let protoLoader = require("@grpc/proto-loader");
 
 export default class PaymentsModule {
   private database: any
@@ -20,30 +18,18 @@ export default class PaymentsModule {
   private iamportHandlers: IamportHandlers | null;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./payments.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-    let payments = protoDescriptor.payments.Payments;
-    this.grpcServer = new grpcModule.Server();
 
-    this.grpcServer.addService(payments.service, {
+    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
+    let serverResult = createServer(this._url);
+    this.grpcServer = serverResult.server;
+    this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
+    console.log("bound on:", this._url);
+
+    addServiceToServer(this.grpcServer, path.resolve(__dirname, "./payments.proto"), "payments.Payments", {
       setConfig: this.setConfig.bind(this),
       createIamportPayment: this.createIamportPayment.bind(this),
       completeIamportPayment: this.completeIamportPayment.bind(this),
-    });
-
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
-    console.log("bound on: ", this._url);
+    })
 
     this.grpcSdk
       .waitForExistence("database-provider")

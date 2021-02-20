@@ -2,13 +2,11 @@ import {createStorageProvider, IStorageProvider} from '@quintessential-sft/stora
 import File from './models/File';
 import StorageConfigSchema from './config';
 import {isNil} from 'lodash';
-import ConduitGrpcSdk, {grpcModule} from'@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer, createServer} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from "grpc";
 import * as path from 'path';
 import {FileHandlers} from './handlers/file';
 import {FileRoutes} from "./routes/router";
-
-let protoLoader = require('@grpc/proto-loader');
 
 export class StorageModule {
     private storageProvider: IStorageProvider;
@@ -19,36 +17,24 @@ export class StorageModule {
     private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-        var packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './storage.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            });
-        var protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
 
-        var storage = protoDescriptor.storage.Storage;
-        this.grpcServer = new grpcModule.Server();
+        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
+        let serverResult = createServer(this._url);
+        this.grpcServer = serverResult.server;
+        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
+        console.log("bound on:", this._url);
 
-        this.grpcServer.addService(storage.service, {
+        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./storage.proto"), "storage.Storage", {
             setConfig: this.setConfig.bind(this),
             getFile: this.getFileGrpc.bind(this),
             createFile: this.createFileGrpc.bind(this),
             updateFileGrpc: this.updateFileGrpc.bind(this)
-        });
+        })
+
         let files = new FileRoutes(this.grpcServer, grpcSdk, this.storageProvider);
         this._routes = files.registeredRoutes;
-        this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-            "grpc.max_receive_message_length": 1024 * 1024 * 100,
-            "grpc.max_send_message_length": 1024 * 1024 * 100
-          });
-        this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-        console.log("bound on:", this._url);
         this.grpcServer.start();
+
         this.grpcSdk.waitForExistence('database-provider')
         .then(() => {
             return this.grpcSdk.initializeEventBus();

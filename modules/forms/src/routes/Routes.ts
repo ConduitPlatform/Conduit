@@ -1,28 +1,18 @@
 import grpc from "grpc";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {addServiceToServer} from "@quintessential-sft/conduit-grpc-sdk";
 import {isNil} from "lodash";
 import axios from "axios";
+import path from "path";
 
-var protoLoader = require("@grpc/proto-loader");
-var PROTO_PATH = __dirname + "/router.proto";
 
 export class FormRoutes {
     private forms: any[] = [];
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
-        const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-            keepCase: true,
-            longs: String,
-            enums: String,
-            defaults: true,
-            oneofs: true,
-        });
-        const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // @ts-ignore
-        const router = protoDescriptor.forms.router.Router;
-        server.addService(router.service, {
+
+        addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "forms.router.Router", {
             submitForm: this.submitForm.bind(this)
-        });
+        })
     }
 
     async submitForm(call: any, callback: any) {
@@ -48,13 +38,13 @@ export class FormRoutes {
                 fileData[r] = data[r]
                 delete data[r];
             }
-            if(isNil(form.fields[r])){
+            if (isNil(form.fields[r])) {
                 honeyPot = true;
             }
         });
 
         errorMessage = null;
-        if(form.emailField && data[form.emailField]){
+        if (form.emailField && data[form.emailField]) {
             const response = await axios.get('http://api.stopforumspam.org/api',
                 {
                     params: {
@@ -68,7 +58,7 @@ export class FormRoutes {
         }
 
         errorMessage = null;
-        if(honeyPot && possibleSpam){
+        if (honeyPot && possibleSpam) {
             await this.grpcSdk.databaseProvider!.create("FormReplies", {
                 form: form._id,
                 data,

@@ -4,13 +4,11 @@ import {FirebaseProvider} from './providers/firebase';
 import PushNotificationsConfigSchema from './config';
 import {isNil} from 'lodash';
 import path from 'path';
-import ConduitGrpcSdk, {grpcModule} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer, createServer} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';
 import * as models from './models';
-
-let protoLoader = require('@grpc/proto-loader');
 
 export default class PushNotificationsModule {
 
@@ -23,31 +21,22 @@ export default class PushNotificationsModule {
     private _routes: any[];
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './push-notifications.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            });
-        let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-        let notifications = protoDescriptor.pushnotifications.PushNotifications;
-        this.grpcServer = new grpcModule.Server();
 
-        this.grpcServer.addService(notifications.service, {
+        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
+        let serverResult = createServer(this._url);
+        this.grpcServer = serverResult.server;
+        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
+        console.log("bound on:", this._url);
+
+        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./push-notifications.proto"), "pushnotifications.PushNotifications", {
             setConfig: this.setConfig.bind(this),
             setNotificationToken: this.setNotificationToken.bind(this),
             getNotificationTokens: this.getNotificationTokens.bind(this)
-        });
+        })
+
         let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
         this._routes = router.registeredRoutes;
 
-        this._url = process.env.SERVICE_URL || '0.0.0.0:0';
-        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure());
-        this._url = process.env.SERVICE_URL || ('0.0.0.0:' + result);
-        console.log("bound on:", this._url);
         this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
@@ -57,7 +46,7 @@ export default class PushNotificationsModule {
             .catch(() => {
                 return this.grpcSdk.config.updateConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
             })
-            .then((notificationsConfig: any) => {
+            .then(() => {
                 return this.grpcSdk.config.addFieldstoConfig(PushNotificationsConfigSchema.getProperties(), 'pushNotifications');
             })
             .catch(() => {

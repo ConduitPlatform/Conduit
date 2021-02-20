@@ -1,18 +1,17 @@
 import * as grpc from "grpc";
 import ConduitGrpcSdk, {
-  ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
-  constructRoute,
-  TYPE
+    addServiceToServer,
+    ConduitRoute,
+    ConduitRouteActions,
+    ConduitRouteReturnDefinition,
+    ConduitString,
+    constructRoute,
+    TYPE
 } from "@quintessential-sft/conduit-grpc-sdk";
 import { isNil } from "lodash";
 import { StripeHandlers } from "../handlers/stripe";
 import { IamportHandlers } from "../handlers/iamport";
-
-const protoLoader = require("@grpc/proto-loader");
-const PROTO_PATH = __dirname + "/router.proto";
+import path from "path";
 
 export class PaymentsRoutes {
   private database: any;
@@ -29,35 +28,24 @@ export class PaymentsRoutes {
         self.database = self.grpcSdk.databaseProvider;
       });
 
-    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-
-    const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const router = protoDescriptor.payments.router.Router;
-    server.addService(router.service, {
-      getProducts: this.getProducts.bind(this),
-      getSubscriptions: this.getSubscriptions.bind(this),
-      createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
-      createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(this.stripeHandlers),
-      cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
-      refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
-      getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
-      completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
-      createIamportPayment: this.createIamportPayment.bind(this),
-      completeIamportPayment: this.completeIamportPayment.bind(this),
-      addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
-      validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
-      subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(this.iamportHandlers),
-      cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(this.iamportHandlers),
-      iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(this.iamportHandlers),
-      getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(this.iamportHandlers),
-    });
+      addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "payments.router.Router", {
+          getProducts: this.getProducts.bind(this),
+          getSubscriptions: this.getSubscriptions.bind(this),
+          createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
+          createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(this.stripeHandlers),
+          cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
+          refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
+          getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(this.stripeHandlers),
+          completeStripePayment: this.stripeHandlers.completePayment.bind(this.stripeHandlers),
+          createIamportPayment: this.createIamportPayment.bind(this),
+          completeIamportPayment: this.completeIamportPayment.bind(this),
+          addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
+          validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
+          subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(this.iamportHandlers),
+          cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(this.iamportHandlers),
+          iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(this.iamportHandlers),
+          getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(this.iamportHandlers),
+      })
   }
 
   async getStripe(): Promise<StripeHandlers | null> {

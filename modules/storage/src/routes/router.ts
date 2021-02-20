@@ -2,32 +2,24 @@ import File from '../models/File';
 import {FileHandlers} from '../handlers/file';
 import {IStorageProvider} from '@quintessential-sft/storage-provider';
 import grpc from "grpc";
-import {ConduitRoute, ConduitRouteActions, ConduitRouteReturnDefinition, TYPE, constructRoute} from "@quintessential-sft/conduit-grpc-sdk";
+import {
+    ConduitRoute,
+    ConduitRouteActions,
+    ConduitRouteReturnDefinition,
+    TYPE,
+    constructRoute,
+    addServiceToServer
+} from "@quintessential-sft/conduit-grpc-sdk";
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-
-var protoLoader = require('@grpc/proto-loader');
-var PROTO_PATH = __dirname + '/router.proto';
+import path from "path";
 
 export class FileRoutes {
     private readonly fileHandlers: FileHandlers;
 
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly storageProvider: IStorageProvider) {
         this.fileHandlers = new FileHandlers(grpcSdk, storageProvider);
-        // this.registerMiddleware();
-        var packageDefinition = protoLoader.loadSync(
-            PROTO_PATH,
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            });
-        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // The protoDescriptor object has the full package hierarchy
-        // @ts-ignore
-        var router = protoDescriptor.storage.router.Router;
-        server.addService(router.service, {
+
+        addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "storage.router.Router", {
             createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
             deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
             getFile: this.fileHandlers.getFile.bind(this.fileHandlers),

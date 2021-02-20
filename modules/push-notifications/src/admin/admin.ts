@@ -1,10 +1,8 @@
 import {isEmpty, isNil} from 'lodash';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from "path";
 import {IPushNotificationsProvider} from '../interfaces/IPushNotificationsProvider';
-
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandler {
 
@@ -16,29 +14,15 @@ export class AdminHandler {
         this.conduit = conduit;
         this.provider = provider;
         const self = this;
-        conduit.waitForExistence('database-provider').then(r => {
+        conduit.waitForExistence('database-provider').then(() => {
             self.databaseAdapter = conduit.databaseProvider;
         });
-
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-        // @ts-ignore
-        let admin = protoDescriptor.pushnotifications.admin.Admin;
-        server.addService(admin.service, {
+        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "pushnotifications.admin.Admin", {
             sendNotification: this.sendNotification.bind(this),
             sendManyNotifications: this.sendManyNotifications.bind(this),
             sendToManyDevices: this.sendToManyDevices.bind(this),
             getNotificationTokens: this.getNotificationTokens.bind(this)
-        });
+        })
     }
 
     updateProvider(provider: IPushNotificationsProvider) {

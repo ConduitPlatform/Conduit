@@ -2,14 +2,12 @@ import * as models from "./models";
 import {AdminHandlers} from "./admin/admin";
 import FormsConfigSchema from "./config";
 import {isNil} from "lodash";
-import ConduitGrpcSdk, {grpcModule} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 import {FormRoutes} from "./routes/Routes";
 import {FormsController} from "./controllers/forms.controller";
 import {FormSubmissionTemplate} from "./templates";
-
-let protoLoader = require("@grpc/proto-loader");
 
 export default class FormsModule {
     private database: any;
@@ -21,29 +19,16 @@ export default class FormsModule {
     private readonly grpcServer: any;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-        const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./forms.proto"), {
-            keepCase: true,
-            longs: String,
-            enums: String,
-            defaults: true,
-            oneofs: true,
-        });
-        const protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-
-        const forms = protoDescriptor.forms.Forms;
-        this.grpcServer = new grpcModule.Server();
-
-        this.grpcServer.addService(forms.service, {
-            setConfig: this.setConfig.bind(this),
-        });
 
         this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-        let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-            "grpc.max_receive_message_length": 1024 * 1024 * 100,
-            "grpc.max_send_message_length": 1024 * 1024 * 100
-        });
-        this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
+        let serverResult = createServer(this._url);
+        this.grpcServer = serverResult.server;
+        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
         console.log("bound on:", this._url);
+
+        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./forms.proto"), "forms.Forms", {
+            setConfig: this.setConfig.bind(this),
+        })
 
         this.grpcSdk
             .waitForExistence("database-provider")
