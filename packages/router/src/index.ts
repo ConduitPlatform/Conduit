@@ -105,10 +105,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
         return sdk.getState().setKey("router", JSON.stringify(state));
       })
       .then((r) => {
+        this.publishAdminRouteData(protofile, routes, url);
         console.log("Updated state");
       })
       .catch((err) => {
-        console.log("Failed to recover state");
+        console.log("Failed to update state");
       });
   }
 
@@ -149,7 +150,6 @@ export class ConduitDefaultRouter implements IConduitRouter {
       });
       this._grpcRoutes[call.request.routerUrl] = call.request.routes;
       this.cleanupRoutes();
-      this.publishAdminRouteData(call.request.protoFile, call.request.routes, call.request.routerUrl);
       this.updateState(call.request.protoFile, call.request.routes, call.request.routerUrl);
     } catch (err) {
       console.error(err);
