@@ -32,6 +32,11 @@ export default class Admin extends ConduitModule {
         this.descriptorObj = "conduit.core.Admin";
         this.initializeClient();
     }
+    sleep(ms: number) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, ms);
+        });
+    }
 
     registerAdmin(server: grpc.Server, paths: any[], functions: { [name: string]: Function }): Promise<any> {
         let protoFunctions = "";
@@ -47,7 +52,12 @@ export default class Admin extends ConduitModule {
         addServiceToServer(server, protoPath, this.moduleName + ".admin.Admin", functions);
         fs.unlinkSync(protoPath);
 
-        return this.register(paths, protoFile);
+        //added sleep as a precaution
+        // With this register process there is the chance that the config instances will
+        // not have the url of the service yet. In order to avoid this i've added the sleep period.
+        // One case is to register to config module X and the admin package to request the url from
+        // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it
+        return this.sleep(3000).then(()=>this.register(paths, protoFile));
     }
 
     register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
