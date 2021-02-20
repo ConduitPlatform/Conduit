@@ -86,17 +86,17 @@ export class DatabaseProvider {
       self._activeAdapter.registeredSchemas.forEach((k, v) => {
         state[k.name] = k;
       });
-      
+
       return this.conduit.state?.setState(JSON.stringify(state));
     })
     .then((r:any)=>{
+      this.conduit.bus!.publish("database_provider", sendingSchema);
       console.log('Updated state');
     })
     .catch((err:any)=>{
       console.log("Failed to update state");
       console.error(err);
     })
-    this.conduit.bus!.publish("database_provider", sendingSchema);
   }
 
   ensureIsRunning() {

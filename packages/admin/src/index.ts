@@ -106,6 +106,7 @@ export default class AdminModule extends IConduitAdmin {
         return this.conduit.getState().setKey("admin", JSON.stringify(state));
       })
       .then((r) => {
+        this.publishAdminRouteData(protofile, routes, url);
         console.log("Updated state");
       })
       .catch((err) => {
@@ -206,9 +207,7 @@ export default class AdminModule extends IConduitAdmin {
         message: "Error when registering routes",
       });
     } else {
-      this.publishAdminRouteData(protofile, routes, call.request.adminUrl);
       this.updateState(protofile, routes, call.request.adminUrl);
-      //perhaps wrong(?) we send an empty response
       callback(null, null);
     }
   }
