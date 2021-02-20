@@ -58,3 +58,4 @@ export function addServiceToServer(server: grpc.Server, protoFilePath: string, d
     });
     server.addService(descObj.service, functions);
 }
+

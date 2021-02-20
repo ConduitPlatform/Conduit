@@ -1,13 +1,12 @@
-import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
-import path from "path";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {SchemaController} from "../controllers/cms/schema.controller";
 import {SchemaAdmin} from "./schema.admin";
 import {DocumentsAdmin} from "./documents.admin";
 import {CustomEndpointsAdmin} from "./customEndpoints/customEndpoints.admin";
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
+import {CustomEndpointController} from '../controllers/customEndpoints/customEndpoint.controller';
 
-const protoLoader = require('@grpc/proto-loader');
+let paths = require("./admin.json");
 
 export class AdminHandlers {
     private database: any;
@@ -20,7 +19,7 @@ export class AdminHandlers {
         let schemaAdmin = new SchemaAdmin(this.grpcSdk, this.schemaController, this.customEndpointController);
         let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
         let customEndpointsAdmin = new CustomEndpointsAdmin(this.grpcSdk, this.customEndpointController);
-        addServiceToServer(server, path.resolve(__dirname, './admin.proto'),"cms.admin.Admin",{
+        this.grpcSdk.admin.registerAdmin(server, paths.functions, {
             getAllSchemas: schemaAdmin.getAllSchemas.bind(schemaAdmin),
             getById: schemaAdmin.getById.bind(schemaAdmin),
             createSchema: schemaAdmin.createSchema.bind(schemaAdmin),
@@ -38,7 +37,10 @@ export class AdminHandlers {
             createCustomEndpoints: customEndpointsAdmin.createCustomEndpoints.bind(customEndpointsAdmin),
             deleteCustomEndpoints: customEndpointsAdmin.deleteCustomEndpoints.bind(customEndpointsAdmin),
             editCustomEndpoints: customEndpointsAdmin.editCustomEndpoints.bind(customEndpointsAdmin)
-        })
+        }).catch((err: Error) => {
+            console.log("Failed to register admin routes for module!")
+            console.error(err);
+        });
     }
 
 

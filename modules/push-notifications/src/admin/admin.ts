@@ -1,9 +1,9 @@
 import {isEmpty, isNil} from 'lodash';
-import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
-import path from "path";
 import {IPushNotificationsProvider} from '../interfaces/IPushNotificationsProvider';
 
+let paths = require("./admin.json").functions
 export class AdminHandler {
 
     private provider: IPushNotificationsProvider;
@@ -17,12 +17,16 @@ export class AdminHandler {
         conduit.waitForExistence('database-provider').then(() => {
             self.databaseAdapter = conduit.databaseProvider;
         });
-        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "pushnotifications.admin.Admin", {
+
+        this.conduit.admin.registerAdmin(server, paths.functions, {
             sendNotification: this.sendNotification.bind(this),
             sendManyNotifications: this.sendManyNotifications.bind(this),
             sendToManyDevices: this.sendToManyDevices.bind(this),
             getNotificationTokens: this.getNotificationTokens.bind(this)
-        })
+        }).catch((err: Error) => {
+            console.log("Failed to register admin routes for module!")
+            console.error(err);
+        });
     }
 
     updateProvider(provider: IPushNotificationsProvider) {

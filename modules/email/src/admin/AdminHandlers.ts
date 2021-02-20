@@ -1,8 +1,8 @@
 import {isNil} from 'lodash';
 import {EmailService} from '../services/email.service';
-import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
-import path from "path";
+let paths = require("./admin.json").functions
 
 export class AdminHandlers {
     private database: any;
@@ -13,13 +13,15 @@ export class AdminHandlers {
         grpcSdk.waitForExistence('database-provider').then(() => {
             self.database = self.grpcSdk.databaseProvider
         })
-
-        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "email.admin.Admin", {
+        this.grpcSdk.admin.registerAdmin(server, paths.functions, {
             getTemplates: this.getTemplates.bind(this),
             createTemplate: this.createTemplate.bind(this),
             editTemplate: this.editTemplate.bind(this),
             sendEmail: this.sendEmail.bind(this)
-        })
+        }).catch((err: Error) => {
+            console.log("Failed to register admin routes for module!")
+            console.error(err);
+        });
     }
 
     setEmailService(emailService: EmailService) {

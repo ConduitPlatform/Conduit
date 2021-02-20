@@ -1,5 +1,8 @@
 import path from "path";
 import {ConduitModule} from "../../classes/ConduitModule";
+import * as grpc from "grpc";
+import {addServiceToServer} from "../../helpers";
+import fs from "fs";
 
 let protofile_template = `
 syntax = "proto3";
@@ -28,6 +31,23 @@ export default class Admin extends ConduitModule {
         this.protoPath = path.resolve(__dirname, "../../proto/core.proto");
         this.descriptorObj = "conduit.core.Admin";
         this.initializeClient();
+    }
+
+    registerAdmin(server: grpc.Server, paths: any[], functions: { [name: string]: Function }): Promise<any> {
+        let protoFunctions = "";
+        paths.forEach((r) => {
+            protoFunctions += `rpc ${r.protoName.charAt(0).toUpperCase() + r.protoName.slice(1)}(AdminRequest) returns (AdminResponse);\n`;
+        });
+        let protoFile = protofile_template.toString().replace("MODULE_FUNCTIONS", protoFunctions);
+        protoFile = protoFile.replace("MODULE_NAME", this.moduleName);
+
+        let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+        fs.writeFileSync(protoPath, protoFile);
+
+        addServiceToServer(server, protoPath, this.moduleName + ".admin.Admin", functions);
+        fs.unlinkSync(protoPath);
+
+        return this.register(paths, protoFile);
     }
 
     register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {

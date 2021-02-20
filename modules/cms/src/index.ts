@@ -2,7 +2,7 @@ import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import {CMS} from './CMS';
 import * as process from "process";
 
-let paths = require("./admin/admin.json")
+
 if (!process.env.CONDUIT_SERVER) {
     throw new Error("Conduit server URL not provided");
 }
@@ -17,11 +17,4 @@ grpcSdk.config.registerModule('cms', url)
     .catch(err => {
         console.error(err)
         process.exit(-1);
-    })
-    .then(() => {
-        grpcSdk.admin.register(paths.functions)
-    })
-    .catch((err: Error) => {
-        console.log("Failed to register admin routes for CMS module!")
-        console.error(err);
     });

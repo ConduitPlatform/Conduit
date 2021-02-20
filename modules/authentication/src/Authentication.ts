@@ -20,9 +20,9 @@ export default class AuthenticationModule {
         this._url = process.env.SERVICE_URL || "0.0.0.0:0";
         let serverResult = createServer(this._url);
         this.grpcServer = serverResult.server;
-
         this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
         console.log("bound on:", this._url);
+
         addServiceToServer(this.grpcServer, path.resolve(__dirname, "./authentication.proto"),
             "authentication.Authentication", {
                 setConfig: this.setConfig.bind(this),

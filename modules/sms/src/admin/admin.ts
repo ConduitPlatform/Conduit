@@ -1,8 +1,9 @@
-import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {isNil} from 'lodash';
-import path from "path";
 import {ISmsProvider} from '../interfaces/ISmsProvider';
+
+let paths = require("./admin.json").functions
 
 export class AdminHandlers {
 
@@ -11,9 +12,12 @@ export class AdminHandlers {
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, provider: ISmsProvider | undefined) {
         this.provider = provider;
 
-        addServiceToServer(server, path.resolve(__dirname, "./admin.proto"), "sms.admin.Admin", {
+        this.grpcSdk.admin.registerAdmin(server, paths.functions, {
             sendSms: this.sendSms.bind(this)
-        })
+        }).catch((err: Error) => {
+            console.log("Failed to register admin routes for module!")
+            console.error(err);
+        });
     }
 
     updateProvider(provider: ISmsProvider) {

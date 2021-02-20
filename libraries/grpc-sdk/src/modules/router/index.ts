@@ -34,6 +34,7 @@ export default class Router extends ConduitModule {
         let protoFunctions = "";
         if (!protoFile) {
             paths.forEach((r) => {
+                if(protoFunctions.indexOf(r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1))!==-1)return;
                 protoFunctions += `rpc ${r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)}(RouterRequest) returns (RouterResponse);\n`;
             });
 

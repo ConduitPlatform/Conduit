@@ -1,9 +1,9 @@
-import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
-import path from "path";
 import {isNil} from 'lodash';
 import {ServiceAdmin} from './service';
 
+let paths = require("./admin.json").functions
 export class AdminHandlers {
     private database: any;
 
@@ -14,13 +14,15 @@ export class AdminHandlers {
                 self.database = self.grpcSdk.databaseProvider;
             })
         let serviceAdmin = new ServiceAdmin(this.grpcSdk);
-        addServiceToServer(server, path.resolve(__dirname, path.resolve(__dirname, './admin.proto')),
-            "authentication.admin.Admin", {
-                getUsers: this.getUsers.bind(this),
-                getServices: serviceAdmin.getServices.bind(serviceAdmin),
-                createService: serviceAdmin.createService.bind(serviceAdmin),
-                renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin)
-            });
+        this.grpcSdk.admin.registerAdmin(server, paths, {
+            getUsers: this.getUsers.bind(this),
+            getServices: serviceAdmin.getServices.bind(serviceAdmin),
+            createService: serviceAdmin.createService.bind(serviceAdmin),
+            renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin)
+        }).catch((err: Error) => {
+            console.log("Failed to register admin routes for module!")
+            console.error(err);
+        });
     }
 
     async getUsers(call: any, callback: any) {
