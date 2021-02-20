@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import PushNotifications from './PushNotifications';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
@@ -23,8 +21,7 @@ grpcSdk.config.registerModule("push-notifications", notifications.url)
         console.error(err);
     })
     .then(() => {
-        let routerProtoFile = fs.readFileSync(path.resolve(__dirname, './routes/router.proto'));
-        grpcSdk.router.register(notifications.routes, routerProtoFile.toString('utf-8'))
+        grpcSdk.router.register(notifications.routes)
     })
     .catch((err: Error) => {
         console.log('Failed to register routes for push notifications module');

@@ -51,14 +51,13 @@ export default class PaymentsModule {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
-        const self = this;
         this.grpcSdk.bus?.subscribe("payments", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
-              .then((r: any) => {
+              .then(() => {
                 console.log("Updated payments configuration");
               })
-              .catch((e: Error) => {
+              .catch(() => {
                 console.log("Failed to update payments config");
               });
           }
@@ -73,7 +72,7 @@ export default class PaymentsModule {
       .catch(() => {
         return this.grpcSdk.config.updateConfig(PaymentsConfigSchema.getProperties(), "payments");
       })
-      .then((paymentsConfig: any) => {
+      .then(() => {
         return this.grpcSdk.config.addFieldstoConfig(PaymentsConfigSchema.getProperties(), "payments");
       })
       .catch(() => {
@@ -171,11 +170,7 @@ export default class PaymentsModule {
       this.grpcServer.start();
       this.isRunning = true;
     }
-    let url = this._url;
-    if (process.env.REGISTER_NAME === "true") {
-      url = "payments-provider:" + this._url.split(":")[1];
-    }
-    await this._router.registerRoutes(url);
+    await this._router.registerRoutes();
   }
 
   private registerSchemas() {

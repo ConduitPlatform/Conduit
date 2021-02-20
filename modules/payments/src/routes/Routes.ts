@@ -7,8 +7,6 @@ import ConduitGrpcSdk, {
   constructRoute,
   TYPE
 } from "@quintessential-sft/conduit-grpc-sdk";
-import fs from "fs";
-import path from "path";
 import { isNil } from "lodash";
 import { StripeHandlers } from "../handlers/stripe";
 import { IamportHandlers } from "../handlers/iamport";
@@ -27,7 +25,7 @@ export class PaymentsRoutes {
     const self = this;
 
     grpcSdk.waitForExistence('database-provider')
-      .then(r => {
+      .then(() => {
         self.database = self.grpcSdk.databaseProvider;
       });
 
@@ -152,10 +150,9 @@ export class PaymentsRoutes {
     return callback({ code: grpc.status.INTERNAL, message: 'Something went wrong' });
   }
 
-  async registerRoutes(url: string) {
-    let routerProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
+  async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8")).catch((err: Error) => {
+    this.grpcSdk.router.register(activeRoutes).catch((err: Error) => {
       console.log("Failed to register routes for payments module");
       console.log(err);
     });

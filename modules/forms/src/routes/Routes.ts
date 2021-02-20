@@ -1,6 +1,4 @@
 import grpc from "grpc";
-import fs from "fs";
-import path from "path";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import {isNil} from "lodash";
 import axios from "axios";
@@ -11,7 +9,7 @@ var PROTO_PATH = __dirname + "/router.proto";
 export class FormRoutes {
     private forms: any[] = [];
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly url: string) {
+    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
         const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
             keepCase: true,
             longs: String,
@@ -121,9 +119,8 @@ export class FormRoutes {
     }
 
     private _refreshRoutes() {
-        let routesProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
         this.grpcSdk.router
-            .register(this.forms, routesProtoFile.toString("utf-8"))
+            .register(this.forms)
             .catch((err: Error) => {
                 console.log("Failed to register routes for CMS module!");
                 console.error(err);

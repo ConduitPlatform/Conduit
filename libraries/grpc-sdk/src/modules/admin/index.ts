@@ -22,7 +22,6 @@ message AdminRequest {
 message AdminResponse {
   string result = 1;
 }
-
 `
 
 export default class Admin implements ConduitModule{
@@ -32,7 +31,7 @@ export default class Admin implements ConduitModule{
   active: boolean = false;
 
 
-  constructor(url: string, readonly moduleName: string) {
+  constructor(url: string, private readonly moduleName: string) {
     this._url = url;
     this.initializeClient();
   }

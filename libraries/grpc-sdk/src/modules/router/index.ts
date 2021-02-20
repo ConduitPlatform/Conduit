@@ -4,55 +4,84 @@ import {ConduitModule} from "../../interfaces/ConduitModule";
 
 let protoLoader = require("@grpc/proto-loader");
 
-export default class Router implements ConduitModule{
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
+let protofile_template = `
+syntax = "proto3";
+package MODULE_NAME.router;
 
-  constructor(url: string) {
-    this._url = url;
-    this.initializeClient();
-  }
+service Router {
+ MODULE_FUNCTIONS
+}
 
-  initializeClient() {
-    if (this.client) return;
-    var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/core.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    var router = protoDescriptor.conduit.core.Router;
-    this.client = new router(this._url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this.active = true;
-  }
+message RouterRequest {
+  string params = 1;
+  string path = 2;
+  string headers = 3;
+  string context = 4;
+}
 
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
-  }
+message RouterResponse {
+  string result = 1;
+  string redirect = 2;
+}
+`
+export default class Router implements ConduitModule {
+    private client: grpc.Client | any;
+    private readonly _url: string;
+    active: boolean = false;
 
-  register(paths: any[], protoFile: string, url?: string): Promise<any> {
-    let request = {
-      routes: paths,
-      protoFile: protoFile,
-      routerUrl: url,
-    };
-    return new Promise((resolve, reject) => {
-      this.client.registerConduitRoute(request, (err: any, res: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve("OK");
+    constructor(url: string, private readonly moduleName: string) {
+        this._url = url;
+        this.initializeClient();
+    }
+
+    initializeClient() {
+        if (this.client) return;
+        var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/core.proto"), {
+            keepCase: true,
+            longs: String,
+            enums: String,
+            defaults: true,
+            oneofs: true,
+        });
+        var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+        // @ts-ignore
+        var router = protoDescriptor.conduit.core.Router;
+        this.client = new router(this._url, grpc.credentials.createInsecure(), {
+            "grpc.max_receive_message_length": 1024 * 1024 * 100,
+            "grpc.max_send_message_length": 1024 * 1024 * 100
+        });
+        this.active = true;
+    }
+
+    closeConnection() {
+        this.client.close();
+        this.client = null;
+        this.active = false;
+    }
+
+    register(paths: any[], protoFile?: string, url?: string): Promise<any> {
+        let protoFunctions = "";
+        if (!protoFile) {
+            paths.forEach((r) => {
+                protoFunctions += `rpc ${r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)}(RouterRequest) returns (RouterResponse);\n`;
+            });
+
+            protoFile = protofile_template.toString().replace("MODULE_FUNCTIONS", protoFunctions);
+            protoFile = protoFile.replace("MODULE_NAME", this.moduleName);
         }
-      });
-    });
-  }
+        let request = {
+            routes: paths,
+            protoFile: protoFile,
+            routerUrl: url,
+        };
+        return new Promise((resolve, reject) => {
+            this.client.registerConduitRoute(request, (err: any, res: any) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve("OK");
+                }
+            });
+        });
+    }
 }

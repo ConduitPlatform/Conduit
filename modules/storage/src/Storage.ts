@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {grpcModule} from'@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from "grpc";
 import * as path from 'path';
 import {FileHandlers} from './handlers/file';
-import {FileRoutes} from "./routes/file";
+import {FileRoutes} from "./routes/router";
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -54,14 +54,13 @@ export class StorageModule {
             return this.grpcSdk.initializeEventBus();
           })
           .then(() => {
-            const self = this;
             this.grpcSdk.bus?.subscribe("storage", (message: string) => {
               if (message === "config-update") {
                 this.enableModule()
-                  .then((r) => {
+                  .then(() => {
                     console.log("Updated storage configuration");
                   })
-                  .catch((e: Error) => {
+                  .catch(() => {
                     console.log("Failed to update email config");
                   });
               }
@@ -76,7 +75,7 @@ export class StorageModule {
             .catch(() => {
                 return this.grpcSdk.config.updateConfig(StorageConfigSchema.getProperties(), 'storage');
             })
-            .then((storageConfig: any) => {
+            .then(() => {
                 return this.grpcSdk.config.addFieldstoConfig(StorageConfigSchema.getProperties(), 'storage');
             })
             .catch(() => {

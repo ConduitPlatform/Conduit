@@ -1,7 +1,5 @@
 import { CmsHandlers } from "../handlers/cms.handler";
 import grpc from "grpc";
-import fs from "fs";
-import path from "path";
 import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
 import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 
@@ -16,7 +14,7 @@ export class CmsRoutes {
   private crudRoutes: any[] = [];
   private customRoutes: any[] = [];
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly url: string) {
+  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new CmsHandlers(grpcSdk);
     this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
 
@@ -57,9 +55,8 @@ export class CmsRoutes {
   }
 
   private _refreshRoutes() {
-    let routesProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
     this.grpcSdk.router
-      .register(this.crudRoutes.concat(this.customRoutes), routesProtoFile.toString("utf-8"))
+      .register(this.crudRoutes.concat(this.customRoutes))
       .catch((err: Error) => {
         console.log("Failed to register routes for CMS module!");
         console.error(err);

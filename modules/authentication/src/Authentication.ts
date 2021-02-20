@@ -49,14 +49,13 @@ export default class AuthenticationModule {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
-        const self = this;
         this.grpcSdk.bus?.subscribe("authentication", (message: string) => {
           if (message === "config-update") {
             this.enableModule()
-              .then((r) => {
+              .then(() => {
                 console.log("Updated authentication configuration");
               })
-              .catch((e: Error) => {
+              .catch(() => {
                 console.log("Failed to update email config");
               });
           }
@@ -64,10 +63,10 @@ export default class AuthenticationModule {
         this.grpcSdk.bus?.subscribe("email-provider", (message: string) => {
             if (message === "enabled") {
               this.enableModule()
-                .then((r) => {
+                .then(() => {
                   console.log("Updated authentication configuration");
                 })
-                .catch((e: Error) => {
+                .catch(() => {
                   console.log("Failed to update email config");
                 });
             }
@@ -82,7 +81,7 @@ export default class AuthenticationModule {
       .catch(() => {
         return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema.getProperties(), "authentication");
       })
-      .then((authConfig: any) => {
+      .then(() => {
         return this.grpcSdk.config.addFieldstoConfig(AuthenticationConfigSchema.getProperties(), "authentication");
       })
       .catch(() => {
@@ -138,11 +137,7 @@ export default class AuthenticationModule {
       this.grpcServer.start();
       this.isRunning = true;
     }
-    let url = this._url;
-    if (process.env.REGISTER_NAME === "true") {
-      url = "authentication:" + this._url.split(":")[1];
-    }
-    await this._router.registerRoutes(url);
+    await this._router.registerRoutes();
   }
 
   private registerSchemas() {

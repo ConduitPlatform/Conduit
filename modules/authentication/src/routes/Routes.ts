@@ -17,8 +17,6 @@ import { ServiceHandler } from "../handlers/auth/service";
 import { KakaoHandlers } from "../handlers/auth/kakao";
 import { TwitchHandlers } from "../handlers/auth/twitch";
 import { isNil } from "lodash";
-import fs from "fs";
-import path from "path";
 import { UserSchema } from "../models";
 import moment from "moment";
 
@@ -77,10 +75,9 @@ export class AuthenticationRoutes {
     });
   }
 
-  async registerRoutes(url: string) {
-    let routerProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
+  async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8")).catch((err: Error) => {
+    this.grpcSdk.router.register(activeRoutes).catch((err: Error) => {
       console.log("Failed to register routes for authentication module");
       console.log(err);
     });
