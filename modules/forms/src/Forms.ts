@@ -54,14 +54,13 @@ export default class FormsModule {
                 return this.grpcSdk.initializeEventBus();
             })
             .then(() => {
-                const self = this;
                 this.grpcSdk.bus?.subscribe("forms", (message: string) => {
                     if (message === "config-update") {
                         this.enableModule()
-                            .then((r) => {
+                            .then(() => {
                                 console.log("Updated forms configuration");
                             })
-                            .catch((e: Error) => {
+                            .catch(() => {
                                 console.log("Failed to update forms config");
                             });
                     }
@@ -69,10 +68,10 @@ export default class FormsModule {
                 this.grpcSdk.bus?.subscribe("email-provider", (message: string) => {
                     if (message === "enabled") {
                         this.enableModule()
-                            .then((r) => {
+                            .then(() => {
                                 console.log("Updated forms configuration");
                             })
-                            .catch((e: Error) => {
+                            .catch(() => {
                                 console.log("Failed to update forms config");
                             });
                     }
@@ -87,7 +86,7 @@ export default class FormsModule {
             .catch(() => {
                 return this.grpcSdk.config.updateConfig(FormsConfigSchema.getProperties(), "forms");
             })
-            .then((authConfig: any) => {
+            .then(() => {
                 return this.grpcSdk.config.addFieldstoConfig(FormsConfigSchema.getProperties(), "forms");
             })
             .catch(() => {
@@ -135,13 +134,9 @@ export default class FormsModule {
     }
 
     private async enableModule() {
-        let url = this._url;
-        if (process.env.REGISTER_NAME === "true") {
-            url = "forms:" + this._url.split(":")[1];
-        }
         if (!this.isRunning) {
             this.database = this.grpcSdk.databaseProvider;
-            this._router = new FormRoutes(this.grpcServer, this.grpcSdk, url);
+            this._router = new FormRoutes(this.grpcServer, this.grpcSdk);
             this._formController = new FormsController(this.grpcSdk, this._router);
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._formController);
             await this.registerSchemas();

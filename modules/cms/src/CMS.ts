@@ -1,6 +1,5 @@
-import schema from "./models/schemaDefinitions.schema";
 import { AdminHandlers } from "./admin/admin";
-import ConduitGrpcSdk, { ConduitSchema, grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import { CmsRoutes } from "./routes/Routes";
 import { SchemaController } from "./controllers/cms/schema.controller";
@@ -38,23 +37,19 @@ export class CMS {
 
     this.grpcSdk
       .waitForExistence("database-provider")
-      .catch((err) => {
+      .catch(() => {
         console.error("Failed to wait for database");
         process.exit(-1);
       })
-      .then((r) => {
+      .then(() => {
         return this.grpcSdk.initializeEventBus();
       })
-      .catch((err) => {
+      .catch(() => {
         console.log("Failed to start redis connection");
         return (this.stateActive = false);
       })
       .then(() => {
-        let url = self.url;
-        if (process.env.REGISTER_NAME === "true") {
-          url = "cms:" + url.split(":")[1];
-        }
-        let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk, url);
+        let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk);
         let schemaController = new SchemaController(self.grpcSdk, consumerRoutes, self.stateActive);
         let customEndpointController = new CustomEndpointController(self.grpcSdk, consumerRoutes, self.stateActive);
         new AdminHandlers(self.grpcServer, self.grpcSdk, schemaController, customEndpointController);

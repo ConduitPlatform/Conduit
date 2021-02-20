@@ -1,37 +1,14 @@
-import * as grpc from "grpc";
 import path from "path";
 import { EventEmitter } from "events";
-import {ConduitModule} from "../../interfaces/ConduitModule";
+import {ConduitModule} from "../../classes/ConduitModule";
 
-let protoLoader = require("@grpc/proto-loader");
-
-export default class Config implements ConduitModule{
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
+export default class Config extends ConduitModule{
 
   constructor(url: string) {
-    this._url = url;
+    super(url);
+    this.protoPath = path.resolve(__dirname, "../../proto/core.proto");
+    this.descriptorObj = "conduit.core.Config";
     this.initializeClient();
-  }
-
-  initializeClient() {
-    if (this.client) return;
-    var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/core.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    var config = protoDescriptor.conduit.core.Config;
-    this.client = new config(this._url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this.active = true;
   }
 
   getServerConfig(): Promise<any> {
@@ -45,12 +22,6 @@ export default class Config implements ConduitModule{
         }
       });
     });
-  }
-
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
   }
 
   getModuleUrlByInstance(instancePeer:string): Promise<any>{
@@ -182,7 +153,7 @@ export default class Config implements ConduitModule{
       moduleName: name.toString(),
       url: url.toString(),
     };
-    this.client.moduleHealthProbe(request, (err: any, res: any) => {});
+    this.client.moduleHealthProbe(request, () => {});
   }
 
   watchModules() {
@@ -196,7 +167,7 @@ export default class Config implements ConduitModule{
       // The server has finished sending
       console.log("Stream ended");
     });
-    call.on("error", function (e: any) {
+    call.on("error", function () {
       // An error has occurred and the stream has been closed.
       console.error("Connection to grpc server closed");
     });

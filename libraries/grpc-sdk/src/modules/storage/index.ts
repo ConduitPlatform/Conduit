@@ -1,42 +1,14 @@
-import * as grpc from "grpc";
 import path from "path";
-import {ConduitModule} from "../../interfaces/ConduitModule";
+import {ConduitModule} from "../../classes/ConduitModule";
 
-let protoLoader = require("@grpc/proto-loader");
 
-export default class Storage implements ConduitModule{
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
+export default class Storage extends ConduitModule{
 
   constructor(url: string) {
-    this._url = url;
+    super(url);
+    this.protoPath = path.resolve(__dirname, "../../proto/storage.proto");
+    this.descriptorObj = "storage.Storage";
     this.initializeClient();
-  }
-
-  initializeClient() {
-    if (this.client) return;
-    var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/storage.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    var storage = protoDescriptor.storage.Storage;
-    this.client = new storage(this._url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this.active = true;
-  }
-
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
   }
 
   setConfig(newConfig: any) {

@@ -1,4 +1,4 @@
-import {ConduitMiddleware, ConduitRoute} from "../interfaces";
+import {ConduitMiddleware, ConduitRoute} from "../classes";
 
 export function constructRoute(route: ConduitRoute) {
     let routeObject: any = {

@@ -237,7 +237,7 @@ export default class ConduitGrpcSdk {
 }
 export let grpcModule: any = grpc;
 export * from "./interfaces";
-export * from "./models";
+export * from "./classes";
 export * from "./modules";
 export * from "./helpers";
 export * from "./constants";
