@@ -4,7 +4,7 @@ import { EmailService } from "./services/email.service";
 import { AdminHandlers } from "./admin/AdminHandlers";
 import EmailConfigSchema from "./config";
 import { isNil } from "lodash";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 
@@ -26,9 +26,10 @@ export default class EmailModule {
       defaults: true,
       oneofs: true,
     });
-    let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
+    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    //@ts-ignore
     let email = protoDescriptor.email.Email;
-    this.grpcServer = new grpcModule.Server();
+    this.grpcServer = new grpc.Server();
 
     this.grpcServer.addService(email.service, {
       setConfig: this.setConfig.bind(this),
@@ -38,7 +39,7 @@ export default class EmailModule {
     this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk);
 
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
+    let result = this.grpcServer.bind(this._url, grpc.ServerCredentials.createInsecure(), {
       "grpc.max_receive_message_length": 1024 * 1024 * 100,
       "grpc.max_send_message_length": 1024 * 1024 * 100
     });

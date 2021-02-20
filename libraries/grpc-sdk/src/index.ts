@@ -6,7 +6,6 @@ import Email from "./modules/email";
 import Storage from "./modules/storage";
 import PushNotifications from "./modules/pushNotifications";
 import Authentication from "./modules/authentication";
-import * as grpc from "grpc";
 import Crypto from "crypto";
 import CMS from "./modules/cms";
 import SMS from "./modules/sms";
@@ -235,7 +234,6 @@ export default class ConduitGrpcSdk {
     }
   }
 }
-export let grpcModule: any = grpc;
 export * from "./interfaces";
 export * from "./classes";
 export * from "./modules";

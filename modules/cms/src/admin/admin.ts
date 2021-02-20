@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
 import grpc from "grpc";
 import {SchemaController} from "../controllers/cms/schema.controller";
@@ -15,23 +15,12 @@ export class AdminHandlers {
     constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController, private readonly customEndpointController: CustomEndpointController) {
 
         this.database = this.grpcSdk.databaseProvider;
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+
         // @ts-ignore
-        let admin = protoDescriptor.cms.admin.Admin;
         let schemaAdmin = new SchemaAdmin(this.grpcSdk, this.schemaController, this.customEndpointController);
         let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
         let customEndpointsAdmin = new CustomEndpointsAdmin(this.grpcSdk, this.customEndpointController);
-        server.addService(admin.service, {
+        addServiceToServer(server, path.resolve(__dirname, './admin.proto'),"cms.admin.Admin",{
             getAllSchemas: schemaAdmin.getAllSchemas.bind(schemaAdmin),
             getById: schemaAdmin.getById.bind(schemaAdmin),
             createSchema: schemaAdmin.createSchema.bind(schemaAdmin),
@@ -49,8 +38,7 @@ export class AdminHandlers {
             createCustomEndpoints: customEndpointsAdmin.createCustomEndpoints.bind(customEndpointsAdmin),
             deleteCustomEndpoints: customEndpointsAdmin.deleteCustomEndpoints.bind(customEndpointsAdmin),
             editCustomEndpoints: customEndpointsAdmin.editCustomEndpoints.bind(customEndpointsAdmin)
-
-        });
+        })
     }
 
 

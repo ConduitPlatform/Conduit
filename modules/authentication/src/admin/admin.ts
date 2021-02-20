@@ -1,10 +1,8 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {addServiceToServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import path from "path";
 import {isNil} from 'lodash';
 import {ServiceAdmin} from './service';
-
-const protoLoader = require('@grpc/proto-loader');
 
 export class AdminHandlers {
     private database: any;
@@ -15,27 +13,14 @@ export class AdminHandlers {
             .then(r => {
                 self.database = self.grpcSdk.databaseProvider;
             })
-
-        let packageDefinition = protoLoader.loadSync(
-            path.resolve(__dirname, './admin.proto'),
-            {
-                keepCase: true,
-                longs: String,
-                enums: String,
-                defaults: true,
-                oneofs: true
-            }
-        );
-        let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
         let serviceAdmin = new ServiceAdmin(this.grpcSdk);
-        // @ts-ignore
-        let admin = protoDescriptor.authentication.admin.Admin;
-        server.addService(admin.service, {
-            getUsers: this.getUsers.bind(this),
-            getServices: serviceAdmin.getServices.bind(serviceAdmin),
-            createService: serviceAdmin.createService.bind(serviceAdmin),
-            renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin)
-        });
+        addServiceToServer(server, path.resolve(__dirname, path.resolve(__dirname, './admin.proto')),
+            "authentication.admin.Admin", {
+                getUsers: this.getUsers.bind(this),
+                getServices: serviceAdmin.getServices.bind(serviceAdmin),
+                createService: serviceAdmin.createService.bind(serviceAdmin),
+                renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin)
+            });
     }
 
     async getUsers(call: any, callback: any) {

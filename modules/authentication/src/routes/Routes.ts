@@ -1,14 +1,15 @@
 import { LocalHandlers } from "../handlers/auth/local";
 import * as grpc from "grpc";
 import ConduitGrpcSdk, {
-  ConduitMiddleware,
-  ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
-  constructMiddleware,
-  constructRoute,
-  TYPE,
+    addServiceToServer,
+    ConduitMiddleware,
+    ConduitRoute,
+    ConduitRouteActions,
+    ConduitRouteReturnDefinition,
+    ConduitString,
+    constructMiddleware,
+    constructRoute,
+    TYPE,
 } from "@quintessential-sft/conduit-grpc-sdk";
 import { FacebookHandlers } from "../handlers/auth/facebook";
 import { GoogleHandlers } from "../handlers/auth/google";
@@ -19,9 +20,7 @@ import { TwitchHandlers } from "../handlers/auth/twitch";
 import { isNil } from "lodash";
 import { UserSchema } from "../models";
 import moment from "moment";
-
-const protoLoader = require("@grpc/proto-loader");
-const PROTO_PATH = __dirname + "/router.proto";
+import path from "path";
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -41,38 +40,29 @@ export class AuthenticationRoutes {
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
 
-    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
+      addServiceToServer(server, path.resolve(__dirname, path.resolve(__dirname + "/router.proto")),
+          "authentication.router.Router", {
+              register: this.localHandlers.register.bind(this.localHandlers),
+              authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
+              forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
+              resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
+              verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
+              verify: this.localHandlers.verify.bind(this.localHandlers),
+              enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
+              verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
+              disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
+              authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
+              authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
+              authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
+              authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
+              authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
+              renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
+              logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
+              getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
+              deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
+              authMiddleware: this.middleware.bind(this),
+          });
 
-    const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const router = protoDescriptor.authentication.router.Router;
-    server.addService(router.service, {
-      register: this.localHandlers.register.bind(this.localHandlers),
-      authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
-      forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
-      resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
-      verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
-      verify: this.localHandlers.verify.bind(this.localHandlers),
-      enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
-      verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
-      disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
-      authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
-      authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
-      authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-      authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
-      authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-      renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
-      logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
-      getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
-      deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
-      authMiddleware: this.middleware.bind(this),
-    });
   }
 
   async registerRoutes() {

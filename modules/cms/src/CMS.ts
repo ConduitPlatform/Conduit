@@ -1,12 +1,9 @@
 import { AdminHandlers } from "./admin/admin";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
-import path from "path";
+import ConduitGrpcSdk, {createServer} from "@quintessential-sft/conduit-grpc-sdk";
 import { CmsRoutes } from "./routes/Routes";
 import { SchemaController } from "./controllers/cms/schema.controller";
 import process from "process";
 import { CustomEndpointController } from "./controllers/customEndpoints/customEndpoint.controller";
-
-let protoLoader = require("@grpc/proto-loader");
 
 export class CMS {
   private _url: string;
@@ -14,25 +11,13 @@ export class CMS {
   private stateActive = true;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./cms.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    const protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-
-    const cms = protoDescriptor.cms.CMS;
-    this.grpcServer = new grpcModule.Server();
-    // this.grpcServer.addService(cms.service, {});
-
     this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
+    let serverResult = createServer(this._url);
+    this.grpcServer = serverResult.server;
+
+    this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
+    console.log("bound on:", this._url);
+
     const self = this;
 
     this.grpcSdk

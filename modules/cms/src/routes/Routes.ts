@@ -1,10 +1,9 @@
 import { CmsHandlers } from "../handlers/cms.handler";
-import grpc from "grpc";
 import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {addServiceToServer} from "@quintessential-sft/conduit-grpc-sdk";
+import * as path from "path";
+import * as grpc from "grpc";
 
-var protoLoader = require("@grpc/proto-loader");
-var PROTO_PATH = __dirname + "/router.proto";
 
 export class CmsRoutes {
   private readonly handlers: CmsHandlers;
@@ -18,17 +17,7 @@ export class CmsRoutes {
     this.handlers = new CmsHandlers(grpcSdk);
     this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
 
-    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const router = protoDescriptor.cms.router.Router;
-    server.addService(router.service, {
+    addServiceToServer(server,path.resolve(__dirname + "/router.proto"),"cms.router.Router",{
       getDocuments: this.handlers.getDocuments.bind(this.handlers),
       getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
       createDocument: this.handlers.createDocument.bind(this.handlers),
@@ -37,7 +26,7 @@ export class CmsRoutes {
       editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
       deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
       customOperation: this.customEndpointHandler.entryPoint.bind(this.customEndpointHandler),
-    });
+    })
   }
 
   addRoutes(routes: any[], crud: boolean = true) {
