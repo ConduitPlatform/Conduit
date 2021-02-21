@@ -4,7 +4,7 @@ import {EmailService} from "./services/email.service";
 import {AdminHandlers} from "./admin/AdminHandlers";
 import EmailConfigSchema from "./config";
 import {isNil} from "lodash";
-import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 
@@ -14,25 +14,29 @@ export default class EmailModule {
     private adminHandlers: AdminHandlers;
     private isRunning: boolean = false;
     private _url: string;
-    private readonly grpcServer: any;
+    private readonly grpcServer: GrpcServer;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
 
-        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-        let serverResult = createServer(this._url);
-        this.grpcServer = serverResult.server;
-        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-        console.log("bound on:", this._url);
-
-        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./email.proto"), "email.Email", {
+        this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+        this._url = this.grpcServer.url;
+        this.grpcServer.addService( path.resolve(__dirname, "./email.proto"), "email.Email", {
             setConfig: this.setConfig.bind(this),
             registerTemplate: this.registerTemplate.bind(this),
             sendEmail: this.sendEmail.bind(this),
         })
+            .then(() => {
+                return this.grpcServer.start();
+            }).then(() => {
+            console.log("Grpc server is online")
+        })
+            .catch((err: Error) => {
+                console.log("Failed to initialize server");
+                console.error(err);
+                process.exit(-1);
+            });
 
         this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk);
-
-        this.grpcServer.start();
 
         this.grpcSdk
             .waitForExistence("database-provider")

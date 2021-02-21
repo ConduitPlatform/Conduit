@@ -1,5 +1,5 @@
 import grpc from "grpc";
-import ConduitGrpcSdk, {addServiceToServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import {isNil} from "lodash";
 import axios from "axios";
 import path from "path";
@@ -8,10 +8,12 @@ import path from "path";
 export class FormRoutes {
     private forms: any[] = [];
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
-        addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "forms.router.Router", {
+        server.addService(path.resolve(__dirname, "./router.proto"), "forms.router.Router", {
             submitForm: this.submitForm.bind(this)
+        }).catch(() => {
+            console.log("Failed to register routes");
         })
     }
 

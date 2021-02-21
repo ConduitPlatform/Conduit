@@ -1,13 +1,11 @@
 import {NotificationTokensHandler} from '../handlers/notification-tokens';
-import * as grpc from 'grpc';
 import ConduitGrpcSdk, {
-    addServiceToServer,
     ConduitDate,
     ConduitObjectId,
     ConduitRoute,
     ConduitRouteActions,
     ConduitRouteReturnDefinition, ConduitString,
-    constructRoute,
+    constructRoute, GrpcServer,
     TYPE
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
@@ -15,10 +13,12 @@ import path from "path";
 export class PushNotificationsRoutes {
     private readonly handlers: NotificationTokensHandler;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
         this.handlers = new NotificationTokensHandler(grpcSdk);
-        addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "pushnotifications.router.Router", {
+        server.addService(path.resolve(__dirname, "./router.proto"), "pushnotifications.router.Router", {
             setNotificationToken: this.handlers.setNotificationToken.bind(this.handlers)
+        }).catch(()=>{
+            console.log("Failed to register routes");
         })
     }
 

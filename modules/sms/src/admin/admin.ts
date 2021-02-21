@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {isNil} from 'lodash';
 import {ISmsProvider} from '../interfaces/ISmsProvider';
@@ -9,7 +9,7 @@ export class AdminHandlers {
 
     private provider: ISmsProvider | undefined;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, provider: ISmsProvider | undefined) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, provider: ISmsProvider | undefined) {
         this.provider = provider;
 
         this.grpcSdk.admin.registerAdmin(server, paths.functions, {

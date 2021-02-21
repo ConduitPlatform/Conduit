@@ -2,7 +2,7 @@ import * as models from "./models";
 import {AdminHandlers} from "./admin/admin";
 import FormsConfigSchema from "./config";
 import {isNil} from "lodash";
-import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 import {FormRoutes} from "./routes/Routes";
@@ -16,19 +16,25 @@ export default class FormsModule {
     private _url: string;
     private _router: FormRoutes;
     private _formController: FormsController;
-    private readonly grpcServer: any;
+    private readonly grpcServer: GrpcServer;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
 
-        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-        let serverResult = createServer(this._url);
-        this.grpcServer = serverResult.server;
-        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-        console.log("bound on:", this._url);
-
-        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./forms.proto"), "forms.Forms", {
+        this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+        this._url = this.grpcServer.url;
+        this.grpcServer.addService(path.resolve(__dirname, "./forms.proto"), "forms.Forms", {
             setConfig: this.setConfig.bind(this),
         })
+            .then(() => {
+                return this.grpcServer.start();
+            }).then(() => {
+            console.log("Grpc server is online")
+        })
+            .catch((err: Error) => {
+                console.log("Failed to initialize server");
+                console.error(err);
+                process.exit(-1);
+            });
 
         this.grpcSdk
             .waitForExistence("database-provider")
@@ -126,7 +132,6 @@ export default class FormsModule {
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._formController);
             await this.registerSchemas();
             await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-            this.grpcServer.start();
             this.isRunning = true;
         }
 

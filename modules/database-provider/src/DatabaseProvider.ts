@@ -1,6 +1,6 @@
 import {MongooseAdapter} from "./adapters/mongoose-adapter";
 import {DatabaseAdapter} from "./interfaces";
-import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import * as grpc from "grpc";
 import path from "path";
 
@@ -23,10 +23,10 @@ export class DatabaseProvider {
         const self = this;
         this.conduit
             .initializeEventBus()
-            .then((r: any) => {
+            .then(() => {
                 self.conduit.bus?.subscribe("database_provider", (message: string) => {
                     if (message === "request") {
-                        self._activeAdapter.registeredSchemas.forEach((k, v) => {
+                        self._activeAdapter.registeredSchemas.forEach((k) => {
                             this.conduit.bus!.publish("database_provider", JSON.stringify(k));
                         });
                         return;
@@ -41,10 +41,8 @@ export class DatabaseProvider {
                             };
                             self._activeAdapter
                                 .createSchemaFromAdapter(schema)
-                                .then((schemaAdapter: any) => {
-                                    let schema = schemaAdapter.schema;
-                                })
-                                .catch((err) => {
+                                .then(() => {})
+                                .catch(() => {
                                     console.log("Failed to create/update schema");
                                 });
                         }
@@ -58,10 +56,8 @@ export class DatabaseProvider {
                     Object.keys(state).forEach((schema: any) => {
                         self._activeAdapter
                             .createSchemaFromAdapter(state[schema])
-                            .then((schemaAdapter: any) => {
-                                let schema = schemaAdapter.schema;
-                            })
-                            .catch((err) => {
+                            .then(() => {})
+                            .catch(() => {
                                 console.log("Failed to create/update schema");
                             });
                     });
@@ -71,7 +67,7 @@ export class DatabaseProvider {
                         console.error(err);
                     });
             })
-            .catch((err: any) => {
+            .catch(() => {
                 console.log("Database provider running without HA");
             });
     }
@@ -81,13 +77,13 @@ export class DatabaseProvider {
         const self = this;
         this.conduit.state?.getState().then((r: any) => {
             let state = !r || r.length === 0 ? {} : JSON.parse(r);
-            self._activeAdapter.registeredSchemas.forEach((k, v) => {
+            self._activeAdapter.registeredSchemas.forEach((k) => {
                 state[k.name] = k;
             });
 
             return this.conduit.state?.setState(JSON.stringify(state));
         })
-            .then((r: any) => {
+            .then(() => {
                 this.conduit.bus!.publish("database_provider", sendingSchema);
                 console.log('Updated state');
             })
@@ -100,13 +96,9 @@ export class DatabaseProvider {
     ensureIsRunning() {
         return this._activeAdapter.ensureConnected().then(() => {
 
-            this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-            let serverResult = createServer(this._url);
-            let server = serverResult.server;
-            this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-            console.log("bound on:", this._url);
-
-            addServiceToServer(server, path.resolve(__dirname, "./database-provider.proto"),
+            let grpcServer = new GrpcServer(process.env.SERVICE_URL);
+            this._url = grpcServer.url;
+            grpcServer.addService(path.resolve(__dirname, "./database-provider.proto"),
                 "databaseprovider.DatabaseProvider", {
                     createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
                     getSchema: this.getSchema.bind(this),
@@ -119,8 +111,17 @@ export class DatabaseProvider {
                     deleteOne: this.deleteOne.bind(this),
                     deleteMany: this.deleteMany.bind(this),
                     countDocuments: this.countDocuments.bind(this),
+                })
+                .then(() => {
+                    return grpcServer.start();
+                }).then(() => {
+                console.log("Grpc server is online")
+            })
+                .catch((err: Error) => {
+                    console.log("Failed to initialize server");
+                    console.error(err);
+                    process.exit(-1);
                 });
-            server.start();
             return "ok";
         });
     }

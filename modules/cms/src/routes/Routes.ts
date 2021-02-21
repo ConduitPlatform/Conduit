@@ -1,8 +1,7 @@
 import { CmsHandlers } from "../handlers/cms.handler";
 import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
-import ConduitGrpcSdk, {addServiceToServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import * as path from "path";
-import * as grpc from "grpc";
 
 
 export class CmsRoutes {
@@ -13,11 +12,11 @@ export class CmsRoutes {
   private crudRoutes: any[] = [];
   private customRoutes: any[] = [];
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new CmsHandlers(grpcSdk);
     this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
 
-    addServiceToServer(server,path.resolve(__dirname + "/router.proto"),"cms.router.Router",{
+    server.addService(path.resolve(__dirname + "/router.proto"),"cms.router.Router",{
       getDocuments: this.handlers.getDocuments.bind(this.handlers),
       getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
       createDocument: this.handlers.createDocument.bind(this.handlers),
@@ -26,6 +25,8 @@ export class CmsRoutes {
       editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
       deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
       customOperation: this.customEndpointHandler.entryPoint.bind(this.customEndpointHandler),
+    }).catch(()=>{
+      console.log("Failed to register routes");
     })
   }
 

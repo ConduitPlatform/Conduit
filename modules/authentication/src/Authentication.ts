@@ -2,7 +2,7 @@ import * as models from "./models";
 import {AdminHandlers} from "./admin/admin";
 import AuthenticationConfigSchema from "./config";
 import {isNil} from "lodash";
-import ConduitGrpcSdk, {addServiceToServer, createServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import path from "path";
 import * as grpc from "grpc";
 import {AuthenticationRoutes} from "./routes/Routes";
@@ -13,19 +13,25 @@ export default class AuthenticationModule {
     private isRunning: boolean = false;
     private _url: string;
     private _router: AuthenticationRoutes;
-    private readonly grpcServer: any;
+    private readonly grpcServer: GrpcServer;
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
 
-        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-        let serverResult = createServer(this._url);
-        this.grpcServer = serverResult.server;
-        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-        console.log("bound on:", this._url);
-
-        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./authentication.proto"),
+        this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+        this._url = this.grpcServer.url;
+        this.grpcServer.addService(path.resolve(__dirname, "./authentication.proto"),
             "authentication.Authentication", {
                 setConfig: this.setConfig.bind(this),
+            })
+            .then(() => {
+                return this.grpcServer.start();
+            }).then(() => {
+            console.log("Grpc server is online")
+        })
+            .catch((err: Error) => {
+                console.log("Failed to initialize server");
+                console.error(err);
+                process.exit(-1);
             });
 
         this.grpcSdk
@@ -119,7 +125,6 @@ export default class AuthenticationModule {
             this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
             await this.registerSchemas();
             this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
-            this.grpcServer.start();
             this.isRunning = true;
         }
         await this._router.registerRoutes();

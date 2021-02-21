@@ -1,5 +1,5 @@
 import {isEmpty, isNil} from 'lodash';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import {IPushNotificationsProvider} from '../interfaces/IPushNotificationsProvider';
 
@@ -10,7 +10,7 @@ export class AdminHandler {
     private databaseAdapter: any;
     private readonly conduit: ConduitGrpcSdk;
 
-    constructor(server: grpc.Server, conduit: ConduitGrpcSdk, provider: IPushNotificationsProvider) {
+    constructor(server: GrpcServer, conduit: ConduitGrpcSdk, provider: IPushNotificationsProvider) {
         this.conduit = conduit;
         this.provider = provider;
         const self = this;

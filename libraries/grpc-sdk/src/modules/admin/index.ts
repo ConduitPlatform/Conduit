@@ -1,8 +1,7 @@
 import path from "path";
 import {ConduitModule} from "../../classes/ConduitModule";
-import * as grpc from "grpc";
-import {addServiceToServer} from "../../helpers";
 import fs from "fs";
+import {GrpcServer} from "../../classes";
 
 let protofile_template = `
 syntax = "proto3";
@@ -38,7 +37,7 @@ export default class Admin extends ConduitModule {
         });
     }
 
-    registerAdmin(server: grpc.Server, paths: any[], functions: { [name: string]: Function }): Promise<any> {
+    async registerAdmin(server: GrpcServer, paths: any[], functions: { [name: string]: Function }): Promise<any> {
         let protoFunctions = "";
         paths.forEach((r) => {
             protoFunctions += `rpc ${r.protoName.charAt(0).toUpperCase() + r.protoName.slice(1)}(AdminRequest) returns (AdminResponse);\n`;
@@ -48,9 +47,8 @@ export default class Admin extends ConduitModule {
 
         let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
         fs.writeFileSync(protoPath, protoFile);
-
-        addServiceToServer(server, protoPath, this.moduleName + ".admin.Admin", functions);
-        fs.unlinkSync(protoPath);
+        await server.addService(protoPath, this.moduleName + ".admin.Admin", functions);
+        // fs.unlinkSync(protoPath);
 
         //added sleep as a precaution
         // With this register process there is the chance that the config instances will

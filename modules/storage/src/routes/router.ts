@@ -1,14 +1,13 @@
 import File from '../models/File';
 import {FileHandlers} from '../handlers/file';
 import {IStorageProvider} from '@quintessential-sft/storage-provider';
-import grpc from "grpc";
 import {
     ConduitRoute,
     ConduitRouteActions,
     ConduitRouteReturnDefinition,
     TYPE,
     constructRoute,
-    addServiceToServer
+    GrpcServer
 } from "@quintessential-sft/conduit-grpc-sdk";
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import path from "path";
@@ -16,15 +15,17 @@ import path from "path";
 export class FileRoutes {
     private readonly fileHandlers: FileHandlers;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly storageProvider: IStorageProvider) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly storageProvider: IStorageProvider) {
         this.fileHandlers = new FileHandlers(grpcSdk, storageProvider);
 
-        addServiceToServer(server, path.resolve(__dirname, "./router.proto"), "storage.router.Router", {
+        server.addService(path.resolve(__dirname, "./router.proto"), "storage.router.Router", {
             createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
             deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
             getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
             updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
             getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers)
+        }).catch(()=>{
+           console.log("Failed to register routes");
         });
     }
 

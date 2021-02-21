@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {isNil} from 'lodash';
 import {ServiceAdmin} from './service';
@@ -7,10 +7,10 @@ let paths = require("./admin.json").functions
 export class AdminHandlers {
     private database: any;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
         const self = this;
         grpcSdk.waitForExistence('database-provider')
-            .then(r => {
+            .then(() => {
                 self.database = self.grpcSdk.databaseProvider;
             })
         let serviceAdmin = new ServiceAdmin(this.grpcSdk);

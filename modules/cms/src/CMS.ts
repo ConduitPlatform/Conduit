@@ -1,5 +1,5 @@
 import { AdminHandlers } from "./admin/admin";
-import ConduitGrpcSdk, {createServer} from "@quintessential-sft/conduit-grpc-sdk";
+import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
 import { CmsRoutes } from "./routes/Routes";
 import { SchemaController } from "./controllers/cms/schema.controller";
 import process from "process";
@@ -7,16 +7,13 @@ import { CustomEndpointController } from "./controllers/customEndpoints/customEn
 
 export class CMS {
   private _url: string;
-  private readonly grpcServer: any;
+  private readonly grpcServer: GrpcServer;
   private stateActive = true;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let serverResult = createServer(this._url);
-    this.grpcServer = serverResult.server;
 
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-    console.log("bound on:", this._url);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._url = this.grpcServer.url;
 
     const self = this;
 

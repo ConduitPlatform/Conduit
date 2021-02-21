@@ -1,14 +1,13 @@
 import { LocalHandlers } from "../handlers/auth/local";
 import * as grpc from "grpc";
 import ConduitGrpcSdk, {
-    addServiceToServer,
     ConduitMiddleware,
     ConduitRoute,
     ConduitRouteActions,
     ConduitRouteReturnDefinition,
     ConduitString,
     constructMiddleware,
-    constructRoute,
+    constructRoute, GrpcServer,
     TYPE,
 } from "@quintessential-sft/conduit-grpc-sdk";
 import { FacebookHandlers } from "../handlers/auth/facebook";
@@ -31,7 +30,7 @@ export class AuthenticationRoutes {
   private readonly kakaoHandlers: KakaoHandlers;
   private readonly twitchHandlers: TwitchHandlers;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
     this.googleHandlers = new GoogleHandlers(grpcSdk);
@@ -40,7 +39,7 @@ export class AuthenticationRoutes {
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
 
-      addServiceToServer(server, path.resolve(__dirname, path.resolve(__dirname + "/router.proto")),
+      server.addService(path.resolve(__dirname, path.resolve(__dirname + "/router.proto")),
           "authentication.router.Router", {
               register: this.localHandlers.register.bind(this.localHandlers),
               authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),

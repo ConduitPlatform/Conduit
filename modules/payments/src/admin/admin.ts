@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 import {isNil} from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
@@ -7,7 +7,7 @@ let paths = require("./admin.json").functions
 export class AdminHandlers {
   private database: any;
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly stripeHandlers: StripeHandlers | null) {
+  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly stripeHandlers: StripeHandlers | null) {
     const self = this;
     grpcSdk.waitForExistence('database-provider')
       .then(() => {

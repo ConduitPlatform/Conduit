@@ -1,5 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from "grpc";
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import {SchemaController} from "../controllers/cms/schema.controller";
 import {SchemaAdmin} from "./schema.admin";
 import {DocumentsAdmin} from "./documents.admin";
@@ -11,7 +10,7 @@ let paths = require("./admin.json");
 export class AdminHandlers {
     private database: any;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController, private readonly customEndpointController: CustomEndpointController) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly schemaController: SchemaController, private readonly customEndpointController: CustomEndpointController) {
 
         this.database = this.grpcSdk.databaseProvider;
 

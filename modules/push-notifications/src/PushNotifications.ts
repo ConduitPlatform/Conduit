@@ -4,7 +4,7 @@ import {FirebaseProvider} from './providers/firebase';
 import PushNotificationsConfigSchema from './config';
 import {isNil} from 'lodash';
 import path from 'path';
-import ConduitGrpcSdk, {addServiceToServer, createServer} from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import {AdminHandler} from './admin/admin';
 import {PushNotificationsRoutes} from './routes/Routes';
@@ -14,7 +14,7 @@ export default class PushNotificationsModule {
 
     private _provider: IPushNotificationsProvider | undefined;
     private isRunning: boolean = false;
-    private readonly grpcServer: any;
+    private readonly grpcServer: GrpcServer;
     private _url: string;
     // @ts-ignore
     private adminHandler: AdminHandler;
@@ -22,22 +22,26 @@ export default class PushNotificationsModule {
 
     constructor(private readonly grpcSdk: ConduitGrpcSdk) {
 
-        this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-        let serverResult = createServer(this._url);
-        this.grpcServer = serverResult.server;
-        this._url = process.env.SERVICE_URL || "0.0.0.0:" + serverResult.port;
-        console.log("bound on:", this._url);
-
-        addServiceToServer(this.grpcServer, path.resolve(__dirname, "./push-notifications.proto"), "pushnotifications.PushNotifications", {
+        this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+        this._url = this.grpcServer.url;
+        this.grpcServer.addService(path.resolve(__dirname, "./push-notifications.proto"), "pushnotifications.PushNotifications", {
             setConfig: this.setConfig.bind(this),
             setNotificationToken: this.setNotificationToken.bind(this),
             getNotificationTokens: this.getNotificationTokens.bind(this)
         })
+            .then(() => {
+                return this.grpcServer.start();
+            }).then(() => {
+            console.log("Grpc server is online")
+        })
+            .catch((err: Error) => {
+                console.log("Failed to initialize server");
+                console.error(err);
+                process.exit(-1);
+            });
 
         let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
         this._routes = router.registeredRoutes;
-
-        this.grpcServer.start();
 
         this.grpcSdk.waitForExistence('database-provider')
             .then(() => {

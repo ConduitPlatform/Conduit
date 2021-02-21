@@ -1,6 +1,6 @@
 import {isNil} from 'lodash';
 import {EmailService} from '../services/email.service';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {GrpcServer} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from "grpc";
 let paths = require("./admin.json").functions
 
@@ -8,7 +8,7 @@ export class AdminHandlers {
     private database: any;
     private emailService: EmailService;
 
-    constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk) {
+    constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
         const self = this;
         grpcSdk.waitForExistence('database-provider').then(() => {
             self.database = self.grpcSdk.databaseProvider
