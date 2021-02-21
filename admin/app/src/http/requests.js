@@ -56,7 +56,7 @@ axios.interceptors.response.use(
 
 //Requests
 export const getAuthUsersDataReq = (skip, limit) =>
-  axios.get(`${CONDUIT_API}/admin/users`, {
+  axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
       skip,
       limit,
