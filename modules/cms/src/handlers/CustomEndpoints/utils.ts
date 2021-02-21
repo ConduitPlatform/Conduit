@@ -59,6 +59,32 @@ export function constructQuery(schemaField: string, operation: number, compariso
   }
 }
 
+export function mergeQueries(queries: string[]): any {
+  let mergedQuery: any = {};
+  let insertedFields: Record<string, boolean> = {};
+
+  queries.forEach((query: string) => {
+    const parsedQuery = JSON.parse(`{${query}}`);
+    const field = Object.keys(parsedQuery)[0];
+    if (mergedQuery.hasOwnProperty(field)) {
+      if (!mergedQuery.hasOwnProperty("$and")) {
+        mergedQuery["$and"] = [];
+      }
+
+      mergedQuery["$and"].push(parsedQuery);
+      mergedQuery["$and"].push({ [field]: mergedQuery[field] });
+      delete mergedQuery[field];
+      insertedFields[field] = true;
+    } else if (insertedFields[field]) {
+      mergedQuery["$and"].push(parsedQuery);
+    } else {
+      mergedQuery[field] = parsedQuery[field]
+    }
+  });
+
+  return mergedQuery;
+}
+
 export function constructAssignment(schemaField: string, action: number, assignmentValue: any) {
   //   SET: 0,
   //   INCREMENT: 1,
