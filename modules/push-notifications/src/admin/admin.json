@@ -1,22 +1,22 @@
 {
   "functions": [
     {
-      "path": "/notification-token/:userId",
+      "path": "/token/:userId",
       "method": "GET",
       "protoName": "getNotificationToken"
     },
     {
-      "path": "/notifications/send",
+      "path": "/send",
       "method": "POST",
       "protoName": "sendNotification"
     },
     {
-      "path": "/notifications/send-many",
+      "path": "/send-many",
       "method": "POST",
       "protoName": "sendManyNotifications"
     },
     {
-      "path": "/notifications/send-to-many-devices",
+      "path": "/send-to-many-devices",
       "method": "POST",
       "protoName": "sendToManyDevices"
     }

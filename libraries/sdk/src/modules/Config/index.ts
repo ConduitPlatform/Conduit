@@ -14,7 +14,9 @@ export abstract class IConfigManager {
     newModulesConfigSchemaFields: any
   ): Promise<any>;
   abstract set(name: string, newModulesConfigSchemaFields: any): Promise<any>;
-  abstract getModuleUrlByInstance(instancePeer: string): string | undefined;
+  abstract getModuleUrlByInstance(
+    instancePeer: string
+  ): { url: string; moduleName: string } | undefined;
 }
 
 export abstract class IDatabaseConfigUtility {

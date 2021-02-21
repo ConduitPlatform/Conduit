@@ -3,12 +3,7 @@ import { hashPassword, verifyToken } from './utils/auth';
 import { Router, Handler, Request, Response, NextFunction } from 'express';
 import { AuthHandlers } from './handlers/auth';
 import { AdminSchema } from './models/Admin';
-import {
-  ConduitError,
-  ConduitRouteParameters,
-  ConduitSDK,
-  IConduitAdmin,
-} from '@quintessential-sft/conduit-sdk';
+import { ConduitSDK, IConduitAdmin } from '@quintessential-sft/conduit-sdk';
 import AdminConfigSchema from './config';
 import * as grpc from 'grpc';
 
@@ -216,16 +211,20 @@ export default class AdminModule extends IConduitAdmin {
     }
     let error;
     let url = call.request.adminUrl;
+    let moduleName = '';
     if (!url) {
-      url = await this.grpcSdk.config
-        .getModuleUrlByInstance(call.getPeer())
-        .catch((err) => (error = err));
-      if (error) {
-        callback({
+      let result = this.conduit.getConfigManager().getModuleUrlByInstance(call.getPeer());
+      if (!result) {
+        return callback({
           code: grpc.status.INTERNAL,
           message: 'Error when registering routes',
         });
       }
+      url = result.url;
+      moduleName = result.moduleName;
+      routes.forEach((r) => {
+        r.path = `/${moduleName}${r.path}`;
+      });
     }
     let done = await this._registerGprcRoute(protofile, routes, url).catch(
       (err) => (error = err)

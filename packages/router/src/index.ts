@@ -138,18 +138,21 @@ export class ConduitDefaultRouter implements IConduitRouter {
   async registerGrpcRoute(call: any, callback: any) {
     try {
       let url = call.request.routerUrl;
-      let error;
       if (!url) {
-        url = await this.grpcSdk.config
-          .getModuleUrlByInstance(call.getPeer())
-          .catch((err) => (error = err));
-        if (error) {
-          callback({
+        let result = ((this._app as any).conduit! as ConduitSDK)
+          .getConfigManager()!
+          .getModuleUrlByInstance(call.getPeer());
+        if (!result) {
+          return callback({
             code: grpc.status.INTERNAL,
             message: 'Error when registering routes',
           });
         }
-        call.request.routerUrl = url;
+        call.request.routerUrl = result.url;
+        // do not enable yet, it requires further consideration
+        // call.request.routes.forEach((r: any) => {
+        //   r.options.path = result!.moduleName + r.options.path;
+        // });
       }
 
       let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);

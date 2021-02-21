@@ -78,6 +78,7 @@ message ModuleByInstanceRequest {
 
 message ModuleByInstanceResponse {
     string moduleUrl = 1;
+    string moduleName = 2;
 }
 
 message RegisterModuleRequest {

@@ -23,13 +23,15 @@ export default class Config extends ConduitModule {
     });
   }
 
-  getModuleUrlByInstance(instancePeer: string): Promise<any> {
+  getModuleUrlByInstance(
+    instancePeer: string
+  ): Promise<{ url: string; moduleName: string }> {
     return new Promise((resolve, reject) => {
       this.client.getModuleUrlByInstance({ instancePeer }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
-          resolve(res.moduleUrl);
+          resolve({ url: res.moduleUrl, moduleName: res.moduleName });
         }
       });
     });

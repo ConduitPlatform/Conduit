@@ -464,7 +464,7 @@ export default class ConfigManager implements IConfigManager {
     let instance = call.request.instancePeer;
     let result = this.getModuleUrlByInstance(instance);
     if (result) {
-      callback(null, { moduleUrl: result });
+      callback(null, { moduleUrl: result.url, moduleName: result.moduleName });
     } else {
       callback({
         code: grpc.status.NOT_FOUND,
@@ -473,7 +473,9 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getModuleUrlByInstance(instancePeer: string): string | undefined {
+  getModuleUrlByInstance(
+    instancePeer: string
+  ): { url: string; moduleName: string } | undefined {
     let found = null;
     Object.keys(this.moduleHealth).forEach((r) => {
       Object.keys(this.moduleHealth[r]).forEach((i) => {
@@ -484,7 +486,7 @@ export default class ConfigManager implements IConfigManager {
       });
     });
     if (found) {
-      return this.registeredModules.get(found);
+      return { url: this.registeredModules.get(found)!, moduleName: found };
     } else {
       return undefined;
     }
