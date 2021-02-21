@@ -150,9 +150,22 @@ export class ConduitDefaultRouter implements IConduitRouter {
         }
         call.request.routerUrl = result.url;
         // do not enable yet, it requires further consideration
-        // call.request.routes.forEach((r: any) => {
-        //   r.options.path = result!.moduleName + r.options.path;
-        // });
+        call.request.routes.forEach((r: any) => {
+          if (
+            r.path.startsWith(`/${result!.moduleName}`) ||
+            r.path.startsWith(`/hook/${result!.moduleName}`)
+          ) {
+            return;
+          }
+          if (
+            r.path.startsWith(`/hook`) &&
+            !r.path.startsWith(`/hook/${result!.moduleName}`)
+          ) {
+            r.options.path.replace('/hook', `/hook/${result!.moduleName}`);
+          } else {
+            r.options.path = `/${result!.moduleName}${r.options.path}`;
+          }
+        });
       }
 
       let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);
