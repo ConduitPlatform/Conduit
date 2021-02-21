@@ -196,7 +196,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/stripe/createPayment',
+              path: '/stripe/createPayment',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 productId: TYPE.String,
@@ -217,7 +217,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/stripe/createPaymentWithSavedCard',
+              path: '/stripe/createPaymentWithSavedCard',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 productId: TYPE.String,
@@ -239,7 +239,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/stripe/cancelPayment',
+              path: '/stripe/cancelPayment',
               action: ConduitRouteActions.UPDATE,
               bodyParams: {
                 paymentId: TYPE.String,
@@ -259,7 +259,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/stripe/refundPayment',
+              path: '/stripe/refundPayment',
               action: ConduitRouteActions.UPDATE,
               bodyParams: {
                 paymentId: TYPE.String,
@@ -276,7 +276,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/stripe/getPaymentMethods',
+              path: '/stripe/getPaymentMethods',
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
@@ -292,7 +292,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/hook/payments/stripe/completePayment',
+              path: '/hook/stripe/completePayment',
               action: ConduitRouteActions.POST,
             },
             new ConduitRouteReturnDefinition('CompleteStripePaymentResponse', 'String'),
@@ -311,7 +311,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/createPayment',
+              path: '/iamport/createPayment',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 productId: TYPE.String,
@@ -332,7 +332,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/addCard',
+              path: '/iamport/addCard',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 email: TYPE.String,
@@ -356,7 +356,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/validateCard/:customerId',
+              path: '/iamport/validateCard/:customerId',
               action: ConduitRouteActions.POST,
               urlParams: {
                 customerId: TYPE.String,
@@ -373,7 +373,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/completePayment',
+              path: '/iamport/completePayment',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 imp_uid: TYPE.String,
@@ -390,7 +390,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/subscribe',
+              path: '/iamport/subscribe',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 productId: TYPE.String,
@@ -410,7 +410,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/cancelSubscription/:subscriptionId',
+              path: '/iamport/cancelSubscription/:subscriptionId',
               action: ConduitRouteActions.UPDATE,
               urlParams: {
                 subscriptionId: TYPE.String,
@@ -430,7 +430,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/hook/payments/iamport/subscriptionCallback',
+              path: '/hook/iamport/subscriptionCallback',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 imp_uid: TYPE.String,
@@ -450,7 +450,7 @@ export class PaymentsRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/payments/iamport/getPaymentMethods',
+              path: '/iamport/getPaymentMethods',
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
@@ -467,7 +467,7 @@ export class PaymentsRoutes {
       constructRoute(
         new ConduitRoute(
           {
-            path: '/payments/products',
+            path: '/products',
             action: ConduitRouteActions.GET,
           },
           new ConduitRouteReturnDefinition('GetProductsResponse', {
@@ -491,7 +491,7 @@ export class PaymentsRoutes {
       constructRoute(
         new ConduitRoute(
           {
-            path: '/payments/subscriptions',
+            path: '/subscriptions',
             action: ConduitRouteActions.GET,
             middlewares: ['authMiddleware'],
           },

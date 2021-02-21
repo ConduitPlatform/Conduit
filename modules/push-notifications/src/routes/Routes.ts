@@ -38,7 +38,7 @@ export class PushNotificationsRoutes {
               platform: TYPE.String,
             },
             action: ConduitRouteActions.POST,
-            path: '/notification-token',
+            path: '/token',
           },
           new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
             message: TYPE.String,

@@ -48,7 +48,7 @@ export class FileRoutes {
               isPublic: TYPE.Boolean,
             },
             action: ConduitRouteActions.POST,
-            path: '/storage/file',
+            path: '/file',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('File', {
@@ -73,7 +73,7 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.GET,
-            path: '/storage/file/:id',
+            path: '/file/:id',
           },
           new ConduitRouteReturnDefinition('FileWithData', {
             _id: TYPE.String,
@@ -98,7 +98,7 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.GET,
-            path: '/storage/getFileUrl/:id',
+            path: '/getFileUrl/:id',
           },
           new ConduitRouteReturnDefinition('FileWithData', {
             _id: TYPE.String,
@@ -123,7 +123,7 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.DELETE,
-            path: '/storage/file/:id',
+            path: '/file/:id',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileDeleteResponse', {
@@ -148,7 +148,7 @@ export class FileRoutes {
               folder: TYPE.String,
             },
             action: ConduitRouteActions.UPDATE,
-            path: '/storage/file',
+            path: '/file',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileUpdateResponse', {

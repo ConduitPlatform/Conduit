@@ -86,7 +86,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/local/new',
+              path: '/local/new',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 email: TYPE.String,
@@ -103,7 +103,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/local',
+              path: '/local',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 email: TYPE.String,
@@ -125,7 +125,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/forgot-password',
+              path: '/forgot-password',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 email: TYPE.String,
@@ -141,7 +141,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/reset-password',
+              path: '/reset-password',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 passwordResetToken: TYPE.String,
@@ -158,7 +158,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/hook/authentication/verify-email/:verificationToken',
+              path: '/hook/verify-email/:verificationToken',
               action: ConduitRouteActions.GET,
               urlParams: {
                 verificationToken: TYPE.String,
@@ -178,7 +178,7 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
-                path: '/authentication/local/twofa',
+                path: '/local/twofa',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
                   email: TYPE.String,
@@ -200,7 +200,7 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
-                path: '/authentication/local/enable-twofa',
+                path: '/local/enable-twofa',
                 action: ConduitRouteActions.UPDATE,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
@@ -217,7 +217,7 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
-                path: '/authentication/local/verifyPhoneNumber',
+                path: '/local/verifyPhoneNumber',
                 action: ConduitRouteActions.POST,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
@@ -234,7 +234,7 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
-                path: '/authentication/local/disable-twofa',
+                path: '/local/disable-twofa',
                 action: ConduitRouteActions.UPDATE,
                 middlewares: ['authMiddleware'],
               },
@@ -255,7 +255,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/facebook',
+              path: '/facebook',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 // todo switch to required when the parsing is added
@@ -284,7 +284,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/google',
+              path: '/google',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 id_token: TYPE.String,
@@ -314,7 +314,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/service',
+              path: '/service',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 serviceName: TYPE.String,
@@ -343,7 +343,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/hook/authentication/kakao',
+              path: '/hook/kakao',
               action: ConduitRouteActions.GET,
               urlParams: {
                 code: TYPE.String,
@@ -371,7 +371,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/hook/authentication/twitch',
+              path: '/hook/twitch',
               action: ConduitRouteActions.GET,
               urlParams: {
                 code: TYPE.String,
@@ -395,7 +395,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/user',
+              path: '/user',
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
@@ -408,7 +408,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/user',
+              path: '/user',
               action: ConduitRouteActions.DELETE,
               middlewares: ['authMiddleware'],
             },
@@ -421,7 +421,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/renew',
+              path: '/renew',
               action: ConduitRouteActions.POST,
               bodyParams: {
                 refreshToken: TYPE.String,
@@ -440,7 +440,7 @@ export class AuthenticationRoutes {
         constructRoute(
           new ConduitRoute(
             {
-              path: '/authentication/logout',
+              path: '/logout',
               action: ConduitRouteActions.POST,
               middlewares: ['authMiddleware'],
             },
@@ -451,9 +451,7 @@ export class AuthenticationRoutes {
       );
 
       routesArray.push(
-        constructMiddleware(
-          new ConduitMiddleware({ path: '/authentication' }, 'authMiddleware')
-        )
+        constructMiddleware(new ConduitMiddleware({ path: '/' }, 'authMiddleware'))
       );
     }
     return routesArray;

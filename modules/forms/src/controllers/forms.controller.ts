@@ -62,7 +62,7 @@ export class FormsController {
         constructRoute(
           new ConduitRoute(
             {
-              path: `/form/${r.name}`,
+              path: `/${r.name}`,
               action: ConduitRouteActions.POST,
               bodyParams: r.fields,
             },
