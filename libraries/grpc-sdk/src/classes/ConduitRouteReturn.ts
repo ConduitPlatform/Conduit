@@ -1,4 +1,4 @@
-import {ConduitModel} from "../interfaces";
+import { ConduitModel } from '../interfaces';
 
 /**
  * Supports:
@@ -41,21 +41,19 @@ import {ConduitModel} from "../interfaces";
  *
  */
 export class ConduitRouteReturnDefinition {
+  private _name: string;
+  private _fields: ConduitModel | string;
 
-    private _name: string;
-    private _fields: ConduitModel | string;
+  constructor(name: string, fields: ConduitModel | string) {
+    this._name = name;
+    this._fields = fields;
+  }
 
-    constructor(name: string, fields: ConduitModel | string) {
-        this._name = name;
-        this._fields = fields;
-    }
+  get name(): string {
+    return this._name;
+  }
 
-    get name(): string {
-        return this._name;
-    }
-
-    get fields(): ConduitModel | string {
-        return this._fields;
-    }
-
+  get fields(): ConduitModel | string {
+    return this._fields;
+  }
 }

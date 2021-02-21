@@ -1,16 +1,14 @@
-import {Handler, NextFunction, Request, Response} from "express";
-import {ConduitSDK} from "../../index";
+import { Handler, NextFunction, Request, Response } from 'express';
+import { ConduitSDK } from '../../index';
 
 export abstract class IConduitAdmin {
+  constructor(conduit: ConduitSDK) {}
 
-    constructor(conduit: ConduitSDK) {
-    }
+  abstract initialize(): void;
 
-    abstract initialize(): void;
+  abstract registerRoute(method: string, route: string, handler: Handler): void;
 
-    abstract registerRoute(method: string, route: string, handler: Handler): void;
+  abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;
 
-    abstract authMiddleware(req: Request, res: Response, next: NextFunction): void;
-
-    abstract adminMiddleware(req: Request, res: Response, next: NextFunction): void;
+  abstract adminMiddleware(req: Request, res: Response, next: NextFunction): void;
 }

@@ -1,13 +1,12 @@
-import path from "path";
-import { EventEmitter } from "events";
-import {ConduitModule} from "../../classes/ConduitModule";
+import path from 'path';
+import { EventEmitter } from 'events';
+import { ConduitModule } from '../../classes/ConduitModule';
 
-export default class Config extends ConduitModule{
-
+export default class Config extends ConduitModule {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, "../../proto/core.proto");
-    this.descriptorObj = "conduit.core.Config";
+    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
+    this.descriptorObj = 'conduit.core.Config';
     this.initializeClient();
   }
 
@@ -16,7 +15,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.getServerConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.data));
         }
@@ -24,11 +23,11 @@ export default class Config extends ConduitModule{
     });
   }
 
-  getModuleUrlByInstance(instancePeer:string): Promise<any>{
+  getModuleUrlByInstance(instancePeer: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.getModuleUrlByInstance({instancePeer}, (err: any, res: any) => {
+      this.client.getModuleUrlByInstance({ instancePeer }, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.moduleUrl);
         }
@@ -43,7 +42,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.get(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.data));
         }
@@ -60,7 +59,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.updateConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.result));
         }
@@ -77,7 +76,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.addFieldstoConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.result));
         }
@@ -92,7 +91,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.moduleExists(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -105,7 +104,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.moduleList(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -113,19 +112,18 @@ export default class Config extends ConduitModule{
     });
   }
 
-  getRedisDetails(): Promise<any>{
+  getRedisDetails(): Promise<any> {
     let request: { [key: string]: any } = {};
     return new Promise((resolve, reject) => {
       this.client.getRedisDetails(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res);
         }
       });
     });
   }
-
 
   registerModule(name: string, url: string): Promise<any> {
     // TODO make newConfigSchema required when all modules provide their config schema
@@ -137,7 +135,7 @@ export default class Config extends ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.registerModule(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -160,30 +158,33 @@ export default class Config extends ConduitModule{
     let emitter = new EventEmitter();
     emitter.setMaxListeners(150);
     let call = this.client.watchModules({});
-    call.on("data", function (data: any) {
-      emitter.emit("module-registered", data.modules);
+    call.on('data', function (data: any) {
+      emitter.emit('module-registered', data.modules);
     });
-    call.on("end", function () {
+    call.on('end', function () {
       // The server has finished sending
-      console.log("Stream ended");
+      console.log('Stream ended');
     });
-    call.on("error", function () {
+    call.on('error', function () {
       // An error has occurred and the stream has been closed.
-      console.error("Connection to grpc server closed");
+      console.error('Connection to grpc server closed');
     });
-    call.on("status", function (status: any) {
-      console.error("Connection status changed to : ", status);
+    call.on('status', function (status: any) {
+      console.error('Connection status changed to : ', status);
     });
 
     return emitter;
   }
 
   registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
-    let request = { moduleName, newModulesConfigSchema: JSON.stringify(newModulesConfigSchema) };
+    let request = {
+      moduleName,
+      newModulesConfigSchema: JSON.stringify(newModulesConfigSchema),
+    };
     return new Promise((resolve, reject) => {
       this.client.registerModulesConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve({});
         }

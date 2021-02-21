@@ -1,8 +1,7 @@
-import { CmsHandlers } from "../handlers/cms.handler";
-import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
-import ConduitGrpcSdk, {GrpcServer} from "@quintessential-sft/conduit-grpc-sdk";
-import * as path from "path";
-
+import { CmsHandlers } from '../handlers/cms.handler';
+import { CustomEndpointHandler } from '../handlers/CustomEndpoints/customEndpoint.handler';
+import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import * as path from 'path';
 
 export class CmsRoutes {
   private readonly handlers: CmsHandlers;
@@ -16,18 +15,22 @@ export class CmsRoutes {
     this.handlers = new CmsHandlers(grpcSdk);
     this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
 
-    server.addService(path.resolve(__dirname + "/router.proto"),"cms.router.Router",{
-      getDocuments: this.handlers.getDocuments.bind(this.handlers),
-      getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
-      createDocument: this.handlers.createDocument.bind(this.handlers),
-      createManyDocuments: this.handlers.createManyDocuments.bind(this.handlers),
-      editDocument: this.handlers.editDocument.bind(this.handlers),
-      editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
-      deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
-      customOperation: this.customEndpointHandler.entryPoint.bind(this.customEndpointHandler),
-    }).catch(()=>{
-      console.log("Failed to register routes");
-    })
+    server
+      .addService(path.resolve(__dirname + '/router.proto'), 'cms.router.Router', {
+        getDocuments: this.handlers.getDocuments.bind(this.handlers),
+        getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
+        createDocument: this.handlers.createDocument.bind(this.handlers),
+        createManyDocuments: this.handlers.createManyDocuments.bind(this.handlers),
+        editDocument: this.handlers.editDocument.bind(this.handlers),
+        editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
+        deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
+        customOperation: this.customEndpointHandler.entryPoint.bind(
+          this.customEndpointHandler
+        ),
+      })
+      .catch(() => {
+        console.log('Failed to register routes');
+      });
   }
 
   addRoutes(routes: any[], crud: boolean = true) {
@@ -48,7 +51,7 @@ export class CmsRoutes {
     this.grpcSdk.router
       .register(this.crudRoutes.concat(this.customRoutes))
       .catch((err: Error) => {
-        console.log("Failed to register routes for CMS module!");
+        console.log('Failed to register routes for CMS module!');
         console.error(err);
       });
   }

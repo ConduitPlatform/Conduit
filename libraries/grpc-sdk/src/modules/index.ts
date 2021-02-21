@@ -1,5 +1,5 @@
 export * from './storage';
-export * from './router'
+export * from './router';
 export * from './email';
 export * from './databaseProvider';
 export * from './config';

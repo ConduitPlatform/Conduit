@@ -1,29 +1,31 @@
-import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
-export const Token = new ConduitSchema('Token',
+export const Token = new ConduitSchema(
+  'Token',
   {
     _id: TYPE.ObjectId,
     type: {
       type: TYPE.String,
-      systemRequired: true
+      systemRequired: true,
     },
     userId: {
       type: TYPE.Relation,
       model: 'User',
-      systemRequired: true
+      systemRequired: true,
     },
     token: {
       type: TYPE.String,
-      systemRequired: true
+      systemRequired: true,
     },
     data: {
       type: TYPE.JSON,
-      systemRequired: true
+      systemRequired: true,
     },
     createdAt: TYPE.Date,
-    updatedAt: TYPE.Date
+    updatedAt: TYPE.Date,
   },
   {
     timestamps: true,
-    systemRequired: true
-  });
+    systemRequired: true,
+  }
+);

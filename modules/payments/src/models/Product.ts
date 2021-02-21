@@ -1,6 +1,7 @@
-import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
-export const ProductSchema = new ConduitSchema('Product',
+export const ProductSchema = new ConduitSchema(
+  'Product',
   {
     _id: TYPE.ObjectId,
     name: TYPE.String,
@@ -8,24 +9,25 @@ export const ProductSchema = new ConduitSchema('Product',
     currency: TYPE.String,
     isSubscription: {
       type: TYPE.Boolean,
-      default: false
+      default: false,
     },
     recurring: {
       type: TYPE.String,
-      default: ''
+      default: '',
     },
     recurringCount: {
       type: TYPE.Number,
-      default: 1
+      default: 1,
     },
     stripe: {
       subscriptionId: TYPE.String,
       priceId: TYPE.String,
     },
     createdAt: TYPE.Date,
-    updatedAt: TYPE.Date
+    updatedAt: TYPE.Date,
   },
   {
     timestamps: true,
-    systemRequired: true
-  })
+    systemRequired: true,
+  }
+);

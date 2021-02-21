@@ -1,6 +1,7 @@
 # Admin Module
+
 The admin package, will expose the entire conduit's configuration to the admin panel,
-and allow for config changes, plugin installation, log viewing, metric viewing, push 
+and allow for config changes, plugin installation, log viewing, metric viewing, push
 notification status and generally admin things.
 
 THIS SHOULD BE BUILT WITH NEXT.JS I THINK, SO THAT EACH MODULE DESCRIBES THEIR

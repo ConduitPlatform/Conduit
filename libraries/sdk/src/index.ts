@@ -1,16 +1,16 @@
-import { Application } from "express";
-import { IConduitRouter } from "./modules";
-import { IConduitAdmin } from "./modules";
-import { IConduitSecurity } from "./modules";
-import { isNil, isPlainObject, merge } from "lodash";
-import validator from "validator";
-import isNaturalNumber from "is-natural-number";
-import { Config as ConvictConfig } from "convict";
-import { IConfigManager } from "./modules";
-import { StateManager } from "./utilities/StateManager";
-import { RedisManager } from "./utilities/RedisManager";
-import { EventBus } from "./utilities/EventBus";
-import Crypto from "crypto";
+import { Application } from 'express';
+import { IConduitRouter } from './modules';
+import { IConduitAdmin } from './modules';
+import { IConduitSecurity } from './modules';
+import { isNil, isPlainObject, merge } from 'lodash';
+import validator from 'validator';
+import isNaturalNumber from 'is-natural-number';
+import { Config as ConvictConfig } from 'convict';
+import { IConfigManager } from './modules';
+import { StateManager } from './utilities/StateManager';
+import { RedisManager } from './utilities/RedisManager';
+import { EventBus } from './utilities/EventBus';
+import Crypto from 'crypto';
 
 export class ConduitSDK {
   private static _instance: ConduitSDK;
@@ -26,7 +26,7 @@ export class ConduitSDK {
   private constructor(app: Application, name?: string) {
     this._app = app;
     if (!name) {
-      this.name = "corepackage_" + Crypto.randomBytes(16).toString("hex");
+      this.name = 'corepackage_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
@@ -35,13 +35,13 @@ export class ConduitSDK {
       this._eventBus = new EventBus(redisManager);
       this._stateManager = new StateManager(redisManager, this.name);
     } else {
-      console.error("Redis IP not defined");
+      console.error('Redis IP not defined');
       process.exit(-1);
     }
   }
 
   registerRouter(router: IConduitRouter) {
-    if (this._router) throw new Error("Cannot register a second router!");
+    if (this._router) throw new Error('Cannot register a second router!');
     this._router = router;
   }
 
@@ -55,43 +55,43 @@ export class ConduitSDK {
 
   getRouter(): IConduitRouter {
     if (this._router) return this._router;
-    throw new Error("Router not assigned yet!");
+    throw new Error('Router not assigned yet!');
   }
 
   registerAdmin(admin: IConduitAdmin) {
-    if (this._admin) throw new Error("Cannot register a second admin!");
+    if (this._admin) throw new Error('Cannot register a second admin!');
     this._admin = admin;
   }
 
   getAdmin(): IConduitAdmin {
     if (this._admin) return this._admin;
-    throw new Error("Admin not assigned yet!");
+    throw new Error('Admin not assigned yet!');
   }
 
   registerSecurity(security: IConduitSecurity) {
-    if (this._security) throw new Error("Cannot register a second security module");
+    if (this._security) throw new Error('Cannot register a second security module');
     this._security = security;
   }
 
   getSecurity(): IConduitSecurity {
     if (this._security) return this._security;
-    throw new Error("Security module not assigned yet");
+    throw new Error('Security module not assigned yet');
   }
 
   registerConfigManager(configManager: IConfigManager) {
-    if (this._configManager) throw new Error("Cannot register a second config manager");
+    if (this._configManager) throw new Error('Cannot register a second config manager');
     this._configManager = configManager;
   }
 
   getConfigManager(): IConfigManager {
     if (this._configManager) return this._configManager;
-    throw new Error("Config manager not assigned yet");
+    throw new Error('Config manager not assigned yet');
   }
 
   static getInstance(app: Application, name: string) {
-    if (!this._instance && !app) throw new Error("No settings provided to initialize");
+    if (!this._instance && !app) throw new Error('No settings provided to initialize');
     if (!this._instance) {
-      this._instance = new ConduitSDK(app,name);
+      this._instance = new ConduitSDK(app, name);
     }
     return this._instance;
   }
@@ -104,17 +104,18 @@ export class ConduitSDK {
       if (configSchema.hasOwnProperty(key)) {
         if (isPlainObject(configInput[key])) {
           return this.validateConfig(configInput[key], configSchema[key]);
-        } else if (configSchema[key].hasOwnProperty("format")) {
+        } else if (configSchema[key].hasOwnProperty('format')) {
           const format = configSchema[key].format.toLowerCase();
-          if (typeof configInput[key] === format || format === "*") return true;
-          if (format === "int" && validator.isInt(configInput[key])) return true;
-          if (format === "port" && validator.isPort(configInput[key])) return true;
-          if (format === "url" && validator.isURL(configInput[key])) return true;
-          if (format === "email" && validator.isEmail(configInput[key])) return true;
-          if (format === "ipaddress" && validator.isIP(configInput[key])) return true;
-          if (format === "timestamp" && new Date(configInput[key]).getTime() > 0) return true;
-          if (format === "nat" && isNaturalNumber(configInput[key])) return true;
-          if (format === "duration" && isNaturalNumber(configInput[key])) return true;
+          if (typeof configInput[key] === format || format === '*') return true;
+          if (format === 'int' && validator.isInt(configInput[key])) return true;
+          if (format === 'port' && validator.isPort(configInput[key])) return true;
+          if (format === 'url' && validator.isURL(configInput[key])) return true;
+          if (format === 'email' && validator.isEmail(configInput[key])) return true;
+          if (format === 'ipaddress' && validator.isIP(configInput[key])) return true;
+          if (format === 'timestamp' && new Date(configInput[key]).getTime() > 0)
+            return true;
+          if (format === 'nat' && isNaturalNumber(configInput[key])) return true;
+          if (format === 'duration' && isNaturalNumber(configInput[key])) return true;
         }
       }
       return false;
@@ -122,8 +123,8 @@ export class ConduitSDK {
   }
 }
 
-export * from "./models";
-export * from "./interfaces";
-export * from "./modules";
-export * from "./helpers";
-export * from "./constants";
+export * from './models';
+export * from './interfaces';
+export * from './modules';
+export * from './helpers';
+export * from './constants';

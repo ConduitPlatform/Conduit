@@ -1,129 +1,168 @@
-import {isEmpty, isNil} from 'lodash';
-import {ISignTokenOptions} from '../../interfaces/ISignTokenOptions';
-import {AuthUtils} from '../../utils/auth';
+import { isEmpty, isNil } from 'lodash';
+import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import { AuthUtils } from '../../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from "grpc";
+import grpc from 'grpc';
 
 export class CommonHandlers {
-    private database: any;
+  private database: any;
 
-    constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-        this.initDbAndEmail(grpcSdk);
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.initDbAndEmail(grpcSdk);
+  }
+
+  private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
+    await grpcSdk.waitForExistence('database-provider');
+    this.database = grpcSdk.databaseProvider;
+  }
+
+  async renewAuth(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
+
+    const clientId = context.clientId;
+
+    const { refreshToken } = JSON.parse(call.request.params);
+    if (isNil(refreshToken)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Invalid parameters',
+      });
     }
 
-    private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-        await grpcSdk.waitForExistence('database-provider');
-        this.database = grpcSdk.databaseProvider;
+    let errorMessage = null;
+    const config = await this.grpcSdk.config
+      .get('authentication')
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    const oldRefreshToken = await this.database
+      .findOne('RefreshToken', {
+        token: refreshToken,
+        clientId,
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (isNil(oldRefreshToken)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Invalid parameters',
+      });
+    }
+    if (moment().isAfter(moment(oldRefreshToken.expiresOn))) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Token expired' });
     }
 
-    async renewAuth(call: any, callback: any) {
-        const context = JSON.parse(call.request.context);
+    // delete the old tokens before generating new ones
+    const accessTokenPromise = this.database.deleteMany('AccessToken', {
+      userId: oldRefreshToken.userId,
+      clientId,
+    });
+    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
+      userId: oldRefreshToken.userId,
+      clientId,
+    });
 
-        const clientId = context.clientId;
+    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
+      (e: any) => (errorMessage = e.message)
+    );
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-        const {refreshToken} = JSON.parse(call.request.params);
-        if (isNil(refreshToken)) {
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
-        }
+    const signTokenOptions: ISignTokenOptions = {
+      secret: config.jwtSecret,
+      expiresIn: config.tokenInvalidationPeriod,
+    };
 
-        let errorMessage = null;
-        const config = await this.grpcSdk.config.get('authentication').catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    const newAccessToken = await this.database
+      .create('AccessToken', {
+        userId: oldRefreshToken.userId,
+        clientId,
+        token: AuthUtils.signToken({ id: oldRefreshToken.userId }, signTokenOptions),
+        expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-        const oldRefreshToken = await this.database.findOne('RefreshToken', {
-            token: refreshToken,
-            clientId
-        }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        if (isNil(oldRefreshToken)) {
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Invalid parameters'});
-        }
-        if(moment().isAfter(moment(oldRefreshToken.expiresOn))){
-            return callback({code: grpc.status.INVALID_ARGUMENT, message: 'Token expired'});
-        }
+    const newRefreshToken = await this.database
+      .create('RefreshToken', {
+        userId: oldRefreshToken.userId,
+        clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
+          .toDate(),
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-        // delete the old tokens before generating new ones
-        const accessTokenPromise = this.database.deleteMany('AccessToken', {
-            userId: oldRefreshToken.userId,
-            clientId
-        });
-        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
-            userId: oldRefreshToken.userId,
-            clientId
-        });
+    return callback(null, {
+      result: JSON.stringify({
+        accessToken: newAccessToken.token,
+        refreshToken: newRefreshToken.token,
+      }),
+    });
+  }
 
-        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+  async logOut(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
 
-        const signTokenOptions: ISignTokenOptions = {
-            secret: config.jwtSecret,
-            expiresIn: config.tokenInvalidationPeriod
-        };
+    const clientId = context.clientId;
+    const user = context.user;
 
-        const newAccessToken = await this.database.create('AccessToken', {
-            userId: oldRefreshToken.userId,
-            clientId,
-            token: AuthUtils.signToken({id: oldRefreshToken.userId}, signTokenOptions),
-            expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate()
-        }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    const accessTokenPromise = this.database.deleteMany('AccessToken', {
+      userId: user._id,
+      clientId,
+    });
+    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
+      userId: user._id,
+      clientId,
+    });
 
-        const newRefreshToken = await this.database.create('RefreshToken', {
-            userId: oldRefreshToken.userId,
-            clientId,
-            token: AuthUtils.randomToken(),
-            expiresOn: moment().add(config.refreshTokenInvalidationPeriod, 'milliseconds').toDate()
-        }).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+    let errorMessage = null;
+    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
+      (e: any) => (errorMessage = e.message)
+    );
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-        return callback(null, {
-            result: JSON.stringify({
-                accessToken: newAccessToken.token,
-                refreshToken: newRefreshToken.token
-            })
-        });
-    }
+    return callback(null, { result: JSON.stringify({ message: 'Logged out' }) });
+  }
 
-    async logOut(call: any, callback: any) {
-        const context = JSON.parse(call.request.context);
+  async getUser(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
 
-        const clientId = context.clientId;
-        const user = context.user;
+    const user = context.user;
 
-        const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id, clientId});
-        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id, clientId});
+    return callback(null, { result: JSON.stringify(user) });
+  }
 
-        let errorMessage = null;
-        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
+  async deleteUser(call: any, callback: any) {
+    const context = JSON.parse(call.request.context);
 
-        return callback(null, {result: JSON.stringify({message: 'Logged out'})});
-    }
+    const user = context.user;
+    let errorMessage = null;
+    await this.database
+      .deleteOne('User', { _id: user._id })
+      .catch((e: any) => (errorMessage = e.message));
 
-    async getUser(call: any, callback: any) {
-        const context = JSON.parse(call.request.context);
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    callback(null, { result: 'done' });
 
-        const user = context.user;
-
-        return callback(null, {result: JSON.stringify(user)});
-    }
-
-    async deleteUser(call: any, callback: any) {
-        const context = JSON.parse(call.request.context);
-
-        const user = context.user;
-        let errorMessage = null;
-        await this.database.deleteOne("User", {_id: user._id}).catch((e: any) => errorMessage = e.message);
-
-        if (!isNil(errorMessage)) return callback({code: grpc.status.INTERNAL, message: errorMessage});
-        callback(null, {result: "done"});
-
-        const accessTokenPromise = this.database.deleteMany('AccessToken', {userId: user._id});
-        const refreshTokenPromise = this.database.deleteMany('RefreshToken', {userId: user._id});
-        await Promise.all([accessTokenPromise, refreshTokenPromise]).catch((e: any) => errorMessage = e.message);
-        if (!isNil(errorMessage)) console.log("Failed to delete all access tokens");
-
-    }
-
+    const accessTokenPromise = this.database.deleteMany('AccessToken', {
+      userId: user._id,
+    });
+    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
+      userId: user._id,
+    });
+    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
+      (e: any) => (errorMessage = e.message)
+    );
+    if (!isNil(errorMessage)) console.log('Failed to delete all access tokens');
+  }
 }

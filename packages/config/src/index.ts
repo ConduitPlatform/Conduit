@@ -1,13 +1,13 @@
-import * as grpc from "grpc";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { isNil } from "lodash";
-import { DatabaseConfigUtility } from "./utils/config";
-import AppConfigSchema from "./utils/config/schema/config";
-import { ConduitSDK, IConfigManager } from "@quintessential-sft/conduit-sdk";
-import { EventEmitter } from "events";
-import { AdminHandlers } from "./admin/admin";
-import { NextFunction, Request, Response } from "express";
-import * as request from "request-promise";
+import * as grpc from 'grpc';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { isNil } from 'lodash';
+import { DatabaseConfigUtility } from './utils/config';
+import AppConfigSchema from './utils/config/schema/config';
+import { ConduitSDK, IConfigManager } from '@quintessential-sft/conduit-sdk';
+import { EventEmitter } from 'events';
+import { AdminHandlers } from './admin/admin';
+import { NextFunction, Request, Response } from 'express';
+import * as request from 'request-promise';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -54,7 +54,7 @@ export default class ConfigManager implements IConfigManager {
     const self = this;
     this.sdk
       .getState()
-      .getKey("config")
+      .getKey('config')
       .then((r) => {
         if (!r || r.length === 0) return;
         let state = JSON.parse(r);
@@ -83,14 +83,18 @@ export default class ConfigManager implements IConfigManager {
         }
       })
       .catch((err) => {
-        console.log("Failed to recover state");
+        console.log('Failed to recover state');
       });
 
-    this.sdk.getBus().subscribe("config", (message: string) => {
+    this.sdk.getBus().subscribe('config', (message: string) => {
       let messageParsed = JSON.parse(message);
-      if (messageParsed.type === "module-register") {
-        self._registerModule(messageParsed.name, messageParsed.url, messageParsed.instance);
-      } else if (messageParsed.type === "module-health") {
+      if (messageParsed.type === 'module-register') {
+        self._registerModule(
+          messageParsed.name,
+          messageParsed.url,
+          messageParsed.instance
+        );
+      } else if (messageParsed.type === 'module-health') {
         self.updateModuleHealth(messageParsed.name, messageParsed.instance);
       }
     });
@@ -99,19 +103,19 @@ export default class ConfigManager implements IConfigManager {
   setState(state: any) {
     this.sdk
       .getState()
-      .setKey("config", JSON.stringify(state))
+      .setKey('config', JSON.stringify(state))
       .then((r) => {
-        console.log("Updated state");
+        console.log('Updated state');
       })
       .catch((err) => {
-        console.log("Failed to recover state");
+        console.log('Failed to recover state');
       });
   }
 
   updateState(name: string, url: string, instance: string) {
     this.sdk
       .getState()
-      .getKey("config")
+      .getKey('config')
       .then((r) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
@@ -120,19 +124,19 @@ export default class ConfigManager implements IConfigManager {
           instance,
           url,
         });
-        return this.sdk.getState().setKey("config", JSON.stringify(state));
+        return this.sdk.getState().setKey('config', JSON.stringify(state));
       })
       .then((r) => {
-        console.log("Updated state");
+        console.log('Updated state');
       })
       .catch((err) => {
-        console.log("Failed to recover state");
+        console.log('Failed to recover state');
       });
   }
 
   publishModuleData(type: string, name: string, instance: string, url?: string) {
     this.sdk.getBus().publish(
-      "config",
+      'config',
       JSON.stringify({
         type,
         name,
@@ -144,19 +148,21 @@ export default class ConfigManager implements IConfigManager {
 
   getServerConfig(call: any, callback: any) {
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      return this.grpcSdk.databaseProvider!.findOne("Config", {}).then(async (dbConfig: any) => {
-        if (isNil(dbConfig)) throw new Error("Config not found in the database");
-        callback(null, {
-          data: JSON.stringify({
-            url: dbConfig["moduleConfigs"]["core"].hostUrl,
-            env: dbConfig["moduleConfigs"]["core"].env,
-          }),
+      return this.grpcSdk
+        .databaseProvider!.findOne('Config', {})
+        .then(async (dbConfig: any) => {
+          if (isNil(dbConfig)) throw new Error('Config not found in the database');
+          callback(null, {
+            data: JSON.stringify({
+              url: dbConfig['moduleConfigs']['core'].hostUrl,
+              env: dbConfig['moduleConfigs']['core'].env,
+            }),
+          });
         });
-      });
     } else {
       callback({
         code: grpc.status.INTERNAL,
-        message: "Database provider not set",
+        message: 'Database provider not set',
       });
     }
   }
@@ -195,13 +201,16 @@ export default class ConfigManager implements IConfigManager {
 
   async get(name: string) {
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      return this.grpcSdk.databaseProvider!.findOne("Config", {}).then(async (dbConfig: any) => {
-        if (isNil(dbConfig)) throw new Error("Config not found in the database");
-        if (isNil(dbConfig["moduleConfigs"][name])) throw new Error(`Config for module "${name} not set`);
-        return dbConfig["moduleConfigs"][name];
-      });
+      return this.grpcSdk
+        .databaseProvider!.findOne('Config', {})
+        .then(async (dbConfig: any) => {
+          if (isNil(dbConfig)) throw new Error('Config not found in the database');
+          if (isNil(dbConfig['moduleConfigs'][name]))
+            throw new Error(`Config for module "${name} not set`);
+          return dbConfig['moduleConfigs'][name];
+        });
     } else {
-      throw new Error("Database provider not set");
+      throw new Error('Database provider not set');
     }
   }
 
@@ -213,22 +222,26 @@ export default class ConfigManager implements IConfigManager {
     const newConfig = JSON.parse(call.request.config);
     if (!isNil(this.grpcSdk.databaseProvider)) {
       this.grpcSdk
-        .databaseProvider!.findOne("Config", {})
+        .databaseProvider!.findOne('Config', {})
         .then((dbConfig) => {
-          if (isNil(dbConfig)) throw new Error("Config not found in the database");
-          if (!dbConfig["moduleConfigs"]) {
-            dbConfig["moduleConfigs"] = {};
+          if (isNil(dbConfig)) throw new Error('Config not found in the database');
+          if (!dbConfig['moduleConfigs']) {
+            dbConfig['moduleConfigs'] = {};
           }
-          let modName = "moduleConfigs." + call.request.moduleName;
+          let modName = 'moduleConfigs.' + call.request.moduleName;
           return this.grpcSdk
-            .databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, { $set: { [modName]: newConfig } })
+            .databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
+              $set: { [modName]: newConfig },
+            })
             .then((updatedConfig: any) => {
               delete updatedConfig._id;
               delete updatedConfig.createdAt;
               delete updatedConfig.updatedAt;
               delete updatedConfig.__v;
               return callback(null, {
-                result: JSON.stringify(updatedConfig["moduleConfigs"][call.request.moduleName]),
+                result: JSON.stringify(
+                  updatedConfig['moduleConfigs'][call.request.moduleName]
+                ),
               });
             });
         })
@@ -241,24 +254,24 @@ export default class ConfigManager implements IConfigManager {
     } else {
       callback({
         code: grpc.status.FAILED_PRECONDITION,
-        message: "Database provider not set",
+        message: 'Database provider not set',
       });
     }
   }
 
   async addFieldsToModule(name: string, config: any) {
     return this.grpcSdk
-      .databaseProvider!.findOne("Config", {})
+      .databaseProvider!.findOne('Config', {})
       .then((dbConfig) => {
-        if (isNil(dbConfig)) throw new Error("Config not found in the database");
-        if (!dbConfig["moduleConfigs"]) {
-          dbConfig["moduleConfigs"] = {};
+        if (isNil(dbConfig)) throw new Error('Config not found in the database');
+        if (!dbConfig['moduleConfigs']) {
+          dbConfig['moduleConfigs'] = {};
         }
-        let modName = "moduleConfigs." + name;
+        let modName = 'moduleConfigs.' + name;
         // keep only new fields
         let existing = dbConfig.moduleConfigs[name];
         config = { ...config, ...existing };
-        return this.grpcSdk.databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
+        return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
           $set: { [modName]: config },
         });
       })
@@ -267,7 +280,7 @@ export default class ConfigManager implements IConfigManager {
         delete updatedConfig.createdAt;
         delete updatedConfig.updatedAt;
         delete updatedConfig.__v;
-        return updatedConfig["moduleConfigs"][name];
+        return updatedConfig['moduleConfigs'][name];
       });
   }
 
@@ -287,21 +300,21 @@ export default class ConfigManager implements IConfigManager {
     } else {
       callback({
         code: grpc.status.FAILED_PRECONDITION,
-        message: "Database provider not set",
+        message: 'Database provider not set',
       });
     }
   }
 
   async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
-    await this.grpcSdk.waitForExistence("database-provider");
-    this.grpcSdk.databaseProvider!.findOne("Config", {}).then((dbConfig) => {
-      if (isNil(dbConfig)) throw new Error("Config not found in the database");
-      if (!dbConfig["moduleConfigs"]) {
-        dbConfig["moduleConfigs"] = {};
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.grpcSdk.databaseProvider!.findOne('Config', {}).then((dbConfig) => {
+      if (isNil(dbConfig)) throw new Error('Config not found in the database');
+      if (!dbConfig['moduleConfigs']) {
+        dbConfig['moduleConfigs'] = {};
       }
-      let modName = "moduleConfigs." + name;
+      let modName = 'moduleConfigs.' + name;
       return this.grpcSdk
-        .databaseProvider!.findByIdAndUpdate("Config", dbConfig._id, {
+        .databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
           $set: { [modName]: newModulesConfigSchemaFields },
         })
         .then((updatedConfig: any) => {
@@ -309,7 +322,7 @@ export default class ConfigManager implements IConfigManager {
           delete updatedConfig.createdAt;
           delete updatedConfig.updatedAt;
           delete updatedConfig.__v;
-          return updatedConfig["moduleConfigs"][name];
+          return updatedConfig['moduleConfigs'][name];
         });
     });
   }
@@ -320,14 +333,14 @@ export default class ConfigManager implements IConfigManager {
     } else {
       callback({
         code: grpc.status.NOT_FOUND,
-        message: "Module is missing",
+        message: 'Module is missing',
       });
     }
   }
 
   moduleHealthProbe(call: any, callback: any) {
     this.updateModuleHealth(call.request.moduleName, call.getPeer());
-    this.publishModuleData("module-health", call.request.moduleName, call.getPeer());
+    this.publishModuleData('module-health', call.request.moduleName, call.getPeer());
     callback(null, null);
   }
 
@@ -335,7 +348,9 @@ export default class ConfigManager implements IConfigManager {
     let removedCount = 0;
     Object.keys(this.moduleHealth).forEach((r) => {
       let module = this.moduleHealth[r];
-      let unhealthyInstances = Object.keys(module).filter((instance) => module[instance] + 5000 < Date.now());
+      let unhealthyInstances = Object.keys(module).filter(
+        (instance) => module[instance] + 5000 < Date.now()
+      );
       if (unhealthyInstances && unhealthyInstances.length > 0) {
         removedCount += unhealthyInstances.length;
         unhealthyInstances.forEach((instance) => {
@@ -344,12 +359,14 @@ export default class ConfigManager implements IConfigManager {
       }
     });
     if (removedCount > 0) {
-      let unhealthyModules = Object.keys(this.moduleHealth).filter((module) => Object.keys(module).length === 0);
+      let unhealthyModules = Object.keys(this.moduleHealth).filter(
+        (module) => Object.keys(module).length === 0
+      );
       if (unhealthyModules && unhealthyModules.length > 0) {
         unhealthyModules.forEach((r) => {
           delete this.moduleHealth[r];
         });
-        this.moduleRegister.emit("module-registered");
+        this.moduleRegister.emit('module-registered');
       }
     }
   }
@@ -358,7 +375,7 @@ export default class ConfigManager implements IConfigManager {
     if (!this.moduleHealth[moduleName]) {
       this.moduleHealth[moduleName] = {};
     }
-    let instanceName = moduleName + "-" + moduleAddress;
+    let instanceName = moduleName + '-' + moduleAddress;
     let moduleInstances = this.moduleHealth[moduleName];
     moduleInstances[instanceName] = Date.now();
   }
@@ -376,14 +393,14 @@ export default class ConfigManager implements IConfigManager {
     } else {
       callback({
         code: grpc.status.NOT_FOUND,
-        message: "Modules not available",
+        message: 'Modules not available',
       });
     }
   }
 
   watchModules(call: any, callback: any) {
     const self = this;
-    this.moduleRegister.on("module-registered", () => {
+    this.moduleRegister.on('module-registered', () => {
       let modules: any[] = [];
       self.registeredModules.forEach((value: string, key: string) => {
         modules.push({
@@ -397,92 +414,120 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModule(call: any, callback: any) {
-    await this._registerModule(call.request.moduleName, call.request.url, call.getPeer(), true);
+    await this._registerModule(
+      call.request.moduleName,
+      call.request.url,
+      call.getPeer(),
+      true
+    );
     this.updateState(call.request.moduleName, call.request.url, call.getPeer());
-    this.publishModuleData("mpdule-register", call.request.moduleName, call.getPeer(), call.request.url);
+    this.publishModuleData(
+      'mpdule-register',
+      call.request.moduleName,
+      call.getPeer(),
+      call.request.url
+    );
     callback(null, { result: true });
   }
 
-  private async _registerModule(moduleName: string, moduleUrl: string, instancePeer: string, fromGrpc = false) {
+  private async _registerModule(
+    moduleName: string,
+    moduleUrl: string,
+    instancePeer: string,
+    fromGrpc = false
+  ) {
     let dbInit = false;
     if (!fromGrpc) {
       let failed: any;
-      let success = await request.get("http://" + moduleUrl).catch((err) => {
+      let success = await request.get('http://' + moduleUrl).catch((err) => {
         failed = err;
       });
-      if (failed && failed.message !== "Error: Parse Error") {
-        throw new Error("Failed to register dead module");
+      if (failed && failed.message !== 'Error: Parse Error') {
+        throw new Error('Failed to register dead module');
       }
     }
-    if (moduleName === "database-provider" && this.registeredModules.has("database-provider")) {
+    if (
+      moduleName === 'database-provider' &&
+      this.registeredModules.has('database-provider')
+    ) {
       dbInit = true;
     }
     this.registeredModules.set(moduleName, moduleUrl);
-    if (moduleName === "database-provider" && !dbInit) {
+    if (moduleName === 'database-provider' && !dbInit) {
       this.databaseCallback();
     }
     this.updateModuleHealth(moduleName, instancePeer);
-    this.moduleRegister.emit("module-registered");
+    this.moduleRegister.emit('module-registered');
   }
 
-  getModuleUrlByInstanceGrpc(call:any, callback:any){
-      let instance = call.request.instancePeer;
-      let result = this.getModuleUrlByInstance(instance);
-      if(result){
-          callback(null, {moduleUrl:result});
-      }else{
-          callback({
-              code: grpc.status.NOT_FOUND,
-              message: "Module not found",
-          });
-      }
-    }
-
-  getModuleUrlByInstance(instancePeer: string): string | undefined{
-    let found = null;
-      Object.keys(this.moduleHealth)
-          .forEach(r=>{
-            Object.keys(this.moduleHealth[r]).forEach(i=>{
-              if(i.indexOf(instancePeer)!==-1){
-                found = r;
-                return;
-              }
-            })
-
+  getModuleUrlByInstanceGrpc(call: any, callback: any) {
+    let instance = call.request.instancePeer;
+    let result = this.getModuleUrlByInstance(instance);
+    if (result) {
+      callback(null, { moduleUrl: result });
+    } else {
+      callback({
+        code: grpc.status.NOT_FOUND,
+        message: 'Module not found',
       });
-      if(found){
-          return this.registeredModules.get(found);
-      }else{
-          return undefined;
-      }
+    }
+  }
+
+  getModuleUrlByInstance(instancePeer: string): string | undefined {
+    let found = null;
+    Object.keys(this.moduleHealth).forEach((r) => {
+      Object.keys(this.moduleHealth[r]).forEach((i) => {
+        if (i.indexOf(instancePeer) !== -1) {
+          found = r;
+          return;
+        }
+      });
+    });
+    if (found) {
+      return this.registeredModules.get(found);
+    } else {
+      return undefined;
+    }
   }
 
   private registerAdminRoutes() {
     const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
     const adminModule = this.sdk.getAdmin();
 
-    adminModule.registerRoute("GET", "/config/modules", (req: Request, res: Response, next: NextFunction) => {
-      if (isNil((req as any).conduit)) {
-        (req as any).conduit = {};
+    adminModule.registerRoute(
+      'GET',
+      '/config/modules',
+      (req: Request, res: Response, next: NextFunction) => {
+        if (isNil((req as any).conduit)) {
+          (req as any).conduit = {};
+        }
+        (req as any).conduit.registeredModules = this.registeredModules;
+        return adminHandlers.getModules(req, res);
       }
-      (req as any).conduit.registeredModules = this.registeredModules;
-      return adminHandlers.getModules(req, res);
-    });
+    );
 
-    adminModule.registerRoute("GET", "/config/:module?", (req: Request, res: Response, next: NextFunction) => {
-      if (isNil((req as any).conduit)) {
-        (req as any).conduit = {};
+    adminModule.registerRoute(
+      'GET',
+      '/config/:module?',
+      (req: Request, res: Response, next: NextFunction) => {
+        if (isNil((req as any).conduit)) {
+          (req as any).conduit = {};
+        }
+        (req as any).conduit.registeredModules = this.registeredModules;
+        return adminHandlers.getConfig(req, res);
       }
-      (req as any).conduit.registeredModules = this.registeredModules;
-      return adminHandlers.getConfig(req, res);
-    });
+    );
 
-    adminModule.registerRoute("PUT", "/config/:module?", (req: Request, res: Response, next: NextFunction) => {
-      if (isNil((req as any).conduit)) {
-        (req as any).conduit = {};
+    adminModule.registerRoute(
+      'PUT',
+      '/config/:module?',
+      (req: Request, res: Response, next: NextFunction) => {
+        if (isNil((req as any).conduit)) {
+          (req as any).conduit = {};
+        }
+        (req as any).conduit.registeredModules = this.registeredModules;
+        return adminHandlers.setConfig(req, res);
       }
-      (req as any).conduit.registeredModules = this.registeredModules;
-      return adminHandlers.setConfig(req, res);
-    });
+    );
   }
 }
