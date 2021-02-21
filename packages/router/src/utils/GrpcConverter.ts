@@ -9,7 +9,10 @@ import {
 
 let protoLoader = require('@grpc/proto-loader');
 
-export function grpcToConduitRoute(request: any): (ConduitRoute | ConduitMiddleware)[] {
+export function grpcToConduitRoute(
+  request: any,
+  moduleName?: string
+): (ConduitRoute | ConduitMiddleware)[] {
   let finalRoutes: (ConduitRoute | ConduitMiddleware)[] = [];
   let protofile = request.protoFile;
   let routes: [{ options: any; returns?: any; grpcFunction: string }] = request.routes;
@@ -66,6 +69,23 @@ export function grpcToConduitRoute(request: any): (ConduitRoute | ConduitMiddlew
         } catch (e) {}
       }
     }
+    if (moduleName) {
+      if (
+        options.path.startsWith(`/${moduleName}`) ||
+        options.path.startsWith(`/hook/${moduleName}`)
+      ) {
+        return;
+      }
+      if (
+        options.path.startsWith(`/hook`) &&
+        !options.path.startsWith(`/hook/${moduleName}`)
+      ) {
+        options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
+      } else {
+        options.path = `/${moduleName!.toString()}${options.path.toString()}`;
+      }
+    }
+
     if (returns) {
       finalRoutes.push(new ConduitRoute(options, returns, handler));
     } else {

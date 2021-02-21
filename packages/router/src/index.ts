@@ -47,7 +47,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     sdk
       .getState()
       .getKey('router')
-      .then((r) => {
+      .then((r: any) => {
         if (!r || r.length === 0) return;
         let state = JSON.parse(r);
         if (state.routes) {
@@ -72,7 +72,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           });
         }
       })
-      .catch((err) => {
+      .catch(() => {
         console.log('Failed to recover state');
       });
 
@@ -104,7 +104,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     sdk
       .getState()
       .getKey('router')
-      .then((r) => {
+      .then((r: any) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         state.routes.push({
@@ -114,11 +114,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
         });
         return sdk.getState().setKey('router', JSON.stringify(state));
       })
-      .then((r) => {
+      .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
         console.log('Updated state');
       })
-      .catch((err) => {
+      .catch(() => {
         console.log('Failed to update state');
       });
   }
@@ -138,6 +138,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   async registerGrpcRoute(call: any, callback: any) {
     try {
       let url = call.request.routerUrl;
+      let moduleName: string | undefined = undefined;
       if (!url) {
         let result = ((this._app as any).conduit! as ConduitSDK)
           .getConfigManager()!
@@ -149,26 +150,15 @@ export class ConduitDefaultRouter implements IConduitRouter {
           });
         }
         call.request.routerUrl = result.url;
+        moduleName = result!.moduleName;
         // do not enable yet, it requires further consideration
-        call.request.routes.forEach((r: any) => {
-          if (
-            r.path.startsWith(`/${result!.moduleName}`) ||
-            r.path.startsWith(`/hook/${result!.moduleName}`)
-          ) {
-            return;
-          }
-          if (
-            r.path.startsWith(`/hook`) &&
-            !r.path.startsWith(`/hook/${result!.moduleName}`)
-          ) {
-            r.options.path.replace('/hook', `/hook/${result!.moduleName}`);
-          } else {
-            r.options.path = `/${result!.moduleName}${r.options.path}`;
-          }
-        });
       }
 
-      let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);
+      let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(
+        call.request,
+        moduleName
+      );
+
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
           this.registerRouteMiddleware(r);
