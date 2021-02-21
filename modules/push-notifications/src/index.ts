@@ -20,11 +20,4 @@ grpcSdk.config
   .catch((err: Error) => {
     console.log('Failed to register admin routes for push-notifications module!');
     console.error(err);
-  })
-  .then(() => {
-    grpcSdk.router.register(notifications.routes);
-  })
-  .catch((err: Error) => {
-    console.log('Failed to register routes for push notifications module');
-    console.log(err);
   });

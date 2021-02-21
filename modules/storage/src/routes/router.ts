@@ -10,28 +10,27 @@ import {
   GrpcServer,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import path from 'path';
 
 export class FileRoutes {
   private readonly fileHandlers: FileHandlers;
 
   constructor(
-    server: GrpcServer,
+    readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly storageProvider: IStorageProvider
   ) {
     this.fileHandlers = new FileHandlers(grpcSdk, storageProvider);
-
-    server
-      .addService(path.resolve(__dirname, './router.proto'), 'storage.router.Router', {
+    this.grpcSdk.router
+      .registerRouter(server, this.registeredRoutes, {
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
       })
-      .catch(() => {
-        console.log('Failed to register routes');
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
       });
   }
 

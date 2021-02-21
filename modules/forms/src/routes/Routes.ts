@@ -2,20 +2,11 @@ import grpc from 'grpc';
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import axios from 'axios';
-import path from 'path';
 
 export class FormRoutes {
   private forms: any[] = [];
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    server
-      .addService(path.resolve(__dirname, './router.proto'), 'forms.router.Router', {
-        submitForm: this.submitForm.bind(this),
-      })
-      .catch(() => {
-        console.log('Failed to register routes');
-      });
-  }
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async submitForm(call: any, callback: any) {
     const formName = call.request.path.split('/')[2];
@@ -123,9 +114,13 @@ export class FormRoutes {
   }
 
   private _refreshRoutes() {
-    this.grpcSdk.router.register(this.forms).catch((err: Error) => {
-      console.log('Failed to register routes for CMS module!');
-      console.error(err);
-    });
+    this.grpcSdk.router
+      .registerRouter(this.server, this.forms, {
+        submitForm: this.submitForm.bind(this),
+      })
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
+      });
   }
 }

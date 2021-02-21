@@ -11,16 +11,7 @@ if (process.env.REGISTER_NAME === 'true') {
   url = 'storage:' + url.split(':')[1];
 }
 
-grpcSdk.config
-  .registerModule('storage', storage.url)
-  .catch((err) => {
-    console.error(err);
-    process.exit(-1);
-  })
-  .then(() => {
-    grpcSdk.router.register(storage.routes);
-  })
-  .catch((err: Error) => {
-    console.log('Failed to register routes for storage module!');
-    console.error(err);
-  });
+grpcSdk.config.registerModule('storage', storage.url).catch((err) => {
+  console.error(err);
+  process.exit(-1);
+});

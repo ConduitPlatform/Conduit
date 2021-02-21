@@ -10,23 +10,19 @@ import ConduitGrpcSdk, {
   GrpcServer,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import path from 'path';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new NotificationTokensHandler(grpcSdk);
-    server
-      .addService(
-        path.resolve(__dirname, './router.proto'),
-        'pushnotifications.router.Router',
-        {
-          setNotificationToken: this.handlers.setNotificationToken.bind(this.handlers),
-        }
-      )
-      .catch(() => {
-        console.log('Failed to register routes');
+    this.grpcSdk.router
+      .registerRouter(server, this.registeredRoutes, {
+        setNotificationToken: this.handlers.setNotificationToken.bind(this.handlers),
+      })
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
       });
   }
 

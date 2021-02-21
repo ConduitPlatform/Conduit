@@ -20,7 +20,6 @@ import { TwitchHandlers } from '../handlers/auth/twitch';
 import { isNil } from 'lodash';
 import { UserSchema } from '../models';
 import moment from 'moment';
-import path from 'path';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -31,7 +30,7 @@ export class AuthenticationRoutes {
   private readonly kakaoHandlers: KakaoHandlers;
   private readonly twitchHandlers: TwitchHandlers;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
     this.googleHandlers = new GoogleHandlers(grpcSdk);
@@ -39,11 +38,12 @@ export class AuthenticationRoutes {
     this.kakaoHandlers = new KakaoHandlers(grpcSdk);
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
+  }
 
-    server.addService(
-      path.resolve(__dirname, path.resolve(__dirname + '/router.proto')),
-      'authentication.router.Router',
-      {
+  async registerRoutes() {
+    let activeRoutes = await this.getRegisteredRoutes();
+    this.grpcSdk.router
+      .registerRouter(this.server, activeRoutes, {
         register: this.localHandlers.register.bind(this.localHandlers),
         authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
@@ -65,16 +65,11 @@ export class AuthenticationRoutes {
         getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
         deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
         authMiddleware: this.middleware.bind(this),
-      }
-    );
-  }
-
-  async registerRoutes() {
-    let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes).catch((err: Error) => {
-      console.log('Failed to register routes for authentication module');
-      console.log(err);
-    });
+      })
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
+      });
   }
 
   async getRegisteredRoutes(): Promise<any[]> {

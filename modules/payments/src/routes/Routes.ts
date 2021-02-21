@@ -11,14 +11,13 @@ import ConduitGrpcSdk, {
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 import { IamportHandlers } from '../handlers/iamport';
-import path from 'path';
 
 export class PaymentsRoutes {
   private database: any;
   private readonly stripeHandlers: StripeHandlers;
   private readonly iamportHandlers: IamportHandlers;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.stripeHandlers = new StripeHandlers(grpcSdk);
     this.iamportHandlers = new IamportHandlers(grpcSdk);
     const self = this;
@@ -26,43 +25,6 @@ export class PaymentsRoutes {
     grpcSdk.waitForExistence('database-provider').then(() => {
       self.database = self.grpcSdk.databaseProvider;
     });
-
-    server
-      .addService(path.resolve(__dirname, './router.proto'), 'payments.router.Router', {
-        getProducts: this.getProducts.bind(this),
-        getSubscriptions: this.getSubscriptions.bind(this),
-        createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
-        createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(
-          this.stripeHandlers
-        ),
-        cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
-        refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
-        getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(
-          this.stripeHandlers
-        ),
-        completeStripePayment: this.stripeHandlers.completePayment.bind(
-          this.stripeHandlers
-        ),
-        createIamportPayment: this.createIamportPayment.bind(this),
-        completeIamportPayment: this.completeIamportPayment.bind(this),
-        addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
-        validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
-        subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(
-          this.iamportHandlers
-        ),
-        cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(
-          this.iamportHandlers
-        ),
-        iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(
-          this.iamportHandlers
-        ),
-        getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(
-          this.iamportHandlers
-        ),
-      })
-      .catch(() => {
-        console.log('Failed to register routes');
-      });
   }
 
   async getStripe(): Promise<StripeHandlers | null> {
@@ -182,10 +144,44 @@ export class PaymentsRoutes {
 
   async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes).catch((err: Error) => {
-      console.log('Failed to register routes for payments module');
-      console.log(err);
-    });
+
+    this.grpcSdk.router
+      .registerRouter(this.server, activeRoutes, {
+        getProducts: this.getProducts.bind(this),
+        getSubscriptions: this.getSubscriptions.bind(this),
+        createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
+        createStripePaymentWithSavedCard: this.stripeHandlers.createPaymentWithSavedCard.bind(
+          this.stripeHandlers
+        ),
+        cancelStripePayment: this.stripeHandlers.cancelPayment.bind(this.stripeHandlers),
+        refundStripePayment: this.stripeHandlers.refundPayment.bind(this.stripeHandlers),
+        getStripePaymentMethods: this.stripeHandlers.getPaymentMethods.bind(
+          this.stripeHandlers
+        ),
+        completeStripePayment: this.stripeHandlers.completePayment.bind(
+          this.stripeHandlers
+        ),
+        createIamportPayment: this.createIamportPayment.bind(this),
+        completeIamportPayment: this.completeIamportPayment.bind(this),
+        addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
+        validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
+        subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(
+          this.iamportHandlers
+        ),
+        cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(
+          this.iamportHandlers
+        ),
+        iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(
+          this.iamportHandlers
+        ),
+        getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(
+          this.iamportHandlers
+        ),
+      })
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
+      });
   }
 
   async getRegisteredRoutes(): Promise<any[]> {
