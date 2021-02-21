@@ -55,9 +55,14 @@ export class SwaggerGenerator {
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
     let method = this._extractMethod(route.input.action);
-
+    let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
+    serviceName = serviceName.substr(0, serviceName.indexOf('/'));
+    if (serviceName.trim() === '') {
+      serviceName = 'core';
+    }
     let routeDoc: any = {
       summary: route.input.description,
+      tags: [serviceName],
       parameters: [],
       responses: {},
       security: [
