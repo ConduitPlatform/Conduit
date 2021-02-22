@@ -7,6 +7,7 @@ all: ${IMAGE_DIRS}
 
 conduit:
 	docker build -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
+	docker push  quintessential.azurecr.io/conduit:${IMAGE_TAG}
 
 conduit-builder:
 	docker build -t conduit-base:latest -f ./Dockerfile ./
