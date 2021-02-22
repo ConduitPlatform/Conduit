@@ -18,7 +18,7 @@ message CreateFileRequest {
   string mimeType = 2;
   string data = 3;
   string folder = 4;
-  string isPublic = 5
+  bool isPublic = 5;
 }
 
 message UpdateFileRequest {
@@ -33,9 +33,12 @@ message FileResponse {
   string fileDocument = 1;
 }
 
+message Empty {
+}
+
 service Storage {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GetFile(GetFileRequest) returns (FileResponse);
-  rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
-  rpc CreateFile(CreateFileRequest) returns (FileResponse);
+  rpc UpdateFile(UpdateFileRequest) returns (Empty);
+  rpc CreateFile(CreateFileRequest) returns (Empty);
 }

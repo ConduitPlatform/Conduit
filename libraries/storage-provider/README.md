@@ -7,6 +7,12 @@ menu: Development
 # An storage provider library
 This library can be used with anything really.
 
+#STATUS
+- Azure: Tested - working
+- Google: Tested - not working
+- Local: Not tested
+
+
 # Local Storage (Test/Dev Usage only)
 Disclaimer: This functionality is not built for production usage nor will it.
 
@@ -21,4 +27,5 @@ Either a regular one or SAS connection string.
 
 Limitations:
 - Azure doesn't allow the client library to specify blob access. So making files public through this is not possible
+
 
