@@ -75,13 +75,18 @@ export class FileHandlers {
         name,
         mimeType,
         folder,
+        isPublic,
         url: publicUrl,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, null);
+    return callback(null, {
+      id: newFile._id,
+      name: newFile.name,
+      url: newFile.url,
+    });
   }
 
   async getFile(call: any, callback: any) {
@@ -94,32 +99,22 @@ export class FileHandlers {
     }
 
     let errorMessage = null;
-    const result = await this.database
+    const file = await this.database
       .findOne("File", { _id: id })
-      .then((found: any) => {
-        if (isNil(found)) {
-          throw new Error("File not found");
-        }
-        return {
-          file: this.storageProvider.folder(found.folder).get(found.name),
-          found,
-        };
-      })
-      .then((obj: any) => {
-        let data;
-        if (Buffer.isBuffer(obj.file)) {
-          data = obj.file.toString("base64");
-        } else {
-          data = Buffer.from(obj.file.toString()).toString("base64");
-        }
-
-        return { ...obj.found, data };
-      })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (isNil(file))
+      return callback({
+        code: grpc.status.NOT_FOUND,
+        message: "File not found",
+      });
 
-    return callback(null, { ...result });
+    return callback(null, {
+      id: file._id,
+      name: file.name,
+      url: file.url,
+    });
   }
 
   async getFileUrl(call: any, callback: any) {
@@ -137,6 +132,11 @@ export class FileHandlers {
       .then((found: any) => {
         if (isNil(found)) {
           throw new Error("File not found");
+        }
+        if (found.isPublic) {
+          return callback(null, {
+            redirect: found.url,
+          });
         }
         return callback(null, {
           redirect: this.storageProvider
@@ -175,13 +175,11 @@ export class FileHandlers {
       })
       .catch((e: any) => (errorMessage = e.message));
 
-    return callback(null, { result: JSON.stringify({ success: true }) });
+    return callback(null, { success: true });
   }
 
   async updateFile(call: any, callback: any) {
-    const { id, data, name, folder, mimeType } = JSON.parse(
-      call.request.params
-    );
+    const { id, data, name, folder, mimeType } = call.request;
     if (!isString(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -292,6 +290,10 @@ export class FileHandlers {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, { result: JSON.stringify(updatedFile) });
+    return callback(null, {
+      id: updatedFile._id,
+      name: updatedFile.name,
+      url: updatedFile.url,
+    });
   }
 }

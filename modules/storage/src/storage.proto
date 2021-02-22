@@ -30,8 +30,11 @@ message UpdateFileRequest {
 }
 
 message FileResponse {
-  string fileDocument = 1;
+  string id = 1;
+  string url = 2;
+  string name = 3;
 }
+
 
 message Empty {
 }
@@ -39,6 +42,6 @@ message Empty {
 service Storage {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GetFile(GetFileRequest) returns (FileResponse);
-  rpc UpdateFile(UpdateFileRequest) returns (Empty);
-  rpc CreateFile(CreateFileRequest) returns (Empty);
+  rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
+  rpc CreateFile(CreateFileRequest) returns (FileResponse);
 }
