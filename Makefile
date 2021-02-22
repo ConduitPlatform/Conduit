@@ -3,7 +3,7 @@ IMAGE_TAG = ${shell git describe --tags `git rev-list --tags --max-count=1` 2> /
 
 IMAGE_DIRS = $(wildcard libraries/* modules/*)
 
-all: ${IMAGE_DIRS}
+all: conduit ${IMAGE_DIRS}
 
 conduit:
 	docker build -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
@@ -15,8 +15,8 @@ conduit-builder:
 
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
-	docker build -t quintessential.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker push  quintessential.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+	docker build -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
+	docker push  quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG}
 
 modules/authentication: conduit-builder
 modules/cms: conduit-builder
