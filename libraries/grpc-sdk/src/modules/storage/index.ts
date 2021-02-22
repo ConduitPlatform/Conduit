@@ -83,7 +83,7 @@ export default class Storage implements ConduitModule {
           if (err || !res) {
             reject(err || "Something went wrong");
           } else {
-            resolve(...res);
+            resolve({ id: res.id, name: res.name, url: res.url });
           }
         }
       );

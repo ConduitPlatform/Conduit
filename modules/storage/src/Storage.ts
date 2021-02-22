@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
 import * as grpc from "grpc";
 import * as path from "path";
 import { FileHandlers } from "./handlers/file";
+import { FileRoutes } from "./routes/file";
 
 let protoLoader = require("@grpc/proto-loader");
 
@@ -20,7 +21,6 @@ export class StorageModule {
   private readonly _url: string;
   private _fileHandlers: FileHandlers;
   private grpcServer: any;
-  private _routes: any[];
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     var packageDefinition = protoLoader.loadSync(
@@ -55,6 +55,15 @@ export class StorageModule {
     );
     this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
     console.log("bound on:", this._url);
+    this.storageProvider = createStorageProvider("local", {} as any);
+    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+    let files = new FileRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this.storageProvider,
+      this._fileHandlers
+    );
+    this._routes = files.registeredRoutes;
     this.grpcServer.start();
     this.grpcSdk
       .waitForExistence("database-provider")
@@ -103,6 +112,8 @@ export class StorageModule {
       })
       .catch(console.log);
   }
+
+  private _routes: any[];
 
   get routes() {
     return this._routes;
@@ -181,29 +192,15 @@ export class StorageModule {
     const { provider, storagePath, google, azure } = storageConfig;
 
     if (!this.isRunning) {
-      this.storageProvider = createStorageProvider(provider, {
-        storagePath,
-        google,
-        azure,
-      });
-      this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-      // let files = new FileRoutes(
-      //   this.grpcServer,
-      //   this.grpcSdk,
-      //   this.storageProvider,
-      //   this._fileHandlers
-      // );
-      // this._routes = files.registeredRoutes;
       this.registerModels();
       this.isRunning = true;
-    } else {
-      this.storageProvider = createStorageProvider(provider, {
-        storagePath,
-        google,
-        azure,
-      });
-      this._fileHandlers.updateProvider(this.storageProvider);
     }
+    this.storageProvider = createStorageProvider(provider, {
+      storagePath,
+      google,
+      azure,
+    });
+    this._fileHandlers.updateProvider(this.storageProvider);
   }
 
   private registerModels(): any {
