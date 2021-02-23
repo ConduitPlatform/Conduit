@@ -17,6 +17,7 @@
     "convict": "^6.0.0",
     "deepdash": "^5.0.3",
     "grpc": "^1.24.2",
+    "@grpc/proto-loader": "^0.5.4",
     "lodash": "^4.17.15"
   },
   "directories": {

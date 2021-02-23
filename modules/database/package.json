@@ -18,6 +18,7 @@
     "deepdash": "^5.0.3",
     "deepdash-es": "^5.0.3",
     "grpc": "^1.24.2",
+    "@grpc/proto-loader": "^0.5.4",
     "lodash": "^4.17.15",
     "mongoose": "latest"
   },
