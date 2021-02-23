@@ -68,7 +68,9 @@ export class MongooseSchema implements SchemaAdapter {
       finalQuery = finalQuery.limit(limit!);
     }
     if (populate !== null) {
-      finalQuery = finalQuery.populate(populate!);
+      populate.forEach((r: any) => {
+        finalQuery = finalQuery.populate(r);
+      });
     }
     if (sort !== null) {
       finalQuery = finalQuery.sort(sort);
@@ -79,7 +81,13 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   findOne(query: any, select?: string, populate?: any): Promise<any> {
-    return this.model.findOne(query, select).populate(populate).lean().exec();
+    let finalQuery = this.model.findOne(query, select);
+    if (populate !== null) {
+      populate.forEach((r: any) => {
+        finalQuery = finalQuery.populate(r);
+      });
+    }
+    return finalQuery.lean().exec();
   }
 
   countDocuments(query: any) {
