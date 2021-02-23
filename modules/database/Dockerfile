@@ -8,7 +8,7 @@ RUN yarn install --production --pure-lockfile --non-interactive --cache-folder .
 
 RUN apk del .gyp
 
-WORKDIR /app/modules/database-provider
+WORKDIR /app/modules/database
 
 ENV CONDUIT_SERVER conduit_server
 
