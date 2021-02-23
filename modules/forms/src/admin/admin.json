@@ -1,22 +1,22 @@
 {
   "functions": [
     {
-      "path": "/forms/get",
+      "path": "/get",
       "method": "GET",
       "protoName": "getForms"
     },
     {
-      "path": "/forms/replies/:formId",
+      "path": "/replies/:formId",
       "method": "GET",
       "protoName": "getRepliesByFormId"
     },
     {
-      "path": "/forms/new",
+      "path": "/new",
       "method": "POST",
       "protoName": "createForm"
     },
     {
-      "path": "/forms/update/:formId",
+      "path": "/update/:formId",
       "method": "PUT",
       "protoName": "editFormById"
     }

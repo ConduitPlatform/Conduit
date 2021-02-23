@@ -4,7 +4,7 @@ import AppConfigSchema from './schema/config';
 import { isNil } from 'lodash';
 import { IAppConfig } from '@quintessential-sft/conduit-sdk';
 
-export class AppConfig implements IAppConfig{
+export class AppConfig implements IAppConfig {
   private static instance: AppConfig;
   private convictConfig: Config<any>;
   private completeConfigSchema: any;
@@ -33,7 +33,7 @@ export class AppConfig implements IAppConfig{
   }
 
   addModulesConfigSchema(moduleConfigSchema: any) {
-    this.completeConfigSchema = {...this.completeConfigSchema, ...moduleConfigSchema};
+    this.completeConfigSchema = { ...this.completeConfigSchema, ...moduleConfigSchema };
     this.convictConfig = convict(this.completeConfigSchema);
     this.loadConfig();
     this.validateConfig();

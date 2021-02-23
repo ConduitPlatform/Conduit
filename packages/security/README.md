@@ -5,6 +5,7 @@ menu: Core
 ---
 
 # Security Package
+
 This will be added as a required middleware, configurable on how strict is should be
 
 ##Features
@@ -17,8 +18,9 @@ This will be added as a required middleware, configurable on how strict is shoul
 - Anomaly detection in requests
 - Nuclear War prevention
 
-## TODO 
-add  express-rate-limit
-add  express-ipfilter
+## TODO
+
+add express-rate-limit
+add express-ipfilter
 
 add a way to remember IPs and ban them according to rules

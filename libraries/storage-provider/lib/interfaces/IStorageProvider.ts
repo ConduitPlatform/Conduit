@@ -1,9 +1,5 @@
 export interface IStorageProvider {
-  store(
-    fileName: string,
-    data: any,
-    isPublic?: boolean
-  ): Promise<boolean | Error>;
+  store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error>;
 
   get(fileName: string, downloadPath?: string): Promise<any | Error>;
 
@@ -32,10 +28,7 @@ export interface IStorageProvider {
 
   getPublicUrl(fileName: string): Promise<any | Error>;
 
-  rename(
-    currentFilename: string,
-    newFilename: string
-  ): Promise<boolean | Error>;
+  rename(currentFilename: string, newFilename: string): Promise<boolean | Error>;
 
   moveToFolder(filename: string, newFolder: string): Promise<boolean | Error>;
 

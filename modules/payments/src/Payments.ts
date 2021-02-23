@@ -1,83 +1,81 @@
-import PaymentsConfigSchema from "./config";
-import { isNil } from "lodash";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
-import path from "path";
-import * as grpc from "grpc";
-import { PaymentsRoutes } from "./routes/Routes";
-import * as models from "./models";
-import { AdminHandlers } from "./admin/admin";
-import { IamportHandlers } from "./handlers/iamport";
-
-let protoLoader = require("@grpc/proto-loader");
+import PaymentsConfigSchema from './config';
+import { isNil } from 'lodash';
+import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import path from 'path';
+import * as grpc from 'grpc';
+import { PaymentsRoutes } from './routes/Routes';
+import * as models from './models';
+import { AdminHandlers } from './admin/admin';
+import { IamportHandlers } from './handlers/iamport';
 
 export default class PaymentsModule {
-  private database: any
+  private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private readonly _url: string;
-  private readonly grpcServer: any;
+  private readonly grpcServer: GrpcServer;
   private _router: PaymentsRoutes;
   private iamportHandlers: IamportHandlers | null;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./payments.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-    let payments = protoDescriptor.payments.Payments;
-    this.grpcServer = new grpcModule.Server();
-
-    this.grpcServer.addService(payments.service, {
-      setConfig: this.setConfig.bind(this),
-      createIamportPayment: this.createIamportPayment.bind(this),
-      completeIamportPayment: this.completeIamportPayment.bind(this),
-    });
-
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
-    console.log("bound on: ", this._url);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._url = this.grpcServer.url;
+    this.grpcServer
+      .addService(path.resolve(__dirname, './payments.proto'), 'payments.Payments', {
+        setConfig: this.setConfig.bind(this),
+        createIamportPayment: this.createIamportPayment.bind(this),
+        completeIamportPayment: this.completeIamportPayment.bind(this),
+      })
+      .then(() => {
+        return this.grpcServer.start();
+      })
+      .then(() => {
+        console.log('Grpc server is online');
+      })
+      .catch((err: Error) => {
+        console.log('Failed to initialize server');
+        console.error(err);
+        process.exit(-1);
+      });
 
     this.grpcSdk
-      .waitForExistence("database-provider")
+      .waitForExistence('database-provider')
       .then(() => {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
-        const self = this;
-        this.grpcSdk.bus?.subscribe("payments", (message: string) => {
-          if (message === "config-update") {
+        this.grpcSdk.bus?.subscribe('payments', (message: string) => {
+          if (message === 'config-update') {
             this.enableModule()
-              .then((r: any) => {
-                console.log("Updated payments configuration");
+              .then(() => {
+                console.log('Updated payments configuration');
               })
-              .catch((e: Error) => {
-                console.log("Failed to update payments config");
+              .catch(() => {
+                console.log('Failed to update payments config');
               });
           }
         });
       })
       .catch(() => {
-        console.log("Bus did not initialize!");
+        console.log('Bus did not initialize!');
       })
       .then(() => {
-        return this.grpcSdk.config.get("payments");
+        return this.grpcSdk.config.get('payments');
       })
       .catch(() => {
-        return this.grpcSdk.config.updateConfig(PaymentsConfigSchema.getProperties(), "payments");
+        return this.grpcSdk.config.updateConfig(
+          PaymentsConfigSchema.getProperties(),
+          'payments'
+        );
       })
-      .then((paymentsConfig: any) => {
-        return this.grpcSdk.config.addFieldstoConfig(PaymentsConfigSchema.getProperties(), "payments");
+      .then(() => {
+        return this.grpcSdk.config.addFieldstoConfig(
+          PaymentsConfigSchema.getProperties(),
+          'payments'
+        );
       })
       .catch(() => {
-        console.log("payments config did not update");
+        console.log('payments config did not update');
       })
       .then((paymentsConfig: any) => {
         if (paymentsConfig.active) {
@@ -93,28 +91,39 @@ export default class PaymentsModule {
 
   async setConfig(call: any, callback: any) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (isNil(newConfig.active) || isNil(newConfig.providerName) || isNil(newConfig[newConfig.providerName])) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "Invalid configuration given" });
+    if (
+      isNil(newConfig.active) ||
+      isNil(newConfig.providerName) ||
+      isNil(newConfig[newConfig.providerName])
+    ) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Invalid configuration given',
+      });
     }
     if (!PaymentsConfigSchema.load(newConfig).validate()) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "Invalid configuration given" });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Invalid configuration given',
+      });
     }
 
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, "payments")
-      .catch((e: Error) => errorMessage = e.message);
+      .updateConfig(newConfig, 'payments')
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const paymentsConfig = await this.grpcSdk.config.get("payments");
+    const paymentsConfig = await this.grpcSdk.config.get('payments');
     if (paymentsConfig.active) {
-      await this.enableModule().catch((e: Error) => errorMessage = e.message);
-      if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-      this.grpcSdk.bus?.publish("payments", "config-update");
+      await this.enableModule().catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage))
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      this.grpcSdk.bus?.publish('payments', 'config-update');
     } else {
-      return callback({ code: grpc.status.INTERNAL, message: "Module is not active"});
+      return callback({ code: grpc.status.INTERNAL, message: 'Module is not active' });
     }
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -150,7 +159,10 @@ export default class PaymentsModule {
     }
 
     if (isNil(imp_uid) || isNil(merchant_uid) || imp_uid === '' || merchant_uid === '') {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'imp_uid and merchant_uid are required' });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'imp_uid and merchant_uid are required',
+      });
     }
 
     try {
@@ -165,17 +177,16 @@ export default class PaymentsModule {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
-      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, await this._router.getStripe());
+      this._admin = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        await this._router.getStripe()
+      );
       this.iamportHandlers = await this._router.getIamport();
       await this.registerSchemas();
-      this.grpcServer.start();
       this.isRunning = true;
     }
-    let url = this._url;
-    if (process.env.REGISTER_NAME === "true") {
-      url = "payments-provider:" + this._url.split(":")[1];
-    }
-    await this._router.registerRoutes(url);
+    await this._router.registerRoutes();
   }
 
   private registerSchemas() {
@@ -184,5 +195,4 @@ export default class PaymentsModule {
     });
     return Promise.all(promises);
   }
-
 }

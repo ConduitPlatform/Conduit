@@ -12,7 +12,6 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@types/mongoose": "^5.5.43",
     "deepdash": "^5.0.3",

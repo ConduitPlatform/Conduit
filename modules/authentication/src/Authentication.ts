@@ -1,14 +1,11 @@
-import * as models from "./models";
-// import {AuthMiddleware} from './middleware/auth';
-import { AdminHandlers } from "./admin/admin";
-import AuthenticationConfigSchema from "./config";
-import { isNil } from "lodash";
-import ConduitGrpcSdk, { grpcModule } from "@quintessential-sft/conduit-grpc-sdk";
-import path from "path";
-import * as grpc from "grpc";
-import { AuthenticationRoutes } from "./routes/Routes";
-
-let protoLoader = require("@grpc/proto-loader");
+import * as models from './models';
+import { AdminHandlers } from './admin/admin';
+import AuthenticationConfigSchema from './config';
+import { isNil } from 'lodash';
+import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import path from 'path';
+import * as grpc from 'grpc';
+import { AuthenticationRoutes } from './routes/Routes';
 
 export default class AuthenticationModule {
   private database: any;
@@ -16,77 +13,80 @@ export default class AuthenticationModule {
   private isRunning: boolean = false;
   private _url: string;
   private _router: AuthenticationRoutes;
-  private readonly grpcServer: any;
+  private readonly grpcServer: GrpcServer;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "./authentication.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    const protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-
-    const authentication = protoDescriptor.authentication.Authentication;
-    this.grpcServer = new grpcModule.Server();
-
-    this.grpcServer.addService(authentication.service, {
-      setConfig: this.setConfig.bind(this),
-    });
-
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(this._url, grpcModule.ServerCredentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
-    console.log("bound on:", this._url);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._url = this.grpcServer.url;
+    this.grpcServer
+      .addService(
+        path.resolve(__dirname, './authentication.proto'),
+        'authentication.Authentication',
+        {
+          setConfig: this.setConfig.bind(this),
+        }
+      )
+      .then(() => {
+        return this.grpcServer.start();
+      })
+      .then(() => {
+        console.log('Grpc server is online');
+      })
+      .catch((err: Error) => {
+        console.log('Failed to initialize server');
+        console.error(err);
+        process.exit(-1);
+      });
 
     this.grpcSdk
-      .waitForExistence("database-provider")
+      .waitForExistence('database-provider')
       .then(() => {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
-        const self = this;
-        this.grpcSdk.bus?.subscribe("authentication", (message: string) => {
-          if (message === "config-update") {
+        this.grpcSdk.bus?.subscribe('authentication', (message: string) => {
+          if (message === 'config-update') {
             this.enableModule()
-              .then((r) => {
-                console.log("Updated authentication configuration");
+              .then(() => {
+                console.log('Updated authentication configuration');
               })
-              .catch((e: Error) => {
-                console.log("Failed to update email config");
+              .catch(() => {
+                console.log('Failed to update email config');
               });
           }
         });
-        this.grpcSdk.bus?.subscribe("email-provider", (message: string) => {
-            if (message === "enabled") {
-              this.enableModule()
-                .then((r) => {
-                  console.log("Updated authentication configuration");
-                })
-                .catch((e: Error) => {
-                  console.log("Failed to update email config");
-                });
-            }
-          });
+        this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
+          if (message === 'enabled') {
+            this.enableModule()
+              .then(() => {
+                console.log('Updated authentication configuration');
+              })
+              .catch(() => {
+                console.log('Failed to update email config');
+              });
+          }
+        });
       })
       .catch(() => {
-        console.log("Bus did not initialize!");
+        console.log('Bus did not initialize!');
       })
       .then(() => {
-        return this.grpcSdk.config.get("authentication");
+        return this.grpcSdk.config.get('authentication');
       })
       .catch(() => {
-        return this.grpcSdk.config.updateConfig(AuthenticationConfigSchema.getProperties(), "authentication");
+        return this.grpcSdk.config.updateConfig(
+          AuthenticationConfigSchema.getProperties(),
+          'authentication'
+        );
       })
-      .then((authConfig: any) => {
-        return this.grpcSdk.config.addFieldstoConfig(AuthenticationConfigSchema.getProperties(), "authentication");
+      .then(() => {
+        return this.grpcSdk.config.addFieldstoConfig(
+          AuthenticationConfigSchema.getProperties(),
+          'authentication'
+        );
       })
       .catch(() => {
-        console.log("authentication config did not update");
+        console.log('authentication config did not update');
       })
       .then((authConfig: any) => {
         if (authConfig.active) {
@@ -103,24 +103,31 @@ export default class AuthenticationModule {
   async setConfig(call: any, callback: any) {
     const newConfig = JSON.parse(call.request.newConfig);
     if (!AuthenticationConfigSchema.load(newConfig).validate()) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: "Invalid configuration values" });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Invalid configuration values',
+      });
     }
 
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, "authentication")
+      .updateConfig(newConfig, 'authentication')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const authenticationConfig = await this.grpcSdk.config.get("authentication");
+    const authenticationConfig = await this.grpcSdk.config.get('authentication');
     if (authenticationConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-      this.grpcSdk.bus?.publish("authentication", "config-update");
+      if (!isNil(errorMessage))
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      this.grpcSdk.bus?.publish('authentication', 'config-update');
     } else {
-      return callback({ code: grpc.status.FAILED_PRECONDITION, message: "Module is not active" });
+      return callback({
+        code: grpc.status.FAILED_PRECONDITION,
+        message: 'Module is not active',
+      });
     }
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -135,14 +142,9 @@ export default class AuthenticationModule {
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
-      this.grpcServer.start();
       this.isRunning = true;
     }
-    let url = this._url;
-    if (process.env.REGISTER_NAME === "true") {
-      url = "authentication:" + this._url.split(":")[1];
-    }
-    await this._router.registerRoutes(url);
+    await this._router.registerRoutes();
   }
 
   private registerSchemas() {

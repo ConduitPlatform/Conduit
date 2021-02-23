@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { Request } from 'express';
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit;
   let params: any = {};
@@ -16,8 +16,8 @@ export function extractRequestData(req: Request) {
   }
 
   if (params.populate) {
-    if (params.populate.includes(",")) {
-      params.populate = params.populate.split(",");
+    if (params.populate.includes(',')) {
+      params.populate = params.populate.split(',');
     } else {
       params.populate = [params.populate];
     }

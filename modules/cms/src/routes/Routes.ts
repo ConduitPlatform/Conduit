@@ -1,12 +1,6 @@
-import { CmsHandlers } from "../handlers/cms.handler";
-import grpc from "grpc";
-import fs from "fs";
-import path from "path";
-import { CustomEndpointHandler } from "../handlers/CustomEndpoints/customEndpoint.handler";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-
-var protoLoader = require("@grpc/proto-loader");
-var PROTO_PATH = __dirname + "/router.proto";
+import { CmsHandlers } from '../handlers/cms.handler';
+import { CustomEndpointHandler } from '../handlers/CustomEndpoints/customEndpoint.handler';
+import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 
 export class CmsRoutes {
   private readonly handlers: CmsHandlers;
@@ -16,30 +10,9 @@ export class CmsRoutes {
   private crudRoutes: any[] = [];
   private customRoutes: any[] = [];
 
-  constructor(server: grpc.Server, private readonly grpcSdk: ConduitGrpcSdk, private readonly url: string) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new CmsHandlers(grpcSdk);
     this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
-
-    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const router = protoDescriptor.cms.router.Router;
-    server.addService(router.service, {
-      getDocuments: this.handlers.getDocuments.bind(this.handlers),
-      getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
-      createDocument: this.handlers.createDocument.bind(this.handlers),
-      createManyDocuments: this.handlers.createManyDocuments.bind(this.handlers),
-      editDocument: this.handlers.editDocument.bind(this.handlers),
-      editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
-      deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
-      customOperation: this.customEndpointHandler.entryPoint.bind(this.customEndpointHandler),
-    });
   }
 
   addRoutes(routes: any[], crud: boolean = true) {
@@ -57,12 +30,22 @@ export class CmsRoutes {
   }
 
   private _refreshRoutes() {
-    let routesProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
     this.grpcSdk.router
-      .register(this.crudRoutes.concat(this.customRoutes), routesProtoFile.toString("utf-8"), this.url)
+      .registerRouter(this.server, this.crudRoutes.concat(this.customRoutes), {
+        getDocuments: this.handlers.getDocuments.bind(this.handlers),
+        getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
+        createDocument: this.handlers.createDocument.bind(this.handlers),
+        createManyDocuments: this.handlers.createManyDocuments.bind(this.handlers),
+        editDocument: this.handlers.editDocument.bind(this.handlers),
+        editManyDocuments: this.handlers.editManyDocuments.bind(this.handlers),
+        deleteDocument: this.handlers.deleteDocument.bind(this.handlers),
+        customOperation: this.customEndpointHandler.entryPoint.bind(
+          this.customEndpointHandler
+        ),
+      })
       .catch((err: Error) => {
-        console.log("Failed to register routes for CMS module!");
-        console.error(err);
+        console.log('Failed to register routes for module');
+        console.log(err);
       });
   }
 }

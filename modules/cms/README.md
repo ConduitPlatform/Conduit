@@ -5,6 +5,7 @@ menu: Modules
 ---
 
 # CMS module
+
 This module should allow the creation of content types and content.
 
 ## Features

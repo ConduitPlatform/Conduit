@@ -5,5 +5,5 @@ export enum PlatformTypesEnum {
   IPADOS = 'IPADOS',
   WINDOWS = 'WINDOWS',
   MACOS = 'MACOS',
-  LINUX = 'LINUX'
+  LINUX = 'LINUX',
 }

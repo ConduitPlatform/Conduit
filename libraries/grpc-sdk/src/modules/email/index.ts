@@ -1,57 +1,35 @@
-import * as grpc from "grpc";
-import path from "path";
-import {ConduitModule} from "../../interfaces/ConduitModule";
+import path from 'path';
+import { ConduitModule } from '../../classes/ConduitModule';
 
-let protoLoader = require("@grpc/proto-loader");
-
-export default class Email implements ConduitModule{
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
-
+export default class Email extends ConduitModule {
   constructor(url: string) {
-    this._url = url;
+    super(url);
+    this.protoPath = path.resolve(__dirname, '../../proto/email.proto');
+    this.descriptorObj = 'email.Email';
     this.initializeClient();
-  }
-
-  initializeClient() {
-    if (this.client) return;
-    let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/email.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    let email = protoDescriptor.email.Email;
-    this.client = new email(this._url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this.active = true;
-  }
-
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig({ newConfig: JSON.stringify(newConfig) }, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || "Something went wrong");
-        } else {
-          resolve(JSON.parse(res.updatedConfig));
+      this.client.setConfig(
+        { newConfig: JSON.stringify(newConfig) },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || 'Something went wrong');
+          } else {
+            resolve(JSON.parse(res.updatedConfig));
+          }
         }
-      });
+      );
     });
   }
 
-  registerTemplate(template: { name: string; subject: string; body: string; variables: string[] }) {
+  registerTemplate(template: {
+    name: string;
+    subject: string;
+    body: string;
+    variables: string[];
+  }) {
     return new Promise((resolve, reject) => {
       this.client.registerTemplate(
         {
@@ -71,7 +49,17 @@ export default class Email implements ConduitModule{
     });
   }
 
-  sendEmail(templateName: string, params: { email: string; variables: any; sender: string, replyTo?: string, cc?: string[], attachments?: string[] }) {
+  sendEmail(
+    templateName: string,
+    params: {
+      email: string;
+      variables: any;
+      sender: string;
+      replyTo?: string;
+      cc?: string[];
+      attachments?: string[];
+    }
+  ) {
     return new Promise((resolve, reject) => {
       this.client.sendEmail(
         {
@@ -82,7 +70,7 @@ export default class Email implements ConduitModule{
             sender: params.sender,
             replyTo: params.replyTo,
             cc: params.cc,
-            attachments: params.attachments
+            attachments: params.attachments,
           },
         },
         (err: any, res: any) => {

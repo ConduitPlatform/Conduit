@@ -1,6 +1,9 @@
-import moment from "moment";
+import moment from 'moment';
 
-export function calculateRenewDate(recurring: 'day' | 'week' | 'month' | 'year', recurringCount: number = 1): moment.Moment {
+export function calculateRenewDate(
+  recurring: 'day' | 'week' | 'month' | 'year',
+  recurringCount: number = 1
+): moment.Moment {
   let renewDate = moment();
   let days;
 

@@ -1,9 +1,9 @@
 {
-    "functions": [
-        {
-            "path": "/sms/send",
-            "method": "POST",
-            "protoName": "sendSms"
-        }
-    ]
+  "functions": [
+    {
+      "path": "/send",
+      "method": "POST",
+      "protoName": "sendSms"
+    }
+  ]
 }

@@ -1,14 +1,14 @@
-import { IStorageProvider, StorageConfig } from "../../interfaces";
+import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
   BlobSASPermissions,
   BlobSASSignatureValues,
   BlobServiceClient,
   SASProtocol,
-} from "@azure/storage-blob";
-import fs from "fs";
+} from '@azure/storage-blob';
+import fs from 'fs';
 
 export class AzureStorage implements IStorageProvider {
-  _activeContainer: string = "";
+  _activeContainer: string = '';
   private _storage: BlobServiceClient;
 
   constructor(options: StorageConfig) {
@@ -67,13 +67,13 @@ export class AzureStorage implements IStorageProvider {
   async streamToBuffer(readableStream: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const chunks: any = [];
-      readableStream.on("data", (data: any) => {
+      readableStream.on('data', (data: any) => {
         chunks.push(data instanceof Buffer ? data : Buffer.from(data));
       });
-      readableStream.on("end", () => {
+      readableStream.on('end', () => {
         resolve(Buffer.concat(chunks));
       });
-      readableStream.on("error", reject);
+      readableStream.on('error', reject);
     });
   }
 
@@ -90,30 +90,24 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async getSignedUrl(fileName: string): Promise<any | Error> {
-    let containerClient = this._storage.getContainerClient(
-      this._activeContainer
-    );
+    let containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,
       expiresOn: new Date(new Date().valueOf() + 3600 * 1000),
-      permissions: BlobSASPermissions.parse("r"),
+      permissions: BlobSASPermissions.parse('r'),
     };
     return containerClient.getBlobClient(fileName).generateSasUrl(sasOptions);
   }
 
   async getPublicUrl(fileName: string): Promise<any | Error> {
-    let containerClient = this._storage.getContainerClient(
-      this._activeContainer
-    );
+    let containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,
       protocol: SASProtocol.Https,
-      expiresOn: new Date(
-        new Date().setFullYear(new Date().getFullYear() + 99)
-      ),
-      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(new Date().setFullYear(new Date().getFullYear() + 99)),
+      permissions: BlobSASPermissions.parse('r'),
     };
 
     return containerClient.getBlobClient(fileName).generateSasUrl(sasOptions);
@@ -131,23 +125,17 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
-  async rename(
-    currentFilename: string,
-    newFilename: string
-  ): Promise<boolean | Error> {
+  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
     // await this._storage.getContainerClient(this._activeContainer).getBlockBlobClient(currentFilename).move(newFilename);
     // return true;
-    throw new Error("Not Implemented yet!");
+    throw new Error('Not Implemented yet!');
   }
 
-  async moveToFolder(
-    filename: string,
-    newFolder: string
-  ): Promise<boolean | Error> {
+  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
     // let newBucketFile = this._storage.getContainerClient(newFolder).file(filename)
     // await this._storage.getContainerClient(this._activeContainer).file(filename).move(newBucketFile);
     // return true;
-    throw new Error("Not Implemented yet!");
+    throw new Error('Not Implemented yet!');
   }
 
   async moveToFolderAndRename(
@@ -158,6 +146,6 @@ export class AzureStorage implements IStorageProvider {
     // let newBucketFile = this._storage.getContainerClient(newFolder).file(newFilename)
     // await this._storage.getContainerClient(this._activeContainer).file(currentFilename).move(newBucketFile);
     // return true;
-    throw new Error("Not Implemented yet!");
+    throw new Error('Not Implemented yet!');
   }
 }
