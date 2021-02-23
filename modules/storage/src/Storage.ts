@@ -45,7 +45,6 @@ export class StorageModule {
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     new FileRoutes(this.grpcServer, this.grpcSdk, this.storageProvider);
 
-    this.grpcServer.start();
     this.grpcSdk
       .waitForExistence('database-provider')
       .then(() => {
