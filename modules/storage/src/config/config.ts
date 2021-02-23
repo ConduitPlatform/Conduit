@@ -5,23 +5,23 @@ export default {
   },
   provider: {
     type: String,
-    default: 'local',
+    default: "local",
   },
   storagePath: {
     type: String,
-    default: '/var/tmp',
+    default: "/var/tmp",
   },
   google: {
     serviceAccountKeyPath: {
       type: String,
-      default: '~/google_storage_service_account.json',
+      default: "",
     },
     bucketName: {
       type: String,
-      default: 'conduit',
+      default: "",
     },
   },
   azure: {
-    connectionString: { type: String },
+    connectionString: { type: String, default: "" },
   },
 };

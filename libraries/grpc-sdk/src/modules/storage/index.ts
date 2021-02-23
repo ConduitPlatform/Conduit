@@ -36,15 +36,24 @@ export default class Storage extends ConduitModule {
     });
   }
 
-  createFile(name: string, mimeType: string, data: string, folder: string) {
+  createFile(
+    name: string,
+    mimeType: string,
+    data: string,
+    folder: string,
+    isPublic: boolean = false
+  ) {
     return new Promise((resolve, reject) => {
-      this.client.createFile({ name, mimeType, data, folder }, (err: any, res: any) => {
-        if (err || !res) {
+      this.client.createFile(
+        { name, mimeType, data, folder, isPublic },
+        (err: any, res: any) => {
+          if (err || !res) {
           reject(err || 'Something went wrong');
-        } else {
-          resolve(JSON.parse(res.fileDocument));
+          } else {
+            resolve({ id: res.id, name: res.name, url: res.url });
+          }
         }
-      });
+      );
     });
   }
 }

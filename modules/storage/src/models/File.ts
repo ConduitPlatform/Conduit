@@ -1,7 +1,7 @@
-import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from "@quintessential-sft/conduit-grpc-sdk";
 
 export default new ConduitSchema(
-  'File',
+  "File",
   {
     _id: TYPE.ObjectId,
     name: {
@@ -13,6 +13,10 @@ export default new ConduitSchema(
       type: TYPE.String,
       required: true,
       systemRequired: true,
+    },
+    isPublic: {
+      type: TYPE.Boolean,
+      default: false,
     },
     url: TYPE.String,
     mimeType: { type: TYPE.String, systemRequired: true },

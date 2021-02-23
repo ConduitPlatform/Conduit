@@ -1,21 +1,30 @@
-import { IStorageProvider } from '../../interfaces/IStorageProvider';
-import { StorageConfig } from '../../interfaces/StorageConfig';
-import { existsSync, writeFile, readFile, mkdir, unlink, rename } from 'fs';
-import { resolve } from 'path';
+import { IStorageProvider } from "../../interfaces/IStorageProvider";
+import { StorageConfig } from "../../interfaces/StorageConfig";
+import {
+  existsSync,
+  writeFile,
+  readFile,
+  mkdir,
+  unlink,
+  rename,
+  access,
+} from "fs";
+import { resolve } from "path";
 
 export class LocalStorage implements IStorageProvider {
   _rootStoragePath: string;
   _storagePath: string;
 
   constructor(options?: StorageConfig) {
-    this._rootStoragePath = options && options.storagePath ? options.storagePath : '';
+    this._rootStoragePath =
+      options && options.storagePath ? options.storagePath : "";
     this._storagePath = this._rootStoragePath;
   }
 
   get(fileName: string): Promise<Buffer | Error> {
     if (!existsSync(resolve(this._storagePath, fileName))) {
       return new Promise(function (res, reject) {
-        reject(new Error('File does not exist'));
+        reject(new Error("File does not exist"));
       });
     }
     const self = this;
@@ -52,6 +61,16 @@ export class LocalStorage implements IStorageProvider {
     return this;
   }
 
+  folderExists(name: string): Promise<boolean | Error> {
+    const self = this;
+    return new Promise(function (res, reject) {
+      access(resolve(self._storagePath, name), function (err) {
+        if (err) reject(err);
+        else res(true);
+      });
+    });
+  }
+
   delete(fileName: string): Promise<boolean | Error> {
     const self = this;
     return new Promise(function (res, reject) {
@@ -73,7 +92,10 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
-  rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
+  rename(
+    currentFilename: string,
+    newFilename: string
+  ): Promise<boolean | Error> {
     const self = this;
     return new Promise(function (res, reject) {
       rename(
@@ -120,10 +142,10 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getPublicUrl(fileName: string): Promise<any | Error> {
-    throw new Error('Method not implemented!');
+    throw new Error("Method not implemented!");
   }
 
   getSignedUrl(fileName: string): Promise<any> {
-    throw new Error('Method not implemented!| Error');
+    throw new Error("Method not implemented!| Error");
   }
 }
