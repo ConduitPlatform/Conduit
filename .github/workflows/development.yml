@@ -28,7 +28,7 @@ jobs:
           password: ${{ secrets.REGISTRY_PASSWORD }}
       - name: Build conduit modules
         run: |
-          sh ./scripts/docker-build.sh;
+          DEV=TRUE make all
   document:
     runs-on: ubuntu-18.04
     steps:
