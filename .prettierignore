@@ -1,0 +1,11 @@
+**/dist/
+**/.next/
+**/app/
+**/node_modules/
+**/.nyc_output
+/.idea
+**/*.tsbuildinfo
+**/src/proto/*.proto
+**/protos/src/*.proto
+.vscode
+**/resourceRegistry.log

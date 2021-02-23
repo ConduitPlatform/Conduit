@@ -1,7 +1,7 @@
-import { ConduitSchema, TYPE } from "@quintessential-sft/conduit-grpc-sdk";
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 export default new ConduitSchema(
-  "File",
+  'File',
   {
     _id: TYPE.ObjectId,
     name: {

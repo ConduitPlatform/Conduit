@@ -1,7 +1,7 @@
 {
   "functions": [
     {
-      "path": "/payments/products",
+      "path": "/products",
       "method": "POST",
       "protoName": "createProduct"
     }

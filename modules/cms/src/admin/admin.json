@@ -1,87 +1,87 @@
 {
   "functions": [
     {
-      "path": "/cms/schemas",
+      "path": "/schemas",
       "method": "GET",
       "protoName": "getAllSchemas"
     },
     {
-      "path": "/cms/schemas/:id",
+      "path": "/schemas/:id",
       "method": "GET",
       "protoName": "getById"
     },
     {
-      "path": "/cms/schemas",
+      "path": "/schemas",
       "method": "POST",
       "protoName": "createSchema"
     },
     {
-      "path": "/cms/schemas/toggle/:id",
+      "path": "/schemas/toggle/:id",
       "method": "PUT",
       "protoName": "toggle"
     },
     {
-      "path": "/cms/schemas/:id",
+      "path": "/schemas/:id",
       "method": "PUT",
       "protoName": "editSchema"
     },
     {
-      "path": "/cms/schemas/:id",
+      "path": "/schemas/:id",
       "method": "DELETE",
       "protoName": "deleteSchema"
     },
     {
-      "path": "/cms/content/:schemaName",
+      "path": "/content/:schemaName",
       "method": "GET",
       "protoName": "getDocuments"
     },
     {
-      "path": "/cms/content/:schemaName/:id",
+      "path": "/content/:schemaName/:id",
       "method": "GET",
       "protoName": "getDocumentById"
     },
     {
-      "path": "/cms/content/:schemaName",
+      "path": "/content/:schemaName",
       "method": "POST",
       "protoName": "createDocument"
     },
     {
-      "path": "/cms/content/:schemaName/many",
+      "path": "/content/:schemaName/many",
       "method": "POST",
       "protoName": "createManyDocuments"
     },
     {
-      "path": "/cms/schemas/:schemaName/many",
+      "path": "/schemas/:schemaName/many",
       "method": "PUT",
       "protoName": "editManyDocuments"
     },
     {
-      "path": "/cms/schemas/:schemaName/:id",
+      "path": "/schemas/:schemaName/:id",
       "method": "PUT",
       "protoName": "editDocument"
     },
     {
-      "path": "/cms/schemas/:schemaName/:id",
+      "path": "/schemas/:schemaName/:id",
       "method": "DELETE",
       "protoName": "deleteDocument"
     },
     {
-      "path": "/cms/customEndpoints",
+      "path": "/customEndpoints",
       "method": "GET",
       "protoName": "getCustomEndpoints"
     },
     {
-      "path": "/cms/customEndpoints/:id",
+      "path": "/customEndpoints/:id",
       "method": "PUT",
       "protoName": "editCustomEndpoints"
     },
     {
-      "path": "/cms/customEndpoints/:id",
+      "path": "/customEndpoints/:id",
       "method": "DELETE",
       "protoName": "deleteCustomEndpoints"
     },
     {
-      "path": "/cms/customEndpoints",
+      "path": "/customEndpoints",
       "method": "POST",
       "protoName": "createCustomEndpoints"
     }

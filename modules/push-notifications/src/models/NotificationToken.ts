@@ -1,28 +1,34 @@
-import { ConduitSchema, PlatformTypesEnum, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import {
+  ConduitSchema,
+  PlatformTypesEnum,
+  TYPE,
+} from '@quintessential-sft/conduit-grpc-sdk';
 
-export const NotificationTokenModel = new ConduitSchema('NotificationToken',
+export const NotificationTokenModel = new ConduitSchema(
+  'NotificationToken',
   {
-        _id: TYPE.ObjectId,
-        userId: {
-            type: TYPE.Relation,
-            model: 'User',
-            systemRequired: true
-        },
-        token: {
-            type: TYPE.String,
-            required: true,
-            systemRequired: true
-        },
-        platform: {
-            type: TYPE.String,
-            enum: Object.values(PlatformTypesEnum),
-            required: true,
-            systemRequired: true
-        },
-        createdAt: TYPE.Date,
-        updatedAt: TYPE.Date
+    _id: TYPE.ObjectId,
+    userId: {
+      type: TYPE.Relation,
+      model: 'User',
+      systemRequired: true,
     },
+    token: {
+      type: TYPE.String,
+      required: true,
+      systemRequired: true,
+    },
+    platform: {
+      type: TYPE.String,
+      enum: Object.values(PlatformTypesEnum),
+      required: true,
+      systemRequired: true,
+    },
+    createdAt: TYPE.Date,
+    updatedAt: TYPE.Date,
+  },
   {
-      timestamps: true,
-      systemRequired: true
-  });
+    timestamps: true,
+    systemRequired: true,
+  }
+);

@@ -1,11 +1,11 @@
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { ConduitError } from "@quintessential-sft/conduit-grpc-sdk";
-import { AuthUtils } from "../../utils/auth";
-import { ISignTokenOptions } from "../../interfaces/ISignTokenOptions";
-import grpc from "grpc";
-import { isNil } from "lodash";
-import axios from "axios";
-import moment from "moment";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import { AuthUtils } from '../../utils/auth';
+import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import grpc from 'grpc';
+import { isNil } from 'lodash';
+import axios from 'axios';
+import moment from 'moment';
 
 export class TwitchHandlers {
   private database: any;
@@ -17,19 +17,25 @@ export class TwitchHandlers {
         return this.initDbAndEmail();
       })
       .catch((err) => {
-        console.log("twitch not active");
+        console.log('twitch not active');
       });
   }
 
   async validate(): Promise<Boolean> {
     return this.grpcSdk.config
-      .get("authentication")
+      .get('authentication')
       .then((authConfig: any) => {
         if (!authConfig.twitch.enabled) {
-          throw ConduitError.forbidden("Twitch auth is deactivated");
+          throw ConduitError.forbidden('Twitch auth is deactivated');
         }
-        if (!authConfig.twitch || !authConfig.twitch.clientId || !authConfig.twitch.clientSecret) {
-          throw ConduitError.forbidden("Cannot enable twitch auth due to missing clientId or client secret");
+        if (
+          !authConfig.twitch ||
+          !authConfig.twitch.clientId ||
+          !authConfig.twitch.clientSecret
+        ) {
+          throw ConduitError.forbidden(
+            'Cannot enable twitch auth due to missing clientId or client secret'
+          );
         }
       })
       .then(() => {
@@ -48,7 +54,7 @@ export class TwitchHandlers {
   }
 
   private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence("database-provider");
+    await this.grpcSdk.waitForExistence('database-provider');
     this.database = this.grpcSdk.databaseProvider;
     this.initialized = true;
   }
@@ -58,16 +64,22 @@ export class TwitchHandlers {
     if (isNil(code))
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: "Invalid parameters",
+        message: 'Invalid parameters',
       });
 
     let errorMessage = null;
 
-    const config = await this.grpcSdk.config.get("authentication").catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = await this.grpcSdk.config
+      .get('authentication')
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    let serverConfig = await this.grpcSdk.config.getServerConfig().catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let serverConfig = await this.grpcSdk.config
+      .getServerConfig()
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
     let twitch_access_token = undefined;
@@ -77,23 +89,23 @@ export class TwitchHandlers {
     let profile_image_url = undefined;
 
     try {
-      const response = await axios.post("https://id.twitch.tv/oauth2/token", null, {
+      const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
         params: {
           client_id: config.twitch.clientId,
           client_secret: config.twitch.clientSecret,
           code,
-          grant_type: "authorization_code",
-          redirect_uri: url + "/hook/authentication/twitch",
+          grant_type: 'authorization_code',
+          redirect_uri: url + '/hook/authentication/twitch',
         },
       });
 
       twitch_access_token = response.data.access_token;
       expires_in = response.data.expires_in;
 
-      const response2 = await axios.get("https://api.twitch.tv/helix/users", {
+      const response2 = await axios.get('https://api.twitch.tv/helix/users', {
         headers: {
           Authorization: `Bearer ${twitch_access_token}`,
-          "Client-Id": config.twitch.clientId,
+          'Client-Id': config.twitch.clientId,
         },
       });
 
@@ -103,18 +115,25 @@ export class TwitchHandlers {
     } catch (e) {
       errorMessage = e.message;
     }
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    let user = await this.database.findOne("User", { "twitch.id": id }).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    
+    let user = await this.database
+      .findOne('User', { 'twitch.id': id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
     if (isNil(user) && !isNil(email)) {
-      user = await this.database.findOne("User", { email: email }).catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      user = await this.database
+        .findOne('User', { email: email })
+        .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage))
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
     if (isNil(user)) {
       user = await this.database
-        .create("User", {
+        .create('User', {
           email,
           twitch: {
             id,
@@ -125,14 +144,19 @@ export class TwitchHandlers {
           isVerified: true,
         })
         .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      if (!isNil(errorMessage))
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     } else {
-      if (!user.active) return callback({ code: grpc.status.PERMISSION_DENIED, message: "Inactive user" });
+      if (!user.active)
+        return callback({
+          code: grpc.status.PERMISSION_DENIED,
+          message: 'Inactive user',
+        });
       if (!user.twitch) {
         user = await this.database
-          .findByIdAndUpdate("User", user._id, {
+          .findByIdAndUpdate('User', user._id, {
             $set: {
-              ["twitch"]: {
+              ['twitch']: {
                 id,
                 token: twitch_access_token,
                 tokenExpires: moment().add(expires_in).format(),
@@ -141,7 +165,8 @@ export class TwitchHandlers {
             },
           })
           .catch((e: any) => (errorMessage = e.message));
-        if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        if (!isNil(errorMessage))
+          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
       }
     }
 
@@ -153,30 +178,38 @@ export class TwitchHandlers {
     let clientId = AuthUtils.randomToken(); // TODO find a way to pass the client id
 
     const accessToken = await this.database
-      .create("AccessToken", {
+      .create('AccessToken', {
         userId: user._id,
         clientId,
         token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
         expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, "milliseconds")
+          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     const refreshToken = await this.database
-      .create("RefreshToken", {
+      .create('RefreshToken', {
         userId: user._id,
         clientId,
         token: AuthUtils.randomToken(),
-        expiresOn: moment().add(config.refreshTokenInvalidationPeriod, "milliseconds").toDate(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
+          .toDate(),
       })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       redirect:
-        config.twitch.redirect_uri + "?accessToken=" + accessToken.token + "&refreshToken=" + refreshToken.token,
+        config.twitch.redirect_uri +
+        '?accessToken=' +
+        accessToken.token +
+        '&refreshToken=' +
+        refreshToken.token,
       result: JSON.stringify({
         userId: user._id.toString(),
         accessToken: accessToken.token,

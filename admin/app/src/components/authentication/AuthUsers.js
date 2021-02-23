@@ -6,10 +6,10 @@ const AuthUsers = ({ users }) => {
     return users.map((u) => {
       return {
         _id: u._id,
-        email: u.email,
-        active: u.active,
-        isVerified: u.isVerified,
-        createdAt: u.createdAt,
+        Email: u.email ? u.email : 'N/A',
+        Active: u.active,
+        Verified: u.isVerified,
+        'Registered At': u.createdAt,
       };
     });
   };

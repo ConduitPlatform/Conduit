@@ -11,10 +11,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@grpc/proto-loader": "^0.5.4",
     "convict": "^5.2.0",
     "google-protobuf": "^3.8.0-rc.1",
-    "grpc": "1.24.2",
     "is-natural-number": "^4.0.1",
     "lodash": "^4.17.15",
     "redis": "^3.0.2",
@@ -50,5 +48,9 @@
     "rimraf": "^3.0.2",
     "ts-protoc-gen": "^0.12.0",
     "typescript": "^3.7.5"
+  },
+  "peerDependencies": {
+    "grpc": "^1.24.2",
+    "@grpc/proto-loader": "^0.5.4"
   }
 }

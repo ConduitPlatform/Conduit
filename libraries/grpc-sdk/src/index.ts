@@ -1,19 +1,18 @@
-import Config from "./modules/config";
-import Admin from "./modules/admin";
-import Router from "./modules/router";
-import DatabaseProvider from "./modules/databaseProvider";
-import Email from "./modules/email";
-import Storage from "./modules/storage";
-import PushNotifications from "./modules/pushNotifications";
-import Authentication from "./modules/authentication";
-import * as grpc from "grpc";
-import Crypto from "crypto";
-import CMS from "./modules/cms";
-import SMS from "./modules/sms";
-import Payments from "./modules/payments";
-import { EventBus } from "./utilities/EventBus";
-import { RedisManager } from "./utilities/RedisManager";
-import { StateManager } from "./utilities/StateManager";
+import Config from './modules/config';
+import Admin from './modules/admin';
+import Router from './modules/router';
+import DatabaseProvider from './modules/databaseProvider';
+import Email from './modules/email';
+import Storage from './modules/storage';
+import PushNotifications from './modules/pushNotifications';
+import Authentication from './modules/authentication';
+import Crypto from 'crypto';
+import CMS from './modules/cms';
+import SMS from './modules/sms';
+import Payments from './modules/payments';
+import { EventBus } from './utilities/EventBus';
+import { RedisManager } from './utilities/RedisManager';
+import { StateManager } from './utilities/StateManager';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -22,36 +21,36 @@ export default class ConduitGrpcSdk {
   private readonly _router: Router;
   private readonly _modules: any = {};
   private readonly _availableModules: any = {
-    "database-provider": DatabaseProvider,
-    "storage": Storage,
-    "email": Email,
-    "push-notifications": PushNotifications,
-    "authentication": Authentication,
-    "cms": CMS,
-    "sms": SMS,
-    "payments": Payments,
+    'database-provider': DatabaseProvider,
+    storage: Storage,
+    email: Email,
+    'push-notifications': PushNotifications,
+    authentication: Authentication,
+    cms: CMS,
+    sms: SMS,
+    payments: Payments,
   };
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly name: string;
 
-  constructor(serverUrl: string, name?:string) {
-    if(!name){
-      this.name = 'module_'+ Crypto.randomBytes(16).toString("hex");
-    }else{
+  constructor(serverUrl: string, name?: string) {
+    if (!name) {
+      this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
+    } else {
       this.name = name;
     }
     this.serverUrl = serverUrl;
     this._config = new Config(this.serverUrl);
-    this._admin = new Admin(this.serverUrl);
-    this._router = new Router(this.serverUrl);
+    this._admin = new Admin(this.serverUrl, this.name);
+    this._router = new Router(this.serverUrl, this.name);
     this.initializeModules().then(() => {});
     this.watchModules();
   }
 
   watchModules() {
-    this.config.watchModules().on("module-registered", (modules: any) => {
+    this.config.watchModules().on('module-registered', (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
         let found = modules.filter((m: any) => m.moduleName === r);
         if ((!found || found.length === 0) && this._availableModules[r]) {
@@ -61,24 +60,26 @@ export default class ConduitGrpcSdk {
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
           this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-        } else if(this._availableModules[m.moduleName]){
+        } else if (this._availableModules[m.moduleName]) {
           this._modules[m.moduleName].initializeClient();
         }
       });
     });
   }
 
-  initializeEventBus(): Promise<any>{
-    return this.config.getRedisDetails()
-    .then((r:any)=>{
-      let redisManager = new RedisManager(r.redisHost, r.redisPort);
-      this._eventBus = new EventBus(redisManager);
-      this._stateManager = new StateManager(redisManager, this.name);
-      return this._eventBus;
-    }).catch((err: any)=>{
-      console.error("Failed to initialize event bus");
-      return err;
-    });
+  initializeEventBus(): Promise<any> {
+    return this.config
+      .getRedisDetails()
+      .then((r: any) => {
+        let redisManager = new RedisManager(r.redisHost, r.redisPort);
+        this._eventBus = new EventBus(redisManager);
+        this._stateManager = new StateManager(redisManager, this.name);
+        return this._eventBus;
+      })
+      .catch((err: any) => {
+        console.error('Failed to initialize event bus');
+        return err;
+      });
   }
 
   /**
@@ -95,7 +96,7 @@ export default class ConduitGrpcSdk {
             this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
           }
         });
-        return "ok";
+        return 'ok';
       })
       .catch((err) => {
         if (err.code !== 5) {
@@ -105,7 +106,7 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    return this._modules[moduleName] && this._modules[moduleName].active ? true : false;
+    return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
   async waitForExistence(moduleName: string) {
@@ -129,23 +130,23 @@ export default class ConduitGrpcSdk {
     if (this.lastSearch < Date.now() - 3000 || force) {
       return this.initializeModules();
     }
-    return "ok";
+    return 'ok';
   }
 
   get bus(): EventBus | null {
     if (this._eventBus) {
-      return this._eventBus
+      return this._eventBus;
     } else {
-      console.warn("Event bus not initialized");
+      console.warn('Event bus not initialized');
       return null;
     }
   }
 
   get state(): StateManager | null {
     if (this._stateManager) {
-      return this._stateManager
+      return this._stateManager;
     } else {
-      console.warn("State Manager not initialized");
+      console.warn('State Manager not initialized');
       return null;
     }
   }
@@ -163,81 +164,79 @@ export default class ConduitGrpcSdk {
   }
 
   get databaseProvider(): DatabaseProvider | null {
-    if (this._modules["database-provider"]) {
-      return this._modules["database-provider"];
+    if (this._modules['database-provider']) {
+      return this._modules['database-provider'];
     } else {
-      console.warn("Database provider not up yet!");
+      console.warn('Database provider not up yet!');
       return null;
     }
   }
 
   get storage(): Storage | null {
-    if (this._modules["storage"]) {
-      return this._modules["storage"];
+    if (this._modules['storage']) {
+      return this._modules['storage'];
     } else {
-      console.warn("Storage module not up yet!");
+      console.warn('Storage module not up yet!');
       return null;
     }
   }
 
   get emailProvider(): Email | null {
-    if (this._modules["email"]) {
-      return this._modules["email"];
+    if (this._modules['email']) {
+      return this._modules['email'];
     } else {
-      console.warn("Email provider not up yet!");
+      console.warn('Email provider not up yet!');
       return null;
     }
   }
 
   get pushNotifications(): PushNotifications | null {
-    if (this._modules["push-notifications"]) {
-      return this._modules["push-notifications"];
+    if (this._modules['push-notifications']) {
+      return this._modules['push-notifications'];
     } else {
-      console.warn("Push notifications module not up yet!");
+      console.warn('Push notifications module not up yet!');
       return null;
     }
   }
 
   get authentication(): Authentication | null {
-    if (this._modules["authentication"]) {
-      return this._modules["authentication"];
+    if (this._modules['authentication']) {
+      return this._modules['authentication'];
     } else {
-      console.warn("Authentication module not up yet!");
+      console.warn('Authentication module not up yet!');
       return null;
     }
   }
 
   get cms(): CMS | null {
-    if (this._modules["cms"]) {
-      return this._modules["cms"];
+    if (this._modules['cms']) {
+      return this._modules['cms'];
     } else {
-      console.warn("Cms module not up yet!");
+      console.warn('Cms module not up yet!');
       return null;
     }
   }
 
-
   get sms(): SMS | null {
-      if (this._modules["sms"]) {
-          return this._modules["sms"];
-      } else {
-          console.warn("SMS module not up yet!");
-          return null
-      }
+    if (this._modules['sms']) {
+      return this._modules['sms'];
+    } else {
+      console.warn('SMS module not up yet!');
+      return null;
+    }
   }
 
   get payments(): Payments | null {
-    if (this._modules["payments"]) {
-      return this._modules["payments"];
+    if (this._modules['payments']) {
+      return this._modules['payments'];
     } else {
-      console.warn("Payments module not up yet!");
+      console.warn('Payments module not up yet!');
       return null;
     }
   }
 }
-export let grpcModule: any = grpc;
-export * from "./interfaces";
-export * from "./models";
-export * from "./modules";
-export * from "./helpers";
-export * from "./constants";
+export * from './interfaces';
+export * from './classes';
+export * from './modules';
+export * from './helpers';
+export * from './constants';

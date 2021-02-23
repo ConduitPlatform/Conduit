@@ -1,11 +1,12 @@
-import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
-export const PaymentsCustomerSchema = new ConduitSchema('PaymentsCustomer',
+export const PaymentsCustomerSchema = new ConduitSchema(
+  'PaymentsCustomer',
   {
     _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
-      model: 'User'
+      model: 'User',
     },
     email: TYPE.String,
     buyerName: TYPE.String,
@@ -13,19 +14,20 @@ export const PaymentsCustomerSchema = new ConduitSchema('PaymentsCustomer',
     address: TYPE.String,
     postCode: TYPE.String,
     stripe: {
-      customerId: TYPE.String
+      customerId: TYPE.String,
     },
     iamport: {
       isCardVerified: {
         type: TYPE.Boolean,
         default: false,
-        systemRequired: true
-      }
+        systemRequired: true,
+      },
     },
     createdAt: TYPE.Date,
-    updatedAt: TYPE.Date
+    updatedAt: TYPE.Date,
   },
   {
     timestamps: true,
-    systemRequired: true
-  })
+    systemRequired: true,
+  }
+);

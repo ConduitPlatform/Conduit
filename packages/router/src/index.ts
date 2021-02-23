@@ -1,11 +1,16 @@
-import { Application, NextFunction, Router, Request, Response } from "express";
-import { RouterBuilder } from "./builders";
-import { ConduitRoutingController } from "./controllers/Routing";
-import { ConduitRoute, IConduitRouter, ConduitMiddleware, ConduitSDK } from "@quintessential-sft/conduit-sdk";
-import * as grpc from "grpc";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
+import { Application, NextFunction, Router, Request, Response } from 'express';
+import { RouterBuilder } from './builders';
+import { ConduitRoutingController } from './controllers/Routing';
+import {
+  ConduitRoute,
+  IConduitRouter,
+  ConduitMiddleware,
+  ConduitSDK,
+} from '@quintessential-sft/conduit-sdk';
+import * as grpc from 'grpc';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
-import { grpcToConduitRoute } from "./utils/GrpcConverter";
+import { grpcToConduitRoute } from './utils/GrpcConverter';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   private _app: Application;
@@ -15,7 +20,12 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _grpcRoutes: any = {};
   grpcSdk: ConduitGrpcSdk;
 
-  constructor(app: Application, grpcSdk: ConduitGrpcSdk, packageDefinition: any, server: grpc.Server) {
+  constructor(
+    app: Application,
+    grpcSdk: ConduitGrpcSdk,
+    packageDefinition: any,
+    server: grpc.Server
+  ) {
     this._app = app;
     this._routes = [];
     this._globalMiddlewares = [];
@@ -36,8 +46,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
     let sdk: ConduitSDK = (this._app as any).conduit;
     sdk
       .getState()
-      .getKey("router")
-      .then((r) => {
+      .getKey('router')
+      .then((r: any) => {
         if (!r || r.length === 0) return;
         let state = JSON.parse(r);
         if (state.routes) {
@@ -62,11 +72,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
           });
         }
       })
-      .catch((err) => {
-        console.log("Failed to recover state");
+      .catch(() => {
+        console.log('Failed to recover state');
       });
 
-    sdk.getBus().subscribe("router", (message: string) => {
+    sdk.getBus().subscribe('router', (message: string) => {
       try {
         let messageParsed = JSON.parse(message);
         let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute({
@@ -93,8 +103,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
     let sdk: ConduitSDK = (this._app as any).conduit;
     sdk
       .getState()
-      .getKey("router")
-      .then((r) => {
+      .getKey('router')
+      .then((r: any) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         state.routes.push({
@@ -102,20 +112,21 @@ export class ConduitDefaultRouter implements IConduitRouter {
           routes,
           url,
         });
-        return sdk.getState().setKey("router", JSON.stringify(state));
+        return sdk.getState().setKey('router', JSON.stringify(state));
       })
-      .then((r) => {
-        console.log("Updated state");
+      .then(() => {
+        this.publishAdminRouteData(protofile, routes, url);
+        console.log('Updated state');
       })
-      .catch((err) => {
-        console.log("Failed to recover state");
+      .catch(() => {
+        console.log('Failed to update state');
       });
   }
 
   publishAdminRouteData(protofile: string, routes: any, url: string) {
     let sdk: ConduitSDK = (this._app as any).conduit;
     sdk.getBus().publish(
-      "router",
+      'router',
       JSON.stringify({
         protofile,
         routes,
@@ -124,9 +135,30 @@ export class ConduitDefaultRouter implements IConduitRouter {
     );
   }
 
-  registerGrpcRoute(call: any, callback: any) {
+  async registerGrpcRoute(call: any, callback: any) {
     try {
-      let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(call.request);
+      let url = call.request.routerUrl;
+      let moduleName: string | undefined = undefined;
+      if (!url) {
+        let result = ((this._app as any).conduit! as ConduitSDK)
+          .getConfigManager()!
+          .getModuleUrlByInstance(call.getPeer());
+        if (!result) {
+          return callback({
+            code: grpc.status.INTERNAL,
+            message: 'Error when registering routes',
+          });
+        }
+        call.request.routerUrl = result.url;
+        moduleName = result!.moduleName;
+        // do not enable yet, it requires further consideration
+      }
+
+      let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(
+        call.request,
+        moduleName
+      );
+
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
           this.registerRouteMiddleware(r);
@@ -136,11 +168,14 @@ export class ConduitDefaultRouter implements IConduitRouter {
       });
       this._grpcRoutes[call.request.routerUrl] = call.request.routes;
       this.cleanupRoutes();
-      this.publishAdminRouteData(call.request.protoFile, call.request.routes, call.request.routerUrl);
-      this.updateState(call.request.protoFile, call.request.routes, call.request.routerUrl);
+      this.updateState(
+        call.request.protoFile,
+        call.request.routes,
+        call.request.routerUrl
+      );
     } catch (err) {
       console.error(err);
-      return callback({ code: grpc.status.INTERNAL, message: "Well that failed :/" });
+      return callback({ code: grpc.status.INTERNAL, message: 'Well that failed :/' });
     }
 
     //todo definitely missing an error handler here
@@ -148,13 +183,16 @@ export class ConduitDefaultRouter implements IConduitRouter {
     callback(null, null);
   }
 
-  cleanupRoutes(){
-    let routes: {action: string, path:string}[] = [];
-     Object.keys(this._grpcRoutes)
-     .forEach((grpcRoute:string)=>{
+  cleanupRoutes() {
+    let routes: { action: string; path: string }[] = [];
+    Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       let routesArray = this._grpcRoutes[grpcRoute];
-      routes.push(...routesArray.map((route:any)=>{return {action: route.options.action, path: route.options.path}}));
-     })
+      routes.push(
+        ...routesArray.map((route: any) => {
+          return { action: route.options.action, path: route.options.path };
+        })
+      );
+    });
     this._internalRouter.cleanupRoutes(routes);
   }
 
@@ -186,7 +224,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.registerRoute(name, router);
   }
 
-  registerDirectRouter(name: string, router: (req: Request, res: Response, next: NextFunction) => void) {
+  registerDirectRouter(
+    name: string,
+    router: (req: Request, res: Response, next: NextFunction) => void
+  ) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
   }
@@ -204,4 +245,4 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 }
 
-export * from "./builders";
+export * from './builders';

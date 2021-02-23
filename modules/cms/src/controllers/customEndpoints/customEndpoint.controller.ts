@@ -1,13 +1,17 @@
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpointHandler } from "../../handlers/CustomEndpoints/customEndpoint.handler";
-import { CustomEndpoint } from "../../models/customEndpoint";
-import { CmsRoutes } from "../../routes/Routes";
-import { createCustomEndpointRoute } from "./utils";
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
+import { CustomEndpoint } from '../../models/customEndpoint';
+import { CmsRoutes } from '../../routes/Routes';
+import { createCustomEndpointRoute } from './utils';
 
 export class CustomEndpointController {
   private _adapter: any;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: CmsRoutes, private readonly stateActive: boolean) {
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private router: CmsRoutes,
+    private readonly stateActive: boolean
+  ) {
     this._adapter = this.grpcSdk.databaseProvider!;
     this.refreshRoutes();
     if (stateActive) {
@@ -15,8 +19,8 @@ export class CustomEndpointController {
     }
   }
   initializeState() {
-    this.grpcSdk.bus?.subscribe("cms", ( message: string) => {
-      if(message === "customEndpoint"){
+    this.grpcSdk.bus?.subscribe('cms', (message: string) => {
+      if (message === 'customEndpoint') {
         this.refreshRoutes();
       }
     });
@@ -24,10 +28,10 @@ export class CustomEndpointController {
 
   refreshRoutes() {
     return this._adapter
-      .findMany("CustomEndpoints", { enabled: true })
+      .findMany('CustomEndpoints', { enabled: true })
       .then((r: CustomEndpoint[]) => {
         if (!r || r.length == 0) {
-          return console.log("No custom endpoints to register");
+          return console.log('No custom endpoints to register');
         }
         let routes: any[] = [];
         r.forEach((schema: CustomEndpoint) => {
@@ -39,17 +43,17 @@ export class CustomEndpointController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error("Something went wrong when loading custom endpoints to the router");
+        console.error('Something went wrong when loading custom endpoints to the router');
         console.error(err);
       });
   }
 
   refreshEndpoints(): void {
-    if(this.stateActive){
+    if (this.stateActive) {
       this.grpcSdk.bus?.publish('cms', 'customEndpoint');
     }
-    this.refreshRoutes().then((r:any) => {
-      console.log("Refreshed routes");
+    this.refreshRoutes().then((r: any) => {
+      console.log('Refreshed routes');
     });
   }
 }

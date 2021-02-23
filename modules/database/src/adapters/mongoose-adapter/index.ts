@@ -1,10 +1,10 @@
-import { ConnectionOptions, Mongoose } from "mongoose";
-import { MongooseSchema } from "./MongooseSchema";
-import { schemaConverter } from "./SchemaConverter";
-import { ConduitError, ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
-import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from "lodash";
+import { ConnectionOptions, Mongoose } from 'mongoose';
+import { MongooseSchema } from './MongooseSchema';
+import { schemaConverter } from './SchemaConverter';
+import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
 
-const deepdash = require("deepdash/standalone");
+const deepdash = require('deepdash/standalone');
 
 export class MongooseAdapter {
   connected: boolean = false;
@@ -25,35 +25,35 @@ export class MongooseAdapter {
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
-    this.mongoose.Promise = require("bluebird");
+    this.mongoose.Promise = require('bluebird');
     this.connect();
   }
 
   async ensureConnected(): Promise<any> {
     return new Promise((resolve, reject) => {
       let db = this.mongoose.connection;
-      db.on("connected", () => {
-        console.log("MongoDB dashboard is connected");
+      db.on('connected', () => {
+        console.log('MongoDB dashboard is connected');
         resolve();
       });
 
-      db.on("error", (err: any) => {
-        console.error("Dashboard Connection error:", err.message);
+      db.on('error', (err: any) => {
+        console.error('Dashboard Connection error:', err.message);
         reject();
       });
 
-      db.once("open", function callback() {
-        console.info("Connected to Dashboard Database!");
+      db.once('open', function callback() {
+        console.info('Connected to Dashboard Database!');
         resolve();
       });
 
-      db.on("reconnected", function () {
-        console.log("Dashboard Database reconnected!");
+      db.on('reconnected', function () {
+        console.log('Dashboard Database reconnected!');
         resolve();
       });
 
-      db.on("disconnected", function () {
-        console.log("Dashboard Database Disconnected");
+      db.on('disconnected', function () {
+        console.log('Dashboard Database Disconnected');
         reject();
       });
     });
@@ -65,7 +65,7 @@ export class MongooseAdapter {
       .then(() => {})
       .catch((err: any) => {
         console.log(err);
-        throw new Error("Connection with Mongo not possible");
+        throw new Error('Connection with Mongo not possible');
       });
   }
 
@@ -76,9 +76,12 @@ export class MongooseAdapter {
     }
 
     if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== "Config") {
+      if (schema.name !== 'Config') {
         try {
-          schema = this.systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+          schema = this.systemRequiredValidator(
+            this.registeredSchemas.get(schema.name)!,
+            schema
+          );
         } catch (err) {
           return new Promise((resolve, reject) => {
             reject(err);
@@ -102,18 +105,19 @@ export class MongooseAdapter {
     if (this.models) {
       return { schema: this.models![schemaName].originalSchema };
     }
-    throw new Error("Schema not defined yet");
+    throw new Error('Schema not defined yet');
   }
 
   async getSchemaModel(schemaName: string): Promise<{ model: any }> {
     if (this.models) {
       return { model: this.models![schemaName] };
     }
-    throw new Error("Schema not defined yet");
+    throw new Error('Schema not defined yet');
   }
 
   deleteSchema(schemaName: string) {
-    if (!this.models?.[schemaName]) throw ConduitError.notFound("Requested schema not found");
+    if (!this.models?.[schemaName])
+      throw ConduitError.notFound('Requested schema not found');
     if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
@@ -122,7 +126,10 @@ export class MongooseAdapter {
     // TODO should we delete anything else?
   }
 
-  private systemRequiredValidator(oldSchema: ConduitSchema, newSchema: ConduitSchema): ConduitSchema {
+  private systemRequiredValidator(
+    oldSchema: ConduitSchema,
+    newSchema: ConduitSchema
+  ): ConduitSchema {
     const clonedOld = cloneDeep(oldSchema.fields);
 
     // get system required fields
@@ -149,7 +156,10 @@ export class MongooseAdapter {
     }
 
     // validate types
-    this.validateSchemaFields(oldSchema.fields ?? oldSchema.modelSchema, newSchema.fields ?? newSchema.modelSchema);
+    this.validateSchemaFields(
+      oldSchema.fields ?? oldSchema.modelSchema,
+      newSchema.fields ?? newSchema.modelSchema
+    );
 
     return newSchema;
   }
@@ -158,22 +168,32 @@ export class MongooseAdapter {
     const tempObj: { [key: string]: any } = {};
 
     Object.keys(oldSchemaFields).forEach((key) => {
-      if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key]) && !isArray(oldSchemaFields[key])) {
-        tempObj[key] = this.validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
+      if (
+        !oldSchemaFields[key].type &&
+        !isString(oldSchemaFields[key]) &&
+        !isArray(oldSchemaFields[key])
+      ) {
+        tempObj[key] = this.validateSchemaFields(
+          oldSchemaFields[key],
+          newSchemaFields[key]
+        );
       } else {
         // There used to be a check here for missing (non system required fields) from the new schema.
         // this got removed so that deletion of fields is supported
         // For a schema to be updated the caller must give the new schema after he gets the old one with getSchema
 
-        const oldType = oldSchemaFields[key].type ? oldSchemaFields[key].type : oldSchemaFields[key];
-        const newType = newSchemaFields[key] && newSchemaFields.type ? newSchemaFields[key].type : null;
+        const oldType = oldSchemaFields[key].type
+          ? oldSchemaFields[key].type
+          : oldSchemaFields[key];
+        const newType =
+          newSchemaFields[key] && newSchemaFields.type ? newSchemaFields[key].type : null;
         if (!newType) return;
         if (isArray(oldType) && isArray(newType)) {
           if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
-            throw ConduitError.forbidden("Invalid schema types");
+            throw ConduitError.forbidden('Invalid schema types');
         } else if (oldType !== newType) {
           // TODO migrate types
-          throw ConduitError.forbidden("Invalid schema types");
+          throw ConduitError.forbidden('Invalid schema types');
         }
       }
     });

@@ -5,27 +5,30 @@ menu: Modules
 ---
 
 # Payments adapter
+
 This will provide a consistent payments mechanism
 
 # Admin
 
 ## Create Product
 
-| route                   |  method  |
-| :---------------------: | :------: |
-| /admin/payments/products| POST     |
+|          route           | method |
+| :----------------------: | :----: |
+| /admin/payments/products |  POST  |
 
 ### Body parameters
+
 - Required
-    - name (string)
-    - value (int)
-    - currency (string): E.g. "USD", "EUR", "KRW". Note that iamport provider will accept only products with "KRW" currency.
+  - name (string)
+  - value (int)
+  - currency (string): E.g. "USD", "EUR", "KRW". Note that iamport provider will accept only products with "KRW" currency.
 - Optional
   - isSubscription (boolean)
   - recurring (string): Required when isSubscription is set to true. Valid values are "day", "week", "month", "year".
   - recurringCount (int): Defaults to 1. The number of intervals (specified in the recurring attribute) between subscription billings. For example, recurring=month and interval_count=3 bills every 3 months.
 
 ### Returns
+
 The created product.
 
 Example:
@@ -46,11 +49,12 @@ Example:
 
 ## Get Products
 
-| route              |  method  | requires authentication   |
-| :----------------: | :------: | :-----------------------: |
-| /payments/products | GET      | false                     |
+|       route        | method | requires authentication |
+| :----------------: | :----: | :---------------------: |
+| /payments/products |  GET   |          false          |
 
 ### Returns
+
 A list of products.
 
 Example:
@@ -73,14 +77,15 @@ Example:
 
 ## Get Subscriptions
 
-| route                   |  method  | requires authentication   |
-| :---------------------: | :------: | :-----------------------: |
-| /payments/subscriptions | GET      | true                      |
+|          route          | method | requires authentication |
+| :---------------------: | :----: | :---------------------: |
+| /payments/subscriptions |  GET   |          true           |
 
 ### Returns
+
 A list of active subscriptions the requesting user has.
 
-Example: 
+Example:
 
 ```json
 {
@@ -114,9 +119,9 @@ These routes will be available ony if stripe handler is enabled.
 
 ## Create Payment
 
-| route                          |  method  | requires authentication   |
-| :----------------------------: | :------: | :-----------------------: |
-| /payments/stripe/createPayment | POST     | false                     |
+|             route              | method | requires authentication |
+| :----------------------------: | :----: | :---------------------: |
+| /payments/stripe/createPayment |  POST  |          false          |
 
 ### Body parameters
 
@@ -125,7 +130,7 @@ These routes will be available ony if stripe handler is enabled.
 - Optional
   - userId (string)
   - saveCard (boolean): If true the card the user will use to pay can be used again without prompting.
-  
+
 ### Returns
 
 - clientSecret. Use this in the front end to open the stripe dialog for the user's card information
@@ -133,16 +138,16 @@ These routes will be available ony if stripe handler is enabled.
 
 ## Create Payment With Saved Card
 
-| route                                       |  method  | requires authentication   |
-| :-----------------------------------------: | :------: | :-----------------------: |
-| /payments/stripe/createPaymentWithSavedCard | POST     | true                      |
+|                    route                    | method | requires authentication |
+| :-----------------------------------------: | :----: | :---------------------: |
+| /payments/stripe/createPaymentWithSavedCard |  POST  |          true           |
 
 ### Body parameters
 
 - Required
   - productId (string)
   - cardId (string): See [Get Payment Methods](#get-payment-methods)
-  
+
 ### Returns
 
 - clientSecret
@@ -151,11 +156,11 @@ These routes will be available ony if stripe handler is enabled.
 
 ## Cancel Payment
 
-| route                          |  method  | requires authentication   |
-| :----------------------------: | :------: | :-----------------------: |
-| /payments/stripe/cancelPayment | PUT      | false                     |
+|             route              | method | requires authentication |
+| :----------------------------: | :----: | :---------------------: |
+| /payments/stripe/cancelPayment |  PUT   |          false          |
 
-You can cancel a PaymentIntent if you no longer intend to use it to collect payment from the customer. Canceling a 
+You can cancel a PaymentIntent if you no longer intend to use it to collect payment from the customer. Canceling a
 PaymentIntent is optional, and it’s okay to keep a PaymentIntent in an incomplete status like requires_confirmation or requires_payment_method.
 
 ### Body parameters
@@ -167,9 +172,9 @@ PaymentIntent is optional, and it’s okay to keep a PaymentIntent in an incompl
 
 ## Refund Payment
 
-| route                          |  method  | requires authentication   |
-| :----------------------------: | :------: | :-----------------------: |
-| /payments/stripe/refundPayment | PUT      | false                     |
+|             route              | method | requires authentication |
+| :----------------------------: | :----: | :---------------------: |
+| /payments/stripe/refundPayment |  PUT   |          false          |
 
 ### Body parameters
 
@@ -180,9 +185,9 @@ PaymentIntent is optional, and it’s okay to keep a PaymentIntent in an incompl
 
 ## Get Payment Methods
 
-| route                              |  method  | requires authentication   |
-| :--------------------------------: | :------: | :-----------------------: |
-| /payments/stripe/getPaymentMethods | GET      | true                      |
+|               route                | method | requires authentication |
+| :--------------------------------: | :----: | :---------------------: |
+| /payments/stripe/getPaymentMethods |  GET   |          true           |
 
 ### Returns
 
@@ -224,9 +229,7 @@ Example:
           "generated_from": "string",
           "last4": "string",
           "networks": {
-            "available": [
-              "string"
-            ],
+            "available": ["string"],
             "preferred": "boolean"
           },
           "three_d_secure_usage": {
@@ -248,9 +251,9 @@ Example:
 
 ## Complete Payment
 
-| route                                 |  method  | requires authentication   |
-| :-----------------------------------: | :------: | :-----------------------: |
-| /hook/payments/stripe/completePayment | POST     | false                     |
+|                 route                 | method | requires authentication |
+| :-----------------------------------: | :----: | :---------------------: |
+| /hook/payments/stripe/completePayment |  POST  |          false          |
 
 Add this route to stripe dashboard to save transactions events to database.
 
@@ -260,17 +263,17 @@ These routes will be available ony if iamport handler is enabled.
 
 ## Create Payment
 
-| route                           |  method  | requires authentication |
-| :-----------------------------: | :------: | :---------------------: |
-| /payments/iamport/createPayment | POST     | false                   |
+|              route              | method | requires authentication |
+| :-----------------------------: | :----: | :---------------------: |
+| /payments/iamport/createPayment |  POST  |          false          |
 
 ### Body parameters
 
 - Required
-    - productId
+  - productId
 - Optional
-    - quantity: How many products the user wants to buy. Defaults to 1.
-    - userId
+  - quantity: How many products the user wants to buy. Defaults to 1.
+  - userId
 
 ### Returns
 
@@ -279,9 +282,9 @@ These routes will be available ony if iamport handler is enabled.
 
 ## Complete Payment
 
-| route                             |  method  | requires authentication |
-| :-------------------------------: | :------: | :---------------------: |
-| /payments/iamport/completePayment | POST     | false                   |
+|               route               | method | requires authentication |
+| :-------------------------------: | :----: | :---------------------: |
+| /payments/iamport/completePayment |  POST  |          false          |
 
 Call this route in the IMP.request_pay callback function to check if the payment was paid in full and save the transaction to database.
 
@@ -290,12 +293,12 @@ Call this route in the IMP.request_pay callback function to check if the payment
 - Required
   - imp_uid
   - merchant_uid
-  
+
 ## Add Card
 
-| route                     |  method  | requires authentication |
-| :-----------------------: | :------: | :---------------------: |
-| /payments/iamport/addCard | POST     | true                    |
+|           route           | method | requires authentication |
+| :-----------------------: | :----: | :---------------------: |
+| /payments/iamport/addCard |  POST  |          true           |
 
 This route will create a customer and prepare a payment for 0 KRW (South Korean won) in order for a billing key to be issued.
 After the payment is completed successfully, call [Validate Card](#validate-card) to mark the customer's card as verified.
@@ -317,9 +320,9 @@ Note that the card is not stored in the database, instead the customer id will b
 
 ## Validate Card
 
-| route                                      |  method  | requires authentication |
-| :----------------------------------------: | :------: | :---------------------: |
-| /payments/iamport/validateCard/:customerId | POST     | true                    |
+|                   route                    | method | requires authentication |
+| :----------------------------------------: | :----: | :---------------------: |
+| /payments/iamport/validateCard/:customerId |  POST  |          true           |
 
 ### URL parameters
 
@@ -327,9 +330,9 @@ Note that the card is not stored in the database, instead the customer id will b
 
 ## Subscribe
 
-| route                       |  method  | requires authentication |
-| :-------------------------: | :------: | :---------------------: |
-| /payments/iamport/subscribe | POST     | true                    |
+|            route            | method | requires authentication |
+| :-------------------------: | :----: | :---------------------: |
+| /payments/iamport/subscribe |  POST  |          true           |
 
 This route will subscribe a user to product, the user must have a registered card. The user's card will be charged the product's value,
 and a new payment will be registered for the date the subscription ends. Note that the product must have "KRW" currency.
@@ -364,32 +367,34 @@ Example:
 
 ## Subscription Callback
 
-| route                                       |  method  | requires authentication |
-| :-----------------------------------------: | :------: | :---------------------: |
-| /hook/payments/iamport/subscriptionCallback | POST     | false                   |
+|                    route                    | method | requires authentication |
+| :-----------------------------------------: | :----: | :---------------------: |
+| /hook/payments/iamport/subscriptionCallback |  POST  |          false          |
 
 This route is called by I'mport when a scheduled payment is completed, if the payment was successful a new payment is scheduled
 for the date the subscription ends.
 
 ### Body parameters
+
 - Required
   - imp_uid (string)
   - merchant_uid (string)
 
 ## Cancel Subscription
 
-| route                                                |  method  | requires authentication |
-| :--------------------------------------------------: | :------: | :---------------------: |
-| /payments/iamport/cancelSubscription/:subscriptionId | PUT      | true                    |
+|                        route                         | method | requires authentication |
+| :--------------------------------------------------: | :----: | :---------------------: |
+| /payments/iamport/cancelSubscription/:subscriptionId |  PUT   |          true           |
 
 ### Url parameters
+
 - subscriptionId (string)
 
 ## Get Payment Methods
 
-| route                               |  method  | requires authentication |
-| :---------------------------------: | :------: | :---------------------: |
-| /payments/iamport/getPaymentMethods | GET      | true                    |
+|                route                | method | requires authentication |
+| :---------------------------------: | :----: | :---------------------: |
+| /payments/iamport/getPaymentMethods |  GET   |          true           |
 
 ### Returns
 

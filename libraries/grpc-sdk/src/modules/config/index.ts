@@ -1,37 +1,13 @@
-import * as grpc from "grpc";
-import path from "path";
-import { EventEmitter } from "events";
-import {ConduitModule} from "../../interfaces/ConduitModule";
+import path from 'path';
+import { EventEmitter } from 'events';
+import { ConduitModule } from '../../classes/ConduitModule';
 
-let protoLoader = require("@grpc/proto-loader");
-
-export default class Config implements ConduitModule{
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
-  
+export default class Config extends ConduitModule {
   constructor(url: string) {
-    this._url = url;
+    super(url);
+    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
+    this.descriptorObj = 'conduit.core.Config';
     this.initializeClient();
-  }
-
-  initializeClient() {
-    if (this.client) return;
-    var packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/core.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    var config = protoDescriptor.conduit.core.Config;
-    this.client = new config(this._url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
-    this.active = true;
   }
 
   getServerConfig(): Promise<any> {
@@ -39,7 +15,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.getServerConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.data));
         }
@@ -47,10 +23,18 @@ export default class Config implements ConduitModule{
     });
   }
 
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
+  getModuleUrlByInstance(
+    instancePeer: string
+  ): Promise<{ url: string; moduleName: string }> {
+    return new Promise((resolve, reject) => {
+      this.client.getModuleUrlByInstance({ instancePeer }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve({ url: res.moduleUrl, moduleName: res.moduleName });
+        }
+      });
+    });
   }
 
   get(name: string): Promise<any> {
@@ -60,7 +44,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.get(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.data));
         }
@@ -77,7 +61,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.updateConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.result));
         }
@@ -94,7 +78,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.addFieldstoConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(JSON.parse(res.result));
         }
@@ -109,7 +93,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.moduleExists(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -122,7 +106,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.moduleList(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -130,19 +114,18 @@ export default class Config implements ConduitModule{
     });
   }
 
-  getRedisDetails(): Promise<any>{
+  getRedisDetails(): Promise<any> {
     let request: { [key: string]: any } = {};
     return new Promise((resolve, reject) => {
       this.client.getRedisDetails(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res);
         }
       });
     });
-  } 
-
+  }
 
   registerModule(name: string, url: string): Promise<any> {
     // TODO make newConfigSchema required when all modules provide their config schema
@@ -154,7 +137,7 @@ export default class Config implements ConduitModule{
     return new Promise((resolve, reject) => {
       this.client.registerModule(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve(res.modules);
         }
@@ -170,37 +153,40 @@ export default class Config implements ConduitModule{
       moduleName: name.toString(),
       url: url.toString(),
     };
-    this.client.moduleHealthProbe(request, (err: any, res: any) => {});
+    this.client.moduleHealthProbe(request, () => {});
   }
 
   watchModules() {
     let emitter = new EventEmitter();
     emitter.setMaxListeners(150);
     let call = this.client.watchModules({});
-    call.on("data", function (data: any) {
-      emitter.emit("module-registered", data.modules);
+    call.on('data', function (data: any) {
+      emitter.emit('module-registered', data.modules);
     });
-    call.on("end", function () {
+    call.on('end', function () {
       // The server has finished sending
-      console.log("Stream ended");
+      console.log('Stream ended');
     });
-    call.on("error", function (e: any) {
+    call.on('error', function () {
       // An error has occurred and the stream has been closed.
-      console.error("Connection to grpc server closed");
+      console.error('Connection to grpc server closed');
     });
-    call.on("status", function (status: any) {
-      console.error("Connection status changed to : ", status);
+    call.on('status', function (status: any) {
+      console.error('Connection status changed to : ', status);
     });
 
     return emitter;
   }
 
   registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
-    let request = { moduleName, newModulesConfigSchema: JSON.stringify(newModulesConfigSchema) };
+    let request = {
+      moduleName,
+      newModulesConfigSchema: JSON.stringify(newModulesConfigSchema),
+    };
     return new Promise((resolve, reject) => {
       this.client.registerModulesConfig(request, (err: any, res: any) => {
         if (err || !res) {
-          reject(err || "Something went wrong");
+          reject(err || 'Something went wrong');
         } else {
           resolve({});
         }
