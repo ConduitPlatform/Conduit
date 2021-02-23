@@ -14,6 +14,18 @@ export interface ParseResult {
   parentResolve: ResolverDefinition;
 }
 
+function _extractNestedPopulation(path: string) {
+  let nestedPath = path.substring(path.indexOf('fieldsByTypeName.'));
+  nestedPath = nestedPath.replace('fieldsByTypeName.', '');
+  nestedPath = nestedPath.substring(nestedPath.indexOf('.') + 1);
+  let paths = nestedPath.split('.');
+  while (paths.indexOf('fieldsByTypeName') !== -1) {
+    paths.splice(paths.indexOf('fieldsByTypeName'), 2);
+  }
+  nestedPath = paths.join('.');
+  return nestedPath;
+}
+
 export function findPopulation(fields: any, relations: string[]): string[] | undefined {
   if (relations.length === 0) return undefined;
   let result: string[] = [];
@@ -25,7 +37,7 @@ export function findPopulation(fields: any, relations: string[]): string[] | und
         relations.indexOf(keys[0]) !== -1 &&
         result.indexOf(key) === -1
       ) {
-        result.push(key);
+        result.push(_extractNestedPopulation(context._item.strPath));
       }
     }
   });
