@@ -15,7 +15,7 @@ export class CustomEndpointHandler {
 
   entryPoint(call: any, callback: any) {
     //use it to find the right controller
-    let path = call.request.path.split('/')[2];
+    let path = call.request.path.split('/')[3];
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
     let params = JSON.parse(call.request.params);
     let searchQuery: any = {};
