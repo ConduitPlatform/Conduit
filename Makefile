@@ -30,9 +30,10 @@ endif
 
 modules/authentication: conduit-builder
 modules/cms: conduit-builder
-modules/database-provider: conduit-builder
+modules/database: conduit-builder
 modules/email: conduit-builder
 modules/forms: conduit-builder
 modules/payments: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
+conduit: conduit-builder
