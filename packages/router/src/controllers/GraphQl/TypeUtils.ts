@@ -15,15 +15,12 @@ export interface ParseResult {
 }
 
 function _extractNestedPopulation(path: string) {
-  let nestedPath = path.substring(path.indexOf('fieldsByTypeName.'));
-  nestedPath = nestedPath.replace('fieldsByTypeName.', '');
-  nestedPath = nestedPath.substring(nestedPath.indexOf('.') + 1);
-  let paths = nestedPath.split('.');
+  let paths = path.split('.');
   while (paths.indexOf('fieldsByTypeName') !== -1) {
     paths.splice(paths.indexOf('fieldsByTypeName'), 2);
   }
-  nestedPath = paths.join('.');
-  return nestedPath;
+  path = paths.join('.');
+  return path;
 }
 
 export function findPopulation(fields: any, relations: string[]): string[] | undefined {

@@ -193,7 +193,9 @@ export class GraphQLController {
 
   shouldPopulate(args: any, info: any) {
     let resolveInfo = parseResolveInfo(info);
-    let result = findPopulation(resolveInfo.fieldsByTypeName, this._relationTypes);
+    let objs = resolveInfo.fieldsByTypeName;
+    objs = objs[Object.keys(objs)[0]];
+    let result = findPopulation(objs, this._relationTypes);
     if (result) {
       args['populate'] = result;
     }

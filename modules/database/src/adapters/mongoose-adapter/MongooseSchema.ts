@@ -1,4 +1,4 @@
-import { Model, Schema } from 'mongoose';
+import { Model, Query, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 
 export class MongooseSchema implements SchemaAdapter {
@@ -67,10 +67,8 @@ export class MongooseSchema implements SchemaAdapter {
     if (limit !== null) {
       finalQuery = finalQuery.limit(limit!);
     }
-    if (populate !== null) {
-      populate.forEach((r: any) => {
-        finalQuery = finalQuery.populate(r);
-      });
+    if (populate != null) {
+      finalQuery = this.calculatePopulates(finalQuery, populate);
     }
     if (sort !== null) {
       finalQuery = finalQuery.sort(sort);
@@ -83,9 +81,7 @@ export class MongooseSchema implements SchemaAdapter {
   findOne(query: any, select?: string, populate?: any): Promise<any> {
     let finalQuery = this.model.findOne(query, select);
     if (populate !== null) {
-      populate.forEach((r: any) => {
-        finalQuery = finalQuery.populate(r);
-      });
+      finalQuery = this.calculatePopulates();
     }
     return finalQuery.lean().exec();
   }
