@@ -11,7 +11,6 @@
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto ./dist/",
     "prepare": "npm run build",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit-push-notifications:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-push-notifications:latest"
-
   },
   "author": "",
   "license": "ISC",

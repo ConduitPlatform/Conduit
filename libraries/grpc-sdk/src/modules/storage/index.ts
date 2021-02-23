@@ -48,7 +48,7 @@ export default class Storage extends ConduitModule {
         { name, mimeType, data, folder, isPublic },
         (err: any, res: any) => {
           if (err || !res) {
-          reject(err || 'Something went wrong');
+            reject(err || 'Something went wrong');
           } else {
             resolve({ id: res.id, name: res.name, url: res.url });
           }

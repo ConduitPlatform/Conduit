@@ -48,17 +48,13 @@ export class FileRoutes {
               isPublic: TYPE.Boolean,
             },
             action: ConduitRouteActions.POST,
-            path: '/file',
+            path: '/storage/file',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('File', {
             _id: TYPE.String,
             name: TYPE.String,
-            user: TYPE.ObjectId, // Hack because we don't have endpoints that return a user so the model is not defined TODO replace with relation
-            mimeType: TYPE.String,
-            folder: TYPE.String,
-            createdAt: TYPE.String,
-            updatedAt: TYPE.String,
+            url: TYPE.String,
           }),
           'createFile'
         )
@@ -73,17 +69,12 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.GET,
-            path: '/file/:id',
+            path: '/storage/file/:id',
           },
-          new ConduitRouteReturnDefinition('FileWithData', {
+          new ConduitRouteReturnDefinition('File', {
             _id: TYPE.String,
             name: TYPE.String,
-            user: TYPE.ObjectId,
-            mimeType: TYPE.String,
-            folder: TYPE.String,
-            createdAt: TYPE.String,
-            updatedAt: TYPE.String,
-            data: TYPE.String,
+            url: TYPE.String,
           }),
           'getFile'
         )
@@ -98,18 +89,9 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.GET,
-            path: '/getFileUrl/:id',
+            path: '/storage/getFileUrl/:id',
           },
-          new ConduitRouteReturnDefinition('FileWithData', {
-            _id: TYPE.String,
-            name: TYPE.String,
-            user: TYPE.ObjectId,
-            mimeType: TYPE.String,
-            folder: TYPE.String,
-            createdAt: TYPE.String,
-            updatedAt: TYPE.String,
-            data: TYPE.String,
-          }),
+          new ConduitRouteReturnDefinition('FileUrl', 'String'),
           'getFileUrl'
         )
       )
@@ -123,7 +105,7 @@ export class FileRoutes {
               id: TYPE.String,
             },
             action: ConduitRouteActions.DELETE,
-            path: '/file/:id',
+            path: '/storage/file/:id',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileDeleteResponse', {
@@ -148,17 +130,13 @@ export class FileRoutes {
               folder: TYPE.String,
             },
             action: ConduitRouteActions.UPDATE,
-            path: '/file',
+            path: '/storage/file',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileUpdateResponse', {
             _id: TYPE.String,
             name: TYPE.String,
-            user: TYPE.ObjectId,
-            mimeType: TYPE.String,
-            folder: TYPE.String,
-            createdAt: TYPE.String,
-            updatedAt: TYPE.String,
+            url: TYPE.String,
           }),
           'updateFile'
         )

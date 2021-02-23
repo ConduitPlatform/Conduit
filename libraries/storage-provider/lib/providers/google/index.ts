@@ -1,7 +1,7 @@
-import { IStorageProvider } from "../../interfaces";
-import { StorageConfig } from "../../interfaces";
+import { IStorageProvider } from '../../interfaces';
+import { StorageConfig } from '../../interfaces';
 
-import { Storage } from "@google-cloud/storage";
+import { Storage } from '@google-cloud/storage';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -9,7 +9,7 @@ import { Storage } from "@google-cloud/storage";
  */
 export class GoogleCloudStorage implements IStorageProvider {
   _storage: Storage;
-  _activeBucket: string = "";
+  _activeBucket: string = '';
 
   constructor(options: StorageConfig) {
     this._storage = new Storage({
@@ -40,9 +40,9 @@ export class GoogleCloudStorage implements IStorageProvider {
 
   folderExists(name: string): Promise<boolean | Error> {
     // terribly wrong but w/e
-    return (this._storage
-      .bucket(this._activeBucket)
-      .exists() as unknown) as Promise<boolean | Error>;
+    return (this._storage.bucket(this._activeBucket).exists() as unknown) as Promise<
+      boolean | Error
+    >;
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
@@ -58,17 +58,11 @@ export class GoogleCloudStorage implements IStorageProvider {
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
     let promise;
     if (downloadPath) {
-      promise = this._storage
-        .bucket(this._activeBucket)
-        .file(fileName)
-        .download({
-          destination: downloadPath,
-        });
+      promise = this._storage.bucket(this._activeBucket).file(fileName).download({
+        destination: downloadPath,
+      });
     } else {
-      promise = this._storage
-        .bucket(this._activeBucket)
-        .file(fileName)
-        .download();
+      promise = this._storage.bucket(this._activeBucket).file(fileName).download();
     }
 
     return promise.then((r: any) => {
@@ -84,7 +78,7 @@ export class GoogleCloudStorage implements IStorageProvider {
       .bucket(this._activeBucket)
       .file(fileName)
       .getSignedUrl({
-        action: "read",
+        action: 'read',
         expires: Date.now() + 14400000,
       })
       .then((r: any) => {
@@ -107,18 +101,12 @@ export class GoogleCloudStorage implements IStorageProvider {
   ): Promise<boolean | Error> {
     await this._storage.bucket(this._activeBucket).file(fileName).save(data);
     if (isPublic) {
-      await this._storage
-        .bucket(this._activeBucket)
-        .file(fileName)
-        .makePublic();
+      await this._storage.bucket(this._activeBucket).file(fileName).makePublic();
     }
     return true;
   }
 
-  async rename(
-    currentFilename: string,
-    newFilename: string
-  ): Promise<boolean | Error> {
+  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
     await this._storage
       .bucket(this._activeBucket)
       .file(currentFilename)
@@ -126,15 +114,9 @@ export class GoogleCloudStorage implements IStorageProvider {
     return true;
   }
 
-  async moveToFolder(
-    filename: string,
-    newFolder: string
-  ): Promise<boolean | Error> {
+  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
     let newBucketFile = this._storage.bucket(newFolder).file(filename);
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(filename)
-      .move(newBucketFile);
+    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
     return true;
   }
 

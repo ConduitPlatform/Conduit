@@ -224,7 +224,7 @@ export default class AdminModule extends IConduitAdmin {
       moduleName = result.moduleName;
       routes.forEach((r) => {
         // for backwards compatibility and fool-proofing
-        if(r.path.startsWith(`/${moduleName}`)) return;
+        if (r.path.startsWith(`/${moduleName}`)) return;
         r.path = `/${moduleName}${r.path}`;
       });
     }

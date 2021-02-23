@@ -1,19 +1,17 @@
 import {
   createStorageProvider,
   IStorageProvider,
-} from "@quintessential-sft/storage-provider";
-import File from "./models/File";
-import StorageConfigSchema from "./config";
-import { isNil } from "lodash";
-import ConduitGrpcSdk, {
-  grpcModule,
-} from "@quintessential-sft/conduit-grpc-sdk";
-import * as grpc from "grpc";
-import * as path from "path";
-import { FileHandlers } from "./handlers/file";
-import { FileRoutes } from "./routes/file";
+} from '@quintessential-sft/storage-provider';
+import File from './models/File';
+import StorageConfigSchema from './config';
+import { isNil } from 'lodash';
+import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import * as grpc from 'grpc';
+import * as path from 'path';
+import { FileHandlers } from './handlers/file';
+import { FileRoutes } from './routes/router';
 
-let protoLoader = require("@grpc/proto-loader");
+let protoLoader = require('@grpc/proto-loader');
 
 export class StorageModule {
   private storageProvider: IStorageProvider;
@@ -23,87 +21,70 @@ export class StorageModule {
   private grpcServer: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    var packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, "./storage.proto"),
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      }
-    );
-    var protoDescriptor = grpcModule.loadPackageDefinition(packageDefinition);
-
-    var storage = protoDescriptor.storage.Storage;
-    this.grpcServer = new grpcModule.Server();
-
-    this.grpcServer.addService(storage.service, {
-      setConfig: this.setConfig.bind(this),
-      getFile: this.getFileGrpc.bind(this),
-      createFile: this.createFileGrpc.bind(this),
-      updateFile: this.updateFileGrpc.bind(this),
-    });
-    this._url = process.env.SERVICE_URL || "0.0.0.0:0";
-    let result = this.grpcServer.bind(
-      this._url,
-      grpcModule.ServerCredentials.createInsecure(),
-      {
-        "grpc.max_receive_message_length": 1024 * 1024 * 100,
-        "grpc.max_send_message_length": 1024 * 1024 * 100,
-      }
-    );
-    this._url = process.env.SERVICE_URL || "0.0.0.0:" + result;
-    console.log("bound on:", this._url);
-    this.storageProvider = createStorageProvider("local", {} as any);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._url = this.grpcServer.url;
+    this.grpcServer
+      .addService(path.resolve(__dirname, './storage.proto'), 'storage.Storage', {
+        setConfig: this.setConfig.bind(this),
+        getFile: this.getFileGrpc.bind(this),
+        createFile: this.createFileGrpc.bind(this),
+        updateFile: this.updateFileGrpc.bind(this),
+      })
+      .then(() => {
+        return this.grpcServer.start();
+      })
+      .then(() => {
+        console.log('Grpc server is online');
+      })
+      .catch((err: Error) => {
+        console.log('Failed to initialize server');
+        console.error(err);
+        process.exit(-1);
+      });
+    this.storageProvider = createStorageProvider('local', {} as any);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    let files = new FileRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this.storageProvider,
-      this._fileHandlers
-    );
-    this._routes = files.registeredRoutes;
+    new FileRoutes(this.grpcServer, this.grpcSdk, this.storageProvider);
+
     this.grpcServer.start();
     this.grpcSdk
-      .waitForExistence("database-provider")
+      .waitForExistence('database-provider')
       .then(() => {
         return this.grpcSdk.initializeEventBus();
       })
       .then(() => {
         const self = this;
-        this.grpcSdk.bus?.subscribe("storage", (message: string) => {
-          if (message === "config-update") {
+        this.grpcSdk.bus?.subscribe('storage', (message: string) => {
+          if (message === 'config-update') {
             this.enableModule()
               .then((r) => {
-                console.log("Updated storage configuration");
+                console.log('Updated storage configuration');
               })
               .catch((e: Error) => {
-                console.log("Failed to update email config");
+                console.log('Failed to update email config');
               });
           }
         });
       })
       .catch(() => {
-        console.log("Bus did not initialize!");
+        console.log('Bus did not initialize!');
       })
       .then(() => {
-        return this.grpcSdk.config.get("storage");
+        return this.grpcSdk.config.get('storage');
       })
       .catch(() => {
         return this.grpcSdk.config.updateConfig(
           StorageConfigSchema.getProperties(),
-          "storage"
+          'storage'
         );
       })
       .then((storageConfig: any) => {
         return this.grpcSdk.config.addFieldstoConfig(
           StorageConfigSchema.getProperties(),
-          "storage"
+          'storage'
         );
       })
       .catch(() => {
-        console.log("storage config did not update");
+        console.log('storage config did not update');
       })
       .then((storageConfig: any) => {
         if (storageConfig.active) {
@@ -128,28 +109,28 @@ export class StorageModule {
     if (!StorageConfigSchema.load(newConfig).validate()) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: "Invalid configuration values",
+        message: 'Invalid configuration values',
       });
     }
 
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, "storage")
+      .updateConfig(newConfig, 'storage')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const storageConfig = await this.grpcSdk.config.get("storage");
+    const storageConfig = await this.grpcSdk.config.get('storage');
     if (storageConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-      this.grpcSdk.bus?.publish("storage", "config-update");
+      this.grpcSdk.bus?.publish('storage', 'config-update');
     } else {
       return callback({
         code: grpc.status.FAILED_PRECONDITION,
-        message: "Module is not active",
+        message: 'Module is not active',
       });
     }
     if (!isNil(errorMessage)) {
@@ -163,7 +144,7 @@ export class StorageModule {
     if (!this._fileHandlers)
       return callback({
         code: grpc.status.INTERNAL,
-        message: "File handlers not initiated",
+        message: 'File handlers not initiated',
       });
     await this._fileHandlers.getFile(call, callback);
   }
@@ -172,7 +153,7 @@ export class StorageModule {
     if (!this._fileHandlers)
       return callback({
         code: grpc.status.INTERNAL,
-        message: "File handlers not initiated",
+        message: 'File handlers not initiated',
       });
     await this._fileHandlers.createFile(call, callback);
   }
@@ -181,14 +162,14 @@ export class StorageModule {
     if (!this._fileHandlers)
       return callback({
         code: grpc.status.INTERNAL,
-        message: "File handlers not initiated",
+        message: 'File handlers not initiated',
       });
 
     await this._fileHandlers.updateFile(call, callback);
   }
 
   private async enableModule(): Promise<any> {
-    const storageConfig = await this.grpcSdk.config.get("storage");
+    const storageConfig = await this.grpcSdk.config.get('storage');
     const { provider, storagePath, google, azure } = storageConfig;
 
     if (!this.isRunning) {
