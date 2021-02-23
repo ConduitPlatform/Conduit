@@ -18,7 +18,7 @@ message CreateFileRequest {
   string mimeType = 2;
   string data = 3;
   string folder = 4;
-  string isPublic = 5
+  bool isPublic = 5;
 }
 
 message UpdateFileRequest {
@@ -30,7 +30,13 @@ message UpdateFileRequest {
 }
 
 message FileResponse {
-  string fileDocument = 1;
+  string id = 1;
+  string url = 2;
+  string name = 3;
+}
+
+
+message Empty {
 }
 
 service Storage {
