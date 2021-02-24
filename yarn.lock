@@ -14566,6 +14566,11 @@ mongodb@3.5.9:
   optionalDependencies:
     saslprep "^1.0.0"
 
+mongoose-deep-populate@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/mongoose-deep-populate/-/mongoose-deep-populate-3.2.0.tgz#3abbdf42f63460f7c4a830da5ed31e1e4fd07abd"
+  integrity sha512-MD77o0Wo1e+s8sipP9xRytDdEBX5mfJGRfGGLA1D378+o9mXgCES3+SZxKyhPe+xyLc30abxAX5CK36l9TdpJg==
+
 mongoose-legacy-pluralize@1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/mongoose-legacy-pluralize/-/mongoose-legacy-pluralize-1.0.2.tgz#3ba9f91fa507b5186d399fb40854bff18fb563e4"
