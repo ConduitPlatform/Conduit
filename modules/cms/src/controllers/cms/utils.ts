@@ -53,7 +53,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}/:id`,
+          path: `/${schemaName}/:id`,
           action: ConduitRouteActions.GET,
           urlParams: {
             id: TYPE.String,
@@ -70,7 +70,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}`,
+          path: `/${schemaName}`,
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: TYPE.Number,
@@ -92,7 +92,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}`,
+          path: `/${schemaName}`,
           action: ConduitRouteActions.POST,
           bodyParams: actualSchema.fields,
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
@@ -107,7 +107,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}/many`,
+          path: `/${schemaName}/many`,
           action: ConduitRouteActions.POST,
           bodyParams: { docs: [actualSchema.fields] },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
@@ -124,7 +124,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}/many`,
+          path: `/${schemaName}/many`,
           action: ConduitRouteActions.UPDATE,
           bodyParams: {
             docs: [{ ...actualSchema.fields, _id: { type: 'String', unique: true } }],
@@ -143,7 +143,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}/:id`,
+          path: `/${schemaName}/:id`,
           action: ConduitRouteActions.UPDATE,
           urlParams: {
             id: TYPE.String,
@@ -161,7 +161,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
-          path: `/content/${schemaName}/:id`,
+          path: `/${schemaName}/:id`,
           action: ConduitRouteActions.DELETE,
           urlParams: {
             id: TYPE.String,

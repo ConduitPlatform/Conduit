@@ -47,7 +47,7 @@ function extractParams(inputs: { name: string; type: string; location: number }[
 
 export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
   let input = {
-    path: `/customOperation/${endpoint.name}`,
+    path: `/function/${endpoint.name}`,
     action: getOperation(endpoint.operation),
     middlewares: endpoint.authentication ? ['authMiddleware'] : undefined,
   };
