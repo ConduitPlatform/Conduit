@@ -5,6 +5,7 @@ import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sd
 import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
 
 const deepdash = require('deepdash/standalone');
+let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter {
   connected: boolean = false;
@@ -62,7 +63,9 @@ export class MongooseAdapter {
   connect() {
     this.mongoose
       .connect(this.connectionString, this.options)
-      .then(() => {})
+      .then(() => {
+        deepPopulate = deepPopulate(this.mongoose);
+      })
       .catch((err: any) => {
         console.log(err);
         throw new Error('Connection with Mongo not possible');
@@ -95,7 +98,7 @@ export class MongooseAdapter {
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
-    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema);
+    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate);
     return new Promise((resolve, reject) => {
       resolve({ schema: this.models![schema.name] });
     });

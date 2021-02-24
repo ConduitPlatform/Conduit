@@ -1,16 +1,15 @@
-import { Model, Query, Schema } from 'mongoose';
+import { Model, Mongoose, Query, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 
 export class MongooseSchema implements SchemaAdapter {
   model: Model<any>;
   originalSchema: any; // any for now
 
-  constructor(mongoose: any, schema: any) {
+  constructor(mongoose: Mongoose, schema: any, deepPopulate: any) {
     this.originalSchema = schema;
-    this.model = mongoose.model(
-      schema.name,
-      new Schema(schema.modelSchema as any, schema.modelOptions)
-    );
+    let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
+    mongooseSchema.plugin(deepPopulate, {});
+    this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
   create(query: any): Promise<any> {
@@ -52,6 +51,35 @@ export class MongooseSchema implements SchemaAdapter {
     return this.model.deleteMany(query).exec();
   }
 
+  calculatePopulates(queryObj: Query<any>, population: any) {
+    population.forEach((r: any, index: number) => {
+      let final = r.toString();
+      if (r.indexOf('.') !== -1) {
+        final = '';
+        r = r.split('.');
+        let controlBool = true;
+        while (controlBool) {
+          if (this.originalSchema.modelSchema[r[0]]) {
+            controlBool = false;
+          } else {
+            r.splice(0, 1);
+          }
+        }
+        population[index] = r.join('.');
+      }
+      // if (final.indexOf('.') !== -1) {
+      //   // @ts-ignore
+      //   queryObj.deepPopulate(final);
+      // } else {
+      //   queryObj.populate(final);
+      // }
+    });
+    // @ts-ignore
+    queryObj = queryObj.deepPopulate(population);
+
+    return queryObj;
+  }
+
   findMany(
     query: any,
     skip?: number,
@@ -81,7 +109,7 @@ export class MongooseSchema implements SchemaAdapter {
   findOne(query: any, select?: string, populate?: any): Promise<any> {
     let finalQuery = this.model.findOne(query, select);
     if (populate !== null) {
-      finalQuery = this.calculatePopulates();
+      finalQuery = this.calculatePopulates(finalQuery, populate);
     }
     return finalQuery.lean().exec();
   }

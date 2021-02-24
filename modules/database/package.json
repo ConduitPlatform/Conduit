@@ -12,14 +12,15 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@types/mongoose": "^5.5.43",
     "deepdash": "^5.0.3",
     "deepdash-es": "^5.0.3",
     "grpc": "^1.24.2",
-    "@grpc/proto-loader": "^0.5.4",
     "lodash": "^4.17.15",
-    "mongoose": "latest"
+    "mongoose": "latest",
+    "mongoose-deep-populate": "^3.2.0"
   },
   "directories": {
     "lib": "src"
