@@ -166,7 +166,12 @@ export class GraphQLController {
       params = '(' + params + ')';
     }
 
-    let finalName = name + params + ':' + returnType;
+    let description = '';
+    if (input.description) {
+      description = `""" ${input.description} """ `;
+    }
+
+    let finalName = description + name + params + ':' + returnType;
     if (input.action === ConduitRouteActions.GET && !this.queries.includes(finalName)) {
       this.queries += ' ' + finalName;
     } else if (
