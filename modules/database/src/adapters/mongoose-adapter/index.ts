@@ -105,17 +105,17 @@ export class MongooseAdapter {
   }
 
   async getSchema(schemaName: string): Promise<{ schema: any }> {
-    if (this.models) {
+    if (this.models && this.models![schemaName]) {
       return { schema: this.models![schemaName].originalSchema };
     }
-    throw new Error('Schema not defined yet');
+    throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
   async getSchemaModel(schemaName: string): Promise<{ model: any }> {
-    if (this.models) {
+    if (this.models && this.models![schemaName]) {
       return { model: this.models![schemaName] };
     }
-    throw new Error('Schema not defined yet');
+    throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
   deleteSchema(schemaName: string) {
