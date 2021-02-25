@@ -61,7 +61,8 @@ export class SwaggerGenerator {
       serviceName = 'core';
     }
     let routeDoc: any = {
-      summary: route.input.description,
+      summary: route.input.name,
+      description: route.input.description,
       tags: [serviceName],
       parameters: [],
       responses: {},
