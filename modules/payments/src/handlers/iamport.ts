@@ -174,7 +174,7 @@ export class IamportHandlers {
     }
 
     const transaction = await this.database
-      .findOne('Transaction', { _id: merchant_uid }, null, 'product')
+      .findOne('Transaction', { _id: merchant_uid }, null, ['product'])
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -640,7 +640,9 @@ export class IamportHandlers {
     let url = serverConfig.url;
 
     const subscription = await this.database
-      .findOne('Subscription', { 'iamport.nextPaymentId': merchant_uid }, null, 'product')
+      .findOne('Subscription', { 'iamport.nextPaymentId': merchant_uid }, null, [
+        'product',
+      ])
       .catch((e: Error) => {
         errorMessage = e.message;
       });

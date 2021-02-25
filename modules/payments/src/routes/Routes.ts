@@ -87,7 +87,7 @@ export class PaymentsRoutes {
         null,
         null,
         null,
-        'product'
+        ['product']
       )
       .catch((e: Error) => {
         errorMessage = e.message;
