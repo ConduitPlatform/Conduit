@@ -1,4 +1,12 @@
-import { Model, Mongoose, Query, Schema } from 'mongoose';
+import {
+  CreateQuery,
+  FilterQuery,
+  Model,
+  Mongoose,
+  Query,
+  Schema,
+  UpdateQuery,
+} from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 
 export class MongooseSchema implements SchemaAdapter {
@@ -12,26 +20,26 @@ export class MongooseSchema implements SchemaAdapter {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  create(query: any): Promise<any> {
+  create(query: CreateQuery<any>): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
     return this.model.create(query).then((r) => r.toObject());
   }
 
-  createMany(query: any): Promise<any> {
+  createMany(docs: any[]): Promise<any> {
     let date = new Date();
-    query.forEach((doc: any) => {
+    docs.forEach((doc: any) => {
       doc.createdAt = date;
       doc.updatedAt = date;
     });
 
-    return this.model.insertMany(query).then((r) => r);
+    return this.model.insertMany(docs).then((r) => r);
   }
 
-  findByIdAndUpdate(id: any, query: any): Promise<any> {
+  findByIdAndUpdate(id: string, query: any): Promise<any> {
     // check if it is a document
     if (!query['$set']) {
-      query.updatedAt = new Date();
+      query['updatedAt'] = new Date();
     } else {
       query['$set']['updatedAt'] = new Date();
     }
@@ -39,19 +47,19 @@ export class MongooseSchema implements SchemaAdapter {
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
-  updateMany(filterQuery: any, query: any): Promise<any> {
+  updateMany(filterQuery: FilterQuery<any>, query: UpdateQuery<any>): Promise<any> {
     return this.model.updateMany(filterQuery, query).exec();
   }
 
-  deleteOne(query: any): Promise<any> {
+  deleteOne(query: Query<any>): Promise<any> {
     return this.model.deleteOne(query).exec();
   }
 
-  deleteMany(query: any): Promise<any> {
+  deleteMany(query: Query<any>): Promise<any> {
     return this.model.deleteMany(query).exec();
   }
 
-  calculatePopulates(queryObj: Query<any>, population: any) {
+  calculatePopulates(queryObj: Query<any>, population: string[]) {
     population.forEach((r: any, index: number) => {
       let final = r.toString();
       if (r.indexOf('.') !== -1) {
@@ -67,12 +75,6 @@ export class MongooseSchema implements SchemaAdapter {
         }
         population[index] = r.join('.');
       }
-      // if (final.indexOf('.') !== -1) {
-      //   // @ts-ignore
-      //   queryObj.deepPopulate(final);
-      // } else {
-      //   queryObj.populate(final);
-      // }
     });
     // @ts-ignore
     queryObj = queryObj.deepPopulate(population);
@@ -81,12 +83,12 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   findMany(
-    query: any,
+    query: Query<any>,
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: any,
-    populate?: any
+    sort?: string,
+    populate?: string[]
   ): Promise<any> {
     let finalQuery = this.model.find(query);
     if (skip !== null) {
@@ -106,15 +108,15 @@ export class MongooseSchema implements SchemaAdapter {
     return finalQuery.lean().exec();
   }
 
-  findOne(query: any, select?: string, populate?: any): Promise<any> {
+  findOne(query: FilterQuery<any>, select?: string, populate?: string[]): Promise<any> {
     let finalQuery = this.model.findOne(query, select);
-    if (populate !== null) {
+    if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
     return finalQuery.lean().exec();
   }
 
-  countDocuments(query: any) {
+  countDocuments(query: FilterQuery<any>) {
     return this.model.find(query).countDocuments().exec();
   }
 }
