@@ -208,7 +208,7 @@ export class DatabaseProvider {
       .then((schemaAdapter: { model: any }) => {
         return schemaAdapter.model.findOne(
           JSON.parse(call.request.query),
-          call.request.select ? JSON.parse(call.request.select) : null,
+          call.request.select,
           call.request.populate
         );
       })
@@ -227,9 +227,9 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        const skip = call.request.skip ? Number.parseInt(call.request.skip) : null;
-        const limit = call.request.limit ? Number.parseInt(call.request.limit) : null;
-        const select = call.request.select ? JSON.parse(call.request.select) : null;
+        const skip = call.request.skip;
+        const limit = call.request.limit;
+        const select = call.request.select;
         const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
         const populate = call.request.populate;
 

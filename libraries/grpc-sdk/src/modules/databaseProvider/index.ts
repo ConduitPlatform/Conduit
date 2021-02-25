@@ -49,12 +49,10 @@ export default class DatabaseProvider extends ConduitModule {
   findOne(
     schemaName: string,
     query: any,
-    select?: any,
+    select?: string,
     populate?: string | string[]
   ): Promise<any> {
     return new Promise((resolve, reject) => {
-      // @ts-ignore
-      const selectStr = select ? JSON.stringify(select) : null;
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
         populateArray = [populate];
@@ -63,7 +61,7 @@ export default class DatabaseProvider extends ConduitModule {
         {
           schemaName,
           query: JSON.stringify(query),
-          select: selectStr,
+          select,
           populate: populateArray,
         },
         (err: any, res: any) => {
@@ -80,14 +78,13 @@ export default class DatabaseProvider extends ConduitModule {
   findMany(
     schemaName: string,
     query: any,
-    select?: any,
+    select?: string,
     skip?: number,
     limit?: number,
     sort?: any,
     populate?: string | string[]
   ) {
     return new Promise((resolve, reject) => {
-      const selectStr = select ? JSON.stringify(select) : null;
       const sortStr = sort ? JSON.stringify(sort) : null;
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
@@ -97,7 +94,7 @@ export default class DatabaseProvider extends ConduitModule {
         {
           schemaName,
           query: JSON.stringify(query),
-          select: selectStr,
+          select,
           skip,
           limit,
           sort: sortStr,
@@ -144,7 +141,7 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  findByIdAndUpdate(schemaName: string, id: any, document: any) {
+  findByIdAndUpdate(schemaName: string, id: string, document: any) {
     return new Promise((resolve, reject) => {
       this.client.findByIdAndUpdate(
         { schemaName, id, query: JSON.stringify(document) },

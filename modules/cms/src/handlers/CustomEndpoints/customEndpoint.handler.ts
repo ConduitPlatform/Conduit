@@ -154,7 +154,7 @@ export class CustomEndpointHandler {
         const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
           searchQuery,
-          null,
+          undefined,
           params['skip'],
           params['limit'],
           sortObj,
