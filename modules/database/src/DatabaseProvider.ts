@@ -209,7 +209,7 @@ export class DatabaseProvider {
         return schemaAdapter.model.findOne(
           JSON.parse(call.request.query),
           call.request.select ? JSON.parse(call.request.select) : null,
-          call.request.populate ? JSON.parse(call.request.populate) : null
+          call.request.populate
         );
       })
       .then((doc: any) => {
@@ -231,7 +231,7 @@ export class DatabaseProvider {
         const limit = call.request.limit ? Number.parseInt(call.request.limit) : null;
         const select = call.request.select ? JSON.parse(call.request.select) : null;
         const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
-        const populate = call.request.populate ? JSON.parse(call.request.populate) : null;
+        const populate = call.request.populate;
 
         return schemaAdapter.model.findMany(
           JSON.parse(call.request.query),
