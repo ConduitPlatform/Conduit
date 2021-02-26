@@ -56,19 +56,35 @@ export class AuthenticationRoutes {
     const router = protoDescriptor.authentication.router.Router;
     server.addService(router.service, {
       register: this.localHandlers.register.bind(this.localHandlers),
-      authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
-      forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
+      authenticateLocal: this.localHandlers.authenticate.bind(
+        this.localHandlers
+      ),
+      forgotPassword: this.localHandlers.forgotPassword.bind(
+        this.localHandlers
+      ),
       resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
       verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
       verify: this.localHandlers.verify.bind(this.localHandlers),
       enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
-      verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
+      verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(
+        this.localHandlers
+      ),
       disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
-      authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
-      authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
-      authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-      authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
-      authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
+      authenticateFacebook: this.facebookHandlers.authenticate.bind(
+        this.facebookHandlers
+      ),
+      authenticateGoogle: this.googleHandlers.authenticate.bind(
+        this.googleHandlers
+      ),
+      authenticateService: this.serviceHandler.authenticate.bind(
+        this.serviceHandler
+      ),
+      authenticateKakao: this.kakaoHandlers.authenticate.bind(
+        this.kakaoHandlers
+      ),
+      authenticateTwitch: this.twitchHandlers.authenticate.bind(
+        this.twitchHandlers
+      ),
       renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
       logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
       getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
@@ -78,12 +94,16 @@ export class AuthenticationRoutes {
   }
 
   async registerRoutes(url: string) {
-    let routerProtoFile = fs.readFileSync(path.resolve(__dirname, "./router.proto"));
+    let routerProtoFile = fs.readFileSync(
+      path.resolve(__dirname, "./router.proto")
+    );
     let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router.register(activeRoutes, routerProtoFile.toString("utf-8"), url).catch((err: Error) => {
-      console.log("Failed to register routes for authentication module");
-      console.log(err);
-    });
+    this.grpcSdk.router
+      .register(activeRoutes, routerProtoFile.toString("utf-8"), url)
+      .catch((err: Error) => {
+        console.log("Failed to register routes for authentication module");
+        console.log(err);
+      });
   }
 
   async getRegisteredRoutes(): Promise<any[]> {
@@ -92,7 +112,9 @@ export class AuthenticationRoutes {
     let enabled = false;
 
     let errorMessage = null;
-    let authActive = await this.localHandlers.validate().catch((e: any) => (errorMessage = e));
+    let authActive = await this.localHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -143,7 +165,10 @@ export class AuthenticationRoutes {
                 email: TYPE.String,
               },
             },
-            new ConduitRouteReturnDefinition("ForgotPasswordResponse", "String"),
+            new ConduitRouteReturnDefinition(
+              "ForgotPasswordResponse",
+              "String"
+            ),
             "forgotPassword"
           )
         )
@@ -182,7 +207,9 @@ export class AuthenticationRoutes {
         )
       );
 
-      const authConfig = await this.grpcSdk.config.get("authentication").catch(console.error);
+      const authConfig = await this.grpcSdk.config
+        .get("authentication")
+        .catch(console.error);
       if (authConfig?.twofa.enabled) {
         routesArray.push(
           constructRoute(
@@ -193,13 +220,13 @@ export class AuthenticationRoutes {
                 bodyParams: {
                   email: TYPE.String,
                   code: TYPE.String,
-                }
+                },
               },
               new ConduitRouteReturnDefinition("VerifyTwoFaResponse", {
-                  userId: ConduitString.Optional,
-                  accessToken: ConduitString.Optional,
-                  refreshToken: ConduitString.Optional,
-                  message: ConduitString.Optional,
+                userId: ConduitString.Optional,
+                accessToken: ConduitString.Optional,
+                refreshToken: ConduitString.Optional,
+                message: ConduitString.Optional,
               }),
               "verify"
             )
@@ -207,57 +234,65 @@ export class AuthenticationRoutes {
         );
 
         routesArray.push(
-            constructRoute(
-                new ConduitRoute(
-                    {
-                        path: "/authentication/local/enable-twofa",
-                        action: ConduitRouteActions.UPDATE,
-                        middlewares: ["authMiddleware"],
-                        bodyParams: {
-                            phoneNumber: TYPE.String
-                        }
-                    },
-                    new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
-                    "enableTwoFa"
-                )
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: "/authentication/local/enable-twofa",
+                action: ConduitRouteActions.UPDATE,
+                middlewares: ["authMiddleware"],
+                bodyParams: {
+                  phoneNumber: TYPE.String,
+                },
+              },
+              new ConduitRouteReturnDefinition("EnableTwoFaResponse", "String"),
+              "enableTwoFa"
             )
+          )
         );
 
         routesArray.push(
-            constructRoute(
-                new ConduitRoute(
-                    {
-                        path: "/authentication/local/verifyPhoneNumber",
-                        action: ConduitRouteActions.POST,
-                        middlewares: ["authMiddleware"],
-                        bodyParams: {
-                            code: TYPE.String
-                        }
-                    },
-                    new ConduitRouteReturnDefinition("VerifyPhoneNumberResponse", "String"),
-                    "verifyPhoneNumber"
-                )
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: "/authentication/local/verifyPhoneNumber",
+                action: ConduitRouteActions.POST,
+                middlewares: ["authMiddleware"],
+                bodyParams: {
+                  code: TYPE.String,
+                },
+              },
+              new ConduitRouteReturnDefinition(
+                "VerifyPhoneNumberResponse",
+                "String"
+              ),
+              "verifyPhoneNumber"
             )
+          )
         );
 
-          routesArray.push(
-              constructRoute(
-                  new ConduitRoute(
-                      {
-                          path: "/authentication/local/disable-twofa",
-                          action: ConduitRouteActions.UPDATE,
-                          middlewares: ["authMiddleware"],
-                      },
-                      new ConduitRouteReturnDefinition("DisableTwoFaResponse", "String"),
-                      "disableTwoFa"
-                  )
-              )
-          );
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: "/authentication/local/disable-twofa",
+                action: ConduitRouteActions.UPDATE,
+                middlewares: ["authMiddleware"],
+              },
+              new ConduitRouteReturnDefinition(
+                "DisableTwoFaResponse",
+                "String"
+              ),
+              "disableTwoFa"
+            )
+          )
+        );
       }
       enabled = true;
     }
     errorMessage = null;
-    authActive = await this.facebookHandlers.validate().catch((e: any) => (errorMessage = e));
+    authActive = await this.facebookHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -284,7 +319,9 @@ export class AuthenticationRoutes {
     }
 
     errorMessage = null;
-    authActive = await this.googleHandlers.validate().catch((e: any) => (errorMessage = e));
+    authActive = await this.googleHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -312,7 +349,9 @@ export class AuthenticationRoutes {
     }
 
     errorMessage = null;
-    authActive = await this.serviceHandler.validate().catch((e: any) => (errorMessage = e));
+    authActive = await this.serviceHandler
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -339,7 +378,9 @@ export class AuthenticationRoutes {
     }
 
     errorMessage = null;
-    authActive = await this.kakaoHandlers.validate().catch((e: any) => (errorMessage = e));
+    authActive = await this.kakaoHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -365,7 +406,9 @@ export class AuthenticationRoutes {
     }
 
     errorMessage = null;
-    authActive = await this.twitchHandlers.validate().catch((e: any) => (errorMessage = e));
+    authActive = await this.twitchHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
         constructRoute(
@@ -450,16 +493,31 @@ export class AuthenticationRoutes {
         )
       );
 
-      routesArray.push(constructMiddleware(new ConduitMiddleware({ path: "/authentication" }, "authMiddleware")));
+      routesArray.push(
+        constructMiddleware(
+          new ConduitMiddleware({ path: "/authentication" }, "authMiddleware")
+        )
+      );
     }
     return routesArray;
   }
 
   middleware(call: any, callback: any) {
-    let context = JSON.parse(call.request.context);
-    let headers = JSON.parse(call.request.headers);
+    let context;
+    let headers;
+    try {
+      context = JSON.parse(call.request.context);
+      headers = JSON.parse(call.request.headers);
+    } catch (e) {
+      console.log("Failed to parse json");
+      return callback({
+        code: grpc.status.UNAUTHENTICATED,
+        message: "No authorization header present",
+      });
+    }
 
-    const header = (headers["Authorization"] || headers["authorization"]) as string;
+    const header = (headers["Authorization"] ||
+      headers["authorization"]) as string;
     if (isNil(header)) {
       return callback({
         code: grpc.status.UNAUTHENTICATED,
@@ -481,22 +539,27 @@ export class AuthenticationRoutes {
         clientId: context.clientId,
       })
       .then((accessTokenDoc: any) => {
-        if (isNil(accessTokenDoc) || moment().isAfter(moment(accessTokenDoc.expiresOn))) {
+        if (
+          isNil(accessTokenDoc) ||
+          moment().isAfter(moment(accessTokenDoc.expiresOn))
+        ) {
           return callback({
             code: grpc.status.UNAUTHENTICATED,
             message: "Token is expired or otherwise not valid",
           });
         }
-        return this.grpcSdk.databaseProvider!.findOne("User", { _id: accessTokenDoc.userId }).then((user: any) => {
-          if (isNil(user)) {
-            callback({
-              code: grpc.status.UNAUTHENTICATED,
-              message: "User no longer exists",
-            });
-          } else {
-            callback(null, { result: JSON.stringify({ user: user }) });
-          }
-        });
+        return this.grpcSdk
+          .databaseProvider!.findOne("User", { _id: accessTokenDoc.userId })
+          .then((user: any) => {
+            if (isNil(user)) {
+              callback({
+                code: grpc.status.UNAUTHENTICATED,
+                message: "User no longer exists",
+              });
+            } else {
+              callback(null, { result: JSON.stringify({ user: user }) });
+            }
+          });
       })
       .catch((err) => {
         callback({

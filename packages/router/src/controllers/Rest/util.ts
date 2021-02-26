@@ -1,6 +1,6 @@
 import { Request } from "express";
 export function extractRequestData(req: Request) {
-  const context = (req as any).conduit;
+  const context = (req as any).conduit || {};
   let params: any = {};
   let headers: any = req.headers;
   if (req.query) {
