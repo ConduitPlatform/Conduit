@@ -43,7 +43,7 @@ export class GraphQLController {
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
       context: ({ req }: any) => {
-        const context = (req as any).conduit;
+        const context = (req as any).conduit || {};
         let headers: any = req.headers;
         return { context, headers };
       },

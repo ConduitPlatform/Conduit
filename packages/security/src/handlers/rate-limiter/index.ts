@@ -13,7 +13,7 @@ export class RateLimiter {
     });
     this._limiter = new RateLimiterRedis({
       storeClient: redisClient,
-      keyPrefix: 'mainLimiter',
+            keyPrefix: 'mainLimiter',
       points: 50, // 10 requests
       duration: 1, // per 1 second by IP
       blockDuration: 10,
@@ -25,13 +25,18 @@ export class RateLimiter {
   get limiter() {
     const self = this;
     return (req: any, res: any, next: any) => {
+      let ip =
+        req.headers["cf-connecting-ip"] ||
+        req.headers["x-original-forwarded-for"] ||
+        req.headers["x-forwarded-for"] ||
+        req.ip;
       self._limiter
-        .consume(req.ip)
+        .consume(ip)
         .then(() => {
           next();
         })
         .catch(() => {
-          res.status(429).send('Too Many Requests');
+                    res.status(429).send('Too Many Requests');
         });
     };
   }

@@ -7,25 +7,25 @@ all: conduit ${IMAGE_DIRS}
 
 conduit:
 ifeq ($(DEV),TRUE)
-	docker build -t quintessential.azurecr.io/conduit:latest ./packages
-	docker push  quintessential.azurecr.io/conduit:latest
+	docker build --no-cache -t quintessential.azurecr.io/conduit:latest ./packages
+	docker push quintessential.azurecr.io/conduit:latest
 else
-	docker build -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
-	docker push  quintessential.azurecr.io/conduit:${IMAGE_TAG}
+	docker build --no-cache -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
+	docker push quintessential.azurecr.io/conduit:${IMAGE_TAG}
 endif
 
 conduit-builder:
-	docker build -t conduit-base:latest -f ./Dockerfile ./
-	docker build -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
+	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
+	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
 
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 ifeq ($(DEV),TRUE)
-	docker build -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest $@
-	docker push  quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest
+	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest $@
+	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest
 else
-	docker build -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker push  quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG}
+	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
+	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG}
 endif
 
 modules/authentication: conduit-builder
