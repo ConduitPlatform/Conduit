@@ -62,7 +62,6 @@ export default class ConfigManager implements IConfigManager {
         if (state.modules) {
           let promise = Promise.resolve();
           state.modules.forEach((r: any) => {
-            let error;
             promise = promise
               .then(() => {
                 return self._registerModule(r.name, r.url, r.instance);
@@ -74,18 +73,16 @@ export default class ConfigManager implements IConfigManager {
                   instance: r.instance,
                 });
               })
-              .catch((err) => {
-                // do nothing
-                console.log(err);
+              .catch(() => {
                 return Promise.resolve();
               });
           });
           promise
-            .then((r) => {
+            .then(() => {
               state.modules = success;
               self.setState(state);
             })
-            .then((r) => {
+            .then(() => {
               return this.grpcSdk.initializeModules();
             });
         }
@@ -451,7 +448,6 @@ export default class ConfigManager implements IConfigManager {
         failed = err;
       });
       if (failed && failed.message.indexOf('Error: Parse Error') === -1) {
-        console.log('Failed');
         throw new Error('Failed to register dead module');
       }
     }
