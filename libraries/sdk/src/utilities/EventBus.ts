@@ -1,9 +1,9 @@
-import { RedisClient } from 'redis';
 import { RedisManager } from './RedisManager';
+import { Redis } from 'ioredis';
 
 export class EventBus {
-  private _clientSubscriber: RedisClient;
-  private _clientPublisher: RedisClient;
+  private _clientSubscriber: Redis;
+  private _clientPublisher: Redis;
 
   constructor(redisManager: RedisManager) {
     this._clientSubscriber = redisManager.getClient({ prefix: '_bus' });
@@ -14,7 +14,7 @@ export class EventBus {
   }
 
   subscribe(channelName: string, callback: (message: string) => void): void {
-    this._clientSubscriber.subscribe(channelName);
+    this._clientSubscriber.subscribe(channelName, () => {});
     this._clientSubscriber.on('message', (channel: string, message: string) => {
       if (channel !== channelName) return;
       callback(message);
