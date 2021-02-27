@@ -6,8 +6,8 @@ export class EventBus {
   private _clientPublisher: Redis;
 
   constructor(redisManager: RedisManager) {
-    this._clientSubscriber = redisManager.getClient({ prefix: '_bus' });
-    this._clientPublisher = redisManager.getClient({ prefix: '_bus' });
+    this._clientSubscriber = redisManager.getClient({ keyPrefix: '_bus' });
+    this._clientPublisher = redisManager.getClient({ keyPrefix: '_bus' });
     this._clientSubscriber.on('ready', () => {
       console.log('The Bus is in the station...hehe');
     });
