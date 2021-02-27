@@ -28,6 +28,7 @@ export class ClientValidator {
 
     let key = await this.sdk.getState().getKey(`${clientid}-${clientsecret}`);
     if (key) {
+      (req as any).conduit.clientId = clientid;
       return next();
     }
     this.database
