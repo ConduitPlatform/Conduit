@@ -12,12 +12,13 @@ export class MongooseAdapter {
   mongoose: Mongoose;
   connectionString: string;
   options: ConnectionOptions = {
-    autoReconnect: true,
     keepAlive: true,
+    poolSize: 10,
     connectTimeoutMS: 30000,
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
+    useUnifiedTopology: true,
   };
   models?: { [name: string]: MongooseSchema };
   registeredSchemas: Map<string, ConduitSchema>;

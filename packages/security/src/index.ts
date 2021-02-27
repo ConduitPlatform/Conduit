@@ -15,7 +15,10 @@ class SecurityModule extends IConduitSecurity {
     new Admin(conduit, grpcSdk);
     const router = conduit.getRouter();
 
-    let clientValidator: ClientValidator = new ClientValidator(grpcSdk.databaseProvider!);
+    let clientValidator: ClientValidator = new ClientValidator(
+      grpcSdk.databaseProvider,
+      conduit
+    );
 
     router.registerGlobalMiddleware(
       'rateLimiter',

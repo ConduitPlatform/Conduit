@@ -1,5 +1,6 @@
 // todo Create the controller that creates REST-specific endpoints
 import {
+  Application,
   Handler,
   IRouterMatcher,
   NextFunction,
@@ -13,11 +14,13 @@ import {
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitSDK,
 } from '@quintessential-sft/conduit-sdk';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData } from './util';
 
 const swaggerUi = require('swagger-ui-express');
+const crypto = require('crypto');
 
 export class RestController {
   private _router!: Router;
@@ -26,7 +29,7 @@ export class RestController {
   private _registeredLocalRoutes: Map<string, Handler>;
   private _swagger: SwaggerGenerator;
 
-  constructor() {
+  constructor(private readonly app: Application) {
     this._registeredRoutes = new Map();
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator();
@@ -115,6 +118,21 @@ export class RestController {
   ) {
     this._router.use(path, router);
   }
+  private findInCache(hashKey: string) {
+    return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
+  }
+
+  private storeInCache(hashKey: string, data: any) {
+    ((this.app as any).conduit as ConduitSDK)
+      .getState()
+      .setKey('hash-' + hashKey, JSON.stringify(data), 10000);
+  }
+
+  private createHashKey(path: string, context: any, params: any, headers: string) {
+    let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
+    hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
+    return hashKey;
+  }
 
   private addConduitRoute(route: ConduitRoute) {
     const self = this;
@@ -144,22 +162,51 @@ export class RestController {
 
     routerMethod(route.input.path, (req, res, next) => {
       let context = extractRequestData(req);
+      let hashKey: string;
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
           Object.assign(context.context, r);
-          return route.executeRequest(context);
+          if (route.input.action !== ConduitRouteActions.GET) {
+            return route.executeRequest(context);
+          }
+          hashKey = self.createHashKey(
+            context.path,
+            context.context,
+            context.params,
+            context.headers
+          );
+          return this.findInCache(hashKey)
+            .then((r) => {
+              if (r) {
+                return { fromCache: true, data: JSON.parse(r) };
+              } else {
+                return route.executeRequest(context);
+              }
+            })
+            .catch(() => {
+              return route.executeRequest(context);
+            });
         })
         .then((r: any) => {
           if (r.redirect) {
-            res.redirect(r.redirect);
+            return res.redirect(r.redirect);
           } else {
-            let result = r.result ? r.result : r;
+            let result;
+            if (r.fromCache) {
+              return res.status(200).json(r.data);
+            } else {
+              result = r.result ? r.result : r;
+            }
             if (r.result && !(typeof route.returnTypeFields === 'string')) {
               result = JSON.parse(result);
             } else {
               result = { result: result };
             }
+            if (route.input.action === ConduitRouteActions.GET) {
+              this.storeInCache(hashKey, result);
+            }
+
             res.status(200).json(result);
           }
         })

@@ -3,6 +3,9 @@
   "version": "1.0.16",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "prepublish": "npm run build",
     "prebuild": "sh build.sh",
@@ -11,12 +14,13 @@
   },
   "license": "ISC",
   "dependencies": {
-    "convict": "^5.2.0",
+    "@types/google-protobuf": "^3.2.7",
+    "@types/lodash": "^4.14.150",
+    "@types/ioredis": "^4.22.0",
+    "ioredis": "^4.23.0",
     "google-protobuf": "^3.8.0-rc.1",
-    "is-natural-number": "^4.0.1",
     "lodash": "^4.17.15",
-    "redis": "^3.0.2",
-    "validator": "^13.0.0"
+    "redis": "^3.0.2"
   },
   "directories": {
     "lib": "dist",
@@ -34,25 +38,15 @@
     "directory": "libraries/grpc-sdk"
   },
   "devDependencies": {
-    "@types/convict": "^4.2.1",
-    "@types/express": "~4.16.1",
-    "@types/google-protobuf": "^3.2.7",
-    "@types/is-natural-number": "^4.0.0",
-    "@types/lodash": "^4.14.150",
-    "@types/node": "^13.9.8",
-    "@types/redis": "^2.8.28",
-    "@types/validator": "^13.0.0",
-    "copyfiles": "^2.2.0",
-    "express": "~4.16.1",
-    "grpc-tools": "^1.8.1",
-    "grpc": "^1.24.2",
     "@grpc/proto-loader": "^0.5.4",
+    "@types/node": "^13.9.8",
+    "copyfiles": "^2.2.0",
+    "grpc": "^1.24.2",
     "rimraf": "^3.0.2",
-    "ts-protoc-gen": "^0.12.0",
     "typescript": "^3.7.5"
   },
   "peerDependencies": {
-    "grpc": "^1.24.2",
-    "@grpc/proto-loader": "^0.5.4"
+    "@grpc/proto-loader": "^0.5.4",
+    "grpc": "^1.24.2"
   }
 }

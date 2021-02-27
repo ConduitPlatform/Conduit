@@ -1,20 +1,22 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import {
+  ConduitError,
+  ConduitMiddleware,
   ConduitModel,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteOptionExtended,
   ConduitRouteOptions,
   ConduitRouteParameters,
-  ConduitMiddleware,
+  ConduitSDK,
 } from '@quintessential-sft/conduit-sdk';
 import { extractTypes, findPopulation, ParseResult } from './TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
-import { ConduitError } from '@quintessential-sft/conduit-sdk';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer, ApolloError } = require('apollo-server-express');
+const crypto = require('crypto');
 
 export class GraphQLController {
   typeDefs!: string;
@@ -29,7 +31,7 @@ export class GraphQLController {
   private _registeredRoutes!: Map<string, ConduitRoute>;
   private _scheduledTimeout: any = null;
 
-  constructor(app: Application) {
+  constructor(private readonly app: Application) {
     this._registeredRoutes = new Map();
     this.initialize();
   }
@@ -271,6 +273,16 @@ export class GraphQLController {
     }
   }
 
+  private findInCache(hashKey: string) {
+    return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
+  }
+
+  private storeInCache(hashKey: string, data: any) {
+    ((this.app as any).conduit as ConduitSDK)
+      .getState()
+      .setKey('hash-' + hashKey, JSON.stringify(data), 10000);
+  }
+
   private initialize() {
     this.resolvers = {
       Date: new GraphQLScalarType({
@@ -305,6 +317,12 @@ export class GraphQLController {
     });
   }
 
+  private createHashKey(path: string, context: any, params: any, headers: string) {
+    let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
+    hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
+    return hashKey;
+  }
+
   private addConduitRoute(route: ConduitRoute) {
     this.generateType(route.returnTypeName, route.returnTypeFields);
     let actionName = this.generateAction(route.input, route.returnTypeName);
@@ -322,21 +340,45 @@ export class GraphQLController {
       ) => {
         args = self.shouldPopulate(args, info);
         context.path = route.input.path;
+        let hashKey: string;
         return self
           .checkMiddlewares(context, route.input.middlewares)
           .then((r: any) => {
             Object.assign(context.context, r);
             let params = Object.assign(args, args.params);
             delete params.params;
-            return route.executeRequest.bind(route)({ ...context, params });
+            hashKey = self.createHashKey(
+              context.path,
+              context.context,
+              params,
+              context.headers
+            );
+            return this.findInCache(hashKey)
+              .then((r) => {
+                if (r) {
+                  return { fromCache: true, data: JSON.parse(r) };
+                } else {
+                  return route.executeRequest.bind(route)({ ...context, params });
+                }
+              })
+              .catch(() => {
+                return route.executeRequest.bind(route)({ ...context, params });
+              });
           })
           .then((r: any) => {
-            let result = r.result ? r.result : r;
+            let result;
+            if (r.fromCache) {
+              return r.data;
+            } else {
+              result = r.result ? r.result : r;
+            }
+
             if (r.result && !(typeof route.returnTypeFields === 'string')) {
               result = JSON.parse(result);
             } else {
               result = { result: result };
             }
+            this.storeInCache(hashKey, result);
             return result;
           })
           .catch((err: Error | ConduitError) => {

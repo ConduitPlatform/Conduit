@@ -3,6 +3,9 @@
   "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "prepublish": "npm run build",
@@ -14,12 +17,11 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@types/mongoose": "^5.5.43",
     "deepdash": "^5.0.3",
     "deepdash-es": "^5.0.3",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15",
-    "mongoose": "latest",
+    "mongoose": "^5.11.18",
     "mongoose-deep-populate": "^3.2.0"
   },
   "directories": {
