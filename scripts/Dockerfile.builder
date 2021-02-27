@@ -1,4 +1,4 @@
-FROM node:dubnium-alpine
+FROM node:fermium-alpine
 
 WORKDIR /app
 

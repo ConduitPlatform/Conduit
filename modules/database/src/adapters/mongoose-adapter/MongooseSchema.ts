@@ -1,12 +1,4 @@
-import {
-  CreateQuery,
-  FilterQuery,
-  Model,
-  Mongoose,
-  Query,
-  Schema,
-  UpdateQuery,
-} from 'mongoose';
+import { Model, Mongoose, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 
 export class MongooseSchema implements SchemaAdapter {
@@ -20,7 +12,7 @@ export class MongooseSchema implements SchemaAdapter {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  create(query: CreateQuery<any>): Promise<any> {
+  create(query: any): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
     return this.model.create(query).then((r) => r.toObject());
@@ -47,19 +39,19 @@ export class MongooseSchema implements SchemaAdapter {
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
-  updateMany(filterQuery: FilterQuery<any>, query: UpdateQuery<any>): Promise<any> {
+  updateMany(filterQuery: any, query: any): Promise<any> {
     return this.model.updateMany(filterQuery, query).exec();
   }
 
-  deleteOne(query: Query<any>): Promise<any> {
+  deleteOne(query: any): Promise<any> {
     return this.model.deleteOne(query).exec();
   }
 
-  deleteMany(query: Query<any>): Promise<any> {
+  deleteMany(query: any): Promise<any> {
     return this.model.deleteMany(query).exec();
   }
 
-  calculatePopulates(queryObj: Query<any>, population: string[]) {
+  calculatePopulates(queryObj: any, population: string[]) {
     population.forEach((r: any, index: number) => {
       let final = r.toString();
       if (r.indexOf('.') !== -1) {
@@ -83,7 +75,7 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   findMany(
-    query: Query<any>,
+    query: any,
     skip?: number,
     limit?: number,
     select?: string,
@@ -108,7 +100,7 @@ export class MongooseSchema implements SchemaAdapter {
     return finalQuery.lean().exec();
   }
 
-  findOne(query: FilterQuery<any>, select?: string, populate?: string[]): Promise<any> {
+  findOne(query: any, select?: string, populate?: string[]): Promise<any> {
     let finalQuery = this.model.findOne(query, select);
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
@@ -116,7 +108,7 @@ export class MongooseSchema implements SchemaAdapter {
     return finalQuery.lean().exec();
   }
 
-  countDocuments(query: FilterQuery<any>) {
+  countDocuments(query: any) {
     return this.model.find(query).countDocuments().exec();
   }
 }

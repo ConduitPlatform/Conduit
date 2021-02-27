@@ -4,6 +4,9 @@
   "main": "dist/bin/www.js",
   "types": "dist/bin/www.d.ts",
   "private": true,
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",

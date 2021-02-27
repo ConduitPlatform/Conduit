@@ -3,6 +3,9 @@
   "version": "1.0.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc"

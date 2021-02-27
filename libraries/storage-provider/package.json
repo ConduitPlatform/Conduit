@@ -27,7 +27,7 @@
     "directory": "libraries/storage-provider"
   },
   "devDependencies": {
-    "typescript": "^3.7.5",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5"
   }
 }

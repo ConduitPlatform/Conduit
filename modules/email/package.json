@@ -3,6 +3,9 @@
   "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
@@ -21,11 +24,11 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@quintessential-sft/email-provider": "^1.0.0",
     "convict": "^6.0.0",
     "grpc": "^1.24.2",
-    "@grpc/proto-loader": "^0.5.4",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
