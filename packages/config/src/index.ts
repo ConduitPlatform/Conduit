@@ -79,8 +79,11 @@ export default class ConfigManager implements IConfigManager {
           });
           promise
             .then(() => {
-              state.modules = success;
-              self.setState(state);
+              if (state.modules.length > success.length) {
+                state.modules = success;
+                self.setState(state);
+              }
+              return;
             })
             .then(() => {
               return this.grpcSdk.initializeModules();
