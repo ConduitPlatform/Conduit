@@ -16,7 +16,8 @@
   "dependencies": {
     "@types/google-protobuf": "^3.2.7",
     "@types/lodash": "^4.14.150",
-    "@types/redis": "^2.8.28",
+    "@types/ioredis": "^4.22.0",
+    "ioredis": "^4.23.0",
     "google-protobuf": "^3.8.0-rc.1",
     "lodash": "^4.17.15",
     "redis": "^3.0.2"
