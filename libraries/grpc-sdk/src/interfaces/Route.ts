@@ -41,4 +41,5 @@ export interface ConduitRouteOptions {
   name?: string;
   description?: string;
   middlewares?: string[];
+  cacheControl?: string;
 }

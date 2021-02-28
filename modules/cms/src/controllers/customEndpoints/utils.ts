@@ -1,6 +1,7 @@
 import {
   ConduitRoute,
   ConduitRouteActions,
+  ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
@@ -46,13 +47,19 @@ function extractParams(inputs: { name: string; type: string; location: number }[
 }
 
 export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
-  let input = {
+  let input: ConduitRouteOptions = {
     path: `/function/${endpoint.name}`,
     action: getOperation(endpoint.operation),
     middlewares: endpoint.authentication ? ['authMiddleware'] : undefined,
+    cacheControl: undefined,
   };
   let inputs = endpoint.inputs;
   let returns: any = { result: [endpoint.returns] };
+  if (input.action === ConduitRouteActions.GET) {
+    input.cacheControl = endpoint.authentication
+      ? 'private, max-age=10'
+      : 'public, max-age=10';
+  }
   if (endpoint.paginated) {
     inputs.push({
       name: 'skip',

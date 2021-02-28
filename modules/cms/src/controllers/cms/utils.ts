@@ -59,6 +59,9 @@ export function getOps(schemaName: string, actualSchema: any) {
             id: TYPE.String,
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+          cacheControl: actualSchema.authentication
+            ? 'private, max-age=10'
+            : 'public, max-age=10',
         },
         new ConduitRouteReturnDefinition(`${schemaName}`, actualSchema.fields),
         'getDocumentById'
@@ -78,6 +81,9 @@ export function getOps(schemaName: string, actualSchema: any) {
             sort: TYPE.String,
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+          cacheControl: actualSchema.authentication
+            ? 'private, max-age=10'
+            : 'public, max-age=10',
         },
         new ConduitRouteReturnDefinition(`get${schemaName}`, {
           documents: [actualSchema.fields],

@@ -18,6 +18,7 @@ import {
 } from '@quintessential-sft/conduit-sdk';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData } from './util';
+import { createHashKey, extractCaching } from '../cache.utils';
 
 const swaggerUi = require('swagger-ui-express');
 const crypto = require('crypto');
@@ -122,16 +123,10 @@ export class RestController {
     return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
   }
 
-  private storeInCache(hashKey: string, data: any) {
+  private storeInCache(hashKey: string, data: any, cacheAge: number) {
     ((this.app as any).conduit as ConduitSDK)
       .getState()
-      .setKey('hash-' + hashKey, JSON.stringify(data), 10000);
-  }
-
-  private createHashKey(path: string, context: any, params: any, headers: string) {
-    let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
-    hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
-    return hashKey;
+      .setKey('hash-' + hashKey, JSON.stringify(data), cacheAge * 1000);
   }
 
   private addConduitRoute(route: ConduitRoute) {
@@ -163,6 +158,7 @@ export class RestController {
     routerMethod(route.input.path, (req, res, next) => {
       let context = extractRequestData(req);
       let hashKey: string;
+      let { caching, cacheAge, scope } = extractCaching(route);
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
@@ -170,23 +166,22 @@ export class RestController {
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
           }
-          hashKey = self.createHashKey(
-            context.path,
-            context.context,
-            context.params,
-            context.headers
-          );
-          return this.findInCache(hashKey)
-            .then((r) => {
-              if (r) {
-                return { fromCache: true, data: JSON.parse(r) };
-              } else {
+          if (caching) {
+            hashKey = createHashKey(context.path, context.context, context.params);
+            return this.findInCache(hashKey)
+              .then((r) => {
+                if (r) {
+                  return { fromCache: true, data: JSON.parse(r) };
+                } else {
+                  return route.executeRequest(context);
+                }
+              })
+              .catch(() => {
                 return route.executeRequest(context);
-              }
-            })
-            .catch(() => {
-              return route.executeRequest(context);
-            });
+              });
+          } else {
+            return route.executeRequest(context);
+          }
         })
         .then((r: any) => {
           if (r.redirect) {
@@ -203,8 +198,11 @@ export class RestController {
             } else {
               result = { result: result };
             }
-            if (route.input.action === ConduitRouteActions.GET) {
-              this.storeInCache(hashKey, result);
+            if (route.input.action === ConduitRouteActions.GET && caching) {
+              this.storeInCache(hashKey, result, cacheAge!);
+              res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
+            } else {
+              res.setHeader('Cache-Control', 'no-store');
             }
 
             res.status(200).json(result);
