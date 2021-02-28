@@ -56,6 +56,7 @@ message RegisterConduitRouteRequest {
         string name = 6;
         string description = 7;
         repeated string middlewares = 8;
+        string cacheControl = 9;
     }
 
     message ConduitRouteReturnDefinition {

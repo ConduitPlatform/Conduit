@@ -4623,6 +4623,16 @@ apollo-reporting-protobuf@^0.6.2:
   dependencies:
     "@apollo/protobufjs" "^1.0.3"
 
+apollo-server-cache-redis@^1.2.3:
+  version "1.2.3"
+  resolved "https://registry.yarnpkg.com/apollo-server-cache-redis/-/apollo-server-cache-redis-1.2.3.tgz#cdc19624d0370f623df7e1d726bd0e5b544bef95"
+  integrity sha512-e81tYrK2tUJYmVa0lPsBazoNeLXvRPkFhrIwOfH1DeCGKcHOF7/loXH+AXm6eVQ9v5l271gsDKU3dtV1EuNd3w==
+  dependencies:
+    apollo-server-caching "^0.5.3"
+    apollo-server-env "^3.0.0"
+    dataloader "^2.0.0"
+    ioredis "^4.0.0"
+
 apollo-server-caching@^0.5.3:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/apollo-server-caching/-/apollo-server-caching-0.5.3.tgz#cf42a77ad09a46290a246810075eaa029b5305e1"
@@ -4703,6 +4713,15 @@ apollo-server-plugin-base@^0.10.4:
   integrity sha512-HRhbyHgHFTLP0ImubQObYhSgpmVH4Rk1BinnceZmwudIVLKrqayIVOELdyext/QnSmmzg5W7vF3NLGBcVGMqDg==
   dependencies:
     apollo-server-types "^0.6.3"
+
+apollo-server-plugin-response-cache@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/apollo-server-plugin-response-cache/-/apollo-server-plugin-response-cache-0.6.0.tgz#b8735951665e01428fbf22f36aafd12953b350c9"
+  integrity sha512-Yjwec1VXINmNV6tmZLv+J9+iPb/4oKPcVA2YwF05o3Lf/oO+T5/9DP1yHxxjB117KDYlepKeIPuzAcqFZW/l8g==
+  dependencies:
+    apollo-cache-control "^0.11.6"
+    apollo-server-caching "^0.5.3"
+    apollo-server-plugin-base "^0.10.4"
 
 apollo-server-types@^0.6.3:
   version "0.6.3"
@@ -7623,6 +7642,11 @@ dataloader@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/dataloader/-/dataloader-1.4.0.tgz#bca11d867f5d3f1b9ed9f737bd15970c65dff5c8"
   integrity sha512-68s5jYdlvasItOJnCuI2Q9s4q98g0pCyL3HrcKJu8KNugUl8ahgmZYg38ysLTgQjjXX3H8CJLkAvWrclWfcalw==
+
+dataloader@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/dataloader/-/dataloader-2.0.0.tgz#41eaf123db115987e21ca93c005cd7753c55fe6f"
+  integrity sha512-YzhyDAwA4TaQIhM5go+vCLmU0UikghC/t9DTQYZR2M/UvZ1MdOhPezSDZcjj9uqQJOMqjLcpWtyW2iNINdlatQ==
 
 date-and-time@^0.13.0:
   version "0.13.1"
@@ -12120,7 +12144,7 @@ invert-kv@^1.0.0:
   resolved "https://registry.yarnpkg.com/invert-kv/-/invert-kv-1.0.0.tgz#104a8e4aaca6d3d8cd157a8ef8bfab2d7a3ffdb6"
   integrity sha1-EEqOSqym09jNFXqO+L+rLXo//bY=
 
-ioredis@^4.23.0:
+ioredis@^4.0.0, ioredis@^4.23.0:
   version "4.23.0"
   resolved "https://registry.yarnpkg.com/ioredis/-/ioredis-4.23.0.tgz#f61b65633a25c93f43fccebcacac2f4342e418f9"
   integrity sha512-R5TDCODwnEH3J3A5TSoB17+6a+SeJTtIOW6vsy5Q1yag/AM8FejHjZC5R2O1QepSXV8hwOnGSm/4buJc/LeXTQ==

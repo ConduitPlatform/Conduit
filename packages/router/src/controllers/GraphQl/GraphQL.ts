@@ -13,10 +13,11 @@ import {
 import { extractTypes, findPopulation, ParseResult } from './TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
+import 'apollo-cache-control';
+import { createHashKey, extractCachingGql } from '../cache.utils';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer, ApolloError } = require('apollo-server-express');
-const crypto = require('crypto');
 
 export class GraphQLController {
   typeDefs!: string;
@@ -277,10 +278,11 @@ export class GraphQLController {
     return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
   }
 
-  private storeInCache(hashKey: string, data: any) {
+  // age is in seconds
+  private storeInCache(hashKey: string, data: any, age: number) {
     ((this.app as any).conduit as ConduitSDK)
       .getState()
-      .setKey('hash-' + hashKey, JSON.stringify(data), 10000);
+      .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
 
   private initialize() {
@@ -317,12 +319,6 @@ export class GraphQLController {
     });
   }
 
-  private createHashKey(path: string, context: any, params: any, headers: string) {
-    let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
-    hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
-    return hashKey;
-  }
-
   private addConduitRoute(route: ConduitRoute) {
     this.generateType(route.returnTypeName, route.returnTypeFields);
     let actionName = this.generateAction(route.input, route.returnTypeName);
@@ -338,6 +334,10 @@ export class GraphQLController {
         context: any,
         info: any
       ) => {
+        let { caching, cacheAge, scope } = extractCachingGql(route);
+        if (caching) {
+          info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
+        }
         args = self.shouldPopulate(args, info);
         context.path = route.input.path;
         let hashKey: string;
@@ -347,23 +347,25 @@ export class GraphQLController {
             Object.assign(context.context, r);
             let params = Object.assign(args, args.params);
             delete params.params;
-            hashKey = self.createHashKey(
-              context.path,
-              context.context,
-              params,
-              context.headers
-            );
-            return this.findInCache(hashKey)
-              .then((r) => {
-                if (r) {
-                  return { fromCache: true, data: JSON.parse(r) };
-                } else {
+            if (caching) {
+              hashKey = createHashKey(context.path, context.context, params);
+            }
+            if (caching) {
+              return self
+                .findInCache(hashKey)
+                .then((r) => {
+                  if (r) {
+                    return { fromCache: true, data: JSON.parse(r) };
+                  } else {
+                    return route.executeRequest.bind(route)({ ...context, params });
+                  }
+                })
+                .catch(() => {
                   return route.executeRequest.bind(route)({ ...context, params });
-                }
-              })
-              .catch(() => {
-                return route.executeRequest.bind(route)({ ...context, params });
-              });
+                });
+            } else {
+              return route.executeRequest.bind(route)({ ...context, params });
+            }
           })
           .then((r: any) => {
             let result;
@@ -378,7 +380,10 @@ export class GraphQLController {
             } else {
               result = { result: result };
             }
-            this.storeInCache(hashKey, result);
+            if (caching) {
+              this.storeInCache(hashKey, result, cacheAge!);
+            }
+
             return result;
           })
           .catch((err: Error | ConduitError) => {
