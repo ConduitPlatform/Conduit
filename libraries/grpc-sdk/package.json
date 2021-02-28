@@ -1,6 +1,6 @@
 {
   "name": "@quintessential-sft/conduit-grpc-sdk",
-  "version": "1.0.16",
+  "version": "1.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
