@@ -237,7 +237,7 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Error when registering routes',
       });
     } else {
-      this.updateState(protofile, routes, call.request.adminUrl);
+      this.updateState(protofile, routes, url);
       callback(null, null);
     }
   }
