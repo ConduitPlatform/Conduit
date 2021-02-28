@@ -22,6 +22,7 @@ export class CustomEndpointHandler {
     let searchStrings: string[] = [];
     let createString = '';
 
+    let stopExecution: boolean = false;
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       endpoint.queries!.forEach(
@@ -30,8 +31,10 @@ export class CustomEndpointHandler {
           operation: number;
           comparisonField: { type: string; value: any };
         }) => {
+          if (stopExecution) return;
           if (r.comparisonField.type === 'Input') {
             if (isNil(params[r.comparisonField.value])) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.comparisonField.value} is missing from input`,
@@ -46,6 +49,7 @@ export class CustomEndpointHandler {
             );
           } else if (r.comparisonField.type === 'Context') {
             if (isNil(call.request.context)) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.comparisonField.value} is missing from context`,
@@ -56,6 +60,7 @@ export class CustomEndpointHandler {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
+                stopExecution = true;
                 return callback({
                   code: grpc.status.INTERNAL,
                   message: `Field ${r.comparisonField.value} is missing from context`,
@@ -76,9 +81,10 @@ export class CustomEndpointHandler {
           }
         }
       );
-
       searchQuery = mergeQueries(searchStrings);
     }
+
+    if (stopExecution) return;
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
       endpoint.assignments!.forEach(
@@ -87,9 +93,11 @@ export class CustomEndpointHandler {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
+          if (stopExecution) return;
           if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from input`,
@@ -102,6 +110,7 @@ export class CustomEndpointHandler {
             );
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from context`,
@@ -112,6 +121,7 @@ export class CustomEndpointHandler {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
+                stopExecution = true;
                 return callback({
                   code: grpc.status.INTERNAL,
                   message: `Field ${r.assignmentField.value} is missing from context`,
@@ -133,6 +143,7 @@ export class CustomEndpointHandler {
         }
       );
     }
+    if (stopExecution) return;
     let sortObj: any = null;
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
       let sort = params.sort;
@@ -194,7 +205,6 @@ export class CustomEndpointHandler {
         searchQuery
       );
     } else {
-      console.error('Niko eisai malakas');
       process.exit(-1);
     }
 
