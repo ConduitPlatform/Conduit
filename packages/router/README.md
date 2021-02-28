@@ -66,3 +66,10 @@ Middlewares specify each middleware that should be run before the actual handler
 The middlewares array should contain names of handlers that conduit knows about.
 In the future this may also include external urls.
 - middlewares?: string[];
+  
+The cacheControl field works almost the same as the relevant HTTP header.
+It expects either public,max-age=number or private,max-age=number or nothing.
+If you sent any other string that those provided conduit will not utilize caching for the request.
+The number that you specify also sets the expiry time of conduit's cache. All caching takes place,
+AFTER middleware execution
+- cacheControl?: string;
