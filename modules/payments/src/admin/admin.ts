@@ -18,7 +18,7 @@ export class AdminHandlers {
     });
 
     this.grpcSdk.admin
-      .registerAdmin(server, paths.functions, {
+      .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
       })
       .catch((err: Error) => {

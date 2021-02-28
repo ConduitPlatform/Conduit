@@ -22,7 +22,7 @@ export class AdminHandler {
     });
 
     this.conduit.admin
-      .registerAdmin(server, paths.functions, {
+      .registerAdmin(server, paths, {
         sendNotification: this.sendNotification.bind(this),
         sendManyNotifications: this.sendManyNotifications.bind(this),
         sendToManyDevices: this.sendToManyDevices.bind(this),

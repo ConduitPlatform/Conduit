@@ -5,7 +5,7 @@ import { DocumentsAdmin } from './documents.admin';
 import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 
-let paths = require('./admin.json');
+let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
   private database: any;
@@ -30,7 +30,7 @@ export class AdminHandlers {
       this.customEndpointController
     );
     this.grpcSdk.admin
-      .registerAdmin(server, paths.functions, {
+      .registerAdmin(server, paths, {
         getAllSchemas: schemaAdmin.getAllSchemas.bind(schemaAdmin),
         getById: schemaAdmin.getById.bind(schemaAdmin),
         createSchema: schemaAdmin.createSchema.bind(schemaAdmin),

@@ -18,7 +18,7 @@ export class AdminHandlers {
       self.database = self.grpcSdk.databaseProvider;
     });
     this.grpcSdk.admin
-      .registerAdmin(server, paths.functions, {
+      .registerAdmin(server, paths, {
         getForms: this.getForms.bind(this),
         getRepliesByFormId: this.getRepliesByFormId.bind(this),
         createForm: this.createForm.bind(this),

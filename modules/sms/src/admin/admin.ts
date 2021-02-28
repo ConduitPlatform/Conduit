@@ -16,7 +16,7 @@ export class AdminHandlers {
     this.provider = provider;
 
     this.grpcSdk.admin
-      .registerAdmin(server, paths.functions, {
+      .registerAdmin(server, paths, {
         sendSms: this.sendSms.bind(this),
       })
       .catch((err: Error) => {
