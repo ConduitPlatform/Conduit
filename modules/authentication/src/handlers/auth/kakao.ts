@@ -56,9 +56,31 @@ export class KakaoHandlers {
     this.initialized = true;
   }
 
+  async beginAuth(call: any, callback: any) {
+    let errorMessage = null;
+    const config = await this.grpcSdk.config
+      .get('authentication')
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    let serverConfig = await this.grpcSdk.config
+      .getServerConfig()
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let redirect = serverConfig.url + '/hook/authentication/kakao';
+    const context = JSON.parse(call.request.context);
+    const clientId = context.clientId;
+    let originalUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.clientId}&redirect_uri=${redirect}&response_type=code&state=${clientId}`;
+    return callback(null, {
+      redirect: originalUrl,
+    });
+  }
+
   async authenticate(call: any, callback: any) {
-    // TODO redirect
-    const code = JSON.parse(call.request.params).code;
+    const params = JSON.parse(call.request.params);
+    const code = params.code;
     if (isNil(code))
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -183,7 +205,7 @@ export class KakaoHandlers {
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    let clientId = AuthUtils.randomToken(); // TODO find a way to pass the client id
+    let clientId = params.state; // TODO find a way to pass the client id
 
     const accessToken = await this.database
       .create('AccessToken', {

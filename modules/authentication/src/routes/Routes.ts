@@ -59,6 +59,7 @@ export class AuthenticationRoutes {
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
         authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
+        beginAuthKakao: this.kakaoHandlers.beginAuth.bind(this.kakaoHandlers),
         authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
         beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
@@ -348,6 +349,7 @@ export class AuthenticationRoutes {
               action: ConduitRouteActions.GET,
               urlParams: {
                 code: TYPE.String,
+                state: TYPE.String,
               },
             },
             new ConduitRouteReturnDefinition('KakaoResponse', {
@@ -356,6 +358,19 @@ export class AuthenticationRoutes {
               refreshToken: ConduitString.Required,
             }),
             'authenticateKakao'
+          )
+        )
+      );
+
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: '/init/kakao',
+              action: ConduitRouteActions.GET,
+            },
+            new ConduitRouteReturnDefinition('KakaoInitResponse', 'String'),
+            'beginAuthKakao'
           )
         )
       );
