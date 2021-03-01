@@ -74,7 +74,7 @@ export class KakaoHandlers {
     const clientId = context.clientId;
     let originalUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.clientId}&redirect_uri=${redirect}&response_type=code&state=${clientId}`;
     return callback(null, {
-      redirect: originalUrl,
+      result: originalUrl,
     });
   }
 

@@ -70,7 +70,7 @@ export class TwitchHandlers {
     const clientId = context.clientId;
     let originalUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${config.twitch.clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
     return callback(null, {
-      redirect: originalUrl,
+      result: originalUrl,
     });
   }
 
