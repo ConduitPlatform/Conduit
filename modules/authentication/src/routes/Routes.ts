@@ -60,6 +60,7 @@ export class AuthenticationRoutes {
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
         authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
         authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
+        beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
         getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
@@ -375,6 +376,7 @@ export class AuthenticationRoutes {
               action: ConduitRouteActions.GET,
               urlParams: {
                 code: TYPE.String,
+                state: TYPE.String,
               },
             },
             new ConduitRouteReturnDefinition('TwitchResponse', {
@@ -386,7 +388,18 @@ export class AuthenticationRoutes {
           )
         )
       );
-
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: '/init/twitch',
+              action: ConduitRouteActions.GET,
+            },
+            new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
+            'beginAuthTwitch'
+          )
+        )
+      );
       enabled = true;
     }
 

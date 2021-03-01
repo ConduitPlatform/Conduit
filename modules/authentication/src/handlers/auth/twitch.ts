@@ -1,5 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../../utils/auth';
 import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
 import grpc from 'grpc';
@@ -53,14 +52,31 @@ export class TwitchHandlers {
       });
   }
 
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
+  async beginAuth(call: any, callback: any) {
+    let errorMessage = null;
+    const config = await this.grpcSdk.config
+      .get('authentication')
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    let serverConfig = await this.grpcSdk.config
+      .getServerConfig()
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let redirect = serverConfig.url + '/hook/authentication/twitch';
+    const context = JSON.parse(call.request.context);
+    const clientId = context.clientId;
+    let originalUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${config.twitch.clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
+    return callback(null, {
+      redirect: originalUrl,
+    });
   }
 
   async authenticate(call: any, callback: any) {
-    const code = JSON.parse(call.request.params).code;
+    const params = JSON.parse(call.request.params);
+    const code = params.code;
     if (isNil(code))
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -175,7 +191,7 @@ export class TwitchHandlers {
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    let clientId = AuthUtils.randomToken(); // TODO find a way to pass the client id
+    let clientId = params.state; // TODO find a way to pass the client id
 
     const accessToken = await this.database
       .create('AccessToken', {
@@ -216,5 +232,11 @@ export class TwitchHandlers {
         refreshToken: refreshToken.token,
       }),
     });
+  }
+
+  private async initDbAndEmail() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.database = this.grpcSdk.databaseProvider;
+    this.initialized = true;
   }
 }

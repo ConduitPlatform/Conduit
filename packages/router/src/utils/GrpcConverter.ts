@@ -80,7 +80,7 @@ export function grpcToConduitRoute(
         options.path.startsWith(`/hook`) &&
         !options.path.startsWith(`/hook/${moduleName}`)
       ) {
-        options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
+        options.path = options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
       } else {
         options.path = `/${moduleName!.toString()}${options.path.toString()}`;
       }
