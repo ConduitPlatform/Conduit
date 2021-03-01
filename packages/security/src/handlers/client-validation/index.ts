@@ -24,6 +24,7 @@ export class ClientValidator {
     const { clientid, clientsecret } = req.headers;
     if (isNil(clientid) || isNil(clientsecret)) {
       res.status(401).send('Unauthorized');
+      return;
     }
 
     let key = await this.sdk.getState().getKey(`${clientid}-${clientsecret}`);
