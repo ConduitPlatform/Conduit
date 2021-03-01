@@ -14,6 +14,15 @@ else
 	docker push quintessential.azurecr.io/conduit:${IMAGE_TAG}
 endif
 
+admin:
+ifeq ($(DEV),TRUE)
+	docker build --no-cache -t quintessential.azurecr.io/conduit-admin:latest ./admin/app
+	docker push quintessential.azurecr.io/conduit-admin:latest
+else
+	docker build --no-cache -t quintessential.azurecr.io/conduit-admin:${IMAGE_TAG} ./admin/app
+	docker push quintessential.azurecr.io/conduit-admin:${IMAGE_TAG}
+endif
+
 conduit-builder:
 	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
@@ -37,3 +46,4 @@ modules/payments: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
 conduit: conduit-builder
+admin: conduit-builder
