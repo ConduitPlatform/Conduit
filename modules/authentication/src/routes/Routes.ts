@@ -1,4 +1,4 @@
-import { LocalHandlers } from '../handlers/auth/local';
+import { LocalHandlers } from '../handlers/local';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk, {
   ConduitMiddleware,
@@ -11,12 +11,12 @@ import ConduitGrpcSdk, {
   GrpcServer,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { FacebookHandlers } from '../handlers/auth/facebook';
-import { GoogleHandlers } from '../handlers/auth/google';
-import { CommonHandlers } from '../handlers/auth/common';
-import { ServiceHandler } from '../handlers/auth/service';
-import { KakaoHandlers } from '../handlers/auth/kakao';
-import { TwitchHandlers } from '../handlers/auth/twitch';
+import { FacebookHandlers } from '../handlers/facebook';
+import { GoogleHandlers } from '../handlers/google';
+import { CommonHandlers } from '../handlers/common';
+import { ServiceHandler } from '../handlers/service';
+import { KakaoHandlers } from '../handlers/kakao';
+import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import { UserSchema } from '../models';
 import moment from 'moment';

@@ -1,20 +1,17 @@
-import { isEmpty, isNil } from 'lodash';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
-import { AuthUtils } from '../../utils/auth';
+import { isNil } from 'lodash';
+import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
+import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
+import { ConfigController } from '../config/Config.controller';
+import { deleteUserTokens } from './util';
 
 export class CommonHandlers {
   private database: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.initDbAndEmail(grpcSdk);
-  }
-
-  private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-    await grpcSdk.waitForExistence('database-provider');
-    this.database = grpcSdk.databaseProvider;
   }
 
   async renewAuth(call: any, callback: any) {
@@ -31,11 +28,7 @@ export class CommonHandlers {
     }
 
     let errorMessage = null;
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     const oldRefreshToken = await this.database
       .findOne('RefreshToken', {
@@ -55,19 +48,12 @@ export class CommonHandlers {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Token expired' });
     }
 
-    // delete the old tokens before generating new ones
-    const accessTokenPromise = this.database.deleteMany('AccessToken', {
-      userId: oldRefreshToken.userId,
-      clientId,
-    });
-    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
-      userId: oldRefreshToken.userId,
-      clientId,
-    });
-
-    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
+    await Promise.all(
+      deleteUserTokens(this.grpcSdk, {
+        userId: oldRefreshToken.userId,
+        clientId,
+      })
+    ).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -114,19 +100,13 @@ export class CommonHandlers {
     const clientId = context.clientId;
     const user = context.user;
 
-    const accessTokenPromise = this.database.deleteMany('AccessToken', {
-      userId: user._id,
-      clientId,
-    });
-    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
-      userId: user._id,
-      clientId,
-    });
-
     let errorMessage = null;
-    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
+    await Promise.all(
+      deleteUserTokens(this.grpcSdk, {
+        userId: user._id,
+        clientId,
+      })
+    ).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -154,15 +134,16 @@ export class CommonHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     callback(null, { result: 'done' });
 
-    const accessTokenPromise = this.database.deleteMany('AccessToken', {
-      userId: user._id,
-    });
-    const refreshTokenPromise = this.database.deleteMany('RefreshToken', {
-      userId: user._id,
-    });
-    await Promise.all([accessTokenPromise, refreshTokenPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
+    await Promise.all(
+      deleteUserTokens(this.grpcSdk, {
+        userId: user._id,
+      })
+    ).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) console.log('Failed to delete all access tokens');
+  }
+
+  private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
+    await grpcSdk.waitForExistence('database-provider');
+    this.database = grpcSdk.databaseProvider;
   }
 }

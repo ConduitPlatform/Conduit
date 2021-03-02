@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
-import { AuthUtils } from '../../utils/auth';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
 import moment from 'moment';
+import { ConfigController } from '../config/Config.controller';
+import { createUserTokensAsPromise } from './util';
 
 export class TwitchHandlers {
   private database: any;
@@ -21,44 +21,33 @@ export class TwitchHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('authentication')
-      .then((authConfig: any) => {
-        if (!authConfig.twitch.enabled) {
-          throw ConduitError.forbidden('Twitch auth is deactivated');
-        }
-        if (
-          !authConfig.twitch ||
-          !authConfig.twitch.clientId ||
-          !authConfig.twitch.clientSecret
-        ) {
-          throw ConduitError.forbidden(
-            'Cannot enable twitch auth due to missing clientId or client secret'
-          );
-        }
-      })
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDbAndEmail();
-        }
-      })
-      .then((r) => {
-        return true;
-      })
-      .catch((err: Error) => {
-        // De-initialize the provider if the config is now invalid
-        this.initialized = false;
-        throw err;
-      });
+    let authConfig = ConfigController.getInstance().config;
+    if (!authConfig.twitch.enabled) {
+      throw ConduitError.forbidden('Twitch auth is deactivated');
+    }
+    if (
+      !authConfig.twitch ||
+      !authConfig.twitch.clientId ||
+      !authConfig.twitch.clientSecret
+    ) {
+      throw ConduitError.forbidden(
+        'Cannot enable twitch auth due to missing clientId or client secret'
+      );
+    }
+    try {
+      if (!this.initialized) {
+        await this.initDbAndEmail();
+      }
+      return true;
+    } catch (e) {
+      this.initialized = false;
+      throw e;
+    }
   }
 
   async beginAuth(call: any, callback: any) {
     let errorMessage = null;
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config
       .getServerConfig()
@@ -85,11 +74,7 @@ export class TwitchHandlers {
 
     let errorMessage = null;
 
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config
       .getServerConfig()
@@ -186,39 +171,16 @@ export class TwitchHandlers {
       }
     }
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
+    let clientId = params.state;
 
-    let clientId = params.state; // TODO find a way to pass the client id
+    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
+      userId: user._id,
+      clientId,
+      config,
+    }).catch((e) => (errorMessage = e));
 
-    const accessToken = await this.database
-      .create('AccessToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
     return callback(null, {
       redirect:
         config.twitch.redirect_uri +

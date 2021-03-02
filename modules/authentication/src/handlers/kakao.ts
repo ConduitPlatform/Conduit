@@ -1,12 +1,11 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
-import { AuthUtils } from '../../utils/auth';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
 import querystring from 'querystring';
 import moment from 'moment';
+import { ConfigController } from '../config/Config.controller';
+import { createUserTokensAsPromise } from './util';
 
 export class KakaoHandlers {
   private database: any;
@@ -23,46 +22,27 @@ export class KakaoHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('authentication')
-      .then((authConfig: any) => {
-        if (!authConfig.kakao.enabled) {
-          throw ConduitError.forbidden('Kakao auth is deactivated');
-        }
-        if (!authConfig.kakao || !authConfig.kakao.clientId) {
-          throw ConduitError.forbidden(
-            'Cannot enable kakao auth due to missing clientId'
-          );
-        }
-      })
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDbAndEmail();
-        }
-      })
-      .then((r) => {
-        return true;
-      })
-      .catch((err: Error) => {
-        // De-initialize the provider if the config is now invalid
-        this.initialized = false;
-        throw err;
-      });
-  }
-
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
+    let authConfig = ConfigController.getInstance().config;
+    if (!authConfig.kakao.enabled) {
+      throw ConduitError.forbidden('Kakao auth is deactivated');
+    }
+    if (!authConfig.kakao || !authConfig.kakao.clientId) {
+      throw ConduitError.forbidden('Cannot enable kakao auth due to missing clientId');
+    }
+    try {
+      if (!this.initialized) {
+        await this.initDbAndEmail();
+      }
+      return true;
+    } catch (e) {
+      this.initialized = false;
+      throw e;
+    }
   }
 
   async beginAuth(call: any, callback: any) {
     let errorMessage = null;
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config
       .getServerConfig()
@@ -89,11 +69,7 @@ export class KakaoHandlers {
 
     let errorMessage = null;
 
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config
       .getServerConfig()
@@ -200,36 +176,14 @@ export class KakaoHandlers {
       }
     }
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
+    let clientId = params.state;
 
-    let clientId = params.state; // TODO find a way to pass the client id
+    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
+      userId: user._id,
+      clientId,
+      config,
+    }).catch((e) => (errorMessage = e));
 
-    const accessToken = await this.database
-      .create('AccessToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -246,5 +200,11 @@ export class KakaoHandlers {
         refreshToken: refreshToken.token,
       }),
     });
+  }
+
+  private async initDbAndEmail() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.database = this.grpcSdk.databaseProvider;
+    this.initialized = true;
   }
 }

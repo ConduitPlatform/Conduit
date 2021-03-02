@@ -1,11 +1,10 @@
-import { auth, OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library';
 import { isEmpty, isNil } from 'lodash';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
-import { AuthUtils } from '../../utils/auth';
-import moment = require('moment');
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
-import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConfigController } from '../config/Config.controller';
+import { createUserTokensAsPromise } from './util';
+import moment = require('moment');
 
 export class GoogleHandlers {
   private readonly client: OAuth2Client;
@@ -24,37 +23,22 @@ export class GoogleHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('authentication')
-      .then((authConfig: any) => {
-        if (!authConfig.google.enabled) {
-          throw ConduitError.forbidden('Google auth is deactivated');
-        }
-        if (!authConfig.google || !authConfig.google.clientId) {
-          throw ConduitError.forbidden(
-            'Cannot enable google auth due to missing clientId'
-          );
-        }
-      })
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDbAndEmail();
-        }
-      })
-      .then((r) => {
-        return true;
-      })
-      .catch((err: Error) => {
-        // De-initialize the provider if the config is now invalid
-        this.initialized = false;
-        throw err;
-      });
-  }
-
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
+    let authConfig = ConfigController.getInstance().config;
+    if (!authConfig.google.enabled) {
+      throw ConduitError.forbidden('Google auth is deactivated');
+    }
+    if (authConfig.google.clientId) {
+      throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
+    }
+    try {
+      if (!this.initialized) {
+        await this.initDbAndEmail();
+      }
+      return true;
+    } catch (e) {
+      this.initialized = false;
+      throw e;
+    }
   }
 
   async authenticate(call: any, callback: any) {
@@ -67,11 +51,7 @@ export class GoogleHandlers {
 
     let errorMessage = null;
 
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
@@ -147,32 +127,12 @@ export class GoogleHandlers {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
+    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
+      userId: user._id,
+      clientId: context.clientId,
+      config,
+    }).catch((e) => (errorMessage = e));
 
-    const accessToken = await this.database
-      .create('AccessToken', {
-        userId: user._id,
-        clientId: context.clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId: context.clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -183,5 +143,11 @@ export class GoogleHandlers {
         refreshToken: refreshToken.token,
       }),
     });
+  }
+
+  private async initDbAndEmail() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.database = this.grpcSdk.databaseProvider;
+    this.initialized = true;
   }
 }

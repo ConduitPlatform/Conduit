@@ -6,12 +6,12 @@ import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk
 import path from 'path';
 import * as grpc from 'grpc';
 import { AuthenticationRoutes } from './routes/Routes';
+import { ConfigController } from './config/Config.controller';
 
 export default class AuthenticationModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private _url: string;
   private _router: AuthenticationRoutes;
   private readonly grpcServer: GrpcServer;
 
@@ -96,6 +96,8 @@ export default class AuthenticationModule {
       .catch(console.log);
   }
 
+  private _url: string;
+
   get url(): string {
     return this._url;
   }
@@ -110,33 +112,42 @@ export default class AuthenticationModule {
     }
 
     let errorMessage: string | null = null;
-    const updateResult = await this.grpcSdk.config
+    const authenticationConfig = await this.grpcSdk.config
       .updateConfig(newConfig, 'authentication')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
-
-    const authenticationConfig = await this.grpcSdk.config.get('authentication');
+    this.updateConfig(authenticationConfig);
     if (authenticationConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('authentication', 'config-update');
     } else {
-      return callback({
-        code: grpc.status.FAILED_PRECONDITION,
-        message: 'Module is not active',
-      });
-    }
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      this.grpcSdk.bus?.publish('authentication', 'config-update');
     }
 
-    return callback(null, { updatedConfig: JSON.stringify(updateResult) });
+    return callback(null, { updatedConfig: JSON.stringify(authenticationConfig) });
+  }
+
+  private updateConfig(config?: any) {
+    if (config) {
+      ConfigController.getInstance().config = config;
+    } else {
+      this.grpcSdk.config
+        .get('authentication')
+        .then((config: any) => {
+          ConfigController.getInstance().config = config;
+        })
+        .catch(() => {
+          console.log('Failed to update config');
+        });
+    }
   }
 
   private async enableModule() {
+    this.updateConfig();
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
