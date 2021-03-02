@@ -368,7 +368,7 @@ export class StripeHandlers {
     unitAmount: number,
     recurring: 'day' | 'week' | 'month' | 'year',
     recurringCount?: number
-  ): Promise<any> {
+  ): Promise<{ subscriptionId: string, priceId: string }> {
     const product = await this.client.products.create({
       name,
     });
