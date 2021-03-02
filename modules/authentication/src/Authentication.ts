@@ -118,13 +118,16 @@ export default class AuthenticationModule {
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
-    this.updateConfig(authenticationConfig);
+
     if (authenticationConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('authentication', 'config-update');
     } else {
+      await this.updateConfig(authenticationConfig).catch(() => {
+        console.log('Failed to update config');
+      });
       this.grpcSdk.bus?.publish('authentication', 'config-update');
     }
 
@@ -134,20 +137,16 @@ export default class AuthenticationModule {
   private updateConfig(config?: any) {
     if (config) {
       ConfigController.getInstance().config = config;
+      return Promise.resolve();
     } else {
-      this.grpcSdk.config
-        .get('authentication')
-        .then((config: any) => {
-          ConfigController.getInstance().config = config;
-        })
-        .catch(() => {
-          console.log('Failed to update config');
-        });
+      return this.grpcSdk.config.get('authentication').then((config: any) => {
+        ConfigController.getInstance().config = config;
+      });
     }
   }
 
   private async enableModule() {
-    this.updateConfig();
+    await this.updateConfig();
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);

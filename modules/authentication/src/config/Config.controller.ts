@@ -18,7 +18,6 @@ export class ConfigController {
     if (!ConfigController.instance) {
       ConfigController.instance = new ConfigController();
     }
-
     return ConfigController.instance;
   }
 }
