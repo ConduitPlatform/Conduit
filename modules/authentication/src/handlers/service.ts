@@ -9,9 +9,10 @@ export class ServiceHandler {
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then((r: any) => {
-        return this.initDb();
+        console.error('Service is active');
       })
       .catch((err: any) => {
         console.error('Service not active');
@@ -23,15 +24,8 @@ export class ServiceHandler {
     if (!authConfig.service.enabled) {
       throw ConduitError.forbidden('Service auth is deactivated');
     }
-    try {
-      if (!this.initialized) {
-        await this.initDb();
-      }
-      return true;
-    } catch (e) {
-      this.initialized = false;
-      throw e;
-    }
+    this.initialized = true;
+    return true;
   }
 
   async authenticate(call: any, callback: any) {
@@ -117,11 +111,5 @@ export class ServiceHandler {
         refreshToken: refreshToken.token,
       }),
     });
-  }
-
-  private async initDb() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
   }
 }

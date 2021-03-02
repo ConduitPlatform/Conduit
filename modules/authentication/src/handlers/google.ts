@@ -3,8 +3,8 @@ import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
-import moment = require('moment');
 import { AuthUtils } from '../utils/auth';
+import moment = require('moment');
 
 export class GoogleHandlers {
   private readonly client: OAuth2Client;
@@ -13,9 +13,10 @@ export class GoogleHandlers {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.client = new OAuth2Client();
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then(() => {
-        return this.initDbAndEmail();
+        console.log('Google is active');
       })
       .catch((err) => {
         console.log('Google not active');
@@ -30,15 +31,8 @@ export class GoogleHandlers {
     if (authConfig.google.clientId) {
       throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
     }
-    try {
-      if (!this.initialized) {
-        await this.initDbAndEmail();
-      }
-      return true;
-    } catch (e) {
-      this.initialized = false;
-      throw e;
-    }
+    this.initialized = true;
+    return true;
   }
 
   async authenticate(call: any, callback: any) {
@@ -146,11 +140,5 @@ export class GoogleHandlers {
         refreshToken: refreshToken.token,
       }),
     });
-  }
-
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
   }
 }

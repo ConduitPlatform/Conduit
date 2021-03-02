@@ -12,9 +12,10 @@ export class KakaoHandlers {
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then((r) => {
-        return this.initDbAndEmail();
+        console.log('Kakao is active');
       })
       .catch((err) => {
         console.log('Kakao not active');
@@ -29,15 +30,8 @@ export class KakaoHandlers {
     if (!authConfig.kakao || !authConfig.kakao.clientId) {
       throw ConduitError.forbidden('Cannot enable kakao auth due to missing clientId');
     }
-    try {
-      if (!this.initialized) {
-        await this.initDbAndEmail();
-      }
-      return true;
-    } catch (e) {
-      this.initialized = false;
-      throw e;
-    }
+    this.initialized = true;
+    return true;
   }
 
   async beginAuth(call: any, callback: any) {
@@ -203,11 +197,5 @@ export class KakaoHandlers {
         refreshToken: refreshToken.token,
       }),
     });
-  }
-
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
   }
 }

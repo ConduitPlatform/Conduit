@@ -10,7 +10,7 @@ export class CommonHandlers {
   private database: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.initDbAndEmail(grpcSdk);
+    this.database = grpcSdk.databaseProvider;
   }
 
   async renewAuth(call: any, callback: any) {
@@ -139,10 +139,5 @@ export class CommonHandlers {
       })
     ).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) console.log('Failed to delete all access tokens');
-  }
-
-  private async initDbAndEmail(grpcSdk: ConduitGrpcSdk) {
-    await grpcSdk.waitForExistence('database-provider');
-    this.database = grpcSdk.databaseProvider;
   }
 }

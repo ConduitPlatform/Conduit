@@ -10,9 +10,10 @@ export class FacebookHandlers {
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then((r) => {
-        return this.initDbAndEmail();
+        console.log('Facebook is active');
       })
       .catch((err) => {
         console.log('Facebook not active');
@@ -28,15 +29,8 @@ export class FacebookHandlers {
     if (!authConfig.facebook.clientId) {
       throw ConduitError.forbidden('Cannot enable facebook auth due to missing clientId');
     }
-    try {
-      if (!this.initialized) {
-        await this.initDbAndEmail();
-      }
-      return true;
-    } catch (err) {
-      this.initialized = false;
-      throw err;
-    }
+    this.initialized = true;
+    return true;
   }
 
   async authenticate(call: any, callback: any) {
@@ -145,11 +139,5 @@ export class FacebookHandlers {
         refreshToken: refreshToken.token,
       }),
     });
-  }
-
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
   }
 }
