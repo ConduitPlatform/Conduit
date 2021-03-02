@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
@@ -26,7 +26,7 @@ export class AdminHandlers {
       });
   }
 
-  async getUsers(call: any, callback: any) {
+  async getUsers(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;

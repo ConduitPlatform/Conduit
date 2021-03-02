@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 const PROVIDER_NAME = 'stripe';
@@ -54,7 +54,7 @@ export class StripeHandlers {
     this.initialized = true;
   }
 
-  async createPayment(call: any, callback: any) {
+  async createPayment(call: RouterRequest, callback: RouterResponse) {
     const { productId, userId, saveCard } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
     let customerId;
@@ -147,7 +147,7 @@ export class StripeHandlers {
     });
   }
 
-  async createPaymentWithSavedCard(call: any, callback: any) {
+  async createPaymentWithSavedCard(call: RouterRequest, callback: RouterResponse) {
     const { productId, cardId } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
 
@@ -237,7 +237,7 @@ export class StripeHandlers {
     return callback(null, { result: JSON.stringify(res) });
   }
 
-  async cancelPayment(call: any, callback: any) {
+  async cancelPayment(call: RouterRequest, callback: RouterResponse) {
     // TODO maybe check if user is the same as the one that created the payment
     const { paymentId, userId } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
@@ -266,7 +266,7 @@ export class StripeHandlers {
     return callback(null, { result: 'true' });
   }
 
-  async refundPayment(call: any, callback: any) {
+  async refundPayment(call: RouterRequest, callback: RouterResponse) {
     // TODO maybe check if user is the same as the one that created the payment
     const { paymentId, userId } = JSON.parse(call.request.params);
 
@@ -308,7 +308,7 @@ export class StripeHandlers {
     return callback(null, { result: 'true' });
   }
 
-  async getPaymentMethods(call: any, callback: any): Promise<any> {
+  async getPaymentMethods(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
     const context = JSON.parse(call.request.context);
     if (isNil(context)) {
@@ -338,7 +338,7 @@ export class StripeHandlers {
     return callback(null, { result: JSON.stringify({ paymentMethods }) });
   }
 
-  async completePayment(call: any, callback: any) {
+  async completePayment(call: RouterRequest, callback: RouterResponse) {
     const data = JSON.parse(call.request.params);
     let userId = data.data.object.metadata?.userId;
 

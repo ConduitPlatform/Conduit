@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import { constructQuery, constructAssignment, mergeQueries } from './utils';
 import grpc from 'grpc';
 import { CustomEndpoint } from '../../models/customEndpoint';
@@ -13,7 +13,7 @@ export class CustomEndpointHandler {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  entryPoint(call: any, callback: any) {
+  entryPoint(call: RouterRequest, callback: RouterResponse) {
     //use it to find the right controller
     let path = call.request.path.split('/')[3];
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];

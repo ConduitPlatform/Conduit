@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
@@ -34,7 +34,7 @@ export class KakaoHandlers {
     return true;
   }
 
-  async beginAuth(call: any, callback: any) {
+  async beginAuth(call: RouterRequest, callback: RouterResponse) {
     let errorMessage = null;
     const config = ConfigController.getInstance().config;
 
@@ -52,7 +52,7 @@ export class KakaoHandlers {
     });
   }
 
-  async authenticate(call: any, callback: any) {
+  async authenticate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const code = params.code;
     if (isNil(code))

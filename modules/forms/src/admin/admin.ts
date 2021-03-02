@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';
@@ -30,7 +30,7 @@ export class AdminHandlers {
       });
   }
 
-  async getForms(call: any, callback: any) {
+  async getForms(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -64,7 +64,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ forms, count }) });
   }
 
-  async getRepliesByFormId(call: any, callback: any) {
+  async getRepliesByFormId(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit, formId } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -98,7 +98,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ replies, count }) });
   }
 
-  async createForm(call: any, callback: any) {
+  async createForm(call: RouterRequest, callback: RouterResponse) {
     const { name, fields, forwardTo, emailField, enabled } = JSON.parse(
       call.request.params
     );
@@ -152,7 +152,7 @@ export class AdminHandlers {
     return callback(null, { result: 'Ok' });
   }
 
-  async editFormById(call: any, callback: any) {
+  async editFormById(call: RouterRequest, callback: RouterResponse) {
     const { formId, name, fields, forwardTo, emailField, enabled } = JSON.parse(
       call.request.params
     );

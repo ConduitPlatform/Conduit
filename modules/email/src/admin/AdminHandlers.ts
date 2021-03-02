@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 let paths = require('./admin.json').functions;
 
@@ -30,7 +30,7 @@ export class AdminHandlers {
     this.emailService = emailService;
   }
 
-  async getTemplates(call: any, callback: any) {
+  async getTemplates(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -65,7 +65,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
 
-  async createTemplate(call: any, callback: any) {
+  async createTemplate(call: RouterRequest, callback: RouterResponse) {
     const { name, subject, body, variables } = JSON.parse(call.request.params);
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
@@ -91,7 +91,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
 
-  async editTemplate(call: any, callback: any) {
+  async editTemplate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
 
@@ -142,7 +142,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ updatedTemplate }) });
   }
 
-  async sendEmail(call: any, callback: any) {
+  async sendEmail(call: RouterRequest, callback: RouterResponse) {
     let { templateName, body, subject, email, variables, sender } = JSON.parse(
       call.request.params
     );

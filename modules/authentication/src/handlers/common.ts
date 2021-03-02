@@ -2,7 +2,7 @@ import { isNil } from 'lodash';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 
@@ -13,7 +13,7 @@ export class CommonHandlers {
     this.database = grpcSdk.databaseProvider;
   }
 
-  async renewAuth(call: any, callback: any) {
+  async renewAuth(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     const clientId = context.clientId;
@@ -93,7 +93,7 @@ export class CommonHandlers {
     });
   }
 
-  async logOut(call: any, callback: any) {
+  async logOut(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     const clientId = context.clientId;
@@ -112,7 +112,7 @@ export class CommonHandlers {
     return callback(null, { result: JSON.stringify({ message: 'Logged out' }) });
   }
 
-  async getUser(call: any, callback: any) {
+  async getUser(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     const user = context.user;
@@ -120,7 +120,7 @@ export class CommonHandlers {
     return callback(null, { result: JSON.stringify(user) });
   }
 
-  async deleteUser(call: any, callback: any) {
+  async deleteUser(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     const user = context.user;

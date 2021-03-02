@@ -1,6 +1,6 @@
 import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 
@@ -28,7 +28,7 @@ export class ServiceHandler {
     return true;
   }
 
-  async authenticate(call: any, callback: any) {
+  async authenticate(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,

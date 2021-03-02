@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   constructRoute,
-  GrpcServer,
+  GrpcServer, RouterRequest, RouterResponse,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
@@ -49,7 +49,7 @@ export class PaymentsRoutes {
     return Promise.resolve(null);
   }
 
-  async getProducts(call: any, callback: any) {
+  async getProducts(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
     const products = await this.database.findMany('Product', {}).catch((e: Error) => {
       errorMessage = e.message;
@@ -64,7 +64,7 @@ export class PaymentsRoutes {
     return callback(null, { result: JSON.stringify({ products }) });
   }
 
-  async getSubscriptions(call: any, callback: any) {
+  async getSubscriptions(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     if (isNil(context)) {
@@ -99,7 +99,7 @@ export class PaymentsRoutes {
     return callback(null, { result: JSON.stringify({ subscriptions }) });
   }
 
-  async createIamportPayment(call: any, callback: any) {
+  async createIamportPayment(call: RouterRequest, callback: RouterResponse) {
     const { productId, quantity, userId } = JSON.parse(call.request.params);
 
     if (isNil(productId)) {
@@ -118,7 +118,7 @@ export class PaymentsRoutes {
     }
   }
 
-  async completeIamportPayment(call: any, callback: any) {
+  async completeIamportPayment(call: RouterRequest, callback: RouterResponse) {
     const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
 
     if (isNil(imp_uid) || isNil(merchant_uid)) {

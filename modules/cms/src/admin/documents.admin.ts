@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import grpc from 'grpc';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaController } from '../controllers/cms/schema.controller';
 
 export class DocumentsAdmin {
@@ -13,7 +13,7 @@ export class DocumentsAdmin {
     this.database = this.grpcSdk.databaseProvider;
   }
 
-  async getDocuments(call: any, callback: any) {
+  async getDocuments(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit, schemaName } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -63,7 +63,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify({ documents, documentsCount }) });
   }
 
-  async getDocumentById(call: any, callback: any) {
+  async getDocumentById(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, id } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -95,7 +95,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify(document) });
   }
 
-  async createDocument(call: any, callback: any) {
+  async createDocument(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, inputDocument } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -121,7 +121,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify(newDocument) });
   }
 
-  async createManyDocuments(call: any, callback: any) {
+  async createManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, inputDocuments } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -147,7 +147,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify({ docs: newDocuments }) });
   }
 
-  async editDocument(call: any, callback: any) {
+  async editDocument(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, id, changedDocument } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -181,7 +181,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
 
-  async editManyDocuments(call: any, callback: any) {
+  async editManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, changedDocuments } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
@@ -219,7 +219,7 @@ export class DocumentsAdmin {
     return callback(null, { result: JSON.stringify({ docs: updatedDocuments }) });
   }
 
-  async deleteDocument(call: any, callback: any) {
+  async deleteDocument(call: RouterRequest, callback: RouterResponse) {
     const { schemaName, id } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;

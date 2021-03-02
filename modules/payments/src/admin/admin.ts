@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
@@ -27,7 +27,7 @@ export class AdminHandlers {
       });
   }
 
-  async createProduct(call: any, callback: any) {
+  async createProduct(call: RouterRequest, callback: RouterResponse) {
     const {
       name,
       value,

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { ISmsProvider } from '../interfaces/ISmsProvider';
@@ -29,7 +29,7 @@ export class AdminHandlers {
     this.provider = provider;
   }
 
-  async sendSms(call: any, callback: any) {
+  async sendSms(call: RouterRequest, callback: RouterResponse) {
     const { to, message } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
 

@@ -3,7 +3,7 @@ import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
@@ -50,7 +50,7 @@ export class LocalHandlers {
       });
   }
 
-  async register(call: any, callback: any) {
+  async register(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -132,7 +132,7 @@ export class LocalHandlers {
     });
   }
 
-  async authenticate(call: any, callback: any) {
+  async authenticate(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -276,7 +276,7 @@ export class LocalHandlers {
     });
   }
 
-  async forgotPassword(call: any, callback: any) {
+  async forgotPassword(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -337,7 +337,7 @@ export class LocalHandlers {
     return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
 
-  async resetPassword(call: any, callback: any) {
+  async resetPassword(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -416,7 +416,7 @@ export class LocalHandlers {
     });
   }
 
-  async verifyEmail(call: any, callback: any) {
+  async verifyEmail(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,
@@ -472,7 +472,7 @@ export class LocalHandlers {
     }
   }
 
-  async verify(call: any, callback: any) {
+  async verify(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
       return callback({
@@ -578,7 +578,7 @@ export class LocalHandlers {
     });
   }
 
-  async enableTwoFa(call: any, callback: any) {
+  async enableTwoFa(call: RouterRequest, callback: RouterResponse) {
     const { phoneNumber } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
 
@@ -626,7 +626,7 @@ export class LocalHandlers {
     });
   }
 
-  async verifyPhoneNumber(call: any, callback: any) {
+  async verifyPhoneNumber(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
     const { code } = JSON.parse(call.request.params);
 
@@ -697,7 +697,7 @@ export class LocalHandlers {
     });
   }
 
-  async disableTwoFa(call: any, callback: any) {
+  async disableTwoFa(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isNil(context.user)) {
       return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });

@@ -1,10 +1,9 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import schema from '../../models/customEndpoint.schema';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
-import e from 'express';
 
 const OperationsEnum = {
   GET: 0, //'FIND/GET'
@@ -31,7 +30,7 @@ export class CustomEndpointsAdmin {
       });
   }
 
-  async getCustomEndpoints(call: any, callback: any) {
+  async getCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
 
     const customEndpointsDocs = await this.database
@@ -42,7 +41,7 @@ export class CustomEndpointsAdmin {
     return callback(null, { result: JSON.stringify({ results: customEndpointsDocs }) });
   }
 
-  async editCustomEndpoints(call: any, callback: any) {
+  async editCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
     const { inputs, queries, selectedSchema, assignments, paginated, sorted } = params;
@@ -193,7 +192,7 @@ export class CustomEndpointsAdmin {
     return callback(null, { result: JSON.stringify(updatedSchema) });
   }
 
-  async deleteCustomEndpoints(call: any, callback: any) {
+  async deleteCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
@@ -230,7 +229,7 @@ export class CustomEndpointsAdmin {
     return callback(null, { result: 'Custom Endpoint deleted' });
   }
 
-  async createCustomEndpoints(call: any, callback: any) {
+  async createCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const {
       name,
       operation,
