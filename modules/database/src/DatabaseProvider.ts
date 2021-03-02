@@ -3,6 +3,8 @@ import { DatabaseAdapter } from './interfaces';
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
+import { EJSON } from 'bson';
+import parse = EJSON.parse;
 
 export class DatabaseProvider {
   private readonly _activeAdapter: DatabaseAdapter;
@@ -207,7 +209,7 @@ export class DatabaseProvider {
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
         return schemaAdapter.model.findOne(
-          JSON.parse(call.request.query),
+          parse(call.request.query),
           call.request.select,
           call.request.populate
         );
@@ -234,7 +236,7 @@ export class DatabaseProvider {
         const populate = call.request.populate;
 
         return schemaAdapter.model.findMany(
-          JSON.parse(call.request.query),
+          parse(call.request.query),
           skip,
           limit,
           select,
@@ -257,7 +259,7 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.create(JSON.parse(call.request.query));
+        return schemaAdapter.model.create(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -274,7 +276,7 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.createMany(JSON.parse(call.request.query));
+        return schemaAdapter.model.createMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -293,7 +295,7 @@ export class DatabaseProvider {
       .then((schemaAdapter: { model: any }) => {
         return schemaAdapter.model.findByIdAndUpdate(
           call.request.id,
-          JSON.parse(call.request.query)
+          parse(call.request.query)
         );
       })
       .then((result) => {
@@ -312,8 +314,8 @@ export class DatabaseProvider {
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
         return schemaAdapter.model.updateMany(
-          JSON.parse(call.request.filterQuery),
-          JSON.parse(call.request.query)
+          parse(call.request.filterQuery),
+          parse(call.request.query)
         );
       })
       .then((result) => {
@@ -331,7 +333,7 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteOne(JSON.parse(call.request.query));
+        return schemaAdapter.model.deleteOne(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -348,7 +350,7 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteMany(JSON.parse(call.request.query));
+        return schemaAdapter.model.deleteMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -365,7 +367,7 @@ export class DatabaseProvider {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.countDocuments(JSON.parse(call.request.query));
+        return schemaAdapter.model.countDocuments(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });

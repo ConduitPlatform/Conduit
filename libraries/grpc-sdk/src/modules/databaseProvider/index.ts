@@ -1,5 +1,9 @@
 import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { EJSON } from 'bson';
+import parse = EJSON.parse;
+import serialize = EJSON.serialize;
+import stringify = EJSON.stringify;
 
 export default class DatabaseProvider extends ConduitModule {
   constructor(url: string) {
@@ -46,6 +50,15 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
+  processQuery(query: any) {
+    let processed: any;
+    if (typeof query === 'string') {
+      query = EJSON.parse(query, { relaxed: true });
+    }
+    processed = serialize(query);
+    return stringify(processed);
+  }
+
   findOne(
     schemaName: string,
     query: any,
@@ -60,7 +73,7 @@ export default class DatabaseProvider extends ConduitModule {
       this.client.findOne(
         {
           schemaName,
-          query: JSON.stringify(query),
+          query: this.processQuery(query),
           select,
           populate: populateArray,
         },
@@ -93,7 +106,7 @@ export default class DatabaseProvider extends ConduitModule {
       this.client.findMany(
         {
           schemaName,
-          query: JSON.stringify(query),
+          query: this.processQuery(query),
           select,
           skip,
           limit,
@@ -114,7 +127,7 @@ export default class DatabaseProvider extends ConduitModule {
   create(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
       this.client.create(
-        { schemaName, query: JSON.stringify(query) },
+        { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -129,7 +142,7 @@ export default class DatabaseProvider extends ConduitModule {
   createMany(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
       this.client.createMany(
-        { schemaName, query: JSON.stringify(query) },
+        { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -144,7 +157,7 @@ export default class DatabaseProvider extends ConduitModule {
   findByIdAndUpdate(schemaName: string, id: string, document: any) {
     return new Promise((resolve, reject) => {
       this.client.findByIdAndUpdate(
-        { schemaName, id, query: JSON.stringify(document) },
+        { schemaName, id, query: this.processQuery(document) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -161,8 +174,8 @@ export default class DatabaseProvider extends ConduitModule {
       this.client.updateMany(
         {
           schemaName,
-          filterQuery: JSON.stringify(filterQuery),
-          query: JSON.stringify(query),
+          filterQuery: this.processQuery(filterQuery),
+          query: this.processQuery(query),
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -178,7 +191,7 @@ export default class DatabaseProvider extends ConduitModule {
   deleteOne(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
       this.client.deleteOne(
-        { schemaName, query: JSON.stringify(query) },
+        { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -193,7 +206,7 @@ export default class DatabaseProvider extends ConduitModule {
   deleteMany(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
       this.client.deleteMany(
-        { schemaName, query: JSON.stringify(query) },
+        { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -208,7 +221,7 @@ export default class DatabaseProvider extends ConduitModule {
   countDocuments(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
       this.client.countDocuments(
-        { schemaName, query: JSON.stringify(query) },
+        { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
