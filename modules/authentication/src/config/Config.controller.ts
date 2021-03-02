@@ -14,7 +14,7 @@ export class ConfigController {
     this._config = config;
   }
 
-  public static getInstance(): ConfigController {
+  static getInstance(): ConfigController {
     if (!ConfigController.instance) {
       ConfigController.instance = new ConfigController();
     }

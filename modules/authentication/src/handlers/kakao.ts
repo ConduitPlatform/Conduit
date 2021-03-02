@@ -23,7 +23,7 @@ export class KakaoHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    let authConfig = ConfigController.getInstance().config;
+    const authConfig = ConfigController.getInstance().config;
     if (!authConfig.kakao.enabled) {
       throw ConduitError.forbidden('Kakao auth is deactivated');
     }
@@ -170,9 +170,9 @@ export class KakaoHandlers {
       }
     }
 
-    let clientId = params.state;
+    const clientId = params.state;
 
-    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
         userId: user._id,

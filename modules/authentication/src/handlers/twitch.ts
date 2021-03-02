@@ -22,7 +22,7 @@ export class TwitchHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    let authConfig = ConfigController.getInstance().config;
+    const authConfig = ConfigController.getInstance().config;
     if (!authConfig.twitch.enabled) {
       throw ConduitError.forbidden('Twitch auth is deactivated');
     }
@@ -167,7 +167,7 @@ export class TwitchHandlers {
 
     let clientId = params.state;
 
-    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
         userId: user._id,
@@ -178,6 +178,7 @@ export class TwitchHandlers {
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
     return callback(null, {
       redirect:
         config.twitch.redirect_uri +

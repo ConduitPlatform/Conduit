@@ -24,7 +24,7 @@ export class GoogleHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    let authConfig = ConfigController.getInstance().config;
+    const authConfig = ConfigController.getInstance().config;
     if (!authConfig.google.enabled) {
       throw ConduitError.forbidden('Google auth is deactivated');
     }
@@ -121,7 +121,7 @@ export class GoogleHandlers {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
         userId: user._id,
