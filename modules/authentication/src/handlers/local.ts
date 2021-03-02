@@ -6,7 +6,6 @@ import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
-import { deleteUserTokens } from './util';
 import { ConfigController } from '../config/Config.controller';
 import moment = require('moment');
 
@@ -229,7 +228,7 @@ export class LocalHandlers {
     }
 
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
       })
@@ -404,7 +403,7 @@ export class LocalHandlers {
 
     await Promise.all(
       [userPromise, tokenPromise].concat(
-        deleteUserTokens(this.grpcSdk, {
+        AuthUtils.deleteUserTokens(this.grpcSdk, {
           userId: user._id,
         })
       )
@@ -531,7 +530,7 @@ export class LocalHandlers {
     const config = ConfigController.getInstance().config;
 
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
       })

@@ -5,7 +5,7 @@ import axios from 'axios';
 import querystring from 'querystring';
 import moment from 'moment';
 import { ConfigController } from '../config/Config.controller';
-import { createUserTokensAsPromise } from './util';
+import { AuthUtils } from '../utils/auth';
 
 export class KakaoHandlers {
   private database: any;
@@ -178,11 +178,14 @@ export class KakaoHandlers {
 
     let clientId = params.state;
 
-    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
-      userId: user._id,
-      clientId,
-      config,
-    }).catch((e) => (errorMessage = e));
+    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
+        userId: user._id,
+        clientId,
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });

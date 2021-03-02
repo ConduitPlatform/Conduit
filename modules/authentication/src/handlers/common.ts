@@ -5,7 +5,6 @@ import moment from 'moment';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
-import { deleteUserTokens } from './util';
 
 export class CommonHandlers {
   private database: any;
@@ -49,7 +48,7 @@ export class CommonHandlers {
     }
 
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: oldRefreshToken.userId,
         clientId,
       })
@@ -102,7 +101,7 @@ export class CommonHandlers {
 
     let errorMessage = null;
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
       })
@@ -135,7 +134,7 @@ export class CommonHandlers {
     callback(null, { result: 'done' });
 
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
       })
     ).catch((e: any) => (errorMessage = e.message));

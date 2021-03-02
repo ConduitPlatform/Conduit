@@ -4,7 +4,7 @@ import { isNil } from 'lodash';
 import axios from 'axios';
 import moment from 'moment';
 import { ConfigController } from '../config/Config.controller';
-import { createUserTokensAsPromise } from './util';
+import { AuthUtils } from '../utils/auth';
 
 export class TwitchHandlers {
   private database: any;
@@ -173,11 +173,14 @@ export class TwitchHandlers {
 
     let clientId = params.state;
 
-    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
-      userId: user._id,
-      clientId,
-      config,
-    }).catch((e) => (errorMessage = e));
+    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
+        userId: user._id,
+        clientId,
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });

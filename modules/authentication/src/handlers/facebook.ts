@@ -3,7 +3,7 @@ import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
-import { createUserTokensAsPromise } from './util';
+import { AuthUtils } from '../utils/auth';
 
 export class FacebookHandlers {
   private database: any;
@@ -126,11 +126,14 @@ export class FacebookHandlers {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
-      userId: user._id,
-      clientId: context.clientId,
-      config,
-    }).catch((e) => (errorMessage = e));
+    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
+        userId: user._id,
+        clientId: context.clientId,
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });

@@ -3,7 +3,6 @@ import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
-import { createUserTokensAsPromise, deleteUserTokens } from './util';
 
 export class ServiceHandler {
   private database: any;
@@ -91,7 +90,7 @@ export class ServiceHandler {
     const config = ConfigController.getInstance().config;
 
     await Promise.all(
-      deleteUserTokens(this.grpcSdk, {
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: serviceUser._id,
         clientId,
       })
@@ -99,11 +98,14 @@ export class ServiceHandler {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    let [accessToken, refreshToken] = await createUserTokensAsPromise(this.grpcSdk, {
-      userId: serviceUser._id,
-      clientId: context.clientId,
-      config,
-    }).catch((e) => (errorMessage = e));
+    let [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
+        userId: serviceUser._id,
+        clientId: context.clientId,
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
