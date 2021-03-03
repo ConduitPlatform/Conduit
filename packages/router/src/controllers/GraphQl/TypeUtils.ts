@@ -52,7 +52,7 @@ function getGraphQLType(conduitType: any) {
     case 'String':
       return conduitType;
     case 'Number':
-      return 'Int';
+      return 'Number';
     case 'Boolean':
       return conduitType;
     case 'Date':

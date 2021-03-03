@@ -99,7 +99,7 @@ export class GraphQLController {
       params += (params.length > 1 ? ',' : '') + k + ':';
       if (typeof paramObj[k] === 'string') {
         if (paramObj[k] === 'Number') {
-          params += 'Int';
+          params += 'Number';
         } else if (paramObj[k] === 'ObjectId') {
           params += 'ID';
         } else {
@@ -108,7 +108,7 @@ export class GraphQLController {
       } else {
         if ((paramObj[k] as ConduitRouteOptionExtended).type === 'Number') {
           params +=
-            'Int' + ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
+            'Number' + ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
         } else if ((paramObj[k] as ConduitRouteOptionExtended).type === 'ObjectId') {
           params +=
             'ID' + ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
@@ -303,9 +303,48 @@ export class GraphQLController {
           return null;
         },
       }),
+      Number: new GraphQLScalarType({
+        name: 'Number',
+        description: 'Number custom scalar type, is either int or float',
+        parseValue(value) {
+          // maybe wrong
+          if (typeof value === 'string') {
+            if (Number.isInteger(value)) {
+              return Number.parseInt(value);
+            } else if (!Number.isNaN(value)) {
+              return Number.parseFloat(value);
+            }
+          } else {
+            return value;
+          }
+        },
+        serialize(value) {
+          if (typeof value === 'string') {
+            if (Number.isInteger(value)) {
+              return Number.parseInt(value);
+            } else if (!Number.isNaN(value)) {
+              return Number.parseFloat(value);
+            }
+          } else {
+            return value;
+          }
+        },
+        parseLiteral(ast) {
+          if (ast.kind === Kind.INT || ast.kind === Kind.FLOAT) {
+            return ast.value;
+          } else if (ast.kind == Kind.STRING) {
+            if (Number.isInteger(ast.value)) {
+              return Number.parseInt(ast.value);
+            } else if (!Number.isNaN(ast.value)) {
+              return Number.parseFloat(ast.value);
+            }
+          }
+          return null;
+        },
+      }),
     };
     this.typeDefs = ` `;
-    this.types = 'scalar Date\n';
+    this.types = 'scalar Date\nscalar Number\n';
     this.queries = '';
     this.mutations = '';
     const self = this;
