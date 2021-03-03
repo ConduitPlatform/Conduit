@@ -96,6 +96,13 @@ export class SchemaAdmin {
       });
     }
 
+    if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Names cannot include spaces and - characters',
+      });
+    }
+
     const errorMessage = validateSchemaInput(name, fields, modelOptions, enabled);
     if (!isNil(errorMessage)) {
       return callback({
@@ -207,6 +214,13 @@ export class SchemaAdmin {
       });
     }
 
+    if (name !== null) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Name of existing schema cannot be edited',
+      });
+    }
+
     let errorMessage = null;
     const requestedSchema = await this.database
       .findOne('SchemaDefinitions', { _id: id })
@@ -226,6 +240,13 @@ export class SchemaAdmin {
       return callback({
         code: grpc.status.INTERNAL,
         message: errorMessage,
+      });
+    }
+
+    if (Object.keys(requestedSchema.fields).length > Object.keys(fields).length) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Schema fields may not be deleted...yet',
       });
     }
 
@@ -258,8 +279,6 @@ export class SchemaAdmin {
         )
       );
     }
-    // TODO reinitialise routes?
-    // TODO even if new routes are initiated the old ones don't go anywhere so the user requests to those routes expect values compatible with the old schema
 
     return callback(null, { result: JSON.stringify(updatedSchema) });
   }

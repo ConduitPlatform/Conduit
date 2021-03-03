@@ -8,7 +8,6 @@ import parse = EJSON.parse;
 
 export class DatabaseProvider {
   private readonly _activeAdapter: DatabaseAdapter;
-  private _url: string;
 
   constructor(private readonly conduit: ConduitGrpcSdk) {
     const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
@@ -21,6 +20,12 @@ export class DatabaseProvider {
     } else {
       throw new Error('Arguments not supported');
     }
+  }
+
+  private _url: string;
+
+  get url() {
+    return this._url;
   }
 
   initBus() {
@@ -138,21 +143,23 @@ export class DatabaseProvider {
     });
   }
 
-  get url() {
-    return this._url;
-  }
-
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param call
    * @param callback
    */
   createSchemaFromAdapter(call: any, callback: any) {
-    let schema = {
+    let schema: { name: string; modelSchema: any; modelOptions: any } = {
       name: call.request.schema.name,
       modelSchema: JSON.parse(call.request.schema.modelSchema),
       modelOptions: JSON.parse(call.request.schema.modelOptions),
     };
+    if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Names cannot include spaces and - characters',
+      });
+    }
     this._activeAdapter
       .createSchemaFromAdapter(schema)
       .then((schemaAdapter: any) => {
