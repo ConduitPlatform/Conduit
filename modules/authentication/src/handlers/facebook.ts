@@ -1,20 +1,19 @@
 import request, { OptionsWithUrl } from 'request-promise';
-import { isNil, isEmpty } from 'lodash';
-import { AuthUtils } from '../../utils/auth';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
-import moment = require('moment');
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { isEmpty, isNil } from 'lodash';
+import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
-import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConfigController } from '../config/Config.controller';
+import { AuthUtils } from '../utils/auth';
 
 export class FacebookHandlers {
   private database: any;
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then((r) => {
-        return this.initDbAndEmail();
+        console.log('Facebook is active');
       })
       .catch((err) => {
         console.log('Facebook not active');
@@ -22,37 +21,16 @@ export class FacebookHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('authentication')
-      .then((authConfig: any) => {
-        if (!authConfig.facebook.enabled) {
-          throw ConduitError.forbidden('Facebook auth is deactivated');
-        }
-        if (!authConfig.facebook || !authConfig.facebook.clientId) {
-          throw ConduitError.forbidden(
-            'Cannot enable facebook auth due to missing clientId'
-          );
-        }
-      })
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDbAndEmail();
-        }
-      })
-      .then((r) => {
-        return true;
-      })
-      .catch((err: Error) => {
-        // De-initialize the provider if the config is now invalid
-        this.initialized = false;
-        throw err;
-      });
-  }
+    const authConfig = ConfigController.getInstance().config;
 
-  private async initDbAndEmail() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
+    if (!authConfig.facebook.enabled) {
+      throw ConduitError.forbidden('Facebook auth is deactivated');
+    }
+    if (!authConfig.facebook.clientId) {
+      throw ConduitError.forbidden('Cannot enable facebook auth due to missing clientId');
+    }
     this.initialized = true;
+    return true;
   }
 
   async authenticate(call: any, callback: any) {
@@ -66,11 +44,7 @@ export class FacebookHandlers {
 
     let errorMessage = null;
 
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
@@ -146,34 +120,15 @@ export class FacebookHandlers {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken = await this.database
-      .create('AccessToken', {
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
         userId: user._id,
         clientId: context.clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId: context.clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 

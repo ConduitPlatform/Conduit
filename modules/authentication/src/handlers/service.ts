@@ -1,18 +1,18 @@
 import { isEmpty, isNil } from 'lodash';
-import { AuthUtils } from '../../utils/auth';
-import { ISignTokenOptions } from '../../interfaces/ISignTokenOptions';
+import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
-import moment from 'moment';
+import { ConfigController } from '../config/Config.controller';
 
 export class ServiceHandler {
   private database: any;
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider;
     this.validate()
       .then((r: any) => {
-        return this.initDb();
+        console.error('Service is active');
       })
       .catch((err: any) => {
         console.error('Service not active');
@@ -20,32 +20,12 @@ export class ServiceHandler {
   }
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('authentication')
-      .then((authConfig: any) => {
-        if (!authConfig.service.enabled) {
-          throw ConduitError.forbidden('Service auth is deactivated');
-        }
-      })
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDb();
-        }
-      })
-      .then((r) => {
-        return true;
-      })
-      .catch((err: Error) => {
-        // De-initialize the provider if the config is now invalid
-        this.initialized = false;
-        throw err;
-      });
-  }
-
-  private async initDb() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
+    const authConfig = ConfigController.getInstance().config;
+    if (!authConfig.service.enabled) {
+      throw ConduitError.forbidden('Service auth is deactivated');
+    }
     this.initialized = true;
+    return true;
   }
 
   async authenticate(call: any, callback: any) {
@@ -101,52 +81,26 @@ export class ServiceHandler {
         message: 'Invalid login credentials',
       });
 
-    const config = await this.grpcSdk.config
-      .get('authentication')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const config = ConfigController.getInstance().config;
 
-    const promise1 = this.database.deleteMany('AccessToken', {
-      userId: serviceUser._id,
-      clientId,
-    });
-    const promise2 = this.database.deleteMany('RefreshToken', {
-      userId: serviceUser._id,
-      clientId,
-    });
-    await Promise.all([promise1, promise2]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken = await this.database
-      .create('AccessToken', {
+    await Promise.all(
+      AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: serviceUser._id,
         clientId,
-        token: AuthUtils.signToken({ id: serviceUser._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
       })
-      .catch((e: any) => (errorMessage = e.message));
+    ).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
         userId: serviceUser._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
+        clientId: context.clientId,
+        config,
+      }
+    ).catch((e) => (errorMessage = e));
+
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
