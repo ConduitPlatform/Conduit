@@ -152,7 +152,7 @@ export class DatabaseProvider {
     let schema: { name: string; modelSchema: any; modelOptions: any } = {
       name: call.request.schema.name,
       modelSchema: JSON.parse(call.request.schema.modelSchema),
-      modelOptions: JSON.parse(call.request.schema.modelOptions),
+      modelOptions: call.request.schema.modelOptions,
     };
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -167,12 +167,12 @@ export class DatabaseProvider {
         let originalSchema = {
           name: schema.originalSchema.name,
           modelSchema: JSON.stringify(schema.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schema.originalSchema.modelOptions),
+          modelOptions: schema.originalSchema.modelOptions,
         };
         this.publishSchema({
           name: call.request.schema.name,
           modelSchema: JSON.parse(call.request.schema.modelSchema),
-          modelOptions: JSON.parse(call.request.schema.modelOptions),
+          modelOptions: call.request.schema.modelOptions,
         });
         callback(null, {
           schema: originalSchema,

@@ -3,9 +3,11 @@
 **/app/
 **/node_modules/
 **/.nyc_output
+**/docs
 /.idea
 **/*.tsbuildinfo
 **/src/proto/*.proto
 **/protos/src/*.proto
 .vscode
 **/resourceRegistry.log
+**/.docz/
