@@ -32,7 +32,7 @@ export default class DatabaseProvider extends ConduitModule {
           schema: {
             name: schema.name,
             modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
-            modelOptions: schema.modelOptions,
+            modelOptions: JSON.stringify(schema.modelOptions),
           },
         },
         (err: any, res: any) => {
@@ -42,7 +42,7 @@ export default class DatabaseProvider extends ConduitModule {
             resolve({
               name: res.schema.name,
               modelSchema: JSON.parse(res.schema.modelSchema),
-              modelOptions: res.schema.modelOptions,
+              modelOptions: JSON.parse(res.schema.modelOptions),
             });
           }
         }
