@@ -4,6 +4,7 @@
 **/node_modules/
 **/.nyc_output
 **/docs
+**/.docz/
 /.idea
 **/*.tsbuildinfo
 **/src/proto/*.proto

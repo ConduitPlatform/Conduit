@@ -3,9 +3,10 @@
 **/.nyc_output
 /.idea
 **/docs
+**/.docz/
 **/*.tsbuildinfo
 **/src/proto/*.proto
 **/protos/src/*.proto
 .vscode
 **/resourceRegistry.log
-**/.docz/
+

@@ -4,6 +4,7 @@ node_modules
 **/*.tsbuildinfo
 **/.next
 **/docs
+**/.docz/
 **/scripts
 **/.github
 **/.idea

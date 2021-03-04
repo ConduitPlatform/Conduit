@@ -3,7 +3,7 @@ IMAGE_TAG = ${shell git describe --tags `git rev-list --tags --max-count=1` 2> /
 
 IMAGE_DIRS = $(wildcard libraries/* modules/*)
 
-all: conduit ${IMAGE_DIRS}
+all: conduit admin ${IMAGE_DIRS}
 
 conduit:
 ifeq ($(DEV),TRUE)
