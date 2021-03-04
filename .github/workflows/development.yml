@@ -5,21 +5,11 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     name: Deploy conduit
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Get npm cache directory
-        id: npm-cache
-        run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v1
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
       - name: Docker Login
         uses: docker/login-action@v1.6.0
         with:
@@ -51,25 +41,3 @@ jobs:
         with:
           github_token: ${{ secrets.GIT_TOKEN }}
           publish_dir: ./docs
-  publish_sdk:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 14
-          registry-url: https://npm.pkg.github.com
-          scope: '@quintessential-sft'
-          always-auth: true
-      - run: npm config set allow-same-version true
-      - name: Authenticate with GitHub package registry
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > .npmrc
-          echo "@quintessential-sft:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "always-auth: true" >> .npmrc
-        working-directory: ./libraries/grpc-sdk
-      - name: actually_publish
-        run: npm config set allow-same-version true && npm install && npm publish
-        working-directory: ./libraries/grpc-sdk
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
