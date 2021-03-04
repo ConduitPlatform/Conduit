@@ -3,6 +3,7 @@ node_modules
 **/node_modules
 **/*.tsbuildinfo
 **/.next
+**/docs
 **/scripts
 **/.github
 **/.idea

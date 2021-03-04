@@ -3,6 +3,7 @@
 **/app/
 **/node_modules/
 **/.nyc_output
+**/docs
 /.idea
 **/*.tsbuildinfo
 **/src/proto/*.proto
