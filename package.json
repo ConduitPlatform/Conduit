@@ -29,12 +29,13 @@
   "devDependencies": {
     "copyfiles": "^2.2.0",
     "lerna": "^3.13.1",
-    "pm2": "^4.4.0"
-  },
-  "dependencies": {
+    "pm2": "^4.4.0",
     "docz": "^2.3.1",
     "prettier": "^2.2.1",
     "react": "16.12.0",
     "react-dom": "16.12.0"
+  },
+  "dependencies": {
+
   }
 }
