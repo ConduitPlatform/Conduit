@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
           node-version: 14
@@ -44,7 +46,7 @@ jobs:
           echo "always-auth: true" >> .npmrc
         working-directory: ./libraries/grpc-sdk
       - name: actually_publish
-        run: npm config set allow-same-version true && npm install && npm publish
+        run: npm install && npm version ${{ env.RELEASE_VERSION }} && npm publish
         working-directory: ./libraries/grpc-sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
