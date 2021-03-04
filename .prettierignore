@@ -10,3 +10,4 @@
 **/protos/src/*.proto
 .vscode
 **/resourceRegistry.log
+**/.docz/
