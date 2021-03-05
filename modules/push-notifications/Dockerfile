@@ -6,9 +6,7 @@ COPY --from=conduit-base:latest /app/modules/push-notifications /app/modules/pus
 
 RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
 
-RUN apk del .gyp
-
-WORKDIR /app/modules/storage
+WORKDIR /app/modules/push-notifications
 
 ENV CONDUIT_SERVER conduit_server
 

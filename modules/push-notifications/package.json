@@ -11,7 +11,7 @@
     "start": "node dist/index.js",
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto ./dist/",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepare": "npm run build",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit-push-notifications:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-push-notifications:latest"
   },

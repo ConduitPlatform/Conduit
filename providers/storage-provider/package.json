@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc"
+    "build": "node_modules/.bin/rimraf dist && tsc"
   },
   "license": "ISC",
   "dependencies": {
@@ -24,7 +24,7 @@
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
-    "directory": "libraries/storage-provider"
+    "directory": "providers/storage-provider"
   },
   "devDependencies": {
     "rimraf": "^3.0.2",

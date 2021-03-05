@@ -6,12 +6,10 @@ COPY --from=conduit-base:latest /app/modules/sms /app/modules/sms
 
 RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
 
-RUN apk del .gyp
-
 WORKDIR /app/modules/sms
 
 ENV CONDUIT_SERVER conduit_server
- 
+
 ENV SERVICE_URL 0.0.0.0:5000
 
 ENV REGISTER_NAME true

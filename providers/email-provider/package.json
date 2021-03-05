@@ -8,10 +8,10 @@
   },
   "scripts": {
     "prepublish": "npm run snyk-protect && npm run build",
-    "build": "rimraf dist && tsc",
-    "test": "cross-env TS_NODE_FILES=true mocha --timeout 10000 --reporter nyan -r ts-node/register test/**/*.ts",
-    "coverage": "nyc r lcov -e .ts -x \"*.test.ts\" npm run test",
-    "snyk-protect": "snyk protect"
+    "build": "node_modules/.bin/rimraf dist && tsc",
+    "test": "node_modules/.bin/cross-env TS_NODE_FILES=true mocha --timeout 10000 --reporter nyan -r ts-node/register test/**/*.ts",
+    "coverage": "node_modules/.bin/nyc r lcov -e .ts -x \\\"*.test.ts\\\" npm run test",
+    "snyk-protect": "node_modules/.bin/snyk protect"
   },
   "license": "ISC",
   "dependencies": {
@@ -32,7 +32,7 @@
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
-    "directory": "libraries/email-provider"
+    "directory": "providers/email-provider"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",

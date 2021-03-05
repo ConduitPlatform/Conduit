@@ -1,7 +1,6 @@
 import Stripe from 'stripe';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitError } from '@quintessential-sft/conduit-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 const PROVIDER_NAME = 'stripe';

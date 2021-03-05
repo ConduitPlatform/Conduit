@@ -27,7 +27,6 @@ export class MongooseAdapter {
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
-    this.mongoose.Promise = require('bluebird');
     this.connect();
   }
 

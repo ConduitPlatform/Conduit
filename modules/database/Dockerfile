@@ -6,8 +6,6 @@ COPY --from=conduit-base:latest /app/modules/database /app/modules/database
 
 RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
 
-RUN apk del .gyp
-
 WORKDIR /app/modules/database
 
 ENV CONDUIT_SERVER conduit_server

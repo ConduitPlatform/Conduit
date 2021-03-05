@@ -1,7 +1,6 @@
 import { Schema } from 'mongoose';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import * as _ from 'lodash';
-import { isNil, isObject, isArray } from 'lodash';
+import { isNil, isObject, isArray, cloneDeep } from 'lodash';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -9,7 +8,7 @@ const deepdash = require('deepdash/standalone');
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  let copy = _.cloneDeep(jsonSchema);
+  let copy = cloneDeep(jsonSchema);
   let actual: any = copy.modelSchema;
 
   if (actual.hasOwnProperty('_id')) {

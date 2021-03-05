@@ -21,7 +21,8 @@
     "packages/*",
     "libraries/*",
     "admin/*",
-    "modules/*"
+    "modules/*",
+    "providers/*"
   ],
   "keywords": [],
   "author": "",
@@ -36,6 +37,5 @@
     "react-dom": "16.12.0"
   },
   "dependencies": {
-
   }
 }
