@@ -94,9 +94,10 @@ export class MongooseSchema implements SchemaAdapter {
     }
     if (sort !== null) {
       finalQuery = finalQuery.sort(sort);
-    } else {
-      finalQuery = finalQuery.sort({ createdAt: -1 });
     }
+    // } else {
+    //   finalQuery = finalQuery.sort({ createdAt: -1 });
+    // }
     return finalQuery.lean().exec();
   }
 
