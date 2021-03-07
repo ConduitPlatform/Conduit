@@ -28,7 +28,7 @@ export class GoogleHandlers {
     if (!authConfig.google.enabled) {
       throw ConduitError.forbidden('Google auth is deactivated');
     }
-    if (authConfig.google.clientId) {
+    if (!authConfig.google.clientId) {
       throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
     }
     this.initialized = true;
