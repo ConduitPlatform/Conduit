@@ -1,4 +1,5 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { SchemaAdapter } from './SchemaAdapter';
 
 export interface DatabaseAdapter {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -15,7 +16,7 @@ export interface DatabaseAdapter {
    */
   getSchema(schemaName: string): Promise<{ schema: any }>;
 
-  getSchemaModel(schemaName: string): Promise<{ model: any }>;
+  getSchemaModel(schemaName: string): Promise<SchemaAdapter>;
 
   ensureConnected(): Promise<any>;
 }

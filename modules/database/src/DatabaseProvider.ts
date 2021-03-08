@@ -1,5 +1,5 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { DatabaseAdapter } from './interfaces';
+import { DatabaseAdapter, SchemaAdapter } from './interfaces';
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
@@ -222,8 +222,8 @@ export class DatabaseProvider {
   findOne(call: FindOneRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.findOne(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.findOne(
           parse(call.request.query),
           call.request.select,
           call.request.populate
@@ -243,14 +243,14 @@ export class DatabaseProvider {
   findMany(call: FindRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
+      .then((schemaAdapter: SchemaAdapter) => {
         const skip = call.request.skip;
         const limit = call.request.limit;
         const select = call.request.select;
         const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
         const populate = call.request.populate;
 
-        return schemaAdapter.model.findMany(
+        return schemaAdapter.findMany(
           parse(call.request.query),
           skip,
           limit,
@@ -273,8 +273,8 @@ export class DatabaseProvider {
   create(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.create(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.create(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -290,8 +290,8 @@ export class DatabaseProvider {
   createMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.createMany(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.createMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -307,8 +307,8 @@ export class DatabaseProvider {
   findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.findByIdAndUpdate(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.findByIdAndUpdate(
           call.request.id,
           parse(call.request.query)
         );
@@ -327,8 +327,8 @@ export class DatabaseProvider {
   updateMany(call: UpdateManyRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.updateMany(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.updateMany(
           parse(call.request.filterQuery),
           parse(call.request.query)
         );
@@ -347,8 +347,8 @@ export class DatabaseProvider {
   deleteOne(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteOne(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.deleteOne(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -364,8 +364,8 @@ export class DatabaseProvider {
   deleteMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteMany(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.deleteMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -381,8 +381,8 @@ export class DatabaseProvider {
   countDocuments(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.countDocuments(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.countDocuments(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });

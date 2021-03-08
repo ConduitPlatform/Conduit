@@ -12,8 +12,9 @@ export interface SchemaAdapter {
    * Should find one
    * @param query
    * @param select
+   * @param populate
    */
-  findOne(query: any, select?: string): Promise<any>;
+  findOne(query: any, select?: string, populate?: string[]): Promise<any>;
 
   /**
    * Should find Many
@@ -28,7 +29,8 @@ export interface SchemaAdapter {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: any
+    sort?: any,
+    populate?: string[],
   ): Promise<any>;
 
   /**
