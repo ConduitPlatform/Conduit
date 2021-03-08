@@ -52,6 +52,7 @@ export default class SmsModule {
     this.grpcServer
       .addService(path.resolve(__dirname, './sms.proto'), 'sms.Sms', {
         setConfig: this.setConfig.bind(this),
+        sendSms: this.sendSms.bind(this),
         sendVerificationCode: this.sendVerificationCode.bind(this),
         verify: this.verify.bind(this),
       })
