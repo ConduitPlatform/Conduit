@@ -1,12 +1,36 @@
 import PaymentsConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
 import { PaymentsRoutes } from './routes/Routes';
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import { IamportHandlers } from './handlers/iamport';
+
+type CreateIamportPaymentRequest = GrpcRequest<{
+  productId: string,
+  quantity: number,
+  userId: string
+}>;
+
+type CreateIamportPaymentResponse = GrpcResponse<{
+  merchant_uid: string,
+  amount: number
+}>;
+
+type CompleteIamportPaymentRequest = GrpcRequest<{
+  imp_uid: string,
+  merchant_uid: string
+}>;
+
+type CompleteIamportPaymentResponse = GrpcResponse<{ success: boolean }>;
 
 export default class PaymentsModule {
   private database: any;
@@ -89,7 +113,7 @@ export default class PaymentsModule {
     return this._url;
   }
 
-  async setConfig(call: any, callback: any) {
+  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
     if (
       isNil(newConfig.active) ||
@@ -129,10 +153,10 @@ export default class PaymentsModule {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { updateConfig: JSON.stringify(updateResult) });
+    return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  async createIamportPayment(call: any, callback: any) {
+  async createIamportPayment(call: CreateIamportPaymentRequest, callback: CreateIamportPaymentResponse) {
     const productId = call.request.productId;
     const quantity = call.request.quantity;
     const userId = call.request.userId === '' ? undefined : call.request.userId;
@@ -150,7 +174,7 @@ export default class PaymentsModule {
     }
   }
 
-  async completeIamportPayment(call: any, callback: any) {
+  async completeIamportPayment(call: CompleteIamportPaymentRequest, callback: CompleteIamportPaymentResponse) {
     const imp_uid = call.request.imp_uid;
     const merchant_uid = call.request.merchant_uid;
 

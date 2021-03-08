@@ -4,9 +4,36 @@ import { EmailService } from './services/email.service';
 import { AdminHandlers } from './admin/AdminHandlers';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
+
+type RegisterTemplateRequest = GrpcRequest<{
+  name: string,
+  subject: string,
+  body: string,
+  variables: string[]
+}>;
+type RegisterTemplateResponse = GrpcResponse<{ template: string }>;
+
+type SendEmailRequest = GrpcRequest<{
+  templateName: string,
+  params: {
+    email: string,
+    variables: string,
+    sender: string,
+    cc: string[],
+    replyTo: string,
+    attachments: string[],
+  }
+}>;
+type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
 export default class EmailModule {
   private emailProvider: EmailProvider;
@@ -90,7 +117,7 @@ export default class EmailModule {
     return this._url;
   }
 
-  async setConfig(call: any, callback: any) {
+  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
     if (
       isNil(newConfig.active) ||
@@ -146,7 +173,7 @@ export default class EmailModule {
     }
   }
 
-  async registerTemplate(call: any, callback: any) {
+  async registerTemplate(call: RegisterTemplateRequest, callback: RegisterTemplateResponse) {
     const params = {
       name: call.request.name,
       subject: call.request.subject,
@@ -162,7 +189,7 @@ export default class EmailModule {
     return callback(null, { template: JSON.stringify(template) });
   }
 
-  async sendEmail(call: any, callback: any) {
+  async sendEmail(call: SendEmailRequest, callback: SendEmailResponse) {
     const template = call.request.templateName;
     const params = {
       email: call.request.params.email,

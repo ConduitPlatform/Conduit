@@ -3,6 +3,14 @@ import { DatabaseAdapter } from './interfaces';
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
+import {
+  CreateSchemaRequest,
+  FindOneRequest,
+  FindRequest,
+  GetSchemaRequest, QueryRequest,
+  QueryResponse,
+  SchemaResponse, UpdateManyRequest, UpdateRequest,
+} from './types';
 import { EJSON } from 'bson';
 import parse = EJSON.parse;
 
@@ -148,7 +156,7 @@ export class DatabaseProvider {
    * @param call
    * @param callback
    */
-  createSchemaFromAdapter(call: any, callback: any) {
+  createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
     let schema: { name: string; modelSchema: any; modelOptions: any } = {
       name: call.request.schema.name,
       modelSchema: JSON.parse(call.request.schema.modelSchema),
@@ -191,7 +199,7 @@ export class DatabaseProvider {
    * @param call
    * @param callback
    */
-  getSchema(call: any, callback: any) {
+  getSchema(call: GetSchemaRequest, callback: SchemaResponse) {
     this._activeAdapter
       .getSchema(call.request.schemaName)
       .then((schemaAdapter) => {
@@ -211,7 +219,7 @@ export class DatabaseProvider {
       });
   }
 
-  findOne(call: any, callback: any) {
+  findOne(call: FindOneRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -232,7 +240,7 @@ export class DatabaseProvider {
       });
   }
 
-  findMany(call: any, callback: any) {
+  findMany(call: FindRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -262,7 +270,7 @@ export class DatabaseProvider {
       });
   }
 
-  create(call: any, callback: any) {
+  create(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -279,7 +287,7 @@ export class DatabaseProvider {
       });
   }
 
-  createMany(call: any, callback: any) {
+  createMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -296,7 +304,7 @@ export class DatabaseProvider {
       });
   }
 
-  findByIdAndUpdate(call: any, callback: any) {
+  findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -316,7 +324,7 @@ export class DatabaseProvider {
       });
   }
 
-  updateMany(call: any, callback: any) {
+  updateMany(call: UpdateManyRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -336,7 +344,7 @@ export class DatabaseProvider {
       });
   }
 
-  deleteOne(call: any, callback: any) {
+  deleteOne(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -353,7 +361,7 @@ export class DatabaseProvider {
       });
   }
 
-  deleteMany(call: any, callback: any) {
+  deleteMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
@@ -370,7 +378,7 @@ export class DatabaseProvider {
       });
   }
 
-  countDocuments(call: any, callback: any) {
+  countDocuments(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
       .then((schemaAdapter: { model: any }) => {
