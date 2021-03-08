@@ -1,11 +1,12 @@
 import { Model, Mongoose, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
+import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 
 export class MongooseSchema implements SchemaAdapter {
   model: Model<any>;
-  originalSchema: any; // any for now
+  originalSchema: ConduitSchema;
 
-  constructor(mongoose: Mongoose, schema: any, deepPopulate: any) {
+  constructor(mongoose: Mongoose, schema: ConduitSchema, deepPopulate: any) {
     this.originalSchema = schema;
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});

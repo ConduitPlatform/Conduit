@@ -73,7 +73,7 @@ export class MongooseAdapter implements DatabaseAdapter {
       });
   }
 
-  createSchemaFromAdapter(schema: any): Promise<{ schema: any }> {
+  createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
     const Schema = this.mongoose.Schema;
     if (!this.models) {
       this.models = {};
@@ -101,13 +101,13 @@ export class MongooseAdapter implements DatabaseAdapter {
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate);
     return new Promise((resolve, reject) => {
-      resolve({ schema: this.models![schema.name] });
+      resolve(this.models![schema.name]);
     });
   }
 
-  async getSchema(schemaName: string): Promise<{ schema: any }> {
+  async getSchema(schemaName: string): Promise<ConduitSchema> {
     if (this.models && this.models![schemaName]) {
-      return { schema: this.models![schemaName].originalSchema };
+      return this.models![schemaName].originalSchema;
     }
     throw new Error(`Schema ${schemaName} not defined yet`);
   }

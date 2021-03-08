@@ -1,6 +1,6 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { DatabaseAdapter, SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
 import {
@@ -51,11 +51,11 @@ export class DatabaseProvider {
           try {
             let receivedSchema = JSON.parse(message);
             if (receivedSchema.name) {
-              let schema = {
-                name: receivedSchema.name,
-                modelSchema: receivedSchema.modelSchema,
-                modelOptions: receivedSchema.modelOptions,
-              };
+              let schema = new ConduitSchema(
+                receivedSchema.name,
+                receivedSchema.modelSchema,
+                receivedSchema.modelOptions
+              );
               self._activeAdapter
                 .createSchemaFromAdapter(schema)
                 .then(() => {})
@@ -72,9 +72,15 @@ export class DatabaseProvider {
           .then((r: any) => {
             if (!r || r.length === 0) return;
             let state = JSON.parse(r);
-            Object.keys(state).forEach((schema: any) => {
+            Object.keys(state).forEach((schemaName: string) => {
+              const schema = new ConduitSchema(
+                state[schemaName]._name,
+                state[schemaName]._fields,
+                state[schemaName]._modelOptions,
+                state[schemaName]._collectionName
+              );
               self._activeAdapter
-                .createSchemaFromAdapter(state[schema])
+                .createSchemaFromAdapter(schema)
                 .then(() => {})
                 .catch(() => {
                   console.log('Failed to create/update schema');
@@ -157,11 +163,11 @@ export class DatabaseProvider {
    * @param callback
    */
   createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
-    let schema: { name: string; modelSchema: any; modelOptions: any } = {
-      name: call.request.schema.name,
-      modelSchema: JSON.parse(call.request.schema.modelSchema),
-      modelOptions: JSON.parse(call.request.schema.modelOptions),
-    };
+    let schema = new ConduitSchema(
+      call.request.schema.name,
+      JSON.parse(call.request.schema.modelSchema),
+      JSON.parse(call.request.schema.modelOptions)
+    );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -170,12 +176,11 @@ export class DatabaseProvider {
     }
     this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: any) => {
-        let schema = schemaAdapter.schema;
+      .then((schemaAdapter: SchemaAdapter) => {
         let originalSchema = {
-          name: schema.originalSchema.name,
-          modelSchema: JSON.stringify(schema.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schema.originalSchema.modelOptions),
+          name: schemaAdapter.originalSchema.name,
+          modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
         };
         this.publishSchema({
           name: call.request.schema.name,
@@ -205,9 +210,9 @@ export class DatabaseProvider {
       .then((schemaAdapter) => {
         callback(null, {
           schema: {
-            name: schemaAdapter.schema.name,
-            modelSchema: JSON.stringify(schemaAdapter.schema.modelSchema),
-            modelOptions: JSON.stringify(schemaAdapter.schema.modelOptions),
+            name: schemaAdapter.name,
+            modelSchema: JSON.stringify(schemaAdapter.modelSchema),
+            modelOptions: JSON.stringify(schemaAdapter.modelOptions),
           },
         });
       })
