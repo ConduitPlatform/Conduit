@@ -1,15 +1,21 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { DatabaseAdapter, SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { ConduitSchema, GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  GrpcServer,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
 import {
   CreateSchemaRequest,
   FindOneRequest,
   FindRequest,
-  GetSchemaRequest, QueryRequest,
+  GetSchemaRequest,
+  QueryRequest,
   QueryResponse,
-  SchemaResponse, UpdateManyRequest, UpdateRequest,
+  SchemaResponse,
+  UpdateManyRequest,
+  UpdateRequest,
 } from './types';
 import { EJSON } from 'bson';
 import parse = EJSON.parse;
@@ -54,7 +60,8 @@ export class DatabaseProvider {
               let schema = new ConduitSchema(
                 receivedSchema.name,
                 receivedSchema.modelSchema,
-                receivedSchema.modelOptions
+                receivedSchema.modelOptions,
+                receivedSchema.collectionName
               );
               self._activeAdapter
                 .createSchemaFromAdapter(schema)
@@ -74,10 +81,10 @@ export class DatabaseProvider {
             let state = JSON.parse(r);
             Object.keys(state).forEach((schemaName: string) => {
               const schema = new ConduitSchema(
-                state[schemaName]._name,
-                state[schemaName]._fields,
-                state[schemaName]._modelOptions,
-                state[schemaName]._collectionName
+                state[schemaName]._name ?? state[schemaName].name,
+                state[schemaName]._fields ?? state[schemaName].modelSchema,
+                state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
+                state[schemaName]._collectionName ?? null
               );
               self._activeAdapter
                 .createSchemaFromAdapter(schema)
@@ -104,8 +111,13 @@ export class DatabaseProvider {
       ?.getState()
       .then((r: any) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
-        self._activeAdapter.registeredSchemas.forEach((k) => {
-          state[k.name] = k;
+        self._activeAdapter.registeredSchemas.forEach((k: ConduitSchema) => {
+          state[k.name] = {
+            _name: k.name,
+            _fields: k.fields,
+            _modelOptions: k.modelOptions,
+            _collectionName: k.collectionName,
+          };
         });
 
         return this.conduit.state?.setState(JSON.stringify(state));
