@@ -99,20 +99,20 @@ export class MongooseAdapter implements DatabaseAdapter {
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
-    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate);
+    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate, this);
     return new Promise((resolve, reject) => {
       resolve(this.models![schema.name]);
     });
   }
 
-  async getSchema(schemaName: string): Promise<ConduitSchema> {
+  getSchema(schemaName: string): ConduitSchema {
     if (this.models && this.models![schemaName]) {
       return this.models![schemaName].originalSchema;
     }
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  async getSchemaModel(schemaName: string): Promise<MongooseSchema> {
+  async getSchemaModel(schemaName: string): MongooseSchema {
     if (this.models && this.models![schemaName]) {
       return this.models![schemaName];
     }

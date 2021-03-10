@@ -14,9 +14,9 @@ export interface DatabaseAdapter {
    * Given a schema name, returns the schema adapter assigned
    * @param schemaName
    */
-  getSchema(schemaName: string): Promise<ConduitSchema>;
+  getSchema(schemaName: string): ConduitSchema;
 
-  getSchemaModel(schemaName: string): Promise<SchemaAdapter>;
+  getSchemaModel(schemaName: string): SchemaAdapter;
 
   ensureConnected(): Promise<any>;
 }
