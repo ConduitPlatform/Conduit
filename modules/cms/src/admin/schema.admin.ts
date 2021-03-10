@@ -1,6 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
   TYPE,
+  RouterRequest,
+  RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
@@ -19,7 +21,7 @@ export class SchemaAdmin {
     this.database = this.grpcSdk.databaseProvider;
   }
 
-  async getAllSchemas(call: any, callback: any) {
+  async getAllSchemas(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -53,7 +55,7 @@ export class SchemaAdmin {
     });
   }
 
-  async getById(call: any, callback: any) {
+  async getById(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
@@ -79,7 +81,7 @@ export class SchemaAdmin {
     return callback(null, { result: JSON.stringify(requestedSchema) });
   }
 
-  async createSchema(call: any, callback: any) {
+  async createSchema(call: RouterRequest, callback: RouterResponse) {
     const {
       name,
       fields,
@@ -146,7 +148,7 @@ export class SchemaAdmin {
     return callback(null, { result: JSON.stringify(newSchema) });
   }
 
-  async toggle(call: any, callback: any) {
+  async toggle(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
@@ -203,7 +205,7 @@ export class SchemaAdmin {
     });
   }
 
-  async editSchema(call: any, callback: any) {
+  async editSchema(call: RouterRequest, callback: RouterResponse) {
     const { id, name, fields, modelOptions, authentication, crudOperations } = JSON.parse(
       call.request.params
     );
@@ -283,7 +285,7 @@ export class SchemaAdmin {
     return callback(null, { result: JSON.stringify(updatedSchema) });
   }
 
-  async deleteSchema(call: any, callback: any) {
+  async deleteSchema(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({

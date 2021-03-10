@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import axios from 'axios';
 import { calculateRenewDate, dateToUnixTimestamp } from '../utils/subscriptions';
@@ -222,7 +222,7 @@ export class IamportHandlers {
     return Promise.reject({ code: grpc.status.ABORTED, message: 'Payment failed' });
   }
 
-  async addCard(call: any, callback: any) {
+  async addCard(call: RouterRequest, callback: RouterResponse) {
     const { email, buyerName, phoneNumber, address, postCode } = JSON.parse(
       call.request.params
     );
@@ -302,7 +302,7 @@ export class IamportHandlers {
         }
       );
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: grpc.status.INTERNAL, message: e.message });
     }
 
     return callback(null, {
@@ -310,7 +310,7 @@ export class IamportHandlers {
     });
   }
 
-  async validateCard(call: any, callback: any) {
+  async validateCard(call: RouterRequest, callback: RouterResponse) {
     const { customerId } = JSON.parse(call.request.params);
 
     if (isNil(customerId)) {
@@ -346,7 +346,7 @@ export class IamportHandlers {
     });
   }
 
-  async subscribeToProduct(call: any, callback: any) {
+  async subscribeToProduct(call: RouterRequest, callback: RouterResponse) {
     const { productId, customerId } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
 
@@ -532,7 +532,7 @@ export class IamportHandlers {
     return callback(null, { result: JSON.stringify({ ...subscription }) });
   }
 
-  async cancelSubscription(call: any, callback: any) {
+  async cancelSubscription(call: RouterRequest, callback: RouterResponse) {
     const { subscriptionId } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
 
@@ -618,7 +618,7 @@ export class IamportHandlers {
     });
   }
 
-  async subscriptionCallback(call: any, callback: any) {
+  async subscriptionCallback(call: RouterRequest, callback: RouterResponse) {
     const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
 
     let errorMessage: string | null = null;
@@ -708,7 +708,7 @@ export class IamportHandlers {
     }
   }
 
-  async getPaymentMethods(call: any, callback: any) {
+  async getPaymentMethods(call: RouterRequest, callback: RouterResponse) {
     const context = JSON.parse(call.request.context);
 
     if (isNil(context)) {

@@ -3,11 +3,12 @@ import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { cloneDeep, isEmpty, isObject, isString, merge, isArray } from 'lodash';
+import { DatabaseAdapter } from '../../interfaces';
 
 const deepdash = require('deepdash/standalone');
 let deepPopulate = require('mongoose-deep-populate');
 
-export class MongooseAdapter {
+export class MongooseAdapter implements DatabaseAdapter {
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
@@ -72,7 +73,7 @@ export class MongooseAdapter {
       });
   }
 
-  createSchemaFromAdapter(schema: any): Promise<{ schema: any }> {
+  createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
     const Schema = this.mongoose.Schema;
     if (!this.models) {
       this.models = {};
@@ -100,20 +101,20 @@ export class MongooseAdapter {
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate);
     return new Promise((resolve, reject) => {
-      resolve({ schema: this.models![schema.name] });
+      resolve(this.models![schema.name]);
     });
   }
 
-  async getSchema(schemaName: string): Promise<{ schema: any }> {
+  async getSchema(schemaName: string): Promise<ConduitSchema> {
     if (this.models && this.models![schemaName]) {
-      return { schema: this.models![schemaName].originalSchema };
+      return this.models![schemaName].originalSchema;
     }
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  async getSchemaModel(schemaName: string): Promise<{ model: any }> {
+  async getSchemaModel(schemaName: string): Promise<MongooseSchema> {
     if (this.models && this.models![schemaName]) {
-      return { model: this.models![schemaName] };
+      return this.models![schemaName];
     }
     throw new Error(`Schema ${schemaName} not defined yet`);
   }

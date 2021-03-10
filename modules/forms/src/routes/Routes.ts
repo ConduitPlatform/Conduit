@@ -1,5 +1,5 @@
 import grpc from 'grpc';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import axios from 'axios';
 
@@ -8,7 +8,7 @@ export class FormRoutes {
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  async submitForm(call: any, callback: any) {
+  async submitForm(call: RouterRequest, callback: RouterResponse) {
     const formName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;

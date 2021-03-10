@@ -10,6 +10,8 @@ import ConduitGrpcSdk, {
   constructRoute,
   GrpcServer,
   TYPE,
+  RouterRequest,
+  RouterResponse
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
@@ -485,7 +487,7 @@ export class AuthenticationRoutes {
     return routesArray;
   }
 
-  middleware(call: any, callback: any) {
+  middleware(call: RouterRequest, callback: RouterResponse) {
     let context;
     let headers;
     try {

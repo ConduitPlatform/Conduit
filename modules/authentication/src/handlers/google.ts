@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
@@ -35,7 +35,7 @@ export class GoogleHandlers {
     return true;
   }
 
-  async authenticate(call: any, callback: any) {
+  async authenticate(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
         code: grpc.status.NOT_FOUND,

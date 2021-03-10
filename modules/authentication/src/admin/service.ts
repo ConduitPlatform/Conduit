@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../utils/auth';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
@@ -13,7 +13,7 @@ export class ServiceAdmin {
     });
   }
 
-  async getServices(call: any, callback: any) {
+  async getServices(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -49,7 +49,7 @@ export class ServiceAdmin {
     return callback(null, { result: JSON.stringify({ services, count }) });
   }
 
-  async createService(call: any, callback: any) {
+  async createService(call: RouterRequest, callback: RouterResponse) {
     const { name } = JSON.parse(call.request.params);
 
     if (isNil(name)) {
@@ -81,7 +81,7 @@ export class ServiceAdmin {
     return callback(null, { result: JSON.stringify({ name, token }) });
   }
 
-  async renewToken(call: any, callback: any) {
+  async renewToken(call: RouterRequest, callback: RouterResponse) {
     const { serviceId } = JSON.parse(call.request.params);
 
     if (isNil(serviceId)) {

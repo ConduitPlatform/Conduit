@@ -1,7 +1,7 @@
 import { isString, isNil } from 'lodash';
 import { IStorageProvider } from '@quintessential-sft/storage-provider';
 import { v4 as uuid } from 'uuid';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 export class FileHandlers {
@@ -10,7 +10,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider
+    storageProvider: IStorageProvider,
   ) {
     this.initDb(grpcSdk, storageProvider);
   }
@@ -25,8 +25,8 @@ export class FileHandlers {
     this.storageProvider = storageProvider;
   }
 
-  async createFile(call: any, callback: any) {
-    const { name, data, folder, mimeType, isPublic } = call.request;
+  async createFile(call: RouterRequest, callback: RouterResponse) {
+    const { name, data, folder, mimeType, isPublic } = JSON.parse(call.request.params);
 
     if (!isString(data)) {
       return callback({
@@ -83,13 +83,15 @@ export class FileHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, {
-      id: newFile._id,
-      name: newFile.name,
-      url: newFile.url,
+      result: JSON.stringify({
+        id: newFile._id,
+        name: newFile.name,
+        url: newFile.url,
+      }),
     });
   }
 
-  async getFile(call: any, callback: any) {
+  async getFile(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
@@ -111,13 +113,15 @@ export class FileHandlers {
       });
 
     return callback(null, {
-      id: file._id,
-      name: file.name,
-      url: file.url,
+      result: JSON.stringify({
+        id: file._id,
+        name: file.name,
+        url: file.url,
+      }),
     });
   }
 
-  async getFileUrl(call: any, callback: any) {
+  async getFileUrl(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
@@ -127,27 +131,23 @@ export class FileHandlers {
     }
 
     let errorMessage = null;
-    const result = await this.database
-      .findOne('File', { _id: id })
-      .then((found: any) => {
-        if (isNil(found)) {
-          throw new Error('File not found');
-        }
-        if (found.isPublic) {
-          return callback(null, {
-            redirect: found.url,
-          });
-        }
-        return callback(null, {
-          redirect: this.storageProvider.folder(found.folder).getSignedUrl(found.name),
-        });
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
+    const found = await this.database.findOne('File', { _id: id })
+      .catch((e: Error) => errorMessage = e.message);
+    if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(found)) {
+      return callback({ code: grpc.status.NOT_FOUND, message: 'File not found' });
+    }
+    if (found.isPublic) {
+      return callback(null, { redirect: found.url });
+    }
+    return callback(null, {
+      redirect: await this.storageProvider.folder(found.folder).getSignedUrl(found.name)
+    });
   }
 
-  async deleteFile(call: any, callback: any) {
+  async deleteFile(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
@@ -173,11 +173,11 @@ export class FileHandlers {
       })
       .catch((e: any) => (errorMessage = e.message));
 
-    return callback(null, { success: true });
+    return callback(null, { result: JSON.stringify({ success: true }) });
   }
 
-  async updateFile(call: any, callback: any) {
-    const { id, data, name, folder, mimeType } = call.request;
+  async updateFile(call: RouterRequest, callback: RouterResponse) {
+    const { id, data, name, folder, mimeType } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -192,7 +192,7 @@ export class FileHandlers {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     if (isNil(found)) {
-      return callback({ code: grpc.status.NOT_FOUND, message: errorMessage });
+      return callback({ code: grpc.status.NOT_FOUND, message: 'File not found' });
     }
 
     // Create temporary file to make the changes so the original is not corrupted if anything fails
@@ -289,9 +289,11 @@ export class FileHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, {
-      id: updatedFile._id,
-      name: updatedFile.name,
-      url: updatedFile.url,
+      result: JSON.stringify({
+        id: updatedFile._id,
+        name: updatedFile.name,
+        url: updatedFile.url,
+      }),
     });
   }
 }

@@ -24,10 +24,10 @@ export default class SMS extends ConduitModule {
     });
   }
 
-  sendSms(params: { to: string; message: string }) {
+  sendSms(to: string, message: string) {
     return new Promise((resolve, reject) => {
       this.client.sendSms(
-        { to: params.to, message: params.message },
+        { to, message },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -39,9 +39,9 @@ export default class SMS extends ConduitModule {
     });
   }
 
-  sendVerificationCode(params: { to: string }) {
+  sendVerificationCode(to: string) {
     return new Promise((resolve, reject) => {
-      this.client.sendVerificationCode({ to: params.to }, (err: any, res: any) => {
+      this.client.sendVerificationCode({ to }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -51,10 +51,10 @@ export default class SMS extends ConduitModule {
     });
   }
 
-  verify(params: { verificationSid: string; code: string }) {
+  verify(verificationSid: string, code: string) {
     return new Promise((resolve, reject) => {
       this.client.verify(
-        { verificationSid: params.verificationSid, code: params.code },
+        { verificationSid, code },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');

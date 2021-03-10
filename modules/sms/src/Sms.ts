@@ -3,9 +3,41 @@ import { TwilioProvider } from './providers/twilio';
 import SmsConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
+
+type SendSmsRequest = GrpcRequest<{
+  to: string,
+  message: string,
+}>;
+
+type SendSmsResponse = GrpcResponse<{
+  message: string,
+}>;
+
+type SendVerificationCodeRequest = GrpcRequest<{
+  to: string,
+}>;
+
+type SendVerificationCodeResponse = GrpcResponse<{
+  verificationSid: string,
+}>;
+
+type VerifyRequest = GrpcRequest<{
+  verificationSid: string,
+  code: string,
+}>;
+
+type VerifyResponse = GrpcResponse<{
+  verified: boolean,
+}>;
 
 export default class SmsModule {
   private _provider: ISmsProvider | undefined;
@@ -20,6 +52,7 @@ export default class SmsModule {
     this.grpcServer
       .addService(path.resolve(__dirname, './sms.proto'), 'sms.Sms', {
         setConfig: this.setConfig.bind(this),
+        sendSms: this.sendSms.bind(this),
         sendVerificationCode: this.sendVerificationCode.bind(this),
         verify: this.verify.bind(this),
       })
@@ -85,7 +118,7 @@ export default class SmsModule {
     return this._url;
   }
 
-  async setConfig(call: any, callback: any) {
+  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
     if (
       isNil(newConfig.active) ||
@@ -125,10 +158,10 @@ export default class SmsModule {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { updateConfig: JSON.stringify(updateResult) });
+    return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  async sendSms(call: any, callback: any) {
+  async sendSms(call: SendSmsRequest, callback: SendSmsResponse) {
     const to = call.request.to;
     const message = call.request.message;
     let errorMessage: string | null = null;
@@ -149,7 +182,7 @@ export default class SmsModule {
     return callback(null, { message: 'SMS sent' });
   }
 
-  async sendVerificationCode(call: any, callback: any) {
+  async sendVerificationCode(call: SendVerificationCodeRequest, callback: SendVerificationCodeResponse) {
     const to = call.request.to;
 
     if (isNil(this._provider)) {
@@ -176,7 +209,7 @@ export default class SmsModule {
     return callback(null, { verificationSid });
   }
 
-  async verify(call: any, callback: any) {
+  async verify(call: VerifyRequest, callback: VerifyResponse) {
     const { verificationSid, code } = call.request;
 
     if (isNil(this._provider)) {

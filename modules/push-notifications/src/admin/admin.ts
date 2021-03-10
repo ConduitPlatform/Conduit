@@ -1,5 +1,5 @@
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
 
@@ -38,7 +38,7 @@ export class AdminHandler {
     this.provider = provider;
   }
 
-  async sendNotification(call: any, callback: any) {
+  async sendNotification(call: RouterRequest, callback: RouterResponse) {
     const { title, body, data, userId } = JSON.parse(call.request.params);
     if (isNil(title) || isNil(userId))
       return callback({
@@ -64,10 +64,10 @@ export class AdminHandler {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, JSON.stringify({ message: 'Ok' }));
+    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
 
-  async sendManyNotifications(call: any, callback: any) {
+  async sendManyNotifications(call: RouterRequest, callback: RouterResponse) {
     let requestParams = JSON.parse(call.request.params);
     const params = requestParams.map((param: any) => {
       if (isNil(param.title) || isNil(param.userId))
@@ -96,10 +96,10 @@ export class AdminHandler {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, JSON.stringify({ message: 'Ok' }));
+    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
 
-  async sendToManyDevices(call: any, callback: any) {
+  async sendToManyDevices(call: RouterRequest, callback: RouterResponse) {
     const { userIds, title, body, data } = JSON.parse(call.request.params);
 
     if (isNil(title) || isNil(userIds) || isEmpty(userIds))
@@ -127,10 +127,10 @@ export class AdminHandler {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, JSON.stringify({ message: 'Ok' }));
+    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
 
-  async getNotificationTokens(call: any, callback: any) {
+  async getNotificationTokens(call: RouterRequest, callback: RouterResponse) {
     const { userId } = JSON.parse(call.request.params);
     if (isNil(userId)) {
       return callback({

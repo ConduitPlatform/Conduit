@@ -1,8 +1,22 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { DatabaseAdapter } from './interfaces';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import { DatabaseAdapter, SchemaAdapter } from './interfaces';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  GrpcServer,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import path from 'path';
+import {
+  CreateSchemaRequest,
+  FindOneRequest,
+  FindRequest,
+  GetSchemaRequest,
+  QueryRequest,
+  QueryResponse,
+  SchemaResponse,
+  UpdateManyRequest,
+  UpdateRequest,
+} from './types';
 import { EJSON } from 'bson';
 import parse = EJSON.parse;
 
@@ -43,11 +57,12 @@ export class DatabaseProvider {
           try {
             let receivedSchema = JSON.parse(message);
             if (receivedSchema.name) {
-              let schema = {
-                name: receivedSchema.name,
-                modelSchema: receivedSchema.modelSchema,
-                modelOptions: receivedSchema.modelOptions,
-              };
+              let schema = new ConduitSchema(
+                receivedSchema.name,
+                receivedSchema.modelSchema,
+                receivedSchema.modelOptions,
+                receivedSchema.collectionName
+              );
               self._activeAdapter
                 .createSchemaFromAdapter(schema)
                 .then(() => {})
@@ -64,9 +79,15 @@ export class DatabaseProvider {
           .then((r: any) => {
             if (!r || r.length === 0) return;
             let state = JSON.parse(r);
-            Object.keys(state).forEach((schema: any) => {
+            Object.keys(state).forEach((schemaName: string) => {
+              const schema = new ConduitSchema(
+                state[schemaName]._name ?? state[schemaName].name,
+                state[schemaName]._fields ?? state[schemaName].modelSchema,
+                state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
+                state[schemaName]._collectionName ?? null
+              );
               self._activeAdapter
-                .createSchemaFromAdapter(state[schema])
+                .createSchemaFromAdapter(schema)
                 .then(() => {})
                 .catch(() => {
                   console.log('Failed to create/update schema');
@@ -90,8 +111,13 @@ export class DatabaseProvider {
       ?.getState()
       .then((r: any) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
-        self._activeAdapter.registeredSchemas.forEach((k) => {
-          state[k.name] = k;
+        self._activeAdapter.registeredSchemas.forEach((k: ConduitSchema) => {
+          state[k.name] = {
+            _name: k.name,
+            _fields: k.fields,
+            _modelOptions: k.modelOptions,
+            _collectionName: k.collectionName,
+          };
         });
 
         return this.conduit.state?.setState(JSON.stringify(state));
@@ -148,12 +174,12 @@ export class DatabaseProvider {
    * @param call
    * @param callback
    */
-  createSchemaFromAdapter(call: any, callback: any) {
-    let schema: { name: string; modelSchema: any; modelOptions: any } = {
-      name: call.request.schema.name,
-      modelSchema: JSON.parse(call.request.schema.modelSchema),
-      modelOptions: JSON.parse(call.request.schema.modelOptions),
-    };
+  createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
+    let schema = new ConduitSchema(
+      call.request.schema.name,
+      JSON.parse(call.request.schema.modelSchema),
+      JSON.parse(call.request.schema.modelOptions)
+    );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -162,12 +188,11 @@ export class DatabaseProvider {
     }
     this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: any) => {
-        let schema = schemaAdapter.schema;
+      .then((schemaAdapter: SchemaAdapter) => {
         let originalSchema = {
-          name: schema.originalSchema.name,
-          modelSchema: JSON.stringify(schema.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schema.originalSchema.modelOptions),
+          name: schemaAdapter.originalSchema.name,
+          modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
         };
         this.publishSchema({
           name: call.request.schema.name,
@@ -191,15 +216,15 @@ export class DatabaseProvider {
    * @param call
    * @param callback
    */
-  getSchema(call: any, callback: any) {
+  getSchema(call: GetSchemaRequest, callback: SchemaResponse) {
     this._activeAdapter
       .getSchema(call.request.schemaName)
       .then((schemaAdapter) => {
         callback(null, {
           schema: {
-            name: schemaAdapter.schema.name,
-            modelSchema: JSON.stringify(schemaAdapter.schema.modelSchema),
-            modelOptions: JSON.stringify(schemaAdapter.schema.modelOptions),
+            name: schemaAdapter.name,
+            modelSchema: JSON.stringify(schemaAdapter.modelSchema),
+            modelOptions: JSON.stringify(schemaAdapter.modelOptions),
           },
         });
       })
@@ -211,11 +236,11 @@ export class DatabaseProvider {
       });
   }
 
-  findOne(call: any, callback: any) {
+  findOne(call: FindOneRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.findOne(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.findOne(
           parse(call.request.query),
           call.request.select,
           call.request.populate
@@ -232,17 +257,17 @@ export class DatabaseProvider {
       });
   }
 
-  findMany(call: any, callback: any) {
+  findMany(call: FindRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
+      .then((schemaAdapter: SchemaAdapter) => {
         const skip = call.request.skip;
         const limit = call.request.limit;
         const select = call.request.select;
         const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
         const populate = call.request.populate;
 
-        return schemaAdapter.model.findMany(
+        return schemaAdapter.findMany(
           parse(call.request.query),
           skip,
           limit,
@@ -262,11 +287,11 @@ export class DatabaseProvider {
       });
   }
 
-  create(call: any, callback: any) {
+  create(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.create(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.create(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -279,11 +304,11 @@ export class DatabaseProvider {
       });
   }
 
-  createMany(call: any, callback: any) {
+  createMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.createMany(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.createMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -296,11 +321,11 @@ export class DatabaseProvider {
       });
   }
 
-  findByIdAndUpdate(call: any, callback: any) {
+  findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.findByIdAndUpdate(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.findByIdAndUpdate(
           call.request.id,
           parse(call.request.query)
         );
@@ -316,11 +341,11 @@ export class DatabaseProvider {
       });
   }
 
-  updateMany(call: any, callback: any) {
+  updateMany(call: UpdateManyRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.updateMany(
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.updateMany(
           parse(call.request.filterQuery),
           parse(call.request.query)
         );
@@ -336,11 +361,11 @@ export class DatabaseProvider {
       });
   }
 
-  deleteOne(call: any, callback: any) {
+  deleteOne(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteOne(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.deleteOne(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -353,11 +378,11 @@ export class DatabaseProvider {
       });
   }
 
-  deleteMany(call: any, callback: any) {
+  deleteMany(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.deleteMany(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.deleteMany(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });
@@ -370,11 +395,11 @@ export class DatabaseProvider {
       });
   }
 
-  countDocuments(call: any, callback: any) {
+  countDocuments(call: QueryRequest, callback: QueryResponse) {
     this._activeAdapter
       .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: { model: any }) => {
-        return schemaAdapter.model.countDocuments(parse(call.request.query));
+      .then((schemaAdapter: SchemaAdapter) => {
+        return schemaAdapter.countDocuments(parse(call.request.query));
       })
       .then((result) => {
         callback(null, { result: JSON.stringify(result) });

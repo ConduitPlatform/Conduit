@@ -1,3 +1,5 @@
+import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+
 export interface SchemaAdapter {
   /**
    * The actual underlying model
@@ -6,14 +8,15 @@ export interface SchemaAdapter {
   /**
    * The original model used to generate this
    */
-  originalSchema: string; // TODO this is string for now since ConduitSchema used to be in the sdk
+  originalSchema: ConduitSchema;
 
   /**
    * Should find one
    * @param query
    * @param select
+   * @param populate
    */
-  findOne(query: any, select?: string): Promise<any>;
+  findOne(query: any, select?: string, populate?: string[]): Promise<any>;
 
   /**
    * Should find Many
@@ -28,7 +31,8 @@ export interface SchemaAdapter {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: any
+    sort?: any,
+    populate?: string[],
   ): Promise<any>;
 
   /**

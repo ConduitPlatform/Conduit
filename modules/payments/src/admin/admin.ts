@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
@@ -27,7 +27,7 @@ export class AdminHandlers {
       });
   }
 
-  async createProduct(call: any, callback: any) {
+  async createProduct(call: RouterRequest, callback: RouterResponse) {
     const {
       name,
       value,
@@ -75,17 +75,15 @@ export class AdminHandlers {
       }
 
       if (!isNil(this.stripeHandlers)) {
-        const res = await this.stripeHandlers
-          .createSubscriptionProduct(name, currency, value, recurring, recurringCount)
-          .catch((e: Error) => {
-            errorMessage = e.message;
-          });
-        if (!isNil(errorMessage)) {
-          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        try {
+          const res = await this.stripeHandlers.createSubscriptionProduct(name, currency, value, recurring, recurringCount);
+
+          productDoc.stripe = {};
+          productDoc.stripe.subscriptionId = res.subscriptionId;
+          productDoc.stripe.priceId = res.priceId;
+        } catch (e) {
+          return callback({ code: grpc.status.INTERNAL, message: e });
         }
-        productDoc.stripe = {};
-        productDoc.stripe.subscriptionId = res.subscriptionId;
-        productDoc.stripe.priceId = res.priceId;
       }
     }
 

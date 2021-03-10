@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
 
@@ -14,7 +14,7 @@ export class CmsHandlers {
     this.database = grpcSdk.databaseProvider;
   }
 
-  async getDocuments(call: any, callback: any) {
+  async getDocuments(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit, sort, populate } = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 
@@ -80,7 +80,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ documents, documentsCount }) });
   }
 
-  async getDocumentById(call: any, callback: any) {
+  async getDocumentById(call: RouterRequest, callback: RouterResponse) {
     const { id, populate } = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 
@@ -113,7 +113,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify(document) });
   }
 
-  async createDocument(call: any, callback: any) {
+  async createDocument(call: RouterRequest, callback: RouterResponse) {
     const inputDocument = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 
@@ -140,7 +140,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify(newDocument) });
   }
 
-  async createManyDocuments(call: any, callback: any) {
+  async createManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const inputDocuments = JSON.parse(call.request.params).docs;
     const schemaName = call.request.path.split('/')[2];
 
@@ -167,7 +167,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ docs: newDocuments }) });
   }
 
-  async editDocument(call: any, callback: any) {
+  async editDocument(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
     const schemaName = call.request.path.split('/')[2];
@@ -203,7 +203,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
 
-  async editManyDocuments(call: any, callback: any) {
+  async editManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 
@@ -242,7 +242,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ docs: updatedDocuments }) });
   }
 
-  async deleteDocument(call: any, callback: any) {
+  async deleteDocument(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 

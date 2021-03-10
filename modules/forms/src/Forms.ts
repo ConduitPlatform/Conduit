@@ -2,7 +2,7 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import FormsConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, SetConfigRequest, SetConfigResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
 import { FormRoutes } from './routes/Routes';
@@ -102,7 +102,7 @@ export default class FormsModule {
     return this._url;
   }
 
-  async setConfig(call: any, callback: any) {
+  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
     if (!FormsConfigSchema.load(newConfig).validate()) {
       return callback({

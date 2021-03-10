@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 export class NotificationTokensHandler {
@@ -14,7 +14,7 @@ export class NotificationTokensHandler {
     this.database = grpcSdk.databaseProvider;
   }
 
-  async setNotificationToken(call: any, callback: any) {
+  async setNotificationToken(call: RouterRequest, callback: RouterResponse) {
     const { token, platform } = JSON.parse(call.request.params);
     if (isNil(token) || isNil(platform)) {
       return callback({
