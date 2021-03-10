@@ -441,11 +441,13 @@ export class LocalHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    if (isNil(verificationTokenDoc))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Invalid parameters',
-      });
+    if (isNil(verificationTokenDoc)) {
+      if (config.local.verification_redirect_uri) {
+        return callback(null, { redirect: config.local.verification_redirect_uri });
+      } else {
+        return callback(null, { result: JSON.stringify({ message: 'Email verified' }) });
+      }
+    }
 
     const user = await this.database
       .findOne('User', { _id: verificationTokenDoc.userId })
