@@ -99,7 +99,12 @@ export class MongooseAdapter implements DatabaseAdapter {
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
-    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, deepPopulate, this);
+    this.models[schema.name] = new MongooseSchema(
+      this.mongoose,
+      newSchema,
+      deepPopulate,
+      this
+    );
     return new Promise((resolve, reject) => {
       resolve(this.models![schema.name]);
     });
@@ -112,7 +117,7 @@ export class MongooseAdapter implements DatabaseAdapter {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  async getSchemaModel(schemaName: string): MongooseSchema {
+  getSchemaModel(schemaName: string): MongooseSchema {
     if (this.models && this.models![schemaName]) {
       return this.models![schemaName];
     }
