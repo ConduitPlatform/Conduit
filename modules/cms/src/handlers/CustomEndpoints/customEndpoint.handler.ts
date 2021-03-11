@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  RouterResponse,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { constructQuery, constructAssignment, mergeQueries } from './utils';
 import grpc from 'grpc';
 import { CustomEndpoint } from '../../models/customEndpoint';
@@ -29,7 +32,7 @@ export class CustomEndpointHandler {
         (r: {
           schemaField: string;
           operation: number;
-          comparisonField: { type: string; value: any };
+          comparisonField: { type: string; value: any; like: boolean };
         }) => {
           if (stopExecution) return;
           if (r.comparisonField.type === 'Input') {
@@ -44,7 +47,8 @@ export class CustomEndpointHandler {
               constructQuery(
                 r.schemaField,
                 r.operation,
-                JSON.stringify(params[r.comparisonField.value])
+                params[r.comparisonField.value],
+                r.comparisonField.like
               )
             );
           } else if (r.comparisonField.type === 'Context') {
@@ -68,14 +72,15 @@ export class CustomEndpointHandler {
               }
             }
             searchStrings.push(
-              constructQuery(r.schemaField, r.operation, JSON.stringify(context))
+              constructQuery(r.schemaField, r.operation, context, r.comparisonField.like)
             );
           } else {
             searchStrings.push(
               constructQuery(
                 r.schemaField,
                 r.operation,
-                JSON.stringify(r.comparisonField.value)
+                r.comparisonField.value,
+                r.comparisonField.like
               )
             );
           }
