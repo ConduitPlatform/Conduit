@@ -9,7 +9,7 @@ export interface CustomEndpoint {
   queries?: {
     schemaField: string;
     operation: number;
-    comparisonField: { type: string; value: any };
+    comparisonField: { type: string; value: any; like: boolean };
   }[];
   assignments?: {
     schemaField: string;

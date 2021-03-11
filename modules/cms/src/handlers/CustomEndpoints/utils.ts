@@ -28,7 +28,8 @@ export function getOpName(name: string, op: number) {
 export function constructQuery(
   schemaField: string,
   operation: number,
-  comparisonField: any
+  comparisonField: any,
+  like?: boolean
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -41,7 +42,11 @@ export function constructQuery(
   //   CONTAIN: 8, //'an array containing'
   let isDate = moment(comparisonField, moment.ISO_8601, true).isValid();
   if (isDate) {
-    comparisonField = `{\"$date\": \"${comparisonField}\"}`;
+    comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
+  } else if (like) {
+    comparisonField = `{ \"$regex\": \"${comparisonField}$\" }`;
+  } else {
+    comparisonField = JSON.stringify(comparisonField);
   }
   switch (operation) {
     case 0:
