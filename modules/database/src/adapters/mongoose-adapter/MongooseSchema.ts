@@ -1,7 +1,7 @@
 import { Model, Mongoose, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { ConduitModel, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { createWithPopulations } from './utils';
 
 export class MongooseSchema implements SchemaAdapter {
@@ -27,7 +27,7 @@ export class MongooseSchema implements SchemaAdapter {
   async create(query: any): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
-    query = await this.createWithPopulations(query);
+    await this.createWithPopulations(query);
     return this.model.create(query).then((r) => r.toObject());
   }
 
