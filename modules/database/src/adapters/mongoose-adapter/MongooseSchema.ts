@@ -20,14 +20,14 @@ export class MongooseSchema implements SchemaAdapter {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  async createWithPopulations(originalSchema: ConduitModel, document: any): Promise<any> {
-    return createWithPopulations(originalSchema, document, this.adapter);
+  private async createWithPopulations(document: any): Promise<any> {
+    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
   async create(query: any): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
-    query = await this.createWithPopulations(this.originalSchema.fields, query);
+    query = await this.createWithPopulations(query);
     return this.model.create(query).then((r) => r.toObject());
   }
 
@@ -37,7 +37,7 @@ export class MongooseSchema implements SchemaAdapter {
       let doc = docs[i];
       doc.createdAt = date;
       doc.updatedAt = date;
-      doc = await this.createWithPopulations(this.originalSchema.fields, doc);
+      doc = await this.createWithPopulations(doc);
     }
 
     return this.model.insertMany(docs).then((r) => r);
@@ -50,12 +50,12 @@ export class MongooseSchema implements SchemaAdapter {
     } else {
       query['$set']['updatedAt'] = new Date();
     }
-    query = await this.createWithPopulations(this.originalSchema.fields, query);
+    query = await this.createWithPopulations(query);
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
   async updateMany(filterQuery: any, query: any): Promise<any> {
-    query = await this.createWithPopulations(this.originalSchema.fields, query);
+    query = await this.createWithPopulations(query);
     return this.model.updateMany(filterQuery, query).exec();
   }
 
