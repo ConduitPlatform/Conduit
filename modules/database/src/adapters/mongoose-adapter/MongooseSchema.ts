@@ -33,11 +33,10 @@ export class MongooseSchema implements SchemaAdapter {
 
   async createMany(docs: any[]): Promise<any> {
     let date = new Date();
-    for (let i = 0; i < docs.length; i++) {
-      let doc = docs[i];
+    for (let doc of docs) {
       doc.createdAt = date;
       doc.updatedAt = date;
-      doc = await this.createWithPopulations(doc);
+      await this.createWithPopulations(doc);
     }
 
     return this.model.insertMany(docs).then((r) => r);
