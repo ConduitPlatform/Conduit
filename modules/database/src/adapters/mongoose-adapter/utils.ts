@@ -1,6 +1,22 @@
 import { ConduitModel } from '@quintessential-sft/conduit-grpc-sdk';
 import { MongooseAdapter } from './index';
 import { isArray, isObject } from 'lodash';
+import { MongooseSchema } from './MongooseSchema';
+
+/**
+ * @throws {Error}
+ */
+async function _createOrUpdate(obj: any, model: MongooseSchema) {
+  if (obj.hasOwnProperty('_id')) {
+    const _id = obj._id;
+    delete obj._id;
+    await model.findByIdAndUpdate(_id, { $set: obj });
+    return _id;
+  } else {
+    const doc = await model.create(obj);
+    return doc._id;
+  }
+}
 
 /**
  * @throws {Error}
@@ -32,17 +48,7 @@ async function _createWithPopulations(
           if (validate) {
             await model.model.validate(val);
           } else {
-            if (val.hasOwnProperty('_id')) {
-              // @ts-ignore
-              const _id = val._id;
-              // @ts-ignore
-              delete val._id;
-              await model.findByIdAndUpdate(_id, { $set: val });
-              document[key][i] = _id;
-            } else {
-              const doc = await model.create(val);
-              document[key][i] = doc._id;
-            }
+            document[key][i] = await _createOrUpdate(val, model);
           }
         } else {
           // @ts-ignore
@@ -56,15 +62,7 @@ async function _createWithPopulations(
         if (validate) {
           await model.model.validate(document[key]);
         } else {
-          if (document[key].hasOwnProperty('_id')) {
-            const _id = document[key]._id;
-            delete document[key]._id;
-            await model.findByIdAndUpdate(_id, { $set: document[key] });
-            document[key] = _id;
-          } else {
-            const doc = await model.create(document[key]);
-            document[key] = doc._id;
-          }
+          document[key] = await _createOrUpdate(document[key], model);
         }
       } else {
         // @ts-ignore
