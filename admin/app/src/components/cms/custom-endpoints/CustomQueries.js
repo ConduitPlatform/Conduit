@@ -301,6 +301,26 @@ const CustomQueries = ({
     }
   };
 
+  const handleInputIsArray = (event, index) => {
+    const value = event.target.checked;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.array = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputIsOptional = (event, index) => {
+    const value = event.target.checked;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.optional = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
   const handleRemoveInput = (index) => {
     const input = selectedInputs[index];
     const currentInputs = selectedInputs.slice();
@@ -344,6 +364,8 @@ const CustomQueries = ({
       name: '',
       type: '',
       location: -1,
+      array: false,
+      optional: false,
     };
     setSelectedInputs([...selectedInputs, input]);
   };
@@ -355,6 +377,7 @@ const CustomQueries = ({
       comparisonField: {
         type: '',
         value: '',
+        like: false,
       },
     };
     setSelectedQueries([...selectedQueries, query]);
@@ -407,6 +430,16 @@ const CustomQueries = ({
     const query = currentQueries[index];
     if (query) {
       query.comparisonField.value = value;
+      setSelectedQueries(currentQueries);
+    }
+  };
+
+  const handleLikeValueChange = (event, index) => {
+    const value = event.target.checked;
+    const currentQueries = selectedQueries.slice();
+    const query = currentQueries[index];
+    if (query) {
+      query.comparisonField.like = value;
       setSelectedQueries(currentQueries);
     }
   };
@@ -607,6 +640,8 @@ const CustomQueries = ({
           handleInputNameChange={handleInputNameChange}
           handleInputTypeChange={handleInputTypeChange}
           handleInputLocationChange={handleInputLocationChange}
+          handleInputIsArray={handleInputIsArray}
+          handleInputIsOptional={handleInputIsOptional}
           handleRemoveInput={handleRemoveInput}
         />
         <Grid item xs={12} style={{ padding: '0' }}>
@@ -642,6 +677,7 @@ const CustomQueries = ({
               handleQueryComparisonFieldChange={handleQueryComparisonFieldChange}
               handleCustomValueChange={handleCustomValueChange}
               handleQueryConditionChange={handleQueryConditionChange}
+              handleLikeValueChange={handleLikeValueChange}
               handleRemoveQuery={handleRemoveQuery}
             />
           </>
@@ -697,7 +733,7 @@ const CustomQueries = ({
     } else {
       return (
         <Box>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="flex-end">
             <Grid item xs={7}>
               <TextField
                 disabled={!editMode}
