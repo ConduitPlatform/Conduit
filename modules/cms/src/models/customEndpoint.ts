@@ -5,7 +5,13 @@ export interface CustomEndpoint {
   operation: number;
   selectedSchema: string;
   selectedSchemaName: string;
-  inputs: { name: string; type: string; location: number }[];
+  inputs: {
+    name: string;
+    type: string;
+    location: number;
+    optional: boolean;
+    array: boolean;
+  }[];
   queries?: {
     schemaField: string;
     operation: number;

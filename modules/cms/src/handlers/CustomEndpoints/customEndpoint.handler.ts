@@ -1,8 +1,8 @@
 import ConduitGrpcSdk, {
-  RouterResponse,
   RouterRequest,
+  RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { constructQuery, constructAssignment, mergeQueries } from './utils';
+import { constructAssignment, constructQuery, mergeQueries } from './utils';
 import grpc from 'grpc';
 import { CustomEndpoint } from '../../models/customEndpoint';
 import { isNil } from 'lodash';
@@ -10,11 +10,11 @@ import { isNil } from 'lodash';
 export class CustomEndpointHandler {
   private static routeControllers: { [name: string]: any } = {};
 
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
   static addNewCustomOperationControl(endpoint: CustomEndpoint) {
     CustomEndpointHandler.routeControllers[endpoint.name] = endpoint;
   }
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   entryPoint(call: RouterRequest, callback: RouterResponse) {
     //use it to find the right controller
@@ -37,6 +37,12 @@ export class CustomEndpointHandler {
           if (stopExecution) return;
           if (r.comparisonField.type === 'Input') {
             if (isNil(params[r.comparisonField.value])) {
+              let res = endpoint.inputs.filter((input) => {
+                input.name === r.comparisonField.value && input.optional;
+              });
+              if (res && res.length > 0) {
+                return;
+              }
               stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
@@ -102,6 +108,12 @@ export class CustomEndpointHandler {
           if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
+              let res = endpoint.inputs.filter((input) => {
+                input.name === r.assignmentField.value && input.optional;
+              });
+              if (res && res.length > 0) {
+                return;
+              }
               stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
