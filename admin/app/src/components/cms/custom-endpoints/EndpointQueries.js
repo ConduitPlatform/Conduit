@@ -1,24 +1,17 @@
 import {
+  Checkbox,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
-  ListSubheader,
-  MenuItem,
+  InputLabel,
   Select,
   TextField,
   Typography,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
 import React, { Fragment } from 'react';
 import ConditionsEnum from '../../../models/ConditionsEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
-
-const useStyles = makeStyles((theme) => ({
-  formControl: {
-    margin: theme.spacing(1),
-    minWidth: 120,
-  },
-}));
 
 const EndpointQueries = ({
   selectedQueries,
@@ -29,17 +22,17 @@ const EndpointQueries = ({
   handleQueryConditionChange,
   handleQueryComparisonFieldChange,
   handleCustomValueChange,
+  handleLikeValueChange,
   handleRemoveQuery,
 }) => {
-  const classes = useStyles();
-
   return selectedQueries.map((query, index) => (
     <Fragment key={`query-${index}`}>
       <Grid item xs={1}>
         <Typography>{index + 1}.</Typography>
       </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
+          <InputLabel>Field of schema</InputLabel>
           <Select
             fullWidth
             disabled={!editMode}
@@ -55,8 +48,9 @@ const EndpointQueries = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
+          <InputLabel>Operator</InputLabel>
           <Select
             disabled={!editMode}
             native
@@ -85,7 +79,8 @@ const EndpointQueries = ({
         </FormControl>
       </Grid>
       <Grid item xs={2}>
-        <FormControl className={classes.formControl}>
+        <FormControl fullWidth>
+          <InputLabel>Value</InputLabel>
           <Select
             fullWidth
             disabled={!editMode}
@@ -144,6 +139,20 @@ const EndpointQueries = ({
       ) : (
         <Grid item xs={2} />
       )}
+      <Grid item xs={2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              color={'primary'}
+              checked={query.comparisonField.like}
+              onChange={(event) => handleLikeValueChange(event, index)}
+              name="Like"
+              size={'small'}
+            />
+          }
+          label="Like"
+        />
+      </Grid>
       <Grid item xs={1}>
         <IconButton
           disabled={!editMode}
