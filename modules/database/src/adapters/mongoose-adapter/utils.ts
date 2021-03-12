@@ -12,12 +12,16 @@ async function _createWithPopulations(
   validate: boolean = false
 ) {
   for (const key of Object.keys(document)) {
+    if (key === '$set') {
+      await _createWithPopulations(fields, document[key], adapter, validate);
+      continue;
+    }
     if (!isObject(fields[key])) continue;
     if (!fields.hasOwnProperty(key)) continue;
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
-        let val = document[key][i];
+        let val: any = document[key][i];
         if (!isObject(val)) {
           continue;
         }
@@ -28,8 +32,17 @@ async function _createWithPopulations(
           if (validate) {
             await model.model.validate(val);
           } else {
-            const doc = await model.create(val);
-            document[key][i] = doc._id;
+            if (val.hasOwnProperty('_id')) {
+              // @ts-ignore
+              const _id = val._id;
+              // @ts-ignore
+              delete val._id;
+              await model.findByIdAndUpdate(_id, { $set: val });
+              document[key][i] = _id;
+            } else {
+              const doc = await model.create(val);
+              document[key][i] = doc._id;
+            }
           }
         } else {
           // @ts-ignore
@@ -43,8 +56,15 @@ async function _createWithPopulations(
         if (validate) {
           await model.model.validate(document[key]);
         } else {
-          const doc = await model.create(document[key]);
-          document[key] = doc._id;
+          if (document[key].hasOwnProperty('_id')) {
+            const _id = document[key]._id;
+            delete document[key]._id;
+            await model.findByIdAndUpdate(_id, { $set: document[key] });
+            document[key] = _id;
+          } else {
+            const doc = await model.create(document[key]);
+            document[key] = doc._id;
+          }
         }
       } else {
         // @ts-ignore

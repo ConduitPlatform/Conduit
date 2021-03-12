@@ -49,12 +49,12 @@ export class MongooseSchema implements SchemaAdapter {
     } else {
       query['$set']['updatedAt'] = new Date();
     }
-    query = await this.createWithPopulations(query);
+    await this.createWithPopulations(query);
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
   async updateMany(filterQuery: any, query: any): Promise<any> {
-    query = await this.createWithPopulations(query);
+    await this.createWithPopulations(query);
     return this.model.updateMany(filterQuery, query).exec();
   }
 
