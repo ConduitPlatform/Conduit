@@ -26,8 +26,7 @@ async function _createWithPopulations(
           // @ts-ignore
           const model = adapter.getSchemaModel(fields[key][0].ref);
           if (validate) {
-            const d = new model.model(val);
-            console.log(d);
+            await model.model.validate(val);
           } else {
             const doc = await model.create(val);
             document[key][i] = doc._id;
