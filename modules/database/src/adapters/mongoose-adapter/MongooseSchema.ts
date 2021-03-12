@@ -1,46 +1,60 @@
 import { Model, Mongoose, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
+import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { createWithPopulations } from './utils';
 
 export class MongooseSchema implements SchemaAdapter {
   model: Model<any>;
   originalSchema: ConduitSchema;
 
-  constructor(mongoose: Mongoose, schema: ConduitSchema, deepPopulate: any) {
+  constructor(
+    mongoose: Mongoose,
+    schema: ConduitSchema,
+    deepPopulate: any,
+    private readonly adapter: MongooseAdapter
+  ) {
     this.originalSchema = schema;
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  create(query: any): Promise<any> {
+  private async createWithPopulations(document: any): Promise<any> {
+    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
+  }
+
+  async create(query: any): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
+    await this.createWithPopulations(query);
     return this.model.create(query).then((r) => r.toObject());
   }
 
-  createMany(docs: any[]): Promise<any> {
+  async createMany(docs: any[]): Promise<any> {
     let date = new Date();
-    docs.forEach((doc: any) => {
+    for (let doc of docs) {
       doc.createdAt = date;
       doc.updatedAt = date;
-    });
+      await this.createWithPopulations(doc);
+    }
 
     return this.model.insertMany(docs).then((r) => r);
   }
 
-  findByIdAndUpdate(id: string, query: any): Promise<any> {
+  async findByIdAndUpdate(id: string, query: any): Promise<any> {
     // check if it is a document
     if (!query['$set']) {
       query['updatedAt'] = new Date();
     } else {
       query['$set']['updatedAt'] = new Date();
     }
-
+    await this.createWithPopulations(query);
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
-  updateMany(filterQuery: any, query: any): Promise<any> {
+  async updateMany(filterQuery: any, query: any): Promise<any> {
+    await this.createWithPopulations(query);
     return this.model.updateMany(filterQuery, query).exec();
   }
 

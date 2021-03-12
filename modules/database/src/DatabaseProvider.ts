@@ -217,198 +217,161 @@ export class DatabaseProvider {
    * @param callback
    */
   getSchema(call: GetSchemaRequest, callback: SchemaResponse) {
-    this._activeAdapter
-      .getSchema(call.request.schemaName)
-      .then((schemaAdapter) => {
-        callback(null, {
-          schema: {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
+      callback(null, {
+        schema: {
             name: schemaAdapter.name,
             modelSchema: JSON.stringify(schemaAdapter.modelSchema),
             modelOptions: JSON.stringify(schemaAdapter.modelOptions),
-          },
-        });
-      })
-      .catch((err) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+        },
       });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
+      });
+    }
   }
 
-  findOne(call: FindOneRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.findOne(
-          parse(call.request.query),
-          call.request.select,
-          call.request.populate
-        );
-      })
-      .then((doc: any) => {
-        callback(null, { result: JSON.stringify(doc) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async findOne(call: FindOneRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const doc = await schemaAdapter.findOne(
+        parse(call.request.query),
+        call.request.select,
+        call.request.populate
+      );
+      callback(null, { result: JSON.stringify(doc) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  findMany(call: FindRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        const skip = call.request.skip;
-        const limit = call.request.limit;
-        const select = call.request.select;
-        const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
-        const populate = call.request.populate;
+  async findMany(call: FindRequest, callback: QueryResponse) {
+    try {
+      const skip = call.request.skip;
+      const limit = call.request.limit;
+      const select = call.request.select;
+      const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
+      const populate = call.request.populate;
 
-        return schemaAdapter.findMany(
-          parse(call.request.query),
-          skip,
-          limit,
-          select,
-          sort,
-          populate
-        );
-      })
-      .then((docs: any) => {
-        callback(null, { result: JSON.stringify(docs) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+
+      const docs = await schemaAdapter.findMany(
+        parse(call.request.query),
+        skip,
+        limit,
+        select,
+        sort,
+        populate
+      );
+      callback(null, { result: JSON.stringify(docs) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  create(call: QueryRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.create(parse(call.request.query));
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async create(call: QueryRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const doc = await schemaAdapter.create(parse(call.request.query));
+      callback(null, { result: JSON.stringify(doc) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  createMany(call: QueryRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.createMany(parse(call.request.query));
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async createMany(call: QueryRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const docs = await schemaAdapter.createMany(parse(call.request.query));
+      callback(null, { result: JSON.stringify(docs) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.findByIdAndUpdate(
-          call.request.id,
-          parse(call.request.query)
-        );
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const result = await schemaAdapter.findByIdAndUpdate(
+        call.request.id,
+        parse(call.request.query)
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  updateMany(call: UpdateManyRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.updateMany(
-          parse(call.request.filterQuery),
-          parse(call.request.query)
-        );
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async updateMany(call: UpdateManyRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const result = await schemaAdapter.updateMany(
+        parse(call.request.filterQuery),
+        parse(call.request.query)
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  deleteOne(call: QueryRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.deleteOne(parse(call.request.query));
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async deleteOne(call: QueryRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const result = await schemaAdapter.deleteOne(parse(call.request.query));
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  deleteMany(call: QueryRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.deleteMany(parse(call.request.query));
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async deleteMany(call: QueryRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const result = await schemaAdapter.deleteMany(parse(call.request.query));
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 
-  countDocuments(call: QueryRequest, callback: QueryResponse) {
-    this._activeAdapter
-      .getSchemaModel(call.request.schemaName)
-      .then((schemaAdapter: SchemaAdapter) => {
-        return schemaAdapter.countDocuments(parse(call.request.query));
-      })
-      .then((result) => {
-        callback(null, { result: JSON.stringify(result) });
-      })
-      .catch((err: any) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err.message,
-        });
+  async countDocuments(call: QueryRequest, callback: QueryResponse) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const result = await schemaAdapter.countDocuments(parse(call.request.query));
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
       });
+    }
   }
 }
