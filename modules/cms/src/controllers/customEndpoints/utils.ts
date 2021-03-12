@@ -24,25 +24,46 @@ function getOperation(op: number) {
   }
 }
 
-function extractParams(inputs: { name: string; type: string; location: number }[]) {
+function extractParams(
+  inputs: {
+    name: string;
+    type: string;
+    location: number;
+    optional?: boolean;
+    array?: boolean;
+  }[]
+) {
   let resultingObject: any = {};
-  inputs.forEach((r: { name: string; type: string; location: number }) => {
-    //body
-    if (r.location === 0) {
-      if (!resultingObject['bodyParams']) resultingObject['bodyParams'] = {};
-      resultingObject['bodyParams'][r.name] = r.type;
+  inputs.forEach(
+    (r: {
+      name: string;
+      type: string;
+      location: number;
+      optional?: boolean;
+      array?: boolean;
+    }) => {
+      let placement = '';
+      //body
+      if (r.location === 0) {
+        if (!resultingObject['bodyParams']) resultingObject['bodyParams'] = {};
+        placement = 'bodyParams';
+      }
+      // query params
+      else if (r.location === 1) {
+        if (!resultingObject['queryParams']) resultingObject['queryParams'] = {};
+        placement = 'queryParams';
+      }
+      // urlParams
+      else {
+        if (!resultingObject['urlParams']) resultingObject['urlParams'] = {};
+        placement = 'urlParams';
+      }
+      resultingObject[placement][r.name] = {
+        type: r.type,
+        required: r.optional ? r.optional : true,
+      };
     }
-    // query params
-    else if (r.location === 1) {
-      if (!resultingObject['queryParams']) resultingObject['queryParams'] = {};
-      resultingObject['queryParams'][r.name] = r.type;
-    }
-    // urlParams
-    else {
-      if (!resultingObject['urlParams']) resultingObject['urlParams'] = {};
-      resultingObject['urlParams'][r.name] = r.type;
-    }
-  });
+  );
   return resultingObject;
 }
 

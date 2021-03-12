@@ -9,8 +9,8 @@ export interface CustomEndpoint {
     name: string;
     type: string;
     location: number;
-    optional: boolean;
-    array: boolean;
+    optional?: boolean;
+    array?: boolean;
   }[];
   queries?: {
     schemaField: string;
