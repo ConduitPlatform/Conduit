@@ -32,8 +32,9 @@ async function _createWithPopulations(
       await _createWithPopulations(fields, document[key], adapter, validate);
       continue;
     }
-    if (!isObject(fields[key])) continue;
+
     if (!fields.hasOwnProperty(key)) continue;
+    if (!isObject(fields[key])) continue;
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
@@ -78,7 +79,7 @@ async function _createWithPopulations(
 export async function createWithPopulations(
   fields: ConduitModel,
   document: { [key: string]: any },
-  adapter: MongooseAdapter,
+  adapter: MongooseAdapter
 ): Promise<any> {
   // TODO find a way to validate the whole object, now only the inner objects are validated.
   // The problem is that if we validate the object it will fail because the references will have an object

@@ -44,7 +44,7 @@ export function constructQuery(
   if (isDate) {
     comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
   } else if (like) {
-    comparisonField = `{ \"$regex\": \"${comparisonField}$\" }`;
+    comparisonField = `{ \"$regex\": \".*${comparisonField}.*\", \"$options\": \"i\" }`;
   } else {
     comparisonField = JSON.stringify(comparisonField);
   }

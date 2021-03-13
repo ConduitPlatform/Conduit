@@ -21,10 +21,12 @@ const schema = new ConduitSchema(
       type: TYPE.String,
       required: true,
     },
-    inputs: {
-      type: TYPE.JSON,
-      required: true,
-    },
+    inputs: [
+      {
+        type: TYPE.JSON,
+        required: true,
+      },
+    ],
     returns: {
       type: TYPE.JSON,
       required: true,
@@ -46,8 +48,8 @@ const schema = new ConduitSchema(
       type: TYPE.Boolean,
       default: false,
     },
-    queries: TYPE.JSON,
-    assignments: TYPE.JSON,
+    queries: [TYPE.JSON],
+    assignments: [TYPE.JSON],
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },
