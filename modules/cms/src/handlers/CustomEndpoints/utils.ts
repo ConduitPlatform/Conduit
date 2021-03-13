@@ -1,6 +1,7 @@
 import { ConduitRouteActions } from '@quintessential-sft/conduit-grpc-sdk';
 import { CustomEndpoint } from '../../models/customEndpoint';
 import moment from 'moment';
+const escapeStringRegexp = require('escape-string-regexp');
 
 export function getOpName(name: string, op: number) {
   let operation;
@@ -44,6 +45,7 @@ export function constructQuery(
   if (isDate) {
     comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
   } else if (like) {
+    comparisonField = escapeStringRegexp(comparisonField);
     comparisonField = `{ \"$regex\": \".*${comparisonField}.*\", \"$options\": \"i\" }`;
   } else {
     comparisonField = JSON.stringify(comparisonField);
