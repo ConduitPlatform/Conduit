@@ -22,7 +22,7 @@ async function _createOrUpdate(obj: any, model: MongooseSchema) {
  * @throws {Error}
  */
 async function _createWithPopulations(
-  fields: ConduitModel,
+  fields: { [key: string]: any },
   document: { [key: string]: any },
   adapter: MongooseAdapter,
   validate: boolean = false
@@ -42,9 +42,7 @@ async function _createWithPopulations(
         if (!isObject(val)) {
           continue;
         }
-        // @ts-ignore
         if (fields[key][0].hasOwnProperty('ref')) {
-          // @ts-ignore
           const model = adapter.getSchemaModel(fields[key][0].ref);
           if (validate) {
             await model.model.validate(val);
@@ -52,13 +50,11 @@ async function _createWithPopulations(
             document[key][i] = await _createOrUpdate(val, model);
           }
         } else {
-          // @ts-ignore
           await _createWithPopulations(fields[key][0], val, adapter, validate);
         }
       }
     } else if (isObject(document[key])) {
       if (fields[key].hasOwnProperty('ref')) {
-        // @ts-ignore
         const model = adapter.getSchemaModel(fields[key].ref);
         if (validate) {
           await model.model.validate(document[key]);
@@ -66,7 +62,6 @@ async function _createWithPopulations(
           document[key] = await _createOrUpdate(document[key], model);
         }
       } else {
-        // @ts-ignore
         await _createWithPopulations(fields[key], document[key], adapter, validate);
       }
     }
