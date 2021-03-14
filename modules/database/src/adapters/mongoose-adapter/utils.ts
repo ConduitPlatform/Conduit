@@ -35,6 +35,8 @@ async function _createWithPopulations(
 
     if (!fields.hasOwnProperty(key)) continue;
     if (!isObject(fields[key])) continue;
+    if (fields[key].type?.schemaName === 'Mixed') continue;
+    if (fields[key].schemaName === 'Mixed') continue;
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
