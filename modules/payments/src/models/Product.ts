@@ -4,9 +4,18 @@ export const ProductSchema = new ConduitSchema(
   'Product',
   {
     _id: TYPE.ObjectId,
-    name: TYPE.String,
-    value: TYPE.Number,
-    currency: TYPE.String,
+    name: {
+      type: TYPE.String,
+      required: true,
+    },
+    value: {
+      type: TYPE.Number,
+      required: true,
+    },
+    currency: {
+      type: TYPE.String,
+      required: true,
+    },
     isSubscription: {
       type: TYPE.Boolean,
       default: false,
