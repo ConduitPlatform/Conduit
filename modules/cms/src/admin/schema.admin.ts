@@ -216,7 +216,7 @@ export class SchemaAdmin {
       });
     }
 
-    if (name !== null) {
+    if (!isNil(name) && name !== '') {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Name of existing schema cannot be edited',
@@ -245,12 +245,12 @@ export class SchemaAdmin {
       });
     }
 
-    if (Object.keys(requestedSchema.fields).length > Object.keys(fields).length) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Schema fields may not be deleted...yet',
-      });
-    }
+    // if (Object.keys(requestedSchema.fields).length > Object.keys(fields).length) {
+    //   return callback({
+    //     code: grpc.status.INVALID_ARGUMENT,
+    //     message: 'Schema fields may not be deleted...yet',
+    //   });
+    // }
 
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
