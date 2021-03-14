@@ -375,13 +375,12 @@ const BuildTypes = () => {
 
   const handleSave = (name, authentication) => {
     if (data && data.selectedSchema) {
-      const { _id } = data.selectedSchema;
+      const { _id, createdAt, updatedAt } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
       const editableSchema = {
-        name: name,
         authentication,
         crudOperations,
-        fields: editableSchemaFields,
+        fields: { _id, createdAt, updatedAt, ...editableSchemaFields },
       };
       dispatch(editSchema(_id, editableSchema));
     } else {
