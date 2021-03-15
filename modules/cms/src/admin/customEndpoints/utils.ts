@@ -65,7 +65,8 @@ export function queryValidation(
 export function inputValidation(
   name: string,
   type: any,
-  location: number
+  location: number,
+  isArray?: boolean
 ): boolean | string {
   if (isNil(name) || isNil(type) || isNil(location)) {
     return 'Name, type and location must be present in the input';
@@ -84,6 +85,11 @@ export function inputValidation(
   if (location < 0 || location > 2) {
     return 'Location is not valid!';
   }
+
+  if (location === 2 && isArray) {
+    return 'Url params cant have an array input';
+  }
+
   return true;
 }
 

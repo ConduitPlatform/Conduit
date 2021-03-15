@@ -106,7 +106,7 @@ export class CustomEndpointsAdmin {
 
     errorMessage = null;
     inputs.forEach((r) => {
-      let error = inputValidation(r.name, r.type, r.location);
+      let error = inputValidation(r.name, r.type, r.location, r.array);
       if (error !== true) {
         return (errorMessage = error as string);
       }
@@ -323,7 +323,7 @@ export class CustomEndpointsAdmin {
     if (!isNil(inputs) && inputs.length > 0) {
       errorMessage = null;
       inputs.forEach((r) => {
-        let error = inputValidation(r.name, r.type, r.location);
+        let error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
           return (errorMessage = error as string);
         }

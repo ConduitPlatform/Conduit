@@ -59,7 +59,7 @@ function extractParams(
         placement = 'urlParams';
       }
       resultingObject[placement][r.name] = {
-        type: r.type,
+        type: r.array ? [r.type] : r.type,
         required: r.optional ? r.optional : true,
       };
     }
