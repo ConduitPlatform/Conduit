@@ -51,12 +51,10 @@ export default class DatabaseProvider extends ConduitModule {
   }
 
   processQuery(query: any) {
-    let processed: any;
     if (typeof query === 'string') {
-      query = EJSON.parse(query, { relaxed: true });
+      query = JSON.parse(query);
     }
-    processed = serialize(query);
-    return stringify(processed);
+    return JSON.stringify(query);
   }
 
   findOne(

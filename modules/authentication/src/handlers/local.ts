@@ -3,7 +3,11 @@ import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
@@ -757,7 +761,7 @@ export class LocalHandlers {
         });
         return Promise.all(promises);
       })
-      .then((r) => {
+      .then(() => {
         console.log('Email templates registered');
       })
       .catch(() => {
