@@ -15,6 +15,7 @@ import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
 import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
+import moment from 'moment';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer, ApolloError } = require('apollo-server-express');
@@ -299,6 +300,8 @@ export class GraphQLController {
         parseLiteral(ast) {
           if (ast.kind === Kind.INT) {
             return new Date(ast.value); // ast value is always in string format
+          } else if (ast.kind === Kind.STRING) {
+            return moment(ast.value).toDate();
           }
           return null;
         },
