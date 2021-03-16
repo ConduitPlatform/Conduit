@@ -41,7 +41,7 @@ export function constructQuery(
   //   EQUAL_SET: 6, //'equal to any of the following'
   //   NEQUAL_SET: 7, //'not equal to any of the following'
   //   CONTAIN: 8, //'an array containing'
-  let isDate = moment(comparisonField, moment.ISO_8601, true).isValid();
+  let isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
   if (isDate) {
     comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
   } else if (like) {
