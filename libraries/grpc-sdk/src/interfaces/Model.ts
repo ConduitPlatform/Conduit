@@ -28,8 +28,7 @@ export interface ConduitModel {
     | ConduitModel
     | TYPE
     | TYPE[]
-    | any[] // removing this caused multiple issues
-    | ConduitModel[];
+    | any[]; // removing this caused multiple issues
 }
 
 export interface ConduitModelOptions {
