@@ -79,6 +79,7 @@ export const reorderItems = (list, startIndex, endIndex) => {
 
 export const getSchemaFields = (schemaFields) => {
   let keys;
+  if (!schemaFields) return;
   if (Array.isArray(schemaFields)) {
     keys = Object.keys(schemaFields[0]);
   } else {
@@ -86,7 +87,7 @@ export const getSchemaFields = (schemaFields) => {
   }
   const fields = [];
   keys.forEach((k) => {
-    if (typeof schemaFields[k] !== 'string') {
+    if (typeof schemaFields[k] !== 'string' && typeof schemaFields[k] !== 'boolean') {
       const field = schemaFields[k];
       fields.push({ name: k, ...constructFieldType(field) });
     }
@@ -108,16 +109,24 @@ const constructFieldType = (field) => {
       field.type.forEach((f) => {
         obj = { ...obj, ...f };
       });
-      typeField.content = getSchemaFields(obj);
+      if (obj && obj.type === 'Relation') {
+        typeField.relation = true;
+        typeField.type = 'Relation';
+        typeField.select = obj.select;
+        typeField.required = obj.required;
+        typeField.model = obj.model;
+      } else {
+        typeField.content = getSchemaFields(obj);
+      }
     } else {
       typeField.content = getSchemaFields(field.type);
     }
   }
   typeField.isArray = Array.isArray(field.type);
-  if (typeField.isArray) {
+  if (typeField.isArray && !typeField.type) {
     typeField.type = field.type[0];
   } else {
-    typeField.type = field.type;
+    if (!typeField.type) typeField.type = field.type;
   }
   typeField.type = typeTransformer(typeField.type);
   if (typeField.type === '') {
@@ -127,7 +136,6 @@ const constructFieldType = (field) => {
   if (typeField.type !== 'Group') {
     typeField.unique = field.unique ? field.unique : false;
   }
-
   if (field.type === 'Relation' && typeField.isArray) {
     typeField.relation = field.relation;
     typeField.type = field.type[0].type;
@@ -147,7 +155,6 @@ const constructFieldType = (field) => {
     typeField.enumValues = field.enum;
     typeField.isEnum = true;
   }
-
   return typeField;
 };
 
