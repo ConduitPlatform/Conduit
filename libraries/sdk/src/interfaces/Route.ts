@@ -1,47 +1,47 @@
-import {ConduitModel} from "./Model";
-import {IncomingHttpHeaders} from "http";
+import { ConduitModel } from './Model';
+import { IncomingHttpHeaders } from 'http';
 
 export interface ConduitRouteParameters {
-    params?: { [field: string]: any };
-    path?: string;
-    headers: IncomingHttpHeaders;
-    context?: { [field: string]: any };
+  params?: { [field: string]: any };
+  path?: string;
+  headers: IncomingHttpHeaders;
+  context?: { [field: string]: any };
 }
 
 export enum RouteOptionType {
-    String = 'String',
-    Number = 'Number',
-    Boolean = 'Boolean',
-    Date = 'Date',
-    ObjectId = 'ObjectId'
+  String = 'String',
+  Number = 'Number',
+  Boolean = 'Boolean',
+  Date = 'Date',
+  ObjectId = 'ObjectId',
 }
 
 export interface ConduitRouteOptionExtended {
-    type: RouteOptionType;
-    required: boolean;
+  type: RouteOptionType;
+  required: boolean;
 }
 
 export interface ConduitRouteOption {
-    [field: string]: string | ConduitRouteOptionExtended
+  [field: string]: string | ConduitRouteOptionExtended;
 }
 
 export enum ConduitRouteActions {
-    GET = 'GET',
-    POST = 'POST',
-    UPDATE = 'PUT',
-    DELETE = 'DELETE',
-
+  GET = 'GET',
+  POST = 'POST',
+  UPDATE = 'PUT',
+  DELETE = 'DELETE',
 }
 
 export interface ConduitRouteOptions {
-    queryParams?: ConduitRouteOption;
-    bodyParams?: ConduitModel;
-    urlParams?: ConduitRouteOption;
-    action: ConduitRouteActions
-    path: string;
-    name?: string;
-    description?: string;
-    middlewares?: string[];
+  queryParams?: ConduitRouteOption;
+  bodyParams?: ConduitModel;
+  urlParams?: ConduitRouteOption;
+  action: ConduitRouteActions;
+  path: string;
+  name?: string;
+  description?: string;
+  middlewares?: string[];
+  cacheControl?: string;
 }
 
 /**
@@ -85,50 +85,51 @@ export interface ConduitRouteOptions {
  *
  */
 export class ConduitRouteReturnDefinition {
+  private _name: string;
+  private _fields: ConduitModel | string;
 
-    private _name: string;
-    private _fields: ConduitModel | string;
+  constructor(name: string, fields: ConduitModel | string) {
+    this._name = name;
+    this._fields = fields;
+  }
 
-    constructor(name: string, fields: ConduitModel | string) {
-        this._name = name;
-        this._fields = fields;
-    }
+  get name(): string {
+    return this._name;
+  }
 
-    get name(): string {
-        return this._name;
-    }
-
-    get fields(): ConduitModel | string {
-        return this._fields;
-    }
-
+  get fields(): ConduitModel | string {
+    return this._fields;
+  }
 }
 
 export class ConduitRoute {
+  private _returnType: ConduitRouteReturnDefinition;
+  private _input: ConduitRouteOptions;
+  private _handler: (request: ConduitRouteParameters) => Promise<any>;
 
-    private _returnType: ConduitRouteReturnDefinition;
-    private _input: ConduitRouteOptions;
-    private _handler: (request: ConduitRouteParameters) => Promise<any>;
+  constructor(
+    input: ConduitRouteOptions,
+    type: ConduitRouteReturnDefinition,
+    handler: (request: ConduitRouteParameters) => Promise<any>
+  ) {
+    this._input = input;
+    this._returnType = type;
+    this._handler = handler;
+  }
 
-    constructor(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: (request: ConduitRouteParameters) => Promise<any>) {
-        this._input = input;
-        this._returnType = type;
-        this._handler = handler;
-    }
+  get returnTypeName(): string {
+    return this._returnType.name;
+  }
 
-    get returnTypeName(): string {
-        return this._returnType.name;
-    }
+  get input(): ConduitRouteOptions {
+    return this._input;
+  }
 
-    get input(): ConduitRouteOptions {
-        return this._input;
-    }
+  get returnTypeFields(): ConduitModel | string {
+    return this._returnType.fields;
+  }
 
-    get returnTypeFields(): ConduitModel | string {
-        return this._returnType.fields;
-    }
-
-    executeRequest(request: ConduitRouteParameters): Promise<any> {
-        return this._handler(request);
-    }
+  executeRequest(request: ConduitRouteParameters): Promise<any> {
+    return this._handler(request);
+  }
 }

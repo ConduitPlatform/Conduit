@@ -1,9 +1,9 @@
-import { ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
-import schema from "../../models/schemaDefinitions.schema";
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { CmsRoutes } from "../../routes/Routes";
-import { compareFunction, getOps, sortAndConstructRoutes } from "./utils";
-import { isNil } from "lodash";
+import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import schema from '../../models/schemaDefinitions.schema';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { CmsRoutes } from '../../routes/Routes';
+import { compareFunction, getOps, sortAndConstructRoutes } from './utils';
+import { isNil } from 'lodash';
 
 export class SchemaController {
   private _adapter: any;
@@ -21,8 +21,8 @@ export class SchemaController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe("cms", (message: string) => {
-      if (message === "schema") {
+    this.grpcSdk.bus?.subscribe('cms', (message: string) => {
+      if (message === 'schema') {
         this.refreshRoutes();
       }
     });
@@ -31,14 +31,14 @@ export class SchemaController {
   private async loadExistingSchemas() {
     let schemaDefinitions = await this._adapter.createSchemaFromAdapter(schema);
     this._adapter
-      .findMany("SchemaDefinitions", { enabled: true })
+      .findMany('SchemaDefinitions', { enabled: true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
-          resolve("ok");
+          resolve('ok');
         });
         if (r) {
           r.forEach((r: any) => {
-            if (typeof r.modelOptions === "string") {
+            if (typeof r.modelOptions === 'string') {
               r.modelOptions = JSON.parse(r.modelOptions);
             }
             const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
@@ -49,10 +49,13 @@ export class SchemaController {
           promise.then((p) => {
             let routeSchemas: any = {};
             r.forEach((schema: any) => {
-              if (typeof schema.modelOptions === "string") {
+              if (typeof schema.modelOptions === 'string') {
                 schema.modelOptions = JSON.parse(schema.modelOptions);
               }
-              if (schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+              if (
+                schema.name !== 'SchemaDefinitions' &&
+                (schema.crudOperations || isNil(schema.crudOperations))
+              ) {
                 routeSchemas[schema.name] = schema;
               }
             });
@@ -62,34 +65,37 @@ export class SchemaController {
         }
       })
       .catch((err: Error) => {
-        console.error("Something went wrong when loading schema for cms");
+        console.error('Something went wrong when loading schema for cms');
         console.error(err);
       });
   }
 
   refreshRoutes() {
     this._adapter
-      .findMany("SchemaDefinitions", { enabled: true })
+      .findMany('SchemaDefinitions', { enabled: true })
       .then((r: any) => {
         if (r) {
           let routeSchemas: any = {};
           r.forEach((schema: any) => {
-            if (typeof schema.modelOptions === "string") {
+            if (typeof schema.modelOptions === 'string') {
               schema.modelOptions = JSON.parse(schema.modelOptions);
             }
-            if (schema.name !== "SchemaDefinitions" && (schema.crudOperations || isNil(schema.crudOperations))) {
+            if (
+              schema.name !== 'SchemaDefinitions' &&
+              (schema.crudOperations || isNil(schema.crudOperations))
+            ) {
               routeSchemas[schema.name] = schema;
             }
           });
           this._registerRoutes(routeSchemas);
           this.router.requestRefresh();
         } else {
-          console.error("Something went wrong when loading schema for cms");
-          console.error("No schemas emitted");
+          console.error('Something went wrong when loading schema for cms');
+          console.error('No schemas emitted');
         }
       })
       .catch((err: Error) => {
-        console.error("Something went wrong when loading schema for cms");
+        console.error('Something went wrong when loading schema for cms');
         console.error(err);
       });
   }
@@ -97,14 +103,14 @@ export class SchemaController {
   createSchema(schema: ConduitSchema): void {
     this._adapter
       .createSchemaFromAdapter(schema)
-      .then((r:any) => {
+      .then((r: any) => {
         if (this.stateActive) {
-          this.grpcSdk.bus?.publish("cms", "schema");
+          this.grpcSdk.bus?.publish('cms', 'schema');
         }
         this.refreshRoutes();
       })
       .catch((err: any) => {
-        console.log("Failed to create schema for cms");
+        console.log('Failed to create schema for cms');
         console.log(err);
       });
   }

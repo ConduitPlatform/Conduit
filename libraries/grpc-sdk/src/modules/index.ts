@@ -1,6 +1,5 @@
 export * from './storage';
-export * from './router'
-export * from './inMemoryStore'
+export * from './router';
 export * from './email';
 export * from './databaseProvider';
 export * from './config';
@@ -8,3 +7,4 @@ export * from './admin';
 export * from './pushNotifications';
 export * from './cms';
 export * from './sms';
+export * from './payments';

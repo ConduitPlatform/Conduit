@@ -1,4 +1,9 @@
-import { ConduitModel, ConduitSchema, ConduitSDK, TYPE } from '@quintessential-sft/conduit-sdk';
+import {
+  ConduitModel,
+  ConduitSchema,
+  ConduitSDK,
+  TYPE,
+} from '@quintessential-sft/conduit-sdk';
 import { Config } from 'convict';
 import { AppConfig } from '../utils/config';
 import { isNil, isPlainObject, cloneDeep, isString, isArray } from 'lodash';
@@ -60,7 +65,7 @@ export class ConfigModelGenerator {
       case 'boolean':
         return TYPE.Boolean;
       default:
-        return TYPE.String
+        return TYPE.String;
     }
   }
 
@@ -71,7 +76,10 @@ export class ConfigModelGenerator {
       if (isNil(key)) return true;
       if (!isPlainObject(value)) return false;
       if (value.hasOwnProperty('doc')) delete value.doc;
-      if (value.hasOwnProperty('format') && (isString(value.format) || isArray(value.format)) ) {
+      if (
+        value.hasOwnProperty('format') &&
+        (isString(value.format) || isArray(value.format))
+      ) {
         let type;
         let enumType: any[] | null = null;
         switch (value['format']) {
@@ -90,7 +98,7 @@ export class ConfigModelGenerator {
           default: {
             if (isArray(value.format)) {
               const internalType = this.getConduitType(typeof value.format[0]);
-              type = [internalType]
+              type = [internalType];
               enumType = value.format;
             } else {
               type = TYPE.String;
@@ -102,8 +110,7 @@ export class ConfigModelGenerator {
           value.enum = enumType;
         }
         delete value.format;
-
-      } else{
+      } else {
         return true;
       }
     });
@@ -113,9 +120,10 @@ export class ConfigModelGenerator {
   get configModel() {
     const config = AppConfig.getInstance().configSchema;
     const configFieldsObject = this.getConfigFields(config);
-    console.log(JSON.stringify(configFieldsObject, null ,2))
-    return new ConduitSchema('Config',
-      configFieldsObject,
-      {timestamps: true, systemRequired: true});
+    console.log(JSON.stringify(configFieldsObject, null, 2));
+    return new ConduitSchema('Config', configFieldsObject, {
+      timestamps: true,
+      systemRequired: true,
+    });
   }
 }

@@ -1,5 +1,7 @@
-import { ConduitRouteActions } from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpoint } from "../../models/customEndpoint";
+import { ConduitRouteActions } from '@quintessential-sft/conduit-grpc-sdk';
+import { CustomEndpoint } from '../../models/customEndpoint';
+import moment from 'moment';
+const escapeStringRegexp = require('escape-string-regexp');
 
 export function getOpName(name: string, op: number) {
   let operation;
@@ -24,7 +26,12 @@ export function getOpName(name: string, op: number) {
   return operation + name;
 }
 
-export function constructQuery(schemaField: string, operation: number, comparisonField: any) {
+export function constructQuery(
+  schemaField: string,
+  operation: number,
+  comparisonField: any,
+  like?: boolean
+) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
   //   GREATER: 2, //'greater than'
@@ -34,6 +41,15 @@ export function constructQuery(schemaField: string, operation: number, compariso
   //   EQUAL_SET: 6, //'equal to any of the following'
   //   NEQUAL_SET: 7, //'not equal to any of the following'
   //   CONTAIN: 8, //'an array containing'
+  let isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
+  if (isDate) {
+    comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
+  } else if (like) {
+    comparisonField = escapeStringRegexp(comparisonField);
+    comparisonField = `{ \"$regex\": \".*${comparisonField}.*\", \"$options\": \"i\" }`;
+  } else {
+    comparisonField = JSON.stringify(comparisonField);
+  }
   switch (operation) {
     case 0:
       return `\"${schemaField}\":${comparisonField}`;
@@ -59,7 +75,37 @@ export function constructQuery(schemaField: string, operation: number, compariso
   }
 }
 
-export function constructAssignment(schemaField: string, action: number, assignmentValue: any) {
+export function mergeQueries(queries: string[]): any {
+  let mergedQuery: any = {};
+  let insertedFields: Record<string, boolean> = {};
+
+  queries.forEach((query: string) => {
+    const parsedQuery = JSON.parse(`{${query}}`);
+    const field = Object.keys(parsedQuery)[0];
+    if (mergedQuery.hasOwnProperty(field)) {
+      if (!mergedQuery.hasOwnProperty('$and')) {
+        mergedQuery['$and'] = [];
+      }
+
+      mergedQuery['$and'].push(parsedQuery);
+      mergedQuery['$and'].push({ [field]: mergedQuery[field] });
+      delete mergedQuery[field];
+      insertedFields[field] = true;
+    } else if (insertedFields[field]) {
+      mergedQuery['$and'].push(parsedQuery);
+    } else {
+      mergedQuery[field] = parsedQuery[field];
+    }
+  });
+
+  return mergedQuery;
+}
+
+export function constructAssignment(
+  schemaField: string,
+  action: number,
+  assignmentValue: any
+) {
   //   SET: 0,
   //   INCREMENT: 1,
   //   DECREMENT: 2,
@@ -73,26 +119,30 @@ export function constructAssignment(schemaField: string, action: number, assignm
     case 2:
       return `\"$inc\": { \"${schemaField}\": -${assignmentValue} }`;
     case 3:
-      return `\"$push\": { \"${schemaField}\": ${assignmentValue} }`
+      return `\"$push\": { \"${schemaField}\": ${assignmentValue} }`;
     case 4:
-      return `\"$pull\": { \"${schemaField}\": ${assignmentValue} }`
+      return `\"$pull\": { \"${schemaField}\": ${assignmentValue} }`;
     default:
       return `\"${schemaField}\": ${assignmentValue}`;
   }
 }
 
 export function createController(endpoint: CustomEndpoint) {
-  let inputString = "";
+  let inputString = '';
   // will probably need the addition of parsing
   endpoint.inputs.forEach((r: { name: string; type: string; location: number }) => {
     inputString += `let ${r.name} = call.request.params.${r.name};`;
   });
 
-  let searchString = "";
+  let searchString = '';
   if (endpoint.operation !== 1) {
     endpoint.queries!.forEach(
-      (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
-        if (searchString.length !== 0) searchString += ",";
+      (r: {
+        schemaField: string;
+        operation: number;
+        comparisonField: { type: string; value: any };
+      }) => {
+        if (searchString.length !== 0) searchString += ',';
         searchString += constructQuery(r.schemaField, r.operation, r.comparisonField);
       }
     );
@@ -100,9 +150,9 @@ export function createController(endpoint: CustomEndpoint) {
 
   try {
     return new Function(
-      "grpcSdk",
-      "call",
-      "callback",
+      'grpcSdk',
+      'call',
+      'callback',
       ` 
       return grpcSdk.database.findOne(\'SchemaDefinitions\', {_id: ${endpoint.selectedSchema}})
         .then((r)=>{

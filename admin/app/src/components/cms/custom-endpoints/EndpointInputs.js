@@ -1,23 +1,17 @@
 import React, { Fragment } from 'react';
 import {
-  Typography,
-  Grid,
-  TextField,
+  Checkbox,
   FormControl,
+  FormControlLabel,
+  Grid,
+  IconButton,
   InputLabel,
   Select,
-  IconButton,
+  TextField,
+  Typography,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
 import InputLocationEnum from '../../../models/InputLocationEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
-
-const useStyles = makeStyles((theme) => ({
-  formControl: {
-    margin: theme.spacing(1),
-    minWidth: 180,
-  },
-}));
 
 const EndpointInputs = ({
   selectedInputs,
@@ -25,9 +19,10 @@ const EndpointInputs = ({
   handleInputNameChange,
   handleInputTypeChange,
   handleInputLocationChange,
+  handleInputIsArray,
+  handleInputIsOptional,
   handleRemoveInput,
 }) => {
-  const classes = useStyles();
   return selectedInputs.map((input, index) => (
     <Fragment key={`input-${index}`}>
       <Grid item xs={1} key={index}>
@@ -35,13 +30,15 @@ const EndpointInputs = ({
       </Grid>
       <Grid item xs={3}>
         <TextField
+          placeholder={'Input name'}
+          fullWidth
           disabled={!editMode}
           value={input.name}
           onChange={(event) => handleInputNameChange(event, index)}
         />
       </Grid>
-      <Grid item xs={4}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
           <InputLabel>Type</InputLabel>
           <Select
             disabled={!editMode}
@@ -57,8 +54,9 @@ const EndpointInputs = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
+          <InputLabel>Location</InputLabel>
           <Select
             disabled={!editMode}
             native
@@ -70,6 +68,37 @@ const EndpointInputs = ({
             <option value={InputLocationEnum.URL_PARAMS}>URL</option>
           </Select>
         </FormControl>
+      </Grid>
+      <Grid item xs={1} />
+      <Grid container item xs={2}>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                color={'primary'}
+                checked={input.array}
+                onChange={(event) => handleInputIsArray(event, index)}
+                name="Array"
+                size={'small'}
+              />
+            }
+            label="Array"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                color={'primary'}
+                checked={input.optional}
+                onChange={(event) => handleInputIsOptional(event, index)}
+                name="Optional"
+                size={'small'}
+              />
+            }
+            label="Optional"
+          />
+        </Grid>
       </Grid>
       <Grid item xs={1}>
         <IconButton

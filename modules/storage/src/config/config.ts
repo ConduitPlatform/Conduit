@@ -1,24 +1,27 @@
 export default {
-    active: {
-        type: Boolean,
-        default: true
+  active: {
+    type: Boolean,
+    default: true,
+  },
+  provider: {
+    type: String,
+    default: 'local',
+  },
+  storagePath: {
+    type: String,
+    default: '/var/tmp',
+  },
+  google: {
+    serviceAccountKeyPath: {
+      type: String,
+      default: '',
     },
-    provider: {
-        type: String,
-        default: 'local'
+    bucketName: {
+      type: String,
+      default: '',
     },
-    storagePath: {
-        type: String,
-        default: '/var/tmp'
-    },
-    google: {
-        serviceAccountKeyPath: {
-            type: String,
-            default: '~/google_storage_service_account.json'
-        },
-        bucketName: {
-            type: String,
-            default: 'conduit'
-        }
-    }
-}
+  },
+  azure: {
+    connectionString: { type: String, default: '' },
+  },
+};

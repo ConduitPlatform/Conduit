@@ -1,0 +1,9 @@
+{
+  "functions": [
+    {
+      "path": "/products",
+      "method": "POST",
+      "protoName": "createProduct"
+    }
+  ]
+}

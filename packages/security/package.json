@@ -4,6 +4,9 @@
   "description": "This will be added as a required middleware, configurable on how strict is should be",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc"
@@ -19,16 +22,20 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
   },
+  "dependencies": {
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@quintessential-sft/conduit-sdk": "^1.0.0",
+    "helmet": "^4.3.1",
+    "lodash": "^4.17.15",
+    "rate-limiter-flexible": "^2.2.1",
+    "redis": "^3.0.2"
+  },
   "devDependencies": {
     "@types/express": "^4.17.4",
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.9.8",
+    "@types/redis": "^2.8.28",
     "rimraf": "^3.0.2",
     "typescript": "^3.8.3"
-  },
-  "dependencies": {
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-sdk": "^1.0.0",
-    "lodash": "^4.17.15"
   }
 }

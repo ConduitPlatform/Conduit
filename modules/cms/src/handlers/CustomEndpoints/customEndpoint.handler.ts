@@ -1,101 +1,173 @@
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { constructQuery, constructAssignment, getOpName } from "./utils";
-import grpc from "grpc";
-import { CustomEndpoint } from "../../models/customEndpoint";
-import { isNil } from "lodash";
+import ConduitGrpcSdk, {
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { constructAssignment, constructQuery, mergeQueries } from './utils';
+import grpc from 'grpc';
+import { CustomEndpoint } from '../../models/customEndpoint';
+import { isNil } from 'lodash';
 
 export class CustomEndpointHandler {
   private static routeControllers: { [name: string]: any } = {};
+
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   static addNewCustomOperationControl(endpoint: CustomEndpoint) {
     CustomEndpointHandler.routeControllers[endpoint.name] = endpoint;
   }
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  entryPoint(call: any, callback: any) {
+  entryPoint(call: RouterRequest, callback: RouterResponse) {
     //use it to find the right controller
-    let path = call.request.path.split("/")[2];
+    let path = call.request.path.split('/')[3];
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
     let params = JSON.parse(call.request.params);
-    let searchString = "";
-    let createString = "";
+    let searchQuery: any = {};
+    let searchStrings: string[] = [];
+    let createString = '';
 
+    let stopExecution: boolean = false;
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       endpoint.queries!.forEach(
-        (r: { schemaField: string; operation: number; comparisonField: { type: string; value: any } }) => {
-          if (searchString.length !== 0) searchString += ",";
-          if (r.comparisonField.type === "Input") {
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(params[r.comparisonField.value]));
-          } else if (r.comparisonField.type === "Context") {
+        (r: {
+          schemaField: string;
+          operation: number;
+          comparisonField: { type: string; value: any; like: boolean };
+        }) => {
+          if (stopExecution) return;
+          if (r.comparisonField.type === 'Input') {
+            if (isNil(params[r.comparisonField.value])) {
+              let res = endpoint.inputs.filter((input) => {
+                return input.name === r.comparisonField.value && input.optional;
+              });
+              if (res && res.length > 0) {
+                return;
+              }
+              stopExecution = true;
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.comparisonField.value} is missing from input`,
+              });
+            }
+            searchStrings.push(
+              constructQuery(
+                r.schemaField,
+                r.operation,
+                params[r.comparisonField.value],
+                r.comparisonField.like
+              )
+            );
+          } else if (r.comparisonField.type === 'Context') {
             if (isNil(call.request.context)) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.comparisonField.value} is missing from context`,
               });
             }
-            let context: any = call.request.context;
-            for (const key of r.comparisonField.value.split(".")) {
+            let context: any = JSON.parse(call.request.context);
+            for (const key of r.comparisonField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
+                stopExecution = true;
                 return callback({
                   code: grpc.status.INTERNAL,
                   message: `Field ${r.comparisonField.value} is missing from context`,
                 });
               }
             }
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(context));
+            searchStrings.push(
+              constructQuery(r.schemaField, r.operation, context, r.comparisonField.like)
+            );
           } else {
-            searchString += constructQuery(r.schemaField, r.operation, JSON.stringify(r.comparisonField.value));
+            searchStrings.push(
+              constructQuery(
+                r.schemaField,
+                r.operation,
+                r.comparisonField.value,
+                r.comparisonField.like
+              )
+            );
           }
         }
       );
+      searchQuery = mergeQueries(searchStrings);
     }
+
+    if (stopExecution) return;
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
       endpoint.assignments!.forEach(
-        (r: { schemaField: string; action: number; assignmentField: { type: string; value: any } }) => {
-          if (createString.length !== 0) createString += ",";
-          if (r.assignmentField.type === "Input") {
+        (r: {
+          schemaField: string;
+          action: number;
+          assignmentField: { type: string; value: any };
+        }) => {
+          if (stopExecution) return;
+          if (createString.length !== 0) createString += ',';
+          if (r.assignmentField.type === 'Input') {
+            if (isNil(params[r.assignmentField.value])) {
+              let res = endpoint.inputs.filter((input) => {
+                return input.name === r.assignmentField.value && input.optional;
+              });
+              if (res && res.length > 0) {
+                return;
+              }
+              stopExecution = true;
+              return callback({
+                code: grpc.status.INTERNAL,
+                message: `Field ${r.assignmentField.value} is missing from input`,
+              });
+            }
             createString += constructAssignment(
               r.schemaField,
               r.action,
               JSON.stringify(params[r.assignmentField.value])
             );
-          } else if (r.assignmentField.type === "Context") {
+          } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
+              stopExecution = true;
               return callback({
                 code: grpc.status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from context`,
               });
             }
-            let context: any = call.request.context;
-            for (const key of r.assignmentField.value.split(".")) {
+            let context: any = JSON.parse(call.request.context);
+            for (const key of r.assignmentField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
+                stopExecution = true;
                 return callback({
                   code: grpc.status.INTERNAL,
                   message: `Field ${r.assignmentField.value} is missing from context`,
                 });
               }
             }
-            searchString += constructAssignment(r.schemaField, r.action, JSON.stringify(context));
+            createString += constructAssignment(
+              r.schemaField,
+              r.action,
+              JSON.stringify(context)
+            );
           } else {
-            createString += constructAssignment(r.schemaField, r.action, JSON.stringify(r.assignmentField.value));
+            createString += constructAssignment(
+              r.schemaField,
+              r.action,
+              JSON.stringify(r.assignmentField.value)
+            );
           }
         }
       );
     }
+    if (stopExecution) return;
     let sortObj: any = null;
-    if (endpoint.sorted && (params.sort && params.sort.length > 0 )) {
+    if (endpoint.sorted && params.sort && params.sort.length > 0) {
       let sort = params.sort;
       sortObj = {};
-      sort.split(",").forEach((sortVal: string) => {
+      sort.split(',').forEach((sortVal: string) => {
         sortVal = sortVal.trim();
-        if (sortVal.indexOf("-") !== -1) {
+        if (sortVal.indexOf('-') !== -1) {
           sortObj[sortVal.substr(1)] = -1;
         } else {
           sortObj[sortVal] = 1;
@@ -103,49 +175,53 @@ export class CustomEndpointHandler {
       });
     }
 
-    searchString = "{" + searchString + "}";
-    createString = "{" + createString + "}";
+    createString = '{' + createString + '}';
     let promise;
     if (endpoint.operation === 0) {
       if (endpoint.paginated) {
         const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString),
-          null,
-          params["skip"],
-          params["limit"],
+          searchQuery,
+          undefined,
+          params['skip'],
+          params['limit'],
           sortObj,
-          params["populate"]
+          params['populate']
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString)
+          searchQuery
         );
 
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
         promise = this.grpcSdk.databaseProvider!.findMany(
           endpoint.selectedSchemaName,
-          JSON.parse(searchString),
+          searchQuery,
           undefined,
           undefined,
           undefined,
           sortObj,
-          params["populate"]
+          params['populate']
         );
       }
     } else if (endpoint.operation === 1) {
-      promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, JSON.parse(createString));
+      promise = this.grpcSdk.databaseProvider!.create(
+        endpoint.selectedSchemaName,
+        JSON.parse(createString)
+      );
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
-        JSON.parse(searchString),
+        searchQuery,
         JSON.parse(createString)
       );
     } else if (endpoint.operation === 3) {
-      promise = this.grpcSdk.databaseProvider!.deleteMany(endpoint.selectedSchemaName, JSON.parse(searchString));
+      promise = this.grpcSdk.databaseProvider!.deleteMany(
+        endpoint.selectedSchemaName,
+        searchQuery
+      );
     } else {
-      console.error("Niko eisai malakas");
       process.exit(-1);
     }
 
@@ -155,13 +231,13 @@ export class CustomEndpointHandler {
           r = [r];
         } else if (endpoint.operation === 2) {
           // find a way to return updated documents
-          r = ["Ok"];
+          r = ['Ok'];
         } else if (endpoint.operation === 0 && endpoint.paginated) {
           r = {
             documents: r[0],
             documentsCount: r[1],
           };
-          return callback(null, { result: JSON.stringify(r)});
+          return callback(null, { result: JSON.stringify(r) });
         }
         callback(null, { result: JSON.stringify({ result: r }) });
       })

@@ -1,8 +1,21 @@
-import { isBoolean, isEmpty, isNil, isObject, isPlainObject, isString, isArray } from 'lodash';
+import {
+  isBoolean,
+  isEmpty,
+  isNil,
+  isObject,
+  isPlainObject,
+  isString,
+  isArray,
+} from 'lodash';
 import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 const deepdash = require('deepdash/standalone');
 
-export function validateSchemaInput(name: any, fields: any, modelOptions: any, enabled?: any) {
+export function validateSchemaInput(
+  name: any,
+  fields: any,
+  modelOptions: any,
+  enabled?: any
+) {
   if (!isNil(enabled) && !isBoolean(enabled)) {
     return "Field 'enabled' must be of type Boolean";
   }
@@ -14,7 +27,7 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
     if (!isPlainObject(modelOptions)) {
       optionsValidationError = 'Model options must be an object';
     }
-    Object.keys(modelOptions).forEach(key => {
+    Object.keys(modelOptions).forEach((key) => {
       if (key === 'timestamps' && !isBoolean(modelOptions[key])) {
         optionsValidationError = "Option 'timestamps' must be of type Boolean";
       }
@@ -42,17 +55,15 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
     else if (isString(value) && key !== 'default') {
       fieldsErrorFlag = !Object.keys(TYPE).includes(value);
       return false;
-    }
-    else if (isPlainObject(value) && value.hasOwnProperty('type')) {
+    } else if (isPlainObject(value) && value.hasOwnProperty('type')) {
       if (!fieldsErrorFlag && isObject(value.type)) {
         return true;
-      }
-      else if (!fieldsErrorFlag && isArray(value.type)) {
+      } else if (!fieldsErrorFlag && isArray(value.type)) {
         if (value.type.length > 1) fieldsErrorFlag = true;
-        if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value.type[0]);
+        if (!fieldsErrorFlag)
+          fieldsErrorFlag = !Object.values(TYPE).includes(value.type[0]);
         return false;
-      }
-      else fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
+      } else fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
       if (!fieldsErrorFlag && value.type === TYPE.Relation) {
         if (value.hasOwnProperty('model')) {
           if (!isString(value.model)) fieldsErrorFlag = true;
@@ -71,22 +82,19 @@ export function validateSchemaInput(name: any, fields: any, modelOptions: any, e
       }
 
       return false;
-    }
-    else if (isArray(value)) {
+    } else if (isArray(value)) {
       if (value.length > 1) fieldsErrorFlag = true;
       if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value[0]);
       return false;
-    }
-    else if (key === 'select' || key === 'required' || key === 'unique') {
+    } else if (key === 'select' || key === 'required' || key === 'unique') {
       fieldsErrorFlag = !isBoolean(value);
     } else if (key === 'default') {
-        fieldsErrorFlag = !isString(value);
+      fieldsErrorFlag = !isString(value);
     } else if (key === 'type') return true;
     else {
       fieldsErrorFlag = true;
       return false;
     }
-
   });
-  if (fieldsErrorFlag) return "Invalid schema fields configuration";
+  if (fieldsErrorFlag) return 'Invalid schema fields configuration';
 }

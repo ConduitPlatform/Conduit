@@ -1,50 +1,26 @@
-import path from "path";
-import grpc from "grpc";
+import path from 'path';
+import { ConduitModule } from '../../classes/ConduitModule';
 
-let protoLoader = require("@grpc/proto-loader");
-
-export default class PushNotifications {
-  private client: grpc.Client | any;
-  private readonly _url: string;
-  active: boolean = false;
-
+export default class PushNotifications extends ConduitModule {
   constructor(url: string) {
-    this._url = url;
+    super(url);
+    this.protoPath = path.resolve(__dirname, '../../proto/push-notifications.proto');
+    this.descriptorObj = 'pushnotifications.PushNotifications';
     this.initializeClient();
-  }
-
-  initializeClient() {
-    if (this.client) return;
-    let packageDefinition = protoLoader.loadSync(path.resolve(__dirname, "../../proto/push-notifications.proto"), {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-
-    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    let notifications = protoDescriptor.pushnotifications.PushNotifications;
-    this.client = new notifications(this._url, grpc.credentials.createInsecure());
-    this.active = true;
-  }
-
-  closeConnection() {
-    this.client.close();
-    this.client = null;
-    this.active = false;
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig({ newConfig: JSON.stringify(newConfig) }, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || "Something went wrong");
-        } else {
-          resolve(JSON.parse(res.updatedConfig));
+      this.client.setConfig(
+        { newConfig: JSON.stringify(newConfig) },
+        (err: any, res: any) => {
+          if (err || !res) {
+            reject(err || 'Something went wrong');
+          } else {
+            resolve(JSON.parse(res.updatedConfig));
+          }
         }
-      });
+      );
     });
   }
 
@@ -58,7 +34,7 @@ export default class PushNotifications {
         },
         (err: any, res: any) => {
           if (err || !res) {
-            reject(err || "Something went wrong");
+            reject(err || 'Something went wrong');
           } else {
             resolve(JSON.parse(res.newTokenDocument));
           }
@@ -75,7 +51,7 @@ export default class PushNotifications {
         },
         (err: any, res: any) => {
           if (err || !res) {
-            reject(err || "Something went wrong");
+            reject(err || 'Something went wrong');
           } else {
             resolve(JSON.parse(res.tokenDocuments));
           }

@@ -1,24 +1,24 @@
 export default {
-    active: {
-        format: 'Boolean',
-        default: false
+  active: {
+    format: 'Boolean',
+    default: false,
+  },
+  providerName: {
+    format: 'String',
+    default: 'firebase',
+  },
+  firebase: {
+    projectId: {
+      format: 'String',
+      default: 'project-id',
     },
-    providerName: {
-        format: 'String',
-        default: 'firebase'
+    privateKey: {
+      format: 'String',
+      default: 'private-key',
     },
-    firebase: {
-        projectId: {
-            format: 'String',
-            default: 'project-id'
-        },
-        privateKey: {
-            format: 'String',
-            default: 'private-key'
-        },
-        clientEmail: {
-            format: 'String',
-            default: 'client-email'
-        }
-    }
+    clientEmail: {
+      format: 'String',
+      default: 'client-email',
+    },
+  },
 };

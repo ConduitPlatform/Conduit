@@ -1,22 +1,22 @@
 {
   "functions": [
     {
-      "path": "/email/templates",
+      "path": "/templates",
       "method": "GET",
       "protoName": "getTemplates"
     },
     {
-      "path": "/email/templates",
+      "path": "/templates",
       "method": "POST",
       "protoName": "createTemplate"
     },
     {
-      "path": "/email/templates/:id",
+      "path": "/templates/:id",
       "method": "PUT",
       "protoName": "editTemplate"
     },
     {
-      "path": "/email/send",
+      "path": "/send",
       "method": "POST",
       "protoName": "sendEmail"
     }

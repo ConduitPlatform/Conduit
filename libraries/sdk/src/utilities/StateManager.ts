@@ -1,45 +1,30 @@
-import { RedisClient } from "redis";
-import { RedisManager } from "./RedisManager";
-import { promisify } from "util";
+import { Redis } from 'ioredis';
+import { RedisManager } from './RedisManager';
 
-export class StateManager{
+export class StateManager {
+  private readonly redisClient: Redis;
 
-    private readonly redisClient: RedisClient;
+  constructor(redisManager: RedisManager, name: string) {
+    this.redisClient = redisManager.getClient({ keyPrefix: name });
+  }
 
-    constructor(redisManager: RedisManager, name: string){
-        this.redisClient = redisManager.getClient({prefix: name});
+  setState(stateObj: any): Promise<any> {
+    return this.setKey('state', stateObj);
+  }
+
+  getState(): Promise<any> {
+    return this.getKey('state');
+  }
+
+  setKey(keyName: string, value: any, expiry?: number): Promise<any> {
+    if (expiry) {
+      return this.redisClient.set(keyName, value, 'PX', expiry);
+    } else {
+      return this.redisClient.set(keyName, value);
     }
+  }
 
-    setState(stateObj: any): Promise<any>{
-        return this.setKey('state', stateObj);
-    }
-
-    getState(): Promise<any>{
-        return this.getKey('state');
-    }
-
-    setKey(keyName: string, value: any): Promise<any>{
-        return new Promise((resolve, reject)=>{
-            this.redisClient.set(keyName, value, (err: any, val: any)=>{
-                if(err){
-                    reject(err);
-                }else{
-                    resolve('ok');
-                }
-            })
-        })
-    }
-
-    getKey(keyName: string): Promise<any>{
-        return new Promise((resolve, reject)=>{
-            this.redisClient.get(keyName, (err: any, val: any)=>{
-                if(err){
-                    reject(err);
-                }else{
-                    resolve(val);
-                }
-            })
-        })
-    }
-    
+  getKey(keyName: string): Promise<any> {
+    return this.redisClient.get(keyName);
+  }
 }

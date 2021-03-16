@@ -1,0 +1,36 @@
+syntax = 'proto3';
+package payments;
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+message CreateIamportPaymentRequest {
+  string productId = 1;
+  int32 quantity = 2;
+  string userId = 3;
+}
+
+message CreateIamportPaymentResponse {
+  string merchant_uid = 1;
+  int32 amount = 2;
+}
+
+message CompleteIamportPaymentRequest {
+  string imp_uid = 1;
+  string merchant_uid = 2;
+}
+
+message CompleteIamportPaymentResponse {
+  bool success = 1;
+}
+
+service Payments {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc CreateIamportPayment(CreateIamportPaymentRequest) returns (CreateIamportPaymentResponse);
+  rpc CompleteIamportPayment(CompleteIamportPaymentRequest) returns (CompleteIamportPaymentResponse);
+}

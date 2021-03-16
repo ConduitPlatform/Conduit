@@ -12,6 +12,7 @@ service Config {
     rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
     rpc GetServerConfig (Empty) returns (GetConfigResponse);
     rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
+    rpc GetModuleUrlByInstance (ModuleByInstanceRequest) returns (ModuleByInstanceResponse);
 }
 
 service Admin {
@@ -55,6 +56,7 @@ message RegisterConduitRouteRequest {
         string name = 6;
         string description = 7;
         repeated string middlewares = 8;
+        string cacheControl = 9;
     }
 
     message ConduitRouteReturnDefinition {
@@ -69,6 +71,15 @@ message Empty {
 message ModuleHealthRequest {
     string moduleName = 1;
     string url = 2;
+}
+
+message ModuleByInstanceRequest {
+    string instancePeer = 1;
+}
+
+message ModuleByInstanceResponse {
+    string moduleUrl = 1;
+    string moduleName = 2;
 }
 
 message RegisterModuleRequest {

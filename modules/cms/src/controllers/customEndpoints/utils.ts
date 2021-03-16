@@ -1,11 +1,12 @@
 import {
   ConduitRoute,
   ConduitRouteActions,
+  ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from "@quintessential-sft/conduit-grpc-sdk";
-import { CustomEndpoint } from "../../models/customEndpoint";
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { CustomEndpoint } from '../../models/customEndpoint';
 
 function getOperation(op: number) {
   switch (op) {
@@ -23,44 +24,71 @@ function getOperation(op: number) {
   }
 }
 
-function extractParams(inputs: { name: string; type: string; location: number }[]) {
+function extractParams(
+  inputs: {
+    name: string;
+    type: string;
+    location: number;
+    optional?: boolean;
+    array?: boolean;
+  }[]
+) {
   let resultingObject: any = {};
-  inputs.forEach((r: { name: string; type: string; location: number }) => {
-    //body
-    if (r.location === 0) {
-      if (!resultingObject["bodyParams"]) resultingObject["bodyParams"] = {};
-      resultingObject["bodyParams"][r.name] = r.type;
+  inputs.forEach(
+    (r: {
+      name: string;
+      type: string;
+      location: number;
+      optional?: boolean;
+      array?: boolean;
+    }) => {
+      let placement = '';
+      //body
+      if (r.location === 0) {
+        if (!resultingObject['bodyParams']) resultingObject['bodyParams'] = {};
+        placement = 'bodyParams';
+      }
+      // query params
+      else if (r.location === 1) {
+        if (!resultingObject['queryParams']) resultingObject['queryParams'] = {};
+        placement = 'queryParams';
+      }
+      // urlParams
+      else {
+        if (!resultingObject['urlParams']) resultingObject['urlParams'] = {};
+        placement = 'urlParams';
+      }
+      resultingObject[placement][r.name] = {
+        type: r.array ? [r.type] : r.type,
+        required: r.optional ? r.optional : true,
+      };
     }
-    // query params
-    else if (r.location === 1) {
-      if (!resultingObject["queryParams"]) resultingObject["queryParams"] = {};
-      resultingObject["queryParams"][r.name] = r.type;
-    }
-    // urlParams
-    else {
-      if (!resultingObject["urlParams"]) resultingObject["urlParams"] = {};
-      resultingObject["urlParams"][r.name] = r.type;
-    }
-  });
+  );
   return resultingObject;
 }
 
 export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
-  let input = {
-    path: `/customOperation/${endpoint.name}`,
+  let input: ConduitRouteOptions = {
+    path: `/function/${endpoint.name}`,
     action: getOperation(endpoint.operation),
-    middlewares: endpoint.authentication ? ["authMiddleware"] : undefined,
+    middlewares: endpoint.authentication ? ['authMiddleware'] : undefined,
+    cacheControl: undefined,
   };
   let inputs = endpoint.inputs;
   let returns: any = { result: [endpoint.returns] };
+  if (input.action === ConduitRouteActions.GET) {
+    input.cacheControl = endpoint.authentication
+      ? 'private, max-age=10'
+      : 'public, max-age=10';
+  }
   if (endpoint.paginated) {
     inputs.push({
-      name: "skip",
+      name: 'skip',
       type: TYPE.Number,
       location: 1,
     });
     inputs.push({
-      name: "limit",
+      name: 'limit',
       type: TYPE.Number,
       location: 1,
     });
@@ -71,13 +99,17 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
   }
   if (endpoint.sorted) {
     inputs.push({
-      name: "sort",
+      name: 'sort',
       type: TYPE.String,
       location: 1,
     });
   }
   Object.assign(input, extractParams(endpoint.inputs));
   return constructRoute(
-    new ConduitRoute(input, new ConduitRouteReturnDefinition(input.action + endpoint.name, returns), "customOperation")
+    new ConduitRoute(
+      input,
+      new ConduitRouteReturnDefinition(input.action + endpoint.name, returns),
+      'customOperation'
+    )
   );
 }

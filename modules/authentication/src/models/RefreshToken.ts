@@ -1,34 +1,36 @@
-import {ConduitSchema, TYPE} from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
-export const RefreshTokenSchema = new ConduitSchema('RefreshToken',
+export const RefreshTokenSchema = new ConduitSchema(
+  'RefreshToken',
   {
     _id: TYPE.ObjectId,
     userId: {
       type: TYPE.Relation,
       model: 'User',
-      systemRequired: true
+      systemRequired: true,
     },
     clientId: {
       type: TYPE.String,
       required: true,
-      systemRequired: true
+      systemRequired: true,
     },
     token: {
       type: TYPE.String,
-      systemRequired: true
+      systemRequired: true,
     },
     expiresOn: {
       type: TYPE.Date,
-      systemRequired: true
+      systemRequired: true,
     },
     securityDetails: {
       macAddress: { type: TYPE.String, systemRequired: true },
-      userAgent: { type: TYPE.String, systemRequired: true }
+      userAgent: { type: TYPE.String, systemRequired: true },
     },
     createdAt: TYPE.Date,
-    updatedAt: TYPE.Date
+    updatedAt: TYPE.Date,
   },
   {
     timestamps: true,
-    systemRequired: true
-  });
+    systemRequired: true,
+  }
+);

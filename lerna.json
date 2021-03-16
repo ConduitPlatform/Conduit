@@ -1,10 +1,5 @@
 {
-  "packages": [
-    "packages/*",
-    "libraries/*",
-    "admin/*",
-    "modules/*"
-  ],
+  "packages": ["packages/*", "libraries/*", "admin/*", "modules/*", "providers/*"],
   "version": "independent",
   "npmClient": "yarn",
   "stream": true,

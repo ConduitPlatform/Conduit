@@ -1,29 +1,12 @@
-import * as grpc from "grpc";
-import path from "path";
+import path from 'path';
+import { ConduitModule } from '../../classes/ConduitModule';
 
-let protoLoader = require("@grpc/proto-loader");
-
-export default class SMS {
-  private readonly client: any;
-
+export default class SMS extends ConduitModule {
   constructor(url: string) {
-    let packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, "../../proto/sms.proto"),
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      }
-    );
-    let protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-    // @ts-ignore
-    const sms = protoDescriptor.sms.Sms;
-    this.client = new sms(url, grpc.credentials.createInsecure(), {
-      "grpc.max_receive_message_length": 1024 * 1024 * 100,
-      "grpc.max_send_message_length": 1024 * 1024 * 100
-    });
+    super(url);
+    this.protoPath = path.resolve(__dirname, '../../proto/sms.proto');
+    this.descriptorObj = 'sms.Sms';
+    this.initializeClient();
   }
 
   setConfig(newConfig: any) {
@@ -32,7 +15,7 @@ export default class SMS {
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
-            reject(err || "Something went wrong");
+            reject(err || 'Something went wrong');
           } else {
             resolve(JSON.parse(res.updatedConfig));
           }
@@ -41,35 +24,45 @@ export default class SMS {
     });
   }
 
-  sendVerificationCode(params: {to: string}) {
+  sendSms(to: string, message: string) {
     return new Promise((resolve, reject) => {
-      this.client.sendVerificationCode(
-        {to: params.to},
+      this.client.sendSms(
+        { to, message },
         (err: any, res: any) => {
           if (err || !res) {
-            reject(err || "Something went wrong");
+            reject(err || 'Something went wrong');
           } else {
-            resolve(res.verificationSid)
+            resolve(res.message);
           }
         }
-
-      )
+      );
     });
   }
 
-  verify(params: {verificationSid: string, code: string}) {
+  sendVerificationCode(to: string) {
+    return new Promise((resolve, reject) => {
+      this.client.sendVerificationCode({ to }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.verificationSid);
+        }
+      });
+    });
+  }
+
+  verify(verificationSid: string, code: string) {
     return new Promise((resolve, reject) => {
       this.client.verify(
-        {verificationSid: params.verificationSid, code: params.code},
+        { verificationSid, code },
         (err: any, res: any) => {
           if (err || !res) {
-            reject(err || "Something went wrong");
+            reject(err || 'Something went wrong');
           } else {
-            resolve(res.verified)
+            resolve(res.verified);
           }
         }
-
-      )
+      );
     });
   }
 }

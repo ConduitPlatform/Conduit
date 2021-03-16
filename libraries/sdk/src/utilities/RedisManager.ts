@@ -1,18 +1,16 @@
-import { ClientOpts, RedisClient } from "redis";
+import IORedis from 'ioredis';
 
-export class RedisManager{
-    
-    redisConnection: ClientOpts;
+export class RedisManager {
+  redisConnection: IORedis.RedisOptions;
 
-    constructor(redisIp: string, redisPort: any){
-        this.redisConnection = {
-            host: redisIp,
-            port: redisPort
-        }
-    }
+  constructor(redisIp: string, redisPort: any) {
+    this.redisConnection = {
+      host: redisIp,
+      port: redisPort,
+    };
+  }
 
-    getClient(connectionOps?: any): RedisClient{
-        return new RedisClient({...this.redisConnection, ...connectionOps})
-    }
-
+  getClient(connectionOps?: any): IORedis.Redis {
+    return new IORedis({ ...this.redisConnection, ...connectionOps });
+  }
 }

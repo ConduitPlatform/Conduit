@@ -1,6 +1,6 @@
-import ConduitGrpcSdk from "@quintessential-sft/conduit-grpc-sdk";
-import { isNil } from "lodash";
-import grpc from "grpc";
+import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import { isNil } from 'lodash';
+import grpc from 'grpc';
 
 export class CmsHandlers {
   private database: any;
@@ -10,24 +10,25 @@ export class CmsHandlers {
   }
 
   private async initDb(grpcSdk: ConduitGrpcSdk) {
-    await grpcSdk.waitForExistence("database-provider");
+    await grpcSdk.waitForExistence('database-provider');
     this.database = grpcSdk.databaseProvider;
   }
 
-  async getDocuments(call: any, callback: any) {
+  async getDocuments(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit, sort, populate } = JSON.parse(call.request.params);
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
@@ -44,9 +45,9 @@ export class CmsHandlers {
 
     if (!isNil(sort) && sort.length > 0) {
       sortObj = {};
-      sort.split(",").forEach((sortVal: string) => {
+      sort.split(',').forEach((sortVal: string) => {
         sortVal = sortVal.trim();
-        if (sortVal.indexOf("-") !== -1) {
+        if (sortVal.indexOf('-') !== -1) {
           sortObj[sortVal.substr(1)] = -1;
         } else {
           sortObj[sortVal] = 1;
@@ -54,12 +55,21 @@ export class CmsHandlers {
       });
     }
 
-    const documentsPromise = this.database.findMany(schemaName, {}, null, skipNumber, limitNumber, sortObj, populate);
+    const documentsPromise = this.database.findMany(
+      schemaName,
+      {},
+      null,
+      skipNumber,
+      limitNumber,
+      sortObj,
+      populate
+    );
     const countPromise = this.database.countDocuments(schemaName, {});
 
-    const [documents, documentsCount] = await Promise.all([documentsPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
+    const [documents, documentsCount] = await Promise.all([
+      documentsPromise,
+      countPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
         code: grpc.status.INTERNAL,
@@ -70,134 +80,144 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ documents, documentsCount }) });
   }
 
-  async getDocumentById(call: any, callback: any) {
+  async getDocumentById(call: RouterRequest, callback: RouterResponse) {
     const { id, populate } = JSON.parse(call.request.params);
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
     const document = await this.database
       .findOne(schemaName, { _id: id }, null, populate)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(document)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested document not found",
+        message: 'Requested document not found',
       });
     }
     return callback(null, { result: JSON.stringify(document) });
   }
 
-  async createDocument(call: any, callback: any) {
+  async createDocument(call: RouterRequest, callback: RouterResponse) {
     const inputDocument = JSON.parse(call.request.params);
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
     const newDocument = await this.database
       .create(schemaName, inputDocument)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(newDocument) });
   }
 
-  async createManyDocuments(call: any, callback: any) {
+  async createManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const inputDocuments = JSON.parse(call.request.params).docs;
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
     const newDocuments = await this.database
       .createMany(schemaName, inputDocuments)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ docs: newDocuments }) });
   }
 
-  async editDocument(call: any, callback: any) {
+  async editDocument(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
     const dbDocument = await this.database
       .findOne(schemaName, { _id: id })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     Object.assign(dbDocument, params);
 
     const updatedDocument = await this.database
       .findByIdAndUpdate(schemaName, dbDocument._id, dbDocument)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
 
-  async editManyDocuments(call: any, callback: any) {
+  async editManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
@@ -222,26 +242,30 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ docs: updatedDocuments }) });
   }
 
-  async deleteDocument(call: any, callback: any) {
+  async deleteDocument(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
-    const schemaName = call.request.path.split("/")[2];
+    const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
     const schema = await this.database
-      .findOne("SchemaDefinitions", { name: schemaName })
+      .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
         code: grpc.status.NOT_FOUND,
-        message: "Requested cms schema not found",
+        message: 'Requested cms schema not found',
       });
     }
 
-    await this.database.deleteOne(schemaName, { _id: id }).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    await this.database
+      .deleteOne(schemaName, { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, { result: "Ok" });
+    return callback(null, { result: 'Ok' });
   }
 }

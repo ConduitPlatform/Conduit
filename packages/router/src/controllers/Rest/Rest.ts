@@ -1,24 +1,36 @@
 // todo Create the controller that creates REST-specific endpoints
-import { Handler, IRouterMatcher, NextFunction, Request, Response, Router } from "express";
+import {
+  Application,
+  Handler,
+  IRouterMatcher,
+  NextFunction,
+  Request,
+  Response,
+  Router,
+} from 'express';
 import {
   ConduitError,
   ConduitMiddleware,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteParameters,
-} from "@quintessential-sft/conduit-sdk";
-import { SwaggerGenerator } from "./Swagger";
-import { extractRequestData } from "./util";
-const swaggerUi = require("swagger-ui-express");
+  ConduitSDK,
+} from '@quintessential-sft/conduit-sdk';
+import { SwaggerGenerator } from './Swagger';
+import { extractRequestData } from './util';
+import { createHashKey, extractCaching } from '../cache.utils';
+
+const swaggerUi = require('swagger-ui-express');
+const crypto = require('crypto');
 
 export class RestController {
   private _router!: Router;
-  private _middlewares?: { [field: string]: ConduitMiddleware[] };
+  private _middlewares?: { [field: string]: ConduitMiddleware };
   private _registeredRoutes: Map<string, ConduitRoute>;
   private _registeredLocalRoutes: Map<string, Handler>;
   private _swagger: SwaggerGenerator;
 
-  constructor() {
+  constructor(private readonly app: Application) {
     this._registeredRoutes = new Map();
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator();
@@ -43,7 +55,10 @@ export class RestController {
     this.refreshRouter();
   }
 
-  registerRoute(path: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
+  registerRoute(
+    path: string,
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+  ) {
     const key = `*-${path}`;
     const registered = this._registeredLocalRoutes.has(key);
     this._registeredLocalRoutes.set(key, router);
@@ -70,41 +85,48 @@ export class RestController {
     if (!this._middlewares) {
       this._middlewares = {};
     }
-    if (!this._middlewares[middleware.name]) {
-      this._middlewares[middleware.name] = [];
-    }
-    this._middlewares[middleware.name].push(middleware);
+    this._middlewares[middleware.name] = middleware;
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
     let primaryPromise = new Promise((resolve, reject) => {
       resolve({});
     });
+    const self = this;
     if (this._middlewares && middlewares) {
-      for (let k in this._middlewares) {
-        if (!this._middlewares.hasOwnProperty(k)) continue;
-        if (middlewares.indexOf(k) === 0) {
-          this._middlewares[k].forEach((m) => {
-            primaryPromise = primaryPromise.then((r) => {
-              return m.executeRequest
-                .bind(m)(params)
-                .then((p: any) => {
-                  if (p.result) {
-                    Object.assign(r, JSON.parse(p.result));
-                  }
-                  return p;
-                });
-            });
+      middlewares.forEach((m) => {
+        if (!this._middlewares?.hasOwnProperty(m))
+          primaryPromise = Promise.reject('Middleware does not exist');
+        primaryPromise = primaryPromise.then((r) => {
+          return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
+            params
+          ).then((p: any) => {
+            if (p.result) {
+              Object.assign(r, JSON.parse(p.result));
+            }
+            return r;
           });
-        }
-      }
+        });
+      });
     }
 
     return primaryPromise;
   }
 
-  private addRoute(path: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
+  private addRoute(
+    path: string,
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+  ) {
     this._router.use(path, router);
+  }
+  private findInCache(hashKey: string) {
+    return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
+  }
+
+  private storeInCache(hashKey: string, data: any, cacheAge: number) {
+    ((this.app as any).conduit as ConduitSDK)
+      .getState()
+      .setKey('hash-' + hashKey, JSON.stringify(data), cacheAge * 1000);
   }
 
   private addConduitRoute(route: ConduitRoute) {
@@ -135,49 +157,87 @@ export class RestController {
 
     routerMethod(route.input.path, (req, res, next) => {
       let context = extractRequestData(req);
+      let hashKey: string;
+      let { caching, cacheAge, scope } = extractCaching(route);
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
           Object.assign(context.context, r);
-          return route.executeRequest(context);
+          if (route.input.action !== ConduitRouteActions.GET) {
+            return route.executeRequest(context);
+          }
+          if (caching) {
+            hashKey = createHashKey(context.path, context.context, context.params);
+            return this.findInCache(hashKey)
+              .then((r) => {
+                if (r) {
+                  return { fromCache: true, data: JSON.parse(r) };
+                } else {
+                  return route.executeRequest(context);
+                }
+              })
+              .catch(() => {
+                return route.executeRequest(context);
+              });
+          } else {
+            return route.executeRequest(context);
+          }
         })
         .then((r: any) => {
           if (r.redirect) {
-            res.redirect(r.redirect);
+            return res.redirect(r.redirect);
           } else {
-            res.status(200).json(JSON.parse(r.result));
+            let result;
+            if (r.fromCache) {
+              return res.status(200).json(r.data);
+            } else {
+              result = r.result ? r.result : r;
+            }
+            if (r.result && !(typeof route.returnTypeFields === 'string')) {
+              result = JSON.parse(result);
+            } else {
+              result = { result: result };
+            }
+            if (route.input.action === ConduitRouteActions.GET && caching) {
+              this.storeInCache(hashKey, result, cacheAge!);
+              res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
+            } else {
+              res.setHeader('Cache-Control', 'no-store');
+            }
+
+            res.status(200).json(result);
           }
         })
         .catch((err: Error | ConduitError | any) => {
-          if (err.hasOwnProperty("status")) {
+          if (err.hasOwnProperty('status')) {
             console.log(err);
             res.status((err as ConduitError).status).json({
               name: err.name,
               status: (err as ConduitError).status,
               message: err.message,
             });
-          } else if (err.hasOwnProperty("code")) {
+          } else if (err.hasOwnProperty('code')) {
             let statusCode: number;
             let name: string;
             switch (err.code) {
               case 3:
-                name = "INVALID_ARGUMENTS";
+                name = 'INVALID_ARGUMENTS';
                 statusCode = 400;
                 break;
               case 5:
-                name = "NOT_FOUND";
+                name = 'NOT_FOUND';
                 statusCode = 404;
                 break;
               case 7:
-                name = "FORBIDDEN";
+                name = 'FORBIDDEN';
                 statusCode = 403;
                 break;
               case 16:
-                name = "UNAUTHORIZED";
+                name = 'UNAUTHORIZED';
                 statusCode = 401;
                 break;
               default:
-                name = "INTERNAL_SERVER_ERROR";
+                name = 'INTERNAL_SERVER_ERROR';
                 statusCode = 500;
             }
             res.status(statusCode).json({
@@ -188,9 +248,9 @@ export class RestController {
           } else {
             console.log(err);
             res.status(500).json({
-              name: "INTERNAL_SERVER_ERROR",
+              name: 'INTERNAL_SERVER_ERROR',
               status: 500,
-              message: "Something went wrong",
+              message: 'Something went wrong',
             });
           }
         });
@@ -202,7 +262,7 @@ export class RestController {
   private refreshRouter() {
     this.initializeRouter();
     this._registeredLocalRoutes.forEach((route, key) => {
-      const [method, path] = key.split("-");
+      const [method, path] = key.split('-');
       this.addRoute(path, route);
     });
     this._registeredRoutes.forEach((route, key) => {
@@ -213,9 +273,11 @@ export class RestController {
   private initializeRouter() {
     this._router = Router();
     const self = this;
-    this._router.use("/swagger", swaggerUi.serve);
-    this._router.get("/swagger", (req, res, next) => swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next));
-    this._router.get("/swagger.json", (req, res) => {
+    this._router.use('/swagger', swaggerUi.serve);
+    this._router.get('/swagger', (req, res, next) =>
+      swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next)
+    );
+    this._router.get('/swagger.json', (req, res) => {
       res.send(JSON.stringify(this._swagger.swaggerDoc));
     });
     this._router.use((req: Request, res: Response, next: NextFunction) => {

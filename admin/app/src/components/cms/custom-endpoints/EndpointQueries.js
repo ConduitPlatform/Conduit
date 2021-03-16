@@ -1,22 +1,17 @@
 import {
+  Checkbox,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
+  InputLabel,
   Select,
   TextField,
   Typography,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
 import React, { Fragment } from 'react';
 import ConditionsEnum from '../../../models/ConditionsEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
-
-const useStyles = makeStyles((theme) => ({
-  formControl: {
-    margin: theme.spacing(1),
-    minWidth: 120,
-  },
-}));
 
 const EndpointQueries = ({
   selectedQueries,
@@ -27,17 +22,17 @@ const EndpointQueries = ({
   handleQueryConditionChange,
   handleQueryComparisonFieldChange,
   handleCustomValueChange,
+  handleLikeValueChange,
   handleRemoveQuery,
 }) => {
-  const classes = useStyles();
-
   return selectedQueries.map((query, index) => (
     <Fragment key={`query-${index}`}>
       <Grid item xs={1}>
         <Typography>{index + 1}.</Typography>
       </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
+          <InputLabel>Field of schema</InputLabel>
           <Select
             fullWidth
             disabled={!editMode}
@@ -53,8 +48,9 @@ const EndpointQueries = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
+      <Grid item xs={2}>
+        <FormControl fullWidth>
+          <InputLabel>Operator</InputLabel>
           <Select
             disabled={!editMode}
             native
@@ -83,18 +79,23 @@ const EndpointQueries = ({
         </FormControl>
       </Grid>
       <Grid item xs={2}>
-        <FormControl className={classes.formControl}>
+        <FormControl fullWidth>
+          <InputLabel>Value</InputLabel>
           <Select
             fullWidth
             disabled={!editMode}
             native
             value={
-              query.comparisonField.type === 'Custom'
+              query.comparisonField.type === 'Custom' ||
+              query.comparisonField.type === 'Context'
                 ? query.comparisonField.type
                 : query.comparisonField.type + '-' + query.comparisonField.value
             }
             onChange={(event) => handleQueryComparisonFieldChange(event, index)}>
             <option aria-label="None" value="" />
+            <optgroup label="System Values">
+              <option value={'Context'}>Add value from context</option>
+            </optgroup>
             <optgroup label="Custom Value">
               <option value={'Custom'}>Add a custom value</option>
             </optgroup>
@@ -115,21 +116,43 @@ const EndpointQueries = ({
           </Select>
         </FormControl>
       </Grid>
-      {query.comparisonField.type === 'Custom' ? (
+      {query.comparisonField.type === 'Custom' ||
+      query.comparisonField.type === 'Context' ? (
         <Grid item xs={2}>
           <TextField
-            label={'Custom Value'}
-            variant={'outlined'}
+            label={
+              query.comparisonField.type === 'Custom'
+                ? 'Custom value'
+                : 'Select from context'
+            }
+            variant={'filled'}
             disabled={!editMode}
+            size={'small'}
             fullWidth
-            placeholder={'Value'}
+            placeholder={
+              query.comparisonField.type === 'Custom' ? 'ex. John Snow' : 'ex. user._id'
+            }
             value={query.comparisonField.value}
             onChange={(event) => handleCustomValueChange(event, index)}
           />
         </Grid>
       ) : (
-        <Grid item xs={1} />
+        <Grid item xs={2} />
       )}
+      <Grid item xs={2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              color={'primary'}
+              checked={query.comparisonField.like}
+              onChange={(event) => handleLikeValueChange(event, index)}
+              name="Like"
+              size={'small'}
+            />
+          }
+          label="Like"
+        />
+      </Grid>
       <Grid item xs={1}>
         <IconButton
           disabled={!editMode}

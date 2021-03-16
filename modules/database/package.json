@@ -1,0 +1,44 @@
+{
+  "name": "@conduit/database-provider",
+  "version": "1.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "prepublish": "npm run build",
+    "build": "rimraf dist && tsc",
+    "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-database:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-database:latest"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "bson": "^4.2.2",
+    "deepdash": "^5.0.3",
+    "deepdash-es": "^5.0.3",
+    "grpc": "^1.24.2",
+    "lodash": "^4.17.15",
+    "mongodb-extended-json": "^1.11.0",
+    "mongoose": "^5.11.18",
+    "mongoose-deep-populate": "^3.2.0"
+  },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.149",
+    "copyfiles": "^2.2.0",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5"
+  }
+}

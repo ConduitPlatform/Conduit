@@ -1,35 +1,32 @@
-import {
-  ConduitRoute,
-  ConduitRouteActions,
-} from "@quintessential-sft/conduit-sdk";
+import { ConduitRoute, ConduitRouteActions } from '@quintessential-sft/conduit-sdk';
 
 export class SwaggerGenerator {
   private _swaggerDoc: any;
 
   constructor() {
     this._swaggerDoc = {
-      openapi: "3.0.0",
+      openapi: '3.0.0',
       info: {
-        version: "1.0.0",
-        title: "Conduit",
+        version: '1.0.0',
+        title: 'Conduit',
       },
       paths: {},
       components: {
         securitySchemes: {
           clientid: {
-            type: "apiKey",
-            in: "header",
-            name: "clientid",
+            type: 'apiKey',
+            in: 'header',
+            name: 'clientid',
           },
           clientSecret: {
-            type: "apiKey",
-            in: "header",
-            name: "clientSecret",
+            type: 'apiKey',
+            in: 'header',
+            name: 'clientSecret',
           },
           tokenAuth: {
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "JWT",
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
           },
         },
       },
@@ -39,28 +36,34 @@ export class SwaggerGenerator {
   private _extractMethod(action: string) {
     switch (action) {
       case ConduitRouteActions.GET: {
-        return "get";
+        return 'get';
       }
       case ConduitRouteActions.POST: {
-        return "post";
+        return 'post';
       }
       case ConduitRouteActions.DELETE: {
-        return "delete";
+        return 'delete';
       }
       case ConduitRouteActions.UPDATE: {
-        return "put";
+        return 'put';
       }
       default: {
-        return "get";
+        return 'get';
       }
     }
   }
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
     let method = this._extractMethod(route.input.action);
-
+    let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
+    serviceName = serviceName.substr(0, serviceName.indexOf('/'));
+    if (serviceName.trim() === '') {
+      serviceName = 'core';
+    }
     let routeDoc: any = {
-      summary: route.input.description,
+      summary: route.input.name,
+      description: route.input.description,
+      tags: [serviceName],
       parameters: [],
       responses: {},
       security: [
@@ -75,7 +78,7 @@ export class SwaggerGenerator {
       for (const name in route.input.urlParams) {
         routeDoc.parameters.push({
           name,
-          in: "path",
+          in: 'path',
           required: true,
           type: route.input.urlParams[name],
         });
@@ -86,7 +89,7 @@ export class SwaggerGenerator {
       for (const name in route.input.queryParams) {
         routeDoc.parameters.push({
           name,
-          in: "query",
+          in: 'query',
           type: route.input.queryParams[name],
         });
       }
@@ -94,41 +97,41 @@ export class SwaggerGenerator {
 
     if (route.input.bodyParams !== undefined) {
       for (const name in route.input.bodyParams) {
-        let type = "";
-        if (typeof route.input.bodyParams[name] === "object") {
+        let type = '';
+        if (typeof route.input.bodyParams[name] === 'object') {
           // @ts-ignore
           if (
             route.input.bodyParams[name] &&
             // @ts-ignore
             route.input.bodyParams[name].type &&
             // @ts-ignore
-            typeof route.input.bodyParams[name].type !== "object"
+            typeof route.input.bodyParams[name].type !== 'object'
           ) {
             // @ts-ignore
             type = route.input.bodyParams[name].type.toLowerCase();
           } else {
-            type = "object";
+            type = 'object';
           }
 
-          if (!["string", "number", "array", "object"].includes(type)) {
-            type = "string";
+          if (!['string', 'number', 'array', 'object'].includes(type)) {
+            type = 'string';
           }
         } else {
           type = route.input.bodyParams[name].toString().toLowerCase();
         }
         routeDoc.parameters.push({
           name,
-          in: "body",
+          in: 'body',
           type,
         });
       }
     }
 
-    if (route.input.middlewares?.includes("authMiddleware")) {
+    if (route.input.middlewares?.includes('authMiddleware')) {
       routeDoc.security[0].tokenAuth = [];
     }
 
-    let path = route.input.path.replace(/(:)(\w+)/g, "{$2}");
+    let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
     } else {
@@ -139,6 +142,6 @@ export class SwaggerGenerator {
   }
 
   get swaggerDoc() {
-      return this._swaggerDoc;
+    return this._swaggerDoc;
   }
 }

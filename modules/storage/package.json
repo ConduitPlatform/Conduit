@@ -4,6 +4,9 @@
   "description": "This will provide a consistent storage mechanism",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "prepublish": "npm run build",
@@ -27,7 +30,6 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "@quintessential-sft/storage-provider": "^1.0.1",
     "convict": "^6.0.0",
     "grpc": "^1.24.2",

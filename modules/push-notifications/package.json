@@ -4,11 +4,16 @@
   "description": "Handles sending push notifications to users",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "start": "node dist/index.js",
-    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc"
+    "build": "rimraf dist && tsc",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "prepare": "npm run build",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-push-notifications:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-push-notifications:latest"
   },
   "author": "",
   "license": "ISC",
@@ -24,7 +29,6 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-utilities": "^1.0.1",
     "convict": "^6.0.0",
     "firebase-admin": "^8.10.0",
     "grpc": "^1.24.2",
