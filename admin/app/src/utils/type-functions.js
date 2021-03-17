@@ -216,6 +216,21 @@ const prepareTypes = (type, isArray, content, enumType, select, required, model)
   }
 };
 
+const prepareDefaultValue = (type, isArray, content) => {
+  switch (type) {
+    case 'Text':
+      return isArray ? [content] : content;
+    case 'Number':
+      return isArray ? [parseInt(content)] : parseInt(content);
+    case 'Date':
+      return isArray ? [content] : content;
+    case 'Boolean':
+      return isArray ? [content] : content;
+    default:
+      return content;
+  }
+};
+
 export const prepareFields = (typeFields) => {
   let deconstructed = {};
   if (!typeFields) {
@@ -286,9 +301,13 @@ export const prepareFields = (typeFields) => {
         };
       }
     }
-
-    if (clone.default !== undefined && clone.default !== null) {
-      fields.default = clone.default;
+    if (clone.default !== null && clone.default !== undefined && clone.default !== '') {
+      //fields.default=clone.default
+      fields.default = prepareDefaultValue(
+        clone.isEnum ? 'Enum' : clone.type,
+        clone.isArray,
+        clone.default
+      );
     }
 
     if (clone.isEnum) {
