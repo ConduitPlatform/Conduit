@@ -1,6 +1,6 @@
 import { ConduitModel } from '@quintessential-sft/conduit-grpc-sdk';
 import { MongooseAdapter } from './index';
-import { isArray, isObject } from 'lodash';
+import _, { isArray, isObject } from 'lodash';
 import { MongooseSchema } from './MongooseSchema';
 
 /**
@@ -81,6 +81,7 @@ export async function createWithPopulations(
   // TODO find a way to validate the whole object, now only the inner objects are validated.
   // The problem is that if we validate the object it will fail because the references will have an object
   // that must be created and be replaced with the _id (which isn't happening on the validation call)
-  await _createWithPopulations(fields, document, adapter, true);
+
+  await _createWithPopulations(fields, _.cloneDeep(document), adapter, true);
   await _createWithPopulations(fields, document, adapter);
 }
