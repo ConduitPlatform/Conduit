@@ -315,7 +315,7 @@ export const prepareFields = (typeFields) => {
     }
 
     if (clone.type === 'Relation' && !clone.isArray) {
-      fields.model = clone.model.toString();
+      if (clone.model) fields.model = clone.model.toString();
     }
 
     delete clone.name;
