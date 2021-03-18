@@ -1,10 +1,23 @@
 import { Request } from 'express';
+
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
   let params: any = {};
   let headers: any = req.headers;
   if (req.query) {
-    Object.assign(params, req.query);
+    let newObj = {};
+    Object.keys(req.query).forEach((k: string) => {
+      if (!req.query.hasOwnProperty(k)) return;
+      // @ts-ignore
+      if (!Array.isArray(req.query) && req.query[k].indexOf(',') !== -1) {
+        // @ts-ignore
+        newObj[k] = req.query[k].split(',');
+      } else {
+        // @ts-ignore
+        newObj[k] = req.query[k];
+      }
+    });
+    Object.assign(params, newObj);
   }
 
   if (req.body) {
