@@ -10,6 +10,7 @@ import {
   STOP_CMS_LOADING,
   UPDATE_SCHEMAS_STATUS,
   SET_CUSTOM_ENDPOINTS,
+  SET_MORE_DOCUMENTS_BY_NAME,
 } from './actionTypes';
 
 export const setCmsSchemas = (data) => ({
@@ -47,6 +48,11 @@ export const deletedSchemaById = (data) => ({
 
 export const setSchemaDocumentsByName = (data) => ({
   type: SET_CMS_SCHEMA_DOCUMENTS,
+  payload: data,
+});
+
+export const setMoreSchemaDocumentsByName = (data) => ({
+  type: SET_MORE_DOCUMENTS_BY_NAME,
   payload: data,
 });
 
