@@ -31,7 +31,7 @@ const cmsReducer = (state = initialState, action) => {
         ...state,
         data: {
           ...state.data,
-          schemas: action.payload.results,
+          schemas: [...state.data.schemas, ...action.payload.results],
           count: action.payload.documentsCount,
         },
       };

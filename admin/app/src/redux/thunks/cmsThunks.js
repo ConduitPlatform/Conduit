@@ -27,7 +27,24 @@ import {
 export const getCmsSchemas = () => {
   return (dispatch) => {
     dispatch(startCmsLoading());
-    getCmsSchemasRequest(0, 100)
+    getCmsSchemasRequest(0, 30)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsSchemas(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const getMoreCmsSchemas = () => {
+  return (dispatch, getState) => {
+    let SchemaLength = getState().cmsReducer.data.schemas.length;
+    dispatch(startCmsLoading());
+    getCmsSchemasRequest(SchemaLength, 20)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsSchemas(res.data));
