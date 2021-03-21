@@ -3,7 +3,7 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
 import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -26,6 +26,7 @@ import {
   createSchemaDocument,
   deleteSchemaDocument,
   editSchemaDocument,
+  getMoreSchemaDocuments,
 } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
@@ -227,6 +228,14 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
     );
   };
 
+  const onViewMorePress = () => {
+    const schemaName = schemas[selectedSchema].name;
+    const documentLength = documents.length;
+    // const documentsCount = schemaDocuments.documentsCount;
+    // console.log(documentLength, documentsCount);
+    dispatch(getMoreSchemaDocuments(schemaName, documentLength));
+  };
+
   return (
     <Container>
       <Box className={classes.root}>
@@ -281,6 +290,14 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
                 );
               })}
               <Box className={classes.addDocBox}>
+                <Button
+                  style={{ marginRight: 15 }}
+                  color="primary"
+                  variant={'outlined'}
+                  disabled={schemaDocuments.documentsCount === documents.length}
+                  onClick={onViewMorePress}>
+                  View More documents
+                </Button>
                 <Button
                   variant="contained"
                   color="primary"

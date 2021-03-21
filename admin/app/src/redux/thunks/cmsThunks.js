@@ -3,6 +3,7 @@ import {
   setCmsError,
   setCmsSchemas,
   setCustomEndpoints,
+  setMoreSchemaDocumentsByName,
   setSchemaDocumentsByName,
   startCmsLoading,
   stopCmsLoading,
@@ -27,7 +28,24 @@ import {
 export const getCmsSchemas = () => {
   return (dispatch) => {
     dispatch(startCmsLoading());
-    getCmsSchemasRequest(0, 100)
+    getCmsSchemasRequest(0, 30)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsSchemas(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const getMoreCmsSchemas = () => {
+  return (dispatch, getState) => {
+    let SchemaLength = getState().cmsReducer.data.schemas.length;
+    dispatch(startCmsLoading());
+    getCmsSchemasRequest(SchemaLength, 20)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsSchemas(res.data));
@@ -109,6 +127,22 @@ export const getSchemaDocuments = (name) => {
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setSchemaDocumentsByName(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const getMoreSchemaDocuments = (name, skip) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    getCmsDocumentsByNameRequest(name, skip, 20)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setMoreSchemaDocumentsByName(res.data));
         dispatch(setCmsError(null));
       })
       .catch((err) => {

@@ -9,6 +9,7 @@ import {
   STOP_CMS_LOADING,
   UPDATE_SCHEMAS_STATUS,
   SET_CUSTOM_ENDPOINTS,
+  SET_MORE_DOCUMENTS_BY_NAME,
 } from '../actions/actionTypes';
 
 const initialState = {
@@ -31,7 +32,7 @@ const cmsReducer = (state = initialState, action) => {
         ...state,
         data: {
           ...state.data,
-          schemas: action.payload.results,
+          schemas: [...state.data.schemas, ...action.payload.results],
           count: action.payload.documentsCount,
         },
       };
@@ -41,6 +42,17 @@ const cmsReducer = (state = initialState, action) => {
         data: {
           ...state.data,
           documents: action.payload,
+        },
+      };
+    case SET_MORE_DOCUMENTS_BY_NAME:
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          documents: {
+            ...state.data.documents,
+            documents: [...state.data.documents.documents, ...action.payload.documents],
+          },
         },
       };
     case START_CMS_LOADING:

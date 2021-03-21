@@ -130,8 +130,8 @@ export const deleteCmsSchemaRequest = (_id) =>
 export const toggleSchemaByIdRequest = (_id) =>
   axios.put(`${CONDUIT_API}/admin/cms/schemas/toggle/${_id}`);
 
-export const getCmsDocumentsByNameRequest = (name) =>
-  axios.get(`${CONDUIT_API}/admin/cms/content/${name}`);
+export const getCmsDocumentsByNameRequest = (name, skip = 0, limit = 10) =>
+  axios.get(`${CONDUIT_API}/admin/cms/content/${name}`, { params: { skip, limit } });
 //-----------------------//
 
 /** Cloud storage requests **/

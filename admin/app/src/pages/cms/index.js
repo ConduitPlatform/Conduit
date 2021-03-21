@@ -26,6 +26,7 @@ import {
   createCustomEndpoints,
   updateCustomEndpoints,
   getCustomEndpoints,
+  getMoreCmsSchemas,
 } from '../../redux/thunks/cmsThunks';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
 
@@ -36,6 +37,11 @@ const useStyles = makeStyles((theme) => ({
   snackBar: {
     maxWidth: '80%',
     width: 'auto',
+  },
+  moreButton: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: 15,
   },
 }));
 
@@ -69,7 +75,7 @@ const Types = () => {
 
   useEffect(() => {
     if (data.schemas.length > 0) {
-      const name = data.schemas[0].name;
+      const { name } = data.schemas.find((schema) => schema.enabled === true);
       dispatch(getSchemaDocuments(name));
     }
   }, [data.schemas, dispatch]);
@@ -219,6 +225,15 @@ const Types = () => {
               handleActions={handleActions}
             />
           )}
+          <Box className={classes.moreButton}>
+            <Button
+              color="primary"
+              variant={'outlined'}
+              disabled={data.schemas.length === data.count}
+              onClick={() => dispatch(getMoreCmsSchemas())}>
+              LOAD MORE SCHEMAS
+            </Button>
+          </Box>
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
           {data && data.schemas && data.schemas.length > 0 && (
