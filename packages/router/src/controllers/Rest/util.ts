@@ -31,7 +31,7 @@ export function extractRequestData(req: Request) {
   if (params.populate) {
     if (params.populate.includes(',')) {
       params.populate = params.populate.split(',');
-    } else {
+    } else if (!Array.isArray(params.populate)){
       params.populate = [params.populate];
     }
   }
