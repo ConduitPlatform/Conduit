@@ -51,7 +51,7 @@ export class AuthenticationRoutes {
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
-        verify: this.localHandlers.verify.bind(this.localHandlers),
+        verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
         verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
@@ -195,7 +195,7 @@ export class AuthenticationRoutes {
                 refreshToken: ConduitString.Optional,
                 message: ConduitString.Optional,
               }),
-              'verify'
+              'verifyTwoFa'
             )
           )
         );
