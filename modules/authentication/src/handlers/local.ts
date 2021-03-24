@@ -517,7 +517,7 @@ export class LocalHandlers {
       });
 
     const verified = await this.sms
-      .verify({ verificationSid: verificationRecord.verificationSid, code })
+      .verify(verificationRecord.verificationSid, code)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -668,7 +668,7 @@ export class LocalHandlers {
       });
 
     const verified = await this.sms
-      .verify({ verificationSid: verificationRecord.verificationSid, code })
+      .verify(verificationRecord.verificationSid, code)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
