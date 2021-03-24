@@ -771,7 +771,7 @@ export class LocalHandlers {
 
   private async sendVerificationCode(to: string) {
     const verificationSid = await this.sms
-      .sendVerificationCode({ to })
+      .sendVerificationCode(to)
       .catch(console.error);
     return verificationSid || '';
   }
