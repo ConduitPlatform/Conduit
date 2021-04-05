@@ -25,6 +25,41 @@ const EndpointQueries = ({
   handleLikeValueChange,
   handleRemoveQuery,
 }) => {
+  const prepareOptions = () => {
+    return availableFieldsOfSchema.map((field, index) => {
+      if (typeof field.type === 'string' || field.type instanceof String) {
+        return (
+          <option key={`idx-${index}-field`} value={field.name}>
+            {field.name}
+          </option>
+        );
+      }
+      if (field?.type) {
+        let keys = Object?.keys(field?.type);
+        return (
+          <>
+            <option style={{ fontWeight: 'bold' }}>{field.name}</option>
+            {keys?.map((item, i) => (
+              <option
+                disabled={Array.isArray(field.type)}
+                style={{ background: 'rgba(0, 0, 0, 0.05)' }}
+                key={`idx-${index}-${i}-field`}
+                value={`${field.name}.${item}`}>
+                {field.name}.{item}
+              </option>
+            ))}
+          </>
+          // <optgroup label={field.name}>
+          //   {keys?.map((item, i) => (
+          //     <option style={{background:'rgba(0, 0, 0, 0.05)'}} key={`idx-${index}-${i}-field`} value={`${field.name}.${item}`}>
+          //       {item}
+          //     </option>
+          //   ))}
+          // </optgroup>
+        );
+      }
+    });
+  };
   return selectedQueries.map((query, index) => (
     <Fragment key={`query-${index}`}>
       <Grid item xs={1}>
@@ -40,11 +75,7 @@ const EndpointQueries = ({
             value={query.schemaField}
             onChange={(event) => handleQueryFieldChange(event, index)}>
             <option aria-label="None" value="" />
-            {availableFieldsOfSchema.map((field, index) => (
-              <option key={`idx-${index}-field`} value={field.name}>
-                {field.name}
-              </option>
-            ))}
+            {prepareOptions()}
           </Select>
         </FormControl>
       </Grid>
