@@ -7,11 +7,23 @@ import {
   InputLabel,
   Select,
   TextField,
+  MenuItem,
   Typography,
 } from '@material-ui/core';
 import React, { Fragment, useState } from 'react';
 import ConditionsEnum from '../../../models/ConditionsEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
+import { makeStyles } from '@material-ui/core/styles';
+
+const useStyles = makeStyles((theme) => ({
+  menuItem: {
+    margin: theme.spacing(0),
+    padding: theme.spacing(0),
+    '&.MuiMenuItem-dense': {
+      paddingLeft: 12,
+    },
+  },
+}));
 
 const EndpointQueries = ({
   selectedQueries,
@@ -25,8 +37,10 @@ const EndpointQueries = ({
   handleLikeValueChange,
   handleRemoveQuery,
 }) => {
+  let classes = useStyles();
   console.log(availableFieldsOfSchema);
   const [selectedType, setSelectedType] = useState('');
+
   const prepareOptions = () => {
     return availableFieldsOfSchema.map((field, index) => {
       if (
@@ -35,57 +49,46 @@ const EndpointQueries = ({
         field.type === undefined
       ) {
         return (
-          <option
+          <MenuItem
+            className={classes.menuItem}
             key={`idxO-${index}-field`}
-            onClick={() => console.log('CLICKED', field.type)}
+            onClick={() => setSelectedType(field.type)}
             value={field.name}>
             {field.name}
-          </option>
+          </MenuItem>
         );
       }
+
       if (field?.type) {
         let keys = Object?.keys(field?.type);
-        return (
-          <>
-            <option style={{ fontWeight: 'bold' }} onClick={() => setSelectedType('')}>
-              {field.name}
-            </option>
-            {keys?.map((item, i) => (
-              <option
-                onClick={() => setSelectedType(field.type?.[item]?.type)}
-                disabled={Array.isArray(field.type)}
-                style={{ background: 'rgba(0, 0, 0, 0.05)' }}
-                key={`ido-${index}-${i}-field`}
-                value={`${field.name}.${item}`}>
-                {field.name}.{item}
-              </option>
-            ))}
-          </>
-          // <optgroup label={field.name}>
-          //   {keys?.map((item, i) => (
-          //     <option style={{background:'rgba(0, 0, 0, 0.05)'}} key={`idx-${index}-${i}-field`} value={`${field.name}.${item}`}>
-          //       {item}
-          //     </option>
-          //   ))}
-          // </optgroup>
+        let itemTop = (
+          <MenuItem
+            className={classes.menuItem}
+            style={{ fontWeight: 'bold', background: 'rgba(0, 0, 0, 0.10)' }}
+            value={field.name}
+            onClick={() => setSelectedType('')}>
+            {field.name}
+          </MenuItem>
         );
+        let restItems = keys?.map((item, i) => {
+          console.log(item);
+          return (
+            <MenuItem
+              dense
+              className={classes.menuItem}
+              onClick={() => setSelectedType(field.type?.[item]?.type)}
+              disabled={Array.isArray(field.type)}
+              style={{ background: 'rgba(0, 0, 0, 0.05)' }}
+              key={`ido-${index}-${i}-field`}
+              value={`${field.name}.${item}`}>
+              {/*{field.name}.*/}
+              {item}
+            </MenuItem>
+          );
+        });
+        return [itemTop, ...restItems];
       }
     });
-  };
-
-  const prepareType = (event) => {
-    const value = event.target.value;
-    let fields = value.split('.');
-
-    if (fields.length > 1) {
-      let field = availableFieldsOfSchema.find((item) => item.name === fields[0]);
-      let isArray = Array.isArray(field?.type?.[fields[1]]?.type);
-      setSelectedType(isArray ? 'Array' : field?.type?.[fields[1]]?.type);
-      return;
-    }
-    let field = availableFieldsOfSchema.find((item) => item.name === fields[0]);
-    let isArray = Array.isArray(field?.type);
-    setSelectedType(isArray ? 'Array' : field.type);
   };
 
   console.log(selectedType);
@@ -101,10 +104,9 @@ const EndpointQueries = ({
           <Select
             fullWidth
             disabled={!editMode}
-            native
             value={query.schemaField}
             onChange={(event) => {
-              prepareType(event);
+              // prepareType(event);
               handleQueryFieldChange(event, index);
             }}>
             <option aria-label="None" value="" />
