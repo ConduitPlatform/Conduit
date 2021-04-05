@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from '@material-ui/core';
-import React, { Fragment } from 'react';
+import React, { Fragment, useState } from 'react';
 import ConditionsEnum from '../../../models/ConditionsEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
@@ -25,11 +25,20 @@ const EndpointQueries = ({
   handleLikeValueChange,
   handleRemoveQuery,
 }) => {
+  console.log(availableFieldsOfSchema);
+  const [selectedType, setSelectedType] = useState('');
   const prepareOptions = () => {
     return availableFieldsOfSchema.map((field, index) => {
-      if (typeof field.type === 'string' || field.type instanceof String) {
+      if (
+        typeof field.type === 'string' ||
+        field.type instanceof String ||
+        field.type === undefined
+      ) {
         return (
-          <option key={`idx-${index}-field`} value={field.name}>
+          <option
+            key={`idxO-${index}-field`}
+            onClick={() => console.log('CLICKED', field.type)}
+            value={field.name}>
             {field.name}
           </option>
         );
@@ -38,12 +47,15 @@ const EndpointQueries = ({
         let keys = Object?.keys(field?.type);
         return (
           <>
-            <option style={{ fontWeight: 'bold' }}>{field.name}</option>
+            <option style={{ fontWeight: 'bold' }} onClick={() => setSelectedType('')}>
+              {field.name}
+            </option>
             {keys?.map((item, i) => (
               <option
+                onClick={() => setSelectedType(field.type?.[item]?.type)}
                 disabled={Array.isArray(field.type)}
                 style={{ background: 'rgba(0, 0, 0, 0.05)' }}
-                key={`idx-${index}-${i}-field`}
+                key={`ido-${index}-${i}-field`}
                 value={`${field.name}.${item}`}>
                 {field.name}.{item}
               </option>
@@ -60,6 +72,24 @@ const EndpointQueries = ({
       }
     });
   };
+
+  const prepareType = (event) => {
+    const value = event.target.value;
+    let fields = value.split('.');
+
+    if (fields.length > 1) {
+      let field = availableFieldsOfSchema.find((item) => item.name === fields[0]);
+      let isArray = Array.isArray(field?.type?.[fields[1]]?.type);
+      setSelectedType(isArray ? 'Array' : field?.type?.[fields[1]]?.type);
+      return;
+    }
+    let field = availableFieldsOfSchema.find((item) => item.name === fields[0]);
+    let isArray = Array.isArray(field?.type);
+    setSelectedType(isArray ? 'Array' : field.type);
+  };
+
+  console.log(selectedType);
+
   return selectedQueries.map((query, index) => (
     <Fragment key={`query-${index}`}>
       <Grid item xs={1}>
@@ -73,7 +103,10 @@ const EndpointQueries = ({
             disabled={!editMode}
             native
             value={query.schemaField}
-            onChange={(event) => handleQueryFieldChange(event, index)}>
+            onChange={(event) => {
+              prepareType(event);
+              handleQueryFieldChange(event, index);
+            }}>
             <option aria-label="None" value="" />
             {prepareOptions()}
           </Select>
@@ -91,12 +124,20 @@ const EndpointQueries = ({
             <option aria-label="None" value="" />
             <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
             <option value={ConditionsEnum.NEQUAL}>(!=) not equal to</option>
-            <option value={ConditionsEnum.GREATER}>{'(>) greater than'}</option>
-            <option value={ConditionsEnum.GREATER_EQ}>
+            <option disabled={selectedType === 'String'} value={ConditionsEnum.GREATER}>
+              {'(>) greater than'}
+            </option>
+            <option
+              disabled={selectedType === 'String'}
+              value={ConditionsEnum.GREATER_EQ}>
               {'(>=) greater that or equal to'}
             </option>
-            <option value={ConditionsEnum.LESS}>{'(<) less than'}</option>
-            <option value={ConditionsEnum.LESS_EQ}>{'(<=) less that or equal to'}</option>
+            <option disabled={selectedType === 'String'} value={ConditionsEnum.LESS}>
+              {'(<) less than'}
+            </option>
+            <option disabled={selectedType === 'String'} value={ConditionsEnum.LESS_EQ}>
+              {'(<=) less that or equal to'}
+            </option>
             <option value={ConditionsEnum.EQUAL_SET}>
               (in) equal to any of the following
             </option>
@@ -132,14 +173,14 @@ const EndpointQueries = ({
             </optgroup>
             <optgroup label="Schema Fields">
               {availableFieldsOfSchema.map((field, index) => (
-                <option key={`idx-${index}-field`} value={'Schema-' + field.name}>
+                <option key={`idxS-${index}-field`} value={'Schema-' + field.name}>
                   {field.name}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Input Fields">
               {selectedInputs.map((input, index) => (
-                <option key={`idx-${index}-input`} value={'Input-' + input.name}>
+                <option key={`idxF-${index}-input`} value={'Input-' + input.name}>
                   {input.name}
                 </option>
               ))}
