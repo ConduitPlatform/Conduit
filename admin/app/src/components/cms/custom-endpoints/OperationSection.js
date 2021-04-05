@@ -76,9 +76,7 @@ const OperationSection = ({
             }}>
             <option aria-label="None" value="" />
             {availableSchemas.map((schema, index) => (
-              <option
-                key={`schema-${schema._id ? schema._id : index}`}
-                value={schema._id}>
+              <option key={`schema-${index}`} value={schema._id}>
                 {schema.name}
               </option>
             ))}

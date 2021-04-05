@@ -17,10 +17,19 @@ import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
   menuItem: {
+    minHeight: 0,
     margin: theme.spacing(0),
     padding: theme.spacing(0),
     '&.MuiMenuItem-dense': {
       paddingLeft: 12,
+    },
+    '&.Mui-selected': {
+      backgroundColor: '#3399ff !important',
+      color: 'white',
+      '&:hover': {
+        backgroundColor: '#3399ff !important',
+        color: 'white',
+      },
     },
   },
 }));
@@ -38,7 +47,7 @@ const EndpointQueries = ({
   handleRemoveQuery,
 }) => {
   let classes = useStyles();
-  console.log(availableFieldsOfSchema);
+
   const [selectedType, setSelectedType] = useState('');
 
   const prepareOptions = () => {
@@ -46,52 +55,119 @@ const EndpointQueries = ({
       if (
         typeof field.type === 'string' ||
         field.type instanceof String ||
-        field.type === undefined
+        field.type === undefined ||
+        Array.isArray(field.type)
       ) {
         return (
           <MenuItem
             className={classes.menuItem}
             key={`idxO-${index}-field`}
-            onClick={() => setSelectedType(field.type)}
+            onClick={() => changeSelectedType(field.type)}
             value={field.name}>
             {field.name}
           </MenuItem>
         );
       }
+      let allItems = getSubFields(field);
+      return allItems;
+    });
+  };
 
-      if (field?.type) {
-        let keys = Object?.keys(field?.type);
-        let itemTop = (
+  const changeSelectedType = (type) => {
+    return Array.isArray(type) ? setSelectedType('Array') : setSelectedType(type);
+  };
+
+  const getSecondSubField = (field, valuePrefix, suffix) => {
+    let keys = Object?.keys(field?.type);
+    let itemTop = (
+      <MenuItem
+        className={classes.menuItem}
+        dense
+        style={{
+          fontWeight: 'bold',
+          paddingLeft: 8,
+          background: 'rgba(0, 0, 0, 0.05)',
+        }}
+        value={`${valuePrefix}.${suffix}`}
+        onClick={() =>
+          Array.isArray(field.type) ? setSelectedType('Array') : setSelectedType('')
+        }>
+        {suffix}
+      </MenuItem>
+    );
+    let restItems = keys?.map((item, i) => {
+      if (
+        typeof field.type?.[item]?.type === 'string' ||
+        field.type?.[item]?.type instanceof String ||
+        field.type?.[item]?.type === undefined ||
+        Array.isArray(field.type?.[item]?.type)
+      ) {
+        return (
           <MenuItem
+            dense
             className={classes.menuItem}
-            style={{ fontWeight: 'bold', background: 'rgba(0, 0, 0, 0.10)' }}
-            value={field.name}
-            onClick={() => setSelectedType('')}>
-            {field.name}
+            onClick={() => changeSelectedType(field.type?.[item]?.type)}
+            disabled={Array.isArray(field.type)}
+            style={{
+              background: 'rgba(0, 0, 0, 0.15)',
+              paddingLeft: 24,
+            }}
+            key={`ido-${i}-field`}
+            value={`${valuePrefix}.${suffix}.${item}`}>
+            {/*{field.name}.*/}
+            {item}
           </MenuItem>
         );
-        let restItems = keys?.map((item, i) => {
-          console.log(item);
+      }
+    });
+    return [itemTop, ...restItems];
+  };
+
+  const getSubFields = (field) => {
+    if (field?.type) {
+      let keys = Object?.keys(field?.type);
+
+      let itemTop = (
+        <MenuItem
+          className={classes.menuItem}
+          style={{
+            fontWeight: 'bold',
+          }}
+          value={field.name}
+          onClick={() =>
+            Array.isArray(field.type) ? setSelectedType('Array') : setSelectedType('')
+          }>
+          {field.name}
+        </MenuItem>
+      );
+      let restItems = keys?.map((item, i) => {
+        if (
+          typeof field.type?.[item]?.type === 'string' ||
+          field.type?.[item]?.type instanceof String ||
+          field.type?.[item]?.type === undefined ||
+          Array.isArray(field.type?.[item]?.type)
+        ) {
           return (
             <MenuItem
               dense
               className={classes.menuItem}
-              onClick={() => setSelectedType(field.type?.[item]?.type)}
+              onClick={() => changeSelectedType(field.type?.[item]?.type)}
               disabled={Array.isArray(field.type)}
-              style={{ background: 'rgba(0, 0, 0, 0.05)' }}
-              key={`ido-${index}-${i}-field`}
+              style={{
+                background: 'rgba(0, 0, 0, 0.05)',
+              }}
+              key={`idSec-${i}-field`}
               value={`${field.name}.${item}`}>
-              {/*{field.name}.*/}
               {item}
             </MenuItem>
           );
-        });
-        return [itemTop, ...restItems];
-      }
-    });
+        } else {
+          return getSecondSubField(field.type?.[item], field.name, item);
+        }
+      });
+      return [itemTop, ...restItems];
+    }
   };
-
-  console.log(selectedType);
 
   return selectedQueries.map((query, index) => (
     <Fragment key={`query-${index}`}>
@@ -108,6 +184,17 @@ const EndpointQueries = ({
             onChange={(event) => {
               // prepareType(event);
               handleQueryFieldChange(event, index);
+            }}
+            MenuProps={{
+              anchorOrigin: {
+                vertical: 'bottom',
+                horizontal: 'left',
+              },
+              transformOrigin: {
+                vertical: 'top',
+                horizontal: 'left',
+              },
+              getContentAnchorEl: null,
             }}>
             <option aria-label="None" value="" />
             {prepareOptions()}
@@ -126,27 +213,55 @@ const EndpointQueries = ({
             <option aria-label="None" value="" />
             <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
             <option value={ConditionsEnum.NEQUAL}>(!=) not equal to</option>
-            <option disabled={selectedType === 'String'} value={ConditionsEnum.GREATER}>
+            <option
+              disabled={
+                selectedType === 'String' ||
+                selectedType === 'Array' ||
+                selectedType === 'boolean'
+              }
+              value={ConditionsEnum.GREATER}>
               {'(>) greater than'}
             </option>
             <option
-              disabled={selectedType === 'String'}
+              disabled={
+                selectedType === 'String' ||
+                selectedType === 'Array' ||
+                selectedType === 'boolean'
+              }
               value={ConditionsEnum.GREATER_EQ}>
               {'(>=) greater that or equal to'}
             </option>
-            <option disabled={selectedType === 'String'} value={ConditionsEnum.LESS}>
+            <option
+              disabled={
+                selectedType === 'String' ||
+                selectedType === 'Array' ||
+                selectedType === 'boolean'
+              }
+              value={ConditionsEnum.LESS}>
               {'(<) less than'}
             </option>
-            <option disabled={selectedType === 'String'} value={ConditionsEnum.LESS_EQ}>
+            <option
+              disabled={
+                selectedType === 'String' ||
+                selectedType === 'Array' ||
+                selectedType === 'boolean'
+              }
+              value={ConditionsEnum.LESS_EQ}>
               {'(<=) less that or equal to'}
             </option>
-            <option value={ConditionsEnum.EQUAL_SET}>
+            <option
+              disabled={selectedType !== 'Array' || selectedType === 'boolean'}
+              value={ConditionsEnum.EQUAL_SET}>
               (in) equal to any of the following
             </option>
-            <option value={ConditionsEnum.NEQUAL_SET}>
+            <option
+              disabled={selectedType !== 'Array' || selectedType === 'boolean'}
+              value={ConditionsEnum.NEQUAL_SET}>
               (not-in) not equal to any of the following
             </option>
-            <option value={ConditionsEnum.CONTAIN}>
+            <option
+              disabled={selectedType !== 'Array' || selectedType === 'boolean'}
+              value={ConditionsEnum.CONTAIN}>
               (array-contains) an array containing
             </option>
           </Select>
