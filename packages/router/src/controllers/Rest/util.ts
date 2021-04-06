@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { ConduitError } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitError, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 import { isArray, isObject, isNil } from 'lodash';
 
 export function extractRequestData(req: Request) {
@@ -100,10 +100,10 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
   }
 
   switch (paramType) {
-    case 'String':
+    case TYPE.String:
       if (typeof value !== 'string') throw ConduitError.userInput(`${fieldName} must be a string`);
       break;
-    case 'Number':
+    case TYPE.Number:
       if (typeof value === 'string') {
         value = Number(value);
         if (Number.isNaN(value)) {
@@ -113,12 +113,12 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
         throw ConduitError.userInput(`${fieldName} must be a number`);
       }
       break;
-    case 'Boolean':
+    case TYPE.Boolean:
       if (typeof value !== 'boolean') throw ConduitError.userInput(`${fieldName} must be a boolean`);
       break;
-    case 'Date':
+    case TYPE.Date:
       break;
-    case 'ObjectId':
+    case TYPE.ObjectId:
       if (typeof value !== 'string') throw ConduitError.userInput(`${fieldName} must be a string`);
       break;
   }
