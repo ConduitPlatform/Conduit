@@ -163,6 +163,9 @@ export class RestController {
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
           validateParams(context.params, { ...route.input.bodyParams, ...route.input.queryParams, ...route.input.urlParams });
+          return r;
+        })
+        .then((r) => {
           Object.assign(context.context, r);
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
