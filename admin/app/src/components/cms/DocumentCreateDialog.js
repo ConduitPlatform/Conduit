@@ -37,8 +37,9 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
     (documentsData) => {
       if (!editData) return;
       const keys = Object.keys(editData);
-      keys.forEach((k) => {
-        const found = documentsData.find((d) => d.name === k);
+      // eslint-disable-next-line no-unused-expressions
+      keys?.forEach((k) => {
+        const found = documentsData?.find((d) => d.name === k);
         if (found) {
           found.value = editData[k];
         }

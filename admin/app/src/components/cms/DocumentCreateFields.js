@@ -150,7 +150,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
   };
 
   const renderInputFields = (doc, index, innerIndex) => {
-    if (doc.type.toString().toLowerCase() === 'boolean') {
+    if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
         <Switch
           color={'primary'}
@@ -161,7 +161,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         />
       );
     }
-    if (doc.type.toString().toLowerCase() === 'string') {
+    if (doc?.type?.toString().toLowerCase() === 'string') {
       return (
         <TextField
           type={'text'}
@@ -174,21 +174,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         />
       );
     }
-    if (doc.type.toString().toLowerCase() === 'relation') {
-      return (
-        <TextField
-          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
-          type={'text'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc.type.toString().toLowerCase() === 'objectid') {
+    if (doc?.type?.toString().toLowerCase() === 'relation') {
       return (
         <TextField
           placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
@@ -202,7 +188,21 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         />
       );
     }
-    if (doc.type.toString().toLowerCase() === 'date') {
+    if (doc?.type?.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(index, innerIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'date') {
       return (
         <CustomDatepicker
           value={doc.value}
@@ -212,7 +212,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         />
       );
     }
-    if (doc.type.toString().toLowerCase() === 'number') {
+    if (doc?.type?.toString().toLowerCase() === 'number') {
       return (
         <TextField
           type={'number'}
@@ -228,7 +228,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         </TextField>
       );
     }
-    if (doc.type.toString().toLowerCase() === 'objectid') {
+    if (doc?.type?.toString().toLowerCase() === 'objectid') {
       return (
         <TextField
           type={'text'}

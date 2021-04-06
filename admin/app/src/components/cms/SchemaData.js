@@ -167,6 +167,7 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
   };
 
   const addNewDocument = () => {
+    setSelectedDocument(null);
     handleCreateDialog(true);
   };
 
