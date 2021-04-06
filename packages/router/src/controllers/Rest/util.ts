@@ -117,6 +117,17 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
       if (typeof value !== 'boolean') throw ConduitError.userInput(`${fieldName} must be a boolean`);
       break;
     case TYPE.Date:
+      if (typeof value !== 'string' && typeof value !== 'number') {
+        throw ConduitError.userInput(`${fieldName} must be a string representation of a date, or a number timestamp`);
+      }
+
+      value = new Date(value);
+      if (!(value instanceof Date)) {
+        throw ConduitError.userInput(`${fieldName} has an invalid date format`);
+      }
+      if (!isValidDate(value)) {
+        throw ConduitError.userInput(`${fieldName} has an invalid date format`);
+      }
       break;
     case TYPE.ObjectId:
       if (typeof value !== 'string') throw ConduitError.userInput(`${fieldName} must be a string`);
@@ -124,4 +135,8 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
   }
 
   return value;
+}
+
+function isValidDate(date: Date): boolean {
+  return !isNaN(date.getHours());
 }
