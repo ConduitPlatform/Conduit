@@ -114,7 +114,18 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
       }
       break;
     case TYPE.Boolean:
-      if (typeof value !== 'boolean') throw ConduitError.userInput(`${fieldName} must be a boolean`);
+      if (typeof value === 'string') {
+        value = value.toLowerCase();
+        if (value === 'true') {
+          value = true;
+        } else if (value === 'false') {
+          value = false;
+        } else {
+          throw ConduitError.userInput(`${fieldName} must be a boolean`);
+        }
+      } else if (typeof value !== 'boolean') {
+        throw ConduitError.userInput(`${fieldName} must be a boolean`);
+      }
       break;
     case TYPE.Date:
       if (typeof value !== 'string' && typeof value !== 'number') {
