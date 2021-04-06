@@ -16,7 +16,9 @@ import {
 const initialState = {
   data: {
     schemas: [],
-    documents: [],
+    documents: {
+      documents: [],
+    },
     customEndpoints: [],
     count: 0,
     config: null,

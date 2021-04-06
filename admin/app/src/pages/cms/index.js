@@ -242,7 +242,6 @@ const Types = () => {
           {data && data.schemas && data.schemas.length > 0 && (
             <SchemaData
               schemas={getActiveSchemas()}
-              schemaDocuments={data.documents}
               handleSchemaChange={handleSelectSchema}
             />
           )}
