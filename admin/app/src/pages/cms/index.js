@@ -74,9 +74,12 @@ const Types = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (data.schemas.length > 0) {
-      const { name } = data.schemas.find((schema) => schema.enabled === true);
-      dispatch(getSchemaDocuments(name));
+    if (data.schemas?.length > 0) {
+      const schemaFound = data.schemas.find((schema) => schema.enabled === true);
+      if (schemaFound) {
+        const { name } = schemaFound;
+        dispatch(getSchemaDocuments(name));
+      }
     }
   }, [data.schemas, dispatch]);
 

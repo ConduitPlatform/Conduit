@@ -3,6 +3,7 @@ import {
   setCmsError,
   setCmsSchemas,
   setCustomEndpoints,
+  setMoreCmsSchemas,
   setMoreSchemaDocumentsByName,
   setSchemaDocumentsByName,
   startCmsLoading,
@@ -48,7 +49,7 @@ export const getMoreCmsSchemas = () => {
     getCmsSchemasRequest(SchemaLength, 20)
       .then((res) => {
         dispatch(stopCmsLoading());
-        dispatch(setCmsSchemas(res.data));
+        dispatch(setMoreCmsSchemas(res.data));
         dispatch(setCmsError(null));
       })
       .catch((err) => {

@@ -11,10 +11,16 @@ import {
   UPDATE_SCHEMAS_STATUS,
   SET_CUSTOM_ENDPOINTS,
   SET_MORE_DOCUMENTS_BY_NAME,
+  SET_CMS_MORE_SCHEMAS,
 } from './actionTypes';
 
 export const setCmsSchemas = (data) => ({
   type: SET_CMS_SCHEMAS,
+  payload: data,
+});
+
+export const setMoreCmsSchemas = (data) => ({
+  type: SET_CMS_MORE_SCHEMAS,
   payload: data,
 });
 

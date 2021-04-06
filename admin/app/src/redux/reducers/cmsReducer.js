@@ -10,6 +10,7 @@ import {
   UPDATE_SCHEMAS_STATUS,
   SET_CUSTOM_ENDPOINTS,
   SET_MORE_DOCUMENTS_BY_NAME,
+  SET_CMS_MORE_SCHEMAS,
 } from '../actions/actionTypes';
 
 const initialState = {
@@ -28,6 +29,15 @@ const initialState = {
 const cmsReducer = (state = initialState, action) => {
   switch (action.type) {
     case SET_CMS_SCHEMAS:
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          schemas: [...action.payload.results],
+          count: action.payload.documentsCount,
+        },
+      };
+    case SET_CMS_MORE_SCHEMAS:
       return {
         ...state,
         data: {
