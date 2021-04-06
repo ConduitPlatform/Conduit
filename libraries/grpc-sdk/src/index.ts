@@ -13,6 +13,7 @@ import Payments from './modules/payments';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
 import { StateManager } from './utilities/StateManager';
+import Chat from './modules/chat';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -29,6 +30,7 @@ export default class ConduitGrpcSdk {
     cms: CMS,
     sms: SMS,
     payments: Payments,
+    chat: Chat,
   };
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
@@ -234,7 +236,17 @@ export default class ConduitGrpcSdk {
       return null;
     }
   }
+
+  get chat(): Chat | null {
+    if (this._modules['chat']) {
+      return this._modules['chat'];
+    } else {
+      console.warn('Chat module not up yet!');
+      return null;
+    }
+  }
 }
+
 export * from './interfaces';
 export * from './classes';
 export * from './modules';
