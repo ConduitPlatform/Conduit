@@ -100,7 +100,7 @@ const CustomQueries = ({
       if (fields) {
         const fieldsWithTypes = findFieldsWithTypes(fields);
         setAvailableFieldsOfSchema(fieldsWithTypes);
-        setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
+        //setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
       }
 
       if (selectedEndpoint.queries) {
