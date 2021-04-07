@@ -19,7 +19,7 @@ import {
 import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../redux/thunks/appAuthThunks';
 
 const drawerWidth = 200;
@@ -92,6 +92,7 @@ const useStyles = makeStyles((theme) => ({
 function CustomDrawer(props) {
   const classes = useStyles();
   const dispatch = useDispatch();
+  const enabledModules = useSelector((state) => state.appAuthReducer.enabledModules);
 
   const { open, itemSelected, ...rest } = props;
 
@@ -156,9 +157,12 @@ function CustomDrawer(props) {
               />
             </ListItem>
           </Link>
-          <Link href="/authentication">
+          <Link href="/authentication" prefetch={false}>
             <ListItem
               button
+              disabled={
+                !enabledModules?.find((module) => module === 'authentication:5000')
+              }
               key={'Authentication'}
               className={classes.listItem}
               style={itemStyle}
@@ -174,6 +178,7 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/notification">
             <ListItem
+              disabled={!enabledModules?.find((module) => module === 'notification:5000')}
               button
               key={'Notification'}
               className={classes.listItem}
@@ -190,6 +195,9 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/emails">
             <ListItem
+              disabled={
+                !enabledModules?.find((module) => module === 'email-provider:5000')
+              }
               button
               key={'Emails'}
               className={classes.listItem}
@@ -207,6 +215,7 @@ function CustomDrawer(props) {
           <Link href="/cms">
             <ListItem
               button
+              disabled={!enabledModules?.find((module) => module === 'cms:5000')}
               key={'CMS'}
               className={classes.listItem}
               style={itemStyle}
@@ -221,6 +230,7 @@ function CustomDrawer(props) {
             <ListItem
               button
               key={'Storage'}
+              disabled={!enabledModules?.find((module) => module === 'storage:5000')}
               className={classes.listItem}
               style={itemStyle}
               selected={itemSelected === 5}>
@@ -235,6 +245,7 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/settings">
             <ListItem
+              disabled={!enabledModules?.find((module) => module === 'settings:5000')}
               button
               key={'Settings'}
               className={classes.listItem}

@@ -1,5 +1,6 @@
 import {
   CLEAR_AUTHENTICATION_TOKEN,
+  SET_ADMIN_MODULES,
   SET_AUTHENTICATION_TOKEN,
   SET_AUTHENTICATION_TOKEN_ERROR,
   START_AUTHENTICATION_LOADING,
@@ -28,4 +29,9 @@ export const setAuthenticationError = (error) => ({
 
 export const clearAuthenticationToken = () => ({
   type: CLEAR_AUTHENTICATION_TOKEN,
+});
+
+export const setAdminModules = (data) => ({
+  type: SET_ADMIN_MODULES,
+  payload: data,
 });

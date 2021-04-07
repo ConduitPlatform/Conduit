@@ -2,6 +2,7 @@ import { removeCookie, setCookie } from '../../utils/cookie';
 
 import {
   CLEAR_AUTHENTICATION_TOKEN,
+  SET_ADMIN_MODULES,
   SET_AUTHENTICATION_TOKEN,
   SET_AUTHENTICATION_TOKEN_ERROR,
   START_AUTHENTICATION_LOADING,
@@ -12,6 +13,7 @@ const initialState = {
   token: null,
   loading: false,
   error: null,
+  enabledModules: [],
 };
 
 const appAuthReducer = (state = initialState, action) => {
@@ -42,6 +44,13 @@ const appAuthReducer = (state = initialState, action) => {
       return {
         ...state,
         token: null,
+        enabledModules: [],
+      };
+    case SET_ADMIN_MODULES:
+      return {
+        ...state,
+        enabledModules: action.payload,
+        loading: false,
       };
     default:
       return state;

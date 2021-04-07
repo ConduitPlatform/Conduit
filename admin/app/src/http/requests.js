@@ -187,3 +187,7 @@ export const deleteClientRequest = (_id) => {
 export const putCoreRequest = (data) => {
   return axios.put(`${CONDUIT_API}/config/core`, data);
 };
+
+export const getAdminModulesRequest = () => {
+  return axios.get(`${CONDUIT_API}/admin/modules`);
+};
