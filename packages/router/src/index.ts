@@ -31,6 +31,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._globalMiddlewares = [];
     this._internalRouter = new ConduitRoutingController(this._app);
     this.initGraphQL();
+    this.initSockets();
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
@@ -198,6 +199,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   initGraphQL() {
     this._internalRouter.initGraphQL();
+  }
+
+  initSockets() {
+    this._internalRouter.initSockets();
   }
 
   registerGlobalMiddleware(name: string, middleware: any) {
