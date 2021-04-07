@@ -124,7 +124,9 @@ const DocumentCreateFields = ({ document, setDocument }) => {
                   <Typography variant={'caption'}>:</Typography>
                 </Grid>
                 <Grid item xs={3}>
-                  <Typography variant={'body1'}>{`${innerDoc.type}`}</Typography>
+                  <Typography variant={'body1'}>
+                    {innerDoc.type ? innerDoc.type : 'Object'}
+                  </Typography>
                 </Grid>
                 <Grid item xs={1}>
                   <Typography variant={'caption'}>=</Typography>
