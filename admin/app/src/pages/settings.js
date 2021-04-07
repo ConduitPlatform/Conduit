@@ -30,6 +30,7 @@ import {
   getAvailableClients,
 } from '../redux/thunks/settingsThunks';
 import ClientPlatformEnum from '../models/ClientPlatformEnum';
+import CoreSettingsTab from '../components/settings/CoreSettingsTab';
 
 const useStyles = makeStyles({
   table: {
@@ -37,7 +38,7 @@ const useStyles = makeStyles({
   },
 });
 
-const tabs = [{ title: 'Client SDKs' }, { title: 'Secrets' }];
+const tabs = [{ title: 'Client SDKs' }, { title: 'Secrets' }, { title: 'Core' }];
 
 const Settings = () => {
   const classes = useStyles();
@@ -158,6 +159,9 @@ const Settings = () => {
               </Grid>
             </Grid>
           </Container>
+        </Box>
+        <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
+          <CoreSettingsTab />
         </Box>
       </Box>
     </Layout>

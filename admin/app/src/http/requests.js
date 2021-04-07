@@ -183,3 +183,7 @@ export const generateNewClientRequest = (platform) => {
 export const deleteClientRequest = (_id) => {
   return axios.delete(`${CONDUIT_API}/admin/security/client/${_id}`);
 };
+
+export const putCoreRequest = (data) => {
+  return axios.put(`${CONDUIT_API}/config/core`, data);
+};
