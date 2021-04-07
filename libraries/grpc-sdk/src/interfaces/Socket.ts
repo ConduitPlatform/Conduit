@@ -1,10 +1,12 @@
-import { ConduitModel } from './Model';
+import { TYPE } from './Model';
+
+export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
 
 export interface ConduitSocketOptions {
   path: string;
   name?: string;
   description?: string;
-  params?: ConduitModel;
+  params?: ConduitSocketParamTypes;
   // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
 

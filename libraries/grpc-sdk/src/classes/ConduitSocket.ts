@@ -1,6 +1,6 @@
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { ConduitModel } from '../interfaces';
-import { ConduitSocketEventHandlers, ConduitSocketOptions } from '../interfaces/Socket';
+import { ConduitSocketEventHandlers, ConduitSocketOptions } from '../interfaces';
 
 export class ConduitSocket {
   private readonly _input: ConduitSocketOptions;
