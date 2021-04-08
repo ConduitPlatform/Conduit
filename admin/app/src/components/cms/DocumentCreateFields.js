@@ -7,6 +7,10 @@ import React from 'react';
 import CustomDatepicker from '../common/CustomDatepicker';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 
 const useStyles = makeStyles((theme) => ({
   headerContainer: {
@@ -15,6 +19,16 @@ const useStyles = makeStyles((theme) => ({
   },
   'MuiInputBase-root': {
     background: 'red',
+  },
+  accordion: {
+    width: `100%`,
+    background: 'rgba(0, 83, 156, .01)',
+  },
+  accordionSummary: {
+    '&.Mui-expanded': {},
+  },
+  button: {
+    padding: 0,
   },
   divider: {
     width: '100%',
@@ -32,7 +46,6 @@ const useStyles = makeStyles((theme) => ({
 
 const DocumentCreateFields = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
-
   const getCorrectType = (type, event) => {
     let lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
@@ -116,35 +129,54 @@ const DocumentCreateFields = ({ disabled, document, setDocument }) => {
     secondIndex = null,
     thirdIndex = null
   ) => {
-    return docs?.value?.map((doc, arrayIndex) => {
-      let data = { value: doc, type: docs.type[0] };
-
-      return (
-        <Grid
-          key={arrayIndex}
-          container
-          spacing={2}
-          alignItems={'center'}
-          justify={'flex-start'}
-          className={classes.GridContainer}>
-          <Grid item xs={3}>
-            <Typography variant={'body1'}>{arrayIndex}</Typography>
-          </Grid>
-          <Grid item xs={1}>
-            <Typography variant={'body1'}>:</Typography>
-          </Grid>
-          <Grid item xs={3}>
-            <Typography variant={'caption'}>{docs.type[0]}</Typography>
-          </Grid>
-          <Grid item xs={1}>
-            <Typography variant={'caption'}>=</Typography>
-          </Grid>
-          <Grid item container justify={'center'} xs={4}>
-            {renderInputFields(data, firstIndex, secondIndex, thirdIndex, arrayIndex)}
-          </Grid>
-        </Grid>
-      );
-    });
+    return (
+      <Accordion className={classes.accordion}>
+        <AccordionSummary
+          className={classes.accordionSummary}
+          expandIcon={<ExpandMoreIcon />}>
+          <Button disableRipple fullWidth className={classes.button}>
+            all Elements
+          </Button>
+        </AccordionSummary>
+        <AccordionDetails
+          style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {docs?.value?.map((doc, arrayIndex) => {
+            let data = { value: doc, type: docs.type[0] };
+            return (
+              <Grid
+                key={arrayIndex}
+                container
+                spacing={2}
+                alignItems={'center'}
+                justify={'flex-start'}
+                className={classes.GridContainer}>
+                <Grid item xs={3}>
+                  <Typography variant={'body1'}>{arrayIndex}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'body1'}>:</Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant={'caption'}>{docs.type[0]}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'caption'}>=</Typography>
+                </Grid>
+                <Grid item container justify={'center'} xs={4}>
+                  {renderInputFields(
+                    data,
+                    firstIndex,
+                    secondIndex,
+                    thirdIndex,
+                    arrayIndex
+                  )}
+                </Grid>
+              </Grid>
+            );
+          })}
+        </AccordionDetails>
+      </Accordion>
+    );
   };
 
   const getCorrectInitialType = (type) => {
