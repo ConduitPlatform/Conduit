@@ -32,36 +32,36 @@ const useStyles = makeStyles((theme) => ({
 const DocumentCreateFields = ({ document, setDocument }) => {
   const classes = useStyles();
 
-  const handleValueChange = (index, indexInner, event) => {
-    // const newValue = event.target ? event.target.value : event;
-    const activeIndex = indexInner !== null ? indexInner : index;
-    let currentDocuments;
-    let type;
-    if (indexInner === null) {
-      currentDocuments = document.slice();
-      type = currentDocuments[index].type.toString().toLowerCase();
-    } else {
-      currentDocuments = document[index];
-      currentDocuments = currentDocuments.fields.slice();
-      type = currentDocuments[indexInner].type.toString().toLowerCase();
+  const handleValueChange = (
+    firstIndex = null,
+    secondIndex = null,
+    thirdIndex = null,
+    event
+  ) => {
+    const newValue = event?.target?.value;
+    const documentCopy = document.slice();
+    if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
+      documentCopy[firstIndex].value = newValue;
+      setDocument(documentCopy);
     }
-    if (type === 'boolean') {
-      currentDocuments[activeIndex].value = Boolean(event.target.checked);
-    } else if (type === 'number') {
-      currentDocuments[activeIndex].value = Number(event.target.value);
-    } else if (type === 'date') {
-      currentDocuments[activeIndex].value = event.toISOString();
-    } else {
-      currentDocuments[activeIndex].value = event.target ? event.target.value : event;
+    if (firstIndex !== null && secondIndex !== null && thirdIndex === null) {
+      documentCopy[firstIndex].fields[secondIndex].value = newValue;
+      setDocument(documentCopy);
     }
-    if (indexInner !== null) {
-      const docs = document.slice();
-      docs[index].fields = currentDocuments;
-      setDocument(docs);
-    } else {
-      // currentDocuments[activeIndex].value = newValue;
-      setDocument(currentDocuments);
+    if (firstIndex !== null && secondIndex !== null && thirdIndex !== null) {
+      documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value = newValue;
+      setDocument(documentCopy);
     }
+  };
+
+  const findType = (type) => {
+    if (!type) {
+      return 'Object';
+    }
+    if (Array.isArray(type)) {
+      return `[${type}]`;
+    }
+    return type;
   };
 
   const renderNormalField = (doc, index) => {
@@ -80,7 +80,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           <Typography variant={'body1'}>:</Typography>
         </Grid>
         <Grid item xs={3}>
-          <Typography variant={'caption'}>{doc.type ? doc.type : 'Object'}</Typography>
+          <Typography variant={'caption'}>{findType(doc.type)}</Typography>
         </Grid>
         <Grid item xs={1}>
           <Typography variant={'caption'}>=</Typography>
@@ -92,7 +92,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     );
   };
 
-  const renderObjectField = (doc, index) => {
+  const renderObjectField = (doc, index = null, innerIndexParam = null) => {
     return (
       <Grid
         key={'key-' + doc.name}
@@ -108,7 +108,10 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           <Divider />
         </Grid>
         <Grid item xs={12}>
-          {doc.fields.map((innerDoc, indexInner) => {
+          {doc?.fields?.map((innerDoc, indexInner) => {
+            if (!innerDoc.type) {
+              return renderObjectField(innerDoc, index, indexInner, innerIndexParam);
+            }
             return (
               <Grid
                 key={'key-' + innerDoc.name}
@@ -124,15 +127,15 @@ const DocumentCreateFields = ({ document, setDocument }) => {
                   <Typography variant={'caption'}>:</Typography>
                 </Grid>
                 <Grid item xs={3}>
-                  <Typography variant={'body1'}>
-                    {innerDoc.type ? innerDoc.type : 'Object'}
-                  </Typography>
+                  <Typography variant={'body1'}>{findType(innerDoc.type)}</Typography>
                 </Grid>
                 <Grid item xs={1}>
                   <Typography variant={'caption'}>=</Typography>
                 </Grid>
                 <Grid item container justify={'center'} xs={4}>
-                  {renderInputFields(innerDoc, index, indexInner)}
+                  {innerIndexParam
+                    ? renderInputFields(innerDoc, index, innerIndexParam, indexInner)
+                    : renderInputFields(innerDoc, index, indexInner, innerIndexParam)}
                 </Grid>
                 <Grid item xs={11}>
                   <Divider className={classes.Divider} />
@@ -151,14 +154,14 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     });
   };
 
-  const renderInputFields = (doc, index, innerIndex) => {
+  const renderInputFields = (doc, firstIndex, secondIndex, thirdIndex) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
         <Switch
           color={'primary'}
           checked={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );
@@ -171,7 +174,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );
@@ -185,7 +188,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );
@@ -199,7 +202,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );
@@ -209,7 +212,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         <CustomDatepicker
           value={doc.value}
           setValue={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );
@@ -222,7 +225,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}>
           <option aria-label="None" value="">
             None
@@ -238,7 +241,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(index, innerIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
           }}
         />
       );

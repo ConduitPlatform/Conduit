@@ -53,11 +53,20 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
     let documentFields = [];
     documentKeys.forEach((k) => {
       if (typeof fields[k] !== 'string') {
-        if (fields[k].type && typeof fields[k].type !== 'string') {
-          const innerFields = fields[k].type;
-          documentFields.push({ name: k, fields: deconstructFields(innerFields) });
-        } else {
+        if (
+          fields[k].type &&
+          Array.isArray(fields[k].type) &&
+          fields[k].type &&
+          typeof fields[k].type[0] === 'string'
+        ) {
           documentFields.push({ name: k, ...fields[k], value: fields[k].default });
+        } else {
+          if (fields[k].type && typeof fields[k].type !== 'string') {
+            const innerFields = fields[k].type;
+            documentFields.push({ name: k, fields: deconstructFields(innerFields) });
+          } else {
+            documentFields.push({ name: k, ...fields[k], value: fields[k].default });
+          }
         }
       }
     });
