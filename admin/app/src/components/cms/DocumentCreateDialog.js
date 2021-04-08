@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
 const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
   const [document, setDocument] = useState([]);
-
+  const [isDisabled, setIsDisabled] = useState(true);
   const populateEditData = useCallback(
     (documentsData) => {
       if (!editData) return;
@@ -122,7 +122,11 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
             <Divider className={classes.divider} />
           </Grid>
         </Grid>
-        <DocumentCreateFields document={document} setDocument={setDocument} />
+        <DocumentCreateFields
+          disabled={isDisabled && editData}
+          document={document}
+          setDocument={setDocument}
+        />
       </Box>
 
       <Divider className={classes.divider} />
@@ -135,15 +139,26 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
         alignItems={'center'}>
         <Grid container>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button
-              variant={'outlined'}
-              style={{ marginRight: 16 }}
-              onClick={handleCancelClick}>
-              Cancel
-            </Button>
-            <Button variant={'outlined'} onClick={handleSaveClick}>
-              Save
-            </Button>
+            {isDisabled && editData ? (
+              <Button
+                variant={'outlined'}
+                onClick={() => setIsDisabled(false)}
+                color={'primary'}>
+                Edit Document
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant={'outlined'}
+                  style={{ marginRight: 16 }}
+                  onClick={handleCancelClick}>
+                  Cancel
+                </Button>
+                <Button variant={'contained'} color={'primary'} onClick={handleSaveClick}>
+                  Save
+                </Button>
+              </>
+            )}
           </Grid>
         </Grid>
       </Box>

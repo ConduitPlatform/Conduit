@@ -30,7 +30,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const DocumentCreateFields = ({ document, setDocument }) => {
+const DocumentCreateFields = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
 
   const handleValueChange = (
@@ -175,6 +175,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
             renderInputFields(doc, index, null)
           ) : (
             <Button
+              disabled={disabled}
               variant={'contained'}
               onClick={() => addElementOnArray(index)}
               color={'primary'}>
@@ -239,6 +240,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
                     )
                   ) : (
                     <Button
+                      disabled={disabled}
                       variant={'contained'}
                       onClick={() =>
                         innerIndexParam
@@ -275,6 +277,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
         <Switch
+          disabled={disabled}
           color={'primary'}
           checked={doc.value}
           onChange={(e) => {
@@ -286,6 +289,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'string') {
       return (
         <TextField
+          disabled={disabled}
           type={'text'}
           variant={'outlined'}
           size={'small'}
@@ -299,6 +303,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'relation') {
       return (
         <TextField
+          disabled={disabled}
           placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
           type={'text'}
           variant={'outlined'}
@@ -313,6 +318,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'objectid') {
       return (
         <TextField
+          disabled={disabled}
           placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
           type={'text'}
           variant={'outlined'}
@@ -327,6 +333,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'date') {
       return (
         <CustomDatepicker
+          disabled={disabled}
           value={doc.value}
           setValue={(e) => {
             handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
@@ -337,6 +344,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'number') {
       return (
         <TextField
+          disabled={disabled}
           type={'number'}
           variant={'outlined'}
           size={'small'}
@@ -353,6 +361,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     if (doc?.type?.toString().toLowerCase() === 'objectid') {
       return (
         <TextField
+          disabled={disabled}
           type={'text'}
           variant={'outlined'}
           size={'small'}
