@@ -6,6 +6,7 @@ import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import CustomDatepicker from '../common/CustomDatepicker';
 import { makeStyles } from '@material-ui/core/styles';
+import Button from '@material-ui/core/Button';
 
 const useStyles = makeStyles((theme) => ({
   headerContainer: {
@@ -36,21 +37,40 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     firstIndex = null,
     secondIndex = null,
     thirdIndex = null,
+    arrayIndex = null,
     event
   ) => {
-    const newValue = event?.target?.value;
+    let newValue = event?.target?.value;
     const documentCopy = document.slice();
     if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
-      documentCopy[firstIndex].value = newValue;
-      setDocument(documentCopy);
+      if (arrayIndex !== null) {
+        documentCopy[firstIndex].value[arrayIndex] = newValue;
+        setDocument(documentCopy);
+      } else {
+        documentCopy[firstIndex].value = newValue;
+        setDocument(documentCopy);
+      }
     }
     if (firstIndex !== null && secondIndex !== null && thirdIndex === null) {
-      documentCopy[firstIndex].fields[secondIndex].value = newValue;
-      setDocument(documentCopy);
+      if (arrayIndex !== null) {
+        documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = newValue;
+        setDocument(documentCopy);
+      } else {
+        documentCopy[firstIndex].fields[secondIndex].value = newValue;
+        setDocument(documentCopy);
+      }
     }
     if (firstIndex !== null && secondIndex !== null && thirdIndex !== null) {
-      documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value = newValue;
-      setDocument(documentCopy);
+      if (arrayIndex !== null) {
+        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value[
+          arrayIndex
+        ] = newValue;
+
+        setDocument(documentCopy);
+      } else {
+        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value = newValue;
+        setDocument(documentCopy);
+      }
     }
   };
 
@@ -64,7 +84,72 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     return type;
   };
 
+  const renderArrayContent = (
+    docs,
+    firstIndex = null,
+    secondIndex = null,
+    thirdIndex = null
+  ) => {
+    return docs?.value?.map((doc, arrayIndex) => {
+      let data = { value: doc, type: docs.type[0] };
+
+      return (
+        <Grid
+          key={arrayIndex}
+          container
+          spacing={2}
+          alignItems={'center'}
+          justify={'flex-start'}
+          className={classes.GridContainer}>
+          <Grid item xs={3}>
+            <Typography variant={'body1'}>{arrayIndex}</Typography>
+          </Grid>
+          <Grid item xs={1}>
+            <Typography variant={'body1'}>:</Typography>
+          </Grid>
+          <Grid item xs={3}>
+            <Typography variant={'caption'}>{docs.type[0]}</Typography>
+          </Grid>
+          <Grid item xs={1}>
+            <Typography variant={'caption'}>=</Typography>
+          </Grid>
+          <Grid item container justify={'center'} xs={4}>
+            {renderInputFields(data, firstIndex, secondIndex, thirdIndex, arrayIndex)}
+          </Grid>
+        </Grid>
+      );
+    });
+  };
+
+  const addElementOnArray = (index = null, secondIndex = null, thirdIndex = null) => {
+    const documentCopy = document.slice();
+    const newItem = 0;
+    let iterableArray;
+    if (index !== null && secondIndex === null && thirdIndex === null) {
+      iterableArray = documentCopy[index].value;
+      iterableArray = iterableArray ? [...iterableArray] : [];
+      documentCopy[index].value = [...iterableArray, newItem];
+    }
+    if (index !== null && secondIndex !== null && thirdIndex === null) {
+      iterableArray = documentCopy[index].fields[secondIndex].value;
+      iterableArray = iterableArray ? [...iterableArray] : [];
+      documentCopy[index].fields[secondIndex].value = [...iterableArray, newItem];
+    }
+
+    if (index !== null && secondIndex !== null && thirdIndex !== null) {
+      iterableArray = documentCopy[index].fields[secondIndex].fields[thirdIndex].value;
+      iterableArray = iterableArray ? [...iterableArray] : [];
+      documentCopy[index].fields[secondIndex].fields[thirdIndex].value = [
+        ...iterableArray,
+        newItem,
+      ];
+    }
+
+    setDocument(documentCopy);
+  };
+
   const renderNormalField = (doc, index) => {
+    const isArray = Array.isArray(doc.type) && typeof doc.type[0] === 'string';
     return (
       <Grid
         key={'key-' + doc.name}
@@ -86,12 +171,21 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           <Typography variant={'caption'}>=</Typography>
         </Grid>
         <Grid item container justify={'center'} xs={4}>
-          {renderInputFields(doc, index, null)}
+          {!isArray ? (
+            renderInputFields(doc, index, null)
+          ) : (
+            <Button
+              variant={'contained'}
+              onClick={() => addElementOnArray(index)}
+              color={'primary'}>
+              Add element
+            </Button>
+          )}
         </Grid>
+        {isArray && renderArrayContent(doc, index)}
       </Grid>
     );
   };
-
   const renderObjectField = (doc, index = null, innerIndexParam = null) => {
     return (
       <Grid
@@ -112,6 +206,10 @@ const DocumentCreateFields = ({ document, setDocument }) => {
             if (!innerDoc.type) {
               return renderObjectField(innerDoc, index, indexInner, innerIndexParam);
             }
+
+            const isArray =
+              Array.isArray(innerDoc.type) && typeof innerDoc.type[0] === 'string';
+
             return (
               <Grid
                 key={'key-' + innerDoc.name}
@@ -133,11 +231,30 @@ const DocumentCreateFields = ({ document, setDocument }) => {
                   <Typography variant={'caption'}>=</Typography>
                 </Grid>
                 <Grid item container justify={'center'} xs={4}>
-                  {innerIndexParam
-                    ? renderInputFields(innerDoc, index, innerIndexParam, indexInner)
-                    : renderInputFields(innerDoc, index, indexInner, innerIndexParam)}
+                  {!isArray ? (
+                    innerIndexParam ? (
+                      renderInputFields(innerDoc, index, innerIndexParam, indexInner)
+                    ) : (
+                      renderInputFields(innerDoc, index, indexInner, innerIndexParam)
+                    )
+                  ) : (
+                    <Button
+                      variant={'contained'}
+                      onClick={() =>
+                        innerIndexParam
+                          ? addElementOnArray(index, innerIndexParam, indexInner)
+                          : addElementOnArray(index, indexInner, innerIndexParam)
+                      }
+                      color={'primary'}>
+                      Add element
+                    </Button>
+                  )}
                 </Grid>
                 <Grid item xs={11}>
+                  {isArray &&
+                    (innerIndexParam
+                      ? renderArrayContent(innerDoc, index, innerIndexParam, indexInner)
+                      : renderArrayContent(innerDoc, index, indexInner, innerIndexParam))}
                   <Divider className={classes.Divider} />
                 </Grid>
               </Grid>
@@ -154,14 +271,14 @@ const DocumentCreateFields = ({ document, setDocument }) => {
     });
   };
 
-  const renderInputFields = (doc, firstIndex, secondIndex, thirdIndex) => {
+  const renderInputFields = (doc, firstIndex, secondIndex, thirdIndex, arrayIndex) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
         <Switch
           color={'primary'}
           checked={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
@@ -174,7 +291,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
@@ -188,7 +305,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
@@ -202,7 +319,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
@@ -212,7 +329,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
         <CustomDatepicker
           value={doc.value}
           setValue={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
@@ -225,7 +342,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}>
           <option aria-label="None" value="">
             None
@@ -241,7 +358,7 @@ const DocumentCreateFields = ({ document, setDocument }) => {
           size={'small'}
           value={doc.value}
           onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, e);
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
           }}
         />
       );
