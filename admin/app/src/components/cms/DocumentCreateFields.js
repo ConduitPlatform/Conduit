@@ -33,6 +33,20 @@ const useStyles = makeStyles((theme) => ({
 const DocumentCreateFields = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
 
+  const getCorrectType = (type, event) => {
+    let lowerCaseType = type.toString().toLowerCase();
+    if (lowerCaseType === 'boolean') {
+      return Boolean(event.target.checked);
+    }
+    if (lowerCaseType === 'number') {
+      return Number(event.target.value);
+    }
+    if (lowerCaseType === 'date') {
+      return event.toISOString();
+    }
+    return event.target ? event.target.value : event;
+  };
+
   const handleValueChange = (
     firstIndex = null,
     secondIndex = null,
@@ -40,35 +54,47 @@ const DocumentCreateFields = ({ disabled, document, setDocument }) => {
     arrayIndex = null,
     event
   ) => {
-    let newValue = event?.target?.value;
     const documentCopy = document.slice();
     if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
       if (arrayIndex !== null) {
-        documentCopy[firstIndex].value[arrayIndex] = newValue;
+        let type = documentCopy[firstIndex].type[0];
+        documentCopy[firstIndex].value[arrayIndex] = getCorrectType(type, event);
         setDocument(documentCopy);
       } else {
-        documentCopy[firstIndex].value = newValue;
+        let type = documentCopy[firstIndex].type;
+        documentCopy[firstIndex].value = getCorrectType(type, event);
         setDocument(documentCopy);
       }
     }
     if (firstIndex !== null && secondIndex !== null && thirdIndex === null) {
       if (arrayIndex !== null) {
-        documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = newValue;
+        let type = documentCopy[firstIndex].fields[secondIndex].type[0];
+        documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = getCorrectType(
+          type,
+          event
+        );
         setDocument(documentCopy);
       } else {
-        documentCopy[firstIndex].fields[secondIndex].value = newValue;
+        let type = documentCopy[firstIndex].fields[secondIndex].type;
+        documentCopy[firstIndex].fields[secondIndex].value = getCorrectType(type, event);
         setDocument(documentCopy);
       }
     }
     if (firstIndex !== null && secondIndex !== null && thirdIndex !== null) {
       if (arrayIndex !== null) {
+        let type =
+          documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type[0];
+
         documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value[
           arrayIndex
-        ] = newValue;
+        ] = getCorrectType(type, event);
 
         setDocument(documentCopy);
       } else {
-        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value = newValue;
+        let type = documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type;
+        documentCopy[firstIndex].fields[secondIndex].fields[
+          thirdIndex
+        ].value = getCorrectType(type, event);
         setDocument(documentCopy);
       }
     }
@@ -121,22 +147,43 @@ const DocumentCreateFields = ({ disabled, document, setDocument }) => {
     });
   };
 
+  const getCorrectInitialType = (type) => {
+    let lowerCaseType = type.toString().toLowerCase();
+    if (lowerCaseType === 'boolean') {
+      return false;
+    }
+    if (lowerCaseType === 'number') {
+      return 0;
+    }
+    if (lowerCaseType === 'date') {
+      return new Date().toISOString();
+    }
+    return '';
+  };
+
   const addElementOnArray = (index = null, secondIndex = null, thirdIndex = null) => {
     const documentCopy = document.slice();
-    const newItem = 0;
+    let newItem;
     let iterableArray;
     if (index !== null && secondIndex === null && thirdIndex === null) {
+      newItem = getCorrectInitialType(documentCopy[index].type[0]);
       iterableArray = documentCopy[index].value;
       iterableArray = iterableArray ? [...iterableArray] : [];
       documentCopy[index].value = [...iterableArray, newItem];
     }
     if (index !== null && secondIndex !== null && thirdIndex === null) {
+      newItem = getCorrectInitialType(documentCopy[index].fields[secondIndex].type[0]);
+
       iterableArray = documentCopy[index].fields[secondIndex].value;
       iterableArray = iterableArray ? [...iterableArray] : [];
       documentCopy[index].fields[secondIndex].value = [...iterableArray, newItem];
     }
 
     if (index !== null && secondIndex !== null && thirdIndex !== null) {
+      newItem = getCorrectInitialType(
+        documentCopy[index].fields[secondIndex].fields[thirdIndex].type[0]
+      );
+
       iterableArray = documentCopy[index].fields[secondIndex].fields[thirdIndex].value;
       iterableArray = iterableArray ? [...iterableArray] : [];
       documentCopy[index].fields[secondIndex].fields[thirdIndex].value = [
