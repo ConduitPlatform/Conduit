@@ -1,36 +1,27 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { ConduitModel } from '../interfaces';
-import { ConduitSocketEventHandlers, ConduitSocketOptions } from '../interfaces';
+import { ConduitModel, ConduitSocketEvent, ConduitSocketOptions } from '../interfaces';
 
 export class ConduitSocket {
   private readonly _input: ConduitSocketOptions;
-  private readonly _returnType: ConduitRouteReturnDefinition;
-  private readonly _eventHandlers: ConduitSocketEventHandlers;
+  readonly events: Map<string, ConduitSocketEvent>;
 
   constructor(
     input: ConduitSocketOptions,
-    type: ConduitRouteReturnDefinition,
-    eventHandlers: ConduitSocketEventHandlers
+    events: Map<string, ConduitSocketEvent>
   ) {
     this._input = input;
-    this._returnType = type;
-    this._eventHandlers = eventHandlers;
+    this.events = events;
   }
 
   get input(): ConduitSocketOptions {
     return this._input;
   }
 
-  get returnTypeName(): string {
-    return this._returnType.name;
+  returnTypeName(event: string): string {
+    return this.events.get(event)?.returnType.name || '';
   }
 
-  get returnTypeFields(): ConduitModel | string {
-    return this._returnType.fields;
-  }
-
-  get eventHandlers(): ConduitSocketEventHandlers {
-    return this._eventHandlers;
+  returnTypeFields(event: string): ConduitModel | string {
+    return this.events.get(event)?.returnType.fields || '';
   }
 
 }
