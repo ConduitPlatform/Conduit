@@ -11,22 +11,21 @@ import { Clear, Send, Sms } from '@material-ui/icons';
 import Button from '@material-ui/core/Button';
 
 const useStyles = makeStyles((theme) => ({
-  backdrop: {
-    zIndex: theme.zIndex.drawer + 1,
-  },
-  snackBar: {
-    maxWidth: '80%',
-    width: 'auto',
+  paper: {
+    padding: theme.spacing(1, 1),
+    color: theme.palette.text.secondary,
   },
 }));
 
 const SendSms = () => {
+  const classes = useStyles();
+
   const [number, setNumber] = useState('');
   const [content, setContent] = useState('');
 
   return (
     <Container>
-      <Paper style={{ marginTop: 32 }}>
+      <Paper className={classes.paper} style={{ marginTop: 32 }}>
         <Grid container style={{ padding: `16px 32px` }}>
           <Grid item container alignItems={'center'} xs={12}>
             <Typography style={{ marginRight: 8 }} variant={'h6'}>
@@ -64,12 +63,16 @@ const SendSms = () => {
               color="primary"
               startIcon={<Clear />}
               style={{ marginRight: 16 }}
-              onClick={() => {}}>
+              onClick={() => {
+                setNumber('');
+                setContent('');
+              }}>
               Clear
             </Button>
             <Button
               variant="contained"
               color="primary"
+              disabled={!number || !content}
               startIcon={<Send />}
               onClick={() => {}}>
               Send

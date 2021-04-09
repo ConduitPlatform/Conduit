@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { makeStyles } from '@material-ui/core/styles';
 
@@ -7,55 +7,187 @@ import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { Clear, Send, Sms } from '@material-ui/icons';
+import { Clear, Send } from '@material-ui/icons';
 import Button from '@material-ui/core/Button';
+import Divider from '@material-ui/core/Divider';
+import MenuItem from '@material-ui/core/MenuItem';
+import Switch from '@material-ui/core/Switch';
 
 const useStyles = makeStyles((theme) => ({
-  backdrop: {
-    zIndex: theme.zIndex.drawer + 1,
+  paper: {
+    padding: theme.spacing(1, 1),
+    color: theme.palette.text.secondary,
   },
-  snackBar: {
-    maxWidth: '80%',
-    width: 'auto',
+  fieldSpace: {
+    marginTop: theme.spacing(1.5),
+  },
+  divider: {
+    margin: theme.spacing(2, 0),
   },
 }));
 
+const config = {
+  active: true,
+  providerName: 'twilio',
+  twilio: {
+    verify: {
+      active: true,
+      serviceSid: '***REMOVED***',
+    },
+    phoneNumber: '***REMOVED***',
+    accountSID: '***REMOVED***',
+    authToken: '***REMOVED***',
+  },
+  twilio2: {
+    verify: {
+      active: false,
+      serviceSid: 'prodsprods',
+    },
+    phoneNumber: '***REMOVED***',
+    accountSID: 'prodsprodsprods',
+    authToken: 'prodsprodsprodsprods',
+  },
+};
+
 const SmsProviderDetails = () => {
+  const classes = useStyles();
+
   const [number, setNumber] = useState('');
-  const [content, setContent] = useState('');
+  const [accountSID, setAccountSID] = useState('');
+  const [authToken, setAuthToken] = useState('');
+  const [serviceID, setServiceID] = useState('');
+  const [verify, setVerify] = useState(false);
+  const [provider, setProvider] = useState('');
+
+  useEffect(() => {
+    let selected = config.providerName;
+    setProvider(selected);
+  }, []);
+
+  useEffect(() => {
+    const prepareValues = (config) => {
+      if (provider) {
+        setNumber(config[provider].phoneNumber);
+        setAuthToken(config[provider].authToken);
+        setAccountSID(config[provider].accountSID);
+        setVerify(config[provider].verify.active);
+        setServiceID(config[provider].verify.serviceSid);
+      }
+    };
+    prepareValues(config);
+  }, [provider]);
+
+  const onSaveClick = () => {
+    let data = {
+      active: true,
+      providerName: provider,
+      [provider]: {
+        verify: {
+          active: verify,
+          serviceSid: serviceID,
+        },
+        phoneNumber: number,
+        accountSID: accountSID,
+        authToken: authToken,
+      },
+    };
+    console.log(data);
+  };
+
+  const onCancelClick = () => {
+    let selected = config.providerName;
+    setProvider(selected);
+  };
 
   return (
     <Container>
-      <Paper style={{ marginTop: 32 }}>
+      <Paper className={classes.paper}>
         <Grid container style={{ padding: `16px 32px` }}>
-          <Grid item container alignItems={'center'} xs={12}>
-            <Typography style={{ marginRight: 8 }} variant={'h6'}>
-              Compose your SMS message
-            </Typography>
-            <Sms />
+          <Grid item xs={12}>
+            <Typography variant={'h6'}>Provider Details</Typography>
           </Grid>
-          <Grid item style={{ marginTop: 16 }} xs={12}>
+          <Grid item xs={12}>
+            <Divider className={classes.divider} />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant={'h6'}>Provider</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              className={classes.fieldSpace}
+              select
+              value={provider}
+              onChange={(event) => setProvider(event.target.value)}
+              label=""
+              helperText="Select your provider"
+              variant="outlined">
+              <MenuItem value={'twilio'}>Twilio</MenuItem>
+              <MenuItem value={'twilio2'}>Twilio2</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item style={{ marginTop: 32 }} xs={12}>
+            <Typography variant={'h6'}>Provider Settings</Typography>
+            <Divider className={classes.divider} />
+          </Grid>
+          <Grid item xs={12}>
             <TextField
               value={number}
               onChange={(e) => setNumber(e.target.value)}
-              type={'number'}
-              variant="outlined"
+              className={classes.fieldSpace}
+              required
+              id="phone"
               label="Phone Number"
-              placeholder={'ex. +3069xxxxxxxx'}
+              variant="outlined"
             />
           </Grid>
-          <Grid item style={{ marginTop: 16 }} xs={12}>
+          <Grid item xs={12}>
             <TextField
-              multiline
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={'4'}
+              value={accountSID}
+              onChange={(e) => setAccountSID(e.target.value)}
+              className={classes.fieldSpace}
+              required
+              id="sid"
+              label="Account SID"
               variant="outlined"
-              label="sms content"
-              fullWidth
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              value={authToken}
+              onChange={(e) => setAuthToken(e.target.value)}
+              className={classes.fieldSpace}
+              required
+              id="auth"
+              label="Auth Token"
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12} style={{ marginTop: 32 }}>
+            <Typography variant={'h6'}>Verify</Typography>
+          </Grid>
+          <Grid
+            item
+            className={classes.fieldSpace}
+            container
+            alignItems={'center'}
+            xs={12}>
+            <Typography variant={'body1'}>Verify:</Typography>
+            <Switch
               size={'medium'}
-              placeholder={'Message'}
-              type={'textarea'}
+              color={'primary'}
+              checked={verify}
+              onChange={() => setVerify(!verify)}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              value={serviceID}
+              onChange={(e) => setServiceID(e.target.value)}
+              className={classes.fieldSpace}
+              required
+              id="sid"
+              label="Service ID"
+              variant="outlined"
             />
           </Grid>
           <Grid item container style={{ marginTop: 16 }} justify="flex-end" xs={12}>
@@ -64,15 +196,16 @@ const SmsProviderDetails = () => {
               color="primary"
               startIcon={<Clear />}
               style={{ marginRight: 16 }}
-              onClick={() => {}}>
-              Clear
+              onClick={onCancelClick}>
+              Cancel
             </Button>
             <Button
               variant="contained"
               color="primary"
+              disabled={config.providerName === provider}
               startIcon={<Send />}
-              onClick={() => {}}>
-              Send
+              onClick={onSaveClick}>
+              Save
             </Button>
           </Grid>
         </Grid>
