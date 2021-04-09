@@ -2,6 +2,7 @@ import { Application } from 'express';
 import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { ConduitRouteReturnDefinition, ConduitSocket } from '@quintessential-sft/conduit-sdk';
+import { isNil, isArray } from 'lodash';
 
 
 export class SocketController {
@@ -30,7 +31,18 @@ export class SocketController {
           socketId: socket.id,
           params: args
         })
-        .then(() => {
+        .then((res) => {
+          if (isArray(res)) {
+            res.forEach((dataFor) => {
+              if (isNil(dataFor.receivers)) {
+                socket.emit(dataFor.event, ...dataFor.data);
+              } else {
+                socket.to(dataFor.receivers).emit(dataFor.event, ...dataFor.data);
+              }
+            });
+          } else {
+            socket.join(res.rooms);
+          }
 
         })
         .catch((e) => {
