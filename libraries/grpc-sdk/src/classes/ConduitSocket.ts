@@ -2,11 +2,11 @@ import { ConduitModel, ConduitSocketEvent, ConduitSocketOptions } from '../inter
 
 export class ConduitSocket {
   private readonly _input: ConduitSocketOptions;
-  readonly events: Map<string, ConduitSocketEvent>;
+  readonly events: Record<string, ConduitSocketEvent>;
 
   constructor(
     input: ConduitSocketOptions,
-    events: Map<string, ConduitSocketEvent>
+    events: Record<string, ConduitSocketEvent>
   ) {
     this._input = input;
     this.events = events;
@@ -17,11 +17,11 @@ export class ConduitSocket {
   }
 
   returnTypeName(event: string): string {
-    return this.events.get(event)?.returnType.name || '';
+    return this.events[event]?.returnType?.name || '';
   }
 
   returnTypeFields(event: string): ConduitModel | string {
-    return this.events.get(event)?.returnType.fields || '';
+    return this.events[event]?.returnType?.fields || '';
   }
 
 }

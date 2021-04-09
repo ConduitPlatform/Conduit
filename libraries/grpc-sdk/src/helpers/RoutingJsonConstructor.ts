@@ -42,7 +42,8 @@ export function constructSocket(socket: ConduitSocket) {
     events: {}
   };
 
-  socket.events.forEach((event: ConduitSocketEvent, eventName: string) => {
+  Object.keys(socket.events).forEach((eventName: string) => {
+    const event = socket.events[eventName];
     socketObject.events[eventName] = {
       grpcFunction: event.handler,
       params: JSON.stringify(event.params),
