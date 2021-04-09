@@ -38,9 +38,5 @@ function instanceOfSocketProtoDescription(object: any): object is SocketProtoDes
     return false;
   }
 
-  if (!('events' in object)) {
-    return false;
-  }
-
-  return true;
+  return 'events' in object && object.events !== '';
 }

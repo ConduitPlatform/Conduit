@@ -85,5 +85,5 @@ export function instanceOfSocketProtoDescription(object: any): object is SocketP
     return false;
   }
 
-  return 'events' in object;
+  return 'events' in object && object.events !== '';
 }
