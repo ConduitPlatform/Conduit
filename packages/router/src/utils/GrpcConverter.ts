@@ -4,8 +4,12 @@ import grpc from 'grpc';
 import {
   ConduitRoute,
   ConduitRouteParameters,
-  ConduitMiddleware, ConduitSocket,
-  SocketProtoDescription, instanceOfSocketProtoDescription
+  ConduitMiddleware,
+  ConduitSocket,
+  SocketProtoDescription,
+  instanceOfSocketProtoDescription,
+  ConduitSocketParameters,
+  EventResponse, JoinRoomResponse, ConduitSocketEvent,
 } from '@quintessential-sft/conduit-sdk';
 
 let protoLoader = require('@grpc/proto-loader');
@@ -134,5 +138,39 @@ function createHandlerForSocket(
   client: any,
   moduleName?: string
 ) {
+  let eventHandlers = new Map<string, ConduitSocketEvent>();
+  for (const event in socket.events) {
+    let handler = (req: ConduitSocketParameters) => {
+      let request = {
+        event: req.event,
+        socketId: req.socketId,
+        params: req.params ? JSON.stringify(req.params) : null,
+      };
 
+      return new Promise<EventResponse[] | JoinRoomResponse>((resolve, reject) => {
+        client[socket.events[req.event].grpcFunction](request,
+          (err: { code: number, message: string}, result: EventResponse[] | JoinRoomResponse) => {
+            if (err) {
+              return reject(err);
+            }
+            resolve(result);
+          });
+      });
+    };
+
+    const socketEvent: ConduitSocketEvent = {
+      name: event,
+      handler,
+    };
+
+    eventHandlers.set(event, socketEvent);
+  }
+
+  if (moduleName) {
+    if (!socket.options.path.startsWith(`/${moduleName}`)) {
+      socket.options.path = `/${moduleName}${socket.options.path}`;
+    }
+  }
+
+  return new ConduitSocket(socket.options, eventHandlers);
 }
