@@ -73,12 +73,37 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
     return documentFields;
   }, []);
 
+  const prepareField = (field, editData) => {
+    let newField = field;
+    if (newField.fields) {
+      newField.fields.forEach((f, i) => {
+        if (newField.fields[i].fields) {
+          newField.fields[i].fields.forEach((ff, j) => {
+            newField.fields[i].fields[j].value = editData[newField.name][f.name][ff.name];
+          });
+        } else {
+          newField.fields[i].value = editData[newField.name][f.name];
+        }
+      });
+    } else {
+      newField.value = editData[field.name];
+    }
+    return newField;
+  };
+
   const initDocument = useCallback(() => {
     const fields = schema.fields;
     const documentFields = deconstructFields(fields);
     populateEditData(documentFields);
-    setDocument(documentFields);
-  }, [deconstructFields, populateEditData, schema.fields]);
+    if (editData) {
+      let newData = documentFields.map((field) => {
+        return prepareField(field, editData);
+      });
+      setDocument(newData);
+    } else {
+      setDocument(documentFields);
+    }
+  }, [deconstructFields, populateEditData, schema.fields, editData]);
 
   useEffect(() => {
     if (schema) {
