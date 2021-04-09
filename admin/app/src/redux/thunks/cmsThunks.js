@@ -215,9 +215,12 @@ export const editSchemaDocument = (schemaName, documentId, documentData) => {
       id: documentId,
       changedDocument: {},
     };
+
     documentData.forEach((d) => {
-      body.changedDocument = { ...body.changedDocument, [d.name]: d.value };
+      let field = prepareDocumentField(d);
+      body.changedDocument = { ...body.changedDocument, ...field };
     });
+
     editSchemaDocumentRequest(schemaName, documentId, body)
       .then(() => {
         dispatch(stopCmsLoading());
