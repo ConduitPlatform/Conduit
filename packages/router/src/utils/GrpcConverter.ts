@@ -111,18 +111,19 @@ function createHandlerForRoute(
 
   if (moduleName) {
     if (
-      options.path.startsWith(`/${moduleName}`) ||
-      options.path.startsWith(`/hook/${moduleName}`)
+      !(
+        options.path.startsWith(`/${moduleName}`) ||
+        options.path.startsWith(`/hook/${moduleName}`)
+      )
     ) {
-      return undefined;
-    }
-    if (
-      options.path.startsWith(`/hook`) &&
-      !options.path.startsWith(`/hook/${moduleName}`)
-    ) {
-      options.path = options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
-    } else {
-      options.path = `/${moduleName!.toString()}${options.path.toString()}`;
+      if (
+        options.path.startsWith(`/hook`) &&
+        !options.path.startsWith(`/hook/${moduleName}`)
+      ) {
+        options.path = options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
+      } else {
+        options.path = `/${moduleName!.toString()}${options.path.toString()}`;
+      }
     }
   }
 
