@@ -1,7 +1,12 @@
 import { Application } from 'express';
 import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
-import { ConduitRouteReturnDefinition, ConduitSocket } from '@quintessential-sft/conduit-sdk';
+import {
+  ConduitRouteReturnDefinition,
+  ConduitSocket,
+  EventResponse,
+  JoinRoomResponse,
+} from '@quintessential-sft/conduit-sdk';
 import { isNil, isArray } from 'lodash';
 
 
@@ -23,34 +28,43 @@ export class SocketController {
     const namespace = conduitSocket.input.path;
     this._registeredNamespaces.set(namespace, conduitSocket);
     this.io.of(namespace).on('connect', socket => {
+      conduitSocket.executeRequest({
+        event: 'connect',
+        socketId: socket.id
+      })
+      .then((res) => {
+        this.handleResponse(res, socket);
+      })
+      .catch(() => {});
 
       socket.onAny((event, ...args) => {
-
         conduitSocket.executeRequest({
           event,
           socketId: socket.id,
           params: args
         })
         .then((res) => {
-          if (isArray(res)) {
-            res.forEach((dataFor) => {
-              if (isNil(dataFor.receivers)) {
-                socket.emit(dataFor.event, ...dataFor.data);
-              } else {
-                socket.to(dataFor.receivers).emit(dataFor.event, ...dataFor.data);
-              }
-            });
-          } else {
-            socket.join(res.rooms);
-          }
-
+          this.handleResponse(res, socket);
         })
         .catch((e) => {
           console.error(e);
         });
-
       });
 
     });
+  }
+
+  private handleResponse(res: EventResponse[] | JoinRoomResponse, socket: Socket) {
+    if (isArray(res)) {
+      res.forEach((r) => {
+        if (isNil(r.receivers)) {
+          socket.emit(r.event, ...r.data);
+        } else {
+          socket.to(r.receivers).emit(r.event, ...r.data);
+        }
+      });
+    } else {
+      socket.join(res.rooms);
+    }
   }
 }
