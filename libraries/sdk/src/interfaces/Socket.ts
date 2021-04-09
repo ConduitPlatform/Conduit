@@ -15,13 +15,13 @@ export interface ConduitSocketOptions {
   description?: string;
 }
 
-type EventResponse = {
+export type EventResponse = {
   event: string,
   data: any[]
   receivers?: string[]
 };
 
-type JoinRoomResponse = {
+export type JoinRoomResponse = {
   rooms: string[]
 };
 
@@ -32,7 +32,7 @@ export type ConduitSocketEventHandler = (request: ConduitSocketParameters) => Co
 export interface ConduitSocketEvent {
   name: string;
   params?: ConduitSocketParamTypes;
-  returnType: ConduitRouteReturnDefinition;
+  returnType?: ConduitRouteReturnDefinition;
   handler: ConduitSocketEventHandler;
   // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
