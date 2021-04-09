@@ -1,9 +1,9 @@
 import { ConduitRouteReturnDefinition } from './Route';
-import { ConduitModel } from '@quintessential-sft/conduit-grpc-sdk';
 import { TYPE } from './Model';
 
 export interface ConduitSocketParameters {
   event: string;
+  socketId: string;
   params?: any[];
 }
 
@@ -13,47 +13,74 @@ export interface ConduitSocketOptions {
   path: string;
   name?: string;
   description?: string;
+}
+
+type EventResponse = {
+  event: string,
+  data: any[]
+  receivers?: string[]
+};
+
+type JoinRoomResponse = {
+  rooms: string[]
+};
+
+export type ConduitSocketHandlerResponse = Promise<EventResponse[] | JoinRoomResponse>;
+
+export type ConduitSocketEventHandler = (request: ConduitSocketParameters) => ConduitSocketHandlerResponse;
+
+export interface ConduitSocketEvent {
+  name: string;
   params?: ConduitSocketParamTypes;
+  returnType: ConduitRouteReturnDefinition;
+  handler: ConduitSocketEventHandler;
   // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
 
-
-export type ConduitSocketEventHandlers = { [eventName: string]: (request: ConduitSocketParameters) => Promise<any> };
-
-
 export class ConduitSocket {
   private readonly _input: ConduitSocketOptions
-  private readonly _returnType: ConduitRouteReturnDefinition;
-  private readonly _eventHandlers: ConduitSocketEventHandlers;
+  private readonly _events: Map<string, ConduitSocketEvent>;
 
   constructor(
     input: ConduitSocketOptions,
-    type: ConduitRouteReturnDefinition,
-    eventHandlers: ConduitSocketEventHandlers
+    events: Map<string, ConduitSocketEvent>
   ) {
     this._input = input;
-    this._returnType = type;
-    this._eventHandlers = eventHandlers;
-  }
-
-  get returnTypeName(): string {
-    return this._returnType.name;
+    this._events = events;
   }
 
   get input(): ConduitSocketOptions {
     return this._input;
   }
 
-  get returnTypeFields(): ConduitModel | string {
-    return this._returnType.fields;
+  executeRequest(request: ConduitSocketParameters): ConduitSocketHandlerResponse {
+    if (this._events.has(request.event)) {
+      return this._events.get(request.event)!.handler(request);
+    } else if (this._events.has('any')) {
+      return this._events.get('any')!.handler(request);
+    }
+    return Promise.reject('no such event registered');
+  }
+}
+
+export interface SocketProtoDescription {
+  options: ConduitSocketOptions,
+  events: {
+    [name: string]: {
+      grpcFunction: string,
+      params: string,
+      returns: {
+        name: string,
+        fields: string
+      }
+    }
+  }
+}
+
+export function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {
+  if (!('options' in object)) {
+    return false;
   }
 
-  executeRequest(request: ConduitSocketParameters): Promise<any> {
-    if (this._eventHandlers[request.event]) {
-      return this._eventHandlers[request.event](request);
-    } else if (this._eventHandlers['any']) {
-      return this._eventHandlers['any'](request);
-    }
-    return Promise.reject<string>('no such event registered');
-  }
+  return 'events' in object;
 }

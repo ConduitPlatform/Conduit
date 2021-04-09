@@ -29,3 +29,15 @@ export interface SocketProtoDescription {
     }
   }
 }
+
+function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {
+  if (!('options' in object)) {
+    return false;
+  }
+
+  if (!('events' in object)) {
+    return false;
+  }
+
+  return true;
+}

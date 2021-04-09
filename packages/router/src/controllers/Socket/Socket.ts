@@ -27,6 +27,7 @@ export class SocketController {
 
         conduitSocket.executeRequest({
           event,
+          socketId: socket.id,
           params: args
         })
         .then(() => {
