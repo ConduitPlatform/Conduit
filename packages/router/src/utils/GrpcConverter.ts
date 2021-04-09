@@ -5,6 +5,7 @@ import {
   ConduitRoute,
   ConduitRouteParameters,
   ConduitMiddleware, ConduitSocket,
+  SocketProtoDescription, instanceOfSocketProtoDescription
 } from '@quintessential-sft/conduit-sdk';
 
 let protoLoader = require('@grpc/proto-loader');
@@ -13,7 +14,6 @@ export function grpcToConduitRoute(
   request: any,
   moduleName?: string
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
-  let finalRoutes: (ConduitRoute | ConduitMiddleware)[] = [];
   let protofile = request.protoFile;
   let routes: [{ options: any; returns?: any; grpcFunction: string } | SocketProtoDescription] = request.routes;
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
@@ -36,61 +36,103 @@ export function grpcToConduitRoute(
     'grpc.max_receive_message_length': 1024 * 1024 * 100,
     'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
+
+  return createHandlers(routes, client, moduleName);
+}
+
+function createHandlers(
+  routes: [{ options: any; returns?: any; grpcFunction: string } | SocketProtoDescription],
+  client: any,
+  moduleName?: string
+) {
+  let finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
+
   routes.forEach((r) => {
-    let handler = (req: ConduitRouteParameters) => {
-      let request = {
-        params: req.params ? JSON.stringify(req.params) : null,
-        path: req.path,
-        headers: JSON.stringify(req.headers),
-        context: JSON.stringify(req.context),
-      };
-      return new Promise((resolve, reject) => {
-        client[r.grpcFunction](request, (err: any, result: any) => {
-          if (err) {
-            return reject(err);
-          }
-          resolve(result);
-        });
-      });
-    };
-    let options: any = r.options;
-    for (let k in options) {
-      if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
-      try {
-        options[k] = JSON.parse(options[k]);
-      } catch (e) {}
-    }
-    let returns: any = r.returns;
-    if (returns) {
-      for (let k in returns) {
-        if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
-        try {
-          returns[k] = JSON.parse(returns[k]);
-        } catch (e) {}
-      }
-    }
-    if (moduleName) {
-      if (
-        options.path.startsWith(`/${moduleName}`) ||
-        options.path.startsWith(`/hook/${moduleName}`)
-      ) {
-        return;
-      }
-      if (
-        options.path.startsWith(`/hook`) &&
-        !options.path.startsWith(`/hook/${moduleName}`)
-      ) {
-        options.path = options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
-      } else {
-        options.path = `/${moduleName!.toString()}${options.path.toString()}`;
-      }
+    let route;
+
+    if (instanceOfSocketProtoDescription(r)) {
+      route = createHandlerForSocket(r, client, moduleName);
+    } else {
+      route = createHandlerForRoute(r, client, moduleName);
     }
 
-    if (returns) {
-      finalRoutes.push(new ConduitRoute(options, returns, handler));
-    } else {
-      finalRoutes.push(new ConduitMiddleware(options, r.grpcFunction, handler));
+    if (route != undefined) {
+      finalRoutes.push(route);
     }
+
   });
+
   return finalRoutes;
+}
+
+function createHandlerForRoute(
+  route: { options: any; returns?: any; grpcFunction: string },
+  client: any,
+  moduleName?: string
+) {
+  let handler = (req: ConduitRouteParameters) => {
+    let request = {
+      params: req.params ? JSON.stringify(req.params) : null,
+      path: req.path,
+      headers: JSON.stringify(req.headers),
+      context: JSON.stringify(req.context),
+    };
+    return new Promise((resolve, reject) => {
+      client[route.grpcFunction](request, (err: any, result: any) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(result);
+      });
+    });
+  };
+
+  let options: any = route.options;
+  for (let k in options) {
+    if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
+    try {
+      options[k] = JSON.parse(options[k]);
+    } catch (e) {}
+  }
+
+  let returns: any = route.returns;
+  if (returns) {
+    for (let k in returns) {
+      if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
+      try {
+        returns[k] = JSON.parse(returns[k]);
+      } catch (e) {}
+    }
+  }
+
+  if (moduleName) {
+    if (
+      options.path.startsWith(`/${moduleName}`) ||
+      options.path.startsWith(`/hook/${moduleName}`)
+    ) {
+      return undefined;
+    }
+    if (
+      options.path.startsWith(`/hook`) &&
+      !options.path.startsWith(`/hook/${moduleName}`)
+    ) {
+      options.path = options.path.replace('/hook', `/hook/${moduleName!.toString()}`);
+    } else {
+      options.path = `/${moduleName!.toString()}${options.path.toString()}`;
+    }
+  }
+
+  if (returns) {
+    return new ConduitRoute(options, returns, handler);
+  } else {
+    return new ConduitMiddleware(options, route.grpcFunction, handler);
+  }
+}
+
+function createHandlerForSocket(
+  socket: SocketProtoDescription,
+  client: any,
+  moduleName?: string
+) {
+
 }
