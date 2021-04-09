@@ -63,18 +63,21 @@ export class ConduitSocket {
   }
 }
 
-export interface SocketProtoDescription {
-  options: ConduitSocketOptions,
-  events: {
-    [name: string]: {
-      grpcFunction: string,
-      params: string,
-      returns: {
-        name: string,
-        fields: string
-      }
+export interface EventsProtoDescription {
+  [name: string]: {
+    grpcFunction: string,
+    params: string,
+    returns: {
+      name: string,
+      fields: string
     }
   }
+}
+
+export interface SocketProtoDescription {
+  options: ConduitSocketOptions,
+  // JSON stringify EventsProtoDescription
+  events: string,
 }
 
 export function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {

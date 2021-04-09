@@ -16,18 +16,21 @@ export interface ConduitSocketEvent {
   // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
 
-export interface SocketProtoDescription {
-  options: ConduitSocketOptions,
-  events: {
-    [name: string]: {
-      grpcFunction: string,
-      params: string,
-      returns: {
-        name: string,
-        fields: string
-      }
+export interface EventsProtoDescription {
+  [name: string]: {
+    grpcFunction: string,
+    params: string,
+    returns: {
+      name: string,
+      fields: string
     }
   }
+}
+
+export interface SocketProtoDescription {
+  options: ConduitSocketOptions,
+  // JSON stringify EventsProtoDescription
+  events: string,
 }
 
 function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {

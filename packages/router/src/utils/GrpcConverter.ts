@@ -140,7 +140,8 @@ function createHandlerForSocket(
   moduleName?: string
 ) {
   let eventHandlers = new Map<string, ConduitSocketEvent>();
-  for (const event in socket.events) {
+  const events = JSON.parse(socket.events);
+  for (const event in events) {
     let handler = (req: ConduitSocketParameters) => {
       let request = {
         event: req.event,
@@ -149,7 +150,7 @@ function createHandlerForSocket(
       };
 
       return new Promise<EventResponse[] | JoinRoomResponse>((resolve, reject) => {
-        client[socket.events[req.event].grpcFunction](request,
+        client[events[req.event].grpcFunction](request,
           (err: { code: number, message: string}, result: EventResponse[] | JoinRoomResponse) => {
             if (err) {
               return reject(err);

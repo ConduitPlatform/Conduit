@@ -45,6 +45,7 @@ message RegisterConduitRouteRequest {
         ConduitRouteReturnDefinition returns = 2;
         string grpcFunction = 3;
         bool isMiddleware = 4;
+        string events = 5;
     }
 
     message ConduitRouteOptions {

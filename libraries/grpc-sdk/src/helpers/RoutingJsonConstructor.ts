@@ -1,5 +1,5 @@
 import { ConduitMiddleware, ConduitRoute, ConduitSocket } from '../classes';
-import { ConduitSocketEvent, SocketProtoDescription } from '../interfaces';
+import { EventsProtoDescription, SocketProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {
   let routeObject: any = {
@@ -37,14 +37,12 @@ export function constructMiddleware(route: ConduitMiddleware) {
 }
 
 export function constructSocket(socket: ConduitSocket) {
-  let socketObject: SocketProtoDescription = {
-    options: socket.input,
-    events: {}
-  };
+
+  let eventsObj: EventsProtoDescription = {};
 
   Object.keys(socket.events).forEach((eventName: string) => {
     const event = socket.events[eventName];
-    socketObject.events[eventName] = {
+    eventsObj[eventName] = {
       grpcFunction: event.handler,
       params: JSON.stringify(event.params),
       returns: {
@@ -54,5 +52,8 @@ export function constructSocket(socket: ConduitSocket) {
     };
   });
 
-  return socketObject;
+  return {
+    options: socket.input,
+    events: JSON.stringify(eventsObj)
+  };
 }

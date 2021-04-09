@@ -116,9 +116,9 @@ export default class Router extends ConduitModule {
 
   private createProtoFunctionsForSocket(path: SocketProtoDescription, protoFunctions: string) {
     let newFunctions = '';
-
-    Object.keys(path.events).forEach((event) => {
-      const newFunction = this.createGrpcFunctionName(path.events[event].grpcFunction);
+    const events = JSON.parse(path.events);
+    Object.keys(events).forEach((event) => {
+      const newFunction = this.createGrpcFunctionName(events[event].grpcFunction);
 
       if (protoFunctions.indexOf(newFunction) !== -1) {
         return;
