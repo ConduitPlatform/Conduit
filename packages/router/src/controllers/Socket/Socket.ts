@@ -4,7 +4,7 @@ import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import {
   ConduitRouteReturnDefinition,
   ConduitSocket,
-  EventResponse,
+  EventResponse, isInstanceOfEventResponse,
   JoinRoomResponse,
 } from '@quintessential-sft/conduit-sdk';
 import { isNil, isArray } from 'lodash';
@@ -58,15 +58,13 @@ export class SocketController {
     });
   }
 
-  private handleResponse(res: EventResponse[] | JoinRoomResponse, socket: Socket) {
-    if (isArray(res)) {
-      res.forEach((r) => {
-        if (isNil(r.receivers)) {
-          socket.emit(r.event, ...r.data);
-        } else {
-          socket.to(r.receivers).emit(r.event, ...r.data);
-        }
-      });
+  private handleResponse(res: EventResponse | JoinRoomResponse, socket: Socket) {
+    if (isInstanceOfEventResponse(res)) {
+      if (isNil(res.receivers) || res.receivers!.length === 0) {
+        socket.emit(res.event, ...res.data);
+      } else {
+        socket.to(res.receivers).emit(res.event, ...res.data);
+      }
     } else {
       socket.join(res.rooms);
     }

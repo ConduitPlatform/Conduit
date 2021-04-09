@@ -149,9 +149,9 @@ function createHandlerForSocket(
         params: req.params ? JSON.stringify(req.params) : null,
       };
 
-      return new Promise<EventResponse[] | JoinRoomResponse>((resolve, reject) => {
+      return new Promise<EventResponse | JoinRoomResponse>((resolve, reject) => {
         client[events[req.event].grpcFunction](request,
-          (err: { code: number, message: string}, result: EventResponse[] | JoinRoomResponse) => {
+          (err: { code: number, message: string}, result: EventResponse | JoinRoomResponse) => {
             if (err) {
               return reject(err);
             }

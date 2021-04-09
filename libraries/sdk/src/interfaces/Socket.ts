@@ -21,11 +21,18 @@ export type EventResponse = {
   receivers?: string[]
 };
 
+export function isInstanceOfEventResponse(object: any): object is EventResponse {
+  if (!('receivers' in object)) return false;
+  if (!('data' in object)) return false;
+
+  return 'event' in object && object.event !== '';
+}
+
 export type JoinRoomResponse = {
   rooms: string[]
 };
 
-export type ConduitSocketHandlerResponse = Promise<EventResponse[] | JoinRoomResponse>;
+export type ConduitSocketHandlerResponse = Promise<EventResponse | JoinRoomResponse>;
 
 export type ConduitSocketEventHandler = (request: ConduitSocketParameters) => ConduitSocketHandlerResponse;
 
