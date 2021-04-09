@@ -27,7 +27,7 @@ message RouterResponse {
 message SocketRequest {
   string event = 1;
   string socketId = 2;
-  repeated string params = 3;
+  string params = 3;
 }
 
 message SocketResponse {
