@@ -26,6 +26,10 @@ export class SocketController {
 
   registerConduitSocket(conduitSocket: ConduitSocket) {
     const namespace = conduitSocket.input.path;
+    if (this._registeredNamespaces.has(namespace)) {
+      return;
+    }
+
     this._registeredNamespaces.set(namespace, conduitSocket);
     this.io.of(namespace).on('connect', socket => {
       conduitSocket.executeRequest({
