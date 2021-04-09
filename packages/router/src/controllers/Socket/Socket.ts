@@ -51,7 +51,7 @@ export class SocketController {
           this.handleResponse(res, socket);
         })
         .catch((e) => {
-          console.error(e);
+          socket.emit('conduit_error', e);
         });
       });
 
