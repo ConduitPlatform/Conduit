@@ -40,7 +40,8 @@ Let's break them down to see what they do
 These options specify the parameters that Conduit should extract
 from the requests of the clients. Each field represents a different
 position in the request. It mainly effects REST requests, since GraphQL
-only has one type of parameter.
+only has one type of parameter. Parameters default to optional if the required
+field is missing.
 
 - queryParams?: ConduitRouteOption;
 - bodyParams?: ConduitModel;

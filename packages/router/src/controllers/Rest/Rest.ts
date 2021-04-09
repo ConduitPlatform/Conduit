@@ -17,7 +17,7 @@ import {
   ConduitSDK,
 } from '@quintessential-sft/conduit-sdk';
 import { SwaggerGenerator } from './Swagger';
-import { extractRequestData } from './util';
+import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 
 const swaggerUi = require('swagger-ui-express');
@@ -161,6 +161,10 @@ export class RestController {
       let { caching, cacheAge, scope } = extractCaching(route);
       self
         .checkMiddlewares(context, route.input.middlewares)
+        .then((r) => {
+          validateParams(context.params, { ...route.input.bodyParams, ...route.input.queryParams, ...route.input.urlParams });
+          return r;
+        })
         .then((r) => {
           Object.assign(context.context, r);
           if (route.input.action !== ConduitRouteActions.GET) {
