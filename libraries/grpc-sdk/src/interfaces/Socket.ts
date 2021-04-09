@@ -11,7 +11,7 @@ export interface ConduitSocketOptions {
 
 export interface ConduitSocketEvent {
   params?: ConduitSocketParamTypes;
-  returnType: ConduitRouteReturnDefinition;
+  returnType?: ConduitRouteReturnDefinition;
   handler: string;
   // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
