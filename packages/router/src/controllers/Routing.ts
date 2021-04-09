@@ -1,6 +1,6 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest/Rest';
-import { ConduitRoute, ConduitMiddleware } from '@quintessential-sft/conduit-sdk';
+import { ConduitRoute, ConduitMiddleware, ConduitSocket } from '@quintessential-sft/conduit-sdk';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 
@@ -63,6 +63,10 @@ export class ConduitRoutingController {
   registerConduitRoute(route: ConduitRoute) {
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter.registerConduitRoute(route);
+  }
+
+  registerConduitSocket(socket: ConduitSocket) {
+    this._socketRouter?.registerConduitSocket(socket);
   }
 
   cleanupRoutes(routes: any[]) {

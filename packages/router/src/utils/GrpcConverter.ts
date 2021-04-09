@@ -4,7 +4,7 @@ import grpc from 'grpc';
 import {
   ConduitRoute,
   ConduitRouteParameters,
-  ConduitMiddleware,
+  ConduitMiddleware, ConduitSocket,
 } from '@quintessential-sft/conduit-sdk';
 
 let protoLoader = require('@grpc/proto-loader');
@@ -12,10 +12,10 @@ let protoLoader = require('@grpc/proto-loader');
 export function grpcToConduitRoute(
   request: any,
   moduleName?: string
-): (ConduitRoute | ConduitMiddleware)[] {
+): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let finalRoutes: (ConduitRoute | ConduitMiddleware)[] = [];
   let protofile = request.protoFile;
-  let routes: [{ options: any; returns?: any; grpcFunction: string }] = request.routes;
+  let routes: [{ options: any; returns?: any; grpcFunction: string } | SocketProtoDescription] = request.routes;
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {
