@@ -7,13 +7,13 @@ export interface ConduitSocketOptions {
   path: string;
   name?: string;
   description?: string;
+  middlewares?: string[];
 }
 
 export interface ConduitSocketEvent {
   params?: ConduitSocketParamTypes;
   returnType?: ConduitRouteReturnDefinition;
   handler: string;
-  // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
 
 export interface EventsProtoDescription {

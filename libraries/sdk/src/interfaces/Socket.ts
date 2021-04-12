@@ -13,6 +13,7 @@ export interface ConduitSocketOptions {
   path: string;
   name?: string;
   description?: string;
+  middlewares?: string[];
 }
 
 export type EventResponse = {
@@ -41,7 +42,6 @@ export interface ConduitSocketEvent {
   params?: ConduitSocketParamTypes;
   returnType?: ConduitRouteReturnDefinition;
   handler: ConduitSocketEventHandler;
-  // middlewares?: string[]; // TODO https://socket.io/docs/v4/middlewares/
 }
 
 export class ConduitSocket {
