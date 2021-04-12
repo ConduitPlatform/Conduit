@@ -425,7 +425,7 @@ const CustomQueries = ({
   };
 
   const handleCustomValueChange = (event, index) => {
-    const value = event.target.value;
+    const value = event;
     const currentQueries = selectedQueries.slice();
     const query = currentQueries[index];
     if (query) {
@@ -669,6 +669,7 @@ const CustomQueries = ({
               <Divider />
             </Grid>
             <EndpointQueries
+              selectedSchema={selectedSchema}
               selectedQueries={selectedQueries}
               availableFieldsOfSchema={availableFieldsOfSchema}
               selectedInputs={selectedInputs}
