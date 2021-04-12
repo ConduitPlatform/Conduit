@@ -95,6 +95,46 @@ export const getSchemaFields = (schemaFields) => {
   return fields;
 };
 
+export const getSchemaFieldsWithExtra = (schemaFields) => {
+  let keys;
+  if (!schemaFields) return;
+  if (Array.isArray(schemaFields)) {
+    keys = Object.keys(schemaFields[0]);
+  } else {
+    keys = Object.keys(schemaFields);
+  }
+  const fields = [];
+  keys.forEach((k) => {
+    if (typeof schemaFields[k] !== 'string' && typeof schemaFields[k] !== 'boolean') {
+      const field = schemaFields[k];
+      fields.push({ name: k, ...constructFieldType(field) });
+    } else {
+      const field = schemaFields[k];
+      if (k === 'createdAt' || k === 'updatedAt') {
+        fields.push({
+          name: k,
+          type: 'Date',
+          unique: false,
+          select: true,
+          required: false,
+          value: field,
+        });
+      }
+      if (k === '_id') {
+        fields.push({
+          name: k,
+          type: 'ObjectId',
+          unique: true,
+          select: true,
+          required: false,
+          value: field,
+        });
+      }
+    }
+  });
+  return fields;
+};
+
 const checkIsChildOfObject = (innerFields) => {
   const type = typeof innerFields;
   return type !== 'string';
