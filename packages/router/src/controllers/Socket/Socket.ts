@@ -1,8 +1,9 @@
 import { Application } from 'express';
 import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
+import { createAdapter } from 'socket.io-redis';
+import { RedisClient } from 'redis';
 import {
-  ConduitRouteReturnDefinition,
   ConduitSocket,
   EventResponse, isInstanceOfEventResponse,
   JoinRoomResponse,
@@ -15,11 +16,21 @@ export class SocketController {
   private io: IOServer;
   private readonly options: Partial<ServerOptions>;
   private _registeredNamespaces: Map<string, ConduitSocket>;
+  private pubClient: RedisClient;
+  private subClient: RedisClient;
 
   constructor(private readonly app: Application) {
+    if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
+      console.error('Redis IP not defined');
+      process.exit(-1);
+    }
+
     this.httpServer = createServer(app);
     this.options = {};
     this.io = new IOServer(this.httpServer, this.options);
+    this.pubClient = new RedisClient({ host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) });
+    this.subClient = this.pubClient.duplicate();
+    this.io.adapter(createAdapter({ pubClient: this.pubClient, subClient: this.subClient }));
     this.httpServer.listen(process.env.SOCKET_PORT || 3001);
     this._registeredNamespaces = new Map();
   }
