@@ -61,9 +61,9 @@ export class SocketController {
   private handleResponse(res: EventResponse | JoinRoomResponse, socket: Socket) {
     if (isInstanceOfEventResponse(res)) {
       if (isNil(res.receivers) || res.receivers!.length === 0) {
-        socket.emit(res.event, ...res.data);
+        socket.emit(res.event, JSON.parse(res.data));
       } else {
-        socket.to(res.receivers).emit(res.event, ...res.data);
+        socket.to(res.receivers).emit(res.event, JSON.parse(res.data));
       }
     } else {
       socket.join(res.rooms);

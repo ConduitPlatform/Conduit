@@ -17,7 +17,7 @@ export interface ConduitSocketOptions {
 
 export type EventResponse = {
   event: string,
-  data: any[]
+  data: string
   receivers?: string[]
 };
 
