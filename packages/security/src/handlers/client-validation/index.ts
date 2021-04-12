@@ -23,8 +23,7 @@ export class ClientValidator {
 
     const { clientid, clientsecret } = req.headers;
     if (isNil(clientid) || isNil(clientsecret)) {
-      res.status(401).send('Unauthorized');
-      return;
+      return next(ConduitError.unauthorized());
     }
 
     let key = await this.sdk.getState().getKey(`${clientid}-${clientsecret}`);
@@ -44,7 +43,7 @@ export class ClientValidator {
         next();
       })
       .catch(() => {
-        res.status(401).send('Unauthorized');
+        next(ConduitError.unauthorized());
       });
   }
 }

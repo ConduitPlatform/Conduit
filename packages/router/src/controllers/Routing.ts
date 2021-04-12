@@ -1,6 +1,6 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest/Rest';
-import { ConduitRoute, ConduitMiddleware, ConduitSocket } from '@quintessential-sft/conduit-sdk';
+import { ConduitRoute, ConduitMiddleware, ConduitSocket, ConduitError } from '@quintessential-sft/conduit-sdk';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 
@@ -22,6 +22,10 @@ export class ConduitRoutingController {
     const self = this;
     app.use((req, res, next) => {
       self._middlewareRouter(req, res, next);
+    });
+
+    app.use((err: ConduitError, req: Request, res: Response, next: NextFunction) => {
+      res.status(err?.status || 500).send(err.message);
     });
 
     app.use((req, res, next) => {
