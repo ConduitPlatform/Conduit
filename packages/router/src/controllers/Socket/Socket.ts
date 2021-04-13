@@ -4,6 +4,7 @@ import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
+  ConduitError,
   ConduitMiddleware, ConduitRouteParameters,
   ConduitSocket,
   EventResponse, isInstanceOfEventResponse,
@@ -91,6 +92,21 @@ export class SocketController {
         // @ts-ignore
         middleware(socket.request, {}, next);
       })
+    });
+
+    this.io.of(namespace).use((socket, next) => {
+      const context = {
+        headers: socket.request.headers,
+        context: (socket.request as any).conduit || {}
+      }
+      self.checkMiddlewares(context, conduitSocket.input.middlewares)
+        .then((r) => {
+          Object.assign(context.context, r);
+          next();
+        })
+        .catch((err: Error | ConduitError) => {
+          next(err);
+        })
     });
 
     this.io.of(namespace).on('connect', socket => {
