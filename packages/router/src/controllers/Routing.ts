@@ -47,9 +47,13 @@ export class ConduitRoutingController {
   }
 
   registerMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void
+    middleware: (req: Request, res: Response, next: NextFunction) => void,
+    socketMiddleware: boolean
   ) {
     this._middlewareRouter.use(middleware);
+    if (socketMiddleware) {
+      this._socketRouter?.registerGlobalMiddleware(middleware);
+    }
   }
 
   registerRouteMiddleware(middleware: ConduitMiddleware) {

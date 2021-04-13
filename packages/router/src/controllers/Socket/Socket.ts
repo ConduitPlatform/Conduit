@@ -1,4 +1,4 @@
-import { Application } from 'express';
+import { Application, NextFunction, Request, Response } from 'express';
 import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
@@ -20,6 +20,7 @@ export class SocketController {
   private pubClient: RedisClient;
   private subClient: RedisClient;
   private _middlewares?: { [field: string]: ConduitMiddleware };
+  private globalMiddlewares: ((req: Request, res: Response, next: NextFunction) => void)[];
 
   constructor(private readonly app: Application) {
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
@@ -35,6 +36,7 @@ export class SocketController {
     this.io.adapter(createAdapter({ pubClient: this.pubClient, subClient: this.subClient }));
     this.httpServer.listen(process.env.SOCKET_PORT || 3001);
     this._registeredNamespaces = new Map();
+    this.globalMiddlewares = [];
   }
 
   registerMiddleware(middleware: ConduitMiddleware) {
@@ -42,6 +44,10 @@ export class SocketController {
       this._middlewares = {};
     }
     this._middlewares[middleware.name] = middleware;
+  }
+
+  registerGlobalMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
+    this.globalMiddlewares.push(middleware);
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
@@ -76,6 +82,17 @@ export class SocketController {
     }
 
     this._registeredNamespaces.set(namespace, conduitSocket);
+
+    const self = this;
+    this.globalMiddlewares.forEach((middleware) => {
+      self.io.of(namespace).use((socket, next) => {
+        // @ts-ignore
+        socket.request.path = namespace;
+        // @ts-ignore
+        middleware(socket.request, {}, next);
+      })
+    });
+
     this.io.of(namespace).on('connect', socket => {
       conduitSocket.executeRequest({
         event: 'connect',

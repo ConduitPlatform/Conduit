@@ -211,9 +211,9 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.initSockets();
   }
 
-  registerGlobalMiddleware(name: string, middleware: any) {
+  registerGlobalMiddleware(name: string, middleware: any, socketMiddleware: boolean = false) {
     this._globalMiddlewares.push(name);
-    this._internalRouter.registerMiddleware(middleware);
+    this._internalRouter.registerMiddleware(middleware, socketMiddleware);
   }
 
   getGlobalMiddlewares(): string[] {
