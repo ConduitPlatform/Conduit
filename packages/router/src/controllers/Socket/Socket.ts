@@ -148,7 +148,9 @@ export class SocketController {
         socket.to(res.receivers).emit(res.event, JSON.parse(res.data));
       }
     } else {
-      socket.join(res.rooms);
+      if (res.rooms.length !== 0) {
+        socket.join(res.rooms);
+      }
     }
   }
 
