@@ -72,7 +72,7 @@ export class SocketController {
   registerConduitSocket(conduitSocket: ConduitSocket) {
     const namespace = conduitSocket.input.path;
     if (this._registeredNamespaces.has(namespace)) {
-      return;
+      this.removeNamespace(namespace);
     }
 
     this._registeredNamespaces.set(namespace, conduitSocket);
@@ -113,5 +113,12 @@ export class SocketController {
     } else {
       socket.join(res.rooms);
     }
+  }
+
+  private removeNamespace(namespace: string) {
+    const ns = this.io.of(namespace);
+    ns.disconnectSockets(true);
+    ns.removeAllListeners();
+    this.io._nsps.delete(namespace);
   }
 }
