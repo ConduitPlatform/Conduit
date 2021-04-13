@@ -3,12 +3,15 @@ import ChatConfigSchema from './config';
 import * as grpc from 'grpc';
 import path from 'path';
 import { isNil } from 'lodash';
+import { ChatRoutes } from './routes/Routes';
+import * as models from './models';
 
 export default class ChatModule {
   private database: any;
   private isRunning: boolean = false;
   private _url: string;
   private readonly grpcServer: GrpcServer;
+  private _router: ChatRoutes;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
@@ -117,7 +120,19 @@ export default class ChatModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
+      this._router = new ChatRoutes(this.grpcServer, this.grpcSdk);
+      await this.registerSchemas();
       this.isRunning = true;
     }
+
+    await this._router.registerRoutes();
+  }
+
+  private registerSchemas() {
+    const promises = Object.values(models).map((model) => {
+      return this.database.createSchemaFromAdapter(model);
+    });
+
+    return Promise.all(promises);
   }
 }
