@@ -15,6 +15,7 @@ import {
   Settings,
   Toc,
   Cloud,
+  Sms,
 } from '@material-ui/icons';
 import clsx from 'clsx';
 import Link from 'next/link';
@@ -193,6 +194,22 @@ function CustomDrawer(props) {
               />
             </ListItem>
           </Link>
+          <Link href="/sms">
+            <ListItem
+              // disabled={
+              //   !enabledModules?.find((module) => module === 'sms:5000')
+              // }
+              button
+              key={'sms'}
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 3}>
+              <ListItemIcon className={classes.listItemIcon}>
+                <Sms color={'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />
+            </ListItem>
+          </Link>
           <Link href="/emails">
             <ListItem
               disabled={
@@ -202,7 +219,7 @@ function CustomDrawer(props) {
               key={'Emails'}
               className={classes.listItem}
               style={itemStyle}
-              selected={itemSelected === 3}>
+              selected={itemSelected === 4}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Email color={'inherit'} />
               </ListItemIcon>
@@ -219,7 +236,7 @@ function CustomDrawer(props) {
               key={'CMS'}
               className={classes.listItem}
               style={itemStyle}
-              selected={itemSelected === 4}>
+              selected={itemSelected === 5}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Toc color={'inherit'} />
               </ListItemIcon>
@@ -233,7 +250,7 @@ function CustomDrawer(props) {
               disabled={!enabledModules?.find((module) => module === 'storage:5000')}
               className={classes.listItem}
               style={itemStyle}
-              selected={itemSelected === 5}>
+              selected={itemSelected === 6}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Cloud color={'inherit'} />
               </ListItemIcon>
@@ -250,7 +267,7 @@ function CustomDrawer(props) {
               key={'Settings'}
               className={classes.listItem}
               style={itemStyle}
-              selected={itemSelected === 6}>
+              selected={itemSelected === 7}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Settings color={'inherit'} />
               </ListItemIcon>
