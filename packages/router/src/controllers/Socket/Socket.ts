@@ -119,7 +119,9 @@ export class SocketController {
       .then((res) => {
         this.handleResponse(res, socket);
       })
-      .catch(() => {});
+      .catch((e) => {
+        socket.emit('conduit_error', e);
+      });
 
       socket.onAny((event, ...args) => {
         conduitSocket.executeRequest({
