@@ -28,6 +28,7 @@ message SocketRequest {
   string event = 1;
   string socketId = 2;
   string params = 3;
+  string context = 4;
 }
 
 message SocketResponse {

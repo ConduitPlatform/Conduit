@@ -26,7 +26,8 @@ export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
 export type SocketRequest = GrpcRequest<{
   event: string,
   socketId: string,
-  params: string
+  params: string,
+  context: string
 }>;
 
 type EventResponse = {

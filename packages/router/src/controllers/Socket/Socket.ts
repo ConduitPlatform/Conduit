@@ -112,7 +112,9 @@ export class SocketController {
     this.io.of(namespace).on('connect', socket => {
       conduitSocket.executeRequest({
         event: 'connect',
-        socketId: socket.id
+        socketId: socket.id,
+        // @ts-ignore
+        context: socket.request.conduit
       })
       .then((res) => {
         this.handleResponse(res, socket);

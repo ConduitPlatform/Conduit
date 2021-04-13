@@ -5,6 +5,7 @@ export interface ConduitSocketParameters {
   event: string;
   socketId: string;
   params?: any[];
+  context?: { [field: string]: any };
 }
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];

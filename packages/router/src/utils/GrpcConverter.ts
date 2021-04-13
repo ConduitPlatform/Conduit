@@ -147,6 +147,7 @@ function createHandlerForSocket(
         event: req.event,
         socketId: req.socketId,
         params: req.params ? JSON.stringify(req.params) : null,
+        context: req.context ? JSON.stringify(req.context): null
       };
 
       return new Promise<EventResponse | JoinRoomResponse>((resolve, reject) => {
