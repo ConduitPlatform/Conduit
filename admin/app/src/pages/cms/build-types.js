@@ -13,6 +13,7 @@ import {
   cloneItem,
   deleteItem,
   getSchemaFields,
+  getSchemaFieldsWithExtra,
   prepareFields,
   reorderItems,
   updateGroupChildItem,
@@ -121,10 +122,45 @@ const BuildTypes = () => {
       ) {
         setCrudOperations(data.selectedSchema.crudOperations);
       }
-      const formattedFields = getSchemaFields(data.selectedSchema.fields);
+      const formattedFields = getSchemaFieldsWithExtra(data.selectedSchema.fields);
       setSchemaFields({ newTypeFields: formattedFields });
     }
   }, [data]);
+
+  useEffect(() => {
+    if (!data.selectedSchema) {
+      let initialFields = [
+        {
+          default: '',
+          isArray: false,
+          name: '_id',
+          required: false,
+          select: true,
+          type: 'ObjectId',
+          unique: true,
+        },
+        {
+          default: '',
+          isArray: false,
+          name: 'createdAt',
+          required: false,
+          select: true,
+          type: 'Date',
+          unique: false,
+        },
+        {
+          default: '',
+          isArray: false,
+          name: 'updatedAt',
+          required: false,
+          select: true,
+          type: 'Date',
+          unique: false,
+        },
+      ];
+      setSchemaFields({ newTypeFields: initialFields });
+    }
+  }, [data.selectedSchema]);
 
   useEffect(() => {
     if (router.query.name) {
@@ -375,13 +411,14 @@ const BuildTypes = () => {
 
   const handleSave = (name, authentication) => {
     if (data && data.selectedSchema) {
-      const { _id, createdAt, updatedAt } = data.selectedSchema;
+      const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
       const editableSchema = {
         authentication,
         crudOperations,
-        fields: { _id, createdAt, updatedAt, ...editableSchemaFields },
+        fields: { ...editableSchemaFields },
       };
+
       dispatch(editSchema(_id, editableSchema));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);

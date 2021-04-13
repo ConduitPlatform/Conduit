@@ -13,6 +13,8 @@ import GroupType from './types/GroupType/GroupType';
 import EnumType from './types/EnumType/EnumType';
 import ObjectIdType from './types/ObjectIdType/ObjectIdType';
 import RelationType from './types/RelationType/RelationType';
+import Button from '@material-ui/core/Button';
+import IconButton from '@material-ui/core/IconButton';
 
 const useStyles = makeStyles((theme) => ({
   list: {
@@ -46,6 +48,12 @@ const useStyles = makeStyles((theme) => ({
   },
   listPlaceholderItems: {
     marginBottom: theme.spacing(2),
+  },
+  button: {
+    minWidth: 0,
+    minHeight: 0,
+    padding: 0,
+    margin: 0,
   },
 }));
 
@@ -92,6 +100,13 @@ const BuildTypesContent = ({
     }
   };
 
+  const checkIfDisabled = (name) => {
+    if (name === '_id' || name === 'createdAt' || name === 'updatedAt') {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <Box {...rest}>
       <Droppable droppableId={dataKey}>
@@ -117,14 +132,18 @@ const BuildTypesContent = ({
                             </Typography>
                           </Box>
                           <Box display={'flex'}>
-                            <DeleteIcon
-                              className={classes.icon}
+                            <Button
                               onClick={() => handleDelete(index)}
-                            />
-                            <SettingsIcon
-                              className={classes.icon}
+                              className={classes.button}
+                              disabled={checkIfDisabled(item.name)}>
+                              <DeleteIcon className={classes.icon} />
+                            </Button>
+                            <Button
                               onClick={() => handleDrawer(item, index)}
-                            />
+                              className={classes.button}
+                              disabled={checkIfDisabled(item.name)}>
+                              <SettingsIcon className={classes.icon} />
+                            </Button>
                             <Box {...provided.dragHandleProps} className={classes.icon}>
                               <DragHandleIcon />
                             </Box>

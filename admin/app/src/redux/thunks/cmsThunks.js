@@ -153,6 +153,18 @@ export const getMoreSchemaDocuments = (name, skip) => {
   };
 };
 
+const prepareDocumentField = (doc) => {
+  let field = { [doc.name]: null };
+  if (doc.fields) {
+    doc.fields.forEach((subField) => {
+      field[doc.name] = { ...field[doc.name], ...prepareDocumentField(subField) };
+    });
+  } else {
+    field[doc.name] = doc.value;
+  }
+  return field;
+};
+
 export const createSchemaDocument = (schemaName, documentData) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
@@ -160,9 +172,12 @@ export const createSchemaDocument = (schemaName, documentData) => {
       schemaName,
       inputDocument: {},
     };
+
     documentData.forEach((d) => {
-      body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
+      let field = prepareDocumentField(d);
+      body.inputDocument = { ...body.inputDocument, ...field };
     });
+
     createSchemaDocumentRequest(schemaName, body)
       .then(() => {
         dispatch(stopCmsLoading());
@@ -200,9 +215,12 @@ export const editSchemaDocument = (schemaName, documentId, documentData) => {
       id: documentId,
       changedDocument: {},
     };
+
     documentData.forEach((d) => {
-      body.changedDocument = { ...body.changedDocument, [d.name]: d.value };
+      let field = prepareDocumentField(d);
+      body.changedDocument = { ...body.changedDocument, ...field };
     });
+
     editSchemaDocumentRequest(schemaName, documentId, body)
       .then(() => {
         dispatch(stopCmsLoading());

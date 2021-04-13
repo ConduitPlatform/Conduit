@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
 const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
   const [document, setDocument] = useState([]);
-
+  const [isDisabled, setIsDisabled] = useState(true);
   const populateEditData = useCallback(
     (documentsData) => {
       if (!editData) return;
@@ -53,23 +53,57 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
     let documentFields = [];
     documentKeys.forEach((k) => {
       if (typeof fields[k] !== 'string') {
-        if (fields[k].type && typeof fields[k].type !== 'string') {
-          const innerFields = fields[k].type;
-          documentFields.push({ name: k, fields: deconstructFields(innerFields) });
-        } else {
+        if (
+          fields[k].type &&
+          Array.isArray(fields[k].type) &&
+          fields[k].type &&
+          typeof fields[k].type[0] === 'string'
+        ) {
           documentFields.push({ name: k, ...fields[k], value: fields[k].default });
+        } else {
+          if (fields[k].type && typeof fields[k].type !== 'string') {
+            const innerFields = fields[k].type;
+            documentFields.push({ name: k, fields: deconstructFields(innerFields) });
+          } else {
+            documentFields.push({ name: k, ...fields[k], value: fields[k].default });
+          }
         }
       }
     });
     return documentFields;
   }, []);
 
+  const prepareField = (field, editData) => {
+    let newField = field;
+    if (newField.fields) {
+      newField.fields.forEach((f, i) => {
+        if (newField.fields[i].fields) {
+          newField.fields[i].fields.forEach((ff, j) => {
+            newField.fields[i].fields[j].value = editData[newField.name][f.name][ff.name];
+          });
+        } else {
+          newField.fields[i].value = editData[newField.name][f.name];
+        }
+      });
+    } else {
+      newField.value = editData[field.name];
+    }
+    return newField;
+  };
+
   const initDocument = useCallback(() => {
     const fields = schema.fields;
     const documentFields = deconstructFields(fields);
     populateEditData(documentFields);
-    setDocument(documentFields);
-  }, [deconstructFields, populateEditData, schema.fields]);
+    if (editData) {
+      let newData = documentFields.map((field) => {
+        return prepareField(field, editData);
+      });
+      setDocument(newData);
+    } else {
+      setDocument(documentFields);
+    }
+  }, [deconstructFields, populateEditData, schema.fields, editData]);
 
   useEffect(() => {
     if (schema) {
@@ -113,7 +147,11 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
             <Divider className={classes.divider} />
           </Grid>
         </Grid>
-        <DocumentCreateFields document={document} setDocument={setDocument} />
+        <DocumentCreateFields
+          disabled={isDisabled && editData}
+          document={document}
+          setDocument={setDocument}
+        />
       </Box>
 
       <Divider className={classes.divider} />
@@ -126,15 +164,26 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
         alignItems={'center'}>
         <Grid container>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button
-              variant={'outlined'}
-              style={{ marginRight: 16 }}
-              onClick={handleCancelClick}>
-              Cancel
-            </Button>
-            <Button variant={'outlined'} onClick={handleSaveClick}>
-              Save
-            </Button>
+            {isDisabled && editData ? (
+              <Button
+                variant={'outlined'}
+                onClick={() => setIsDisabled(false)}
+                color={'primary'}>
+                Edit Document
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant={'outlined'}
+                  style={{ marginRight: 16 }}
+                  onClick={handleCancelClick}>
+                  Cancel
+                </Button>
+                <Button variant={'contained'} color={'primary'} onClick={handleSaveClick}>
+                  Save
+                </Button>
+              </>
+            )}
           </Grid>
         </Grid>
       </Box>
