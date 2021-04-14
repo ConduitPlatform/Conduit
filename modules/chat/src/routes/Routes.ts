@@ -339,6 +339,7 @@ export class ChatRoutes {
           new ConduitRouteReturnDefinition('JoinRoom', {
             messages: [{
               _id: TYPE.String,
+              message: TYPE.String,
               senderUser: TYPE.String,
               room: TYPE.String,
               createdAt: TYPE.Date,
