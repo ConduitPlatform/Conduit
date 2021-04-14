@@ -34,7 +34,7 @@ export class ChatRoutes {
     }
 
     let errorMessage: string | null = null;
-    const room = await this.database.create('ChatRoom', { name: roomName, participants: [user._id, ...users] })
+    const room = await this.database.create('ChatRoom', { name: roomName, participants: Array.from(new Set([user._id, ...users])) })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -64,6 +64,10 @@ export class ChatRoutes {
 
     if (isNil(room)) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
+    }
+
+    if (room.participants.includes(user._id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'already in room' });
     }
 
     room.participants.push(user._id);
@@ -289,7 +293,7 @@ export class ChatRoutes {
         new ConduitRoute(
           {
             path: '/join/:roomId',
-            action: ConduitRouteActions.POST,
+            action: ConduitRouteActions.UPDATE,
             urlParams: {
               roomId: TYPE.String,
             },
