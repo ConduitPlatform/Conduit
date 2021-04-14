@@ -97,6 +97,42 @@ export class ChatRoutes {
     callback(null, { result: JSON.stringify({ messages }) });
   }
 
+  async leaveRoom(call: RouterRequest, callback: RouterResponse) {
+    const { roomId } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    if (isNil(roomId)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'roomId is required' });
+    }
+
+    let errorMessage: string | null = null;
+    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(room)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
+    }
+
+    const index = room.participants.indexOf(user._id);
+    if (index > -1) {
+      room.participants.splice(index, 1);
+      await this.database.findByIdAndUpdate('ChatRoom', room._id, room)
+        .catch((e: Error) => {
+          errorMessage = e.message;
+        });
+      if (!isNil(errorMessage)) {
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      }
+    }
+
+    callback(null, { result: 'ok' });
+  }
+
   async getMessages(call: RouterRequest, callback: RouterResponse) {
     const { room, skip, limit } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
@@ -254,6 +290,7 @@ export class ChatRoutes {
         connect: this.connect.bind(this),
         createRoom: this.createRoom.bind(this),
         joinRoom: this.joinRoom.bind(this),
+        leaveRoom: this.leaveRoom.bind(this),
         getMessages: this.getMessages.bind(this),
         deleteMessage: this.deleteMessage.bind(this),
         editMessage: this.editMessage.bind(this),
@@ -309,6 +346,23 @@ export class ChatRoutes {
             }]
           }),
           'joinRoom',
+        ),
+      ),
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            path: '/leave/:roomId',
+            action: ConduitRouteActions.UPDATE,
+            urlParams: {
+              roomId: TYPE.String,
+            },
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
+          'leaveRoom',
         ),
       ),
     );
