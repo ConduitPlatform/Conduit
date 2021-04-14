@@ -152,6 +152,41 @@ export class ChatRoutes {
     callback(null, { rooms: rooms?.map((room: any) => room._id) });
   }
 
+  async onMessage(call: SocketRequest, callback: SocketResponse) {
+    const { user } = JSON.parse(call.request.context);
+    const [ roomId, message ] = JSON.parse(call.request.params);
+
+    let errorMessage: string | null = null;
+    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(room) || !room.participants.includes(user._id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid room' });
+    }
+
+    this.database.create('ChatMessage', {
+      message,
+      senderUser: user._id,
+      room: roomId
+    }).then(() => {
+      callback(null, {
+        event: 'message',
+        receivers: [roomId],
+        data: JSON.stringify({ sender: user._id, message, room: roomId })
+      });
+    }).catch((e: Error) => {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: e.message
+      });
+    });
+  }
+
   async registerRoutes() {
     const activeRoutes = await this.getRegisteredRoutes();
 
@@ -161,6 +196,7 @@ export class ChatRoutes {
         createRoom: this.createRoom.bind(this),
         joinRoom: this.joinRoom.bind(this),
         getMessages: this.getMessages.bind(this),
+        onMessage: this.onMessage.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register routes for module');
@@ -256,6 +292,15 @@ export class ChatRoutes {
             'connect': {
               handler: 'connect',
             },
+            'message': {
+              handler: 'onMessage',
+              params: [TYPE.String, TYPE.String],
+              returnType: new ConduitRouteReturnDefinition('MessageResponse', {
+                sender: TYPE.String,
+                message: TYPE.String,
+                room: TYPE.String
+              })
+            }
           },
         ),
       ),
