@@ -93,6 +93,50 @@ export class ChatRoutes {
     callback(null, { result: JSON.stringify({ messages }) });
   }
 
+  async getMessages(call: RouterRequest, callback: RouterResponse) {
+    const { room, skip, limit } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    let messagesPromise;
+    let countPromise;
+    if (isNil(room)) {
+      let errorMessage: string | null = null;
+      const rooms = await this.database.findMany('ChatRoom', { participants: user._id })
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      }
+
+      const query = { room: { $in: rooms.map((room: any) => room._id) }};
+      messagesPromise = this.database.findMany('ChatMessage', query, undefined, skip, limit, '-createdAt');
+      countPromise = this.database.countDocuments('ChatMessage', query);
+    } else {
+      messagesPromise = this.database.findMany(
+        'ChatMessage',
+        {
+          room
+        },
+        undefined,
+        skip,
+        limit,
+        '-createdAt'
+      );
+
+      countPromise = this.database.countDocuments('ChatMessage', { room });
+    }
+
+    Promise.all([messagesPromise, countPromise])
+      .then((res) => {
+        callback(null, { result: JSON.stringify({ messages: res[0], count: res[1] }) });
+      })
+      .catch((e: Error) => {
+        callback({
+          code: grpc.status.INTERNAL,
+          message: e.message
+        });
+      });
+  }
+
   async connect(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
 
@@ -116,6 +160,7 @@ export class ChatRoutes {
         connect: this.connect.bind(this),
         createRoom: this.createRoom.bind(this),
         joinRoom: this.joinRoom.bind(this),
+        getMessages: this.getMessages.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register routes for module');
@@ -169,6 +214,35 @@ export class ChatRoutes {
           'joinRoom',
         ),
       ),
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            path: '/messages',
+            action: ConduitRouteActions.GET,
+            queryParams: {
+              room: TYPE.String,
+              skip: TYPE.Number,
+              limit: TYPE.Number,
+            },
+            middlewares: ['authMiddleware']
+          },
+          new ConduitRouteReturnDefinition('MessagesResponse', {
+            messages: [{
+              _id: TYPE.String,
+              message: TYPE.String,
+              senderUser: TYPE.String,
+              room: TYPE.String,
+              createdAt: TYPE.Date,
+              updatedAt: TYPE.Date,
+            }],
+            count: TYPE.Number
+          }),
+          'getMessages'
+        )
+      )
     );
 
     routesArray.push(
