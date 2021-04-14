@@ -127,7 +127,9 @@ export class SocketController {
         conduitSocket.executeRequest({
           event,
           socketId: socket.id,
-          params: args
+          params: args,
+          // @ts-ignore
+          context: socket.request.conduit
         })
         .then((res) => {
           this.handleResponse(res, socket);
