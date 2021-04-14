@@ -137,6 +137,61 @@ export class ChatRoutes {
       });
   }
 
+  async deleteMessage(call: RouterRequest, callback: RouterResponse) {
+    const { messageId } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    let errorMessage: string | null = null;
+    const message = await this.database.findOne('ChatMessage', { _id: messageId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(message) || message.senderUser !== user._id) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid message id' });
+    }
+
+    this.database.deleteOne('ChatMessage', { _id: messageId })
+      .then(() => {
+        callback(null, { result: 'message deleted successfully' });
+      })
+      .catch((e: Error) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async editMessage(call: RouterRequest, callback: RouterResponse) {
+    const { messageId, newMessage } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    let errorMessage: string | null = null;
+    const message = await this.database.findOne('ChatMessage', { _id: messageId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(message) || message.senderUser !== user._id) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid message id' });
+    }
+
+    message.message = newMessage;
+    this.database.findByIdAndUpdate('ChatMessage', message._id, message)
+      .then(() => {
+        callback(null, { result: 'message changed successfully' });
+      })
+      .catch((e: Error) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
   async connect(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
 
@@ -196,6 +251,8 @@ export class ChatRoutes {
         createRoom: this.createRoom.bind(this),
         joinRoom: this.joinRoom.bind(this),
         getMessages: this.getMessages.bind(this),
+        deleteMessage: this.deleteMessage.bind(this),
+        editMessage: this.editMessage.bind(this),
         onMessage: this.onMessage.bind(this),
       })
       .catch((err: Error) => {
@@ -280,6 +337,48 @@ export class ChatRoutes {
         )
       )
     );
+
+    const config = await this.grpcSdk.config.get('chat');
+    if (config.allowMessageDelete) {
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: '/messages/:messageId',
+              action: ConduitRouteActions.DELETE,
+              urlParams: {
+                messageId: TYPE.String
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
+            'deleteMessage'
+          )
+        )
+      );
+    }
+
+    if (config.allowMessageEdit) {
+      routesArray.push(
+        constructRoute(
+          new ConduitRoute(
+            {
+              path: '/messages/:messageId',
+              action: ConduitRouteActions.UPDATE,
+              urlParams: {
+                messageId: TYPE.String
+              },
+              bodyParams: {
+                newMessage: TYPE.String
+              },
+              middlewares: ['authMiddleware']
+            },
+            new ConduitRouteReturnDefinition('EditMessageResponse', 'String'),
+            'editMessage'
+          )
+        )
+      );
+    }
 
     routesArray.push(
       constructSocket(
