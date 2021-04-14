@@ -139,6 +139,21 @@ export class SocketController {
         });
       });
 
+      socket.on('disconnect', () => {
+        conduitSocket.executeRequest({
+          event: 'disconnect',
+          socketId: socket.id,
+          // @ts-ignore
+          context: socket.request.conduit
+        })
+        .then((res) => {
+          this.handleResponse(res, socket);
+        })
+        .catch((e) => {
+          socket.emit('conduit_error', e);
+        })
+      });
+
     });
   }
 
