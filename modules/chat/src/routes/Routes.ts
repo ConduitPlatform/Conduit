@@ -134,12 +134,12 @@ export class ChatRoutes {
   }
 
   async getMessages(call: RouterRequest, callback: RouterResponse) {
-    const { room, skip, limit } = JSON.parse(call.request.params);
+    const { roomId, skip, limit } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
     let messagesPromise;
     let countPromise;
-    if (isNil(room)) {
+    if (isNil(roomId)) {
       let errorMessage: string | null = null;
       const rooms = await this.database.findMany('ChatRoom', { participants: user._id })
         .catch((e: Error) => (errorMessage = e.message));
@@ -154,7 +154,7 @@ export class ChatRoutes {
       messagesPromise = this.database.findMany(
         'ChatMessage',
         {
-          room
+          room: roomId
         },
         undefined,
         skip,
@@ -162,7 +162,7 @@ export class ChatRoutes {
         '-createdAt'
       );
 
-      countPromise = this.database.countDocuments('ChatMessage', { room });
+      countPromise = this.database.countDocuments('ChatMessage', { room: roomId });
     }
 
     Promise.all([messagesPromise, countPromise])
@@ -375,7 +375,7 @@ export class ChatRoutes {
             path: '/messages',
             action: ConduitRouteActions.GET,
             queryParams: {
-              room: TYPE.String,
+              roomId: TYPE.String,
               skip: TYPE.Number,
               limit: TYPE.Number,
             },
