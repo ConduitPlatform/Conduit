@@ -1,0 +1,174 @@
+---
+name: Chat
+route: /chat
+menu: Modules
+---
+
+# Routes
+
+## New Chat Room
+
+|   route   | method | requires authentication |
+| :-------: | :----: | :---------------------: |
+| /chat/new |  POST  |          true           |
+
+Create a new chat room with other users. Duplicate user id's will be removed.
+
+### Body parameters
+
+- roomName (string)
+- users ([string]): An array of user id's that will be in this room (excluding the authenticated user).
+
+### Returns
+
+- roomId (string)
+
+## Join Chat Room
+
+|       route        | method | requires authentication |
+| :----------------: | :----: | :---------------------: |
+| /chat/join/:roomId |  PUT   |          true           |
+
+Join an existing room.
+
+### URL parameters
+
+- roomId (string)
+
+### Returns
+
+The 10 most recent messages of the room.
+
+Example:
+
+```json
+{
+    "messages": [
+        {
+            "_id": "string",
+            "message": "string",
+            "senderUser": "string",
+            "room": "string",
+            "createdAt": "date",
+            "updatedAt": "date",
+        }
+    ]
+}
+```
+
+## Leave Chat Room
+
+|        route        | method | requires authentication |
+| :-----------------: | :----: | :---------------------: |
+| /chat/leave/:roomId |  PUT   |          true           |
+
+### URL parameters
+
+- roomId (string)
+
+## Get Messages
+
+|     route      | method | requires authentication |
+| :------------: | :----: | :---------------------: |
+| /chat/messages |  GET   |          true           |
+
+Get messages from a specific room or for all rooms the user is in.
+
+### Query parameters
+
+- roomId (string): If roomId is missing then the response will contain messages from all rooms the user is in.
+- skip (number)
+- limit (number)
+
+### Returns
+
+An array of messages sorted by creation date (newest first).
+
+Example:
+
+```json
+{
+    "messages": [
+        {
+            "_id": "string",
+            "message": "string",
+            "senderUser": "string",
+            "room": "string",
+            "createdAt": "date",
+            "updatedAt": "date",
+        }
+    ]
+}
+```
+
+## Delete Message
+
+|           route           | method | requires authentication |
+| :-----------------------: | :----: | :---------------------: |
+| /chat/messages/:messageId | DELETE |          true           |
+
+This route is enabled only if the `allowMessageDelete` flag is set to true in the config.
+
+### URL parameters
+
+- messageId (string)
+
+## Edit Message
+
+|           route           | method | requires authentication |
+| :-----------------------: | :----: | :---------------------: |
+| /chat/messages/:messageId |  PUT   |          true           |
+
+This route is enabled only if the `allowMessageEdit` flag is set to true in the config.
+
+### URL parameters
+
+- messageId (string)
+
+### Body parameters
+
+- newMessage (string)
+
+# Sockets
+
+|       namespace           | requires authentication |
+| :-----------------------: | :---------------------: |
+|         /chat/            |          true           |
+
+## Events
+
+### Connect
+
+| event name |
+| :--------: |
+|  connect   |
+
+When a user connects to this namespace the socket will join all rooms the user is in.
+
+### Message
+
+| event name |                params               |
+| :--------: | :---------------------------------: |
+|  message   | [roomId (string), message (string)] |
+
+When this event is emitted the message will be sent to the room.
+A `message` event will be emitted from the server that will be received only by the other sockets in the room.
+
+Example usage on client:
+
+```javascript
+// client 1
+socket.emit('message', 'room1', 'hi from socket 1');
+
+socket.on('message', (args) => {
+    // prints { sender: 'userId2', message: 'hi from socket 2', room: 'room1' }
+    console.log(args);
+});
+
+// client 2
+socket.emit('message', 'room1', 'hi from socket 2');
+
+socket.on('message', (args) => {
+    // prints: { sender: 'userId1', message: 'hi from socket 1', room: 'room1' }
+    console.log(args);
+});
