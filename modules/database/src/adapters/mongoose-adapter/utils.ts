@@ -45,7 +45,7 @@ async function _createWithPopulations(
           continue;
         }
         if (fields[key][0].hasOwnProperty('ref')) {
-          const model = adapter.getSchemaModel(fields[key][0].ref);
+          const { model } = adapter.getSchemaModel(fields[key][0].ref);
           if (validate) {
             await model.model.validate(val);
           } else {
@@ -57,7 +57,7 @@ async function _createWithPopulations(
       }
     } else if (isObject(document[key])) {
       if (fields[key].hasOwnProperty('ref')) {
-        const model = adapter.getSchemaModel(fields[key].ref);
+        const { model } = adapter.getSchemaModel(fields[key].ref);
         if (validate) {
           await model.model.validate(document[key]);
         } else {

@@ -69,7 +69,7 @@ export function constructQuery(
       return `\"${schemaField}\":{ \"$nin\": ${comparisonField}}`;
     // maybe something else??
     case 8:
-      return `\'${schemaField}\':{ \"$in\": ${comparisonField}}`;
+      return `\'${schemaField}\':{ $contains: ${comparisonField}}`;
     default:
       return `\'${schemaField}\':${comparisonField}`;
   }
