@@ -1,9 +1,9 @@
-import { DatabaseAdapter } from "../../interfaces/DatabaseAdapter";
-import { Sequelize } from "sequelize";
-import { SequelizeSchema } from "./SequelizeSchema";
-import { schemaConverter } from "./SchemaConverter";
-import { ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
-import { systemRequiredValidator } from "../utils/validateSchemas";
+import { DatabaseAdapter } from '../../interfaces/DatabaseAdapter';
+import { Sequelize } from 'sequelize';
+import { SequelizeSchema } from './SequelizeSchema';
+import { schemaConverter } from './SchemaConverter';
+import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { systemRequiredValidator } from '../utils/validateSchemas';
 import { SchemaAdapter } from '../../interfaces';
 
 export class SequelizeAdapter implements DatabaseAdapter {
@@ -25,9 +25,12 @@ export class SequelizeAdapter implements DatabaseAdapter {
     }
 
     if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== "Config") {
+      if (schema.name !== 'Config') {
         try {
-          schema = systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+          schema = systemRequiredValidator(
+            this.registeredSchemas.get(schema.name)!,
+            schema
+          );
         } catch (err) {
           return Promise.reject(err);
         }
@@ -39,7 +42,9 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
-    return this.syncDb().then(() => { return this.models![schema.name] });
+    return this.syncDb().then(() => {
+      return this.models![schema.name];
+    });
   }
 
   private async syncDb() {
@@ -50,32 +55,34 @@ export class SequelizeAdapter implements DatabaseAdapter {
     if (this.models) {
       return this.models[schemaName].originalSchema;
     }
-    throw new Error("Schema not defined yet");
+    throw new Error('Schema not defined yet');
   }
 
-  getSchemaModel(schemaName: string): { model: SchemaAdapter, relations: any } {
+  getSchemaModel(schemaName: string): { model: SchemaAdapter; relations: any } {
     if (this.models) {
       const self = this;
       let relations: any = {};
       for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] = self.models[this.models[schemaName].relations[key]];
+        relations[this.models[schemaName].relations[key]] =
+          self.models[this.models[schemaName].relations[key]];
       }
       return { model: this.models[schemaName], relations };
     }
-    throw new Error("Schema not defined yet");
+    throw new Error('Schema not defined yet');
   }
 
   async ensureConnected(): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.sequelize.authenticate()
+      this.sequelize
+        .authenticate()
         .then(() => {
-          console.log("Sequelize connection established successfully");
+          console.log('Sequelize connection established successfully');
           resolve();
         })
         .catch((err: any) => {
-          console.error("Unable to connect to the database: ", err);
+          console.error('Unable to connect to the database: ', err);
           reject();
-        })
+        });
     });
   }
 }
