@@ -25,7 +25,8 @@ class SecurityModule extends IConduitSecurity {
       new RateLimiter(
         process.env.REDIS_HOST as string,
         parseInt(process.env.REDIS_PORT as string)
-      ).limiter
+      ).limiter,
+      true
     );
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
     router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
@@ -39,7 +40,8 @@ class SecurityModule extends IConduitSecurity {
     });
     router.registerGlobalMiddleware(
       'clientMiddleware',
-      clientValidator.middleware.bind(clientValidator)
+      clientValidator.middleware.bind(clientValidator),
+      true
     );
   }
 }

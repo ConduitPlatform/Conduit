@@ -22,3 +22,22 @@ export type RouterResponse = GrpcResponse<Response | ResponseWithResult | Respon
 
 export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
 export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
+
+export type SocketRequest = GrpcRequest<{
+  event: string,
+  socketId: string,
+  params: string,
+  context: string
+}>;
+
+type EventResponse = {
+  event: string,
+  data: string,
+  receivers?: string[]
+};
+
+type JoinRoomResponse = {
+  rooms: string[]
+}
+
+export type SocketResponse = GrpcResponse<EventResponse | JoinRoomResponse>;

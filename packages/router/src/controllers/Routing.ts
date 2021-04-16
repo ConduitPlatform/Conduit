@@ -1,11 +1,13 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest/Rest';
-import { ConduitRoute, ConduitMiddleware } from '@quintessential-sft/conduit-sdk';
+import { ConduitRoute, ConduitMiddleware, ConduitSocket, ConduitError } from '@quintessential-sft/conduit-sdk';
 import { GraphQLController } from './GraphQl/GraphQL';
+import { SocketController } from './Socket/Socket';
 
 export class ConduitRoutingController {
   private _restRouter: RestController;
   private _graphQLRouter?: GraphQLController;
+  private _socketRouter?: SocketController;
   private _app: Application;
   private _middlewareRouter: Router;
 
@@ -22,6 +24,10 @@ export class ConduitRoutingController {
       self._middlewareRouter(req, res, next);
     });
 
+    app.use((err: ConduitError, req: Request, res: Response, next: NextFunction) => {
+      res.status(err?.status || 500).send(err.message);
+    });
+
     app.use((req, res, next) => {
       if (req.url.startsWith('/graphql') && this._graphQLRouter) {
         this._graphQLRouter.handleRequest(req, res, next);
@@ -36,15 +42,24 @@ export class ConduitRoutingController {
     this._graphQLRouter = new GraphQLController(this._app);
   }
 
+  initSockets() {
+    this._socketRouter = new SocketController(this._app);
+  }
+
   registerMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void
+    middleware: (req: Request, res: Response, next: NextFunction) => void,
+    socketMiddleware: boolean
   ) {
     this._middlewareRouter.use(middleware);
+    if (socketMiddleware) {
+      this._socketRouter?.registerGlobalMiddleware(middleware);
+    }
   }
 
   registerRouteMiddleware(middleware: ConduitMiddleware) {
     this._restRouter.registerMiddleware(middleware);
     this._graphQLRouter?.registerMiddleware(middleware);
+    this._socketRouter?.registerMiddleware(middleware);
   }
 
   registerRoute(
@@ -57,6 +72,10 @@ export class ConduitRoutingController {
   registerConduitRoute(route: ConduitRoute) {
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter.registerConduitRoute(route);
+  }
+
+  registerConduitSocket(socket: ConduitSocket) {
+    this._socketRouter?.registerConduitSocket(socket);
   }
 
   cleanupRoutes(routes: any[]) {

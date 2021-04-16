@@ -2,6 +2,7 @@ import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
 import fs from 'fs';
+import { SocketProtoDescription } from '../../interfaces';
 
 let protofile_template = `
 syntax = "proto3";
@@ -21,6 +22,20 @@ message RouterRequest {
 message RouterResponse {
   string result = 1;
   string redirect = 2;
+}
+
+message SocketRequest {
+  string event = 1;
+  string socketId = 2;
+  string params = 3;
+  string context = 4;
+}
+
+message SocketResponse {
+  string event = 1;
+  string data = 2;
+  repeated string receivers = 3;
+  repeated string rooms = 4;
 }
 `;
 export default class Router extends ConduitModule {
@@ -42,18 +57,7 @@ export default class Router extends ConduitModule {
     paths: any[],
     functions: { [name: string]: Function }
   ): Promise<any> {
-    let protoFunctions = '';
-    paths.forEach((r) => {
-      if (
-        protoFunctions.indexOf(
-          r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
-        ) !== -1
-      )
-        return;
-      protoFunctions += `rpc ${
-        r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
-      }(RouterRequest) returns (RouterResponse);\n`;
-    });
+    const protoFunctions = this.createProtoFunctions(paths);
     let protoFile = protofile_template
       .toString()
       .replace('MODULE_FUNCTIONS', protoFunctions);
@@ -73,19 +77,8 @@ export default class Router extends ConduitModule {
   }
 
   register(paths: any[], protoFile?: string, url?: string): Promise<any> {
-    let protoFunctions = '';
     if (!protoFile) {
-      paths.forEach((r) => {
-        if (
-          protoFunctions.indexOf(
-            r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
-          ) !== -1
-        )
-          return;
-        protoFunctions += `rpc ${
-          r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
-        }(RouterRequest) returns (RouterResponse);\n`;
-      });
+      const protoFunctions = this.createProtoFunctions(paths);
 
       protoFile = protofile_template
         .toString()
@@ -106,5 +99,49 @@ export default class Router extends ConduitModule {
         }
       });
     });
+  }
+
+  private createProtoFunctions(paths: any[]) {
+    let protoFunctions = '';
+
+    paths.forEach((r) => {
+      if (r.hasOwnProperty('events')) {
+        protoFunctions += this.createProtoFunctionsForSocket(r, protoFunctions);
+      } else {
+        protoFunctions += this.createProtoFunctionForRoute(r, protoFunctions);
+      }
+    });
+
+    return protoFunctions;
+  }
+
+  private createProtoFunctionsForSocket(path: SocketProtoDescription, protoFunctions: string) {
+    let newFunctions = '';
+    const events = JSON.parse(path.events);
+    Object.keys(events).forEach((event) => {
+      const newFunction = this.createGrpcFunctionName(events[event].grpcFunction);
+
+      if (protoFunctions.indexOf(newFunction) !== -1) {
+        return;
+      }
+
+      newFunctions += `rpc ${newFunction}(SocketRequest) returns (SocketResponse);\n`;
+    });
+
+    return newFunctions;
+  }
+
+  private createProtoFunctionForRoute(path: any, protoFunctions: string) {
+    const newFunction = this.createGrpcFunctionName(path.grpcFunction);
+
+    if (protoFunctions.indexOf(newFunction) !== -1) {
+      return '';
+    }
+
+    return `rpc ${newFunction}(RouterRequest) returns (RouterResponse);\n`;
+  }
+
+  private createGrpcFunctionName(grpcFunction: string) {
+    return grpcFunction.charAt(0).toUpperCase() + grpcFunction.slice(1);
   }
 }

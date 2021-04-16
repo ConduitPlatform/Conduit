@@ -7,7 +7,7 @@ import {
 } from '../../../interfaces';
 
 export interface IConduitRouter {
-  registerGlobalMiddleware(name: string, middleware: any): void;
+  registerGlobalMiddleware(name: string, middleware: any, socketMiddleware?: boolean): void;
 
   registerRouteMiddleware(middleware: ConduitMiddleware): void;
 

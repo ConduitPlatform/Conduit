@@ -5,7 +5,7 @@ import {
   ConduitRoute,
   IConduitRouter,
   ConduitMiddleware,
-  ConduitSDK,
+  ConduitSDK, ConduitSocket,
 } from '@quintessential-sft/conduit-sdk';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
@@ -31,6 +31,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._globalMiddlewares = [];
     this._internalRouter = new ConduitRoutingController(this._app);
     this.initGraphQL();
+    this.initSockets();
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
@@ -53,7 +54,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         if (state.routes) {
           state.routes.forEach((r: any) => {
             try {
-              let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute({
+              let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute({
                 protoFile: r.protofile,
                 routes: r.routes,
                 routerUrl: r.url,
@@ -62,6 +63,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
               routes.forEach((r) => {
                 if (r instanceof ConduitMiddleware) {
                   this.registerRouteMiddleware(r);
+                } else if (r instanceof ConduitSocket) {
+                  this.registerSocket(r);
                 } else {
                   this.registerRoute(r);
                 }
@@ -79,7 +82,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     sdk.getBus().subscribe('router', (message: string) => {
       try {
         let messageParsed = JSON.parse(message);
-        let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute({
+        let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute({
           protoFile: messageParsed.protofile,
           routes: messageParsed.routes,
           routerUrl: messageParsed.url,
@@ -88,6 +91,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
         routes.forEach((r) => {
           if (r instanceof ConduitMiddleware) {
             this.registerRouteMiddleware(r);
+          } else if (r instanceof  ConduitSocket) {
+            this.registerSocket(r);
           } else {
             this.registerRoute(r);
           }
@@ -154,7 +159,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         // do not enable yet, it requires further consideration
       }
 
-      let routes: (ConduitRoute | ConduitMiddleware)[] = grpcToConduitRoute(
+      let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute(
         call.request,
         moduleName
       );
@@ -162,6 +167,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
           this.registerRouteMiddleware(r);
+        } else if (r instanceof ConduitSocket) {
+          this.registerSocket(r);
         } else {
           this.registerRoute(r);
         }
@@ -200,9 +207,13 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.initGraphQL();
   }
 
-  registerGlobalMiddleware(name: string, middleware: any) {
+  initSockets() {
+    this._internalRouter.initSockets();
+  }
+
+  registerGlobalMiddleware(name: string, middleware: any, socketMiddleware: boolean = false) {
     this._globalMiddlewares.push(name);
-    this._internalRouter.registerMiddleware(middleware);
+    this._internalRouter.registerMiddleware(middleware, socketMiddleware);
   }
 
   getGlobalMiddlewares(): string[] {
@@ -242,6 +253,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   registerRouteMiddleware(middleware: ConduitMiddleware): void {
     this._internalRouter.registerRouteMiddleware(middleware);
+  }
+
+  registerSocket(socket: ConduitSocket): void {
+    this._internalRouter.registerConduitSocket(socket);
   }
 }
 

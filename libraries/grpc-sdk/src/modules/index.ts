@@ -8,3 +8,4 @@ export * from './pushNotifications';
 export * from './cms';
 export * from './sms';
 export * from './payments';
+export * from './chat';

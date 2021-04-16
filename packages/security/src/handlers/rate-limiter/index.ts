@@ -1,6 +1,7 @@
 import { RedisClient } from 'redis';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import { NextFunction } from 'express';
+import { ConduitError } from '@quintessential-sft/conduit-sdk';
 
 export class RateLimiter {
   private _limiter: any;
@@ -36,7 +37,7 @@ export class RateLimiter {
           next();
         })
         .catch(() => {
-                    res.status(429).send('Too Many Requests');
+          next(new ConduitError('RATE_LIMIT', 429, 'Too Many Requests'));
         });
     };
   }

@@ -4,3 +4,4 @@ export * from './ConduitRouteReturn';
 export * from './ConduitMiddleware';
 export * from './ConduitSchema';
 export * from './GrpcServer';
+export * from './ConduitSocket';

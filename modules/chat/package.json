@@ -1,0 +1,35 @@
+{
+  "name": "@conduit/chat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "build": "rimraf dist && tsc",
+    "prepare": "npm run build",
+    "build:docker": "docker build -t quintessential.azurecr.io/conduit-chat:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-chat:latest"
+  },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.4",
+    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "grpc": "^1.24.2",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^3.8.3"
+  }
+}
