@@ -131,13 +131,13 @@ export class MongooseSchema implements SchemaAdapter {
   private parseQuery(query: any) {
     let parsed: any = {};
 
-    for (const key in query) {
-      if (query[key].hasOwnProperty('$contains')) {
+    Object.keys(query).forEach((key) => {
+      if (query[key]?.hasOwnProperty('$contains')) {
         parsed[key] = { $in: query[key]['$contains'] };
       } else {
         parsed[key] = query[key];
       }
-    }
+    });
 
     return parsed;
   }
