@@ -86,6 +86,10 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+      const authConfig = await this.grpcSdk.config
+        .get('authentication')
+        .catch(console.error);
+
       routesArray.push(
         constructRoute(
           new ConduitRoute(
@@ -96,6 +100,7 @@ export class AuthenticationRoutes {
                 email: TYPE.String,
                 password: TYPE.String,
               },
+              middlewares: authConfig.local.identifier === 'username' ? ['authMiddleware'] : undefined
             },
             new ConduitRouteReturnDefinition('RegisterResponse', 'String'),
             'register'
@@ -125,58 +130,57 @@ export class AuthenticationRoutes {
         )
       );
 
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/forgot-password',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                email: TYPE.String,
+      if (authConfig.local.identifier !== 'username') {
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: '/forgot-password',
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                  email: TYPE.String,
+                },
               },
-            },
-            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
-            'forgotPassword'
+              new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
+              'forgotPassword'
+            )
           )
-        )
-      );
+        );
 
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/reset-password',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                passwordResetToken: TYPE.String,
-                password: TYPE.String,
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: '/reset-password',
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                  passwordResetToken: TYPE.String,
+                  password: TYPE.String,
+                },
               },
-            },
-            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
-            'resetPassword'
+              new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+              'resetPassword'
+            )
           )
-        )
-      );
+        );
 
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/hook/verify-email/:verificationToken',
-              action: ConduitRouteActions.GET,
-              urlParams: {
-                verificationToken: TYPE.String,
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: '/hook/verify-email/:verificationToken',
+                action: ConduitRouteActions.GET,
+                urlParams: {
+                  verificationToken: TYPE.String,
+                },
               },
-            },
-            new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
-            'verifyEmail'
+              new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
+              'verifyEmail'
+            )
           )
-        )
-      );
+        );
+      }
 
-      const authConfig = await this.grpcSdk.config
-        .get('authentication')
-        .catch(console.error);
       if (authConfig?.twofa.enabled) {
         routesArray.push(
           constructRoute(

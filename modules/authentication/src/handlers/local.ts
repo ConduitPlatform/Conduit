@@ -106,7 +106,7 @@ export class LocalHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
-    if (config.local.sendVerificationEmail) {
+    if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
       this.database
         .create('Token', {
           type: TokenType.VERIFICATION_TOKEN,
@@ -281,11 +281,12 @@ export class LocalHandlers {
   }
 
   async forgotPassword(call: RouterRequest, callback: RouterResponse) {
-    if (!this.initialized)
+    if (!this.initialized || isNil(this.emailModule)) {
       return callback({
         code: grpc.status.NOT_FOUND,
         message: 'Requested resource not found',
       });
+    }
 
     const { email } = JSON.parse(call.request.params);
     const config = ConfigController.getInstance().config;
@@ -342,11 +343,12 @@ export class LocalHandlers {
   }
 
   async resetPassword(call: RouterRequest, callback: RouterResponse) {
-    if (!this.initialized)
+    if (!this.initialized || isNil(this.emailModule)) {
       return callback({
         code: grpc.status.NOT_FOUND,
         message: 'Requested resource not found',
       });
+    }
 
     const {
       passwordResetToken: passwordResetTokenParam,
@@ -729,15 +731,19 @@ export class LocalHandlers {
   }
 
   private async initDbAndEmail() {
-    await this.grpcSdk.config.moduleExists('email');
-
-    await this.grpcSdk.waitForExistence('email');
+    const config = ConfigController.getInstance().config;
 
     this.database = this.grpcSdk.databaseProvider;
-    this.emailModule = this.grpcSdk.emailProvider;
+
+    if (config.local.identifier !== 'username') {
+      await this.grpcSdk.config.moduleExists('email');
+
+      await this.grpcSdk.waitForExistence('email');
+
+      this.emailModule = this.grpcSdk.emailProvider;
+    }
 
     let errorMessage = null;
-    const config = ConfigController.getInstance().config;
     await this.grpcSdk.config
       .moduleExists('sms')
       .catch((e: any) => (errorMessage = e.message));
@@ -748,7 +754,10 @@ export class LocalHandlers {
     } else {
       console.log('sms 2fa not active');
     }
-    this.registerTemplates();
+
+    if (config.local.identifier === 'email') {
+      this.registerTemplates();
+    }
     this.initialized = true;
   }
 
