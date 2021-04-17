@@ -18,13 +18,15 @@ export class LocalHandlers {
   private emailModule: any;
   private sms: any;
   private initialized: boolean = false;
+  private identifier: string = 'email';
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
     let promise: Promise<void>;
-    if (config.local.identifier !== 'username') {
+    this.identifier = config.local.identifier;
+    if (this.identifier !== 'username') {
       promise = this.grpcSdk.config.get('email')
         .then((emailConfig: any) => {
           if (!emailConfig.active) {
@@ -92,7 +94,8 @@ export class LocalHandlers {
 
     user = await AuthUtils.hashPassword(password)
       .then((hashedPassword: string) => {
-        return this.database.create('User', { email, hashedPassword });
+        const isVerified = this.identifier === 'username';
+        return this.database.create('User', { email, hashedPassword, isVerified });
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
