@@ -14,23 +14,19 @@ export class GoogleHandlers {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.client = new OAuth2Client();
     this.database = this.grpcSdk.databaseProvider;
-    this.validate()
-      .then(() => {
-        console.log('Google is active');
-      })
-      .catch((err) => {
-        console.log('Google not active');
-      });
   }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.google.enabled) {
+      console.log('Google not active');
       throw ConduitError.forbidden('Google auth is deactivated');
     }
     if (!authConfig.google.clientId) {
+      console.log('Google not active');
       throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
     }
+    console.log('Google is active');
     this.initialized = true;
     return true;
   }

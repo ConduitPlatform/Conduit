@@ -19,35 +19,36 @@ export class LocalHandlers {
   private sms: any;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.validate()
-      .then((r) => {
-        return this.initDbAndEmail();
-      })
-      .catch((err) => {
-        console.log('Local not active');
-      });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('email')
-      .then((emailConfig: any) => {
-        if (!emailConfig.active) {
-          throw ConduitError.forbidden(
-            'Cannot use local authentication without email module being enabled'
-          );
-        }
-      })
+    const config = ConfigController.getInstance().config;
+    let promise: Promise<void>;
+    if (config.local.identifier !== 'username') {
+      promise = this.grpcSdk.config.get('email')
+        .then((emailConfig: any) => {
+          if (!emailConfig.active) {
+            throw ConduitError.forbidden(
+              'Cannot use local authentication without email module being enabled'
+            );
+          }
+        });
+    } else {
+      promise = Promise.resolve();
+    }
+
+    return promise
       .then(() => {
         if (!this.initialized) {
           return this.initDbAndEmail();
         }
       })
       .then((r) => {
+        console.log('Local is active');
         return true;
       })
       .catch((err: Error) => {
+        console.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
         throw err;

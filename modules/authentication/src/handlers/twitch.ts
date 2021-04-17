@@ -12,18 +12,12 @@ export class TwitchHandlers {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.databaseProvider;
-    this.validate()
-      .then((r) => {
-        console.log('twitch is active');
-      })
-      .catch((err) => {
-        console.log('twitch not active');
-      });
   }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.twitch.enabled) {
+      console.log('twitch not active');
       throw ConduitError.forbidden('Twitch auth is deactivated');
     }
     if (
@@ -31,10 +25,12 @@ export class TwitchHandlers {
       !authConfig.twitch.clientId ||
       !authConfig.twitch.clientSecret
     ) {
+      console.log('twitch not active');
       throw ConduitError.forbidden(
         'Cannot enable twitch auth due to missing clientId or client secret'
       );
     }
+    console.log('twitch is active');
     this.initialized = true;
     return true;
   }

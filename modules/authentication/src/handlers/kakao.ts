@@ -13,23 +13,19 @@ export class KakaoHandlers {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.databaseProvider;
-    this.validate()
-      .then((r) => {
-        console.log('Kakao is active');
-      })
-      .catch((err) => {
-        console.log('Kakao not active');
-      });
   }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.kakao.enabled) {
+      console.log('Kakao not active');
       throw ConduitError.forbidden('Kakao auth is deactivated');
     }
     if (!authConfig.kakao || !authConfig.kakao.clientId) {
+      console.log('Kakao not active');
       throw ConduitError.forbidden('Cannot enable kakao auth due to missing clientId');
     }
+    console.log('Kakao is active');
     this.initialized = true;
     return true;
   }

@@ -11,24 +11,20 @@ export class FacebookHandlers {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.databaseProvider;
-    this.validate()
-      .then((r) => {
-        console.log('Facebook is active');
-      })
-      .catch((err) => {
-        console.log('Facebook not active');
-      });
   }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
 
     if (!authConfig.facebook.enabled) {
+      console.log('Facebook not active');
       throw ConduitError.forbidden('Facebook auth is deactivated');
     }
     if (!authConfig.facebook.clientId) {
+      console.log('Facebook not active');
       throw ConduitError.forbidden('Cannot enable facebook auth due to missing clientId');
     }
+    console.log('Facebook is active');
     this.initialized = true;
     return true;
   }
