@@ -10,20 +10,15 @@ export class ServiceHandler {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.databaseProvider;
-    this.validate()
-      .then((r: any) => {
-        console.error('Service is active');
-      })
-      .catch((err: any) => {
-        console.error('Service not active');
-      });
   }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
+      console.error('Service not active');
       throw ConduitError.forbidden('Service auth is deactivated');
     }
+    console.error('Service is active');
     this.initialized = true;
     return true;
   }

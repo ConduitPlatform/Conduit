@@ -18,36 +18,39 @@ export class LocalHandlers {
   private emailModule: any;
   private sms: any;
   private initialized: boolean = false;
+  private identifier: string = 'email';
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.validate()
-      .then((r) => {
-        return this.initDbAndEmail();
-      })
-      .catch((err) => {
-        console.log('Local not active');
-      });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
-    return this.grpcSdk.config
-      .get('email')
-      .then((emailConfig: any) => {
-        if (!emailConfig.active) {
-          throw ConduitError.forbidden(
-            'Cannot use local authentication without email module being enabled'
-          );
-        }
-      })
+    const config = ConfigController.getInstance().config;
+    let promise: Promise<void>;
+    this.identifier = config.local.identifier;
+    if (this.identifier !== 'username') {
+      promise = this.grpcSdk.config.get('email')
+        .then((emailConfig: any) => {
+          if (!emailConfig.active) {
+            throw ConduitError.forbidden(
+              'Cannot use local authentication without email module being enabled'
+            );
+          }
+        });
+    } else {
+      promise = Promise.resolve();
+    }
+
+    return promise
       .then(() => {
         if (!this.initialized) {
           return this.initDbAndEmail();
         }
       })
       .then((r) => {
+        console.log('Local is active');
         return true;
       })
       .catch((err: Error) => {
+        console.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
         throw err;
@@ -91,7 +94,8 @@ export class LocalHandlers {
 
     user = await AuthUtils.hashPassword(password)
       .then((hashedPassword: string) => {
-        return this.database.create('User', { email, hashedPassword });
+        const isVerified = this.identifier === 'username';
+        return this.database.create('User', { email, hashedPassword, isVerified });
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -106,7 +110,7 @@ export class LocalHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
-    if (config.local.sendVerificationEmail) {
+    if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
       this.database
         .create('Token', {
           type: TokenType.VERIFICATION_TOKEN,
@@ -281,11 +285,12 @@ export class LocalHandlers {
   }
 
   async forgotPassword(call: RouterRequest, callback: RouterResponse) {
-    if (!this.initialized)
+    if (!this.initialized || isNil(this.emailModule)) {
       return callback({
         code: grpc.status.NOT_FOUND,
         message: 'Requested resource not found',
       });
+    }
 
     const { email } = JSON.parse(call.request.params);
     const config = ConfigController.getInstance().config;
@@ -342,11 +347,12 @@ export class LocalHandlers {
   }
 
   async resetPassword(call: RouterRequest, callback: RouterResponse) {
-    if (!this.initialized)
+    if (!this.initialized || isNil(this.emailModule)) {
       return callback({
         code: grpc.status.NOT_FOUND,
         message: 'Requested resource not found',
       });
+    }
 
     const {
       passwordResetToken: passwordResetTokenParam,
@@ -729,15 +735,19 @@ export class LocalHandlers {
   }
 
   private async initDbAndEmail() {
-    await this.grpcSdk.config.moduleExists('email');
-
-    await this.grpcSdk.waitForExistence('email');
+    const config = ConfigController.getInstance().config;
 
     this.database = this.grpcSdk.databaseProvider;
-    this.emailModule = this.grpcSdk.emailProvider;
+
+    if (config.local.identifier !== 'username') {
+      await this.grpcSdk.config.moduleExists('email');
+
+      await this.grpcSdk.waitForExistence('email');
+
+      this.emailModule = this.grpcSdk.emailProvider;
+    }
 
     let errorMessage = null;
-    const config = ConfigController.getInstance().config;
     await this.grpcSdk.config
       .moduleExists('sms')
       .catch((e: any) => (errorMessage = e.message));
@@ -748,7 +758,10 @@ export class LocalHandlers {
     } else {
       console.log('sms 2fa not active');
     }
-    this.registerTemplates();
+
+    if (config.local.identifier === 'email') {
+      this.registerTemplates();
+    }
     this.initialized = true;
   }
 
