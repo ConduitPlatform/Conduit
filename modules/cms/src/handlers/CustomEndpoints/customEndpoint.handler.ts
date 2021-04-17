@@ -250,6 +250,7 @@ export class CustomEndpointHandler {
     for (const el of arr) {
       let tmp = JSON.parse(el);
       let key = Object.keys(tmp)[0];
+      if(!key) continue;
       let innerKey = Object.keys(tmp[key])[0];
       if (!res.hasOwnProperty(key)) res[key] = tmp[key];
       else res[key][innerKey] = tmp[key][innerKey];

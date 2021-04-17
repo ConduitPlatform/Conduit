@@ -60,7 +60,7 @@ function extractParams(
       }
       resultingObject[placement][r.name] = {
         type: r.array ? [r.type] : r.type,
-        required: r.optional ? r.optional : true,
+        required: r.optional ? !r.optional : true,
       };
     }
   );
