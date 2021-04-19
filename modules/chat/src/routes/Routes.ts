@@ -267,7 +267,8 @@ export class ChatRoutes {
     this.database.create('ChatMessage', {
       message,
       senderUser: user._id,
-      room: roomId
+      room: roomId,
+      readBy: [user._id]
     }).then(() => {
       callback(null, {
         event: 'message',
@@ -342,6 +343,7 @@ export class ChatRoutes {
               message: TYPE.String,
               senderUser: TYPE.String,
               room: TYPE.String,
+              readBy: [TYPE.String],
               createdAt: TYPE.Date,
               updatedAt: TYPE.Date,
             }]
@@ -387,6 +389,7 @@ export class ChatRoutes {
               message: TYPE.String,
               senderUser: TYPE.String,
               room: TYPE.String,
+              readBy: [TYPE.String],
               createdAt: TYPE.Date,
               updatedAt: TYPE.Date,
             }],
