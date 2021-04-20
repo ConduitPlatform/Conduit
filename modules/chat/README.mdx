@@ -23,39 +23,19 @@ Create a new chat room with other users. Duplicate user id's will be removed.
 
 - roomId (string)
 
-## Join Chat Room
+## Invite Users To Chat Room
 
-|       route        | method | requires authentication |
-| :----------------: | :----: | :---------------------: |
-| /chat/join/:roomId |  PUT   |          true           |
-
-Join an existing room.
+|       route       | method | requires authentication |
+| :---------------: | :----: | :---------------------: |
+| /chat/add/:roomId |  PUT   |          true           |
 
 ### URL parameters
 
 - roomId (string)
 
-### Returns
+### Body parameters
 
-The 10 most recent messages of the room.
-
-Example:
-
-```json
-{
-    "messages": [
-        {
-            "_id": "string",
-            "message": "string",
-            "senderUser": "string",
-            "room": "string",
-            "readBy": ["string"],
-            "createdAt": "date",
-            "updatedAt": "date",
-        }
-    ]
-}
-```
+- users (string[])
 
 ## Leave Chat Room
 

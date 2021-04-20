@@ -45,12 +45,12 @@ export class ChatRoutes {
     callback(null, { result: JSON.stringify({ roomId: room._id })});
   }
 
-  async joinRoom(call: RouterRequest, callback: RouterResponse) {
-    const { roomId } = JSON.parse(call.request.params);
+  async addUserToRoom(call: RouterRequest, callback: RouterResponse) {
+    const { roomId, users } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
-    if (isNil(roomId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'roomId is required' });
+    if (isNil(roomId) || isNil(users) || !isArray(users) || users.length === 0) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'roomId and users array are required' });
     }
 
     let errorMessage: string | null = null;
@@ -62,15 +62,27 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    if (isNil(room)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
     }
 
-    if (room.participants.includes(user._id)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'already in room' });
+    const uniqueUsers = Array.from(new Set(users));
+    const usersToBeAdded = await this.database.findMany('User', { _id: { $in: uniqueUsers } })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (usersToBeAdded.length != uniqueUsers.length) {
+      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
+      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
+      if (wrongIds.length != 0) {
+        return callback({ code: grpc.status.INVALID_ARGUMENT, message: `users [${wrongIds}] do not exist` });
+      }
     }
 
-    room.participants.push(user._id);
+    room.participants = Array.from(new Set([...room.participants, ...uniqueUsers]));
     await this.database.findByIdAndUpdate('ChatRoom', room._id, room)
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -79,22 +91,7 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const messages = await this.database.findMany(
-      'ChatMessage',
-      { room: room._id },
-      undefined,
-      undefined,
-      10,
-      '-createdAt'
-    )
-    .catch((e: Error) => {
-      errorMessage = e.message;
-    });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-
-    callback(null, { result: JSON.stringify({ messages }) });
+    callback(null, { result: 'users added successfully' });
   }
 
   async leaveRoom(call: RouterRequest, callback: RouterResponse) {
@@ -332,7 +329,7 @@ export class ChatRoutes {
       .registerRouter(this.server, activeRoutes, {
         connect: this.connect.bind(this),
         createRoom: this.createRoom.bind(this),
-        joinRoom: this.joinRoom.bind(this),
+        addUserToRoom: this.addUserToRoom.bind(this),
         leaveRoom: this.leaveRoom.bind(this),
         getMessages: this.getMessages.bind(this),
         deleteMessage: this.deleteMessage.bind(this),
@@ -373,25 +370,18 @@ export class ChatRoutes {
       constructRoute(
         new ConduitRoute(
           {
-            path: '/join/:roomId',
+            path: '/add/:roomId',
             action: ConduitRouteActions.UPDATE,
             urlParams: {
               roomId: TYPE.String,
             },
+            bodyParams: {
+              users: [TYPE.String]
+            },
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('JoinRoom', {
-            messages: [{
-              _id: TYPE.String,
-              message: TYPE.String,
-              senderUser: TYPE.String,
-              room: TYPE.String,
-              readBy: [TYPE.String],
-              createdAt: TYPE.Date,
-              updatedAt: TYPE.Date,
-            }]
-          }),
-          'joinRoom',
+          new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
+          'addUserToRoom',
         ),
       ),
     );
