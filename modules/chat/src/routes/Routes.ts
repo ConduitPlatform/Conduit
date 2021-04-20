@@ -132,8 +132,8 @@ export class ChatRoutes {
 
     let messagesPromise;
     let countPromise;
+    let errorMessage: string | null = null;
     if (isNil(roomId)) {
-      let errorMessage: string | null = null;
       const rooms = await this.database.findMany('ChatRoom', { participants: user._id })
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
@@ -144,6 +144,14 @@ export class ChatRoutes {
       messagesPromise = this.database.findMany('ChatMessage', query, undefined, skip, limit, '-createdAt');
       countPromise = this.database.countDocuments('ChatMessage', query);
     } else {
+      const room = await this.database.findOne('ChatRoom', { _id: roomId })
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      }
+      if (isNil(room) || !room.participants.includes(user._id)) {
+        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'room does not exist'})
+      }
       messagesPromise = this.database.findMany(
         'ChatMessage',
         {
