@@ -33,6 +33,12 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'users array is required and cannot be empty'});
     }
 
+    try {
+      await this.validateUsersInput(users);
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+
     let errorMessage: string | null = null;
     const room = await this.database.create('ChatRoom', { name: roomName, participants: Array.from(new Set([user._id, ...users])) })
       .catch((e: Error) => {
@@ -66,23 +72,13 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
     }
 
-    const uniqueUsers = Array.from(new Set(users));
-    const usersToBeAdded = await this.database.findMany('User', { _id: { $in: uniqueUsers } })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-    if (usersToBeAdded.length != uniqueUsers.length) {
-      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
-      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
-      if (wrongIds.length != 0) {
-        return callback({ code: grpc.status.INVALID_ARGUMENT, message: `users [${wrongIds}] do not exist` });
-      }
+    try {
+      await this.validateUsersInput(users);
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
     }
 
-    room.participants = Array.from(new Set([...room.participants, ...uniqueUsers]));
+    room.participants = Array.from(new Set([...room.participants, ...users]));
     await this.database.findByIdAndUpdate('ChatRoom', room._id, room)
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -320,6 +316,25 @@ export class ChatRoutes {
           message: e.message
         });
       });
+  }
+
+  private async validateUsersInput(users: any[]) {
+    const uniqueUsers = Array.from(new Set(users));
+    let errorMessage: string | null = null;
+    const usersToBeAdded = await this.database.findMany('User', { _id: { $in: uniqueUsers } })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (usersToBeAdded.length != uniqueUsers.length) {
+      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
+      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
+      if (wrongIds.length != 0) {
+        return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: `users [${wrongIds}] do not exist` });
+      }
+    }
   }
 
   async registerRoutes() {
