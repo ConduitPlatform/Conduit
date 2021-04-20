@@ -13,6 +13,11 @@ export const ChatMessageSchema = new ConduitSchema(
       type: TYPE.Relation,
       model: 'ChatRoom'
     },
+    readBy: [{
+      type: TYPE.Relation,
+      model: 'User',
+      default: []
+    }],
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },

@@ -49,6 +49,7 @@ Example:
             "message": "string",
             "senderUser": "string",
             "room": "string",
+            "readBy": ["string"],
             "createdAt": "date",
             "updatedAt": "date",
         }
@@ -94,6 +95,7 @@ Example:
             "message": "string",
             "senderUser": "string",
             "room": "string",
+            "readBy": ["string"],
             "createdAt": "date",
             "updatedAt": "date",
         }
@@ -172,3 +174,33 @@ socket.on('message', (args) => {
     // prints: { sender: 'userId1', message: 'hi from socket 1', room: 'room1' }
     console.log(args);
 });
+```
+
+### Read Messages
+
+|   event name    |     params        |
+| :-------------: | :---------------: |
+|  messagesRead   | [roomId (string)] |
+
+When a user reads a message this event should be fired in order to mark that the messages in this room are read by this user.
+A `messagesRead` event will be emitted from the server that will be received only by the other sockets in the room the message was sent.
+
+Example usage on client:
+
+```javascript
+
+// client 1
+socket.emit('message', 'room1', 'hi from socket 1');
+
+socket.on('messagesRead', (args) => {
+    // prints: { room: 'room1', readBy: 'userId2' }
+    console.log(args);
+});
+
+
+// client 2
+socket.on('message', (args) => {
+    console.log(args);
+    socket.emit('messagesRead', args.room)
+});
+```

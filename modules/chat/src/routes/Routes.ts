@@ -267,7 +267,8 @@ export class ChatRoutes {
     this.database.create('ChatMessage', {
       message,
       senderUser: user._id,
-      room: roomId
+      room: roomId,
+      readBy: [user._id]
     }).then(() => {
       callback(null, {
         event: 'message',
@@ -280,6 +281,48 @@ export class ChatRoutes {
         message: e.message
       });
     });
+  }
+
+  async onMessagesRead(call: SocketRequest, callback: SocketResponse) {
+    const { user } = JSON.parse(call.request.context);
+    const [ roomId ] = JSON.parse(call.request.params);
+
+    let errorMessage: string | null = null;
+    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: errorMessage
+      });
+    }
+
+    if (isNil(room) || !room.participants.includes(user._id)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'invalid room'
+      });
+    }
+
+    const filterQuery = {
+      room: room._id,
+      readBy: { $ne: user._id }
+    };
+
+    this.database.updateMany('ChatMessage', filterQuery, { $push: { readBy: user._id } })
+      .then(() => {
+        callback(null, {
+          event: 'messagesRead',
+          receivers: [room._id],
+          data: JSON.stringify({ room: room._id, readBy: user._id })
+        });
+      })
+      .catch((e: Error) => {
+        callback({
+          code: grpc.status.INTERNAL,
+          message: e.message
+        });
+      });
   }
 
   async registerRoutes() {
@@ -295,6 +338,7 @@ export class ChatRoutes {
         deleteMessage: this.deleteMessage.bind(this),
         editMessage: this.editMessage.bind(this),
         onMessage: this.onMessage.bind(this),
+        onMessagesRead: this.onMessagesRead.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register routes for module');
@@ -342,6 +386,7 @@ export class ChatRoutes {
               message: TYPE.String,
               senderUser: TYPE.String,
               room: TYPE.String,
+              readBy: [TYPE.String],
               createdAt: TYPE.Date,
               updatedAt: TYPE.Date,
             }]
@@ -387,6 +432,7 @@ export class ChatRoutes {
               message: TYPE.String,
               senderUser: TYPE.String,
               room: TYPE.String,
+              readBy: [TYPE.String],
               createdAt: TYPE.Date,
               updatedAt: TYPE.Date,
             }],
@@ -457,6 +503,14 @@ export class ChatRoutes {
                 sender: TYPE.String,
                 message: TYPE.String,
                 room: TYPE.String
+              })
+            },
+            'messagesRead': {
+              handler: 'onMessagesRead',
+              params: [TYPE.String],
+              returnType: new ConduitRouteReturnDefinition('MessagesReadResponse', {
+                room: TYPE.String,
+                readBy: TYPE.String
               })
             }
           },
