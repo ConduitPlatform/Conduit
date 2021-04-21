@@ -1,4 +1,5 @@
 import { ConduitRoute, ConduitRouteActions } from '@quintessential-sft/conduit-sdk';
+import { extractRouteReturnProperties } from './util';
 
 export class SwaggerGenerator {
   private _swaggerDoc: any;
@@ -65,7 +66,16 @@ export class SwaggerGenerator {
       description: route.input.description,
       tags: [serviceName],
       parameters: [],
-      responses: {},
+      responses: {
+        200: {
+          content: {
+            "application/json": {
+              schema: {
+              }
+            }
+          }
+        }
+      },
       security: [
         {
           clientid: [],
@@ -130,6 +140,8 @@ export class SwaggerGenerator {
     if (route.input.middlewares?.includes('authMiddleware')) {
       routeDoc.security[0].tokenAuth = [];
     }
+
+    routeDoc.responses[200].content['application/json'].schema = extractRouteReturnProperties(route.returnTypeFields);
 
     let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {

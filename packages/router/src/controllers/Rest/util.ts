@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { ConduitError, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
-import { isArray, isObject, isNil } from 'lodash';
+import { isArray, isNil, isObject } from 'lodash';
 
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
@@ -150,4 +150,95 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
 
 function isValidDate(date: Date): boolean {
   return !isNaN(date.getHours());
+}
+
+export function extractRouteReturnProperties(returnDefinition: any) {
+  if (typeof returnDefinition === 'string') {
+    return extractReturnPropertiesFromType(returnDefinition);
+  }
+
+  return {
+    type: 'object',
+    properties: _extractRouteReturnProperties(returnDefinition)
+  };
+}
+
+function _extractRouteReturnProperties(returnDefinition: any) {
+  let result: any = {};
+
+  for (const key of Object.keys(returnDefinition)) {
+    if (isArray(returnDefinition[key])) {
+      result[key] = extractReturnPropertiesFromArray(returnDefinition[key]);
+    } else if (isObject(returnDefinition[key])) {
+      result[key] = extractReturnPropertiesFromObject(returnDefinition[key]);
+    } else {
+      result[key] = extractReturnPropertiesFromType(returnDefinition[key]);
+    }
+  }
+
+  return result;
+}
+
+function extractReturnPropertiesFromArray(returnDefinition: any[]) {
+  let res: any = {
+    type: 'array',
+    items: {
+    }
+  };
+
+  if (isObject(returnDefinition[0])) {
+    res.items.type = 'object';
+    res.items.properties = _extractRouteReturnProperties(returnDefinition[0]);
+  } else {
+    res.items = extractReturnPropertiesFromType(returnDefinition[0]);
+  }
+
+  return res;
+}
+
+function extractReturnPropertiesFromObject(returnDefinition: any) {
+  let res: any;
+
+  if (returnDefinition.hasOwnProperty('type')) {
+    if (isObject(returnDefinition.type)) {
+      res = {
+        type: 'object',
+        properties: _extractRouteReturnProperties(returnDefinition.type)
+      };
+    } else {
+      res = extractReturnPropertiesFromType(returnDefinition.type)
+    }
+  } else {
+    res = {
+      type: 'object',
+      properties: _extractRouteReturnProperties(returnDefinition)
+    }
+  }
+
+  return res;
+}
+
+function extractReturnPropertiesFromType(returnDefinition: string) {
+  let res: { type: string, format?: string } = {
+    type: ''
+  };
+
+  switch (returnDefinition) {
+    case TYPE.JSON:
+      res.type = 'object';
+      break;
+    case TYPE.Date:
+      res.type = 'string';
+      res.format = 'date-time';
+      break;
+    case TYPE.ObjectId:
+    case TYPE.Relation:
+      res.type = 'string';
+      res.format = 'uuid';
+      break;
+    default:
+      res.type = returnDefinition.toLowerCase();
+  }
+
+  return res;
 }
