@@ -19,6 +19,8 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         getUsers: this.getUsers.bind(this),
         createUser: this.createUser.bind(this),
+        blockUser: this.blockUser.bind(this),
+        unblockUser: this.unblockUser.bind(this),
         getServices: serviceAdmin.getServices.bind(serviceAdmin),
         createService: serviceAdmin.createService.bind(serviceAdmin),
         renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin),
@@ -106,6 +108,68 @@ export class AdminHandlers {
         });
       })
       .catch((e: any) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async blockUser(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+
+    if (isNil(id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
+    }
+
+    let errorMessage: string | null = null;
+    const user = await this.database.findOne('User', { _id: id })
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(user)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'user does not exist' });
+    }
+
+    if (!user.active) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'user is already blocked' });
+    }
+
+    user.active = false;
+    this.database.findByIdAndUpdate('User', user._id, user)
+      .then(() => {
+        callback(null, { result: JSON.stringify({ message: 'user was blocked' })});
+      })
+      .catch((e: Error) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async unblockUser(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+
+    if (isNil(id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
+    }
+
+    let errorMessage: string | null = null;
+    const user = await this.database.findOne('User', { _id: id })
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(user)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'user does not exist' });
+    }
+
+    if (user.active) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'user is not blocked' });
+    }
+
+    user.active = true;
+    this.database.findByIdAndUpdate('User', user._id, user)
+      .then(() => {
+        callback(null, { result: JSON.stringify({ message: 'user was unblocked' })});
+      })
+      .catch((e: Error) => {
         callback({ code: grpc.status.INTERNAL, message: e.message });
       });
   }
