@@ -11,6 +11,11 @@
       "protoName": "createUser"
     },
     {
+      "path": "/users/:id",
+      "method": "DELETE",
+      "protoName": "deleteUser"
+    },
+    {
       "path": "/users/:id/block",
       "method": "POST",
       "protoName": "blockUser"

@@ -19,6 +19,7 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         getUsers: this.getUsers.bind(this),
         createUser: this.createUser.bind(this),
+        deleteUser: this.deleteUser.bind(this),
         blockUser: this.blockUser.bind(this),
         unblockUser: this.unblockUser.bind(this),
         getServices: serviceAdmin.getServices.bind(serviceAdmin),
@@ -108,6 +109,35 @@ export class AdminHandlers {
         });
       })
       .catch((e: any) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async deleteUser(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+
+    if (isNil(id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
+    }
+
+    let errorMessage: string | null = null;
+    let user = await this.database
+      .findOne('User', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (isNil(user)) {
+      return callback({
+        code: grpc.status.ALREADY_EXISTS,
+        message: 'User does not exist',
+      });
+    }
+
+    this.database.deleteOne('User', { _id: id })
+      .then(() => {
+        callback(null, { result: JSON.stringify({ message: 'user was deleted'})});
+      })
+      .catch((e: Error) => {
         callback({ code: grpc.status.INTERNAL, message: e.message });
       });
   }
