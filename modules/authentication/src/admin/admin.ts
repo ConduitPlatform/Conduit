@@ -2,6 +2,8 @@ import ConduitGrpcSdk, { GrpcServer, RouterResponse, RouterRequest } from '@quin
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
+import { ConfigController } from '../config/Config.controller';
+import { AuthUtils } from '../utils/auth';
 
 let paths = require('./admin.json').functions;
 export class AdminHandlers {
@@ -16,6 +18,7 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getUsers: this.getUsers.bind(this),
+        createUser: this.createUser.bind(this),
         getServices: serviceAdmin.getServices.bind(serviceAdmin),
         createService: serviceAdmin.createService.bind(serviceAdmin),
         renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin),
@@ -58,5 +61,52 @@ export class AdminHandlers {
       });
 
     return callback(null, { result: JSON.stringify({ users, count }) });
+  }
+
+  async createUser(call: RouterRequest, callback: RouterResponse) {
+    let { identification, password } = JSON.parse(call.request.params);
+
+    if (isNil(identification) || isNil(password)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'identification and password are required' });
+    }
+
+    const config = ConfigController.getInstance().config;
+    if (config.local.identifier === 'email') {
+      if (identification.indexOf('+') !== -1) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'Email contains unsupported characters',
+        });
+      }
+
+      identification = identification.toLowerCase();
+    }
+
+    let errorMessage = null;
+    let user = await this.database
+      .findOne('User', { email: identification })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!isNil(user)) {
+      return callback({
+        code: grpc.status.ALREADY_EXISTS,
+        message: 'User already exists',
+      });
+    }
+
+    AuthUtils.hashPassword(password)
+      .then((hashedPassword: string) => {
+        const isVerified = true;
+        return this.database.create('User', { email: identification, hashedPassword, isVerified });
+      })
+      .then(() => {
+        callback(null, {
+          result: JSON.stringify({ message: 'Registration was successful' })
+        });
+      })
+      .catch((e: any) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
   }
 }

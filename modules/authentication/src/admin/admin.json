@@ -6,6 +6,10 @@
       "protoName": "getUsers"
     },
     {
+      "path": "/users",
+      "method": "POST",
+      "protoName": "createUser"
+    },
       "path": "/services",
       "method": "GET",
       "protoName": "getServices"
