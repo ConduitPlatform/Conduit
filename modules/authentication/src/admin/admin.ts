@@ -19,6 +19,7 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         getUsers: this.getUsers.bind(this),
         createUser: this.createUser.bind(this),
+        editUser: this.editUser.bind(this),
         deleteUser: this.deleteUser.bind(this),
         blockUser: this.blockUser.bind(this),
         unblockUser: this.unblockUser.bind(this),
@@ -109,6 +110,48 @@ export class AdminHandlers {
         });
       })
       .catch((e: any) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async editUser(call: RouterRequest, callback: RouterResponse) {
+    const { id, email, isVerified, hasTwoFA, phoneNumber } = JSON.parse(call.request.params);
+
+    if (isNil(id)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
+    }
+
+    let errorMessage: string | null = null;
+    let user = await this.database
+      .findOne('User', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (isNil(user)) {
+      return callback({
+        code: grpc.status.ALREADY_EXISTS,
+        message: 'User does not exist',
+      });
+    }
+
+    if (hasTwoFA) {
+      if (isNil(phoneNumber) && isNil(user.phoneNumber)) {
+        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'can not enable 2fa without a phone number' });
+      }
+    }
+
+    const query = {
+      email: email ?? user.email,
+      isVerified: isVerified ?? user.isVerified,
+      hasTwoFA: hasTwoFA ?? user.hasTwoFA,
+      phoneNumber: phoneNumber ?? user.phoneNumber
+    };
+
+    this.database.findByIdAndUpdate('User', user._id, query)
+      .then(() => {
+        callback(null, { result: JSON.stringify({ message: 'user updated' })});
+      })
+      .catch((e: Error) => {
         callback({ code: grpc.status.INTERNAL, message: e.message });
       });
   }

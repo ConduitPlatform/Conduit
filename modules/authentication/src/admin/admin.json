@@ -12,6 +12,11 @@
     },
     {
       "path": "/users/:id",
+      "method": "PUT",
+      "protoName": "editUser"
+    },
+    {
+      "path": "/users/:id",
       "method": "DELETE",
       "protoName": "deleteUser"
     },
