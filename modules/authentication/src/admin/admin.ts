@@ -34,7 +34,7 @@ export class AdminHandlers {
   }
 
   async getUsers(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit, isActive, provider, identifier } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -45,14 +45,29 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
+    let query: any = {};
+    if (!isNil(isActive)) {
+      query.active = isActive;
+    }
+    if (!isNil(provider)) {
+      if (provider === 'local') {
+        query['hashedPassword'] = { $exists: true, $ne: null };
+      } else {
+        query[provider] = { $exists: true, $ne: null };
+      }
+    }
+    if (!isNil(identifier)) {
+      query['email'] = { $regex: identifier };
+    }
+
     const usersPromise = this.database.findMany(
       'User',
-      {},
-      null,
+      query,
+      undefined,
       skipNumber,
       limitNumber
     );
-    const countPromise = this.database.countDocuments('User', {});
+    const countPromise = this.database.countDocuments('User', query);
 
     let errorMessage: string | null = null;
     const [users, count] = await Promise.all([usersPromise, countPromise]).catch(
