@@ -1,0 +1,10 @@
+{
+  "name": "Event Trigger",
+  "description": "Triggers a flow when a specified event occurs inside the Conduit cluster",
+  "options": {
+    "eventName": {
+      "type": "string",
+      "nullable": false
+    }
+  }
+}

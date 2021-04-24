@@ -1,0 +1,35 @@
+{
+  "functions": [
+    {
+      "path": "/",
+      "method": "GET",
+      "protoName": "getActors"
+    },
+    {
+      "path": "/flows",
+      "method": "GET",
+      "protoName": "getFlows"
+    },
+    {
+      "path": "/flows/:id/runs",
+      "method": "GET",
+      "protoName": "getFlowRunsById"
+    },
+    {
+      "path": "/flows/:id",
+      "method": "GET",
+      "protoName": "getFlowById"
+    },
+
+    {
+      "path": "/flows",
+      "method": "POST",
+      "protoName": "createFlow"
+    },
+    {
+      "path": "/flows/:id",
+      "method": "PUT",
+      "protoName": "editFlowById"
+    }
+  ]
+}

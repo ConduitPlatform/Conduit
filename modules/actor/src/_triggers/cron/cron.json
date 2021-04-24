@@ -1,0 +1,10 @@
+{
+  "name": "Cron trigger",
+  "description": "Triggers a flow based on a defined CRON interval",
+  "options": {
+    "cronString": {
+      "type": "string",
+      "nullable": false
+    }
+  }
+}
