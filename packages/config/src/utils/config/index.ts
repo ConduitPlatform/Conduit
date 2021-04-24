@@ -27,7 +27,6 @@ export class AppConfig implements IAppConfig {
     this.completeConfigSchema = AppConfigSchema;
     this.convictConfig = convict(this.completeConfigSchema);
     this.validateConfig();
-    this.injectEnvironmentVariables();
   }
 
   addModulesConfigSchema(moduleConfigSchema: any) {
@@ -39,20 +38,6 @@ export class AppConfig implements IAppConfig {
   private validateConfig() {
     // todo maybe change  back to strict but i think strict might not be possible
     this.convictConfig.validate({ allowed: 'warn' });
-  }
-
-  private injectEnvironmentVariables() {
-    if (process.env.DATABASE_TYPE) {
-      process.env.databaseType = process.env.DATABASE_TYPE;
-    } else {
-      process.env.databaseType = this.convictConfig.get('database').type;
-    }
-
-    if (process.env.DATABASE_URL) {
-      process.env.databaseURL = process.env.DATABASE_URL;
-    } else {
-      process.env.databaseURL = this.convictConfig.get('database').databaseURL;
-    }
   }
 }
 
