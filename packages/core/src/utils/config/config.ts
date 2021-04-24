@@ -1,5 +1,3 @@
-import { TYPE } from '@quintessential-sft/conduit-sdk';
-
 export default {
   env: {
     format: String,

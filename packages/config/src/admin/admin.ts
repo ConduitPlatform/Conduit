@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitSDK } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons } from '@quintessential-sft/conduit-commons';
 import { Request, Response } from 'express';
 import { isNil, isEmpty } from 'lodash';
 
@@ -8,7 +8,7 @@ export class AdminHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sdk: ConduitSDK
+    private readonly sdk: ConduitCommons
   ) {
     this.database = grpcSdk.databaseProvider;
   }

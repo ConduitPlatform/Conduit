@@ -1,7 +1,6 @@
 import { RedisClient } from 'redis';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { NextFunction } from 'express';
-import { ConduitError } from '@quintessential-sft/conduit-sdk';
+import { ConduitError } from '@quintessential-sft/conduit-commons';
 
 export class RateLimiter {
   private _limiter: any;
@@ -14,7 +13,7 @@ export class RateLimiter {
     });
     this._limiter = new RateLimiterRedis({
       storeClient: redisClient,
-            keyPrefix: 'mainLimiter',
+      keyPrefix: 'mainLimiter',
       points: 50, // 10 requests
       duration: 1, // per 1 second by IP
       blockDuration: 10,
@@ -27,9 +26,9 @@ export class RateLimiter {
     const self = this;
     return (req: any, res: any, next: any) => {
       let ip =
-        req.headers["cf-connecting-ip"] ||
-        req.headers["x-original-forwarded-for"] ||
-        req.headers["x-forwarded-for"] ||
+        req.headers['cf-connecting-ip'] ||
+        req.headers['x-original-forwarded-for'] ||
+        req.headers['x-forwarded-for'] ||
         req.ip;
       self._limiter
         .consume(ip)

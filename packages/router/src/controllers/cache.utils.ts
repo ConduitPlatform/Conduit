@@ -1,4 +1,4 @@
-import { ConduitRoute } from '@quintessential-sft/conduit-sdk';
+import { ConduitRoute } from '@quintessential-sft/conduit-commons';
 import { CacheScope } from 'apollo-cache-control';
 
 const crypto = require('crypto');

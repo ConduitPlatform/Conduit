@@ -8,8 +8,8 @@ import {
   ConduitRouteOptionExtended,
   ConduitRouteOptions,
   ConduitRouteParameters,
-  ConduitSDK,
-} from '@quintessential-sft/conduit-sdk';
+  ConduitCommons,
+} from '@quintessential-sft/conduit-commons';
 import { extractTypes, findPopulation, ParseResult } from './TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
@@ -276,12 +276,14 @@ export class GraphQLController {
   }
 
   private findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
+    return ((this.app as any).conduit as ConduitCommons)
+      .getState()
+      .getKey('hash-' + hashKey);
   }
 
   // age is in seconds
   private storeInCache(hashKey: string, data: any, age: number) {
-    ((this.app as any).conduit as ConduitSDK)
+    ((this.app as any).conduit as ConduitCommons)
       .getState()
       .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }

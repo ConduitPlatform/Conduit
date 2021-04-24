@@ -15,7 +15,7 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-sdk": "^1.0.0",
+    "@quintessential-sft/conduit-commons": "^1.0.0",
     "axios": "0.20.0",
     "convict": "^5.2.0",
     "deepdash": "^5.0.4",
@@ -30,9 +30,6 @@
   "files": [
     "src"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "devDependencies": {
     "@types/convict": "^4.2.1",
     "@types/express": "~4.16.1",

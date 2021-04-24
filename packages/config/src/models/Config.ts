@@ -1,9 +1,4 @@
-import {
-  ConduitModel,
-  ConduitSchema,
-  ConduitSDK,
-  TYPE,
-} from '@quintessential-sft/conduit-sdk';
+import { ConduitSchema, ConduitCommons, TYPE } from '@quintessential-sft/conduit-commons';
 import { Config } from 'convict';
 import { AppConfig } from '../utils/config';
 import { isNil, isPlainObject, cloneDeep, isString, isArray } from 'lodash';
@@ -12,7 +7,7 @@ const deepdash = require('deepdash/standalone');
 export class ConfigModelGenerator {
   private appConfig: Config<any>;
 
-  constructor(sdk: ConduitSDK) {
+  constructor(sdk: ConduitCommons) {
     this.appConfig = (sdk as any).config;
   }
 

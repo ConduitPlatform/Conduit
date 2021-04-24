@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitError, ConduitSDK } from '@quintessential-sft/conduit-sdk';
+import { ConduitError, ConduitCommons } from '@quintessential-sft/conduit-commons';
 import { ClientModel } from '../../models/Client';
 
 export class ClientValidator {
-  constructor(private readonly database: any, private readonly sdk: ConduitSDK) {
+  constructor(private readonly database: any, private readonly sdk: ConduitCommons) {
     this.database.createSchemaFromAdapter(ClientModel);
   }
 

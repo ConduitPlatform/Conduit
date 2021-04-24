@@ -1,8 +1,8 @@
 import { Handler, NextFunction, Request, Response } from 'express';
-import { ConduitSDK } from '../../index';
+import { ConduitCommons } from '../../index';
 
 export abstract class IConduitAdmin {
-  constructor(conduit: ConduitSDK) {}
+  constructor(conduit: ConduitCommons) {}
 
   abstract initialize(): void;
 

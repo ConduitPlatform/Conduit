@@ -9,13 +9,13 @@ import {
   Router,
 } from 'express';
 import {
+  ConduitCommons,
   ConduitError,
   ConduitMiddleware,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitSDK,
-} from '@quintessential-sft/conduit-sdk';
+} from '@quintessential-sft/conduit-commons';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
@@ -119,12 +119,15 @@ export class RestController {
   ) {
     this._router.use(path, router);
   }
+
   private findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitSDK).getState().getKey('hash-' + hashKey);
+    return ((this.app as any).conduit as ConduitCommons)
+      .getState()
+      .getKey('hash-' + hashKey);
   }
 
   private storeInCache(hashKey: string, data: any, cacheAge: number) {
-    ((this.app as any).conduit as ConduitSDK)
+    ((this.app as any).conduit as ConduitCommons)
       .getState()
       .setKey('hash-' + hashKey, JSON.stringify(data), cacheAge * 1000);
   }
@@ -162,7 +165,11 @@ export class RestController {
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
-          validateParams(context.params, { ...route.input.bodyParams, ...route.input.queryParams, ...route.input.urlParams });
+          validateParams(context.params, {
+            ...route.input.bodyParams,
+            ...route.input.queryParams,
+            ...route.input.urlParams,
+          });
           return r;
         })
         .then((r) => {

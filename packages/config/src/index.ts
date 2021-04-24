@@ -3,7 +3,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
 import AppConfigSchema from './utils/config/schema/config';
-import { ConduitSDK, IConfigManager } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
 import { EventEmitter } from 'events';
 import { AdminHandlers } from './admin/admin';
 import { NextFunction, Request, Response } from 'express';
@@ -18,7 +18,7 @@ export default class ConfigManager implements IConfigManager {
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    private readonly sdk: ConduitSDK,
+    private readonly sdk: ConduitCommons,
     server: grpc.Server,
     packageDefinition: any,
     databaseCallback: any

@@ -2,7 +2,7 @@ import path from 'path';
 import convict, { Config } from 'convict';
 import AppConfigSchema from './schema/config';
 import { isNil } from 'lodash';
-import { IAppConfig } from '@quintessential-sft/conduit-sdk';
+import { IAppConfig } from '@quintessential-sft/conduit-commons';
 
 export class AppConfig implements IAppConfig {
   private static instance: AppConfig;

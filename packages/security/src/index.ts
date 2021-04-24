@@ -1,4 +1,4 @@
-import { ConduitSDK, IConduitSecurity } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons, IConduitSecurity } from '@quintessential-sft/conduit-commons';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { Admin } from './admin';
 import helmet from 'helmet';
@@ -7,7 +7,7 @@ import { ClientValidator } from './handlers/client-validation';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly conduit: ConduitSDK,
+    private readonly conduit: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(conduit);

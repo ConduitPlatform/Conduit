@@ -9,8 +9,10 @@ import {
   SocketProtoDescription,
   instanceOfSocketProtoDescription,
   ConduitSocketParameters,
-  EventResponse, JoinRoomResponse, ConduitSocketEvent,
-} from '@quintessential-sft/conduit-sdk';
+  EventResponse,
+  JoinRoomResponse,
+  ConduitSocketEvent,
+} from '@quintessential-sft/conduit-commons';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -19,7 +21,9 @@ export function grpcToConduitRoute(
   moduleName?: string
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let protofile = request.protoFile;
-  let routes: [{ options: any; returns?: any; grpcFunction: string } | SocketProtoDescription] = request.routes;
+  let routes: [
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+  ] = request.routes;
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {
@@ -45,7 +49,9 @@ export function grpcToConduitRoute(
 }
 
 function createHandlers(
-  routes: [{ options: any; returns?: any; grpcFunction: string } | SocketProtoDescription],
+  routes: [
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+  ],
   client: any,
   moduleName?: string
 ) {
@@ -63,7 +69,6 @@ function createHandlers(
     if (route != undefined) {
       finalRoutes.push(route);
     }
-
   });
 
   return finalRoutes;
@@ -147,17 +152,22 @@ function createHandlerForSocket(
         event: req.event,
         socketId: req.socketId,
         params: req.params ? JSON.stringify(req.params) : null,
-        context: req.context ? JSON.stringify(req.context): null
+        context: req.context ? JSON.stringify(req.context) : null,
       };
 
       return new Promise<EventResponse | JoinRoomResponse>((resolve, reject) => {
-        client[events[req.event].grpcFunction](request,
-          (err: { code: number, message: string}, result: EventResponse | JoinRoomResponse) => {
+        client[events[req.event].grpcFunction](
+          request,
+          (
+            err: { code: number; message: string },
+            result: EventResponse | JoinRoomResponse
+          ) => {
             if (err) {
               return reject(err);
             }
             resolve(result);
-          });
+          }
+        );
       });
     };
 
