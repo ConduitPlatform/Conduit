@@ -1,6 +1,5 @@
-import path from 'path';
 import convict, { Config } from 'convict';
-import AppConfigSchema from './schema/config';
+import AppConfigSchema from '../../models/config.schema';
 import { isNil } from 'lodash';
 import { IAppConfig } from '@quintessential-sft/conduit-commons';
 
@@ -27,7 +26,6 @@ export class AppConfig implements IAppConfig {
   private constructor() {
     this.completeConfigSchema = AppConfigSchema;
     this.convictConfig = convict(this.completeConfigSchema);
-    this.loadConfig();
     this.validateConfig();
     this.injectEnvironmentVariables();
   }
@@ -35,12 +33,7 @@ export class AppConfig implements IAppConfig {
   addModulesConfigSchema(moduleConfigSchema: any) {
     this.completeConfigSchema = { ...this.completeConfigSchema, ...moduleConfigSchema };
     this.convictConfig = convict(this.completeConfigSchema);
-    this.loadConfig();
     this.validateConfig();
-  }
-
-  private loadConfig() {
-    this.convictConfig.loadFile(path.join(__dirname, '../../../config/env.json'));
   }
 
   private validateConfig() {

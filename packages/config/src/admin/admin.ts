@@ -68,11 +68,6 @@ export class AdminHandlers {
           return res.json({ message: 'Module not available' });
         finalConfig = dbConfig.moduleConfigs.pushNotifications;
         break;
-      case 'in-memory-store':
-        if (!registeredModules.has(module))
-          return res.json({ message: 'Module not available' });
-        finalConfig = dbConfig.moduleConfigs.inMemoryStore;
-        break;
       case 'core':
         finalConfig = dbConfig.moduleConfigs.core;
         break;
@@ -105,12 +100,6 @@ export class AdminHandlers {
     switch (moduleName) {
       case undefined:
         return res.status(400).json({ error: 'Module Name missing' });
-      // if (!ConduitUtilities.validateConfigFields(newConfig, this.sdk.getConfigManager().appConfig.configSchema)) {
-      //   errorMessage = 'Invalid configuration fields';
-      //   break;
-      // }
-      // updatedConfig = await this.sdk.updateConfig(newConfig).catch((e: Error) => (errorMessage = e.message));
-      // break;
       case 'authentication':
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.authentication))
           return res.json({ message: 'Module not available' });
