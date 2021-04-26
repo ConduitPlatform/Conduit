@@ -430,8 +430,8 @@ export class LocalHandlers {
     const { oldPassword, newPassword } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
-    if (isNil(oldPassword) || isNil(newPassword)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'oldPassword and newPassword are required' });
+    if (oldPassword === newPassword) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'The new password can not be the same as the old password' });
     }
 
     let errorMessage: string | null = null;
