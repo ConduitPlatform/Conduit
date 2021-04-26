@@ -215,14 +215,14 @@ export class LocalHandlers {
       }
 
       await this.database
-        .deleteMany('VerificationRecord', { userId: user._id, clientId })
+        .deleteMany('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
         .catch(console.error);
 
       await this.database
-        .create('VerificationRecord', {
+        .create('Token', {
           userId: user._id,
-          clientId,
-          verificationSid,
+          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+          token: verificationSid,
         })
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
@@ -494,7 +494,7 @@ export class LocalHandlers {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const token = await this.database.findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN})
+    const token = await this.database.findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -612,7 +612,7 @@ export class LocalHandlers {
       return callback({ code: grpc.status.UNAUTHENTICATED, message: 'User not found' });
 
     const verificationRecord = await this.database
-      .findOne('VerificationRecord', { userId: user._id, clientId })
+      .findOne('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -623,7 +623,7 @@ export class LocalHandlers {
       });
 
     const verified = await this.sms
-      .verify(verificationRecord.verificationSid, code)
+      .verify(verificationRecord.token, code)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -636,7 +636,7 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('VerificationRecord', { userId: user._id, clientId })
+      .deleteMany('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
       .catch(console.error);
 
     const config = ConfigController.getInstance().config;
@@ -705,8 +705,6 @@ export class LocalHandlers {
       });
     }
 
-    const clientId = context.clientId;
-
     let errorMessage: string | null = null;
     const verificationSid = await this.sendVerificationCode(phoneNumber);
     if (verificationSid === '') {
@@ -717,15 +715,17 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('VerificationRecord', { userId: context.user._id, clientId })
+      .deleteMany('Token', { userId: context.user._id, type: TokenType.VERIFY_PHONE_NUMBER_TOKEN })
       .catch(console.error);
 
     await this.database
-      .create('VerificationRecord', {
+      .create('Token', {
         userId: context.user._id,
-        clientId,
-        verificationSid,
-        phoneNumber,
+        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        token: verificationSid,
+        data: {
+          phoneNumber
+        },
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -749,8 +749,6 @@ export class LocalHandlers {
       });
     }
 
-    const clientId = context.clientId;
-
     if (isNil(code)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -760,9 +758,9 @@ export class LocalHandlers {
 
     let errorMessage: string | null = null;
     const verificationRecord = await this.database
-      .findOne('VerificationRecord', {
+      .findOne('Token', {
         userId: context.user._id,
-        clientId,
+        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -774,7 +772,7 @@ export class LocalHandlers {
       });
 
     const verified = await this.sms
-      .verify(verificationRecord.verificationSid, code)
+      .verify(verificationRecord.token, code)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -787,12 +785,12 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('VerificationRecord', { userId: context.user._id, clientId })
+      .deleteMany('Token', { userId: context.user._id, type: TokenType.VERIFY_PHONE_NUMBER_TOKEN })
       .catch(console.error);
 
     await this.database
       .findByIdAndUpdate('User', context.user._id, {
-        phoneNumber: verificationRecord.phoneNumber,
+        phoneNumber: verificationRecord.data.phoneNumber,
         hasTwoFA: true,
       })
       .catch((e: any) => {
