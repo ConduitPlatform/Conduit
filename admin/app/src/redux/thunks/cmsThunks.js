@@ -3,6 +3,8 @@ import {
   setCmsError,
   setCmsSchemas,
   setCustomEndpoints,
+  setMoreCmsSchemas,
+  setMoreSchemaDocumentsByName,
   setSchemaDocumentsByName,
   startCmsLoading,
   stopCmsLoading,
@@ -27,10 +29,27 @@ import {
 export const getCmsSchemas = () => {
   return (dispatch) => {
     dispatch(startCmsLoading());
-    getCmsSchemasRequest(0, 100)
+    getCmsSchemasRequest(0, 30)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsSchemas(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+export const getMoreCmsSchemas = () => {
+  return (dispatch, getState) => {
+    let SchemaLength = getState().cmsReducer.data.schemas.length;
+    dispatch(startCmsLoading());
+    getCmsSchemasRequest(SchemaLength, 20)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setMoreCmsSchemas(res.data));
         dispatch(setCmsError(null));
       })
       .catch((err) => {
@@ -118,6 +137,34 @@ export const getSchemaDocuments = (name) => {
   };
 };
 
+export const getMoreSchemaDocuments = (name, skip) => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    getCmsDocumentsByNameRequest(name, skip, 20)
+      .then((res) => {
+        dispatch(stopCmsLoading());
+        dispatch(setMoreSchemaDocumentsByName(res.data));
+        dispatch(setCmsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
+      });
+  };
+};
+
+const prepareDocumentField = (doc) => {
+  let field = { [doc.name]: null };
+  if (doc.fields) {
+    doc.fields.forEach((subField) => {
+      field[doc.name] = { ...field[doc.name], ...prepareDocumentField(subField) };
+    });
+  } else {
+    field[doc.name] = doc.value;
+  }
+  return field;
+};
+
 export const createSchemaDocument = (schemaName, documentData) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
@@ -125,9 +172,12 @@ export const createSchemaDocument = (schemaName, documentData) => {
       schemaName,
       inputDocument: {},
     };
+
     documentData.forEach((d) => {
-      body.inputDocument = { ...body.inputDocument, [d.name]: d.value };
+      let field = prepareDocumentField(d);
+      body.inputDocument = { ...body.inputDocument, ...field };
     });
+
     createSchemaDocumentRequest(schemaName, body)
       .then(() => {
         dispatch(stopCmsLoading());
@@ -165,9 +215,12 @@ export const editSchemaDocument = (schemaName, documentId, documentData) => {
       id: documentId,
       changedDocument: {},
     };
+
     documentData.forEach((d) => {
-      body.changedDocument = { ...body.changedDocument, [d.name]: d.value };
+      let field = prepareDocumentField(d);
+      body.changedDocument = { ...body.changedDocument, ...field };
     });
+
     editSchemaDocumentRequest(schemaName, documentId, body)
       .then(() => {
         dispatch(stopCmsLoading());

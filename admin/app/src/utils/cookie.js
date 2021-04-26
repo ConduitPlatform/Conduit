@@ -3,8 +3,10 @@ import cookie from 'js-cookie';
 export const setCookie = (key, value, remember) => {
   if (typeof window !== 'undefined') {
     if (remember) {
+      let sixHours = new Date(new Date().getTime() + 6 * 60 * 60 * 1000);
+
       cookie.set(key, value, {
-        expires: 100,
+        expires: sixHours,
         path: '/',
       });
     } else {

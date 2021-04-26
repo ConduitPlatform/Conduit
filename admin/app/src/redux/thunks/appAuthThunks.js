@@ -3,13 +3,14 @@ import {
   clearAuthPageStore,
   clearNotificationPageStore,
   clearStoragePageStore,
+  setAdminModules,
   setAuthenticationError,
   setAuthenticationToken,
   startAuthenticationLoading,
   stopAuthenticationLoading,
 } from '../actions';
 import { clearEmailPageStore } from '../actions/emailsActions';
-import { loginRequest } from '../../http/requests';
+import { getAdminModulesRequest, loginRequest } from '../../http/requests';
 
 export const login = (username, password, remember) => {
   return (dispatch) => {
@@ -35,5 +36,20 @@ export const logout = () => {
     dispatch(clearNotificationPageStore());
     dispatch(clearStoragePageStore());
     dispatch(clearAuthenticationToken());
+  };
+};
+
+export const getAdminModules = () => {
+  return (dispatch) => {
+    dispatch(startAuthenticationLoading());
+    getAdminModulesRequest()
+      .then((res) => {
+        dispatch(setAdminModules(res?.data));
+        dispatch(stopAuthenticationLoading());
+      })
+      .catch((err) => {
+        dispatch(setAuthenticationError(err));
+        dispatch(stopAuthenticationLoading());
+      });
   };
 };

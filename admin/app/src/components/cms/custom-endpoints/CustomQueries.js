@@ -91,16 +91,18 @@ const CustomQueries = ({
       setName(selectedEndpoint.name);
       setSelectedOperation(selectedEndpoint.operation);
       setSelectedSchema(selectedEndpoint.selectedSchema);
-      if (selectedEndpoint.authentication)
-        setAuthentication(selectedEndpoint.authentication);
-      if (selectedEndpoint.paginated) setPaginated(selectedEndpoint.paginated);
-      if (selectedEndpoint.sorted) setSorted(selectedEndpoint.sorted);
+      // if (selectedEndpoint.authentication)
+      setAuthentication(Boolean(selectedEndpoint.authentication));
+      //if (selectedEndpoint.paginated)
+      setPaginated(Boolean(selectedEndpoint.paginated));
+      //if (selectedEndpoint.sorted)
+      setSorted(Boolean(selectedEndpoint.sorted));
 
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
       if (fields) {
         const fieldsWithTypes = findFieldsWithTypes(fields);
         setAvailableFieldsOfSchema(fieldsWithTypes);
-        setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
+        //setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
       }
 
       if (selectedEndpoint.queries) {
@@ -425,7 +427,7 @@ const CustomQueries = ({
   };
 
   const handleCustomValueChange = (event, index) => {
-    const value = event.target.value;
+    const value = event;
     const currentQueries = selectedQueries.slice();
     const query = currentQueries[index];
     if (query) {
@@ -669,6 +671,7 @@ const CustomQueries = ({
               <Divider />
             </Grid>
             <EndpointQueries
+              selectedSchema={selectedSchema}
               selectedQueries={selectedQueries}
               availableFieldsOfSchema={availableFieldsOfSchema}
               selectedInputs={selectedInputs}

@@ -10,6 +10,7 @@ import {
   deleteClientRequest,
   generateNewClientRequest,
   getAvailableClientsRequest,
+  putCoreRequest,
 } from '../../http/requests';
 
 export const getAvailableClients = () => {
@@ -51,6 +52,21 @@ export const deleteClient = (_id) => {
       .then(() => {
         dispatch(stopSettingsLoading());
         dispatch(deleteClientAction(_id));
+        dispatch(setSettingsError(null));
+      })
+      .catch((err) => {
+        dispatch(stopSettingsLoading());
+        dispatch(setSettingsError(err));
+      });
+  };
+};
+
+export const putCoreSettings = (data) => {
+  return (dispatch) => {
+    dispatch(startSettingsLoading());
+    putCoreRequest(data)
+      .then(() => {
+        dispatch(stopSettingsLoading());
         dispatch(setSettingsError(null));
       })
       .catch((err) => {

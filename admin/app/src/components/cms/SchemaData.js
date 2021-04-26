@@ -2,8 +2,8 @@ import Box from '@material-ui/core/Box';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
-import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -26,6 +26,7 @@ import {
   createSchemaDocument,
   deleteSchemaDocument,
   editSchemaDocument,
+  getMoreSchemaDocuments,
 } from '../../redux/thunks/cmsThunks';
 
 const useStyles = makeStyles((theme) => ({
@@ -96,9 +97,12 @@ const TabPanel = ({ children }) => {
 
 const ITEM_HEIGHT = 48;
 
-const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
+const SchemaData = ({ schemas, handleSchemaChange }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
+
+  const { documents } = useSelector((state) => state.cmsReducer.data.documents);
+  const documentsObj = useSelector((state) => state.cmsReducer.data.documents);
 
   const [selectedSchema, setSelectedSchema] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -106,16 +110,8 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDocument, setCreateDocument] = useState(false);
-  const [documents, setDocuments] = useState([]);
 
   const open = Boolean(anchorEl);
-
-  useEffect(() => {
-    if (schemaDocuments && schemaDocuments.documents) {
-      setDocuments(schemaDocuments.documents);
-    }
-    return () => {};
-  }, [schemaDocuments]);
 
   const handleCreateDialog = (create) => {
     if (!create) {
@@ -166,6 +162,7 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
   };
 
   const addNewDocument = () => {
+    setSelectedDocument(null);
     handleCreateDialog(true);
   };
 
@@ -227,6 +224,14 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
     );
   };
 
+  const onViewMorePress = () => {
+    const schemaName = schemas[selectedSchema].name;
+    const documentLength = documents.length;
+    // const documentsCount = schemaDocuments.documentsCount;
+    // console.log(documentLength, documentsCount);
+    dispatch(getMoreSchemaDocuments(schemaName, documentLength));
+  };
+
   return (
     <Container>
       <Box className={classes.root}>
@@ -281,6 +286,14 @@ const SchemaData = ({ schemas, schemaDocuments, handleSchemaChange }) => {
                 );
               })}
               <Box className={classes.addDocBox}>
+                <Button
+                  style={{ marginRight: 15 }}
+                  color="primary"
+                  variant={'outlined'}
+                  disabled={documentsObj?.documentsCount === documents.length}
+                  onClick={onViewMorePress}>
+                  View More documents
+                </Button>
                 <Button
                   variant="contained"
                   color="primary"
