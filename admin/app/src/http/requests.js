@@ -189,5 +189,5 @@ export const putCoreRequest = (data) => {
 };
 
 export const getAdminModulesRequest = () => {
-  return axios.get(`${CONDUIT_API}/admin/modules`);
+  return axios.get(`${CONDUIT_API}/admin/config/modules`);
 };
