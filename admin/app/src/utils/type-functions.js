@@ -187,6 +187,10 @@ const constructFieldType = (field) => {
     typeField.required = field.required ? field.required : false;
   }
 
+  if (typeField.type === 'Relation' && !field.isArray) {
+    typeField.model = field.model.toString();
+  }
+
   if (field.default !== undefined && field.default !== null) {
     typeField.default = field.default;
   }
