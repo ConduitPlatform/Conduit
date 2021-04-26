@@ -82,7 +82,11 @@ const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData
             newField.fields[i].fields[j].value = editData[newField.name][f.name][ff.name];
           });
         } else {
-          newField.fields[i].value = editData[newField.name][f.name];
+          if (editData[newField.name]) {
+            newField.fields[i].value = editData[newField.name][f.name];
+          } else {
+            newField.fields[i].value = undefined;
+          }
         }
       });
     } else {
