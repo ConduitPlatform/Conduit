@@ -426,6 +426,50 @@ export class LocalHandlers {
     });
   }
 
+  async changePassword(call: RouterRequest, callback: RouterResponse) {
+    const { oldPassword, newPassword } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    if (oldPassword === newPassword) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'The new password can not be the same as the old password' });
+    }
+
+    let errorMessage: string | null = null;
+    const dbUser = await this.database.findOne('User', { _id: user._id }, '+hashedPassword')
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(dbUser)) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'user does not exist' });
+    }
+
+    const passwordsMatch = await AuthUtils.checkPassword(
+      oldPassword,
+      dbUser.hashedPassword
+    ).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (!passwordsMatch) {
+      return callback({
+        code: grpc.status.UNAUTHENTICATED,
+        message: 'Invalid password',
+      });
+    }
+
+    await AuthUtils.hashPassword(newPassword)
+      .then((hashedPassword: string) => {
+        return this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword });
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+
+    callback(null, { result: 'Password changed successfully' });
+  }
+
   async verifyEmail(call: RouterRequest, callback: RouterResponse) {
     if (!this.initialized)
       return callback({
