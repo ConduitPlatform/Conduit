@@ -226,8 +226,8 @@ export class AuthenticationRoutes {
                 path: '/local/twofa',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  email: TYPE.String,
-                  code: TYPE.String,
+                  email: ConduitString.Required,
+                  code: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
@@ -249,7 +249,7 @@ export class AuthenticationRoutes {
                 action: ConduitRouteActions.UPDATE,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
-                  phoneNumber: TYPE.String,
+                  phoneNumber: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
@@ -266,7 +266,7 @@ export class AuthenticationRoutes {
                 action: ConduitRouteActions.POST,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
-                  code: TYPE.String,
+                  code: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),

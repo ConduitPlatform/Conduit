@@ -595,11 +595,6 @@ export class LocalHandlers {
     const clientId = context.clientId;
 
     const { email, code } = JSON.parse(call.request.params);
-    if (isNil(email) || isNil(code))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'No email or 2fa code provided',
-      });
 
     let errorMessage = null;
     const user = await this.database
@@ -698,13 +693,6 @@ export class LocalHandlers {
       return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
     }
 
-    if (isNil(phoneNumber)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Phone number is required',
-      });
-    }
-
     let errorMessage: string | null = null;
     const verificationSid = await this.sendVerificationCode(phoneNumber);
     if (verificationSid === '') {
@@ -746,13 +734,6 @@ export class LocalHandlers {
       return callback({
         code: grpc.status.UNAUTHENTICATED,
         message: 'No headers provided',
-      });
-    }
-
-    if (isNil(code)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'code is required',
       });
     }
 
