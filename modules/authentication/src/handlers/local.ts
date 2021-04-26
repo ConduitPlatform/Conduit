@@ -296,12 +296,6 @@ export class LocalHandlers {
     const config = ConfigController.getInstance().config;
     let errorMessage = null;
 
-    if (isNil(email))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Email field required',
-      });
-
     const user = await this.database
       .findOne('User', { email })
       .catch((e: any) => (errorMessage = e.message));
@@ -358,13 +352,6 @@ export class LocalHandlers {
       passwordResetToken: passwordResetTokenParam,
       password: newPassword,
     } = JSON.parse(call.request.params);
-
-    if (isNil(newPassword) || isNil(passwordResetTokenParam)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-    }
 
     let errorMessage = null;
 

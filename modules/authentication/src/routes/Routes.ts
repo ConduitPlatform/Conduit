@@ -139,7 +139,7 @@ export class AuthenticationRoutes {
                 path: '/forgot-password',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  email: TYPE.String,
+                  email: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
@@ -155,8 +155,8 @@ export class AuthenticationRoutes {
                 path: '/reset-password',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  passwordResetToken: TYPE.String,
-                  password: TYPE.String,
+                  passwordResetToken: ConduitString.Required,
+                  password: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
