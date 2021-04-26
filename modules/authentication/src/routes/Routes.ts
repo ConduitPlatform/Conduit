@@ -50,6 +50,7 @@ export class AuthenticationRoutes {
         authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
+        changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
         verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
@@ -160,6 +161,24 @@ export class AuthenticationRoutes {
               },
               new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
               'resetPassword'
+            )
+          )
+        );
+
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: '/local/change-password',
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                  oldPassword: ConduitString.Required,
+                  newPassword: ConduitString.Required,
+                },
+                middlewares: ['authMiddleware']
+              },
+              new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
+              'changePassword'
             )
           )
         );
