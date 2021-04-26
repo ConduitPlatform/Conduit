@@ -51,6 +51,7 @@ export class AuthenticationRoutes {
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
         changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
+        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(this.localHandlers),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
         verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
@@ -139,7 +140,7 @@ export class AuthenticationRoutes {
                 path: '/forgot-password',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  email: TYPE.String,
+                  email: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
@@ -155,8 +156,8 @@ export class AuthenticationRoutes {
                 path: '/reset-password',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  passwordResetToken: TYPE.String,
-                  password: TYPE.String,
+                  passwordResetToken: ConduitString.Required,
+                  password: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
@@ -187,6 +188,23 @@ export class AuthenticationRoutes {
           constructRoute(
             new ConduitRoute(
               {
+                path: '/local/change-password/verify',
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                  code: ConduitString.Required,
+                },
+                middlewares: ['authMiddleware']
+              },
+              new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+              'verifyChangePassword'
+            )
+          )
+        );
+
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
                 path: '/hook/verify-email/:verificationToken',
                 action: ConduitRouteActions.GET,
                 urlParams: {
@@ -208,8 +226,8 @@ export class AuthenticationRoutes {
                 path: '/local/twofa',
                 action: ConduitRouteActions.POST,
                 bodyParams: {
-                  email: TYPE.String,
-                  code: TYPE.String,
+                  email: ConduitString.Required,
+                  code: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
@@ -231,7 +249,7 @@ export class AuthenticationRoutes {
                 action: ConduitRouteActions.UPDATE,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
-                  phoneNumber: TYPE.String,
+                  phoneNumber: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
@@ -248,7 +266,7 @@ export class AuthenticationRoutes {
                 action: ConduitRouteActions.POST,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
-                  code: TYPE.String,
+                  code: ConduitString.Required,
                 },
               },
               new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
