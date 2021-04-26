@@ -308,6 +308,16 @@ export class SchemaAdmin {
       });
     }
 
+    const endpoints = await this.database.findMany('CustomEndpoints', { selectedSchema: id })
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
+    }
+
+    if (!isNil(endpoints) && endpoints.length !== 0) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Can not delete schema because it is used by a custom endpoint' });
+    }
+
     await this.database
       .deleteOne('SchemaDefinitions', requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
