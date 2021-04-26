@@ -17,9 +17,6 @@
     "prepare": "npm run build",
     "prepublish": "npm run build"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "license": "ISC",
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
@@ -27,7 +24,7 @@
     "@quintessential-sft/conduit-config": "^1.0.0",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@quintessential-sft/conduit-router": "^1.0.0",
-    "@quintessential-sft/conduit-sdk": "^1.0.0",
+    "@quintessential-sft/conduit-commons": "^1.0.0",
     "@quintessential-sft/conduit-security": "^1.0.0",
     "convict": "^6.0.0",
     "cookie-parser": "~1.4.4",

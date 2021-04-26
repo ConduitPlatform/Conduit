@@ -1,16 +1,11 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import {
-  ConduitSDK,
-  IConduitSecurity,
-  PlatformTypesEnum,
-  ConduitError,
-} from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons, PlatformTypesEnum } from '@quintessential-sft/conduit-commons';
 import { NextFunction, Request, Response } from 'express';
-import { isNil } from 'lodash';
 import { randomBytes } from 'crypto';
+
 export class Admin {
   constructor(
-    private readonly conduit: ConduitSDK,
+    private readonly conduit: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     this.createClientRoutes();

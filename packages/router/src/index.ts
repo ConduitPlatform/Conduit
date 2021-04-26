@@ -5,8 +5,9 @@ import {
   ConduitRoute,
   IConduitRouter,
   ConduitMiddleware,
-  ConduitSDK, ConduitSocket,
-} from '@quintessential-sft/conduit-sdk';
+  ConduitCommons,
+  ConduitSocket,
+} from '@quintessential-sft/conduit-commons';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
@@ -44,7 +45,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   highAvailability() {
     const self = this;
-    let sdk: ConduitSDK = (this._app as any).conduit;
+    let sdk: ConduitCommons = (this._app as any).conduit;
     sdk
       .getState()
       .getKey('router')
@@ -54,7 +55,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
         if (state.routes) {
           state.routes.forEach((r: any) => {
             try {
-              let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute({
+              let routes: (
+                | ConduitRoute
+                | ConduitMiddleware
+                | ConduitSocket
+              )[] = grpcToConduitRoute({
                 protoFile: r.protofile,
                 routes: r.routes,
                 routerUrl: r.url,
@@ -82,7 +87,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
     sdk.getBus().subscribe('router', (message: string) => {
       try {
         let messageParsed = JSON.parse(message);
-        let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute({
+        let routes: (
+          | ConduitRoute
+          | ConduitMiddleware
+          | ConduitSocket
+        )[] = grpcToConduitRoute({
           protoFile: messageParsed.protofile,
           routes: messageParsed.routes,
           routerUrl: messageParsed.url,
@@ -91,7 +100,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         routes.forEach((r) => {
           if (r instanceof ConduitMiddleware) {
             this.registerRouteMiddleware(r);
-          } else if (r instanceof  ConduitSocket) {
+          } else if (r instanceof ConduitSocket) {
             this.registerSocket(r);
           } else {
             this.registerRoute(r);
@@ -105,7 +114,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   updateState(protofile: string, routes: any, url: string) {
-    let sdk: ConduitSDK = (this._app as any).conduit;
+    let sdk: ConduitCommons = (this._app as any).conduit;
     sdk
       .getState()
       .getKey('router')
@@ -129,7 +138,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   publishAdminRouteData(protofile: string, routes: any, url: string) {
-    let sdk: ConduitSDK = (this._app as any).conduit;
+    let sdk: ConduitCommons = (this._app as any).conduit;
     sdk.getBus().publish(
       'router',
       JSON.stringify({
@@ -145,7 +154,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       let url = call.request.routerUrl;
       let moduleName: string | undefined = undefined;
       if (!url) {
-        let result = ((this._app as any).conduit! as ConduitSDK)
+        let result = ((this._app as any).conduit! as ConduitCommons)
           .getConfigManager()!
           .getModuleUrlByInstance(call.getPeer());
         if (!result) {
@@ -159,10 +168,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
         // do not enable yet, it requires further consideration
       }
 
-      let routes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = grpcToConduitRoute(
-        call.request,
-        moduleName
-      );
+      let routes: (
+        | ConduitRoute
+        | ConduitMiddleware
+        | ConduitSocket
+      )[] = grpcToConduitRoute(call.request, moduleName);
 
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
@@ -211,7 +221,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.initSockets();
   }
 
-  registerGlobalMiddleware(name: string, middleware: any, socketMiddleware: boolean = false) {
+  registerGlobalMiddleware(
+    name: string,
+    middleware: any,
+    socketMiddleware: boolean = false
+  ) {
     this._globalMiddlewares.push(name);
     this._internalRouter.registerMiddleware(middleware, socketMiddleware);
   }

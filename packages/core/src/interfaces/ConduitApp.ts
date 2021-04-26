@@ -1,7 +1,7 @@
 import { Application } from 'express';
-import { ConduitSDK } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons } from '@quintessential-sft/conduit-commons';
 
 export interface ConduitApp extends Application {
-  conduit: ConduitSDK;
+  conduit: ConduitCommons;
   initialized: boolean;
 }

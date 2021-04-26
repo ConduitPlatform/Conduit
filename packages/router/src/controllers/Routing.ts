@@ -1,6 +1,11 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest/Rest';
-import { ConduitRoute, ConduitMiddleware, ConduitSocket, ConduitError } from '@quintessential-sft/conduit-sdk';
+import {
+  ConduitRoute,
+  ConduitMiddleware,
+  ConduitSocket,
+  ConduitError,
+} from '@quintessential-sft/conduit-commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 

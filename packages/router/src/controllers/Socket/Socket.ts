@@ -5,13 +5,14 @@ import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
   ConduitError,
-  ConduitMiddleware, ConduitRouteParameters,
+  ConduitMiddleware,
+  ConduitRouteParameters,
   ConduitSocket,
-  EventResponse, isInstanceOfEventResponse,
+  EventResponse,
+  isInstanceOfEventResponse,
   JoinRoomResponse,
-} from '@quintessential-sft/conduit-sdk';
+} from '@quintessential-sft/conduit-commons';
 import { isNil, isArray } from 'lodash';
-
 
 export class SocketController {
   private readonly httpServer: httpServer;
@@ -21,7 +22,11 @@ export class SocketController {
   private pubClient: RedisClient;
   private subClient: RedisClient;
   private _middlewares?: { [field: string]: ConduitMiddleware };
-  private globalMiddlewares: ((req: Request, res: Response, next: NextFunction) => void)[];
+  private globalMiddlewares: ((
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => void)[];
 
   constructor(private readonly app: Application) {
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
@@ -32,9 +37,14 @@ export class SocketController {
     this.httpServer = createServer(app);
     this.options = {};
     this.io = new IOServer(this.httpServer, this.options);
-    this.pubClient = new RedisClient({ host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) });
+    this.pubClient = new RedisClient({
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+    });
     this.subClient = this.pubClient.duplicate();
-    this.io.adapter(createAdapter({ pubClient: this.pubClient, subClient: this.subClient }));
+    this.io.adapter(
+      createAdapter({ pubClient: this.pubClient, subClient: this.subClient })
+    );
     this.httpServer.listen(process.env.SOCKET_PORT || 3001);
     this._registeredNamespaces = new Map();
     this.globalMiddlewares = [];
@@ -47,7 +57,9 @@ export class SocketController {
     this._middlewares[middleware.name] = middleware;
   }
 
-  registerGlobalMiddleware(middleware: (req: Request, res: Response, next: NextFunction) => void) {
+  registerGlobalMiddleware(
+    middleware: (req: Request, res: Response, next: NextFunction) => void
+  ) {
     this.globalMiddlewares.push(middleware);
   }
 
@@ -91,45 +103,32 @@ export class SocketController {
         socket.request.path = namespace;
         // @ts-ignore
         middleware(socket.request, {}, next);
-      })
+      });
     });
 
     this.io.of(namespace).use((socket, next) => {
       const context = {
         headers: socket.request.headers,
-        context: (socket.request as any).conduit || {}
-      }
-      self.checkMiddlewares(context, conduitSocket.input.middlewares)
+        context: (socket.request as any).conduit || {},
+      };
+      self
+        .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then((r) => {
           Object.assign(context.context, r);
           next();
         })
         .catch((err: Error | ConduitError) => {
           next(err);
-        })
+        });
     });
 
-    this.io.of(namespace).on('connect', socket => {
-      conduitSocket.executeRequest({
-        event: 'connect',
-        socketId: socket.id,
-        // @ts-ignore
-        context: socket.request.conduit
-      })
-      .then((res) => {
-        this.handleResponse(res, socket);
-      })
-      .catch((e) => {
-        socket.emit('conduit_error', e);
-      });
-
-      socket.onAny((event, ...args) => {
-        conduitSocket.executeRequest({
-          event,
+    this.io.of(namespace).on('connect', (socket) => {
+      conduitSocket
+        .executeRequest({
+          event: 'connect',
           socketId: socket.id,
-          params: args,
           // @ts-ignore
-          context: socket.request.conduit
+          context: socket.request.conduit,
         })
         .then((res) => {
           this.handleResponse(res, socket);
@@ -137,23 +136,39 @@ export class SocketController {
         .catch((e) => {
           socket.emit('conduit_error', e);
         });
+
+      socket.onAny((event, ...args) => {
+        conduitSocket
+          .executeRequest({
+            event,
+            socketId: socket.id,
+            params: args,
+            // @ts-ignore
+            context: socket.request.conduit,
+          })
+          .then((res) => {
+            this.handleResponse(res, socket);
+          })
+          .catch((e) => {
+            socket.emit('conduit_error', e);
+          });
       });
 
       socket.on('disconnect', () => {
-        conduitSocket.executeRequest({
-          event: 'disconnect',
-          socketId: socket.id,
-          // @ts-ignore
-          context: socket.request.conduit
-        })
-        .then((res) => {
-          this.handleResponse(res, socket);
-        })
-        .catch((e) => {
-          socket.emit('conduit_error', e);
-        })
+        conduitSocket
+          .executeRequest({
+            event: 'disconnect',
+            socketId: socket.id,
+            // @ts-ignore
+            context: socket.request.conduit,
+          })
+          .then((res) => {
+            this.handleResponse(res, socket);
+          })
+          .catch((e) => {
+            socket.emit('conduit_error', e);
+          });
       });
-
     });
   }
 

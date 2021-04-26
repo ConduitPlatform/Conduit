@@ -1,4 +1,8 @@
-import { ConduitSchema, PlatformTypesEnum, TYPE } from '@quintessential-sft/conduit-sdk';
+import {
+  ConduitSchema,
+  PlatformTypesEnum,
+  TYPE,
+} from '@quintessential-sft/conduit-commons';
 
 export const ClientModel = new ConduitSchema(
   'Client',

@@ -3,7 +3,7 @@ import { hashPassword, verifyToken } from './utils/auth';
 import { Router, Handler, Request, Response, NextFunction } from 'express';
 import { AuthHandlers } from './handlers/auth';
 import { AdminSchema } from './models/Admin';
-import { ConduitSDK, IConduitAdmin } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons, IConduitAdmin } from '@quintessential-sft/conduit-commons';
 import AdminConfigSchema from './config';
 import * as grpc from 'grpc';
 
@@ -14,12 +14,12 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export default class AdminModule extends IConduitAdmin {
   private readonly router: Router;
-  conduit: ConduitSDK;
+  conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    conduit: ConduitSDK,
+    conduit: ConduitCommons,
     server: grpc.Server,
     packageDefinition: any
   ) {

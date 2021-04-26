@@ -1,14 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
-import { ConduitSDK, IConfigManager } from '@quintessential-sft/conduit-sdk';
+import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export class AuthHandlers {
-  private readonly conduit: ConduitSDK;
+  private readonly conduit: ConduitCommons;
   private readonly grpcSdk: ConduitGrpcSdk;
 
-  constructor(grpcSdk: ConduitGrpcSdk, conduit: ConduitSDK) {
+  constructor(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
     this.conduit = conduit;
     this.grpcSdk = grpcSdk;
   }

@@ -11,8 +11,8 @@ import { RedisManager } from './utilities/RedisManager';
 import { EventBus } from './utilities/EventBus';
 import Crypto from 'crypto';
 
-export class ConduitSDK {
-  private static _instance: ConduitSDK;
+export class ConduitCommons {
+  private static _instance: ConduitCommons;
   private _app: Application;
   private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
@@ -90,7 +90,7 @@ export class ConduitSDK {
   static getInstance(app: Application, name: string) {
     if (!this._instance && !app) throw new Error('No settings provided to initialize');
     if (!this._instance) {
-      this._instance = new ConduitSDK(app, name);
+      this._instance = new ConduitCommons(app, name);
     }
     return this._instance;
   }

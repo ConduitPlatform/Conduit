@@ -4,9 +4,9 @@ import {
   ConduitRoute,
   ConduitRouteActions as Actions,
   ConduitRouteReturnDefinition as ReturnDefinition,
-  ConduitSDK,
+  ConduitCommons,
   IConduitRouter,
-} from '@quintessential-sft/conduit-sdk';
+} from '@quintessential-sft/conduit-commons';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -33,7 +33,7 @@ export class App {
 
   private initializeSdk() {
     const expressApp = express();
-    const conduitSDK = ConduitSDK.getInstance(expressApp, 'core');
+    const conduitSDK = ConduitCommons.getInstance(expressApp, 'core');
 
     const conduitExtras = {
       conduit: conduitSDK,

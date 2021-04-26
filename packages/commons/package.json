@@ -1,5 +1,5 @@
 {
-  "name": "@quintessential-sft/conduit-sdk",
+  "name": "@quintessential-sft/conduit-commons",
   "version": "1.0.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,13 +25,10 @@
   "files": [
     "src"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
-    "directory": "libraries/sdk"
+    "directory": "packages/commons"
   },
   "devDependencies": {
     "@types/convict": "^4.2.1",

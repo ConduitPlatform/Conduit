@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-sdk';
+import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-commons';
 
 export default new ConduitSchema(
   'Config',

@@ -11,3 +11,17 @@ Supports Local (Username/email: Password auth), Facebook and Google oAuth.
 # Requirements:
 
 MongoDB database since currently only mongoose is supported.
+
+## Features:
+- Local authentication with email/password(requires email service) or username/password
+  - Optional email verification on email/password strategy
+  - Forgot password/Reset password
+- Facebook Login with client credentials (Stable)
+- Google Login with client credentials (Stable)
+- Kakao Talk login with redirect strategy (Stable)
+- Twitch login with redirect strategy (Stable)
+- Service account/ API key (WIP)
+- Optional 2FA supported on all strategies (requires SMS module) (stable)
+- Optional Account linking supported when email is the same between providers
+
+
