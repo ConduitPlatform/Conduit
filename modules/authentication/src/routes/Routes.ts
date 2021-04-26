@@ -51,6 +51,7 @@ export class AuthenticationRoutes {
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
         changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
+        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(this.localHandlers),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
         verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
@@ -179,6 +180,23 @@ export class AuthenticationRoutes {
               },
               new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
               'changePassword'
+            )
+          )
+        );
+
+        routesArray.push(
+          constructRoute(
+            new ConduitRoute(
+              {
+                path: '/local/change-password/verify',
+                action: ConduitRouteActions.POST,
+                bodyParams: {
+                  code: ConduitString.Required,
+                },
+                middlewares: ['authMiddleware']
+              },
+              new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+              'verifyChangePassword'
             )
           )
         );

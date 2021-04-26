@@ -445,16 +445,85 @@ export class LocalHandlers {
       });
     }
 
-    await AuthUtils.hashPassword(newPassword)
-      .then((hashedPassword: string) => {
-        return this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword });
-      })
+    const hashedPassword = await AuthUtils.hashPassword(newPassword)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
+    if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
 
+    if (dbUser.hasTwoFA) {
+      const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber);
+      if (verificationSid === '') {
+        return callback({
+          code: grpc.status.INTERNAL,
+          message: 'Could not send verification code',
+        });
+      }
 
-    callback(null, { result: 'Password changed successfully' });
+      await this.database
+        .deleteMany('Token', { userId: dbUser._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+        .catch(console.error);
+
+      await this.database
+        .create('Token', {
+          userId: dbUser._id,
+          type: TokenType.CHANGE_PASSWORD_TOKEN,
+          token: verificationSid,
+          data: {
+            password: hashedPassword
+          }
+        })
+        .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage))
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+      return callback(null, { result: 'Verification code sent' });
+    }
+
+    this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword })
+      .then(() => {
+        callback(null, { result: 'Password changed successfully' });
+      })
+      .catch((e: Error) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
+  }
+
+  async verifyChangePassword(call: RouterRequest, callback: RouterResponse) {
+    const { code } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+
+    let errorMessage: string | null = null;
+    const token = await this.database.findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN})
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(token)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'User has no active change_password token' });
+    }
+
+    const verified = await this.sms.verify(token.token, code)
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    if (!verified) {
+      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Invalid code' });
+    }
+
+    await this.database.deleteMany('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+      .catch(console.error);
+
+    this.database.findByIdAndUpdate('User', user._id, { hashedPassword: token.data.password })
+      .then(() => {
+        callback(null, { result: 'Password changed successfully' });
+      })
+      .catch((e: Error) => {
+        callback({ code: grpc.status.INTERNAL, message: e.message });
+      });
   }
 
   async verifyEmail(call: RouterRequest, callback: RouterResponse) {
