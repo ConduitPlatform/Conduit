@@ -93,7 +93,7 @@ export class ServiceAdmin {
 
     let errorMessage = null;
     await this.database
-      .deleteOne('Service', { id })
+      .deleteOne('Service', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage)) {
