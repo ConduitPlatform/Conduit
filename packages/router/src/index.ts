@@ -244,7 +244,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.registerRoute(name, router);
   }
 
-  registerExpressRouter(name: string, router: Router) {
+  registerExpressRouter(name: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
   }

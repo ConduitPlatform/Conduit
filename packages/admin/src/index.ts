@@ -13,9 +13,11 @@ import path from 'path';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export default class AdminModule extends IConduitAdmin {
-  private readonly router: Router;
+  private router: Router;
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
+  private _grpcRoutes: Record<string, { path: string, method: string }[]>;
+  private _registeredRoutes: Map<string, Handler>;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
@@ -27,6 +29,8 @@ export default class AdminModule extends IConduitAdmin {
     this.conduit = conduit;
     this.grpcSdk = grpcSdk;
     this.router = Router();
+    this._grpcRoutes = {};
+    this._registeredRoutes = new Map();
 
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
@@ -73,7 +77,9 @@ export default class AdminModule extends IConduitAdmin {
     //@ts-ignore
     this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
-    this.conduit.getRouter().registerExpressRouter('/admin', this.router);
+    this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
+      this.router(req, res, next);
+    });
     this.highAvailability();
   }
 
@@ -93,6 +99,8 @@ export default class AdminModule extends IConduitAdmin {
               .catch((err) => {
                 console.log('Failed to register recovered route');
               });
+
+            self._grpcRoutes[r.url] = r.routes;
           });
         }
       })
@@ -102,11 +110,15 @@ export default class AdminModule extends IConduitAdmin {
 
     this.conduit.getBus().subscribe('admin', (message: string) => {
       let messageParsed = JSON.parse(message);
+      self._grpcRoutes[messageParsed.url] = messageParsed.routes;
+
       self._registerGprcRoute(
         messageParsed.protofile,
         messageParsed.routes,
         messageParsed.url
-      );
+      ).then(() => {
+        this.cleanupRoutes();
+      });
     });
   }
 
@@ -237,6 +249,8 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Error when registering routes',
       });
     } else {
+      this._grpcRoutes[url] = routes;
+      this.cleanupRoutes();
       this.updateState(protofile, routes, url);
       callback(null, null);
     }
@@ -302,21 +316,28 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   registerRoute(method: string, route: string, handler: Handler) {
-    switch (method) {
-      case 'GET':
-        this.router.get(route, handler);
-        break;
-      case 'POST':
-        this.router.post(route, handler);
-        break;
-      case 'PUT':
-        this.router.put(route, handler);
-        break;
-      case 'DELETE':
-        this.router.delete(route, handler);
-        break;
-      default:
-        this.router.get(route, handler);
+    const key = `${method}-${route}`;
+    const registered = this._registeredRoutes.has(key);
+    this._registeredRoutes.set(key, handler);
+    if (registered) {
+      this.refreshRouter();
+    } else {
+      switch (method) {
+        case 'GET':
+          this.router.get(route, handler);
+          break;
+        case 'POST':
+          this.router.post(route, handler);
+          break;
+        case 'PUT':
+          this.router.put(route, handler);
+          break;
+        case 'DELETE':
+          this.router.delete(route, handler);
+          break;
+        default:
+          this.router.get(route, handler);
+      }
     }
   }
 
@@ -370,6 +391,34 @@ export default class AdminModule extends IConduitAdmin {
       if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
         res.status(401).json({ error: 'Unauthorized' });
       next();
+    });
+  }
+
+  private cleanupRoutes() {
+    const self = this;
+    let routes: { path: string, method: string }[] = [];
+    Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
+      routes.push(...self._grpcRoutes[grpcRoute]);
+    });
+
+    let newRegisteredRoutes: Map<string, any> = new Map();
+    routes.forEach((route: { path: string, method: string }) => {
+      const key = `${route.method}-${route.path}`;
+      if (self._registeredRoutes.has(key)) {
+        newRegisteredRoutes.set(key, this._registeredRoutes.get(key));
+      }
+    });
+
+    this._registeredRoutes.clear();
+    this._registeredRoutes = newRegisteredRoutes;
+    this.refreshRouter();
+  }
+
+  private refreshRouter() {
+    this.router = Router();
+    this._registeredRoutes.forEach((route, key) => {
+      const [method, path] = key.split('-');
+      this.router.use(path, route);
     });
   }
 }
