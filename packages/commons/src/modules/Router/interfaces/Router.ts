@@ -19,7 +19,7 @@ export interface IConduitRouter {
 
   registerRoute(route: ConduitRoute): void;
 
-  registerExpressRouter(name: string, router: Router): void;
+  registerExpressRouter(name: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)): void;
 
   registerDirectRouter(
     name: string,
