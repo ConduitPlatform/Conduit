@@ -1,9 +1,14 @@
 {
   "functions": [
     {
-      "path": "/",
+      "path": "/actors",
       "method": "GET",
       "protoName": "getActors"
+    },
+    {
+      "path": "/triggers",
+      "method": "GET",
+      "protoName": "getTriggers"
     },
     {
       "path": "/flows",
@@ -13,14 +18,13 @@
     {
       "path": "/flows/:id/runs",
       "method": "GET",
-      "protoName": "getFlowRunsById"
+      "protoName": "getFlowRuns"
     },
     {
       "path": "/flows/:id",
       "method": "GET",
       "protoName": "getFlowById"
     },
-
     {
       "path": "/flows",
       "method": "POST",
