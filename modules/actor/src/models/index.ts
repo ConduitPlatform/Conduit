@@ -1,2 +1,2 @@
 export * from './ActorFlow.schema';
-export * from './ActorRun';
+export * from './ActorRun.schema';
