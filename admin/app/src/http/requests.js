@@ -191,3 +191,19 @@ export const putCoreRequest = (data) => {
 export const getAdminModulesRequest = () => {
   return axios.get(`${CONDUIT_API}/admin/config/modules`);
 };
+
+export const getServiceAccounts = () => {
+  return axios.get(`${CONDUIT_API}/admin/authentication/services`);
+};
+
+export const deleteServiceAccounts = (_id) => {
+  return axios.delete(`${CONDUIT_API}/admin/authentication/services/${_id}`);
+};
+
+export const createServiceAccount = (name) => {
+  return axios.post(`${CONDUIT_API}/admin/authentication/services`, { name });
+};
+
+export const refreshServiceAccount = (serviceId) => {
+  return axios.put(`${CONDUIT_API}/admin/authentication/services`, { serviceId });
+};

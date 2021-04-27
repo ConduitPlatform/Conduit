@@ -1,27 +1,36 @@
 import {
   Container,
-  FormControl,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Grid,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
 } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
 import DeleteIcon from '@material-ui/icons/Delete';
-import ClientPlatformEnum from '../../models/ClientPlatformEnum';
 import Button from '@material-ui/core/Button';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
-import { useDispatch, useSelector } from 'react-redux';
-import { deleteClient, generateNewClient } from '../../redux/thunks/settingsThunks';
+import { useDispatch } from 'react-redux';
+import {
+  createServiceAccount,
+  deleteServiceAccounts,
+  getServiceAccounts,
+  refreshServiceAccount,
+} from '../../http/requests';
+import moment from 'moment';
+import ConfirmationDialog from '../common/ConfirmationDialog';
+import GetServiceAccountToken from './GetServiceAccountToken';
+import RefreshIcon from '@material-ui/icons/Refresh';
 
 const useStyles = makeStyles({
   table: {
@@ -31,91 +40,194 @@ const useStyles = makeStyles({
 
 const ServiceAccountsTabs = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
 
-  const [platform, setPlatform] = useState(ClientPlatformEnum.WEB);
+  const [name, setName] = useState('');
+  const [open, setOpen] = useState(false);
+  const [serviceId, setServiceId] = useState('');
+  const [tokenDialog, setTokenDialog] = useState(false);
+  const [confirmation, setConfirmation] = useState(false);
+  const [createdService, setCreatedService] = useState(null);
+  const [serviceAccounts, setServiceAccounts] = useState([]);
 
-  const { data } = useSelector((state) => state.settingsReducer);
+  useEffect(() => {
+    fetchServiceAccounts();
+  }, []);
 
-  const handleDeletion = (_id) => {
-    dispatch(deleteClient(_id));
+  const handleDeleteClick = (_id) => {
+    setServiceId(_id);
+    setConfirmation(true);
   };
+
+  const handleDeletion = async () => {
+    handleCloseConfirmation();
+    try {
+      await deleteServiceAccounts(serviceId);
+      fetchServiceAccounts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   const handleGenerateNew = () => {
-    dispatch(generateNewClient(platform));
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleCloseTokenDialog = () => {
+    setTokenDialog(false);
+    setCreatedService(null);
+  };
+
+  const handleCloseConfirmation = () => {
+    setServiceId(null);
+    setConfirmation(false);
+  };
+
+  const handleCreate = async () => {
+    if (name) {
+      try {
+        const response = await createServiceAccount(name);
+        handleClose();
+        setTokenDialog(true);
+        setCreatedService(response.data);
+        fetchServiceAccounts();
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  };
+
+  const handleRefresh = async (serviceId) => {
+    try {
+      const response = await refreshServiceAccount(serviceId);
+      handleClose();
+      setTokenDialog(true);
+      setCreatedService(response.data);
+      fetchServiceAccounts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const fetchServiceAccounts = async () => {
+    try {
+      const axiosResponse = await getServiceAccounts();
+      if (axiosResponse.data && axiosResponse.data.services) {
+        const services = axiosResponse.data.services;
+        setServiceAccounts(services);
+      }
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   return (
-    <Container>
-      <Grid container>
-        <Grid item xs={12}>
-          <Typography variant={'h6'}>All available Service Accounts</Typography>
-          <Typography variant={'subtitle1'}>
-            Create, delete, refresh your Service Accounts . . .
-          </Typography>
-        </Grid>
-        <Grid item xs={8}>
-          <TableContainer>
-            <Table className={classes.table}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Client ID</TableCell>
-                  <TableCell>Client Secret</TableCell>
-                  <TableCell>Platform</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.availableClients.map((client, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Typography variant={'caption'}>{client.clientId}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box style={{ maxWidth: 500 }}>
-                        <span style={{ overflowWrap: 'break-word' }}>
-                          {client.clientSecret ? client.clientSecret : 'This is a secret'}
-                        </span>
-                      </Box>
-                    </TableCell>
-                    <TableCell colSpan={2}>
-                      <Typography variant={'caption'}>{client.platform}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleDeletion(client._id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+    <>
+      <Container>
+        <Grid container>
+          <Grid item xs={12}>
+            <Typography variant={'h6'}>All available Service Accounts</Typography>
+            <Typography variant={'subtitle1'}>
+              Create, delete, refresh your Service Accounts . . .
+            </Typography>
+          </Grid>
+          <Grid item xs={10}>
+            <TableContainer>
+              <Table className={classes.table}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Token</TableCell>
+                    <TableCell>Active</TableCell>
+                    <TableCell>Created At</TableCell>
+                    <TableCell />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {serviceAccounts.map((service, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Typography variant={'caption'}>{service.name}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant={'caption'}>
+                          {Array(service.hashedToken.length + 1).join('*')}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant={'caption'}>
+                          {service.active ? 'TRUE' : 'FALSE'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant={'caption'}>
+                          {moment(service.createdAt).format('DD/MM/YYYY')}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => handleDeleteClick(service._id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleRefresh(service._id)}>
+                          <RefreshIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+          <Grid item xs={2}>
+            <Button variant={'contained'} color={'primary'} onClick={handleGenerateNew}>
+              Generate new Service Account
+            </Button>
+          </Grid>
         </Grid>
-        <Grid item xs={2}>
-          <FormControl>
-            <InputLabel id="demo-simple-select-label">Platform</InputLabel>
-            <Select
-              labelId="demo-simple-select-label"
-              id="demo-simple-select"
-              value={platform}
-              onChange={(event) => setPlatform(event.target.value)}>
-              <MenuItem value={ClientPlatformEnum.WEB}>WEB</MenuItem>
-              <MenuItem value={ClientPlatformEnum.ANDROID}>ANDROID</MenuItem>
-              <MenuItem value={ClientPlatformEnum.IOS}>IOS</MenuItem>
-              <MenuItem value={ClientPlatformEnum.IPADOS}>IPADOS</MenuItem>
-              <MenuItem value={ClientPlatformEnum.LINUX}>LINUX</MenuItem>
-              <MenuItem value={ClientPlatformEnum.MACOS}>MACOS</MenuItem>
-              <MenuItem value={ClientPlatformEnum.WINDOWS}>WINDOWS</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={2}>
-          <Button variant={'contained'} color={'primary'} onClick={handleGenerateNew}>
-            Generate new Client
+      </Container>
+      <ConfirmationDialog
+        open={confirmation}
+        handleClose={handleCloseConfirmation}
+        buttonAction={handleDeletion}
+        buttonText={'Delete'}
+        title={'Delete selected Service Account'}
+      />
+      <GetServiceAccountToken
+        open={tokenDialog}
+        handleClose={handleCloseTokenDialog}
+        token={createdService ? createdService.token : ''}
+      />
+      <Dialog open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
+        <DialogTitle id="form-dialog-title">New Service Account</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Provide a service name for your new service account and click the create
+            button
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="serviceName"
+            label="Service name"
+            type="text"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Cancel
           </Button>
-        </Grid>
-      </Grid>
-    </Container>
+          <Button onClick={handleCreate} color="primary">
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
