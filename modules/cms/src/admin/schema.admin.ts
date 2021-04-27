@@ -55,6 +55,34 @@ export class SchemaAdmin {
     });
   }
 
+  async getSchemasRegisteredByOtherModules(call: RouterRequest, callback: RouterResponse) {
+    let errorMessage: string | null = null;
+    const allSchemas = await this.database.getSchemas()
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    const schemasFromCMS = await this.database.findMany('SchemaDefinitions', {})
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    }
+
+    const schemaNamesFromCMS = schemasFromCMS.map((schema: any) => schema.name);
+    const schemasFromOtherModules = allSchemas.filter((schema: any) => {
+      return !schemaNamesFromCMS.includes(schema.name);
+    });
+
+    return callback(null, {
+      result: JSON.stringify({
+        results: schemasFromOtherModules.map((schema: any) => {
+          return { name: schema.name, fields: JSON.parse(schema.modelSchema) };
+        })
+      })
+    });
+  }
+
   async getById(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
