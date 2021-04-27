@@ -41,9 +41,9 @@
       "protoName": "createService"
     },
     {
-      "path": "/services",
+      "path": "/services/:id",
       "method": "DELETE",
-      "protoName": "createService"
+      "protoName": "deleteService"
     },
     {
       "path": "/services",
