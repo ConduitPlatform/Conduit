@@ -16,6 +16,8 @@ export interface DatabaseAdapter {
    */
   getSchema(schemaName: string): ConduitSchema;
 
+  getSchemas(): ConduitSchema[];
+
   getSchemaModel(schemaName: string): { model: SchemaAdapter, relations: any };
 
   ensureConnected(): Promise<any>;

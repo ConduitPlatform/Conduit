@@ -25,6 +25,18 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
+  getSchemas(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.client.getSchemas({}, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.schemas);
+        }
+      });
+    });
+  }
+
   createSchemaFromAdapter(schema: any): Promise<any> {
     return new Promise((resolve, reject) => {
       this.client.createSchemaFromAdapter(

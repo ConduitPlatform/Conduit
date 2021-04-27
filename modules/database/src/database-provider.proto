@@ -17,6 +17,13 @@ message GetSchemaResponse {
     Schema schema = 1;
 }
 
+message GetSchemasRequest {
+}
+
+message GetSchemasResponse {
+    repeated Schema schemas = 1;
+}
+
 message Schema {
     string name = 1;
     string modelSchema = 2;
@@ -64,6 +71,7 @@ message UpdateManyRequest {
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter (CreateSchemaRequest) returns (CreateSchemaResponse);
     rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
+    rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     // Database queries
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);
@@ -74,5 +82,4 @@ service DatabaseProvider {
     rpc findByIdAndUpdate (UpdateRequest) returns (QueryResponse);
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments (QueryRequest) returns (QueryResponse);
-
 }

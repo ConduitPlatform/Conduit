@@ -18,6 +18,12 @@ export type SchemaResponse = GrpcResponse<{
   schema: Schema
 }>;
 
+export type GetSchemasRequest = GrpcRequest<{}>;
+
+export type SchemasResponse = GrpcResponse<{
+  schemas: Schema[];
+}>;
+
 export type FindOneRequest = GrpcRequest<{
   schemaName: string,
   query: string,

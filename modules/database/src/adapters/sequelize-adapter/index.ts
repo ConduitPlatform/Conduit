@@ -52,10 +52,21 @@ export class SequelizeAdapter implements DatabaseAdapter {
   }
 
   getSchema(schemaName: string): ConduitSchema {
-    if (this.models) {
+    if (this.models && this.models![schemaName]) {
       return this.models[schemaName].originalSchema;
     }
     throw new Error('Schema not defined yet');
+  }
+
+  getSchemas(): ConduitSchema[] {
+    if (!this.models) {
+      return [];
+    }
+
+    const self = this;
+    return Object.keys(this.models).map((modelName) => {
+      return self.models![modelName].originalSchema;
+    });
   }
 
   getSchemaModel(schemaName: string): { model: SchemaAdapter; relations: any } {
