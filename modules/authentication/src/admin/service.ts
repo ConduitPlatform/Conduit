@@ -30,13 +30,13 @@ export class ServiceAdmin {
       {},
       null,
       skipNumber,
-      limitNumber
+      limitNumber,
     );
     const countPromise = this.database.countDocuments('Service', {});
 
     let errorMessage = null;
     const [services, count] = await Promise.all([servicesPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => (errorMessage = e.message),
     );
 
     if (!isNil(errorMessage)) {
@@ -62,7 +62,7 @@ export class ServiceAdmin {
     let errorMessage = null;
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => (errorMessage = e.message),
     );
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -81,6 +81,31 @@ export class ServiceAdmin {
     return callback(null, { result: JSON.stringify({ name, token }) });
   }
 
+  async deleteService(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+
+    if (isNil(id)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Service id is required',
+      });
+    }
+
+    let errorMessage = null;
+    await this.database
+      .deleteOne('Service', { id })
+      .catch((e: any) => (errorMessage = e.message));
+
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Service deletion failed',
+      });
+    }
+
+    return callback(null, { result: 'OK' });
+  }
+
   async renewToken(call: RouterRequest, callback: RouterResponse) {
     const { serviceId } = JSON.parse(call.request.params);
 
@@ -94,7 +119,7 @@ export class ServiceAdmin {
     let errorMessage = null;
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => (errorMessage = e.message),
     );
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });

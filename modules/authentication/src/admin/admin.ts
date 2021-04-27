@@ -25,6 +25,7 @@ export class AdminHandlers {
         unblockUser: this.unblockUser.bind(this),
         getServices: serviceAdmin.getServices.bind(serviceAdmin),
         createService: serviceAdmin.createService.bind(serviceAdmin),
+        deleteService: serviceAdmin.deleteService.bind(serviceAdmin),
         renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin),
       })
       .catch((err: Error) => {

@@ -42,6 +42,11 @@
     },
     {
       "path": "/services",
+      "method": "DELETE",
+      "protoName": "createService"
+    },
+    {
+      "path": "/services",
       "method": "PUT",
       "protoName": "renewServiceToken"
     }
