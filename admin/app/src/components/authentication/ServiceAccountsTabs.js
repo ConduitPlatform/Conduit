@@ -1,10 +1,5 @@
 import {
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Grid,
   IconButton,
   Table,
@@ -13,14 +8,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
 } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DeleteIcon from '@material-ui/icons/Delete';
 import Button from '@material-ui/core/Button';
 import React, { useEffect, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
-import { useDispatch } from 'react-redux';
 import {
   createServiceAccount,
   deleteServiceAccounts,
@@ -31,6 +24,7 @@ import moment from 'moment';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import GetServiceAccountToken from './GetServiceAccountToken';
 import RefreshIcon from '@material-ui/icons/Refresh';
+import CreateServiceAccount from './CreateServiceAccount';
 
 const useStyles = makeStyles({
   table: {
@@ -200,33 +194,13 @@ const ServiceAccountsTabs = () => {
         handleClose={handleCloseTokenDialog}
         token={createdService ? createdService.token : ''}
       />
-      <Dialog open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
-        <DialogTitle id="form-dialog-title">New Service Account</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Provide a service name for your new service account and click the create
-            button
-          </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="serviceName"
-            label="Service name"
-            type="text"
-            fullWidth
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleCreate} color="primary">
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateServiceAccount
+        open={open}
+        name={name}
+        setName={setName}
+        handleClose={handleClose}
+        handleCreate={handleCreate}
+      />
     </>
   );
 };
