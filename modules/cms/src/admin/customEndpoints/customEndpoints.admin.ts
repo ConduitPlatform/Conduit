@@ -44,7 +44,7 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, queries, selectedSchema, assignments, paginated, sorted } = params;
+    const { inputs, queries, selectedSchema, selectedSchemaName, assignments, paginated, sorted } = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -65,16 +65,38 @@ export class CustomEndpointsAdmin {
       });
     }
     errorMessage = null;
-    const findSchema = await this.database
-      .findOne('SchemaDefinitions', {
-        _id: selectedSchema,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage) || isNil(findSchema)) {
+    let findSchema: any;
+    if (!isNil(selectedSchema)) {
+      findSchema = await this.database
+        .findOne('SchemaDefinitions', {
+          _id: selectedSchema,
+        })
+        .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: errorMessage,
+        });
+      }
+    } else if (!isNil(selectedSchemaName)) {
+      if (found.operation !== OperationsEnum.GET) {
+        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Only get requests are allowed for schemas from other modules' });
+      }
+
+      findSchema = await this.database.getSchema(selectedSchemaName)
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      }
+
+      findSchema.fields = findSchema.modelSchema;
+    }
+
+    if (isNil(findSchema)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'SelectedSchema not found',
-      });
+        message: 'SelectedSchema not found'
+      })
     }
 
     // todo checks for inputs & queries
