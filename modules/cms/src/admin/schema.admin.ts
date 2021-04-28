@@ -77,7 +77,7 @@ export class SchemaAdmin {
     return callback(null, {
       result: JSON.stringify({
         results: schemasFromOtherModules.map((schema: any) => {
-          return { name: schema.name, fields: JSON.parse(schema.modelSchema) };
+          return { name: schema.name, fields: schema.modelSchema };
         })
       })
     });

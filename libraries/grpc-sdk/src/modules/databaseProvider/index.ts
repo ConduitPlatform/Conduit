@@ -19,7 +19,11 @@ export default class DatabaseProvider extends ConduitModule {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
-          resolve(res.schema);
+          resolve({
+            name: res.schema.name,
+            modelSchema: JSON.parse(res.schema.modelSchema),
+            modelOptions: JSON.parse(res.schema.modelOptions),
+          });
         }
       });
     });
@@ -31,7 +35,13 @@ export default class DatabaseProvider extends ConduitModule {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
-          resolve(res.schemas);
+          resolve(res.schemas.map((schema: { name: string, modelSchema: string, modelOptions: string }) => {
+            return {
+              name: schema.name,
+              modelSchema: JSON.parse(schema.modelSchema),
+              modelOptions: JSON.parse(schema.modelOptions),
+            }
+          }));
         }
       });
     });
