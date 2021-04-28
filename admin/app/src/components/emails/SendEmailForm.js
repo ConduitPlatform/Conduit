@@ -1,4 +1,13 @@
-import { Container } from '@material-ui/core';
+import {
+  Box,
+  Checkbox,
+  Container,
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
+} from '@material-ui/core';
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -7,15 +16,13 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
-import clsx from 'clsx';
+import { sendEmailThunk } from '../../redux/thunks/emailsThunk';
+import { useDispatch } from 'react-redux';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
     padding: theme.spacing(2),
     color: theme.palette.text.secondary,
-  },
-  textField: {
-    marginBottom: theme.spacing(2),
   },
   simpleTextField: {
     width: '65ch',
@@ -25,35 +32,98 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SendEmailForm = ({ handleSend }) => {
+const SendEmailForm = ({ templates }) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
 
-  const [emailState, setEmailState] = useState({ email: '', subject: '', body: '' });
+  const [withTemplate, setWithTemplate] = useState(false);
+  const [emailState, setEmailState] = useState({
+    email: '',
+    sender: '',
+    subject: '',
+    body: '',
+    template: '',
+    variables: [],
+    variablesValues: {},
+    templateName: '',
+  });
 
   const sendEmail = () => {
-    handleSend(emailState);
+    let email;
+    if (emailState.template) {
+      email = {
+        templateName: emailState.templateName,
+        variables: emailState.variablesValues,
+        sender: emailState.sender,
+        email: emailState.email,
+        body: emailState.body,
+      };
+    } else {
+      email = {
+        subject: emailState.subject,
+        sender: emailState.sender,
+        email: emailState.email,
+        body: emailState.body,
+      };
+    }
+    dispatch(sendEmailThunk(email));
   };
 
   const clearEmail = () => {
-    setEmailState({ email: '', subject: '', body: '' });
+    setEmailState({
+      email: '',
+      sender: '',
+      subject: '',
+      body: '',
+      template: '',
+      variables: [],
+      variablesValues: {},
+      templateName: '',
+    });
+  };
+
+  const handleChangeTemplate = (event) => {
+    const selectedTemplate = event.target.value;
+
+    let variableValues = {};
+    selectedTemplate.variables.forEach((variable) => {
+      variableValues = { ...variableValues, [variable]: '' };
+    });
+
+    setEmailState({
+      ...emailState,
+      variables: selectedTemplate.variables,
+      templateName: selectedTemplate.name,
+      subject: selectedTemplate.subject,
+      variableValues: variableValues,
+      template: selectedTemplate,
+      body: selectedTemplate.body,
+    });
+  };
+
+  const handleVariableChange = (event, variable) => {
+    const newValue = event.target.value;
+    const variableValues = { ...emailState.variablesValues, [variable]: newValue };
+    setEmailState({ ...emailState, variablesValues: variableValues });
   };
 
   return (
     <Container maxWidth="md">
-      <Paper className={classes.paper} elevation={5}>
+      <Paper className={classes.paper} elevation={1}>
         <Typography variant={'h6'} className={classes.typography}>
           <MailOutline fontSize={'small'} />. Compose your email
         </Typography>
         <form noValidate autoComplete="off">
-          <Grid container>
+          <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
                 required
                 id="recipient"
-                label="Recipient"
+                label="Recipient (To:)"
                 variant="outlined"
+                type={'email'}
                 placeholder={'joedoe@gmail.com'}
-                className={clsx(classes.textField, classes.simpleTextField)}
+                className={classes.simpleTextField}
                 value={emailState.email}
                 onChange={(event) => {
                   setEmailState({
@@ -66,12 +136,30 @@ const SendEmailForm = ({ handleSend }) => {
             <Grid item xs={12}>
               <TextField
                 required
+                id="sender"
+                label="Sender (From:)"
+                variant="outlined"
+                placeholder={'Sender'}
+                className={classes.simpleTextField}
+                value={emailState.sender}
+                onChange={(event) => {
+                  setEmailState({
+                    ...emailState,
+                    sender: event.target.value,
+                  });
+                }}
+              />
+            </Grid>
+            <Grid item xs={8}>
+              <TextField
                 id="subject"
                 label="Subject"
                 variant="outlined"
-                placeholder={'Hello World 👋'}
-                className={clsx(classes.textField, classes.simpleTextField)}
+                disabled={withTemplate}
+                required={!withTemplate}
                 value={emailState.subject}
+                placeholder={'Hello World 👋'}
+                className={classes.simpleTextField}
                 onChange={(event) => {
                   setEmailState({
                     ...emailState,
@@ -80,8 +168,48 @@ const SendEmailForm = ({ handleSend }) => {
                 }}
               />
             </Grid>
+            <Grid item xs={4}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={withTemplate}
+                    onChange={(e) => setWithTemplate(e.target.checked)}
+                    name="withTemplate"
+                    color="primary"
+                  />
+                }
+                label="With Template"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl
+                variant="outlined"
+                required={withTemplate}
+                disabled={!withTemplate}
+                style={{ minWidth: '65ch' }}>
+                <InputLabel id="demo-simple-select-outlined-label">
+                  Email Template
+                </InputLabel>
+                <Select
+                  labelId="demo-simple-select-outlined-label"
+                  id="demo-simple-select-outlined"
+                  value={emailState.template}
+                  onChange={handleChangeTemplate}
+                  label="Email Template">
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {templates?.map((template) => (
+                    <MenuItem key={template._id} value={template}>
+                      {template.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid item xs={12}>
               <TextField
+                disabled={withTemplate}
                 id="outlined-multiline-static"
                 label="Email body"
                 multiline
@@ -90,7 +218,6 @@ const SendEmailForm = ({ handleSend }) => {
                 placeholder="Write your email here..."
                 required
                 fullWidth
-                className={clsx(classes.textField)}
                 value={emailState.body}
                 onChange={(event) => {
                   setEmailState({
@@ -100,22 +227,38 @@ const SendEmailForm = ({ handleSend }) => {
                 }}
               />
             </Grid>
+            <Grid container item xs={12} spacing={1}>
+              {emailState.variables.map((variable, index) => (
+                <Grid key={variable + '_' + index} item xs={3}>
+                  <TextField
+                    label={variable}
+                    variant="outlined"
+                    required
+                    fullWidth
+                    value={emailState.variablesValues[variable]}
+                    onChange={(e) => handleVariableChange(e, variable)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
             <Grid item container justify="flex-end" xs={12}>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<Clear />}
-                style={{ marginRight: 16 }}
-                onClick={clearEmail}>
-                Clear
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Send />}
-                onClick={sendEmail}>
-                Send
-              </Button>
+              <Box marginTop={3}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<Clear />}
+                  style={{ marginRight: 16 }}
+                  onClick={clearEmail}>
+                  Clear
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Send />}
+                  onClick={sendEmail}>
+                  Send
+                </Button>
+              </Box>
             </Grid>
           </Grid>
         </form>
