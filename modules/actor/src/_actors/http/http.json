@@ -58,5 +58,16 @@
       },
       "nullable": true
     }
+  },
+  "returns": {
+    "data": {
+      "type": "object"
+    },
+    "status": {
+      "type": "int64"
+    },
+    "headers": {
+      "type": "object"
+    }
   }
 }

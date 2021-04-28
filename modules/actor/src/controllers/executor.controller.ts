@@ -18,8 +18,8 @@ export class ExecutorController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe('forms', (message: string) => {
-      if (message === 'form') {
+    this.grpcSdk.bus?.subscribe('actor', (message: string) => {
+      if (message === 'actor') {
         this.refreshRoutes();
       }
     });
@@ -28,13 +28,13 @@ export class ExecutorController {
   private async loadExistingFlows() {
     await this._adapter.createSchemaFromAdapter(ActorFlowSchema);
     this._adapter
-      .findMany('Forms', { enabled: true })
+      .findMany('ActorFlows', { enabled: true })
       .then((r: any) => {
         this._registerRoutes(r);
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading forms for forms module');
+        console.error('Something went wrong when loading actors for actor module');
         console.error(err);
       });
   }
@@ -47,7 +47,7 @@ export class ExecutorController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading forms for forms module');
+        console.error('Something went wrong when loading actors for actor module');
         console.error(err);
       });
   }

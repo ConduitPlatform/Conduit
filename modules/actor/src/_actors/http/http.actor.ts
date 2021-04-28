@@ -1,18 +1,20 @@
-import { HttpInterface } from './http.interface';
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { HttpInputs } from './http.interface';
+import axios, { AxiosRequestConfig } from 'axios';
+import { ActorInput } from '../../models/actorInput.interface';
 
-export default async function (data: HttpInterface) {
+export default async function(data: ActorInput<HttpInputs>) {
+  let optionsInput = data.actorOptions;
   let config: AxiosRequestConfig = {
-    url: data.options.url,
-    method: data.options.method,
-    headers: data.options.headers ?? undefined,
-    params: data.options.params ?? undefined,
-    data: data.options.body ?? undefined,
-    timeout: data.options.timeout ?? undefined,
-    auth: data.options.auth ?? undefined,
-    maxContentLength: data.options.maxContentLength ?? undefined,
-    maxBodyLength: data.options.maxBodyLength ?? undefined,
-    maxRedirects: data.options.maxRedirects ?? undefined,
+    url: optionsInput.url,
+    method: optionsInput.method,
+    headers: optionsInput.headers ?? undefined,
+    params: optionsInput.params ?? undefined,
+    data: optionsInput.body ?? undefined,
+    timeout: optionsInput.timeout ?? undefined,
+    auth: optionsInput.auth ?? undefined,
+    maxContentLength: optionsInput.maxContentLength ?? undefined,
+    maxBodyLength: optionsInput.maxBodyLength ?? undefined,
+    maxRedirects: optionsInput.maxRedirects ?? undefined,
   };
   try {
     const response = await axios(config);

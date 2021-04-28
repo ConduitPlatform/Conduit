@@ -62,18 +62,18 @@ export default class ActorModule {
         console.log('Bus did not initialize!');
       })
       .then(() => {
-        return this.grpcSdk.config.get('actors');
+        return this.grpcSdk.config.get('actor');
       })
       .catch(() => {
         return this.grpcSdk.config.updateConfig(
           ActorConfigSchema.getProperties(),
-          'actors'
+          'actor'
         );
       })
       .then(() => {
         return this.grpcSdk.config.addFieldstoConfig(
           ActorConfigSchema.getProperties(),
-          'actors'
+          'actor'
         );
       })
       .catch(() => {
@@ -102,18 +102,18 @@ export default class ActorModule {
 
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, 'actors')
+      .updateConfig(newConfig, 'actor')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const formsConfig = await this.grpcSdk.config.get('actors');
-    if (formsConfig.active) {
+    const actorConfig = await this.grpcSdk.config.get('actor');
+    if (actorConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-      this.grpcSdk.bus?.publish('actors', 'config-update');
+      this.grpcSdk.bus?.publish('actor', 'config-update');
     } else {
       return callback({
         code: grpc.status.FAILED_PRECONDITION,

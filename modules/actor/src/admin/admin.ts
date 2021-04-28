@@ -41,8 +41,8 @@ export class AdminHandlers {
       });
   }
 
-  async getActors(call: RouterRequest, callback: RouterResponse) {
-    let actors = readdirSync(path.resolve(__dirname, '../_actors'), { withFileTypes: true })
+  private _getActors() {
+    return readdirSync(path.resolve(__dirname, '../_actors'), { withFileTypes: true })
       .filter((dirent: any) => dirent.isDirectory())
       .map((dirent: any) => {
         try {
@@ -54,11 +54,17 @@ export class AdminHandlers {
         }
       });
 
+
+  }
+
+  async getActors(call: RouterRequest, callback: RouterResponse) {
+    let actors = this._getActors();
+
     return callback(null, { result: JSON.stringify({ actors }) });
   }
 
-  async getTriggers(call: RouterRequest, callback: RouterResponse) {
-    let triggers = readdirSync(path.resolve(__dirname, '../_triggers'), { withFileTypes: true })
+  private _getTriggers() {
+    return readdirSync(path.resolve(__dirname, '../_triggers'), { withFileTypes: true })
       .filter((dirent: any) => dirent.isDirectory())
       .map((dirent: any) => {
         try {
@@ -69,7 +75,11 @@ export class AdminHandlers {
           return {};
         }
       });
+  }
 
+  async getTriggers(call: RouterRequest, callback: RouterResponse) {
+
+    let triggers = this._getTriggers();
     return callback(null, { result: JSON.stringify({ triggers }) });
   }
 
@@ -170,9 +180,58 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ runs, count }) });
   }
 
-  //todo
   async createFlow(call: RouterRequest, callback: RouterResponse) {
-    return callback({ code: grpc.status.UNIMPLEMENTED, message: 'Not implemented yet' });
+    const { name, trigger, actors, enabled } = JSON.parse(call.request.params);
+    if (!name) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Argument name is required!',
+      });
+    }
+    if (!trigger) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Argument trigger is required!',
+      });
+    }
+
+    if (!actors || !Array.isArray(actors) || actors.length === 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Argument actors is required and must be a non-empty array!',
+      });
+
+    }
+    let triggers = this._getTriggers();
+    let matchingTrigger = triggers.filter((trigr: any) => trigr.name === trigger.name);
+    if (matchingTrigger.length === 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: `Trigger ${trigger.name} is not a valid trigger name.`,
+      });
+    }
+
+    let availableActors = this._getActors();
+    for (let actor of actors) {
+      let matchingActor = availableActors.filter((actor: any) => actor.name === actor);
+      if (matchingActor.length === 0) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: `Actor ${actor} is not a valid actor name.`,
+        });
+      }
+    }
+    let errorMessage = null;
+    const flow = await this.database.create('ActorFlows', {
+      name,
+      trigger,
+      actors,
+      enabled: enabled !== null ? enabled : true,
+    }).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    return callback(null, { result: JSON.stringify({ flow }) });
   }
 
   //todo
