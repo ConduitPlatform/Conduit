@@ -11,7 +11,10 @@ export const ActorFlowSchema = new ConduitSchema(
       systemRequired: true,
     },
     trigger: {
-      type: TYPE.String,
+      type: {
+        name: TYPE.String,
+        options: TYPE.JSON,
+      },
       required: true,
       systemRequired: true,
     },
@@ -35,5 +38,5 @@ export const ActorFlowSchema = new ConduitSchema(
   {
     timestamps: true,
     systemRequired: true,
-  }
+  },
 );
