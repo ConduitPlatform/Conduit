@@ -15,7 +15,7 @@ const schema = new ConduitSchema(
     },
     selectedSchema: {
       type: TYPE.ObjectId,
-      required: true,
+      required: false,
     },
     selectedSchemaName: {
       type: TYPE.String,

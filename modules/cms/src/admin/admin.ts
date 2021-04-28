@@ -32,6 +32,7 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getAllSchemas: schemaAdmin.getAllSchemas.bind(schemaAdmin),
+        getSchemasRegisteredByOtherModules: schemaAdmin.getSchemasRegisteredByOtherModules.bind(schemaAdmin),
         getById: schemaAdmin.getById.bind(schemaAdmin),
         createSchema: schemaAdmin.createSchema.bind(schemaAdmin),
         toggle: schemaAdmin.toggle.bind(schemaAdmin),

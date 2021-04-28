@@ -113,6 +113,17 @@ export class MongooseAdapter implements DatabaseAdapter {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
+  getSchemas(): ConduitSchema[] {
+    if (!this.models) {
+      return [];
+    }
+
+    const self = this;
+    return Object.keys(this.models).map((modelName) => {
+      return self.models![modelName].originalSchema;
+    });
+  }
+
   getSchemaModel(schemaName: string): { model: MongooseSchema, relations: any } {
     if (this.models && this.models![schemaName]) {
       return { model: this.models![schemaName], relations: null };

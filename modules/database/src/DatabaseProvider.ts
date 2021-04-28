@@ -12,9 +12,11 @@ import {
   FindOneRequest,
   FindRequest,
   GetSchemaRequest,
+  GetSchemasRequest,
   QueryRequest,
   QueryResponse,
   SchemaResponse,
+  SchemasResponse,
   UpdateManyRequest,
   UpdateRequest,
 } from './types';
@@ -145,6 +147,7 @@ export class DatabaseProvider {
           {
             createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
             getSchema: this.getSchema.bind(this),
+            getSchemas: this.getSchemas.bind(this),
             findOne: this.findOne.bind(this),
             findMany: this.findMany.bind(this),
             create: this.create.bind(this),
@@ -227,6 +230,26 @@ export class DatabaseProvider {
           modelSchema: JSON.stringify(schemaAdapter.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.modelOptions),
         },
+      });
+    } catch (err) {
+      callback({
+        code: grpc.status.INTERNAL,
+        message: err.message,
+      });
+    }
+  }
+
+  getSchemas(call: GetSchemasRequest, callback:  SchemasResponse) {
+    try {
+      const schemas = this._activeAdapter.getSchemas();
+      callback(null, {
+        schemas: schemas.map((schema) => {
+          return {
+            name: schema.name,
+            modelSchema: JSON.stringify(schema.modelSchema),
+            modelOptions: JSON.stringify(schema.modelOptions),
+          };
+        })
       });
     } catch (err) {
       callback({

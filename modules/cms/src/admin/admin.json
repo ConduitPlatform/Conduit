@@ -6,6 +6,11 @@
       "protoName": "getAllSchemas"
     },
     {
+      "path": "/schemasFromOtherModules",
+      "method": "GET",
+      "protoName": "getSchemasRegisteredByOtherModules"
+    },
+    {
       "path": "/schemas/:id",
       "method": "GET",
       "protoName": "getById"
