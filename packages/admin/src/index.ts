@@ -418,7 +418,22 @@ export default class AdminModule extends IConduitAdmin {
     this.router = Router();
     this._registeredRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');
-      this.router.use(path, route);
+      switch (method) {
+        case 'GET':
+          this.router.get(path, route);
+          break;
+        case 'POST':
+          this.router.post(path, route);
+          break;
+        case 'PUT':
+          this.router.put(path, route);
+          break;
+        case 'DELETE':
+          this.router.delete(path, route);
+          break;
+        default:
+          this.router.get(path, route);
+      }
     });
   }
 }
