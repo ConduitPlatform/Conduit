@@ -44,7 +44,7 @@ export const getAdminModules = () => {
     dispatch(startAuthenticationLoading());
     getAdminModulesRequest()
       .then((res) => {
-        dispatch(setAdminModules(res?.data));
+        dispatch(setAdminModules(res.data.modules));
         dispatch(stopAuthenticationLoading());
       })
       .catch((err) => {

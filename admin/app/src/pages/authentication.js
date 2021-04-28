@@ -18,6 +18,7 @@ import {
   getConfig,
   updateConfig,
 } from '../redux/thunks/authenticationThunks';
+import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -68,6 +69,7 @@ const Authentication = () => {
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
     { title: 'Sign-In Method', isDisabled: configData ? !configData.active : true },
+    { title: 'Service Accounts', isDisabled: false },
     { title: 'Settings', isDisabled: false },
   ];
 
@@ -146,6 +148,9 @@ const Authentication = () => {
           )}
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
+          <ServiceAccountsTabs />
+        </Box>
+        <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
           <AuthSettings
             handleSave={handleSettingsSave}
             settingsData={configData}

@@ -93,6 +93,7 @@ const useStyles = makeStyles((theme) => ({
 function CustomDrawer(props) {
   const classes = useStyles();
   const dispatch = useDispatch();
+
   const enabledModules = useSelector((state) => state.appAuthReducer.enabledModules);
 
   const { open, itemSelected, ...rest } = props;
@@ -117,6 +118,11 @@ function CustomDrawer(props) {
   const handleLogout = () => {
     dispatch(logout());
     Router.replace('/login');
+  };
+
+  const isModuleDisabled = (moduleName) => {
+    const found = enabledModules.find((module) => module.moduleName === moduleName);
+    return !found;
   };
 
   return (
@@ -161,9 +167,7 @@ function CustomDrawer(props) {
           <Link href="/authentication" prefetch={false}>
             <ListItem
               button
-              disabled={
-                !enabledModules?.find((module) => module === 'authentication:5000')
-              }
+              disabled={isModuleDisabled('authentication')}
               key={'Authentication'}
               className={classes.listItem}
               style={itemStyle}
@@ -179,7 +183,7 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/notification">
             <ListItem
-              disabled={!enabledModules?.find((module) => module === 'notification:5000')}
+              disabled={isModuleDisabled('notification')}
               button
               key={'Notification'}
               className={classes.listItem}
@@ -196,9 +200,7 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/sms">
             <ListItem
-              // disabled={
-              //   !enabledModules?.find((module) => module === 'sms:5000')
-              // }
+              disabled={isModuleDisabled('sms')}
               button
               key={'sms'}
               className={classes.listItem}
@@ -212,9 +214,7 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/emails">
             <ListItem
-              disabled={
-                !enabledModules?.find((module) => module === 'email-provider:5000')
-              }
+              disabled={isModuleDisabled('email')}
               button
               key={'Emails'}
               className={classes.listItem}
@@ -232,7 +232,7 @@ function CustomDrawer(props) {
           <Link href="/cms">
             <ListItem
               button
-              disabled={!enabledModules?.find((module) => module === 'cms:5000')}
+              disabled={isModuleDisabled('cms')}
               key={'CMS'}
               className={classes.listItem}
               style={itemStyle}
@@ -247,7 +247,7 @@ function CustomDrawer(props) {
             <ListItem
               button
               key={'Storage'}
-              disabled={!enabledModules?.find((module) => module === 'storage:5000')}
+              disabled={isModuleDisabled('storage')}
               className={classes.listItem}
               style={itemStyle}
               selected={itemSelected === 6}>
@@ -262,7 +262,6 @@ function CustomDrawer(props) {
           </Link>
           <Link href="/settings">
             <ListItem
-              disabled={!enabledModules?.find((module) => module === 'settings:5000')}
               button
               key={'Settings'}
               className={classes.listItem}
