@@ -33,21 +33,12 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Emails = () => {
-  const { data, loading, error } = useSelector((state) => state.emailsPageReducer);
-
-  const dispatch = useDispatch();
   const classes = useStyles();
+  const dispatch = useDispatch();
 
-  const tabs = [
-    { title: 'Templates', isDisabled: data.settings ? !data.settings.active : true },
-    { title: 'Send email', isDisabled: data.settings ? !data.settings.active : true },
-    { title: 'Provider details' },
-  ];
+  const { data, loading, error } = useSelector((state) => state.emailsPageReducer);
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const handleChange = (event, newValue) => {
-    setSelected(newValue);
-  };
 
   useEffect(() => {
     dispatch(getEmailTemplates());
@@ -67,6 +58,16 @@ const Emails = () => {
       setSnackbarOpen(false);
     }
   }, [error]);
+
+  const tabs = [
+    { title: 'Templates', isDisabled: data.settings ? !data.settings.active : true },
+    { title: 'Send email', isDisabled: data.settings ? !data.settings.active : true },
+    { title: 'Provider details' },
+  ];
+
+  const handleChange = (event, newValue) => {
+    setSelected(newValue);
+  };
 
   const snackbarAlert = () => {
     if (error) {
@@ -112,16 +113,6 @@ const Emails = () => {
     dispatch(updateEmailSettings(data));
   };
 
-  const sendEmail = (data) => {
-    const email = {
-      sender: '',
-      email: data.email,
-      subject: data.subject,
-      body: data.body,
-    };
-    dispatch(sendEmailThunk(email));
-  };
-
   return (
     <Layout itemSelected={3}>
       <Box p={2}>
@@ -136,7 +127,7 @@ const Emails = () => {
           />
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <SendEmailForm handleSend={sendEmail} />
+          <SendEmailForm templates={data.templateDocuments} />
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
           <ProviderData
