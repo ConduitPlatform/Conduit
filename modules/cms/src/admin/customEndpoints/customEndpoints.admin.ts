@@ -234,6 +234,7 @@ export class CustomEndpointsAdmin {
       name,
       operation,
       selectedSchema,
+      selectedSchemaName,
       inputs,
       queries,
       authentication,
@@ -242,7 +243,7 @@ export class CustomEndpointsAdmin {
       paginated,
     } = JSON.parse(call.request.params);
 
-    if (isNil(name) || isNil(operation) || isNil(selectedSchema)) {
+    if (isNil(name) || isNil(operation) || (isNil(selectedSchema) && isNil(selectedSchemaName))) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
@@ -276,23 +277,50 @@ export class CustomEndpointsAdmin {
       });
     }
 
-    if (selectedSchema.length === 0) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'SelectedSchema must not be empty',
-      });
-    }
+    let findSchema: any;
     let errorMessage: string | null = null;
-    const findSchema = await this.database
-      .findOne('SchemaDefinitions', {
-        _id: selectedSchema,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage) || isNil(findSchema)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'SelectedSchema not found',
-      });
+    if (!isNil(selectedSchema)) {
+      if (selectedSchema.length === 0) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'SelectedSchema must not be empty',
+        });
+      }
+
+      findSchema = await this.database
+        .findOne('SchemaDefinitions', {
+          _id: selectedSchema,
+        })
+        .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: grpc.status.INTERNAL,
+          message: errorMessage,
+        });
+      }
+    } else {
+      if (selectedSchemaName.length === 0) {
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'SelectedSchemaName must not be empty',
+        });
+      }
+
+      if (operation !== OperationsEnum.GET) {
+        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Only get requests are allowed for schemas from other modules' });
+      }
+
+      findSchema = await this.database.getSchema(selectedSchemaName)
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      }
+
+      findSchema.fields = findSchema.modelSchema;
+    }
+
+    if (isNil(findSchema)) {
+      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'SelectedSchema not found' });
     }
 
     if (!isNil(inputs) && !Array.isArray(inputs)) {
