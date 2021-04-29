@@ -23,7 +23,7 @@ export default class AdminModule extends IConduitAdmin {
     grpcSdk: ConduitGrpcSdk,
     conduit: ConduitCommons,
     server: grpc.Server,
-    packageDefinition: any
+    packageDefinition: any,
   ) {
     super(conduit);
     this.conduit = conduit;
@@ -53,7 +53,7 @@ export default class AdminModule extends IConduitAdmin {
       .registerDirectRouter(
         '/admin/login',
         (req: Request, res: Response, next: NextFunction) =>
-          adminHandlers.loginAdmin(req, res, next).catch(next)
+          adminHandlers.loginAdmin(req, res, next).catch(next),
       );
     this.conduit
       .getRouter()
@@ -63,14 +63,12 @@ export default class AdminModule extends IConduitAdmin {
           let response: any[] = [];
           // this is used here as such, because the config manager is simply the config package
           // todo update the config manager interface so that we don't need these castings
-          ((this.conduit.getConfigManager() as any).registeredModules as Map<
-            string,
-            string
-          >).forEach((val: any, key: any) => {
+          ((this.conduit.getConfigManager() as any).registeredModules as Map<string,
+            string>).forEach((val: any, key: any) => {
             response.push(val);
           });
           res.json(response);
-        }
+        },
       );
 
     // todo fix the middlewares
@@ -115,7 +113,7 @@ export default class AdminModule extends IConduitAdmin {
       self._registerGprcRoute(
         messageParsed.protofile,
         messageParsed.routes,
-        messageParsed.url
+        messageParsed.url,
       ).then(() => {
         this.cleanupRoutes();
       });
@@ -152,7 +150,7 @@ export default class AdminModule extends IConduitAdmin {
         protofile,
         routes,
         url,
-      })
+      }),
     );
   }
 
@@ -186,7 +184,7 @@ export default class AdminModule extends IConduitAdmin {
   findAdmin(object: any) {
     let value;
     const self = this;
-    Object.keys(object).some(function (k) {
+    Object.keys(object).some(function(k) {
       if (k === 'Admin') {
         value = object[k];
         return true;
@@ -237,11 +235,12 @@ export default class AdminModule extends IConduitAdmin {
       routes.forEach((r) => {
         // for backwards compatibility and fool-proofing
         if (r.path.startsWith(`/${moduleName}/`)) return;
+        if (!r.path.startsWith(`/`)) r.path = `/${r.path}`;
         r.path = `/${moduleName}${r.path}`;
       });
     }
     let done = await this._registerGprcRoute(protofile, routes, url).catch(
-      (err) => (error = err)
+      (err) => (error = err),
     );
     if (error) {
       callback({

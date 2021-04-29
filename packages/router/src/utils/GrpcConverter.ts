@@ -18,11 +18,11 @@ let protoLoader = require('@grpc/proto-loader');
 
 export function grpcToConduitRoute(
   request: any,
-  moduleName?: string
+  moduleName?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let protofile = request.protoFile;
   let routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ] = request.routes;
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
@@ -50,10 +50,10 @@ export function grpcToConduitRoute(
 
 function createHandlers(
   routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ],
   client: any,
-  moduleName?: string
+  moduleName?: string,
 ) {
   let finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
@@ -77,7 +77,7 @@ function createHandlers(
 function createHandlerForRoute(
   route: { options: any; returns?: any; grpcFunction: string },
   client: any,
-  moduleName?: string
+  moduleName?: string,
 ) {
   let handler = (req: ConduitRouteParameters) => {
     let request = {
@@ -101,7 +101,8 @@ function createHandlerForRoute(
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   let returns: any = route.returns;
@@ -110,8 +111,12 @@ function createHandlerForRoute(
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
-      } catch (e) {}
+      } catch (e) {
+      }
     }
+  }
+  if (!options.path.startsWith('/')) {
+    options.path = `/${options.path}`;
   }
 
   if (moduleName) {
@@ -142,7 +147,7 @@ function createHandlerForRoute(
 function createHandlerForSocket(
   socket: SocketProtoDescription,
   client: any,
-  moduleName?: string
+  moduleName?: string,
 ) {
   let eventHandlers = new Map<string, ConduitSocketEvent>();
   const events = JSON.parse(socket.events);
@@ -160,13 +165,13 @@ function createHandlerForSocket(
           request,
           (
             err: { code: number; message: string },
-            result: EventResponse | JoinRoomResponse
+            result: EventResponse | JoinRoomResponse,
           ) => {
             if (err) {
               return reject(err);
             }
             resolve(result);
-          }
+          },
         );
       });
     };
@@ -180,7 +185,10 @@ function createHandlerForSocket(
   }
 
   if (moduleName) {
-    if (!socket.options.path.startsWith(`/${moduleName}`)) {
+    if (!socket.options.path.startsWith('/')) {
+      socket.options.path = `/${socket.options.path}`;
+    }
+    if (!socket.options.path.startsWith(`/${moduleName}/`)) {
       socket.options.path = `/${moduleName}${socket.options.path}`;
     }
   }
