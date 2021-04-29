@@ -38,6 +38,7 @@ const ProviderData = ({ settings, error, handleSave }) => {
   const [settingsState, setSettingsState] = useState({
     active: false,
     transport: '',
+    sendingDomain: '',
     transportSettings: { apiKey: '', domain: '', host: '' },
   });
 
@@ -48,6 +49,7 @@ const ProviderData = ({ settings, error, handleSave }) => {
     setSettingsState({
       active: settings.active,
       transport: settings.transport,
+      sendingDomain: settings.sendingDomain,
       transportSettings: {
         apiKey:
           settings.transportSettings && settings.transportSettings[settings.transport]
@@ -77,6 +79,7 @@ const ProviderData = ({ settings, error, handleSave }) => {
     const data = {
       active: settingsState.active,
       transport: settingsState.transport,
+      sendingDomain: settingsState.sendingDomain,
       transportSettings: {
         [settingsState.transport]: {
           apiKey: settingsState.transportSettings.apiKey,
@@ -114,6 +117,19 @@ const ProviderData = ({ settings, error, handleSave }) => {
               Smtp
             </MenuItem>
           </TextField>
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            label="Sending Domain"
+            value={settingsState.sendingDomain}
+            onChange={(event) => {
+              setSettingsState({
+                ...settingsState,
+                sendingDomain: event.target.value,
+              });
+            }}
+            variant="outlined"
+          />
         </Grid>
         <Divider className={classes.divider} />
         <Grid item xs={12}>
