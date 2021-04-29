@@ -4,6 +4,7 @@ import grpc from 'grpc';
 import { isNil } from 'lodash';
 import schema from '../../models/customEndpoint.schema';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
+import { migrateCustomEndpoints } from '../../migrations/customEndpoint.schema.migrations';
 
 const OperationsEnum = {
   GET: 0, //'FIND/GET'
@@ -24,6 +25,10 @@ export class CustomEndpointsAdmin {
       .createSchemaFromAdapter(schema)
       .then((r: any) => {
         console.log('Registered custom endpoints schema');
+        return migrateCustomEndpoints(this.grpcSdk);
+      })
+      .then(() => {
+        console.log('customEndpoints migration complete');
       })
       .catch((err: any) => {
         console.log(err);
