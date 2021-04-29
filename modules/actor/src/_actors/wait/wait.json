@@ -1,4 +1,5 @@
 {
+  "code": "wait",
   "name": "Wait",
   "description": "This actor simply waits a specified amount, adding delay between actors",
   "options": {
