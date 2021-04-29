@@ -10,6 +10,56 @@ import { isNil } from 'lodash';
  * }
  */
 export function queryValidation(
+  query: any,
+  findSchema: any,
+  inputs: any,
+): true | string {
+
+  if (query.hasOwnProperty('AND')) {
+    if (Object.keys(query).length !== 1) {
+      return 'Invalid number of keys';
+    }
+    query = query['AND'];
+  } else if (query.hasOwnProperty('OR')) {
+    if (Object.keys(query).length !== 1) {
+      return 'Invalid number of keys';
+    }
+    query = query['OR'];
+  } else if (query.hasOwnProperty('schemaField')) {
+    let error = _queryValidation(findSchema, inputs, query.schemaField, query.operation, query.comparisonField);
+    if (error !== true) {
+      return error;
+    }
+    query['AND'] = [{...query}];
+    delete query.schemaField;
+    delete query.operation;
+    delete query.comparisonField;
+    return true;
+  } else {
+    return 'Invalid field, missing an AND/OR';
+  }
+
+  for (const q of query) {
+    if (q.hasOwnProperty('schemaField')) {
+      let error = _queryValidation(findSchema, inputs, q.schemaField, q.operation, q.comparisonField);
+      if (error !== true) {
+        return error;
+      }
+    } else if (q.hasOwnProperty('AND') || q.hasOwnProperty('OR')) {
+      let error = queryValidation(q, findSchema, inputs);
+      if (error !== true) {
+        return error;
+      }
+    } else {
+      return 'Invalid fields';
+    }
+  }
+
+  return true;
+}
+
+
+function _queryValidation(
   findSchema: any,
   inputs: any,
   schemaField: string,
