@@ -10,7 +10,6 @@ import ConduitGrpcSdk, {
 import path from 'path';
 import * as grpc from 'grpc';
 import { ActorRoutes } from './routes/Routes';
-import { ExecutorController } from './controllers/executor.controller';
 
 export default class ActorModule {
   private database: any;
@@ -18,7 +17,6 @@ export default class ActorModule {
   private isRunning: boolean = false;
   private _url: string;
   private _router: ActorRoutes;
-  private _executorController: ExecutorController;
   private readonly grpcServer: GrpcServer;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -131,11 +129,9 @@ export default class ActorModule {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new ActorRoutes(this.grpcServer, this.grpcSdk);
-      this._executorController = new ExecutorController(this.grpcSdk, this._router);
       this._admin = new AdminHandlers(
         this.grpcServer,
-        this.grpcSdk,
-        this._executorController
+        this.grpcSdk
       );
       await this.registerSchemas();
       this.isRunning = true;

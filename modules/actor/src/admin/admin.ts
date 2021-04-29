@@ -4,10 +4,10 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 
-import { ExecutorController } from '../controllers/executor.controller';
 import path from 'path';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
+import { FlowCreator } from '../controllers/flowCreator';
 
 const { readdirSync, readFileSync } = require('fs');
 
@@ -15,16 +15,17 @@ let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
   private database: any;
+  private warden: FlowCreator;
 
   constructor(
     server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly executorController: ExecutorController,
   ) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
       self.database = self.grpcSdk.databaseProvider;
     });
+    this.warden = new FlowCreator(grpcSdk);
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getActors: this.getActors.bind(this),
@@ -203,21 +204,21 @@ export class AdminHandlers {
 
     }
     let triggers = this._getTriggers();
-    let matchingTrigger = triggers.filter((trigr: any) => trigr.name === trigger.name);
+    let matchingTrigger = triggers.filter((trigr: any) => trigr.code === trigger.code);
     if (matchingTrigger.length === 0) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: `Trigger ${trigger.name} is not a valid trigger name.`,
+        message: `Trigger ${trigger.code} is not a valid trigger code.`,
       });
     }
 
     let availableActors = this._getActors();
     for (let actor of actors) {
-      let matchingActor = availableActors.filter((actor: any) => actor.name === actor);
+      let matchingActor = availableActors.filter((actr: any) => actr.code === actor.code);
       if (matchingActor.length === 0) {
         return callback({
           code: grpc.status.INVALID_ARGUMENT,
-          message: `Actor ${actor} is not a valid actor name.`,
+          message: `Actor ${actor.code} is not a valid actor code.`,
         });
       }
     }
@@ -228,6 +229,10 @@ export class AdminHandlers {
       actors,
       enabled: enabled !== null ? enabled : true,
     }).catch((e: any) => errorMessage = e.message);
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    await this.warden.constructFlow(flow).catch((e: any) => errorMessage = e.message);
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 

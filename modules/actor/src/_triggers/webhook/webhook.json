@@ -1,4 +1,5 @@
 {
+  "code": "webhook",
   "name": "Webhook Trigger",
   "description": "Triggers a flow when a request arrives on a specific route/method combination",
   "options": {

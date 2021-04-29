@@ -1,4 +1,5 @@
 {
+  "code": "http",
   "name": "Http Request",
   "description": "This actor makes an HTTP request to an accessible address with provided variables",
   "options": {
