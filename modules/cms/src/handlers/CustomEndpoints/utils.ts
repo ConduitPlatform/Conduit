@@ -1,6 +1,6 @@
 import { ConduitRouteActions } from '@quintessential-sft/conduit-grpc-sdk';
-import { CustomEndpoint } from '../../models/customEndpoint';
 import moment from 'moment';
+import { isNil } from 'lodash';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export function getOpName(name: string, op: number) {
@@ -27,6 +27,105 @@ export function getOpName(name: string, op: number) {
 }
 
 export function constructQuery(
+  endpointQuery: any,
+  inputs: {
+    name: string;
+    type: string;
+    location: number;
+    optional?: boolean;
+    array?: boolean;
+  }[],
+  params: any,
+  context: any
+) {
+  let res: any = {};
+  let resTopLevel: string;
+  let endpointTopLevel: string;
+
+  if (endpointQuery.hasOwnProperty('AND')) {
+    resTopLevel = '$and';
+    endpointTopLevel = 'AND';
+  } else if (endpointQuery.hasOwnProperty('OR')) {
+    resTopLevel = '$or';
+    endpointTopLevel = 'OR';
+  } else {
+    throw new Error('Invalid fields');
+  }
+
+  res[resTopLevel] = [];
+  endpointQuery[endpointTopLevel].forEach((query: any) => {
+    if (query.hasOwnProperty('schemaField')) {
+      const r = _constructQuery(query, inputs, params, context);
+      if (!isNil(r)) {
+        res[resTopLevel].push(r);
+      }
+    } else if (query.hasOwnProperty('AND') || query.hasOwnProperty('OR')) {
+      res[resTopLevel].push(constructQuery(query, inputs, params, context));
+    } else {
+      throw new Error('Invalid fields');
+    }
+  });
+
+  return res;
+}
+
+function _constructQuery(
+  query: {
+    schemaField: string;
+    operation: number;
+    comparisonField: { type: string; value: any; like: boolean };
+  },
+  inputs: {
+    name: string;
+    type: string;
+    location: number;
+    optional?: boolean;
+    array?: boolean;
+  }[],
+  params: any,
+  context: any
+) {
+  if (query.comparisonField.type === 'Input') {
+    if (isNil(params[query.comparisonField.value])) {
+      let res = inputs.filter((input) => {
+        return input.name === query.comparisonField.value && input.optional;
+      });
+      if (res && res.length > 0) {
+        return;
+      }
+
+      throw new Error(`Field ${query.comparisonField.value} is missing from input`);
+    }
+
+    return _translateQuery(
+      query.schemaField,
+      query.operation,
+      params[query.comparisonField.value],
+      query.comparisonField.like
+    );
+  } else if (query.comparisonField.type === 'Context') {
+    if (isNil(context)) {
+      throw new Error(`Field ${query.comparisonField.value} is missing from context`);
+    }
+    for (const key of query.comparisonField.value.split('.')) {
+      if (context.hasOwnProperty(key)) {
+        context = context[key];
+      } else {
+        throw new Error(`Field ${query.comparisonField.value} is missing from context`);
+      }
+    }
+    return _translateQuery(query.schemaField, query.operation, context, query.comparisonField.like);
+  } else {
+    return _translateQuery(
+      query.schemaField,
+      query.operation,
+      query.comparisonField.value,
+      query.comparisonField.like
+    );
+  }
+}
+
+function _translateQuery(
   schemaField: string,
   operation: number,
   comparisonField: any,
@@ -43,35 +142,34 @@ export function constructQuery(
   //   CONTAIN: 8, //'an array containing'
   let isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
   if (isDate) {
-    comparisonField = `{\"$date\": \"${JSON.stringify(comparisonField)}\"}`;
+    comparisonField = { $date: comparisonField };
   } else if (like) {
     comparisonField = escapeStringRegexp(comparisonField);
-    comparisonField = `{ \"$regex\": \".*${comparisonField}.*\", \"$options\": \"i\" }`;
-  } else {
-    comparisonField = JSON.stringify(comparisonField);
+    comparisonField = { $regex: `.*${comparisonField}.*`, $options: "i" };
   }
+
   switch (operation) {
     case 0:
-      return `\"${schemaField}\":${comparisonField}`;
+      return { [schemaField]: comparisonField };
     case 1:
-      return `\"${schemaField}\":{ \"$ne\": ${comparisonField}}`;
+      return { [schemaField]: { $ne: comparisonField }};
     case 2:
-      return `\"${schemaField}\":{ \"$gt\": ${comparisonField}}`;
+      return { [schemaField]:{ $gt: comparisonField } };
     case 3:
-      return `\"${schemaField}\":{ \"$gte\": ${comparisonField}}`;
+      return { [schemaField]: { $gte: comparisonField }};
     case 4:
-      return `\"${schemaField}\":{ \"$lt\": ${comparisonField}}`;
+      return { [schemaField]: { $lt: comparisonField }};
     case 5:
-      return `\"${schemaField}\":{ \"$lte\": ${comparisonField}}`;
+      return { [schemaField]: { $lte: comparisonField }};
     case 6:
-      return `\"${schemaField}\":{ \"$in\": ${comparisonField}}`;
+      return { [schemaField]: { $in: comparisonField }};
     case 7:
-      return `\"${schemaField}\":{ \"$nin\": ${comparisonField}}`;
+      return { [schemaField]: { $nin: comparisonField }};
     // maybe something else??
     case 8:
-      return `\'${schemaField}\':{ $contains: ${comparisonField}}`;
+      return { [schemaField]: { $contains: comparisonField }};
     default:
-      return `\'${schemaField}\':${comparisonField}`;
+      return { [schemaField]: comparisonField };
   }
 }
 

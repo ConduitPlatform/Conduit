@@ -22,80 +22,17 @@ export class CustomEndpointHandler {
     let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
     let params = JSON.parse(call.request.params);
     let searchQuery: any = {};
-    let searchStrings: string[] = [];
     let createString = '';
 
     let stopExecution: boolean = false;
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
-      endpoint.queries!.forEach(
-        (r: {
-          schemaField: string;
-          operation: number;
-          comparisonField: { type: string; value: any; like: boolean };
-        }) => {
-          if (stopExecution) return;
-          if (r.comparisonField.type === 'Input') {
-            if (isNil(params[r.comparisonField.value])) {
-              let res = endpoint.inputs.filter((input) => {
-                return input.name === r.comparisonField.value && input.optional;
-              });
-              if (res && res.length > 0) {
-                return;
-              }
-              stopExecution = true;
-              return callback({
-                code: grpc.status.INTERNAL,
-                message: `Field ${r.comparisonField.value} is missing from input`,
-              });
-            }
-            searchStrings.push(
-              constructQuery(
-                r.schemaField,
-                r.operation,
-                params[r.comparisonField.value],
-                r.comparisonField.like
-              )
-            );
-          } else if (r.comparisonField.type === 'Context') {
-            if (isNil(call.request.context)) {
-              stopExecution = true;
-              return callback({
-                code: grpc.status.INTERNAL,
-                message: `Field ${r.comparisonField.value} is missing from context`,
-              });
-            }
-            let context: any = JSON.parse(call.request.context);
-            for (const key of r.comparisonField.value.split('.')) {
-              if (context.hasOwnProperty(key)) {
-                context = context[key];
-              } else {
-                stopExecution = true;
-                return callback({
-                  code: grpc.status.INTERNAL,
-                  message: `Field ${r.comparisonField.value} is missing from context`,
-                });
-              }
-            }
-            searchStrings.push(
-              constructQuery(r.schemaField, r.operation, context, r.comparisonField.like)
-            );
-          } else {
-            searchStrings.push(
-              constructQuery(
-                r.schemaField,
-                r.operation,
-                r.comparisonField.value,
-                r.comparisonField.like
-              )
-            );
-          }
-        }
-      );
-      searchQuery = mergeQueries(searchStrings);
+      try {
+        searchQuery = constructQuery(endpoint.query, endpoint.inputs, params, JSON.parse(call.request.context));
+      } catch (e) {
+        return callback({ code: grpc.status.INTERNAL, message: e.message });
+      }
     }
-
-    if (stopExecution) return;
 
     if (endpoint.operation === 1 || endpoint.operation === 2) {
       endpoint.assignments!.forEach(
