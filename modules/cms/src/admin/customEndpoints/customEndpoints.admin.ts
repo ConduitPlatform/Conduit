@@ -149,6 +149,12 @@ export class CustomEndpointsAdmin {
         errorMessage = error as string;
       }
     }
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: errorMessage,
+      });
+    }
 
     if (
       found.operation === OperationsEnum.POST ||
@@ -174,6 +180,12 @@ export class CustomEndpointsAdmin {
           }
         }
       );
+    }
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: errorMessage,
+      });
     }
 
     if (paginated && found.operation !== OperationsEnum.GET) {
