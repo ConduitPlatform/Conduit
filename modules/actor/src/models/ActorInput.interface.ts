@@ -8,7 +8,7 @@ export interface ActorInput<T>{
   actorOptions: T;
   context: {
     data: any;
-    previousNodes: Actor[];
-    followingNodes: Actor[];
+    // previousNodes: Actor[];
+    // followingNodes: Actor[];
   }
 }

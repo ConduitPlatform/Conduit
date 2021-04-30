@@ -10,11 +10,12 @@ const PROCESSOR_TEMPLATE = `
 {{flow_requirements}}
 module.exports = async function(job){
   let queueData = {
-    data: job.data,
+    data: {trigger: job.data},
     previousNodes: [],
     followingNodes: []
   }
-  
+  // if this is not null then the actors execute in order 
+  let nextActor = null;
   {{flow_code}}
   return Promise.resolve(queueData);
 }
@@ -23,7 +24,7 @@ module.exports = async function(job){
 export class FlowCreator {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly server: GrpcServer
+    private readonly server: GrpcServer,
   ) {
     const self = this;
     grpcSdk
@@ -52,12 +53,23 @@ export class FlowCreator {
       }
 
       flowCode += `
-      let ${actor.code}Input = {
-        actorOptions: ${JSON.stringify(actor.options)},
-        context: {...queueData}
+      if(nextActor === null || nextActor === "${actor.code}"){
+        nextActor = null;
+        let ${actor.code}Input = {
+          actorOptions: ${JSON.stringify(actor.options)},
+          context: {...queueData}
+        }
+        
+        let ${actor.code}Return = await ${actor.code}(${actor.code}Input);
+        if ( ${actor.code}Return.goTo ){
+          nextActor = ${actor.code}Return;
+        }else if(${actor.code}Return.success === false){
+          throw new Error(\"Actor failed with error: \"+${actor.code}Return.message)
+        }else {      
+          queueData.data[\"${actor.code}\"] = ${actor.code}Return.data
+        }
+        console.log(${actor.code}Return)
       }
-      let ${actor.code}Return = await ${actor.code}(${actor.code}Input);
-      console.log(${actor.code}Return)
       `;
     });
 
@@ -66,7 +78,7 @@ export class FlowCreator {
     mkdirSync(path.resolve(__dirname, `../processors`), { recursive: true });
     writeFileSync(
       path.resolve(__dirname, `../processors/${processorName}.js`),
-      processorCode
+      processorCode,
     );
 
     let queue = new Queue(processorName);
@@ -82,7 +94,7 @@ export class FlowCreator {
       name?: string;
       comments?: string;
       options: any;
-    }
+    },
   ) {
     switch (trigger.code) {
       case 'cron':
