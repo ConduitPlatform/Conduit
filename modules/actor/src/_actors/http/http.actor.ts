@@ -1,8 +1,8 @@
 import { HttpInputs } from './http.interface';
 import axios, { AxiosRequestConfig } from 'axios';
-import { ActorInput } from '../../models/actorInput.interface';
+import { ActorInput } from '../../models/ActorInput.interface';
 
-export default async function(data: ActorInput<HttpInputs>) {
+export default async function (data: ActorInput<HttpInputs>) {
   let optionsInput = data.actorOptions;
   let config: AxiosRequestConfig = {
     url: optionsInput.url,

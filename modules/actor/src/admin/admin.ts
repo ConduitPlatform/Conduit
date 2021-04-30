@@ -17,15 +17,12 @@ export class AdminHandlers {
   private database: any;
   private warden: FlowCreator;
 
-  constructor(
-    server: GrpcServer,
-    private readonly grpcSdk: ConduitGrpcSdk,
-  ) {
+  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
       self.database = self.grpcSdk.databaseProvider;
     });
-    this.warden = new FlowCreator(grpcSdk);
+    this.warden = new FlowCreator(grpcSdk, server);
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getActors: this.getActors.bind(this),
@@ -54,8 +51,6 @@ export class AdminHandlers {
           return {};
         }
       });
-
-
   }
 
   async getActors(call: RouterRequest, callback: RouterResponse) {
@@ -79,7 +74,6 @@ export class AdminHandlers {
   }
 
   async getTriggers(call: RouterRequest, callback: RouterResponse) {
-
     let triggers = this._getTriggers();
     return callback(null, { result: JSON.stringify({ triggers }) });
   }
@@ -101,13 +95,13 @@ export class AdminHandlers {
       {},
       undefined,
       skipNumber,
-      limitNumber,
+      limitNumber
     );
     const countPromise = this.database.countDocuments('ActorFlows', {});
 
     let errorMessage: string | null = null;
     const [flows, count] = await Promise.all([flowsPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message),
+      (e: any) => (errorMessage = e.message)
     );
     if (!isNil(errorMessage))
       return callback({
@@ -128,7 +122,9 @@ export class AdminHandlers {
       });
     }
     let errorMessage = null;
-    const flow = await this.database.findOne('ActorFlows', { _id: id }).catch((e: any) => errorMessage = e.message);
+    const flow = await this.database
+      .findOne('ActorFlows', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -155,7 +151,9 @@ export class AdminHandlers {
       });
     }
     let errorMessage = null;
-    const flow = await this.database.findOne('ActorFlows', { _id: id }).catch((e: any) => errorMessage = e.message);
+    const flow = await this.database
+      .findOne('ActorFlows', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -164,13 +162,13 @@ export class AdminHandlers {
       { flow: flow._id },
       undefined,
       skipNumber,
-      limitNumber,
+      limitNumber
     );
     const countPromise = this.database.countDocuments('ActorRuns', {});
 
     errorMessage = null;
     const [runs, count] = await Promise.all([flowRuns, countPromise]).catch(
-      (e: any) => (errorMessage = e.message),
+      (e: any) => (errorMessage = e.message)
     );
     if (!isNil(errorMessage))
       return callback({
@@ -201,7 +199,6 @@ export class AdminHandlers {
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Argument actors is required and must be a non-empty array!',
       });
-
     }
     let triggers = this._getTriggers();
     let matchingTrigger = triggers.filter((trigr: any) => trigr.code === trigger.code);
@@ -223,16 +220,18 @@ export class AdminHandlers {
       }
     }
     let errorMessage = null;
-    const flow = await this.database.create('ActorFlows', {
-      name,
-      trigger,
-      actors,
-      enabled: enabled !== null ? enabled : true,
-    }).catch((e: any) => errorMessage = e.message);
+    const flow = await this.database
+      .create('ActorFlows', {
+        name,
+        trigger,
+        actors,
+        enabled: enabled !== null ? enabled : true,
+      })
+      .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    await this.warden.constructFlow(flow).catch((e: any) => errorMessage = e.message);
+    await this.warden.constructFlow(flow).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
