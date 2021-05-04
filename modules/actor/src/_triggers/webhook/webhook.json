@@ -7,6 +7,13 @@
       "type": "string",
       "nullable": false
     },
+    "mode": {
+      "enum": [
+        "webhook",
+        "request"
+      ],
+      "nullable": false
+    },
     "method": {
       "enum": [
         "GET",
