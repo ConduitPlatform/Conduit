@@ -16,7 +16,6 @@ function injectData(injection, actorOptions){
   let replacements = [];
   
   deepdash.eachDeep(actorOptions, (value, key, parent, context) => {
-    console.log("Iterating on key: "+key+" and value: "+value);
     if (value && typeof value === 'string' && value.indexOf("inject:data") !== -1) {
         replacements.push(context.path);      
     }
@@ -96,7 +95,6 @@ export class FlowCreator {
         } else if ( ${actorAlias}Return ) {      
           queueData.data[\"${actorAlias}\"] = ${actorAlias}Return.data
         }
-        console.log(${actorAlias}Return)
       }
       `;
     });
