@@ -26,6 +26,7 @@ export class Webhook implements Trigger<WebhookInterface> {
   }
 
   async setup(options: WebhookInterface): Promise<boolean> {
+    // todo implement the support for request instead of just webhook
     this._routes[options.route] = constructRoute(
       new ConduitRoute(
         {
@@ -56,6 +57,13 @@ export class Webhook implements Trigger<WebhookInterface> {
       });
     } else {
       this._routeData[route[0]].queue.add(data);
+      if (this._routeData[route[0]].mode === 'webhook') {
+        return callback(null, {
+          result: 'ok',
+        });
+      } else {
+        // todo
+      }
     }
   }
 
