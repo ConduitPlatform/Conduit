@@ -24,7 +24,7 @@ module.exports = async function(job){
 export class FlowCreator {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly server: GrpcServer,
+    private readonly server: GrpcServer
   ) {
     const self = this;
     grpcSdk
@@ -52,23 +52,25 @@ export class FlowCreator {
         flowRequirements += `const ${actor.code} = require(\'../_actors/${actor.code}/${actor.code}.actor.js\').default\n`;
       }
 
+      let actorAlias = actor.name ?? actor.code;
+
       flowCode += `
       if(nextActor === null || nextActor === "${actor.code}"){
         nextActor = null;
-        let ${actor.code}Input = {
+        let ${actorAlias}Input = {
           actorOptions: ${JSON.stringify(actor.options)},
           context: {...queueData}
         }
         
-        let ${actor.code}Return = await ${actor.code}(${actor.code}Input);
-        if ( ${actor.code}Return.goTo ){
-          nextActor = ${actor.code}Return;
-        }else if(${actor.code}Return.success === false){
-          throw new Error(\"Actor failed with error: \"+${actor.code}Return.message)
+        let ${actorAlias}Return = await ${actor.code}(${actor.code}Input);
+        if ( ${actorAlias}Return.goTo ){
+          nextActor = ${actorAlias}Return.gotTo;
+        }else if(${actorAlias}Return.success === false){
+          throw new Error(\"Actor failed with error: \"+${actorAlias}Return.message)
         }else {      
-          queueData.data[\"${actor.code}\"] = ${actor.code}Return.data
+          queueData.data[\"${actorAlias}\"] = ${actorAlias}Return.data
         }
-        console.log(${actor.code}Return)
+        console.log(${actorAlias}Return)
       }
       `;
     });
@@ -78,7 +80,7 @@ export class FlowCreator {
     mkdirSync(path.resolve(__dirname, `../processors`), { recursive: true });
     writeFileSync(
       path.resolve(__dirname, `../processors/${processorName}.js`),
-      processorCode,
+      processorCode
     );
 
     let queue = new Queue(processorName);
@@ -94,7 +96,7 @@ export class FlowCreator {
       name?: string;
       comments?: string;
       options: any;
-    },
+    }
   ) {
     switch (trigger.code) {
       case 'cron':
