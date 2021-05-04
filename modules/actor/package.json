@@ -31,6 +31,7 @@
     "convict": "^6.0.0",
     "grpc": "^1.24.2",
     "lodash": "^4.17.15",
+    "deepdash": "^5.0.1",
     "moment": "^2.24.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.5",

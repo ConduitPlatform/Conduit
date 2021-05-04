@@ -21,5 +21,6 @@ export default async function (data: ActorInput<HttpInputs>) {
     return { data: response.data, status: response.status, headers: response.headers };
   } catch (e) {
     // handle failure properly
+    throw new Error('Failed request with: ' + e.message);
   }
 }
