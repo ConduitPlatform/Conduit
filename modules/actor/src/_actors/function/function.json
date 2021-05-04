@@ -1,0 +1,21 @@
+{
+  "code": "function",
+  "name": "Functions",
+  "description": "This actor runs the JS code provided by the user. This internally uses vm2, and only basic JS packages are provided.",
+  "options": {
+    "code": {
+      "type": "string",
+      "nullable": false
+    },
+    "contextData": {
+      "type": "string",
+      "nullable": false
+    }
+  },
+  "returns": {
+    "data": {
+      "type": "object",
+      "nullable": true
+    }
+  }
+}
