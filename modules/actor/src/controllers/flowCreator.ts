@@ -16,7 +16,13 @@ module.exports = async function(job){
   }
   // if this is not null then the actors execute in order 
   let nextActor = null;
-  {{flow_code}}
+  let executingActor = null;
+  try {
+    {{flow_code}}
+  } catch(e){
+    console.error(\"Actor " + executingActor + " crashed\");
+    throw e;
+  }
   return Promise.resolve(queueData);
 }
 `;
@@ -61,12 +67,10 @@ export class FlowCreator {
           actorOptions: ${JSON.stringify(actor.options)},
           context: {...queueData}
         }
-        
+        executingActor = ${actorAlias};
         let ${actorAlias}Return = await ${actor.code}(${actor.code}Input);
         if ( ${actorAlias}Return.goTo ){
           nextActor = ${actorAlias}Return.gotTo;
-        }else if(${actorAlias}Return.success === false){
-          throw new Error(\"Actor failed with error: \"+${actorAlias}Return.message)
         }else {      
           queueData.data[\"${actorAlias}\"] = ${actorAlias}Return.data
         }

@@ -34,7 +34,8 @@
     "moment": "^2.24.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
-    "uuid": "^7.0.2"
+    "uuid": "^7.0.2",
+    "vm2": "^3.9.3"
   },
   "devDependencies": {
     "@types/bull": "^3.15.1",
