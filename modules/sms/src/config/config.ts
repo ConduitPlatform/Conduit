@@ -11,15 +11,18 @@ export default {
   twilio: {
     phoneNumber: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
     accountSID: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
     authToken: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
     verify: {
       active: {
@@ -28,7 +31,8 @@ export default {
       },
       serviceSid: {
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
     },
   },

@@ -29,10 +29,12 @@ export default {
     verification_redirect_uri: {
       format: 'String',
       default: null,
+      nullable: true,
     },
     forgot_password_redirect_uri: {
       format: 'String',
       default: null,
+      nullable: true,
     },
   },
   google: {

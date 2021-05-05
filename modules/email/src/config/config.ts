@@ -18,22 +18,26 @@ export default {
       apiKey: {
         doc: 'The email service API key',
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
       domain: {
         doc: 'The domain for the emails',
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
       host: {
         doc: 'The host for email service',
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
       proxy: {
         doc: 'The email proxy',
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
     },
     smtp: {
@@ -41,26 +45,31 @@ export default {
       port: {
         doc: 'The port the SMTP server is listening on',
         format: 'Number',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
       host: {
         doc: 'The SMTP server address',
         format: 'String',
-        default: undefined,
+        default: null,
+        nullable: true,
       },
       auth: {
         doc: 'The SMTP server auth details',
         username: {
           format: 'String',
-          default: undefined,
+          default: null,
+          nullable: true,
         },
         password: {
           format: 'String',
-          default: undefined,
+          default: null,
+          nullable: true,
         },
         method: {
           format: 'String',
-          default: undefined,
+          default: null,
+          nullable: true,
         },
       },
     },
