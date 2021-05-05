@@ -30,7 +30,13 @@ export class Event implements Trigger<EventInterface> {
   async setup(options: EventInterface): Promise<boolean> {
     if (this.busInitialized) {
       this.grpcSdk.bus!.subscribe(options.eventName, (data) => {
-        options.queue.add({ eventName: options.eventName, data: data });
+        let parsedData;
+        try{
+          parsedData = JSON.parse(data);
+        }catch (e){
+          parsedData = data;
+        }
+        options.queue.add({ eventName: options.eventName, data: parsedData });
       });
     } else {
       throw new Error('Event bus is not initialized');
