@@ -48,6 +48,7 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish('chat:create:ChatRoom', JSON.stringify({ name: roomName, participants: room.participants }));
     callback(null, { result: JSON.stringify({ roomId: room._id })});
   }
 
@@ -87,6 +88,8 @@ export class ChatRoutes {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
+
     callback(null, { result: 'users added successfully' });
   }
 
@@ -122,6 +125,8 @@ export class ChatRoutes {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
       }
     }
+
+    this.grpcSdk.bus?.publish('chat:leavRoom:ChatRoom', JSON.stringify({ roomId, user: user._id }))
 
     callback(null, { result: 'ok' });
   }
@@ -198,6 +203,7 @@ export class ChatRoutes {
 
     this.database.deleteOne('ChatMessage', { _id: messageId })
       .then(() => {
+        this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
         callback(null, { result: 'message deleted successfully' });
       })
       .catch((e: Error) => {
@@ -226,6 +232,7 @@ export class ChatRoutes {
     message.message = newMessage;
     this.database.findByIdAndUpdate('ChatMessage', message._id, message)
       .then(() => {
+        this.grpcSdk.bus?.publish('chat:edit:ChatMessage', JSON.stringify({ id: messageId, newMessage: message }));
         callback(null, { result: 'message changed successfully' });
       })
       .catch((e: Error) => {
