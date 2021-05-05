@@ -85,42 +85,52 @@ export default function AuthAccordion({
   useEffect(() => {
     if (configData) {
       if (configData.local) {
+        const localData = configData.local;
+
         setLocal({
-          enabled: configData.local.enabled,
-          sendVerificationEmail: configData.local.sendVerificationEmail,
-          verificationRequired: configData.local.verificationRequired,
-          identifier: configData.local.identifier,
-          verification_redirect_uri: configData.local.verification_redirect_uri,
-          forgot_password_redirect_uri: configData.local.forgot_password_redirect_uri,
+          enabled: localData.enabled,
+          sendVerificationEmail: localData.sendVerificationEmail,
+          verificationRequired: localData.verificationRequired,
+          identifier: localData.identifier || '',
+          verification_redirect_uri: localData.verification_redirect_uri || '',
+          forgot_password_redirect_uri: localData.forgot_password_redirect_uri || '',
         });
       }
       if (configData.google) {
+        const googleData = configData.google;
+
         setGoogle({
-          enabled: configData.google.enabled,
-          accountLinking: configData.google.accountLinking,
-          clientId: configData.google.clientId,
+          enabled: googleData.enabled,
+          accountLinking: googleData.accountLinking,
+          clientId: googleData.clientId || '',
         });
       }
       if (configData.facebook) {
+        const facebookData = configData.facebook;
+
         setFacebook({
-          enabled: configData.facebook.enabled,
-          accountLinking: configData.facebook.accountLinking,
-          clientId: configData.facebook.clientId,
+          enabled: facebookData.enabled,
+          accountLinking: facebookData.accountLinking,
+          clientId: facebookData.clientId || '',
         });
       }
       if (configData.twitch) {
+        const twitchData = configData.twitch;
+
         setTwitch({
-          enabled: configData.twitch.enabled,
-          clientId: configData.twitch.clientId,
-          redirect_uri: configData.twitch.redirect_uri,
-          clientSecret: configData.twitch.clientSecret,
+          enabled: twitchData.enabled,
+          clientId: twitchData.clientId || '',
+          redirect_uri: twitchData.redirect_uri || '',
+          clientSecret: twitchData.clientSecret || '',
         });
       }
       if (configData.kakao) {
+        const kakaoData = configData.kakao;
+
         setKakao({
-          enabled: configData.kakao.enabled,
-          clientId: configData.kakao.clientId,
-          redirect_uri: configData.kakao.redirect_uri,
+          enabled: kakaoData.enabled,
+          clientId: kakaoData.clientId || '',
+          redirect_uri: kakaoData.redirect_uri || '',
         });
       }
     }
@@ -291,8 +301,8 @@ export default function AuthAccordion({
         return (
           <KakaoAccordion
             expanded={expanded}
-            facebook={facebook}
-            setFacebook={setFacebook}
+            kakao={kakao}
+            setKakao={setKakao}
             openExpanded={openExpanded}
             handleKakaoTalkClientId={handleKakaoTalkClientId}
             handleKakaoTalkRedirectUri={handleKakaoTalkRedirectUri}>
@@ -306,8 +316,8 @@ export default function AuthAccordion({
         return (
           <TwitchAccordion
             expanded={expanded}
-            facebook={facebook}
-            setFacebook={setFacebook}
+            twitch={twitch}
+            setTwitch={setTwitch}
             openExpanded={openExpanded}
             handleTwitchClientId={handleTwitchClientId}
             handleTwitchRedirectUri={handleTwitchRedirectUri}
