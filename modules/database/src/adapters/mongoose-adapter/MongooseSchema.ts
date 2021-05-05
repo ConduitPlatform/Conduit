@@ -97,7 +97,7 @@ export class MongooseSchema implements SchemaAdapter {
     sort?: string,
     populate?: string[]
   ): Promise<any> {
-    let finalQuery = this.model.find(this.parseQuery(query));
+    let finalQuery = this.model.find(this.parseQuery(query), select);
     if (skip !== null) {
       finalQuery = finalQuery.skip(skip!);
     }
