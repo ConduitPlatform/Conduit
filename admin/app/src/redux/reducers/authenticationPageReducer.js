@@ -10,17 +10,9 @@ import {
   STOP_AUTHENTICATION_CONFIG_LOADING,
 } from '../actions/actionTypes';
 
-const authUsersInitialState = {
-  users: null,
-  count: 0,
-  loading: false,
-  error: null,
-};
-const authConfigInitialState = { data: null, loading: false, error: null };
-
 const initialState = {
-  authUsersState: authUsersInitialState,
-  signInMethodsState: authConfigInitialState,
+  authUsersState: { users: null, count: 0, loading: false, error: null },
+  signInMethodsState: { data: null, loading: false, error: null },
 };
 
 const authenticationPageReducer = (state = initialState, action) => {
