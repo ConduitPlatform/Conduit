@@ -45,7 +45,7 @@ const useStyles = makeStyles((theme) => ({
 const FacebookAccordion = ({
   children,
   expanded,
-  facebook = {},
+  facebook,
   setFacebook,
   openExpanded,
   handleFacebookClientID,

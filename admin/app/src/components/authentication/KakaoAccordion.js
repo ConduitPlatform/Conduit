@@ -42,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const KakaoAccordion = ({
-  kakao = {},
+  kakao,
   setKakao,
   expanded,
   children,

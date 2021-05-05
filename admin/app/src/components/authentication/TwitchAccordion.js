@@ -42,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const TwitchAccordion = ({
-  twitch = {},
+  twitch,
   children,
   expanded,
   setTwitch,

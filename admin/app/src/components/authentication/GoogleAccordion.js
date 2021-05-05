@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const GoogleAccordion = ({
-  google = {},
+  google,
   expanded,
   setGoogle,
   children,

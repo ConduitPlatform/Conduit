@@ -44,7 +44,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const LocalAccordion = ({
-  local = {},
+  local,
   expanded,
   children,
   setLocal,
