@@ -99,6 +99,8 @@ export class AdminHandlers {
       });
     }
 
-    return callback(null, { result: JSON.stringify({ ...product }) });
+    this.grpcSdk.bus?.publish('payments:create:Product', JSON.stringify(productDoc));
+
+    return callback(null, { result: JSON.stringify(product) });
   }
 }

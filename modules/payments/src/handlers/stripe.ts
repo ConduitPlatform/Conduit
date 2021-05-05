@@ -139,6 +139,11 @@ export class StripeHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish(
+      'payments:createStripe:Transaction',
+      JSON.stringify({ userId, productId, amount: product.value })
+    );
+
     return callback(null, {
       result: JSON.stringify({
         clientSecret: intent.client_secret,
@@ -234,6 +239,11 @@ export class StripeHandlers {
       }
     }
 
+    this.grpcSdk.bus?.publish(
+      'payments:create:Transaction',
+      JSON.stringify({ userId: context.user._id, productId, amount: product.value })
+    );
+
     return callback(null, { result: JSON.stringify(res) });
   }
 
@@ -263,6 +273,7 @@ export class StripeHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish('publish:cancel:Transaction', JSON.stringify({ userId, paymentId }));
     return callback(null, { result: 'true' });
   }
 
@@ -305,6 +316,7 @@ export class StripeHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish('publish:refund:Transaction', JSON.stringify({ userId, paymentId }));
     return callback(null, { result: 'true' });
   }
 
@@ -359,6 +371,8 @@ export class StripeHandlers {
         message: errorMessage,
       });
     }
+
+    this.grpcSdk.bus?.publish('payments:paidStripe:Transaction', JSON.stringify({ userId }));
     return callback(null, { result: JSON.stringify('ok') });
   }
 
