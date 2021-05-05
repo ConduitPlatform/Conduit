@@ -22,6 +22,8 @@ import {
 } from './types';
 const EJSON = require('mongodb-extended-json');
 
+const MODULE_NAME = 'database';
+
 export class DatabaseProvider {
   private readonly _activeAdapter: DatabaseAdapter;
 
@@ -309,7 +311,12 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const doc = await schemaAdapter.model.create(EJSON.parse(call.request.query));
-      callback(null, { result: JSON.stringify(doc) });
+
+      const docString = JSON.stringify(doc);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:create:${call.request.schemaName}`, docString);
+
+      callback(null, { result: JSON.stringify(docString) });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -322,7 +329,12 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const docs = await schemaAdapter.model.createMany(EJSON.parse(call.request.query));
-      callback(null, { result: JSON.stringify(docs) });
+
+      const docsString = JSON.stringify(docs);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:createMany:${call.request.schemaName}`, docsString);
+
+      callback(null, { result: docsString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -338,7 +350,12 @@ export class DatabaseProvider {
         call.request.id,
         EJSON.parse(call.request.query)
       );
-      callback(null, { result: JSON.stringify(result) });
+
+      const resultString = JSON.stringify(result);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:update:${call.request.schemaName}`, resultString);
+
+      callback(null, { result: resultString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -354,7 +371,12 @@ export class DatabaseProvider {
         EJSON.parse(call.request.filterQuery),
         EJSON.parse(call.request.query)
       );
-      callback(null, { result: JSON.stringify(result) });
+
+      const resultString = JSON.stringify(result);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:updateMany:${call.request.schemaName}`, resultString);
+
+      callback(null, { result: resultString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -367,7 +389,12 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.deleteOne(EJSON.parse(call.request.query));
-      callback(null, { result: JSON.stringify(result) });
+
+      const resultString = JSON.stringify(result);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:delete:${call.request.schemaName}`, resultString);
+
+      callback(null, { result: resultString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -380,7 +407,12 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.deleteMany(EJSON.parse(call.request.query));
-      callback(null, { result: JSON.stringify(result) });
+
+      const resultString = JSON.stringify(result);
+
+      this.conduit.bus?.publish(`${MODULE_NAME}:delete:${call.request.schemaName}`, resultString);
+
+      callback(null, { result: resultString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
