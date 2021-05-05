@@ -74,18 +74,7 @@ export class SequelizeSchema implements SchemaAdapter {
     let options: FindOptions = { where: this.parseQuery(query), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
     if (!isNil(select)) {
-      if (select[0] !== '+') {
-        try {
-          options.attributes = JSON.parse(select);
-        } catch (e) {
-          options.attributes = [select];
-        }
-      } else {
-        const ind = options.attributes.exclude.indexOf(select.slice(1));
-        if (ind > -1) {
-          options.attributes.exclude.splice(ind, 1);
-        }
-      }
+      options.attributes = this.parseSelect(select);
     }
 
     let document = await this.model.findOne(options);
@@ -123,18 +112,7 @@ export class SequelizeSchema implements SchemaAdapter {
       options.limit = limit;
     }
     if (!isNil(select)) {
-      if (select[0] !== '+') {
-        try {
-          options.attributes = JSON.parse(select);
-        } catch (e) {
-          options.attributes = [select];
-        }
-      } else {
-        const ind = options.attributes.exclude.indexOf(select.slice(1));
-        if (ind > -1) {
-          options.attributes.exclude.splice(ind, 1);
-        }
-      }
+      options.attributes = this.parseSelect(select);
     }
     if (!isNil(sort)) {
       options.order = sort;
@@ -306,5 +284,35 @@ export class SequelizeSchema implements SchemaAdapter {
     }
 
     return parsed;
+  }
+
+  private parseSelect(select: string): string[] | { exclude: string[] } {
+    let include = [];
+    let exclude = [...this.excludedFields];
+    let attributes = select.split(' ');
+    let returnInclude = false;
+
+    for (const attribute of attributes) {
+      if (attribute[0] === '+') {
+        const tmp = attribute.slice(1);
+        include.push(tmp);
+
+        const ind = exclude.indexOf(tmp);
+        if (ind > -1) {
+          exclude.splice(ind, 1);
+        }
+      } else if (attribute[0] === '-') {
+        exclude.push(attribute.slice(1));
+      } else {
+        include.push(attribute);
+        returnInclude = true;
+      }
+    }
+
+    if (returnInclude) {
+      return include;
+    }
+
+    return { exclude };
   }
 }
