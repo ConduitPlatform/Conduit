@@ -11,7 +11,8 @@ export default {
     },
     secret_key: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
   },
   iamport: {
@@ -21,11 +22,13 @@ export default {
     },
     api_key: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
     secret_key: {
       format: 'String',
-      default: undefined,
+      default: null,
+      nullable: true,
     },
   },
 };
