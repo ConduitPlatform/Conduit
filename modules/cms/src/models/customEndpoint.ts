@@ -17,6 +17,7 @@ export interface CustomEndpoint {
     operation: number;
     comparisonField: { type: string; value: any; like: boolean };
   }[];
+  query?: any;
   assignments?: {
     schemaField: string;
     action: number;

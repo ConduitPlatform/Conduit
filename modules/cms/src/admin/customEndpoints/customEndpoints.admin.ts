@@ -1,8 +1,7 @@
 import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import grpc from 'grpc';
-import { isNil } from 'lodash';
-import schema from '../../models/customEndpoint.schema';
+import { isNil, isPlainObject } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 
 const OperationsEnum = {
@@ -20,14 +19,6 @@ export class CustomEndpointsAdmin {
     private readonly customEndpointController: CustomEndpointController
   ) {
     this.database = this.grpcSdk.databaseProvider;
-    this.database
-      .createSchemaFromAdapter(schema)
-      .then((r: any) => {
-        console.log('Registered custom endpoints schema');
-      })
-      .catch((err: any) => {
-        console.log(err);
-      });
   }
 
   async getCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
@@ -44,7 +35,7 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, queries, selectedSchema, selectedSchemaName, assignments, paginated, sorted } = params;
+    const { inputs, query, selectedSchema, selectedSchemaName, assignments, paginated, sorted } = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -106,13 +97,10 @@ export class CustomEndpointsAdmin {
         message: 'Inputs must be an array, even if empty!',
       });
     }
-    if (
-      found.operation !== OperationsEnum.POST &&
-      (!Array.isArray(queries) || queries.length === 0)
-    ) {
+    if (found.operation !== OperationsEnum.POST && !isPlainObject(query)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'The queries field must be an array, and not empty!',
+        message: 'The query field must be an object',
       });
     }
     if (
@@ -142,20 +130,16 @@ export class CustomEndpointsAdmin {
 
     if (found.operation !== OperationsEnum.POST) {
       errorMessage = null;
-      queries.forEach(
-        (r: { schemaField: any; operation: number; comparisonField: any }) => {
-          let error = queryValidation(
-            findSchema,
-            inputs,
-            r.schemaField,
-            r.operation,
-            r.comparisonField
-          );
-          if (error !== true) {
-            return (errorMessage = error as string);
-          }
-        }
-      );
+      let error = queryValidation(query, findSchema, inputs);
+      if (error !== true) {
+        errorMessage = error as string;
+      }
+    }
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: errorMessage,
+      });
     }
 
     if (
@@ -182,6 +166,12 @@ export class CustomEndpointsAdmin {
           }
         }
       );
+    }
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: errorMessage,
+      });
     }
 
     if (paginated && found.operation !== OperationsEnum.GET) {
@@ -258,7 +248,7 @@ export class CustomEndpointsAdmin {
       selectedSchema,
       selectedSchemaName,
       inputs,
-      queries,
+      query,
       authentication,
       assignments,
       sorted,
@@ -283,7 +273,7 @@ export class CustomEndpointsAdmin {
         message: 'Operation is not valid',
       });
     }
-    if (operation !== OperationsEnum.POST && isNil(queries)) {
+    if (operation !== OperationsEnum.POST && isNil(query)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
@@ -351,13 +341,10 @@ export class CustomEndpointsAdmin {
         message: 'Inputs must be an array, even if empty!',
       });
     }
-    if (
-      operation !== OperationsEnum.POST &&
-      (!Array.isArray(queries) || queries.length === 0)
-    ) {
+    if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'The queries field must be an array, and not empty!',
+        message: 'The query field must be an object',
       });
     }
     if (
@@ -396,7 +383,7 @@ export class CustomEndpointsAdmin {
       paginated: false,
       sorted: false,
       returns: findSchema.name,
-      queries: null,
+      query: null,
       assignments: null,
     };
 
@@ -419,28 +406,14 @@ export class CustomEndpointsAdmin {
     }
 
     if (operation !== OperationsEnum.POST) {
-      errorMessage = null;
-      queries.forEach(
-        (r: { schemaField: any; operation: number; comparisonField: any }) => {
-          let error = queryValidation(
-            findSchema,
-            inputs,
-            r.schemaField,
-            r.operation,
-            r.comparisonField
-          );
-          if (error !== true) {
-            return (errorMessage = error as string);
-          }
-        }
-      );
-      if (!isNil(errorMessage)) {
+      let error = queryValidation(query, findSchema, inputs);
+      if (error !== true) {
         return callback({
           code: grpc.status.INVALID_ARGUMENT,
-          message: errorMessage,
+          message: error as string,
         });
       }
-      endpoint.queries = queries;
+      endpoint.query = query;
     }
 
     if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {

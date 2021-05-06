@@ -3,6 +3,8 @@ import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndp
 import { CustomEndpoint } from '../../models/customEndpoint';
 import { CmsRoutes } from '../../routes/Routes';
 import { createCustomEndpointRoute } from './utils';
+import schema from '../../models/customEndpoint.schema';
+import { migrateCustomEndpoints } from '../../migrations/customEndpoint.schema.migrations';
 
 export class CustomEndpointController {
   private _adapter: any;
@@ -13,7 +15,18 @@ export class CustomEndpointController {
     private readonly stateActive: boolean
   ) {
     this._adapter = this.grpcSdk.databaseProvider!;
-    this.refreshRoutes();
+    this._adapter.createSchemaFromAdapter(schema)
+      .then(() => {
+        console.log('Registered custom endpoints schema');
+        return migrateCustomEndpoints(this.grpcSdk);
+      })
+      .then(() => {
+        console.log('customEndpoints migration complete');
+        this.refreshRoutes();
+      })
+      .catch((err: any) => {
+        console.log(err);
+      });
     if (stateActive) {
       this.initializeState();
     }
