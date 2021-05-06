@@ -112,7 +112,9 @@ export default class PushNotificationsModule {
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
 
-    if (!PushNotificationsConfigSchema.load(newConfig).validate()) {
+    try {
+      PushNotificationsConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',

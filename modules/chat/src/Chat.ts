@@ -82,7 +82,9 @@ export default class ChatModule {
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (!ChatConfigSchema.load(newConfig).validate()) {
+    try {
+      ChatConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Module is not active'

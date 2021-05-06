@@ -130,7 +130,9 @@ export default class SmsModule {
         message: 'Invalid configuration given',
       });
     }
-    if (!SmsConfigSchema.load(newConfig).validate()) {
+    try {
+      SmsConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
