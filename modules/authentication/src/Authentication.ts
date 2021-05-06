@@ -104,7 +104,9 @@ export default class AuthenticationModule {
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (!AuthenticationConfigSchema.load(newConfig).validate()) {
+    try {
+      AuthenticationConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',

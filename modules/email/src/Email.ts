@@ -129,7 +129,10 @@ export default class EmailModule {
         message: 'Invalid configuration given',
       });
     }
-    if (!EmailConfigSchema.load(newConfig).validate()) {
+
+    try {
+      EmailConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',

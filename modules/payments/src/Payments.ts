@@ -125,7 +125,10 @@ export default class PaymentsModule {
         message: 'Invalid configuration given',
       });
     }
-    if (!PaymentsConfigSchema.load(newConfig).validate()) {
+
+    try {
+      PaymentsConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',

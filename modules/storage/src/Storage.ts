@@ -105,7 +105,10 @@ export class StorageModule {
 
   async setConfig(call: any, callback: any) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (!StorageConfigSchema.load(newConfig).validate()) {
+
+    try {
+      StorageConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',

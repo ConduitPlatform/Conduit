@@ -104,7 +104,9 @@ export default class FormsModule {
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (!FormsConfigSchema.load(newConfig).validate()) {
+    try {
+      FormsConfigSchema.load(newConfig).validate();
+    } catch (e) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',
