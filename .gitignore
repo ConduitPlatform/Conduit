@@ -10,3 +10,4 @@
 .vscode
 **/resourceRegistry.log
 
+.DS_Store
