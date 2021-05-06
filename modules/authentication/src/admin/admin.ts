@@ -120,7 +120,8 @@ export class AdminHandlers {
         const isVerified = true;
         return this.database.create('User', { email: identification, hashedPassword, isVerified });
       })
-      .then(() => {
+      .then((user: any) => {
+        this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
         callback(null, {
           result: JSON.stringify({ message: 'Registration was successful' })
         });
@@ -164,7 +165,8 @@ export class AdminHandlers {
     };
 
     this.database.findByIdAndUpdate('User', user._id, query)
-      .then(() => {
+      .then((res: any) => {
+        this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
         callback(null, { result: JSON.stringify({ message: 'user updated' })});
       })
       .catch((e: Error) => {
@@ -193,7 +195,8 @@ export class AdminHandlers {
     }
 
     this.database.deleteOne('User', { _id: id })
-      .then(() => {
+      .then((res: any) => {
+        this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
         callback(null, { result: JSON.stringify({ message: 'user was deleted'})});
       })
       .catch((e: Error) => {
@@ -225,6 +228,7 @@ export class AdminHandlers {
     user.active = false;
     this.database.findByIdAndUpdate('User', user._id, user)
       .then(() => {
+        this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
         callback(null, { result: JSON.stringify({ message: 'user was blocked' })});
       })
       .catch((e: Error) => {
@@ -256,6 +260,7 @@ export class AdminHandlers {
     user.active = true;
     this.database.findByIdAndUpdate('User', user._id, user)
       .then(() => {
+        this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
         callback(null, { result: JSON.stringify({ message: 'user was unblocked' })});
       })
       .catch((e: Error) => {

@@ -101,6 +101,8 @@ export class LocalHandlers {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
+    this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
+
     const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config
@@ -577,6 +579,8 @@ export class LocalHandlers {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
+    this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
+
     if (config.local.verification_redirect_uri) {
       return callback(null, { redirect: config.local.verification_redirect_uri });
     } else {
@@ -781,6 +785,11 @@ export class LocalHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
+    this.grpcSdk.bus?.publish(
+      'authentication:enableTwofa:user',
+      JSON.stringify({ id: context.user._id, phoneNumber: verificationRecord.data.phoneNumber })
+    );
+
     return callback(null, {
       result: JSON.stringify({
         message: 'twofa enabled',
@@ -805,6 +814,11 @@ export class LocalHandlers {
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
+
+    this.grpcSdk.bus?.publish(
+      'authentication:disableTwofa:user',
+      JSON.stringify({ id: context.user._id })
+    );
 
     return callback(null, {
       result: JSON.stringify({

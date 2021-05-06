@@ -159,6 +159,8 @@ export class IamportHandlers {
       return Promise.reject({ code: grpc.status.INTERNAL, message: e.message });
     }
 
+    this.grpcSdk.bus?.publish('payments:create:Transaction', JSON.stringify({ userId, productId, amount }));
+
     return Promise.resolve({ merchant_uid: transaction._id, amount });
   }
 
@@ -210,6 +212,8 @@ export class IamportHandlers {
         if (!isNil(errorMessage)) {
           return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
         }
+
+        this.grpcSdk.bus?.publish('payments:paidIamport:Transaction', JSON.stringify({ merchant_uid, imp_uid }));
         return Promise.resolve(true);
       }
     } else {
@@ -305,6 +309,8 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: e.message });
     }
 
+    this.grpcSdk.bus?.publish('payments:addCardIamport:PaymentsCustomer', JSON.stringify(customer));
+
     return callback(null, {
       result: JSON.stringify({ customerId: customer._id, merchant_uid: transaction._id }),
     });
@@ -340,6 +346,8 @@ export class IamportHandlers {
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
+
+    this.grpcSdk.bus?.publish('payments:validateCardIamport:PaymentsCustomer', JSON.stringify(customer));
 
     return callback(null, {
       result: JSON.stringify({ message: 'card validate successfully' }),
@@ -529,7 +537,12 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    return callback(null, { result: JSON.stringify({ ...subscription }) });
+    this.grpcSdk.bus?.publish(
+      'payments:subscribeIamport:Subscription',
+      JSON.stringify({ user: context.user._id, product: product._id, activeUntil: renewDate.toISOString() })
+    );
+
+    return callback(null, { result: JSON.stringify(subscription) });
   }
 
   async cancelSubscription(call: RouterRequest, callback: RouterResponse) {
@@ -613,6 +626,11 @@ export class IamportHandlers {
       return callback({ code: grpc.status.INTERNAL, message: e });
     }
 
+    this.grpcSdk.bus?.publish(
+      'payments:cancelSubscriptionIamport:Subscription',
+      JSON.stringify({ subscription: subscriptionId, user: context.user._id })
+    );
+
     return callback(null, {
       result: JSON.stringify({ message: 'Subscription cancelled' }),
     });
@@ -693,6 +711,11 @@ export class IamportHandlers {
           'Subscription',
           subscription._id,
           subscription
+        );
+
+        this.grpcSdk.bus?.publish(
+          'payments:subscriptionPaid:Subscription',
+          JSON.stringify({ user: subscription.userId, subscription: subscription._id })
         );
       } else {
         await this.database.create('Transaction', {
