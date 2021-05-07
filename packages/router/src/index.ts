@@ -19,6 +19,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _globalMiddlewares: string[];
   private _routes: any[];
   private _grpcRoutes: any = {};
+  private _sdkRoutes: { path: string, action: string }[] = [];
   grpcSdk: ConduitGrpcSdk;
 
   constructor(
@@ -71,7 +72,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
                 } else if (r instanceof ConduitSocket) {
                   this.registerSocket(r);
                 } else {
-                  this.registerRoute(r);
+                  this._registerRoute(r);
                 }
               });
             } catch (err) {
@@ -103,7 +104,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           } else if (r instanceof ConduitSocket) {
             this.registerSocket(r);
           } else {
-            this.registerRoute(r);
+            this._registerRoute(r);
           }
         });
         this.cleanupRoutes();
@@ -180,7 +181,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         } else if (r instanceof ConduitSocket) {
           this.registerSocket(r);
         } else {
-          this.registerRoute(r);
+          this._registerRoute(r);
         }
       });
       this._grpcRoutes[call.request.routerUrl] = call.request.routes;
@@ -210,6 +211,9 @@ export class ConduitDefaultRouter implements IConduitRouter {
         })
       );
     });
+
+    routes.push(...this._sdkRoutes);
+
     this._internalRouter.cleanupRoutes(routes);
   }
 
@@ -262,6 +266,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   registerRoute(route: ConduitRoute): void {
+    this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
+    this._registerRoute(route);
+  }
+
+  _registerRoute(route: ConduitRoute): void {
     this._internalRouter.registerConduitRoute(route);
   }
 
