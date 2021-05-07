@@ -17,6 +17,7 @@ export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
   private _grpcRoutes: Record<string, { path: string, method: string }[]>;
+  private _sdkRoutes: string[];
   private _registeredRoutes: Map<string, Handler>;
 
   constructor(
@@ -30,6 +31,7 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk = grpcSdk;
     this.router = Router();
     this._grpcRoutes = {};
+    this._sdkRoutes = [];
     this._registeredRoutes = new Map();
 
     var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
@@ -310,11 +312,16 @@ export default class AdminModule extends IConduitAdmin {
           res.status(200).json(sendResult);
         });
       };
-      this.registerRoute(r.method, r.path, handler);
+      this._registerRoute(r.method, r.path, handler);
     });
   }
 
   registerRoute(method: string, route: string, handler: Handler) {
+    this._sdkRoutes.push(`${method}-${route}`);
+    this._registerRoute(method, route, handler);
+  }
+
+  _registerRoute(method: string, route: string, handler: Handler) {
     const key = `${method}-${route}`;
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, handler);
@@ -405,6 +412,12 @@ export default class AdminModule extends IConduitAdmin {
       const key = `${route.method}-${route.path}`;
       if (self._registeredRoutes.has(key)) {
         newRegisteredRoutes.set(key, this._registeredRoutes.get(key));
+      }
+    });
+
+    this._sdkRoutes.forEach((routeKey) => {
+      if (self._registeredRoutes.has(routeKey)) {
+        newRegisteredRoutes.set(routeKey, this._registeredRoutes.get(routeKey));
       }
     });
 
