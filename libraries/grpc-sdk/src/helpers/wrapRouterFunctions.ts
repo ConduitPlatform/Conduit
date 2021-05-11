@@ -1,4 +1,4 @@
-import { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import { RouterRequest, RouterResponse } from '../types';
 
 export function wrapCallObjectForRouter(call: any): RouterRequest {
   return {
