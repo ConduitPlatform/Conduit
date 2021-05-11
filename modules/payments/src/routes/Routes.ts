@@ -5,7 +5,9 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   constructRoute,
-  GrpcServer, RouterRequest, RouterResponse,
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
@@ -248,7 +250,9 @@ export class PaymentsRoutes {
             },
             new ConduitRouteReturnDefinition(
               'CancelPaymentWithSavedCardResponse',
-              'Boolean'
+              {
+                success: TYPE.Boolean
+              }
             ),
             'cancelStripePayment'
           )
@@ -266,7 +270,9 @@ export class PaymentsRoutes {
                 userId: TYPE.String,
               },
             },
-            new ConduitRouteReturnDefinition('RefundStripePaymentResponse', 'Boolean'),
+            new ConduitRouteReturnDefinition('RefundStripePaymentResponse', {
+              success: TYPE.Boolean
+            }),
             'refundStripePayment'
           )
         )
