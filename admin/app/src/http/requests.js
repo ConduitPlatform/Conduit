@@ -63,6 +63,38 @@ export const getAuthUsersDataReq = (skip, limit) =>
     },
   });
 
+export const createNewUsers = ({ email, password }) =>
+  axios.post(`${CONDUIT_API}/admin/authentication/users`, {
+    identification: email,
+    password: password,
+  });
+
+export const editUser = (values) =>
+  axios.put(`${CONDUIT_API}/admin/authentication/users/${values._id}`, {
+    ...values,
+  });
+
+export const deleteUser = (id) => {
+  console.log('hi 4');
+  return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
+};
+
+export const searchUser = (identifier) => {
+  return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
+    params: {
+      identifier: identifier,
+    },
+  });
+};
+
+export const blockUser = (id) => {
+  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
+};
+
+export const unblockUser = (id) => {
+  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/unblock`);
+};
+
 export const getAuthenticationConfig = () =>
   axios.get(`${CONDUIT_API}/admin/config/authentication`);
 
