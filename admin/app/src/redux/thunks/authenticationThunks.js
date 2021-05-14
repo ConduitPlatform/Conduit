@@ -1,13 +1,24 @@
 import {
   addAuthUsers,
+  editUserAction,
+  deleteUserAction,
   setAuthUsersError,
   startAuthUsersLoading,
   stopAuthUsersLoading,
+  blockUserUI,
+  searchUsers,
+  unBlockUserUI,
 } from '../actions';
 import {
   getAuthenticationConfig,
   getAuthUsersDataReq,
   putAuthenticationConfig,
+  createNewUsers,
+  deleteUser,
+  editUser,
+  searchUser,
+  blockUser,
+  unblockUser,
 } from '../../http/requests';
 import {
   setAuthenticationConfig,
@@ -16,10 +27,10 @@ import {
   stopAuthenticationConfigLoading,
 } from '../actions';
 
-export const getAuthUsersData = (skip, limit, search, filter) => {
+export const getAuthUsersData = (page, limit, search, filter) => {
   return (dispatch) => {
     dispatch(startAuthUsersLoading());
-    getAuthUsersDataReq(skip, limit, search, filter)
+    getAuthUsersDataReq(page, limit, search, filter)
       .then((res) => {
         dispatch(stopAuthUsersLoading());
         dispatch(setAuthUsersError(null));
@@ -32,17 +43,9 @@ export const getAuthUsersData = (skip, limit, search, filter) => {
   };
 };
 
-// export const searchUsersThunk = (values, filter, skip, limit) => {
-//   console.log(skip, limit);
-//   return (dispatch) => {
-//     searchUser(values, filter, skip, limit)
-//       .then((res) => dispatch(searchUsers(res.data)))
-//       .catch((err) => console.log(err));
-//   };
-// };
-
 export const addNewUserThunk = (values) => {
   return (dispatch) => {
+    console.log(page, limit);
     dispatch(startAuthUsersLoading());
     createNewUsers(values)
       .then((res) => {
@@ -55,16 +58,6 @@ export const addNewUserThunk = (values) => {
         console.log(err);
         dispatch(stopAuthUsersLoading());
       });
-  };
-};
-
-export const deleteUserThunk = (id) => {
-  return (dispatch) => {
-    deleteUser(id)
-      .then((res) => {
-        dispatch(deleteUserAction(id));
-      })
-      .catch((err) => console.log(err));
   };
 };
 
@@ -99,6 +92,15 @@ export const blockUserUIThunk = (id) => {
     } catch (err) {
       console.log(err);
     }
+  };
+};
+
+export const deleteUserThunk = (id) => {
+  return async (dispatch) => {
+    deleteUser(id).then((res) => {
+      deleteUserAction(id);
+    });
+    
   };
 };
 

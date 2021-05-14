@@ -1,5 +1,6 @@
 import DataTable from '../common/DataTable';
 import React, { useState } from 'react';
+// import EditUserDialog from '../../components/authentication/EditUserDialog';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import {
   deleteUserThunk,
@@ -9,8 +10,22 @@ import {
 import { useDispatch } from 'react-redux';
 import { set } from 'lodash';
 import EditUserDialog from './EditUserDialog';
+import { editUser } from '../../http/requests';
 
 const AuthUsers = ({ users }) => {
+  const [openEditUser, setOpenEditUser] = useState(false);
+  const [openDeleteUser, setOpenDeleteUser] = useState(false);
+  const [openBlockUI, setOpenBlockUI] = useState(false);
+  const [data, setData] = useState({});
+
+  const handleClose = () => {
+    setOpenDeleteUser(false);
+    setOpenEditUser(false);
+    setOpenBlockUI(false);
+  };
+
+  const dispatch = useDispatch();
+
   const formatData = (users) => {
     return users.map((u) => {
       return {
@@ -23,9 +38,9 @@ const AuthUsers = ({ users }) => {
     });
   };
 
-  const deleteButtonAction = (data) => {
-    console.log(data);
-    dispatch(deleteUserThunk(data));
+
+  const deleteButtonAction = (id) => {
+    dispatch(deleteUserThunk(id));
     setOpenDeleteUser(false);
   };
 
@@ -46,6 +61,7 @@ const AuthUsers = ({ users }) => {
 
   const actions = [toDelete, toEdit, toBlock];
 
+  
   const handleAction = (action, data) => {
     if (action.type === 'Edit') {
       setOpenEditUser(true);
@@ -80,7 +96,7 @@ const AuthUsers = ({ users }) => {
           handleAction={handleAction}
         />
       )}
-      {/* <EditUserDialog opened={true} /> */}
+      
 
       <ConfirmationDialog
         open={openDeleteUser}

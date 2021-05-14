@@ -1,5 +1,11 @@
 import {
+  ADD_NEW_USER,
   ADD_AUTH_USERS,
+  SEARCH_USERS,
+  EDIT_USER_ACTION,
+  DELETE_USER_ACTION,
+  BLOCK_USER_UI,
+  UNBLOCK_USER_UI,
   CLEAR_AUTH_PAGE_STORE,
   SET_AUTH_USERS_ERROR,
   SET_AUTHENTICATION_CONFIG,
@@ -26,17 +32,7 @@ const authenticationPageReducer = (state = initialState, action) => {
           count: action.payload.count,
         },
       };
-    case SEARCH_USERS:
-      // console.log(...action.payload.data.users);
-      // console.log(action.payload.data.count);
-      return {
-        ...state,
-        authUsersState: {
-          ...state.authUsersState,
-          users: action.payload.users,
-          count: action.payload.count,
-        },
-      };
+    
     case EDIT_USER_ACTION:
       return {
         ...state,
@@ -47,19 +43,6 @@ const authenticationPageReducer = (state = initialState, action) => {
               user._id !== action.payload._id ? user : action.payload
             ),
           ],
-        },
-      };
-
-    case DELETE_USER_ACTION:
-      console.log(action.payload);
-      return {
-        ...state,
-        authUsersState: {
-          ...state.authUsersState,
-          users: [
-            ...state.authUsersState.users.filter((user) => user._id !== action.payload),
-          ],
-          count: state.authUsersState.count - 1,
         },
       };
 
@@ -88,6 +71,22 @@ const authenticationPageReducer = (state = initialState, action) => {
           ],
         },
       };
+
+    case DELETE_USER_ACTION:
+      console.log(action.payload);
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: [
+            ...state.authUsersState.users.filter((user) =>
+              user._id !== action.payload 
+            ),
+          ],
+          count: state.authUsersState.count - 1,
+        },
+      };
+
     case START_AUTH_USERS_LOADING:
       return {
         ...state,

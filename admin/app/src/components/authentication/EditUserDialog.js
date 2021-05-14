@@ -46,8 +46,7 @@ export default function EditUserDialog({ data, open, handleClose }) {
     // active: data.Active || '',
     // verified: data.isVerified || '',
     // hasTwoFA: data.hasTwoFa || '',
-    phoneNumber: data.phoneNumber || '' || undefined,
-  });
+});
 
   useEffect(() => {
     setValues({ ...data });

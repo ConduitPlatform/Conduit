@@ -81,17 +81,15 @@ export const deleteUser = (id) => {
   return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
 };
 
-// export const searchUser = (identifier, filter, skip, limit) => {
-//   console.log(filter.filterValue);
-//   return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
-//     params: {
-//       identifier: identifier,
-//       provider: filter.filterValue,
-//       skip,
-//       limit,
-//     },
-//   });
-// };
+
+
+export const searchUser = (identifier) => {
+  return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
+    params: {
+      identifier: identifier,
+    },
+  });
+};
 
 export const blockUser = (id) => {
   axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);

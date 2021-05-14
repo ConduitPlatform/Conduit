@@ -1,22 +1,30 @@
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthAccordion from '../components/authentication/AuthAccordion';
+import NewUserModal from '../components/authentication/NewUserModal';
 import AuthSettings from '../components/authentication/AuthSettings';
 import AuthUsers from '../components/authentication/AuthUsers';
 import CustomTabs from '../components/common/CustomTabs';
+import Paginator from '../components/common/Paginator';
+import SearchFilter from '../components/authentication/SearchFilter';
+import Grid from '@material-ui/core/Grid';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import {
   getAuthUsersData,
   getConfig,
   updateConfig,
+  addNewUserThunk,
+  searchUsersThunk,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
 import { searchUsers } from '../redux/actions';
+
+
 
 const Authentication = () => {
   const dispatch = useDispatch();
@@ -29,11 +37,15 @@ const Authentication = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState({ filterValue: 'local' });
 
+  // console.log(useSelector((state) => state.authenticationPageReducer.authUsersState));
+
   const {
     users: availableUsers,
     error: authUsersError,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
+
+ 
 
   console.log(availableUsers);
 
@@ -54,16 +66,15 @@ const Authentication = () => {
   console.log(filter.filterValue);
 
   useEffect(() => {
-    if (search === '' && filter.filterValue === 'local') {
+    if (search === '' || filter.filterValue === 'local') {
       dispatch(getAuthUsersData(skip, limit, search, filter));
       dispatch(getConfig());
-      console.log('test 1');
     }
   }, [dispatch, search, filter, skip, limit]);
 
   useEffect(() => {
     if (search !== '' || filter.filterValue !== 'local') {
-      console.log(skip, limit);
+      
       debouncedSearch(search);
     }
   }, [search, filter, skip, limit]);
@@ -77,13 +88,17 @@ const Authentication = () => {
     [search, filter, skip, limit]
   );
 
-  console.log(search);
+
+
+
 
   useEffect(() => {
     if (configData && !configData.active) {
       setSelected(2);
     }
   }, [configData]);
+
+
 
   const handleLimitChange = (e, value) => {
     setLimit(parseInt(e.target.value, 10));
@@ -100,6 +115,8 @@ const Authentication = () => {
       setSkip(skip - limit);
     }
   };
+
+
 
   useEffect(() => {
     if (authUsersError || authConfigError) {
@@ -198,6 +215,12 @@ const Authentication = () => {
           ) : (
             <Typography>No users available</Typography>
           )}
+
+          <NewUserModal
+            handleNewUserDispatch={handleNewUserDispatch}
+            page={skip}
+            limit={limit}
+          />
         </Box>
         <Box
           role="tabpanel"
@@ -232,6 +255,6 @@ const Authentication = () => {
       />
     </Layout>
   );
-};
+          };
 
 export default privateRoute(Authentication);
