@@ -35,7 +35,8 @@
     "redux-devtools-extension": "^2.13.8",
     "redux-thunk": "^2.3.0",
     "snyk": "^1.321.0",
-    "swr": "^0.1.18"
+    "swr": "^0.1.18",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",
