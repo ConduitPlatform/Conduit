@@ -189,9 +189,11 @@ const Types = () => {
       dispatch(createCustomEndpoints(data));
     }
   };
+
   const handleEditCustomEndpoint = (_id, data) => {
     dispatch(updateCustomEndpoints(_id, data));
   };
+
   const handleDeleteCustomEndpoint = (endpointId) => {
     if (endpointId) {
       dispatch(deleteCustomEndpoints(endpointId));
@@ -249,8 +251,6 @@ const Types = () => {
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
         <CustomQueries
-          endpoints={data.customEndpoints}
-          availableSchemas={data.schemas}
           handleCreate={handleCreateCustomEndpoint}
           handleEdit={handleEditCustomEndpoint}
           handleDelete={handleDeleteCustomEndpoint}
