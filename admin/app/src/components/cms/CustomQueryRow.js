@@ -5,10 +5,9 @@ import {
   Grid,
   IconButton,
   InputLabel,
+  MenuItem,
   Select,
   TextField,
-  MenuItem,
-  Typography,
 } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
 
@@ -84,10 +83,10 @@ const CustomQueryRow = ({
           </MenuItem>
         );
       }
-      let allItems = getSubFields(field, indexQuery);
-      return allItems;
+      return getSubFields(field, indexQuery);
     });
   };
+
   const changeSelectedType = (type) => {
     return setSelectedType(Array.isArray(type) ? 'Array' : type);
   };
@@ -194,11 +193,7 @@ const CustomQueryRow = ({
   const inputCustomChange = (e, i) => {
     let value = e.target.value;
     if (selectedType === 'Boolean') {
-      if (value === 'false') {
-        value = false;
-      } else {
-        value = true;
-      }
+      value = value !== 'false';
     }
     if (selectedType === 'Number') {
       value = parseInt(value);
@@ -209,9 +204,6 @@ const CustomQueryRow = ({
 
   return (
     <>
-      <Grid item xs={1}>
-        <Typography>{index + 1}.</Typography>
-      </Grid>
       <Grid item xs={2}>
         <FormControl fullWidth>
           <InputLabel>Field of schema</InputLabel>
@@ -238,7 +230,7 @@ const CustomQueryRow = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={2}>
+      <Grid item xs={3}>
         <FormControl fullWidth>
           <InputLabel>Operator</InputLabel>
           <Select
@@ -390,16 +382,14 @@ const CustomQueryRow = ({
               onChange={(event) => handleLikeValueChange(event, index)}
               name="Like"
               size={'small'}
+              disabled={!editMode}
             />
           }
           label="Like"
         />
       </Grid>
       <Grid item xs={1}>
-        <IconButton
-          disabled={!editMode}
-          size="small"
-          onClick={() => handleRemoveQuery(index)}>
+        <IconButton disabled={!editMode} size="small" onClick={handleRemoveQuery}>
           <RemoveCircleOutlineIcon />
         </IconButton>
       </Grid>
