@@ -1,14 +1,20 @@
 import React from 'react';
 import {
-  Grid,
+  Checkbox,
   FormControl,
+  FormControlLabel,
+  Grid,
   InputLabel,
   Select,
-  FormControlLabel,
-  Checkbox,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import OperationsEnum from '../../../models/OperationsEnum';
+import { findFieldsWithTypes, getAvailableFieldsOfSchema } from '../../../utils/cms';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  setEndpointData,
+  setSchemaFields,
+} from '../../../redux/actions/customEndpointsActions';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -24,21 +30,65 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const OperationSection = ({
-  availableSchemas,
-  selectedSchema,
-  selectedOperation,
-  editMode,
-  handleOperationChange,
-  handleSchemaChange,
-  authentication,
-  handleAuthenticationChange,
-  paginated,
-  handlePaginatedChange,
-  sorted,
-  handleSortedChange,
-}) => {
+const OperationSection = ({ schemas, editMode, availableSchemas }) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
+
+  const { endpoint, schemaFields } = useSelector((state) => state.customEndpointsReducer);
+
+  const handleOperationChange = (event) => {
+    const operation = Number(event.target.value);
+    let assignments = [];
+    if (operation === 1) {
+      if (endpoint.selectedSchema) {
+        if (schemaFields.length > 0) {
+          schemaFields.forEach((field) => {
+            const assignment = {
+              schemaField: field,
+              action: 0,
+              assignmentField: { type: '', value: '' },
+            };
+            assignments.push(assignment);
+          });
+        }
+      }
+    }
+    dispatch(setEndpointData({ operation, assignments }));
+  };
+
+  const handleSchemaChange = (event) => {
+    let assignments = [];
+    const selectedSchema = event.target.value;
+    const fields = getAvailableFieldsOfSchema(selectedSchema, schemas);
+    const fieldsWithTypes = findFieldsWithTypes(fields);
+    if (endpoint.operation && endpoint.operation === OperationsEnum.POST) {
+      const fieldKeys = Object.keys(fields);
+
+      fieldKeys.forEach((field) => {
+        const assignment = {
+          schemaField: field,
+          action: 0,
+          assignmentField: { type: '', value: '' },
+        };
+        assignments.push(assignment);
+      });
+    }
+    dispatch(setEndpointData({ selectedSchema, assignments }));
+    dispatch(setSchemaFields(fieldsWithTypes));
+  };
+
+  const handleAuthenticationChange = (event) => {
+    dispatch(setEndpointData({ authentication: event.target.checked }));
+  };
+
+  const handlePaginatedChange = (event) => {
+    dispatch(setEndpointData({ paginated: event.target.checked }));
+  };
+
+  const handleSortedChange = (event) => {
+    dispatch(setEndpointData({ sorted: event.target.checked }));
+  };
+
   return (
     <>
       <Grid item xs={3}>
@@ -47,7 +97,7 @@ const OperationSection = ({
           <Select
             disabled={!editMode}
             native
-            value={selectedOperation}
+            value={endpoint.operation}
             onChange={handleOperationChange}
             labelWidth={100}
             inputProps={{
@@ -68,7 +118,7 @@ const OperationSection = ({
           <Select
             disabled={!editMode}
             native
-            value={selectedSchema}
+            value={endpoint.selectedSchema}
             onChange={handleSchemaChange}
             inputProps={{
               name: 'select_schema',
@@ -83,13 +133,13 @@ const OperationSection = ({
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={selectedOperation === OperationsEnum.GET ? 2 : 4}>
+      <Grid item xs={endpoint.operation === OperationsEnum.GET ? 2 : 4}>
         <FormControlLabel
           control={
             <Checkbox
               disabled={!editMode}
               color={'primary'}
-              checked={authentication}
+              checked={endpoint.authentication}
               onChange={handleAuthenticationChange}
               name="authentication"
             />
@@ -97,14 +147,14 @@ const OperationSection = ({
           label="Authenticated"
         />
       </Grid>
-      {selectedOperation === OperationsEnum.GET && (
+      {endpoint.operation === OperationsEnum.GET && (
         <Grid item xs={2}>
           <FormControlLabel
             control={
               <Checkbox
                 disabled={!editMode}
                 color={'primary'}
-                checked={paginated}
+                checked={endpoint.paginated}
                 onChange={handlePaginatedChange}
                 name="paginated"
               />
@@ -113,14 +163,14 @@ const OperationSection = ({
           />
         </Grid>
       )}
-      {selectedOperation === OperationsEnum.GET && (
+      {endpoint.operation === OperationsEnum.GET && (
         <Grid item xs={2}>
           <FormControlLabel
             control={
               <Checkbox
                 disabled={!editMode}
                 color={'primary'}
-                checked={sorted}
+                checked={endpoint.sorted}
                 onChange={handleSortedChange}
                 name="sorted"
               />
