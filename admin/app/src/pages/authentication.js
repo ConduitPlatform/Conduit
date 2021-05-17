@@ -66,7 +66,7 @@ const Authentication = () => {
   console.log(filter.filterValue);
 
   useEffect(() => {
-    if (search === '' || filter.filterValue === 'local') {
+    if (search === '' && filter.filterValue === 'local') {
       dispatch(getAuthUsersData(skip, limit, search, filter));
       dispatch(getConfig());
     }
