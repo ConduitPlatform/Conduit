@@ -14,13 +14,20 @@ import {
   updateConfig,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
+import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
+import { searchUsers } from '../redux/actions';
 
 const Authentication = () => {
   const dispatch = useDispatch();
 
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState({ filterValue: 'local' });
 
   const {
     users: availableUsers,
@@ -28,22 +35,71 @@ const Authentication = () => {
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
 
+  console.log(availableUsers);
+
   const {
     data: configData,
     error: authConfigError,
     loading: configLoading,
   } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
 
+  const handleFilterChange = (event) => {
+    const name = event.target.name;
+    setFilter({
+      ...filter,
+      [name]: event.target.value,
+    });
+  };
+
+  console.log(filter.filterValue);
+
   useEffect(() => {
-    dispatch(getAuthUsersData());
-    dispatch(getConfig());
-  }, [dispatch]);
+    if (search === '' && filter.filterValue === 'local') {
+      dispatch(getAuthUsersData(skip, limit, search, filter));
+      dispatch(getConfig());
+      console.log('test 1');
+    }
+  }, [dispatch, search, filter, skip, limit]);
+
+  useEffect(() => {
+    if (search !== '' || filter.filterValue !== 'local') {
+      console.log(skip, limit);
+      debouncedSearch(search);
+    }
+  }, [search, filter, skip, limit]);
+
+  
+
+  const debouncedSearch = useCallback(
+    Debounce((search) => {
+      dispatch(getAuthUsersData(skip, limit, search, filter));
+    }, 300),
+    [search, filter, skip, limit]
+  );
+
+  console.log(search);
 
   useEffect(() => {
     if (configData && !configData.active) {
       setSelected(2);
     }
   }, [configData]);
+
+  const handleLimitChange = (e, value) => {
+    setLimit(parseInt(e.target.value, 10));
+    setSkip(0);
+    setPage(0);
+  };
+
+  const handlePageChange = (e, val) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
 
   useEffect(() => {
     if (authUsersError || authConfigError) {
@@ -92,6 +148,14 @@ const Authentication = () => {
     setSnackbarOpen(false);
   };
 
+  const handleNewUserDispatch = (values) => {
+    dispatch(addNewUserThunk(values));
+    setSkip(0);
+    setPage(0);
+    setSearch('');
+    setFilter({ filterValue: 'local' });
+  };
+
   const handleSettingsSave = (data) => {
     const body = {
       ...configData,
@@ -109,6 +173,26 @@ const Authentication = () => {
           role="tabpanel"
           hidden={selected !== 0 || (configData && !configData.active)}
           id={`tabpanel-0`}>
+          <Grid container>
+            <Grid item xs={6}>
+              <SearchFilter
+                // handleSearchChange={handleSearchChange}
+                setSearch={setSearch}
+                search={search}
+                filter={filter}
+                handleFilterChange={handleFilterChange}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <Paginator
+                handlePageChange={handlePageChange}
+                skip={skip}
+                limit={limit}
+                handleLimitChange={handleLimitChange}
+                page={page}
+              />
+            </Grid>
+          </Grid>
           {availableUsers ? (
             <AuthUsers users={availableUsers} />
           ) : (

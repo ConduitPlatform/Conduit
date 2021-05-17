@@ -26,6 +26,68 @@ const authenticationPageReducer = (state = initialState, action) => {
           count: action.payload.count,
         },
       };
+    case SEARCH_USERS:
+      // console.log(...action.payload.data.users);
+      // console.log(action.payload.data.count);
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: action.payload.users,
+          count: action.payload.count,
+        },
+      };
+    case EDIT_USER_ACTION:
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: [
+            ...state.authUsersState.users.map((user) =>
+              user._id !== action.payload._id ? user : action.payload
+            ),
+          ],
+        },
+      };
+
+    case DELETE_USER_ACTION:
+      console.log(action.payload);
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: [
+            ...state.authUsersState.users.filter((user) => user._id !== action.payload),
+          ],
+          count: state.authUsersState.count - 1,
+        },
+      };
+
+    case BLOCK_USER_UI:
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: [
+            ...state.authUsersState.users.map((user) =>
+              user._id !== action.payload ? user : { ...user, active: false }
+            ),
+          ],
+        },
+      };
+
+    case UNBLOCK_USER_UI:
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          users: [
+            ...state.authUsersState.users.map((user) =>
+              user._id !== action.payload ? user : { ...user, active: true }
+            ),
+          ],
+        },
+      };
     case START_AUTH_USERS_LOADING:
       return {
         ...state,

@@ -3,6 +3,7 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 import getConfig from 'next/config';
+import { filter } from 'lodash';
 
 const {
   publicRuntimeConfig: { CONDUIT_URL, MASTER_KEY },
@@ -55,13 +56,50 @@ axios.interceptors.response.use(
 );
 
 //Requests
-export const getAuthUsersDataReq = (skip, limit) =>
+export const getAuthUsersDataReq = (skip, limit, search, filter) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
+      identifier: search,
+      provider: filter.filterValue,
       skip,
       limit,
     },
   });
+
+export const createNewUsers = ({ email, password }) =>
+  axios.post(`${CONDUIT_API}/admin/authentication/users`, {
+    identification: email,
+    password: password,
+  });
+
+export const editUser = (values) =>
+  axios.put(`${CONDUIT_API}/admin/authentication/users/${values._id}`, {
+    ...values,
+  });
+
+export const deleteUser = (id) => {
+  return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
+};
+
+// export const searchUser = (identifier, filter, skip, limit) => {
+//   console.log(filter.filterValue);
+//   return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
+//     params: {
+//       identifier: identifier,
+//       provider: filter.filterValue,
+//       skip,
+//       limit,
+//     },
+//   });
+// };
+
+export const blockUser = (id) => {
+  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
+};
+
+export const unblockUser = (id) => {
+  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/unblock`);
+};
 
 export const getAuthenticationConfig = () =>
   axios.get(`${CONDUIT_API}/admin/config/authentication`);

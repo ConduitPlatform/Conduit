@@ -56,7 +56,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
   };
 
   const handleRequestSort = (event, property) => {
-    const isAsc = orderById === property && order === 'asc';
+    const isAsc = orderById === property && order === 'desc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderById(property);
   };
