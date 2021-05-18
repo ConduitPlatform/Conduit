@@ -98,9 +98,8 @@ export const blockUserUIThunk = (id) => {
 export const deleteUserThunk = (id) => {
   return async (dispatch) => {
     deleteUser(id).then((res) => {
-      deleteUserAction(id);
+      dispatch(deleteUserAction(id));
     });
-    
   };
 };
 

@@ -24,6 +24,7 @@ export default function Paginator({ handlePageChange, page, limit, handleLimitCh
   return (
     <Grid container justify="flex-end">
       <TablePagination
+        color="primary"
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
         count={docs}
@@ -32,22 +33,6 @@ export default function Paginator({ handlePageChange, page, limit, handleLimitCh
         rowsPerPage={limit}
         onChangeRowsPerPage={handleLimitChange}
       />
-      {/* <ButtonGroup
-        variant="text"
-        color="secondary"
-        aria-label="contained primary button group">
-        <Button onClick={() => handleLimitChange(5)}>5</Button>
-        <Button onClick={() => handleLimitChange(10)}>10</Button>
-        <Button onClick={() => handleLimitChange(15)}>15</Button>
-      </ButtonGroup>
-
-      <Pagination
-        className={classes.paginator}
-        color="secondary"
-        page={page}
-        onChange={handlePageChange}
-        count={Math.ceil(docs / limit)}
-      /> */}
     </Grid>
   );
 }

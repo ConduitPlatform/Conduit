@@ -10,6 +10,8 @@ import CustomTabs from '../components/common/CustomTabs';
 import Paginator from '../components/common/Paginator';
 import SearchFilter from '../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core';
+import Paper from '@material-ui/core/Paper';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import {
@@ -24,9 +26,17 @@ import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
 import { searchUsers } from '../redux/actions';
 
-
+const useStyles = makeStyles((theme) => ({
+  root: {
+    '& > *': {
+      margin: theme.spacing(0.5),
+    },
+    marginBottom: '3px',
+  },
+}));
 
 const Authentication = () => {
+  const classes = useStyles();
   const dispatch = useDispatch();
 
   const [selected, setSelected] = useState(0);
@@ -44,8 +54,6 @@ const Authentication = () => {
     error: authUsersError,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
-
- 
 
   console.log(availableUsers);
 
@@ -74,12 +82,9 @@ const Authentication = () => {
 
   useEffect(() => {
     if (search !== '' || filter.filterValue !== 'local') {
-      
       debouncedSearch(search);
     }
   }, [search, filter, skip, limit]);
-
-  
 
   const debouncedSearch = useCallback(
     Debounce((search) => {
@@ -88,17 +93,11 @@ const Authentication = () => {
     [search, filter, skip, limit]
   );
 
-
-
-
-
   useEffect(() => {
     if (configData && !configData.active) {
       setSelected(2);
     }
   }, [configData]);
-
-
 
   const handleLimitChange = (e, value) => {
     setLimit(parseInt(e.target.value, 10));
@@ -115,8 +114,6 @@ const Authentication = () => {
       setSkip(skip - limit);
     }
   };
-
-
 
   useEffect(() => {
     if (authUsersError || authConfigError) {
@@ -190,26 +187,27 @@ const Authentication = () => {
           role="tabpanel"
           hidden={selected !== 0 || (configData && !configData.active)}
           id={`tabpanel-0`}>
-          <Grid container>
-            <Grid item xs={6}>
-              <SearchFilter
-                // handleSearchChange={handleSearchChange}
-                setSearch={setSearch}
-                search={search}
-                filter={filter}
-                handleFilterChange={handleFilterChange}
-              />
+          <Paper variant="outlined" className={classes.root}>
+            <Grid container>
+              <Grid item xs={6}>
+                <SearchFilter
+                  setSearch={setSearch}
+                  search={search}
+                  filter={filter}
+                  handleFilterChange={handleFilterChange}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Paginator
+                  handlePageChange={handlePageChange}
+                  skip={skip}
+                  limit={limit}
+                  handleLimitChange={handleLimitChange}
+                  page={page}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={6}>
-              <Paginator
-                handlePageChange={handlePageChange}
-                skip={skip}
-                limit={limit}
-                handleLimitChange={handleLimitChange}
-                page={page}
-              />
-            </Grid>
-          </Grid>
+          </Paper>
           {availableUsers ? (
             <AuthUsers users={availableUsers} />
           ) : (
@@ -255,6 +253,6 @@ const Authentication = () => {
       />
     </Layout>
   );
-          };
+};
 
 export default privateRoute(Authentication);

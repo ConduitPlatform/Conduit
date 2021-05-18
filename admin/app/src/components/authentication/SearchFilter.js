@@ -26,7 +26,7 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
 
   return (
     <form>
-      <Grid container justify="center">
+      <Grid container>
         <TextField
           size="small"
           variant="outlined"
@@ -35,7 +35,7 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
           name="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          label="Εύρεση χρήστη"
+          label="Find user"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -46,11 +46,11 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
         />
 
         <FormControl variant="outlined" className={classes.formControl} size="small">
-          <InputLabel id="demo-simple-select-label">Sign in method</InputLabel>
+          <InputLabel id="demo-simple-select-label">Provider</InputLabel>
           <Select
             labelId="demo-simple-select-label"
             id="demo-simple-select"
-            label="Sign in method"
+            label="Provider"
             value={filter.filterValue}
             onChange={handleFilterChange}
             inputProps={{
