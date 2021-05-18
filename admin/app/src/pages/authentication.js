@@ -1,6 +1,6 @@
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthAccordion from '../components/authentication/AuthAccordion';
 import NewUserModal from '../components/authentication/NewUserModal';
@@ -15,16 +15,14 @@ import Paper from '@material-ui/core/Paper';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import {
+  addNewUserThunk,
   getAuthUsersData,
   getConfig,
   updateConfig,
-  addNewUserThunk,
-  searchUsersThunk,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
-import { searchUsers } from '../redux/actions';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -39,23 +37,19 @@ const Authentication = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const [selected, setSelected] = useState(0);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [page, setPage] = useState(0);
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [filter, setFilter] = useState({ filterValue: 'local' });
-
-  // console.log(useSelector((state) => state.authenticationPageReducer.authUsersState));
 
   const {
     users: availableUsers,
     error: authUsersError,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
-
-  console.log(availableUsers);
 
   const {
     data: configData,
@@ -70,8 +64,6 @@ const Authentication = () => {
       [name]: event.target.value,
     });
   };
-
-  console.log(filter.filterValue);
 
   useEffect(() => {
     if (search === '' && filter.filterValue === 'local') {
@@ -99,6 +91,12 @@ const Authentication = () => {
     }
   }, [configData]);
 
+  useEffect(() => {
+    if (authUsersError || authConfigError) {
+      setSnackbarOpen(true);
+    }
+  }, [authUsersError, authConfigError]);
+
   const handleLimitChange = (e, value) => {
     setLimit(parseInt(e.target.value, 10));
     setSkip(0);
@@ -114,12 +112,6 @@ const Authentication = () => {
       setSkip(skip - limit);
     }
   };
-
-  useEffect(() => {
-    if (authUsersError || authConfigError) {
-      setSnackbarOpen(true);
-    }
-  }, [authUsersError, authConfigError]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },

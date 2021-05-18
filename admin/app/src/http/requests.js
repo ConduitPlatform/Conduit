@@ -3,7 +3,6 @@ import store from '../redux/store';
 import { logout } from '../redux/thunks/appAuthThunks';
 import Router from 'next/router';
 import getConfig from 'next/config';
-import { filter } from 'lodash';
 
 const {
   publicRuntimeConfig: { CONDUIT_URL, MASTER_KEY },
@@ -59,10 +58,10 @@ axios.interceptors.response.use(
 export const getAuthUsersDataReq = (skip, limit, search, filter) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
-      identifier: search,
-      provider: filter.filterValue,
       skip,
       limit,
+      identifier: search,
+      provider: filter.filterValue,
     },
   });
 
@@ -81,8 +80,6 @@ export const deleteUser = (id) => {
   return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
 };
 
-
-
 export const searchUser = (identifier) => {
   return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
@@ -92,11 +89,11 @@ export const searchUser = (identifier) => {
 };
 
 export const blockUser = (id) => {
-  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
+  return axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
 };
 
 export const unblockUser = (id) => {
-  axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/unblock`);
+  return axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/unblock`);
 };
 
 export const getAuthenticationConfig = () =>
@@ -117,6 +114,7 @@ export const putEmailTemplateRequest = (templateId, data) =>
 
 export const getEmailSettingsRequest = () =>
   axios.get(`${CONDUIT_API}/admin/config/email`);
+
 export const putEmailSettingsRequest = (data) =>
   axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
 
@@ -138,8 +136,10 @@ export const sendNotification = (data) =>
   axios.post(`${CONDUIT_API}/notifications/send`, {
     ...data,
   });
+
 export const getNotificationConfig = () =>
   axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
+
 export const putNotificationConfig = (projectId, productKey, clientEmail) =>
   axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
     projectId,

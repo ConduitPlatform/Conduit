@@ -1,31 +1,27 @@
 import {
   addAuthUsers,
-  editUserAction,
-  deleteUserAction,
-  setAuthUsersError,
-  startAuthUsersLoading,
-  stopAuthUsersLoading,
   blockUserUI,
-  searchUsers,
+  deleteUserAction,
+  editUserAction,
+  setAuthenticationConfig,
+  setAuthenticationConfigError,
+  setAuthUsersError,
+  startAuthenticationConfigLoading,
+  startAuthUsersLoading,
+  stopAuthenticationConfigLoading,
+  stopAuthUsersLoading,
   unBlockUserUI,
 } from '../actions';
 import {
-  getAuthenticationConfig,
-  getAuthUsersDataReq,
-  putAuthenticationConfig,
+  blockUser,
   createNewUsers,
   deleteUser,
   editUser,
-  searchUser,
-  blockUser,
+  getAuthenticationConfig,
+  getAuthUsersDataReq,
+  putAuthenticationConfig,
   unblockUser,
 } from '../../http/requests';
-import {
-  setAuthenticationConfig,
-  setAuthenticationConfigError,
-  startAuthenticationConfigLoading,
-  stopAuthenticationConfigLoading,
-} from '../actions';
 
 export const getAuthUsersData = (page, limit, search, filter) => {
   return (dispatch) => {
@@ -45,10 +41,9 @@ export const getAuthUsersData = (page, limit, search, filter) => {
 
 export const addNewUserThunk = (values) => {
   return (dispatch) => {
-    console.log(page, limit);
     dispatch(startAuthUsersLoading());
     createNewUsers(values)
-      .then((res) => {
+      .then(() => {
         dispatch(getAuthUsersData(0, 10));
         dispatch(stopAuthUsersLoading());
         dispatch(setAuthUsersError(null));
