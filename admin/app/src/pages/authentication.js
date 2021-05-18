@@ -200,6 +200,7 @@ const Authentication = () => {
               </Grid>
             </Grid>
           </Paper>
+
           {availableUsers ? (
             <AuthUsers users={availableUsers} />
           ) : (
