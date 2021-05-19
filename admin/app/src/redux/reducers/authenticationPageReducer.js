@@ -2,9 +2,11 @@ import {
   ADD_AUTH_USERS,
   BLOCK_USER_UI,
   CLEAR_AUTH_PAGE_STORE,
+  INCREASE_COUNT,
   DELETE_USER_ACTION,
   EDIT_USER_ACTION,
   SET_AUTH_USERS_ERROR,
+  SET_AUTH_USERS_SUCCESS,
   SET_AUTHENTICATION_CONFIG,
   SET_AUTHENTICATION_CONFIG_ERROR,
   START_AUTH_USERS_LOADING,
@@ -15,7 +17,7 @@ import {
 } from '../actions/actionTypes';
 
 const initialState = {
-  authUsersState: { users: null, count: 0, loading: false, error: null },
+  authUsersState: { users: null, count: 0, loading: false, error: null, success: null },
   signInMethodsState: { data: null, loading: false, error: null },
 };
 
@@ -70,6 +72,15 @@ const authenticationPageReducer = (state = initialState, action) => {
         },
       };
 
+    case INCREASE_COUNT:
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          count: state.authUsersState.count + 1,
+        },
+      };
+
     case DELETE_USER_ACTION:
       return {
         ...state,
@@ -106,6 +117,14 @@ const authenticationPageReducer = (state = initialState, action) => {
         authUsersState: {
           ...state.authUsersState,
           error: action.payload.error,
+        },
+      };
+    case SET_AUTH_USERS_SUCCESS:
+      return {
+        ...state,
+        authUsersState: {
+          ...state.authUsersState,
+          success: action.payload.message,
         },
       };
 

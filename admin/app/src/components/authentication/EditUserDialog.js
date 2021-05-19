@@ -46,13 +46,11 @@ export default function EditUserDialog({ data, open, handleClose }) {
     // active: data.Active || '',
     // verified: data.isVerified || '',
     // hasTwoFA: data.hasTwoFa || '',
-});
+  });
 
   useEffect(() => {
     setValues({ ...data });
   }, [data]);
-
-  console.log(values);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

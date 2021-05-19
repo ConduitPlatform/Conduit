@@ -43,11 +43,14 @@ const Authentication = () => {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [filter, setFilter] = useState({ filterValue: 'local' });
+  const [filter, setFilter] = useState({ filterValue: 'none' });
+
+  console.log(skip, limit);
 
   const {
     users: availableUsers,
     error: authUsersError,
+    success: authUsersSuccess,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
 
@@ -56,6 +59,8 @@ const Authentication = () => {
     error: authConfigError,
     loading: configLoading,
   } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
+
+  console.log(authUsersSuccess);
 
   const handleFilterChange = (event) => {
     const name = event.target.name;
@@ -66,14 +71,14 @@ const Authentication = () => {
   };
 
   useEffect(() => {
-    if (search === '' && filter.filterValue === 'local') {
+    if (search === '' && filter.filterValue === 'none') {
       dispatch(getAuthUsersData(skip, limit, search, filter));
       dispatch(getConfig());
     }
   }, [dispatch, search, filter, skip, limit]);
 
   useEffect(() => {
-    if (search !== '' || filter.filterValue !== 'local') {
+    if (search !== '' || filter.filterValue !== 'none') {
       debouncedSearch(search);
     }
   }, [search, filter, skip, limit]);
@@ -92,10 +97,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authUsersError || authConfigError) {
+    if (authUsersError || authConfigError || authUsersSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authUsersError, authConfigError]);
+  }, [authUsersError, authConfigError, authUsersSuccess]);
 
   const handleLimitChange = (e, value) => {
     setLimit(parseInt(e.target.value, 10));
@@ -147,6 +152,12 @@ const Authentication = () => {
     }
   };
 
+  const successMessage = () => {
+    if (authUsersSuccess) {
+      return authUsersSuccess;
+    }
+  };
+
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
       return;
@@ -155,11 +166,11 @@ const Authentication = () => {
   };
 
   const handleNewUserDispatch = (values) => {
-    dispatch(addNewUserThunk(values));
+    dispatch(addNewUserThunk(values, availableUsers, limit));
     setSkip(0);
     setPage(0);
     setSearch('');
-    setFilter({ filterValue: 'local' });
+    setFilter({ filterValue: 'none' });
   };
 
   const handleSettingsSave = (data) => {
@@ -239,7 +250,8 @@ const Authentication = () => {
         </Box>
       </Box>
       <AppState
-        message={alertMessage()}
+        successMessage={successMessage()}
+        errorMessage={alertMessage()}
         loading={usersLoading || configLoading}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}

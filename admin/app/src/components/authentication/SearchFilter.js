@@ -57,6 +57,7 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
               name: 'filterValue',
               id: 'outlined-age-native-simple',
             }}>
+            <MenuItem value="none">None</MenuItem>
             <MenuItem value="local">Local</MenuItem>
             <MenuItem value="google">Google</MenuItem>
             <MenuItem value="facebook">Facebook</MenuItem>
