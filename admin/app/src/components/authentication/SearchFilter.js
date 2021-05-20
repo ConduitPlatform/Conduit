@@ -7,6 +7,7 @@ import Grid from '@material-ui/core/Grid';
 import MenuItem from '@material-ui/core/MenuItem';
 import { makeStyles } from '@material-ui/core';
 import SearchIcon from '@material-ui/icons/Search';
+import React from 'react';
 
 const useStyles = makeStyles((theme) => ({
   margin: {
