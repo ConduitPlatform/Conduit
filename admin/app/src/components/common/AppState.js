@@ -24,8 +24,6 @@ const AppState = ({
 }) => {
   const classes = useStyles();
 
-  console.log(successMessage);
-
   return (
     <>
       <Snackbar
