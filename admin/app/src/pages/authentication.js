@@ -1,6 +1,6 @@
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthAccordion from '../components/authentication/AuthAccordion';
 import NewUserModal from '../components/authentication/NewUserModal';
@@ -21,8 +21,8 @@ import {
   updateConfig,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
-import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
+import useDebounce from '../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -44,6 +44,8 @@ const Authentication = () => {
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [filter, setFilter] = useState({ filterValue: 'none' });
+
+  const debouncedSearch = useDebounce(search, 500);
 
   const {
     users: availableUsers,
@@ -67,24 +69,17 @@ const Authentication = () => {
   };
 
   useEffect(() => {
-    if (search === '' && filter.filterValue === 'none') {
-      dispatch(getAuthUsersData(skip, limit, search, filter));
-      dispatch(getConfig());
-    }
-  }, [dispatch, search, filter, skip, limit]);
+    dispatch(getAuthUsersData(skip, limit, search, filter));
+    dispatch(getConfig());
+  }, []);
 
   useEffect(() => {
-    if (search !== '' || filter.filterValue !== 'none') {
-      debouncedSearch(search);
-    }
-  }, [search, filter, skip, limit]);
+    dispatch(getAuthUsersData(skip, limit, search, filter));
+  }, [debouncedSearch]);
 
-  const debouncedSearch = useCallback(
-    Debounce((search) => {
-      dispatch(getAuthUsersData(skip, limit, search, filter));
-    }, 300),
-    [search, filter, skip, limit]
-  );
+  useEffect(() => {
+    dispatch(getAuthUsersData(skip, limit, search, filter));
+  }, [filter]);
 
   useEffect(() => {
     if (configData && !configData.active) {
