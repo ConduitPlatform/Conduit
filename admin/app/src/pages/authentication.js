@@ -19,34 +19,10 @@ import {
   getAuthUsersData,
   getConfig,
   updateConfig,
-  addNewUserThunk,
-  searchUsersThunk,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
-import { searchUsers } from '../redux/actions';
-
-const debounce = (func, wait, immediate) => {
-  var timeout;
-
-  return (...args) => {
-    var context = this;
-
-    var later = () => {
-      timeout = null;
-      if (!immediate) func.apply(context, args);
-    };
-
-    var callNow = immediate && !timeout;
-
-    clearTimeout(timeout);
-
-    timeout = setTimeout(later, wait);
-
-    if (callNow) func.apply(context, args);
-  };
-};
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -76,21 +52,11 @@ const Authentication = () => {
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
 
-  // const {
-  //   users: availableUsers,
-  //   error: authUsersError,
-  //   loading: usersLoading,
-  // } = useSelector((state) => state.authenticationPageReducer.authUsersState);
-
-  console.log(availableUsers);
-
   const {
     data: configData,
     error: authConfigError,
     loading: configLoading,
   } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
-
-  console.log(authUsersSuccess);
 
   const handleFilterChange = (event) => {
     const name = event.target.name;
@@ -126,47 +92,11 @@ const Authentication = () => {
     }
   }, [configData]);
 
-  //Search and pagination //
-
-  const handleLimitChange = (e, value) => {
-    setLimit(parseInt(e.target.value, 10));
-    setSkip(0);
-    setPage(0);
-  };
-
-  const handlePageChange = (e, val) => {
-    if (val > page) {
-      setPage(page + 1);
-      setSkip(skip + limit);
-    } else {
-      setPage(page - 1);
-      setSkip(skip - limit);
-    }
-  };
-
-  ////////////////////////////////////////////
-
   useEffect(() => {
     if (authUsersError || authConfigError || authUsersSuccess) {
       setSnackbarOpen(true);
     }
   }, [authUsersError, authConfigError, authUsersSuccess]);
-
-  const handleLimitChange = (e, value) => {
-    setLimit(parseInt(e.target.value, 10));
-    setSkip(0);
-    setPage(0);
-  };
-
-  const handlePageChange = (e, val) => {
-    if (val > page) {
-      setPage(page + 1);
-      setSkip(skip + limit);
-    } else {
-      setPage(page - 1);
-      setSkip(skip - limit);
-    }
-  };
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -174,6 +104,22 @@ const Authentication = () => {
     { title: 'Service Accounts', isDisabled: false },
     { title: 'Settings', isDisabled: false },
   ];
+
+  const handleLimitChange = (e, value) => {
+    setLimit(parseInt(e.target.value, 10));
+    setSkip(0);
+    setPage(0);
+  };
+
+  const handlePageChange = (e, val) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
 
   const handleChange = (event, newValue) => {
     setSelected(newValue);
