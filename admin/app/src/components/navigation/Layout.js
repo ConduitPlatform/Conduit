@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CustomAppBar } from './Header';
 import makeStyles from '@material-ui/styles/makeStyles';
 import CustomDrawer from './Drawer';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { useRouter } from 'next/router';
+import { getAdminModules } from '../../redux/thunks/appAuthThunks';
+import { useDispatch } from 'react-redux';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -27,6 +29,11 @@ export function Layout(props) {
   const { menuDisabled, itemSelected, ...rest } = props;
   const [open, setOpen] = useState(false);
   const router = useRouter();
+
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(getAdminModules());
+  }, [dispatch]);
 
   function handleDrawerOpen() {
     setOpen(true);

@@ -19,10 +19,34 @@ import {
   getAuthUsersData,
   getConfig,
   updateConfig,
+  addNewUserThunk,
+  searchUsersThunk,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import Debounce from '../components/common/Debounce';
 import AppState from '../components/common/AppState';
+import { searchUsers } from '../redux/actions';
+
+const debounce = (func, wait, immediate) => {
+  var timeout;
+
+  return (...args) => {
+    var context = this;
+
+    var later = () => {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+
+    var callNow = immediate && !timeout;
+
+    clearTimeout(timeout);
+
+    timeout = setTimeout(later, wait);
+
+    if (callNow) func.apply(context, args);
+  };
+};
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,14 +69,20 @@ const Authentication = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [filter, setFilter] = useState({ filterValue: 'none' });
 
-  console.log(skip, limit);
-
   const {
     users: availableUsers,
     error: authUsersError,
     success: authUsersSuccess,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
+
+  // const {
+  //   users: availableUsers,
+  //   error: authUsersError,
+  //   loading: usersLoading,
+  // } = useSelector((state) => state.authenticationPageReducer.authUsersState);
+
+  console.log(availableUsers);
 
   const {
     data: configData,
@@ -95,6 +125,26 @@ const Authentication = () => {
       setSelected(2);
     }
   }, [configData]);
+
+  //Search and pagination //
+
+  const handleLimitChange = (e, value) => {
+    setLimit(parseInt(e.target.value, 10));
+    setSkip(0);
+    setPage(0);
+  };
+
+  const handlePageChange = (e, val) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
+
+  ////////////////////////////////////////////
 
   useEffect(() => {
     if (authUsersError || authConfigError || authUsersSuccess) {

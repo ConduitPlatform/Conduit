@@ -1,4 +1,5 @@
 import {
+  ADD_NEW_USER,
   ADD_AUTH_USERS,
   BLOCK_USER_UI,
   CLEAR_AUTH_PAGE_STORE,
@@ -32,7 +33,6 @@ const authenticationPageReducer = (state = initialState, action) => {
           count: action.payload.count,
         },
       };
-
     case EDIT_USER_ACTION:
       return {
         ...state,
