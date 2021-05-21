@@ -1,25 +1,31 @@
 import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 export interface ActorFlowModel {
-  _id: string,
-  name: string,
+  _id: string;
+  name: string;
   trigger: {
-    code: string,
-    name?: string,
-    comments?: string,
-    options: any,
-  },
+    code: string;
+    name?: string;
+    comments?: string;
+    options: any;
+  };
   actors: [
     {
-      code: string,
-      name?: string,
-      comments?: string,
-      options: any,
-    },
-  ],
-  enabled: boolean,
-  createdAt: Date,
-  updatedAt: Date,
+      code: string;
+      name: string;
+      comments?: string;
+      options: any;
+    }
+  ];
+  actorPaths: [
+    {
+      actorName: string;
+      destination: [string];
+    }
+  ];
+  enabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const ActorFlowSchema = new ConduitSchema(
@@ -64,5 +70,5 @@ export const ActorFlowSchema = new ConduitSchema(
   {
     timestamps: true,
     systemRequired: true,
-  },
+  }
 );

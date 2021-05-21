@@ -39,38 +39,10 @@ export class AdminHandlers {
       });
   }
 
-  private _getActors() {
-    return readdirSync(path.resolve(__dirname, '../_actors'), { withFileTypes: true })
-      .filter((dirent: any) => dirent.isDirectory())
-      .map((dirent: any) => {
-        try {
-          let filePath = `../_actors/${dirent.name}/${dirent.name}.json`;
-          let fileData = readFileSync(path.resolve(__dirname, filePath));
-          return JSON.parse(fileData);
-        } catch (e) {
-          return {};
-        }
-      });
-  }
-
   async getActors(call: RouterRequest, callback: RouterResponse) {
     let actors = this._getActors();
 
     return callback(null, { result: JSON.stringify({ actors }) });
-  }
-
-  private _getTriggers() {
-    return readdirSync(path.resolve(__dirname, '../_triggers'), { withFileTypes: true })
-      .filter((dirent: any) => dirent.isDirectory())
-      .map((dirent: any) => {
-        try {
-          let filePath = `../_triggers/${dirent.name}/${dirent.name}.json`;
-          let fileData = readFileSync(path.resolve(__dirname, filePath));
-          return JSON.parse(fileData);
-        } catch (e) {
-          return {};
-        }
-      });
   }
 
   async getTriggers(call: RouterRequest, callback: RouterResponse) {
@@ -180,7 +152,9 @@ export class AdminHandlers {
   }
 
   async createFlow(call: RouterRequest, callback: RouterResponse) {
-    const { name, trigger, actors, enabled } = JSON.parse(call.request.params);
+    const { name, trigger, actors, actorPaths, enabled } = JSON.parse(
+      call.request.params
+    );
     if (!name) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -198,6 +172,12 @@ export class AdminHandlers {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Argument actors is required and must be a non-empty array!',
+      });
+    }
+    if (!actorPaths || !Array.isArray(actorPaths) || actorPaths.length === 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Argument actorPaths is required and must be a non-empty array!',
       });
     }
     let triggers = this._getTriggers();
@@ -241,5 +221,33 @@ export class AdminHandlers {
   //todo
   async editFlowById(call: RouterRequest, callback: RouterResponse) {
     return callback({ code: grpc.status.UNIMPLEMENTED, message: 'Not implemented yet' });
+  }
+
+  private _getActors() {
+    return readdirSync(path.resolve(__dirname, '../_actors'), { withFileTypes: true })
+      .filter((dirent: any) => dirent.isDirectory())
+      .map((dirent: any) => {
+        try {
+          let filePath = `../_actors/${dirent.name}/${dirent.name}.json`;
+          let fileData = readFileSync(path.resolve(__dirname, filePath));
+          return JSON.parse(fileData);
+        } catch (e) {
+          return {};
+        }
+      });
+  }
+
+  private _getTriggers() {
+    return readdirSync(path.resolve(__dirname, '../_triggers'), { withFileTypes: true })
+      .filter((dirent: any) => dirent.isDirectory())
+      .map((dirent: any) => {
+        try {
+          let filePath = `../_triggers/${dirent.name}/${dirent.name}.json`;
+          let fileData = readFileSync(path.resolve(__dirname, filePath));
+          return JSON.parse(fileData);
+        } catch (e) {
+          return {};
+        }
+      });
   }
 }
