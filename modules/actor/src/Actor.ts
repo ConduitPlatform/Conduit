@@ -9,14 +9,11 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
-import { ActorRoutes } from './routes/Routes';
 
 export default class ActorModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private _url: string;
-  private _router: ActorRoutes;
   private readonly grpcServer: GrpcServer;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -85,6 +82,8 @@ export default class ActorModule {
       .catch(console.log);
   }
 
+  private _url: string;
+
   get url(): string {
     return this._url;
   }
@@ -128,11 +127,7 @@ export default class ActorModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
-      this._router = new ActorRoutes(this.grpcServer, this.grpcSdk);
-      this._admin = new AdminHandlers(
-        this.grpcServer,
-        this.grpcSdk
-      );
+      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       this.isRunning = true;
     }
