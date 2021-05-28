@@ -2,4 +2,6 @@ import convict from 'convict';
 
 import AppConfigSchema from './config';
 
-export default convict(AppConfigSchema);
+export default (() => {
+  return convict(AppConfigSchema);
+})();
