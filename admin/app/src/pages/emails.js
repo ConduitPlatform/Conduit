@@ -18,7 +18,6 @@ import {
   createNewEmailTemplate,
   getEmailSettings,
   saveEmailTemplateChanges,
-  sendEmailThunk,
   updateEmailSettings,
 } from '../redux/thunks/emailsThunk';
 
