@@ -1,8 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
-  TYPE,
   RouterRequest,
   RouterResponse,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
@@ -55,15 +55,20 @@ export class SchemaAdmin {
     });
   }
 
-  async getSchemasRegisteredByOtherModules(call: RouterRequest, callback: RouterResponse) {
+  async getSchemasRegisteredByOtherModules(
+    call: RouterRequest,
+    callback: RouterResponse
+  ) {
     let errorMessage: string | null = null;
-    const allSchemas = await this.database.getSchemas()
+    const allSchemas = await this.database
+      .getSchemas()
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
-    const schemasFromCMS = await this.database.findMany('SchemaDefinitions', {})
+    const schemasFromCMS = await this.database
+      .findMany('SchemaDefinitions', {})
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -78,8 +83,8 @@ export class SchemaAdmin {
       result: JSON.stringify({
         results: schemasFromOtherModules.map((schema: any) => {
           return { name: schema.name, fields: schema.modelSchema };
-        })
-      })
+        }),
+      }),
     });
   }
 
@@ -150,6 +155,25 @@ export class SchemaAdmin {
     if (!isNil(modelOptions)) options = JSON.stringify(modelOptions);
 
     let error = null;
+    const allSchemas = await this.database
+      .getSchemas()
+      .catch((e: Error) => (error = e.message));
+    if (!isNil(error)) {
+      return callback({ code: grpc.status.INTERNAL, message: error });
+    }
+
+    let nameExists = allSchemas.filter((schema: any) => {
+      return schema.name === name;
+    });
+
+    if (nameExists && nameExists.length !== 0) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Schema already exists!',
+      });
+    }
+
+    error = null;
     const newSchema = await this.database
       .create('SchemaDefinitions', {
         name,
@@ -336,14 +360,18 @@ export class SchemaAdmin {
       });
     }
 
-    const endpoints = await this.database.findMany('CustomEndpoints', { selectedSchema: id })
+    const endpoints = await this.database
+      .findMany('CustomEndpoints', { selectedSchema: id })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
     }
 
     if (!isNil(endpoints) && endpoints.length !== 0) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Can not delete schema because it is used by a custom endpoint' });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Can not delete schema because it is used by a custom endpoint',
+      });
     }
 
     await this.database
