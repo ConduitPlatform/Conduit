@@ -114,7 +114,7 @@ const Emails = () => {
   };
 
   return (
-    <Layout itemSelected={3}>
+    <Layout itemSelected={4}>
       <Box p={2}>
         <Typography variant={'h4'}>Emails</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
