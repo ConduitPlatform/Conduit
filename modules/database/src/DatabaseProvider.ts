@@ -36,7 +36,7 @@ export class DatabaseProvider {
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
     } else if (dbType === 'sequelize') {
-      this._activeAdapter = new SequelizeAdapter(databaseUrl);  
+      this._activeAdapter = new SequelizeAdapter(databaseUrl);
     } else {
       throw new Error('Arguments not supported');
     }
@@ -241,7 +241,7 @@ export class DatabaseProvider {
     }
   }
 
-  getSchemas(call: GetSchemasRequest, callback:  SchemasResponse) {
+  getSchemas(call: GetSchemasRequest, callback: SchemasResponse) {
     try {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
@@ -251,7 +251,7 @@ export class DatabaseProvider {
             modelSchema: JSON.stringify(schema.modelSchema),
             modelOptions: JSON.stringify(schema.modelOptions),
           };
-        })
+        }),
       });
     } catch (err) {
       callback({
@@ -314,9 +314,12 @@ export class DatabaseProvider {
 
       const docString = JSON.stringify(doc);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:create:${call.request.schemaName}`, docString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:create:${call.request.schemaName}`,
+        docString
+      );
 
-      callback(null, { result: JSON.stringify(docString) });
+      callback(null, { result: docString });
     } catch (err) {
       callback({
         code: grpc.status.INTERNAL,
@@ -332,7 +335,10 @@ export class DatabaseProvider {
 
       const docsString = JSON.stringify(docs);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:createMany:${call.request.schemaName}`, docsString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:createMany:${call.request.schemaName}`,
+        docsString
+      );
 
       callback(null, { result: docsString });
     } catch (err) {
@@ -353,7 +359,10 @@ export class DatabaseProvider {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:update:${call.request.schemaName}`, resultString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:update:${call.request.schemaName}`,
+        resultString
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -374,7 +383,10 @@ export class DatabaseProvider {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:updateMany:${call.request.schemaName}`, resultString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:updateMany:${call.request.schemaName}`,
+        resultString
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -392,7 +404,10 @@ export class DatabaseProvider {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:delete:${call.request.schemaName}`, resultString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:delete:${call.request.schemaName}`,
+        resultString
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -406,11 +421,16 @@ export class DatabaseProvider {
   async deleteMany(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.deleteMany(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.deleteMany(
+        EJSON.parse(call.request.query)
+      );
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(`${MODULE_NAME}:delete:${call.request.schemaName}`, resultString);
+      this.conduit.bus?.publish(
+        `${MODULE_NAME}:delete:${call.request.schemaName}`,
+        resultString
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -424,7 +444,9 @@ export class DatabaseProvider {
   async countDocuments(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.countDocuments(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.countDocuments(
+        EJSON.parse(call.request.query)
+      );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({
