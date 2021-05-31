@@ -294,7 +294,7 @@ export const createCustomEndpoints = (endPointData) => {
       paginated: endPointData.paginated,
       sorted: endPointData.sorted,
       inputs: endPointData.inputs,
-      queries: endPointData.queries,
+      query: endPointData.query,
       assignments: endPointData.assignments,
     };
     createCustomEndpointsRequest(body)
