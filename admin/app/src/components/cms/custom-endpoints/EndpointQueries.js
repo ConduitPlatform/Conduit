@@ -30,57 +30,75 @@ const EndpointQueries = ({
 }) => {
   const classes = useStyles();
 
-  const handleQueryFieldChange = (event, index) => {
-    const value = event.target.value;
+  const deconstructQueries = (queries) => {
+    let allQueries = [];
+    queries.forEach((query) => {
+      if ('operator' in query) {
+        allQueries = allQueries.concat(deconstructQueries(query.queries));
+      } else {
+        allQueries.push(query);
+      }
+    });
+
+    return allQueries;
+  };
+
+  const findModifiedQuery = (allQueries, queryId) => {
+    allQueries = deconstructQueries(allQueries);
+    return allQueries.find((q) => q._id === queryId);
+  };
+
+  const handleQueryFieldChange = (event, queryId) => {
     const currentQueries = selectedQueries.slice();
-    const input = currentQueries[index];
-    if (input) {
-      input.schemaField = value;
+    const foundQuery = findModifiedQuery(currentQueries, queryId);
+    const value = event.target.value;
+    if (foundQuery) {
+      foundQuery.schemaField = value;
       setSelectedQueries(currentQueries);
     }
   };
 
-  const handleQueryComparisonFieldChange = (event, index) => {
-    const value = event.target.value;
+  const handleQueryComparisonFieldChange = (event, queryId) => {
+    const currentQueries = selectedQueries.slice();
+    const foundQuery = findModifiedQuery(currentQueries, queryId);
 
+    const value = event.target.value;
     const type = value.split('-')[0];
     const actualValue = value.split('-')[1];
-
-    const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.type = type;
-      query.comparisonField.value = actualValue ? actualValue : '';
+    if (foundQuery) {
+      foundQuery.comparisonField.type = type;
+      foundQuery.comparisonField.value = actualValue ? actualValue : '';
       setSelectedQueries(currentQueries);
     }
   };
 
-  const handleCustomValueChange = (event, index) => {
+  const handleCustomValueChange = (event, queryId) => {
     const value = event;
     const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.value = value;
+    const foundQuery = findModifiedQuery(currentQueries, queryId);
+    if (foundQuery) {
+      foundQuery.comparisonField.value = value;
       setSelectedQueries(currentQueries);
     }
   };
 
-  const handleQueryConditionChange = (event, index) => {
+  const handleQueryConditionChange = (event, queryId) => {
     const value = event.target.value;
     const currentQueries = selectedQueries.slice();
-    const input = currentQueries[index];
-    if (input) {
-      input.operation = Number(value);
+    const foundQuery = findModifiedQuery(currentQueries, queryId);
+    if (foundQuery) {
+      foundQuery.operation = Number(value);
       setSelectedQueries(currentQueries);
     }
   };
 
-  const handleLikeValueChange = (event, index) => {
-    const value = event.target.checked;
+  const handleLikeValueChange = (event, queryId) => {
     const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.like = value;
+    const foundQuery = findModifiedQuery(currentQueries, queryId);
+
+    const value = event.target.checked;
+    if (foundQuery) {
+      foundQuery.comparisonField.like = value;
       setSelectedQueries(currentQueries);
     }
   };
@@ -130,7 +148,7 @@ const EndpointQueries = ({
   const renderItem = (node) => {
     if ('operator' in node && node.queries) {
       return (
-        <>
+        <Box key={node._id}>
           <StyledTreeItem
             key={node._id}
             nodeId={node._id}
@@ -149,7 +167,7 @@ const EndpointQueries = ({
             }>
             {node.queries.map((q) => renderItem(q))}
           </StyledTreeItem>
-        </>
+        </Box>
       );
     }
     if ('schemaField' in node) {
