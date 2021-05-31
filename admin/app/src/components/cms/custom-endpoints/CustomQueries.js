@@ -85,16 +85,31 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
 
       if (selectedEndpoint.queries) {
         const query = selectedEndpoint.query;
+
         const keys = Object.keys(query);
         keys.forEach((k) => {
           const nodeLevel1 = query[k];
-          const nodeLevel1Queries = nodeLevel1.map((q) => ({ _id: uuidv4(), ...q }));
+          const nodeLevel1Queries = nodeLevel1.map((q) => {
+            const keys = Object.keys(q);
+            const isOperator = keys.includes('AND') || keys.includes('OR');
+            if (isOperator) {
+              return { _id: uuidv4(), operator: keys[0], queries: q[keys[0]] };
+            } else {
+              return { _id: uuidv4(), ...q };
+            }
+          });
+
           const lvl2Node = nodeLevel1Queries.find((q) => 'operator' in q);
           if (lvl2Node) {
-            const nodeLevel2Queries = lvl2Node.queries.map((q) => ({
-              _id: uuidv4(),
-              ...q,
-            }));
+            const nodeLevel2Queries = lvl2Node.queries.map((q) => {
+              const keys = Object.keys(q);
+              const isOperator = keys.includes('AND') || keys.includes('OR');
+              if (isOperator) {
+                return { _id: uuidv4(), operator: keys[0], queries: q[keys[0]] };
+              } else {
+                return { _id: uuidv4(), ...q };
+              }
+            });
             lvl2Node.queries = [...nodeLevel2Queries];
 
             const lvl3Node = nodeLevel2Queries.find((q) => 'operator' in q);
@@ -112,9 +127,9 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
             queries: [...nodeLevel1Queries],
           });
         });
-        // const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
-        console.log(queryGroup);
       }
+
+      console.log(queryGroup);
       if (selectedEndpoint.assignments) {
         assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
       }
