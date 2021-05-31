@@ -21,13 +21,13 @@ const hasInvalidQueries = (queriesGroup) => {
   let queries = [];
   queriesGroup.forEach((q1) => {
     if (!q1.queries) return;
-    queries.concat(q1.queries);
+    queries = queries.concat(q1.queries);
     q1.queries.forEach((q2) => {
       if (!q2.queries) return;
-      queries.concat(q2.queries);
+      queries = queries.concat(q2.queries);
       q2.queries.forEach((q3) => {
         if (!q3.queries) return;
-        queries.concat(q3.queries);
+        queries = queries.concat(q3.queries);
       });
     });
   });
