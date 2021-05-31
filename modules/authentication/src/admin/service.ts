@@ -78,6 +78,8 @@ export class ServiceAdmin {
       });
     }
 
+    this.grpcSdk.bus?.publish('authentication:create:service', JSON.stringify({ name }));
+
     return callback(null, { result: JSON.stringify({ name, token }) });
   }
 
@@ -102,6 +104,8 @@ export class ServiceAdmin {
         message: 'Service deletion failed',
       });
     }
+
+    this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id }));
 
     return callback(null, { result: 'OK' });
   }

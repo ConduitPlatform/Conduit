@@ -1,19 +1,12 @@
 import Head from 'next/head';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import Typography from '@material-ui/core/Typography';
 import Slide from '@material-ui/core/Slide';
 import Box from '@material-ui/core/Box';
-import { getAdminModules } from '../redux/thunks/appAuthThunks';
-import { useDispatch } from 'react-redux';
 
 const Home = () => {
-  const dispatch = useDispatch();
-  useEffect(() => {
-    dispatch(getAdminModules());
-  }, [dispatch]);
-
   return (
     <>
       <Head>

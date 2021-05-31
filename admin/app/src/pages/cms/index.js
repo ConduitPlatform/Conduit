@@ -201,7 +201,7 @@ const Types = () => {
   };
 
   return (
-    <Layout itemSelected={4}>
+    <Layout itemSelected={5}>
       <Box p={2}>
         <Box
           display={'flex'}

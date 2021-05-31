@@ -49,6 +49,7 @@ const schema = new ConduitSchema(
       default: false,
     },
     queries: [TYPE.JSON],
+    query: TYPE.JSON,
     assignments: [TYPE.JSON],
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
