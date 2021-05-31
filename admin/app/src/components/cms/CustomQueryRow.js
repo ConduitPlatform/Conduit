@@ -130,7 +130,6 @@ const CustomQueryRow = ({
             }}
             key={`ido-${i}-field`}
             value={`${valuePrefix}.${suffix}.${item}`}>
-            {/*{field.name}.*/}
             {item}
           </MenuItem>
         );
