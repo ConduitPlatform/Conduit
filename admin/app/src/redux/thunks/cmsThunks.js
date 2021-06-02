@@ -6,6 +6,7 @@ import {
   setMoreCmsSchemas,
   setMoreSchemaDocumentsByName,
   setSchemaDocumentsByName,
+  setSchemasFromModules,
   startCmsLoading,
   stopCmsLoading,
   updateSchemaStatus,
@@ -24,6 +25,7 @@ import {
   deleteCustomEndpointsRequest,
   editCustomEndpointsRequest,
   getCustomEndpointsRequest,
+  schemasFromOtherModules,
 } from '../../http/requests';
 
 export const getCmsSchemas = () => {
@@ -306,6 +308,21 @@ export const createCustomEndpoints = (endPointData) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsError({ err }));
         console.log(err);
+      });
+  };
+};
+
+export const fetchSchemasFromOtherModules = () => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    schemasFromOtherModules()
+      .then((res) => {
+        dispatch(setSchemasFromModules(res.data.results));
+      })
+      .catch((err) => {
+        console.log(err);
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
       });
   };
 };

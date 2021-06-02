@@ -243,3 +243,7 @@ export const createServiceAccount = (name) => {
 export const refreshServiceAccount = (serviceId) => {
   return axios.put(`${CONDUIT_API}/admin/authentication/services`, { serviceId });
 };
+
+export const schemasFromOtherModules = () => {
+  return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
+};
