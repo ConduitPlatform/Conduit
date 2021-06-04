@@ -176,7 +176,7 @@ const constructFieldType = (field) => {
   if (typeField.type !== 'Group') {
     typeField.unique = field.unique ? field.unique : false;
   }
-  if (field.type === 'Relation' && typeField.isArray) {
+  if (typeField.type === 'Relation' && typeField.isArray) {
     typeField.relation = field.relation;
     typeField.type = field.type[0].type;
     typeField.select = field.type[0].select;
@@ -186,8 +186,7 @@ const constructFieldType = (field) => {
     typeField.select = field.select ? field.select : false;
     typeField.required = field.required ? field.required : false;
   }
-
-  if (typeField.type === 'Relation' && !field.isArray) {
+  if (typeField.type === 'Relation' && !typeField.isArray) {
     typeField.model = field.model.toString();
   }
 
