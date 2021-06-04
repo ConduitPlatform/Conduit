@@ -361,6 +361,15 @@ export const prepareFields = (typeFields) => {
       if (clone.model) fields.model = clone.model.toString();
     }
 
+    // Possible solution to remove default values, this may
+    // solve the issue with auto generated indexes
+    if (fields.select) {
+      delete fields.select;
+    }
+    if (!fields.unique) {
+      delete fields.unique;
+    }
+
     delete clone.name;
     if (clone.type === 'Group') {
       deconstructed = { ...deconstructed, [name]: { ...fields } };
@@ -368,5 +377,6 @@ export const prepareFields = (typeFields) => {
       deconstructed = { ...deconstructed, [name]: { ...fields } };
     }
   });
+
   return deconstructed;
 };
