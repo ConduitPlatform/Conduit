@@ -77,9 +77,11 @@ export default function RelationForm({
 
   useEffect(() => {
     const systemModules = schemasFromOtherModules.map((s) => ({ ...s, enabled: true }));
-    const activeModules = schemas.filter(
-      (s) => s.enabled && s.name !== selectedSchema.name
-    );
+    let activeModules = schemas.filter((s) => s.enabled);
+    if (selectedSchema) {
+      activeModules = schemas.filter((s) => s.name !== selectedSchema.name);
+    }
+
     setAvailableSchemas([...activeModules, ...systemModules]);
   }, [schemas, schemasFromOtherModules]);
 
