@@ -354,7 +354,7 @@ export const prepareFields = (typeFields) => {
     }
 
     if (clone.isEnum) {
-      fields.enum = clone?.enumValues; //.split(/[\n,]+/);
+      fields.enum = clone?.enumValues.split(/[\n,]+/);
     }
 
     if (clone.type === 'Relation' && !clone.isArray) {
