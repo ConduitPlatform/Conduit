@@ -354,11 +354,20 @@ export const prepareFields = (typeFields) => {
     }
 
     if (clone.isEnum) {
-      fields.enum = clone?.enumValues; //.split(/[\n,]+/);
+      fields.enum = clone?.enumValues.split(/[\n,]+/);
     }
 
     if (clone.type === 'Relation' && !clone.isArray) {
       if (clone.model) fields.model = clone.model.toString();
+    }
+
+    // Possible solution to remove default values, this may
+    // solve the issue with auto generated indexes
+    if (fields.select) {
+      delete fields.select;
+    }
+    if (!fields.unique) {
+      delete fields.unique;
     }
 
     delete clone.name;
@@ -368,5 +377,6 @@ export const prepareFields = (typeFields) => {
       deconstructed = { ...deconstructed, [name]: { ...fields } };
     }
   });
+
   return deconstructed;
 };
