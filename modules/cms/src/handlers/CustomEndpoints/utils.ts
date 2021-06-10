@@ -70,6 +70,9 @@ export function constructQuery(
     }
   });
 
+  if (res[resTopLevel].length === 0) {
+    return {};
+  }
   return res;
 }
 
