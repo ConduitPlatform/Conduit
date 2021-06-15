@@ -28,10 +28,10 @@ import {
   schemasFromOtherModules,
 } from '../../http/requests';
 
-export const getCmsSchemas = () => {
+export const getCmsSchemas = (limit = 30) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
-    getCmsSchemasRequest(0, 30)
+    getCmsSchemasRequest(0, limit)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsSchemas(res.data));

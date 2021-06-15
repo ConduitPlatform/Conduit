@@ -14,7 +14,8 @@ import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { getCmsSchemas } from '../../../../redux/thunks';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -60,6 +61,7 @@ export default function RelationForm({
   ...rest
 }) {
   const classes = useStyles();
+  const dispatch = useDispatch();
 
   const {
     data: { schemas, selectedSchema, schemasFromOtherModules },
@@ -74,6 +76,10 @@ export default function RelationForm({
     model: selectedItem ? selectedItem.model : '',
   });
   const [availableSchemas, setAvailableSchemas] = useState([]);
+
+  useEffect(() => {
+    dispatch(getCmsSchemas(1000));
+  }, [dispatch]);
 
   useEffect(() => {
     const systemModules = schemasFromOtherModules.map((s) => ({ ...s, enabled: true }));

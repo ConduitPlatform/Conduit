@@ -69,7 +69,7 @@ const Types = () => {
   ];
 
   useEffect(() => {
-    dispatch(getCmsSchemas());
+    dispatch(getCmsSchemas(50));
     dispatch(getCustomEndpoints());
   }, [dispatch]);
 
