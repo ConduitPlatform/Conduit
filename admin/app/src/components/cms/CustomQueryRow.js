@@ -53,49 +53,51 @@ const CustomQueryRow = ({
 
   useEffect(() => {
     let type = 'string';
-    if (typeof query.comparisonField.value === 'boolean') {
-      type = 'Boolean';
+    if (typeof query.comparisonField.value === 'string') {
+      type = 'string';
+    } else if (typeof query.comparisonField.value === 'boolean') {
+      type = 'boolean';
+    } else if (typeof query.comparisonField.value === 'number') {
+      type = 'number';
+    } else if (Array.isArray(query.comparisonField.value)) {
+      type = 'array';
     }
-    if (typeof query.comparisonField.value === 'number') {
-      type = 'Number';
-    }
-    if (Array.isArray(query.comparisonField.value)) {
-      type = 'Array';
+
+    if (query.comparisonField.type === 'Input') {
+      const selectedInput = selectedInputs.find(
+        (input) => input.name === query.comparisonField.value
+      );
+      if (selectedInput && selectedInput.array) {
+        type = 'array';
+      }
     }
     setSelectedType(type);
-  }, []);
+  }, [
+    query.schemaField,
+    query.type,
+    query.comparisonField.value,
+    query.comparisonField.type,
+    selectedInputs,
+  ]);
 
   const prepareOptions = (schemaField, indexQuery) => {
     return availableFieldsOfSchema.map((field, index) => {
-      if (
-        typeof field.type === 'string' ||
-        field.type instanceof String ||
-        field.type === undefined ||
-        Array.isArray(field.type)
-      ) {
+      if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
           <MenuItem
             className={classes.menuItem}
             key={`idxO-${index}-field`}
-            onClick={() => changeSelectedType(field.type, indexQuery)}
             value={field.name}>
             {field.name}
           </MenuItem>
         );
       }
+
       return getSubFields(field, indexQuery);
     });
   };
 
-  const changeSelectedType = (type) => {
-    return setSelectedType(Array.isArray(type) ? 'Array' : type);
-  };
-
-  const arraySetType = (type) => {
-    return setSelectedType(Array.isArray(type) ? 'Array' : '');
-  };
-
-  const getSecondSubField = (field, valuePrefix, suffix, indexQuery) => {
+  const getSecondSubField = (field, valuePrefix, suffix) => {
     let keys = Object?.keys(field?.type);
     let itemTop = (
       <MenuItem
@@ -106,23 +108,17 @@ const CustomQueryRow = ({
           paddingLeft: 8,
           background: 'rgba(0, 0, 0, 0.05)',
         }}
-        value={`${valuePrefix}.${suffix}`}
-        onClick={() => arraySetType(field.type, indexQuery)}>
+        value={`${valuePrefix}.${suffix}`}>
         {suffix}
       </MenuItem>
     );
+
     let restItems = keys?.map((item, i) => {
-      if (
-        typeof field.type?.[item]?.type === 'string' ||
-        field.type?.[item]?.type instanceof String ||
-        field.type?.[item]?.type === undefined ||
-        Array.isArray(field.type?.[item]?.type)
-      ) {
+      if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
           <MenuItem
             dense
             className={classes.menuItem}
-            onClick={() => changeSelectedType(field.type?.[item]?.type, indexQuery)}
             disabled={Array.isArray(field.type)}
             style={{
               background: 'rgba(0, 0, 0, 0.15)',
@@ -135,6 +131,7 @@ const CustomQueryRow = ({
         );
       }
     });
+
     return [itemTop, ...restItems];
   };
 
@@ -148,11 +145,11 @@ const CustomQueryRow = ({
           style={{
             fontWeight: 'bold',
           }}
-          value={field.name}
-          onClick={() => arraySetType(field.type, indexQuery)}>
+          value={field.name}>
           {field.name}
         </MenuItem>
       );
+
       let restItems = keys?.map((item, i) => {
         if (
           typeof field.type?.[item]?.type === 'string' ||
@@ -164,7 +161,6 @@ const CustomQueryRow = ({
             <MenuItem
               dense
               className={classes.menuItem}
-              onClick={() => changeSelectedType(field.type?.[item]?.type, indexQuery)}
               disabled={Array.isArray(field.type)}
               style={{
                 background: 'rgba(0, 0, 0, 0.05)',
@@ -178,12 +174,13 @@ const CustomQueryRow = ({
           return getSecondSubField(field.type?.[item], field.name, item, indexQuery);
         }
       });
+
       return [itemTop, ...restItems];
     }
   };
 
   const getCustomPlaceHolder = () => {
-    if (selectedType === 'Number') {
+    if (selectedType === 'number') {
       return 'ex. 15';
     }
     return 'ex. John snow';
@@ -191,10 +188,10 @@ const CustomQueryRow = ({
 
   const inputCustomChange = (e, i) => {
     let value = e.target.value;
-    if (selectedType === 'Boolean') {
+    if (selectedType === 'boolean') {
       value = value !== 'false';
     }
-    if (selectedType === 'Number') {
+    if (selectedType === 'number') {
       value = parseInt(value);
     }
 
@@ -241,55 +238,27 @@ const CustomQueryRow = ({
             <option aria-label="None" value="" />
             <option value={ConditionsEnum.EQUAL}>(==) equal to</option>
             <option value={ConditionsEnum.NEQUAL}>(!=) not equal to</option>
-            <option
-              disabled={
-                selectedType === 'String' ||
-                selectedType === 'Array' ||
-                selectedType === 'Boolean'
-              }
-              value={ConditionsEnum.GREATER}>
+            <option disabled={selectedType !== 'number'} value={ConditionsEnum.GREATER}>
               {'(>) greater than'}
             </option>
             <option
-              disabled={
-                selectedType === 'String' ||
-                selectedType === 'Array' ||
-                selectedType === 'Boolean'
-              }
+              disabled={selectedType !== 'number'}
               value={ConditionsEnum.GREATER_EQ}>
               {'(>=) greater that or equal to'}
             </option>
-            <option
-              disabled={
-                selectedType === 'String' ||
-                selectedType === 'Array' ||
-                selectedType === 'Boolean'
-              }
-              value={ConditionsEnum.LESS}>
+            <option disabled={selectedType !== 'number'} value={ConditionsEnum.LESS}>
               {'(<) less than'}
             </option>
-            <option
-              disabled={
-                selectedType === 'String' ||
-                selectedType === 'Array' ||
-                selectedType === 'Boolean'
-              }
-              value={ConditionsEnum.LESS_EQ}>
+            <option disabled={selectedType !== 'number'} value={ConditionsEnum.LESS_EQ}>
               {'(<=) less that or equal to'}
             </option>
-            <option
-              disabled={selectedType !== 'Array' || selectedType === 'Boolean'}
-              value={ConditionsEnum.EQUAL_SET}>
+            <option disabled={selectedType !== 'array'} value={ConditionsEnum.EQUAL_SET}>
               (in) equal to any of the following
             </option>
-            <option
-              disabled={selectedType !== 'Array' || selectedType === 'Boolean'}
-              value={ConditionsEnum.NEQUAL_SET}>
+            <option disabled={selectedType !== 'array'} value={ConditionsEnum.NEQUAL_SET}>
               (not-in) not equal to any of the following
             </option>
-            <option
-              disabled={selectedType !== 'Array' || selectedType === 'Boolean'}
-              value={ConditionsEnum.CONTAIN}>
+            <option disabled={selectedType !== 'array'} value={ConditionsEnum.CONTAIN}>
               (array-contains) an array containing
             </option>
           </Select>
