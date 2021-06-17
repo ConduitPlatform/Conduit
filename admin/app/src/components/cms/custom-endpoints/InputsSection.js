@@ -55,12 +55,28 @@ const InputsSection = ({ editMode }) => {
     return endpoint.inputs.length === schemaFields.length;
   };
 
+  const deconstructQueries = (queries) => {
+    let allQueries = [];
+    queries.forEach((query) => {
+      if ('operator' in query) {
+        allQueries = allQueries.concat(deconstructQueries(query.queries));
+      } else {
+        allQueries.push(query);
+      }
+    });
+
+    return allQueries;
+  };
+
   const handleRemoveInput = (index) => {
     const input = endpoint.inputs[index];
     const currentInputs = endpoint.inputs.slice();
     currentInputs.splice(index, 1);
 
-    const updatedQueries = endpoint.queries.slice().map((q) => {
+    const updatedQueries = endpoint.queries.slice();
+    const queries = deconstructQueries(updatedQueries);
+
+    queries.map((q) => {
       const comparisonField = q.comparisonField;
       if (comparisonField.name === input.value) {
         return {
