@@ -129,7 +129,6 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
         });
       }
 
-      console.log(queryGroup);
       if (selectedEndpoint.assignments) {
         assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
       }
