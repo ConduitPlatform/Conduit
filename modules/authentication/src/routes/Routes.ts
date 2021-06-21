@@ -477,7 +477,7 @@ export class AuthenticationRoutes {
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
-            new ConduitRouteReturnDefinition('UserResponse', UserSchema.fields),
+            new ConduitRouteReturnDefinition('User', UserSchema.fields),
             'getUser'
           )
         )
