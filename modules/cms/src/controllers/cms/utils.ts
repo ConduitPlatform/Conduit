@@ -137,7 +137,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
-        new ConduitRouteReturnDefinition(`update${schemaName}Many`, {
+        new ConduitRouteReturnDefinition(`updateMany${schemaName}`, {
           docs: [actualSchema.fields],
         }),
         'editManyDocuments'
