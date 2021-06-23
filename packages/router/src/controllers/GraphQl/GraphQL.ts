@@ -430,9 +430,33 @@ export class GraphQLController {
 
             return result;
           })
-          .catch((err: Error | ConduitError) => {
+          .catch((err: Error | ConduitError | any) => {
             if (err.hasOwnProperty('status')) {
               throw new ApolloError(err.message, (err as ConduitError).status, err);
+            } else if (err.hasOwnProperty('code')) {
+              let statusCode: number;
+              let name: string;
+              switch (err.code) {
+                case 3:
+                  name = 'INVALID_ARGUMENTS';
+                  statusCode = 400;
+                  throw new ApolloError(name, statusCode, err);
+                case 5:
+                  name = 'NOT_FOUND';
+                  statusCode = 404;
+                  throw new ApolloError(name, statusCode, err);
+                case 7:
+                  name = 'FORBIDDEN';
+                  statusCode = 403;
+                  throw new ApolloError(name, statusCode, err);
+                case 16:
+                  name = 'UNAUTHORIZED';
+                  statusCode = 401;
+                  throw new ApolloError(name, statusCode, err);
+                default:
+                  name = 'INTERNAL_SERVER_ERROR';
+                  throw new ApolloError(name, 500, err);
+              }
             } else {
               throw new ApolloError(err.message, 500, err);
             }
@@ -467,9 +491,33 @@ export class GraphQLController {
             }
             return result;
           })
-          .catch((err: Error | ConduitError) => {
+          .catch((err: Error | ConduitError | any) => {
             if (err.hasOwnProperty('status')) {
               throw new ApolloError(err.message, (err as ConduitError).status, err);
+            } else if (err.hasOwnProperty('code')) {
+              let statusCode: number;
+              let name: string;
+              switch (err.code) {
+                case 3:
+                  name = 'INVALID_ARGUMENTS';
+                  statusCode = 400;
+                  throw new ApolloError(name, statusCode, err);
+                case 5:
+                  name = 'NOT_FOUND';
+                  statusCode = 404;
+                  throw new ApolloError(name, statusCode, err);
+                case 7:
+                  name = 'FORBIDDEN';
+                  statusCode = 403;
+                  throw new ApolloError(name, statusCode, err);
+                case 16:
+                  name = 'UNAUTHORIZED';
+                  statusCode = 401;
+                  throw new ApolloError(name, statusCode, err);
+                default:
+                  name = 'INTERNAL_SERVER_ERROR';
+                  throw new ApolloError(name, 500, err);
+              }
             } else {
               throw new ApolloError(err.message, 500, err);
             }
