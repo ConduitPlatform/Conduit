@@ -1,5 +1,6 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import {
+  ConduitCommons,
   ConduitError,
   ConduitMiddleware,
   ConduitModel,
@@ -8,7 +9,6 @@ import {
   ConduitRouteOptionExtended,
   ConduitRouteOptions,
   ConduitRouteParameters,
-  ConduitCommons,
 } from '@quintessential-sft/conduit-commons';
 import { extractTypes, findPopulation, ParseResult } from './TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -378,7 +378,10 @@ export class GraphQLController {
         context: any,
         info: any
       ) => {
-        let { caching, cacheAge, scope } = extractCachingGql(route);
+        let { caching, cacheAge, scope } = extractCachingGql(
+          route,
+          context.headers['Cache-Control']
+        );
         if (caching) {
           info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
         }
@@ -397,7 +400,7 @@ export class GraphQLController {
             if (caching) {
               return self
                 .findInCache(hashKey)
-                .then((r) => {
+                .then((r: any) => {
                   if (r) {
                     return { fromCache: true, data: JSON.parse(r) };
                   } else {

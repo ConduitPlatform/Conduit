@@ -161,7 +161,10 @@ export class RestController {
     routerMethod(route.input.path, (req, res, next) => {
       let context = extractRequestData(req);
       let hashKey: string;
-      let { caching, cacheAge, scope } = extractCaching(route);
+      let { caching, cacheAge, scope } = extractCaching(
+        route,
+        req.headers['cache-control']
+      );
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
