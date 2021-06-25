@@ -22,7 +22,12 @@ export interface ConduitRouteOptionExtended {
 }
 
 export interface ConduitRouteOption {
-  [field: string]: string | ConduitRouteOptionExtended | RouteOptionType;
+  [field: string]:
+    | string
+    | string[]
+    | ConduitRouteOptionExtended
+    | RouteOptionType
+    | RouteOptionType[];
 }
 
 export enum ConduitRouteActions {
