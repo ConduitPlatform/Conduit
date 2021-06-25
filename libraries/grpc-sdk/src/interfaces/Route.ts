@@ -1,4 +1,4 @@
-import { ConduitModel } from './Model';
+import { ConduitModel, TYPE } from './Model';
 import { IncomingHttpHeaders } from 'http';
 
 export interface ConduitRouteParameters {
@@ -22,7 +22,7 @@ export interface ConduitRouteOptionExtended {
 }
 
 export interface ConduitRouteOption {
-  [field: string]: string | ConduitRouteOptionExtended;
+  [field: string]: string | ConduitRouteOptionExtended | RouteOptionType;
 }
 
 export enum ConduitRouteActions {
@@ -33,9 +33,9 @@ export enum ConduitRouteActions {
 }
 
 export interface ConduitRouteOptions {
-  queryParams?: ConduitRouteOption;
-  bodyParams?: ConduitModel | ConduitRouteOption;
-  urlParams?: ConduitRouteOption;
+  queryParams?: ConduitRouteOption | ConduitModel;
+  bodyParams?: ConduitRouteOption | ConduitModel;
+  urlParams?: ConduitRouteOption | ConduitModel;
   action: ConduitRouteActions;
   path: string;
   name?: string;
