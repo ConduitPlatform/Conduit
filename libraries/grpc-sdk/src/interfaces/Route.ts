@@ -34,7 +34,7 @@ export enum ConduitRouteActions {
 
 export interface ConduitRouteOptions {
   queryParams?: ConduitRouteOption;
-  bodyParams?: ConduitModel;
+  bodyParams?: ConduitModel | ConduitRouteOption;
   urlParams?: ConduitRouteOption;
   action: ConduitRouteActions;
   path: string;
