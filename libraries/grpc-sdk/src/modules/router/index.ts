@@ -46,6 +46,10 @@ export default class Router extends ConduitModule {
     this.initializeClient();
   }
 
+  getFormattedModuleName() {
+    return this.moduleName.replace('-', '_');
+  }
+
   sleep(ms: number) {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
@@ -61,11 +65,15 @@ export default class Router extends ConduitModule {
     let protoFile = protofile_template
       .toString()
       .replace('MODULE_FUNCTIONS', protoFunctions);
-    protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
+    protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
 
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protoFile);
-    await server.addService(protoPath, this.moduleName + '.router.Router', functions);
+    await server.addService(
+      protoPath,
+      this.getFormattedModuleName() + '.router.Router',
+      functions
+    );
     // fs.unlinkSync(protoPath);
 
     //added sleep as a precaution
@@ -83,7 +91,7 @@ export default class Router extends ConduitModule {
       protoFile = protofile_template
         .toString()
         .replace('MODULE_FUNCTIONS', protoFunctions);
-      protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
+      protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
     }
     let request = {
       routes: paths,
@@ -115,7 +123,10 @@ export default class Router extends ConduitModule {
     return protoFunctions;
   }
 
-  private createProtoFunctionsForSocket(path: SocketProtoDescription, protoFunctions: string) {
+  private createProtoFunctionsForSocket(
+    path: SocketProtoDescription,
+    protoFunctions: string
+  ) {
     let newFunctions = '';
     const events = JSON.parse(path.events);
     Object.keys(events).forEach((event) => {
