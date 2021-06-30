@@ -106,6 +106,31 @@ export class GraphQLController {
         } else {
           params += paramObj[k];
         }
+      } else if (Array.isArray(paramObj[k])) {
+        let elementZero = paramObj[k][0];
+        if (typeof elementZero === 'string') {
+          if (elementZero === 'Number') {
+            params += '[Number]';
+          } else if (elementZero === 'ObjectId') {
+            params += '[ID]';
+          } else {
+            params += '[' + paramObj[k] + ']';
+          }
+        } else {
+          if ((elementZero as ConduitRouteOptionExtended).type === 'Number') {
+            params +=
+              '[Number' +
+              ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
+          } else if ((elementZero as ConduitRouteOptionExtended).type === 'ObjectId') {
+            params +=
+              '[ID' + ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
+          } else {
+            params +=
+              '[' +
+              (elementZero as ConduitRouteOptionExtended).type +
+              ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
+          }
+        }
       } else {
         if ((paramObj[k] as ConduitRouteOptionExtended).type === 'Number') {
           params +=
