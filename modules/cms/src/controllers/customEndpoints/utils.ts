@@ -102,6 +102,7 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
       name: 'sort',
       type: TYPE.String,
       location: 1,
+      array: true,
     });
   }
   Object.assign(input, extractParams(endpoint.inputs));
