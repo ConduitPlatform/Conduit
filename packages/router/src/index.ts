@@ -1,12 +1,12 @@
-import { Application, NextFunction, Router, Request, Response } from 'express';
+import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RouterBuilder } from './builders';
 import { ConduitRoutingController } from './controllers/Routing';
 import {
-  ConduitRoute,
-  IConduitRouter,
-  ConduitMiddleware,
   ConduitCommons,
+  ConduitMiddleware,
+  ConduitRoute,
   ConduitSocket,
+  IConduitRouter,
 } from '@quintessential-sft/conduit-commons';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
@@ -14,13 +14,13 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { grpcToConduitRoute } from './utils/GrpcConverter';
 
 export class ConduitDefaultRouter implements IConduitRouter {
+  grpcSdk: ConduitGrpcSdk;
   private _app: Application;
   private _internalRouter: ConduitRoutingController;
   private _globalMiddlewares: string[];
   private _routes: any[];
   private _grpcRoutes: any = {};
-  private _sdkRoutes: { path: string, action: string }[] = [];
-  grpcSdk: ConduitGrpcSdk;
+  private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
     app: Application,
@@ -177,10 +177,30 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
+          console.log(
+            'New middleware registered: ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
           this.registerRouteMiddleware(r);
         } else if (r instanceof ConduitSocket) {
+          console.log(
+            'New socker registered: ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
           this.registerSocket(r);
         } else {
+          console.log(
+            'New route registered: ' +
+              r.input.action +
+              ' ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
           this._registerRoute(r);
         }
       });
@@ -248,7 +268,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.registerRoute(name, router);
   }
 
-  registerExpressRouter(name: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
+  registerExpressRouter(
+    name: string,
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+  ) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
   }
