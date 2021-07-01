@@ -79,6 +79,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
               console.error(err);
             }
           });
+          console.log('Recovered routes');
         }
       })
       .catch(() => {

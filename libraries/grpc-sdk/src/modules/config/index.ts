@@ -3,6 +3,9 @@ import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 
 export default class Config extends ConduitModule {
+  private emitter = new EventEmitter();
+  private coreLive = false;
+
   constructor(url: string) {
     super(url);
     this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
@@ -135,10 +138,12 @@ export default class Config extends ConduitModule {
     };
     const self = this;
     return new Promise((resolve, reject) => {
+      //@ts-ignore
       this.client.registerModule(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
+          self.coreLive = true;
           resolve(res.modules);
         }
       });
@@ -153,15 +158,30 @@ export default class Config extends ConduitModule {
       moduleName: name.toString(),
       url: url.toString(),
     };
-    this.client.moduleHealthProbe(request, () => {});
+    const self = this;
+    //@ts-ignore
+    this.client.moduleHealthProbe(request, (err: any, res: any) => {
+      if (err || !res) {
+        if (self.coreLive) {
+          console.log('Core unhealthy');
+          self.coreLive = false;
+        }
+      } else {
+        if (!self.coreLive) {
+          console.log('Core is live');
+          self.coreLive = true;
+          self.watchModules();
+        }
+      }
+    });
   }
 
   watchModules() {
-    let emitter = new EventEmitter();
-    emitter.setMaxListeners(150);
+    const self = this;
+    this.emitter.setMaxListeners(150);
     let call = this.client.watchModules({});
     call.on('data', function (data: any) {
-      emitter.emit('module-registered', data.modules);
+      self.emitter.emit('module-registered', data.modules);
     });
     call.on('end', function () {
       // The server has finished sending
@@ -169,13 +189,14 @@ export default class Config extends ConduitModule {
     });
     call.on('error', function () {
       // An error has occurred and the stream has been closed.
+      call.cancel();
       console.error('Connection to grpc server closed');
     });
     call.on('status', function (status: any) {
       console.error('Connection status changed to : ', status);
     });
 
-    return emitter;
+    return self.emitter;
   }
 
   registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {

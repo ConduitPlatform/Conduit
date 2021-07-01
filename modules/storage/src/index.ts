@@ -11,7 +11,7 @@ if (process.env.REGISTER_NAME === 'true') {
   url = 'storage:' + url.split(':')[1];
 }
 
-grpcSdk.config.registerModule('storage', storage.url).catch((err) => {
+grpcSdk.config.registerModule('storage', url).catch((err) => {
   console.error(err);
   process.exit(-1);
 });
