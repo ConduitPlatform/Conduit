@@ -46,7 +46,10 @@ export function validateParams(
   routeDefinedParams: { [key: string]: any }
 ) {
   for (const key of Object.keys(routeDefinedParams)) {
-    if (isArray(routeDefinedParams[key])) {
+    if (
+      isArray(routeDefinedParams[key]) ||
+      (routeDefinedParams[key].type && isArray(routeDefinedParams[key].type))
+    ) {
       params[key] = validateArray(key, params[key], routeDefinedParams[key]);
     } else if (isObject(routeDefinedParams[key])) {
       if (routeDefinedParams[key].hasOwnProperty('type')) {
