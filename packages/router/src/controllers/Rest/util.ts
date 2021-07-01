@@ -77,13 +77,18 @@ function validateArray(
     }
   } else {
     if (!isArray(param)) {
-      param = [param];
+      if (param) {
+        param = [param];
+      }
       // throw ConduitError.userInput(`${fieldName} must be an array`);
     }
-
+    if (!param) {
+      return null;
+    }
     param.forEach((obj: any, index: number) => {
       param[index] = validateType(`${fieldName}[${index}]`, type, obj, false);
     });
+
     return param;
   }
 }
