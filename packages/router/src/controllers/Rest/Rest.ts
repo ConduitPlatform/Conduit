@@ -199,6 +199,10 @@ export class RestController {
         })
         .then((r: any) => {
           if (r.redirect) {
+            res.removeHeader('Authorization');
+            res.removeHeader('authorization');
+            res.removeHeader('clientid');
+            res.removeHeader('clientsecret');
             return res.redirect(r.redirect);
           } else {
             let result;
