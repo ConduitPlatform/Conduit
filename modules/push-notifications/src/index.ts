@@ -8,16 +8,13 @@ if (!process.env.CONDUIT_SERVER) {
 }
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'pushnotifications');
 let notifications = new PushNotifications(grpcSdk);
-grpcSdk.config
-  .registerModule('push-notifications', notifications.url)
-  .catch((err) => {
-    console.error(err);
-    process.exit(-1);
-  })
-  .then(() => {
-    grpcSdk.admin.register(paths.functions);
-  })
-  .catch((err: Error) => {
-    console.log('Failed to register admin routes for push-notifications module!');
-    console.error(err);
-  });
+
+let url = notifications.url;
+if (process.env.REGISTER_NAME === 'true') {
+  url = 'storage:' + url.split(':')[1];
+}
+
+grpcSdk.config.registerModule('push-notifications', notifications.url).catch((err) => {
+  console.error(err);
+  process.exit(-1);
+});
