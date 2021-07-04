@@ -15,7 +15,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const AppState = ({ message, loading, snackbarOpen, handleClose }) => {
+const AppState = ({
+  successMessage,
+  errorMessage,
+  loading,
+  snackbarOpen,
+  handleClose,
+}) => {
   const classes = useStyles();
 
   return (
@@ -26,8 +32,15 @@ const AppState = ({ message, loading, snackbarOpen, handleClose }) => {
         autoHideDuration={6000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert variant={'filled'} onClose={handleClose} severity="error">
-          {message ? message : 'Something went wrong!'}
+        <Alert
+          variant={'filled'}
+          onClose={handleClose}
+          severity={successMessage !== undefined ? 'success' : 'error'}>
+          {successMessage !== undefined
+            ? successMessage
+            : errorMessage
+            ? errorMessage
+            : 'Something went wrong!'}
         </Alert>
       </Snackbar>
       <Backdrop open={loading} className={classes.backdrop}>

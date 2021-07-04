@@ -1,25 +1,20 @@
 import File from '../models/File';
 import { FileHandlers } from '../handlers/file';
-import { IStorageProvider } from '@quintessential-sft/storage-provider';
-import {
+import ConduitGrpcSdk, {
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  TYPE,
   constructRoute,
   GrpcServer,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 export class FileRoutes {
-  private readonly fileHandlers: FileHandlers;
-
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly storageProvider: IStorageProvider
+    private readonly fileHandlers: FileHandlers
   ) {
-    this.fileHandlers = new FileHandlers(grpcSdk, storageProvider);
     this.grpcSdk.router
       .registerRouter(server, this.registeredRoutes, {
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -41,10 +36,10 @@ export class FileRoutes {
         new ConduitRoute(
           {
             bodyParams: {
-              name: TYPE.String,
+              name: { type: TYPE.String, required: true },
               mimeType: TYPE.String,
-              data: TYPE.String,
-              folder: TYPE.String,
+              data: { type: TYPE.String, required: true },
+              folder: { type: TYPE.String, required: true },
               isPublic: TYPE.Boolean,
             },
             action: ConduitRouteActions.POST,
@@ -66,7 +61,7 @@ export class FileRoutes {
         new ConduitRoute(
           {
             urlParams: {
-              id: TYPE.String,
+              id: { type: TYPE.String, required: true },
             },
             action: ConduitRouteActions.GET,
             path: '/storage/file/:id',
@@ -86,7 +81,7 @@ export class FileRoutes {
         new ConduitRoute(
           {
             urlParams: {
-              id: TYPE.String,
+              id: { type: TYPE.String, required: true },
             },
             action: ConduitRouteActions.GET,
             path: '/storage/getFileUrl/:id',
@@ -102,7 +97,7 @@ export class FileRoutes {
         new ConduitRoute(
           {
             urlParams: {
-              id: TYPE.String,
+              id: { type: TYPE.String, required: true },
             },
             action: ConduitRouteActions.DELETE,
             path: '/storage/file/:id',
@@ -121,7 +116,7 @@ export class FileRoutes {
         new ConduitRoute(
           {
             urlParams: {
-              id: TYPE.String,
+              id: { type: TYPE.String, required: true },
             },
             bodyParams: {
               name: TYPE.String,

@@ -71,7 +71,7 @@ const Storage = () => {
   };
 
   return (
-    <Layout itemSelected={5}>
+    <Layout itemSelected={6}>
       <Box p={2}>
         <Typography variant={'h4'}>Storage</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />

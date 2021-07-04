@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { constructAssignment, constructQuery, mergeQueries } from './utils';
+import { constructAssignment, constructQuery } from './utils';
 import grpc from 'grpc';
 import { CustomEndpoint } from '../../models/customEndpoint';
 import { isNil } from 'lodash';
@@ -28,7 +28,12 @@ export class CustomEndpointHandler {
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       try {
-        searchQuery = constructQuery(endpoint.query, endpoint.inputs, params, JSON.parse(call.request.context));
+        searchQuery = constructQuery(
+          endpoint.query,
+          endpoint.inputs,
+          params,
+          JSON.parse(call.request.context)
+        );
       } catch (e) {
         return callback({ code: grpc.status.INTERNAL, message: e.message });
       }
@@ -102,7 +107,7 @@ export class CustomEndpointHandler {
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
       let sort = params.sort;
       sortObj = {};
-      sort.split(',').forEach((sortVal: string) => {
+      sort.forEach((sortVal: string) => {
         sortVal = sortVal.trim();
         if (sortVal.indexOf('-') !== -1) {
           sortObj[sortVal.substr(1)] = -1;
@@ -143,7 +148,10 @@ export class CustomEndpointHandler {
         );
       }
     } else if (endpoint.operation === 1) {
-      promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, createObj);
+      promise = this.grpcSdk.databaseProvider!.create(
+        endpoint.selectedSchemaName,
+        createObj
+      );
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
@@ -182,12 +190,12 @@ export class CustomEndpointHandler {
 
   private parseCreateQuery(query: string): any {
     // add brackets to each field
-    let arr = query.split(',').map(val => `{${val}}`);
+    let arr = query.split(',').map((val) => `{${val}}`);
     let res: any = {};
     for (const el of arr) {
       let tmp = JSON.parse(el);
       let key = Object.keys(tmp)[0];
-      if(!key) continue;
+      if (!key) continue;
       let innerKey = Object.keys(tmp[key])[0];
       if (!res.hasOwnProperty(key)) res[key] = tmp[key];
       else res[key][innerKey] = tmp[key][innerKey];

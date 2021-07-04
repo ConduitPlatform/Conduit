@@ -2,20 +2,22 @@ import {
   CLEAR_SELECTED_SCHEMA,
   DELETE_CMS_SCHEMAS,
   SET_CMS_ERROR,
+  SET_CMS_MORE_SCHEMAS,
   SET_CMS_SCHEMA_DOCUMENTS,
   SET_CMS_SCHEMAS,
+  SET_CUSTOM_ENDPOINTS,
+  SET_MORE_DOCUMENTS_BY_NAME,
+  SET_SCHEMAS_FROM_MODULES,
   SET_SELECTED_SCHEMA,
   START_CMS_LOADING,
   STOP_CMS_LOADING,
   UPDATE_SCHEMAS_STATUS,
-  SET_CUSTOM_ENDPOINTS,
-  SET_MORE_DOCUMENTS_BY_NAME,
-  SET_CMS_MORE_SCHEMAS,
 } from '../actions/actionTypes';
 
 const initialState = {
   data: {
     schemas: [],
+    schemasFromOtherModules: [],
     documents: {
       documents: [],
     },
@@ -37,6 +39,14 @@ const cmsReducer = (state = initialState, action) => {
           ...state.data,
           schemas: [...action.payload.results],
           count: action.payload.documentsCount,
+        },
+      };
+    case SET_SCHEMAS_FROM_MODULES:
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          schemasFromOtherModules: action.payload,
         },
       };
     case SET_CMS_MORE_SCHEMAS:

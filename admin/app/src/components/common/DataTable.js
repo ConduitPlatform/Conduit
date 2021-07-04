@@ -10,7 +10,7 @@ import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import { isNumber, orderBy } from 'lodash';
 import * as moment from 'moment';
-import { IconButton } from '@material-ui/core';
+import { Button, IconButton } from '@material-ui/core';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
@@ -56,7 +56,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
   };
 
   const handleRequestSort = (event, property) => {
-    const isAsc = orderById === property && order === 'asc';
+    const isAsc = orderById === property && order === 'desc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderById(property);
   };
@@ -129,6 +129,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
           </TableBody>
         </Table>
       </TableContainer>
+
       {actions && (
         <Menu
           id="long-menu"

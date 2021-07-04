@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  RouterResponse,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
 
@@ -45,7 +48,7 @@ export class CmsHandlers {
 
     if (!isNil(sort) && sort.length > 0) {
       sortObj = {};
-      sort.split(',').forEach((sortVal: string) => {
+      sort.forEach((sortVal: string) => {
         sortVal = sortVal.trim();
         if (sortVal.indexOf('-') !== -1) {
           sortObj[sortVal.substr(1)] = -1;

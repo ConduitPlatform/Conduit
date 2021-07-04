@@ -78,7 +78,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           queryParams: {
             skip: TYPE.Number,
             limit: TYPE.Number,
-            sort: TYPE.String,
+            sort: [TYPE.String],
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
           cacheControl: actualSchema.authentication
@@ -137,7 +137,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
-        new ConduitRouteReturnDefinition(`update${schemaName}`, {
+        new ConduitRouteReturnDefinition(`updateMany${schemaName}`, {
           docs: [actualSchema.fields],
         }),
         'editManyDocuments'

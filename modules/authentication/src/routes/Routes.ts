@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   TYPE,
   RouterRequest,
-  RouterResponse
+  RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
@@ -51,7 +51,9 @@ export class AuthenticationRoutes {
         forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
         changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
-        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(this.localHandlers),
+        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(
+          this.localHandlers
+        ),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
         verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
@@ -102,9 +104,14 @@ export class AuthenticationRoutes {
                 email: TYPE.String,
                 password: TYPE.String,
               },
-              middlewares: authConfig.local.identifier === 'username' ? ['authMiddleware'] : undefined
+              middlewares:
+                authConfig.local.identifier === 'username'
+                  ? ['authMiddleware']
+                  : undefined,
             },
-            new ConduitRouteReturnDefinition('RegisterResponse', 'String'),
+            new ConduitRouteReturnDefinition('RegisterResponse', {
+              userId: ConduitString.Optional,
+            }),
             'register'
           )
         )
@@ -176,7 +183,7 @@ export class AuthenticationRoutes {
                   oldPassword: ConduitString.Required,
                   newPassword: ConduitString.Required,
                 },
-                middlewares: ['authMiddleware']
+                middlewares: ['authMiddleware'],
               },
               new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
               'changePassword'
@@ -193,7 +200,7 @@ export class AuthenticationRoutes {
                 bodyParams: {
                   code: ConduitString.Required,
                 },
-                middlewares: ['authMiddleware']
+                middlewares: ['authMiddleware'],
               },
               new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
               'verifyChangePassword'
@@ -470,7 +477,7 @@ export class AuthenticationRoutes {
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
-            new ConduitRouteReturnDefinition('UserResponse', UserSchema.fields),
+            new ConduitRouteReturnDefinition('User', UserSchema.fields),
             'getUser'
           )
         )

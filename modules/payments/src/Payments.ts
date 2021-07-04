@@ -6,6 +6,8 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
+  wrapCallObjectForRouter,
+  wrapCallbackFunctionForRouter,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
@@ -13,6 +15,7 @@ import { PaymentsRoutes } from './routes/Routes';
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import { IamportHandlers } from './handlers/iamport';
+import { StripeHandlers } from './handlers/stripe';
 
 type CreateIamportPaymentRequest = GrpcRequest<{
   productId: string,
@@ -32,6 +35,35 @@ type CompleteIamportPaymentRequest = GrpcRequest<{
 
 type CompleteIamportPaymentResponse = GrpcResponse<{ success: boolean }>;
 
+type CreateStripePaymentRequest = GrpcRequest<{
+  productId: string,
+  userId: string,
+  saveCard: boolean,
+}>;
+
+type CreateStripePaymentResponse = GrpcResponse<{
+  clientSecret: string,
+  paymentId: string,
+}>;
+
+type CancelStripePaymentRequest = GrpcRequest<{
+  paymentId: string,
+  userId: string,
+}>;
+
+type CancelStripePaymentResponse = GrpcResponse<{
+  success: boolean,
+}>;
+
+type RefundStripePaymentRequest = GrpcRequest<{
+  paymentId: string,
+  userId: string,
+}>;
+
+type RefundStripePaymentResponse = GrpcResponse<{
+  success: boolean,
+}>;
+
 export default class PaymentsModule {
   private database: any;
   private _admin: AdminHandlers;
@@ -40,6 +72,7 @@ export default class PaymentsModule {
   private readonly grpcServer: GrpcServer;
   private _router: PaymentsRoutes;
   private iamportHandlers: IamportHandlers | null;
+  private stripeHandlers: StripeHandlers | null;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
@@ -49,6 +82,9 @@ export default class PaymentsModule {
         setConfig: this.setConfig.bind(this),
         createIamportPayment: this.createIamportPayment.bind(this),
         completeIamportPayment: this.completeIamportPayment.bind(this),
+        createStripePayment: this.createStripePayment.bind(this),
+        cancelStripePayment: this.cancelStripePayment.bind(this),
+        refundStripePayment: this.refundStripePayment.bind(this),
       })
       .then(() => {
         return this.grpcServer.start();
@@ -200,16 +236,41 @@ export default class PaymentsModule {
     }
   }
 
+  async createStripePayment(call: CreateStripePaymentRequest, callback: CreateStripePaymentResponse) {
+    if (isNil(this.stripeHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Stripe is deactivated' });
+    }
+
+    await this.stripeHandlers.createPayment(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+  }
+
+  async cancelStripePayment(call: CancelStripePaymentRequest, callback: CancelStripePaymentResponse) {
+    if (isNil(this.stripeHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Stripe is deactivated' });
+    }
+
+    await this.stripeHandlers.cancelPayment(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+  }
+
+  async refundStripePayment(call: RefundStripePaymentRequest, callback: RefundStripePaymentResponse) {
+    if (isNil(this.stripeHandlers)) {
+      return callback({ code: grpc.status.INTERNAL, message: 'Stripe is deactivated' });
+    }
+
+    await this.stripeHandlers.refundPayment(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+  }
+
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
+      this.stripeHandlers = await this._router.getStripe();
+      this.iamportHandlers = await this._router.getIamport();
       this._admin = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
-        await this._router.getStripe()
+        this.stripeHandlers
       );
-      this.iamportHandlers = await this._router.getIamport();
       await this.registerSchemas();
       this.isRunning = true;
     }

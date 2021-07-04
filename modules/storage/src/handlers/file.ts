@@ -1,7 +1,10 @@
 import { isString, isNil } from 'lodash';
 import { IStorageProvider } from '@quintessential-sft/storage-provider';
 import { v4 as uuid } from 'uuid';
-import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 
 export class FileHandlers {
@@ -10,7 +13,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider,
+    storageProvider: IStorageProvider
   ) {
     this.initDb(grpcSdk, storageProvider);
   }
@@ -56,7 +59,7 @@ export class FileHandlers {
       .then(() => {
         return this.storageProvider.folder(folder).store(name, buffer);
       })
-      .catch((e: Error) => (errorMessage = e));
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
@@ -131,8 +134,9 @@ export class FileHandlers {
     }
 
     let errorMessage = null;
-    const found = await this.database.findOne('File', { _id: id })
-      .catch((e: Error) => errorMessage = e.message);
+    const found = await this.database
+      .findOne('File', { _id: id })
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
@@ -143,7 +147,7 @@ export class FileHandlers {
       return callback(null, { redirect: found.url });
     }
     return callback(null, {
-      redirect: await this.storageProvider.folder(found.folder).getSignedUrl(found.name)
+      redirect: await this.storageProvider.folder(found.folder).getSignedUrl(found.name),
     });
   }
 

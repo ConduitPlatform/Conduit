@@ -3,28 +3,54 @@ import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthAccordion from '../components/authentication/AuthAccordion';
+import NewUserModal from '../components/authentication/NewUserModal';
 import AuthSettings from '../components/authentication/AuthSettings';
 import AuthUsers from '../components/authentication/AuthUsers';
 import CustomTabs from '../components/common/CustomTabs';
+import Paginator from '../components/common/Paginator';
+import SearchFilter from '../components/authentication/SearchFilter';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core';
+import Paper from '@material-ui/core/Paper';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import {
+  addNewUserThunk,
   getAuthUsersData,
   getConfig,
   updateConfig,
 } from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
+import useDebounce from '../hooks/useDebounce';
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    '& > *': {
+      margin: theme.spacing(0.5),
+    },
+    marginBottom: '3px',
+  },
+}));
 
 const Authentication = () => {
+  const classes = useStyles();
   const dispatch = useDispatch();
 
+  const [page, setPage] = useState(0);
+  const [skip, setSkip] = useState(0);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [filter, setFilter] = useState({ filterValue: 'none' });
+
+  const debouncedSearch = useDebounce(search, 500);
 
   const {
     users: availableUsers,
     error: authUsersError,
+    success: authUsersSuccess,
     loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
 
@@ -34,10 +60,26 @@ const Authentication = () => {
     loading: configLoading,
   } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
 
+  const handleFilterChange = (event) => {
+    const name = event.target.name;
+    setFilter({
+      ...filter,
+      [name]: event.target.value,
+    });
+  };
+
   useEffect(() => {
-    dispatch(getAuthUsersData());
+    dispatch(getAuthUsersData(skip, limit, search, filter));
     dispatch(getConfig());
-  }, [dispatch]);
+  }, []);
+
+  useEffect(() => {
+    dispatch(getAuthUsersData(skip, limit, search, filter));
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    dispatch(getAuthUsersData(skip, limit, search, filter));
+  }, [filter]);
 
   useEffect(() => {
     if (configData && !configData.active) {
@@ -46,10 +88,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authUsersError || authConfigError) {
+    if (authUsersError || authConfigError || authUsersSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authUsersError, authConfigError]);
+  }, [authUsersError, authConfigError, authUsersSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -57,6 +99,22 @@ const Authentication = () => {
     { title: 'Service Accounts', isDisabled: false },
     { title: 'Settings', isDisabled: false },
   ];
+
+  const handleLimitChange = (e, value) => {
+    setLimit(parseInt(e.target.value, 10));
+    setSkip(0);
+    setPage(0);
+  };
+
+  const handlePageChange = (e, val) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
 
   const handleChange = (event, newValue) => {
     setSelected(newValue);
@@ -85,11 +143,25 @@ const Authentication = () => {
     }
   };
 
+  const successMessage = () => {
+    if (authUsersSuccess) {
+      return authUsersSuccess;
+    }
+  };
+
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
       return;
     }
     setSnackbarOpen(false);
+  };
+
+  const handleNewUserDispatch = (values) => {
+    dispatch(addNewUserThunk(values, availableUsers, limit));
+    setSkip(0);
+    setPage(0);
+    setSearch('');
+    setFilter({ filterValue: 'none' });
   };
 
   const handleSettingsSave = (data) => {
@@ -109,11 +181,39 @@ const Authentication = () => {
           role="tabpanel"
           hidden={selected !== 0 || (configData && !configData.active)}
           id={`tabpanel-0`}>
+          <Paper variant="outlined" className={classes.root}>
+            <Grid container>
+              <Grid item xs={6}>
+                <SearchFilter
+                  setSearch={setSearch}
+                  search={search}
+                  filter={filter}
+                  handleFilterChange={handleFilterChange}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Paginator
+                  handlePageChange={handlePageChange}
+                  skip={skip}
+                  limit={limit}
+                  handleLimitChange={handleLimitChange}
+                  page={page}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
           {availableUsers ? (
             <AuthUsers users={availableUsers} />
           ) : (
             <Typography>No users available</Typography>
           )}
+
+          <NewUserModal
+            handleNewUserDispatch={handleNewUserDispatch}
+            page={skip}
+            limit={limit}
+          />
         </Box>
         <Box
           role="tabpanel"
@@ -141,7 +241,8 @@ const Authentication = () => {
         </Box>
       </Box>
       <AppState
-        message={alertMessage()}
+        successMessage={successMessage()}
+        errorMessage={alertMessage()}
         loading={usersLoading || configLoading}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}

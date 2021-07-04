@@ -27,14 +27,13 @@ export class LocalHandlers {
     let promise: Promise<void>;
     this.identifier = config.local.identifier;
     if (this.identifier !== 'username') {
-      promise = this.grpcSdk.config.get('email')
-        .then((emailConfig: any) => {
-          if (!emailConfig.active) {
-            throw ConduitError.forbidden(
-              'Cannot use local authentication without email module being enabled'
-            );
-          }
-        });
+      promise = this.grpcSdk.config.get('email').then((emailConfig: any) => {
+        if (!emailConfig.active) {
+          throw ConduitError.forbidden(
+            'Cannot use local authentication without email module being enabled'
+          );
+        }
+      });
     } else {
       promise = Promise.resolve();
     }
@@ -138,7 +137,7 @@ export class LocalHandlers {
     }
 
     return callback(null, {
-      result: JSON.stringify({ message: 'Registration was successful' }),
+      result: JSON.stringify({ userId: user._id }),
     });
   }
 
@@ -217,7 +216,10 @@ export class LocalHandlers {
       }
 
       await this.database
-        .deleteMany('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
+        .deleteMany('Token', {
+          userId: user._id,
+          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+        })
         .catch(console.error);
 
       await this.database
@@ -420,18 +422,25 @@ export class LocalHandlers {
     const { user } = JSON.parse(call.request.context);
 
     if (oldPassword === newPassword) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'The new password can not be the same as the old password' });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'The new password can not be the same as the old password',
+      });
     }
 
     let errorMessage: string | null = null;
-    const dbUser = await this.database.findOne('User', { _id: user._id }, '+hashedPassword')
+    const dbUser = await this.database
+      .findOne('User', { _id: user._id }, '+hashedPassword')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(dbUser)) {
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'user does not exist' });
+      return callback({
+        code: grpc.status.UNAUTHENTICATED,
+        message: 'user does not exist',
+      });
     }
 
     const passwordsMatch = await AuthUtils.checkPassword(
@@ -447,8 +456,9 @@ export class LocalHandlers {
       });
     }
 
-    const hashedPassword = await AuthUtils.hashPassword(newPassword)
-      .catch((e: any) => (errorMessage = e.message));
+    const hashedPassword = await AuthUtils.hashPassword(newPassword).catch(
+      (e: any) => (errorMessage = e.message)
+    );
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
@@ -463,7 +473,10 @@ export class LocalHandlers {
       }
 
       await this.database
-        .deleteMany('Token', { userId: dbUser._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+        .deleteMany('Token', {
+          userId: dbUser._id,
+          type: TokenType.CHANGE_PASSWORD_TOKEN,
+        })
         .catch(console.error);
 
       await this.database
@@ -472,8 +485,8 @@ export class LocalHandlers {
           type: TokenType.CHANGE_PASSWORD_TOKEN,
           token: verificationSid,
           data: {
-            password: hashedPassword
-          }
+            password: hashedPassword,
+          },
         })
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
@@ -482,7 +495,8 @@ export class LocalHandlers {
       return callback(null, { result: 'Verification code sent' });
     }
 
-    this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword })
+    this.database
+      .findByIdAndUpdate('User', dbUser._id, { hashedPassword })
       .then(() => {
         callback(null, { result: 'Password changed successfully' });
       })
@@ -496,17 +510,22 @@ export class LocalHandlers {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const token = await this.database.findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+    const token = await this.database
+      .findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(token)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'User has no active change_password token' });
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: 'User has no active change_password token',
+      });
     }
 
-    const verified = await this.sms.verify(token.token, code)
+    const verified = await this.sms
+      .verify(token.token, code)
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -516,10 +535,12 @@ export class LocalHandlers {
       return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Invalid code' });
     }
 
-    await this.database.deleteMany('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+    await this.database
+      .deleteMany('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
       .catch(console.error);
 
-    this.database.findByIdAndUpdate('User', user._id, { hashedPassword: token.data.password })
+    this.database
+      .findByIdAndUpdate('User', user._id, { hashedPassword: token.data.password })
       .then(() => {
         callback(null, { result: 'Password changed successfully' });
       })
@@ -635,7 +656,10 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
+      .deleteMany('Token', {
+        userId: user._id,
+        type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+      })
       .catch(console.error);
 
     const config = ConfigController.getInstance().config;
@@ -707,7 +731,10 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('Token', { userId: context.user._id, type: TokenType.VERIFY_PHONE_NUMBER_TOKEN })
+      .deleteMany('Token', {
+        userId: context.user._id,
+        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      })
       .catch(console.error);
 
     await this.database
@@ -716,7 +743,7 @@ export class LocalHandlers {
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
         token: verificationSid,
         data: {
-          phoneNumber
+          phoneNumber,
         },
       })
       .catch((e: any) => (errorMessage = e.message));
@@ -770,7 +797,10 @@ export class LocalHandlers {
     }
 
     await this.database
-      .deleteMany('Token', { userId: context.user._id, type: TokenType.VERIFY_PHONE_NUMBER_TOKEN })
+      .deleteMany('Token', {
+        userId: context.user._id,
+        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      })
       .catch(console.error);
 
     await this.database
@@ -787,7 +817,10 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish(
       'authentication:enableTwofa:user',
-      JSON.stringify({ id: context.user._id, phoneNumber: verificationRecord.data.phoneNumber })
+      JSON.stringify({
+        id: context.user._id,
+        phoneNumber: verificationRecord.data.phoneNumber,
+      })
     );
 
     return callback(null, {
@@ -876,9 +909,7 @@ export class LocalHandlers {
   }
 
   private async sendVerificationCode(to: string) {
-    const verificationSid = await this.sms
-      .sendVerificationCode(to)
-      .catch(console.error);
+    const verificationSid = await this.sms.sendVerificationCode(to).catch(console.error);
     return verificationSid || '';
   }
 }

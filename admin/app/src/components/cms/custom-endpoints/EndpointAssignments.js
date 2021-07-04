@@ -1,10 +1,10 @@
 import {
   FormControl,
   Grid,
+  IconButton,
   Select,
   TextField,
   Typography,
-  IconButton,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import React, { Fragment, useCallback } from 'react';
@@ -15,19 +15,24 @@ import OperationEnum from '../../../models/OperationsEnum';
 const useStyles = makeStyles(() => ({}));
 
 const EndpointAssignments = ({
-  operationType,
-  selectedAssignments,
   editMode,
-  availableFieldsOfSchema,
+  operationType,
   selectedInputs,
-  handleAssignmentFieldChange,
-  handleAssignmentActionChange,
-  handleAssignmentValueFieldChange,
-  handleAssignmentCustomValueChange,
-  handleAssignmentContextValueChange,
-  handleRemoveAssignment,
+  selectedAssignments,
+  setSelectedAssignments,
+  availableFieldsOfSchema,
 }) => {
   const classes = useStyles();
+
+  const handleAssignmentFieldChange = (event, index) => {
+    const value = event.target.value;
+    const currentAssignments = selectedAssignments.slice();
+    const input = currentAssignments[index];
+    if (input) {
+      input.schemaField = value;
+      setSelectedAssignments(currentAssignments);
+    }
+  };
 
   const isArrayType = useCallback(
     (fieldName) => {
@@ -50,6 +55,57 @@ const EndpointAssignments = ({
     },
     [availableFieldsOfSchema]
   );
+
+  const handleAssignmentActionChange = (event, index) => {
+    const value = event.target.value;
+    const currentAssignments = selectedAssignments.slice();
+    const input = currentAssignments[index];
+    if (input) {
+      input.action = Number(value);
+      setSelectedAssignments(currentAssignments);
+    }
+  };
+
+  const handleAssignmentValueFieldChange = (event, index) => {
+    const value = event.target.value;
+
+    const type = value.split('-')[0];
+    const actualValue = value.split('-')[1];
+
+    const currentAssignments = selectedAssignments.slice();
+    const assignment = currentAssignments[index];
+    if (assignment) {
+      assignment.assignmentField.type = type;
+      assignment.assignmentField.value = actualValue ? actualValue : '';
+      setSelectedAssignments(currentAssignments);
+    }
+  };
+
+  const handleAssignmentCustomValueChange = (event, index) => {
+    const value = event.target.value;
+    const currentAssignments = selectedAssignments.slice();
+    const assignment = currentAssignments[index];
+    if (assignment) {
+      assignment.assignmentField.value = value;
+      setSelectedAssignments(currentAssignments);
+    }
+  };
+
+  const handleAssignmentContextValueChange = (event, index) => {
+    const value = event.target.value;
+    const currentAssignments = selectedAssignments.slice();
+    const assignment = currentAssignments[index];
+    if (assignment) {
+      assignment.assignmentField.value = value;
+      setSelectedAssignments(currentAssignments);
+    }
+  };
+
+  const handleRemoveAssignment = (index) => {
+    const currentAssignments = selectedAssignments.slice();
+    currentAssignments.splice(index, 1);
+    setSelectedAssignments(currentAssignments);
+  };
 
   return selectedAssignments.map((assignment, index) => (
     <Fragment key={`assignment-${index}`}>

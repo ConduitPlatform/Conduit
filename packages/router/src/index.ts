@@ -1,12 +1,12 @@
-import { Application, NextFunction, Router, Request, Response } from 'express';
+import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RouterBuilder } from './builders';
 import { ConduitRoutingController } from './controllers/Routing';
 import {
-  ConduitRoute,
-  IConduitRouter,
-  ConduitMiddleware,
   ConduitCommons,
+  ConduitMiddleware,
+  ConduitRoute,
   ConduitSocket,
+  IConduitRouter,
 } from '@quintessential-sft/conduit-commons';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
@@ -14,12 +14,13 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { grpcToConduitRoute } from './utils/GrpcConverter';
 
 export class ConduitDefaultRouter implements IConduitRouter {
+  grpcSdk: ConduitGrpcSdk;
   private _app: Application;
   private _internalRouter: ConduitRoutingController;
   private _globalMiddlewares: string[];
   private _routes: any[];
   private _grpcRoutes: any = {};
-  grpcSdk: ConduitGrpcSdk;
+  private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
     app: Application,
@@ -71,13 +72,14 @@ export class ConduitDefaultRouter implements IConduitRouter {
                 } else if (r instanceof ConduitSocket) {
                   this.registerSocket(r);
                 } else {
-                  this.registerRoute(r);
+                  this._registerRoute(r);
                 }
               });
             } catch (err) {
               console.error(err);
             }
           });
+          console.log('Recovered routes');
         }
       })
       .catch(() => {
@@ -103,7 +105,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           } else if (r instanceof ConduitSocket) {
             this.registerSocket(r);
           } else {
-            this.registerRoute(r);
+            this._registerRoute(r);
           }
         });
         this.cleanupRoutes();
@@ -176,11 +178,31 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
       routes.forEach((r) => {
         if (r instanceof ConduitMiddleware) {
+          console.log(
+            'New middleware registered: ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
           this.registerRouteMiddleware(r);
         } else if (r instanceof ConduitSocket) {
+          console.log(
+            'New socker registered: ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
           this.registerSocket(r);
         } else {
-          this.registerRoute(r);
+          console.log(
+            'New route registered: ' +
+              r.input.action +
+              ' ' +
+              r.input.path +
+              ' handler url: ' +
+              call.request.routerUrl
+          );
+          this._registerRoute(r);
         }
       });
       this._grpcRoutes[call.request.routerUrl] = call.request.routes;
@@ -210,6 +232,9 @@ export class ConduitDefaultRouter implements IConduitRouter {
         })
       );
     });
+
+    routes.push(...this._sdkRoutes);
+
     this._internalRouter.cleanupRoutes(routes);
   }
 
@@ -244,7 +269,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter.registerRoute(name, router);
   }
 
-  registerExpressRouter(name: string, router: Router | ((req: Request, res: Response, next: NextFunction) => void)) {
+  registerExpressRouter(
+    name: string,
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+  ) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
   }
@@ -262,6 +290,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   registerRoute(route: ConduitRoute): void {
+    this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
+    this._registerRoute(route);
+  }
+
+  _registerRoute(route: ConduitRoute): void {
     this._internalRouter.registerConduitRoute(route);
   }
 

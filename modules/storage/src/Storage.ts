@@ -5,12 +5,15 @@ import {
 import File from './models/File';
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  wrapCallObjectForRouter,
+  wrapCallbackFunctionForRouter,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
-import { wrapCallbackFunctionForRouter, wrapCallObjectForRouter } from './utils/wrapRouterFunctions';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -44,7 +47,7 @@ export class StorageModule {
       });
     this.storageProvider = createStorageProvider('local', {} as any);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    new FileRoutes(this.grpcServer, this.grpcSdk, this.storageProvider);
+    new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
 
     this.grpcSdk
       .waitForExistence('database-provider')
@@ -149,7 +152,10 @@ export class StorageModule {
         code: grpc.status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.getFile(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+    await this._fileHandlers.getFile(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
   }
 
   async createFileGrpc(call: any, callback: any) {
@@ -158,7 +164,10 @@ export class StorageModule {
         code: grpc.status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.createFile(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+    await this._fileHandlers.createFile(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
   }
 
   async updateFileGrpc(call: any, callback: any) {
@@ -168,7 +177,10 @@ export class StorageModule {
         message: 'File handlers not initiated',
       });
 
-    await this._fileHandlers.updateFile(wrapCallObjectForRouter(call), wrapCallbackFunctionForRouter(callback));
+    await this._fileHandlers.updateFile(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
   }
 
   private async enableModule(): Promise<any> {

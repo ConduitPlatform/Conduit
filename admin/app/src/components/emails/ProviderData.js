@@ -85,9 +85,11 @@ const ProviderData = ({ settings, error, handleSave }) => {
           apiKey: settingsState.transportSettings.apiKey,
           domain: settingsState.transportSettings.domain,
           host: settingsState.transportSettings.host,
+          proxy: null,
         },
       },
     };
+
     handleSave(data);
   };
 
