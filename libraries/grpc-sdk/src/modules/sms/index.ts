@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { SmsClient } from '../../protoUtils/sms';
 
-export default class SMS extends ConduitModule {
+export default class SMS extends ConduitModule<SmsClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/sms.proto');
-    this.descriptorObj = 'sms.Sms';
-    this.initializeClient();
+    this.initializeClient(SmsClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -26,22 +24,19 @@ export default class SMS extends ConduitModule {
 
   sendSms(to: string, message: string) {
     return new Promise((resolve, reject) => {
-      this.client.sendSms(
-        { to, message },
-        (err: any, res: any) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve(res.message);
-          }
+      this.client?.sendSms({ to, message }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.message);
         }
-      );
+      });
     });
   }
 
   sendVerificationCode(to: string) {
     return new Promise((resolve, reject) => {
-      this.client.sendVerificationCode({ to }, (err: any, res: any) => {
+      this.client?.sendVerificationCode({ to }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -53,16 +48,13 @@ export default class SMS extends ConduitModule {
 
   verify(verificationSid: string, code: string) {
     return new Promise((resolve, reject) => {
-      this.client.verify(
-        { verificationSid, code },
-        (err: any, res: any) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve(res.verified);
-          }
+      this.client?.verify({ verificationSid, code }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.verified);
         }
-      );
+      });
     });
   }
 }

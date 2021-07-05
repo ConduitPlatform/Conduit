@@ -27,7 +27,7 @@ message RegisterAdminRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
-    string adminUrl = 3;
+    optional string adminUrl = 3;
     message PathDefinition {
         string path = 1;
         string method = 2;
@@ -86,7 +86,7 @@ message ModuleByInstanceResponse {
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
-    string newConfigSchema = 3;
+    optional string newConfigSchema = 3;
 }
 
 message RegisterModuleResponse {

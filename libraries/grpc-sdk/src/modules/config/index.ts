@@ -1,22 +1,20 @@
-import path from 'path';
 import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { ConfigClient, RegisterModuleRequest } from '../../protoUtils/core';
 
-export default class Config extends ConduitModule {
+export default class Config extends ConduitModule<ConfigClient> {
   private emitter = new EventEmitter();
   private coreLive = false;
 
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
-    this.descriptorObj = 'conduit.core.Config';
-    this.initializeClient();
+    this.initializeClient(ConfigClient);
   }
 
   getServerConfig(): Promise<any> {
     let request = {};
     return new Promise((resolve, reject) => {
-      this.client.getServerConfig(request, (err: any, res: any) => {
+      this.client?.getServerConfig(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -30,7 +28,7 @@ export default class Config extends ConduitModule {
     instancePeer: string
   ): Promise<{ url: string; moduleName: string }> {
     return new Promise((resolve, reject) => {
-      this.client.getModuleUrlByInstance({ instancePeer }, (err: any, res: any) => {
+      this.client?.getModuleUrlByInstance({ instancePeer }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -45,7 +43,7 @@ export default class Config extends ConduitModule {
       key: name,
     };
     return new Promise((resolve, reject) => {
-      this.client.get(request, (err: any, res: any) => {
+      this.client?.get(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -62,7 +60,7 @@ export default class Config extends ConduitModule {
     };
 
     return new Promise((resolve, reject) => {
-      this.client.updateConfig(request, (err: any, res: any) => {
+      this.client?.updateConfig(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -79,7 +77,7 @@ export default class Config extends ConduitModule {
     };
 
     return new Promise((resolve, reject) => {
-      this.client.addFieldstoConfig(request, (err: any, res: any) => {
+      this.client?.addFieldstoConfig(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -94,7 +92,7 @@ export default class Config extends ConduitModule {
       moduleName: name,
     };
     return new Promise((resolve, reject) => {
-      this.client.moduleExists(request, (err: any, res: any) => {
+      this.client?.moduleExists(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -107,7 +105,7 @@ export default class Config extends ConduitModule {
   moduleList(): Promise<any[]> {
     let request = {};
     return new Promise((resolve, reject) => {
-      this.client.moduleList(request, (err: any, res: any) => {
+      this.client?.moduleList(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -120,7 +118,7 @@ export default class Config extends ConduitModule {
   getRedisDetails(): Promise<any> {
     let request: { [key: string]: any } = {};
     return new Promise((resolve, reject) => {
-      this.client.getRedisDetails(request, (err: any, res: any) => {
+      this.client?.getRedisDetails(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -132,14 +130,13 @@ export default class Config extends ConduitModule {
 
   registerModule(name: string, url: string): Promise<any> {
     // TODO make newConfigSchema required when all modules provide their config schema
-    let request: { [key: string]: any } = {
+    let request: RegisterModuleRequest = {
       moduleName: name.toString(),
       url: url.toString(),
     };
     const self = this;
     return new Promise((resolve, reject) => {
-      //@ts-ignore
-      this.client.registerModule(request, (err: any, res: any) => {
+      this.client?.registerModule(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -179,7 +176,7 @@ export default class Config extends ConduitModule {
   watchModules() {
     const self = this;
     this.emitter.setMaxListeners(150);
-    let call = this.client.watchModules({});
+    let call = this.client!.watchModules({});
     call.on('data', function (data: any) {
       self.emitter.emit('module-registered', data.modules);
     });
@@ -197,21 +194,5 @@ export default class Config extends ConduitModule {
     });
 
     return self.emitter;
-  }
-
-  registerModulesConfig(moduleName: string, newModulesConfigSchema: any) {
-    let request = {
-      moduleName,
-      newModulesConfigSchema: JSON.stringify(newModulesConfigSchema),
-    };
-    return new Promise((resolve, reject) => {
-      this.client.registerModulesConfig(request, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve({});
-        }
-      });
-    });
   }
 }

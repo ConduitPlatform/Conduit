@@ -8,19 +8,19 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "prebuild": "sh build.sh",
+    "prebuild": "npm run install:protoc",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -f src/proto/* ./dist/proto/"
+    "install:protoc": "sh build.sh",
+    "postinstall": "npm run install:protoc"
   },
   "license": "ISC",
   "dependencies": {
     "@types/google-protobuf": "^3.2.7",
     "@types/ioredis": "^4.22.0",
     "@types/lodash": "^4.14.150",
-    "bson": "^4.2.2",
-    "google-protobuf": "^3.8.0-rc.1",
     "ioredis": "^4.23.0",
     "lodash": "^4.17.15",
+    "protobufjs": "^6.11.2",
     "redis": "^3.0.2"
   },
   "directories": {
@@ -40,14 +40,15 @@
   },
   "devDependencies": {
     "@grpc/proto-loader": "^0.5.4",
+    "@grpc/grpc-js": "^1.3.4",
     "@types/node": "^13.9.8",
     "copyfiles": "^2.2.0",
-    "grpc": "^1.24.2",
+    "ts-proto": "^1.82.0",
     "rimraf": "^3.0.2",
     "typescript": "^3.7.5"
   },
   "peerDependencies": {
     "@grpc/proto-loader": "^0.5.4",
-    "grpc": "^1.24.2"
+    "@grpc/grpc-js": "^1.3.4"
   }
 }

@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { StorageClient } from '../../protoUtils/storage';
 
-export default class Storage extends ConduitModule {
+export default class Storage extends ConduitModule<StorageClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/storage.proto');
-    this.descriptorObj = 'storage.Storage';
-    this.initializeClient();
+    this.initializeClient(StorageClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -26,7 +24,7 @@ export default class Storage extends ConduitModule {
 
   getFile(id: string) {
     return new Promise((resolve, reject) => {
-      this.client.getFile({ id }, (err: any, res: any) => {
+      this.client?.getFile({ id }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -44,7 +42,7 @@ export default class Storage extends ConduitModule {
     isPublic: boolean = false
   ) {
     return new Promise((resolve, reject) => {
-      this.client.createFile(
+      this.client?.createFile(
         { name, mimeType, data, folder, isPublic },
         (err: any, res: any) => {
           if (err || !res) {

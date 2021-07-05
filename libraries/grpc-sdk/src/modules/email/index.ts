@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { EmailClient } from '../../protoUtils/email';
 
-export default class Email extends ConduitModule {
+export default class Email extends ConduitModule<EmailClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/email.proto');
-    this.descriptorObj = 'email.Email';
-    this.initializeClient();
+    this.initializeClient(EmailClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -31,7 +29,7 @@ export default class Email extends ConduitModule {
     variables: string[];
   }) {
     return new Promise((resolve, reject) => {
-      this.client.registerTemplate(
+      this.client?.registerTemplate(
         {
           name: template.name,
           subject: template.subject,
@@ -61,7 +59,7 @@ export default class Email extends ConduitModule {
     }
   ) {
     return new Promise((resolve, reject) => {
-      this.client.sendEmail(
+      this.client?.sendEmail(
         {
           templateName,
           params: {
@@ -69,8 +67,8 @@ export default class Email extends ConduitModule {
             variables: JSON.stringify(params.variables),
             sender: params.sender,
             replyTo: params.replyTo,
-            cc: params.cc,
-            attachments: params.attachments,
+            cc: params.cc ?? [],
+            attachments: params.attachments ?? [],
           },
         },
         (err: any, res: any) => {

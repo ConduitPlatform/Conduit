@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { AuthenticationClient } from '../../protoUtils/authentication';
 
-export default class Authentication extends ConduitModule {
+export default class Authentication extends ConduitModule<AuthenticationClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/authentication.proto');
-    this.descriptorObj = 'authentication.Authentication';
-    this.initializeClient();
+    this.initializeClient(AuthenticationClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
