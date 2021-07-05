@@ -12,6 +12,9 @@ export class ConduitRoute {
     handler: string
   ) {
     this._input = input;
+    if (!this._input.middlewares) {
+      this._input.middlewares = [];
+    }
     this._returnType = type;
     this._handler = handler;
   }

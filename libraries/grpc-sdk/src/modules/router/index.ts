@@ -98,7 +98,6 @@ export default class Router extends ConduitModule<RouterClient> {
       routerUrl: url,
     };
     return new Promise((resolve, reject) => {
-      // @ts-ignore
       this.client?.registerConduitRoute(request, (err: any, res: any) => {
         if (err) {
           reject(err);
