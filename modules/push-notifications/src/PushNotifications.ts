@@ -1,6 +1,6 @@
 import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { FirebaseProvider } from './providers/firebase';
+import { FirebaseProvider } from './providers/Firebase.provider';
 import PushNotificationsConfigSchema from './config';
 import { isNil } from 'lodash';
 import path from 'path';
@@ -17,21 +17,21 @@ import { PushNotificationsRoutes } from './routes/Routes';
 import * as models from './models';
 
 type SetNotificationTokenRequest = GrpcRequest<{
-  token: string,
-  platform: string,
-  userId: string,
+  token: string;
+  platform: string;
+  userId: string;
 }>;
 
 type SetNotificationTokenResponse = GrpcResponse<{
-  newTokenDocument: string,
+  newTokenDocument: string;
 }>;
 
 type GetNotificationTokensRequest = GrpcRequest<{
-  userId: string,
+  userId: string;
 }>;
 
 type GetNotificationTokensResponse = GrpcResponse<{
-  tokenDocuments: string[],
+  tokenDocuments: string[];
 }>;
 
 export default class PushNotificationsModule {
@@ -145,7 +145,10 @@ export default class PushNotificationsModule {
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  async setNotificationToken(call: SetNotificationTokenRequest, callback: SetNotificationTokenResponse) {
+  async setNotificationToken(
+    call: SetNotificationTokenRequest,
+    callback: SetNotificationTokenResponse
+  ) {
     const { token, platform, userId } = call.request;
 
     let errorMessage: any = null;
@@ -172,7 +175,10 @@ export default class PushNotificationsModule {
     return callback(null, { newTokenDocument: JSON.stringify(newTokenDocument) });
   }
 
-  async getNotificationTokens(call: GetNotificationTokensRequest, callback: GetNotificationTokensResponse) {
+  async getNotificationTokens(
+    call: GetNotificationTokensRequest,
+    callback: GetNotificationTokensResponse
+  ) {
     const userId = call.request.userId;
 
     let errorMessage = null;
