@@ -5,10 +5,21 @@ message SetConfigRequest {
   string newConfig = 1;
 }
 
+message UserLoginRequest {
+  string userId = 1;
+  string clientId = 2;
+}
+
 message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message UserLoginResponse {
+  string accessToken = 1;
+  string refreshToken = 2;
+}
+
 service Authentication {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
 }
