@@ -6,16 +6,16 @@ import {
   ConduitModel,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteOptionExtended,
   ConduitRouteOptions,
   ConduitRouteParameters,
 } from '@quintessential-sft/conduit-commons';
-import { extractTypes, findPopulation, ParseResult } from './TypeUtils';
+import { extractTypes, findPopulation, ParseResult } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
 import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
+import { processParams } from './utils/SimpleTypeParamUtils';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer, ApolloError } = require('apollo-server-express');
@@ -93,61 +93,6 @@ export class GraphQLController {
     }
   }
 
-  processParams(paramObj: any, sourceParams: string) {
-    let params = sourceParams;
-    for (let k in paramObj) {
-      if (!paramObj.hasOwnProperty(k)) continue;
-      params += (params.length > 1 ? ',' : '') + k + ':';
-      if (typeof paramObj[k] === 'string') {
-        if (paramObj[k] === 'Number') {
-          params += 'Number';
-        } else if (paramObj[k] === 'ObjectId') {
-          params += 'ID';
-        } else {
-          params += paramObj[k];
-        }
-      } else if (Array.isArray(paramObj[k])) {
-        let elementZero = paramObj[k][0];
-        if (typeof elementZero === 'string') {
-          if (elementZero === 'Number') {
-            params += '[Number]';
-          } else if (elementZero === 'ObjectId') {
-            params += '[ID]';
-          } else {
-            params += '[' + paramObj[k] + ']';
-          }
-        } else {
-          if ((elementZero as ConduitRouteOptionExtended).type === 'Number') {
-            params +=
-              '[Number' +
-              ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
-          } else if ((elementZero as ConduitRouteOptionExtended).type === 'ObjectId') {
-            params +=
-              '[ID' + ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
-          } else {
-            params +=
-              '[' +
-              (elementZero as ConduitRouteOptionExtended).type +
-              ((elementZero as ConduitRouteOptionExtended).required ? ']!' : ']');
-          }
-        }
-      } else {
-        if ((paramObj[k] as ConduitRouteOptionExtended).type === 'Number') {
-          params +=
-            'Number' + ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
-        } else if ((paramObj[k] as ConduitRouteOptionExtended).type === 'ObjectId') {
-          params +=
-            'ID' + ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
-        } else {
-          params +=
-            (paramObj[k] as ConduitRouteOptionExtended).type +
-            ((paramObj[k] as ConduitRouteOptionExtended).required ? '!' : '');
-        }
-      }
-    }
-    return params;
-  }
-
   generateAction(input: ConduitRouteOptions, returnType: string) {
     // todo refine this, simply replacing : with empty is too dumb
     let cleanPath: string = input.path;
@@ -186,11 +131,11 @@ export class GraphQLController {
       }
 
       if (input.queryParams) {
-        params = this.processParams(input.queryParams, params);
+        params = processParams(input.queryParams, params);
       }
 
       if (input.urlParams) {
-        params = this.processParams(input.urlParams, params);
+        params = processParams(input.urlParams, params);
       }
       params = '(' + params + ')';
     }

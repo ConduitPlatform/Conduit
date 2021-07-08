@@ -18,6 +18,7 @@ export class ConduitModule {
   }
 
   closeConnection() {
+    if (!this.client) return;
     this.client.close();
     this.client = null;
     this.active = false;
