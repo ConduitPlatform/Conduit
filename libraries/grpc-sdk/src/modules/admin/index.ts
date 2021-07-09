@@ -2,6 +2,7 @@ import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import fs from 'fs';
 import { GrpcServer } from '../../classes';
+import { AdminClient } from '../../protoUtils/core';
 
 let protofile_template = `
 syntax = "proto3";
@@ -23,12 +24,10 @@ message AdminResponse {
 }
 `;
 
-export default class Admin extends ConduitModule {
+export default class Admin extends ConduitModule<AdminClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
-    this.descriptorObj = 'conduit.core.Admin';
-    this.initializeClient();
+    this.initializeClient(AdminClient);
   }
   sleep(ms: number) {
     return new Promise((resolve) => {
@@ -95,7 +94,7 @@ export default class Admin extends ConduitModule {
     };
 
     return new Promise((resolve, reject) => {
-      this.client.registerAdminRoute(request, (err: any, res: any) => {
+      this.client?.registerAdminRoute(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {

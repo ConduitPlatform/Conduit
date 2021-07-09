@@ -3,6 +3,7 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
 import fs from 'fs';
 import { SocketProtoDescription } from '../../interfaces';
+import { RouterClient } from '../../protoUtils/core';
 
 let protofile_template = `
 syntax = "proto3";
@@ -38,12 +39,10 @@ message SocketResponse {
   repeated string rooms = 4;
 }
 `;
-export default class Router extends ConduitModule {
+export default class Router extends ConduitModule<RouterClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
-    this.descriptorObj = 'conduit.core.Router';
-    this.initializeClient();
+    this.initializeClient(RouterClient);
   }
 
   getFormattedModuleName() {
@@ -99,7 +98,7 @@ export default class Router extends ConduitModule {
       routerUrl: url,
     };
     return new Promise((resolve, reject) => {
-      this.client.registerConduitRoute(request, (err: any, res: any) => {
+      this.client?.registerConduitRoute(request, (err: any, res: any) => {
         if (err) {
           reject(err);
         } else {

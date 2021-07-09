@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { ChatClient } from '../../protoUtils/chat';
 
-export default class Chat extends ConduitModule {
+export default class Chat extends ConduitModule<ChatClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/chat.proto');
-    this.descriptorObj = 'chat.Chat';
-    this.initializeClient();
+    this.initializeClient(ChatClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
