@@ -14,6 +14,7 @@ export enum RouteOptionType {
   Boolean = 'Boolean',
   Date = 'Date',
   ObjectId = 'ObjectId',
+  JSON = 'JSON',
 }
 
 export interface ConduitRouteOptionExtended {

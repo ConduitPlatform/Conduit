@@ -28,6 +28,7 @@ export class ConduitModule<T extends Client> {
   }
 
   closeConnection() {
+    if (!this.client) return;
     this.client?.close();
     this.client = undefined;
     this.active = false;

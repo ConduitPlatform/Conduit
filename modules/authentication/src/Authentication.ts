@@ -2,11 +2,18 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer, SetConfigRequest, SetConfigResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import * as grpc from 'grpc';
 import { AuthenticationRoutes } from './routes/Routes';
 import { ConfigController } from './config/Config.controller';
+import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
+import { AuthUtils } from './utils/auth';
+import moment from 'moment';
 
 export default class AuthenticationModule {
   private database: any;
@@ -24,6 +31,7 @@ export default class AuthenticationModule {
         'authentication.Authentication',
         {
           setConfig: this.setConfig.bind(this),
+          userLogin: this.userLogin.bind(this),
         }
       )
       .then(() => {
@@ -134,6 +142,47 @@ export default class AuthenticationModule {
     }
 
     return callback(null, { updatedConfig: JSON.stringify(authenticationConfig) });
+  }
+
+  // produces login credentials for a user without them having to login
+  async userLogin(call: any, callback: any) {
+    const { userId, clientId } = call.request;
+    let config = ConfigController.getInstance().config;
+    const signTokenOptions: ISignTokenOptions = {
+      secret: config.jwtSecret,
+      expiresIn: config.tokenInvalidationPeriod,
+    };
+    let errorMessage = null;
+    const accessToken = await this.database
+      .create('AccessToken', {
+        userId: userId,
+        clientId,
+        token: AuthUtils.signToken({ id: userId }, signTokenOptions),
+        expiresOn: moment()
+          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    const refreshToken = await this.database
+      .create('RefreshToken', {
+        userId: userId,
+        clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+
+    return callback(null, {
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+    });
   }
 
   private updateConfig(config?: any) {
