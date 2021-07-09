@@ -179,7 +179,10 @@ export default class AuthenticationModule {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    return callback(null, { accessToken, refreshToken });
+    return callback(null, {
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+    });
   }
 
   private updateConfig(config?: any) {
