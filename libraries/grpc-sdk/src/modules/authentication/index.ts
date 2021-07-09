@@ -24,7 +24,7 @@ export default class Authentication extends ConduitModule<AuthenticationClient> 
 
   userLogin(userId: string, clientId: string) {
     return new Promise((resolve, reject) => {
-      this.client.userLogin({ userId, clientId }, (err: any, res: any) => {
+      this.client?.userLogin({ userId, clientId }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
