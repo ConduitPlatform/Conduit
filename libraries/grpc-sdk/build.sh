@@ -1,7 +1,7 @@
 #!/usr/bin/bash
-cd ../protos
+cd ../protos || exit
 sh build.sh
-cd ../grpc-sdk
+cd ../grpc-sdk || exit
 rm -rf ./src/proto
 mkdir ./src/proto
 cp -r ../protos/src/*.proto ./src/proto
@@ -16,6 +16,6 @@ protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto \
 --ts_proto_out=./src/protoUtils ./src/proto/*.proto
 
 rm -rf ./src/proto
-cp -r ./src/protoUtils/src/proto/ ./src/protoUtils
+cp -r ./src/protoUtils/src/proto/*.ts ./src/protoUtils
 rm -rf ./src/protoUtils/src/proto/
 rm -rf ./src/protoUtils/src

@@ -10,8 +10,7 @@
     "prepublish": "npm run build",
     "prebuild": "npm run install:protoc",
     "build": "rimraf dist && tsc",
-    "install:protoc": "sh build.sh",
-    "postinstall": "npm run install:protoc"
+    "install:protoc": "sh build.sh"
   },
   "license": "ISC",
   "dependencies": {
