@@ -37,15 +37,15 @@ else
 	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG}
 endif
 
-#modules/authentication: conduit-builder
-#modules/cms: conduit-builder
-#modules/database: conduit-builder
-#modules/email: conduit-builder
-#modules/chat: conduit-builder
-#modules/actor: conduit-builder
-#modules/forms: conduit-builder
-#modules/payments: conduit-builder
-#modules/sms: conduit-builder
-#modules/storage: conduit-builder
+modules/authentication: conduit-builder
+modules/cms: conduit-builder
+modules/database: conduit-builder
+modules/email: conduit-builder
+modules/chat: conduit-builder
+modules/actor: conduit-builder
+modules/forms: conduit-builder
+modules/payments: conduit-builder
+modules/sms: conduit-builder
+modules/storage: conduit-builder
 conduit: conduit-builder
 admin: conduit-builder

@@ -21,6 +21,7 @@
     "deepdash": "^5.0.3",
     "deepdash-es": "^5.0.3",
     "grpc": "^1.24.2",
+    "@grpc/grpc-js": "^1.3.4",
     "lodash": "^4.17.15",
     "mongodb-extended-json": "^1.11.0",
     "mongoose": "^5.11.18",

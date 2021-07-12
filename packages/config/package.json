@@ -20,6 +20,7 @@
     "convict": "^5.2.0",
     "deepdash": "^5.0.4",
     "grpc": "^1.24.2",
+    "@grpc/grpc-js": "^1.3.4",
     "lodash": "^4.17.15",
     "request": "^2.88.2",
     "request-promise": "^4.2.5"

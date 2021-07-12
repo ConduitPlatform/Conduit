@@ -17,6 +17,7 @@
     "@types/google-protobuf": "^3.2.7",
     "@types/ioredis": "^4.22.0",
     "@types/lodash": "^4.14.150",
+    "@grpc/grpc-js": "^1.3.4",
     "ioredis": "^4.23.0",
     "lodash": "^4.17.15",
     "protobufjs": "^6.11.2",
@@ -39,7 +40,6 @@
   },
   "devDependencies": {
     "@grpc/proto-loader": "^0.5.4",
-    "@grpc/grpc-js": "^1.3.4",
     "@types/node": "^13.9.8",
     "grpc": "^1.24.2",
     "copyfiles": "^2.2.0",

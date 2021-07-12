@@ -31,6 +31,7 @@
     "convict": "^6.0.0",
     "google-auth-library": "^5.10.1",
     "grpc": "^1.24.2",
+    "@grpc/grpc-js": "^1.3.4",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
