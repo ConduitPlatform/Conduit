@@ -92,7 +92,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
         {
           schemaName,
           query: this.processQuery(query),
-          select: select,
+          select: select === null ? undefined : select,
           populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {
@@ -125,10 +125,10 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
         {
           schemaName,
           query: this.processQuery(query),
-          select,
+          select: select === null ? undefined : select,
           skip,
           limit,
-          sort: sortStr,
+          sort: select === null ? undefined : select,
           populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {

@@ -61,7 +61,7 @@ export class CmsHandlers {
     const documentsPromise = this.database.findMany(
       schemaName,
       {},
-      null,
+      undefined,
       skipNumber,
       limitNumber,
       sortObj,
@@ -102,7 +102,7 @@ export class CmsHandlers {
     }
 
     const document = await this.database
-      .findOne(schemaName, { _id: id }, null, populate)
+      .findOne(schemaName, { _id: id }, undefined, populate)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
