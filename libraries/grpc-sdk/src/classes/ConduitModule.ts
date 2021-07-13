@@ -1,17 +1,24 @@
 import { ChannelCredentials, ChannelOptions, Client, credentials } from '@grpc/grpc-js';
 
 export class ConduitModule<T extends Client> {
+  // protected descriptorObj?: string;
+  active: boolean = false;
+  constructorObj?: {
+    new (
+      address: string,
+      credentials: ChannelCredentials,
+      options?: Partial<ChannelOptions>
+    ): T;
+  };
   protected client?: T;
   protected readonly _url: string;
   protected protoPath?: string;
-  // protected descriptorObj?: string;
-  active: boolean = false;
 
   constructor(url: string) {
     this._url = url;
   }
 
-  initializeClient(constObj: {
+  initializeClient(constObj?: {
     new (
       address: string,
       credentials: ChannelCredentials,
@@ -19,7 +26,12 @@ export class ConduitModule<T extends Client> {
     ): T;
   }) {
     if (this.client) return;
-    this.client = new constObj(this._url, credentials.createInsecure(), {
+    if (!this.constructorObj && constObj) {
+      this.constructorObj = constObj;
+    } else if (!this.constructorObj && !constObj) {
+      throw new Error('Client cannot be initialized, both constructor objects are null!');
+    }
+    this.client = new this.constructorObj!(this._url, credentials.createInsecure(), {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
