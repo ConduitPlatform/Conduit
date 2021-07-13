@@ -42,8 +42,8 @@ message RegisterConduitRouteRequest {
 
     message PathDefinition {
         ConduitRouteOptions options = 1;
-        ConduitRouteReturnDefinition returns = 2;
-        string grpcFunction = 3;
+        optional ConduitRouteReturnDefinition returns = 2;
+        optional string grpcFunction = 3;
         optional bool isMiddleware = 4;
         optional string events = 5;
     }
@@ -52,7 +52,7 @@ message RegisterConduitRouteRequest {
         optional string queryParams = 1;
         optional string bodyParams = 2;
         optional string urlParams = 3;
-        string action = 4;
+        optional string action = 4;
         string path = 5;
         optional string name = 6;
         optional string description = 7;

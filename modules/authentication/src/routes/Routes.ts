@@ -105,9 +105,7 @@ export class AuthenticationRoutes {
                 password: TYPE.String,
               },
               middlewares:
-                authConfig.local.identifier === 'username'
-                  ? ['authMiddleware']
-                  : undefined,
+                authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
             },
             new ConduitRouteReturnDefinition('RegisterResponse', {
               userId: ConduitString.Optional,
