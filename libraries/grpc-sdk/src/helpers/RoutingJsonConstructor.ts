@@ -9,6 +9,9 @@ export function constructRoute(route: ConduitRoute) {
   };
   routeObject.grpcFunction = route.handler;
   routeObject.options = route.input;
+  if (!routeObject.options.middlewares) {
+    routeObject.options.middlewares = [];
+  }
   routeObject.returns = {
     name: route.returnTypeName,
     fields: JSON.stringify(route.returnTypeFields),
