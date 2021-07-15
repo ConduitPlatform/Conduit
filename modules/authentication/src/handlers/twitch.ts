@@ -1,4 +1,8 @@
-import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterResponse,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
@@ -145,16 +149,19 @@ export class TwitchHandlers {
         });
       if (!user.twitch) {
         user = await this.database
-          .findByIdAndUpdate('User', user._id, {
-            $set: {
-              ['twitch']: {
+          .findByIdAndUpdate(
+            'User',
+            user._id,
+            {
+              twitch: {
                 id,
                 token: twitch_access_token,
                 tokenExpires: moment().add(expires_in).format(),
                 profile_image_url,
               },
             },
-          })
+            true
+          )
           .catch((e: any) => (errorMessage = e.message));
         if (!isNil(errorMessage))
           return callback({ code: grpc.status.INTERNAL, message: errorMessage });

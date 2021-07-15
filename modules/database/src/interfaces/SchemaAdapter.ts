@@ -16,7 +16,12 @@ export interface SchemaAdapter {
    * @param select
    * @param populate
    */
-  findOne(query: any, select?: string, populate?: string[], relations?: any): Promise<any>;
+  findOne(
+    query: any,
+    select?: string,
+    populate?: string[],
+    relations?: any
+  ): Promise<any>;
 
   /**
    * Should find Many
@@ -48,9 +53,9 @@ export interface SchemaAdapter {
 
   deleteMany(query: any): Promise<any>;
 
-  findByIdAndUpdate(id: any, document: any): Promise<any>;
+  findByIdAndUpdate(id: any, document: any, updateProvidedOnly?: boolean): Promise<any>;
 
-  updateMany(filterQuery: any, query: any): Promise<any>;
+  updateMany(filterQuery: any, query: any, updateProvidedOnly?: boolean): Promise<any>;
 
   countDocuments(query: any): Promise<number>;
 }

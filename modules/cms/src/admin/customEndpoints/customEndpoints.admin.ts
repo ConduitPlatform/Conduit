@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import grpc from 'grpc';
 import { isNil, isPlainObject } from 'lodash';
@@ -9,6 +12,7 @@ const OperationsEnum = {
   POST: 1, //'CREATE'
   PUT: 2, //'UPDATE/EDIT'
   DELETE: 3, //'DELETE'
+  PUTSELECTED: 4, //'DELETE'
 };
 
 export class CustomEndpointsAdmin {
@@ -35,7 +39,15 @@ export class CustomEndpointsAdmin {
   async editCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
-    const { inputs, query, selectedSchema, selectedSchemaName, assignments, paginated, sorted } = params;
+    const {
+      inputs,
+      query,
+      selectedSchema,
+      selectedSchemaName,
+      assignments,
+      paginated,
+      sorted,
+    } = params;
     if (isNil(id)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -71,10 +83,14 @@ export class CustomEndpointsAdmin {
       }
     } else if (!isNil(selectedSchemaName)) {
       if (found.operation !== OperationsEnum.GET) {
-        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Only get requests are allowed for schemas from other modules' });
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'Only get requests are allowed for schemas from other modules',
+        });
       }
 
-      findSchema = await this.database.getSchema(selectedSchemaName)
+      findSchema = await this.database
+        .getSchema(selectedSchemaName)
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -86,8 +102,8 @@ export class CustomEndpointsAdmin {
     if (isNil(findSchema)) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'SelectedSchema not found'
-      })
+        message: 'SelectedSchema not found',
+      });
     }
 
     // todo checks for inputs & queries
@@ -105,7 +121,8 @@ export class CustomEndpointsAdmin {
     }
     if (
       (found.operation === OperationsEnum.POST ||
-        found.operation === OperationsEnum.PUT) &&
+        found.operation === OperationsEnum.PUT ||
+        found.operation === OperationsEnum.PUTSELECTED) &&
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
@@ -144,7 +161,8 @@ export class CustomEndpointsAdmin {
 
     if (
       found.operation === OperationsEnum.POST ||
-      found.operation === OperationsEnum.PUT
+      found.operation === OperationsEnum.PUT ||
+      found.operation === OperationsEnum.PUTSELECTED
     ) {
       errorMessage = null;
       assignments.forEach(
@@ -255,7 +273,11 @@ export class CustomEndpointsAdmin {
       paginated,
     } = JSON.parse(call.request.params);
 
-    if (isNil(name) || isNil(operation) || (isNil(selectedSchema) && isNil(selectedSchemaName))) {
+    if (
+      isNil(name) ||
+      isNil(operation) ||
+      (isNil(selectedSchema) && isNil(selectedSchemaName))
+    ) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
@@ -280,7 +302,9 @@ export class CustomEndpointsAdmin {
       });
     }
     if (
-      (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) &&
+      (operation === OperationsEnum.POST ||
+        operation === OperationsEnum.PUT ||
+        operation === OperationsEnum.PUTSELECTED) &&
       isNil(assignments)
     ) {
       return callback({
@@ -319,10 +343,14 @@ export class CustomEndpointsAdmin {
       }
 
       if (operation !== OperationsEnum.GET) {
-        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Only get requests are allowed for schemas from other modules' });
+        return callback({
+          code: grpc.status.INVALID_ARGUMENT,
+          message: 'Only get requests are allowed for schemas from other modules',
+        });
       }
 
-      findSchema = await this.database.getSchema(selectedSchemaName)
+      findSchema = await this.database
+        .getSchema(selectedSchemaName)
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({ code: grpc.status.INTERNAL, message: errorMessage });
@@ -332,7 +360,10 @@ export class CustomEndpointsAdmin {
     }
 
     if (isNil(findSchema)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'SelectedSchema not found' });
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'SelectedSchema not found',
+      });
     }
 
     if (!isNil(inputs) && !Array.isArray(inputs)) {
@@ -348,7 +379,9 @@ export class CustomEndpointsAdmin {
       });
     }
     if (
-      (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) &&
+      (operation === OperationsEnum.POST ||
+        operation === OperationsEnum.PUT ||
+        operation === OperationsEnum.PUTSELECTED) &&
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
@@ -416,7 +449,11 @@ export class CustomEndpointsAdmin {
       endpoint.query = query;
     }
 
-    if (operation === OperationsEnum.POST || operation === OperationsEnum.PUT) {
+    if (
+      operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PUTSELECTED
+    ) {
       errorMessage = null;
       assignments.forEach(
         (r: {

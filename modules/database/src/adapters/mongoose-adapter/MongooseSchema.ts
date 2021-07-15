@@ -38,19 +38,32 @@ export class MongooseSchema implements SchemaAdapter {
     return this.model.insertMany(docs).then((r) => r);
   }
 
-  async findByIdAndUpdate(id: string, query: any): Promise<any> {
-    // check if it is a document
-    if (!query['$set']) {
-      query['updatedAt'] = new Date();
-    } else {
-      query['$set']['updatedAt'] = new Date();
-    }
+  async findByIdAndUpdate(
+    id: string,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
+    query['updatedAt'] = new Date();
     await this.createWithPopulations(query);
+    if (updateProvidedOnly) {
+      query = {
+        $set: query,
+      };
+    }
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
-  async updateMany(filterQuery: any, query: any): Promise<any> {
+  async updateMany(
+    filterQuery: any,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
     await this.createWithPopulations(query);
+    if (updateProvidedOnly) {
+      query = {
+        $set: query,
+      };
+    }
     return this.model.updateMany(this.parseQuery(filterQuery), query).exec();
   }
 

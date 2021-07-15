@@ -1,4 +1,8 @@
-import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
@@ -147,9 +151,11 @@ export class KakaoHandlers {
         });
       if (!user.kakao) {
         user = await this.database
-          .findByIdAndUpdate('User', user._id, {
-            $set: {
-              ['kakao']: {
+          .findByIdAndUpdate(
+            'User',
+            user._id,
+            {
+              kakao: {
                 id: userInfo.id,
                 token: kakao_access_token,
                 tokenExpires: moment().add(expires_in).format(),
@@ -159,7 +165,8 @@ export class KakaoHandlers {
                   userInfo?.kakao_account?.profile?.thumbnail_image_url || '',
               },
             },
-          })
+            true
+          )
           .catch((e: any) => (errorMessage = e.message));
         if (!isNil(errorMessage))
           return callback({ code: grpc.status.INTERNAL, message: errorMessage });

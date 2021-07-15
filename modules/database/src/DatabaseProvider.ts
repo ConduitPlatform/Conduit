@@ -354,7 +354,8 @@ export class DatabaseProvider {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
-        EJSON.parse(call.request.query)
+        EJSON.parse(call.request.query),
+        call.request.updateProvidedOnly
       );
 
       const resultString = JSON.stringify(result);
@@ -378,7 +379,8 @@ export class DatabaseProvider {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.updateMany(
         EJSON.parse(call.request.filterQuery),
-        EJSON.parse(call.request.query)
+        EJSON.parse(call.request.query),
+        call.request.updateProvidedOnly
       );
 
       const resultString = JSON.stringify(result);

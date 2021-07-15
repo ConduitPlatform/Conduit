@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, {
+import {
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -56,7 +56,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           path: `/${schemaName}/:id`,
           action: ConduitRouteActions.GET,
           urlParams: {
-            id: TYPE.String,
+            id: { type: TYPE.String, required: true },
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
           cacheControl: actualSchema.authentication
@@ -94,13 +94,18 @@ export function getOps(schemaName: string, actualSchema: any) {
     )
   );
 
+  let assignableFields = actualSchema.fields;
+  delete assignableFields._id;
+  delete assignableFields.createdAt;
+  delete assignableFields.updatedAt;
+
   routesArray.push(
     constructRoute(
       new ConduitRoute(
         {
           path: `/${schemaName}`,
           action: ConduitRouteActions.POST,
-          bodyParams: actualSchema.fields,
+          bodyParams: assignableFields,
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.fields),
@@ -115,7 +120,7 @@ export function getOps(schemaName: string, actualSchema: any) {
         {
           path: `/${schemaName}/many`,
           action: ConduitRouteActions.POST,
-          bodyParams: { docs: [actualSchema.fields] },
+          bodyParams: { docs: { type: [assignableFields], required: true } },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`createMany${schemaName}`, {
@@ -132,8 +137,14 @@ export function getOps(schemaName: string, actualSchema: any) {
         {
           path: `/${schemaName}/many`,
           action: ConduitRouteActions.UPDATE,
+          queryParams: {
+            updateProvidedOnly: TYPE.Boolean,
+          },
           bodyParams: {
-            docs: [{ ...actualSchema.fields, _id: { type: 'String', unique: true } }],
+            docs: {
+              type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
+              required: true,
+            },
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
@@ -152,9 +163,12 @@ export function getOps(schemaName: string, actualSchema: any) {
           path: `/${schemaName}/:id`,
           action: ConduitRouteActions.UPDATE,
           urlParams: {
-            id: TYPE.String,
+            id: { type: TYPE.String, required: true },
           },
-          bodyParams: actualSchema.fields,
+          queryParams: {
+            updateProvidedOnly: TYPE.Boolean,
+          },
+          bodyParams: assignableFields,
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
@@ -170,7 +184,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           path: `/${schemaName}/:id`,
           action: ConduitRouteActions.DELETE,
           urlParams: {
-            id: TYPE.String,
+            id: { type: TYPE.String, required: true },
           },
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },

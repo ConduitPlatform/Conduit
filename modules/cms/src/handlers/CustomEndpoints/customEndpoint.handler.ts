@@ -39,7 +39,11 @@ export class CustomEndpointHandler {
       }
     }
 
-    if (endpoint.operation === 1 || endpoint.operation === 2) {
+    if (
+      endpoint.operation === 1 ||
+      endpoint.operation === 2 ||
+      endpoint.operation === 4
+    ) {
       endpoint.assignments!.forEach(
         (r: {
           schemaField: string;
@@ -162,6 +166,13 @@ export class CustomEndpointHandler {
       promise = this.grpcSdk.databaseProvider!.deleteMany(
         endpoint.selectedSchemaName,
         searchQuery
+      );
+    } else if (endpoint.operation === 4) {
+      promise = this.grpcSdk.databaseProvider!.updateMany(
+        endpoint.selectedSchemaName,
+        searchQuery,
+        createObj,
+        true
       );
     } else {
       process.exit(-1);

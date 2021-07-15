@@ -172,10 +172,15 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  findByIdAndUpdate(schemaName: string, id: string, document: any) {
+  findByIdAndUpdate(
+    schemaName: string,
+    id: string,
+    document: any,
+    updateProvidedOnly: boolean = false
+  ) {
     return new Promise((resolve, reject) => {
       this.client?.findByIdAndUpdate(
-        { schemaName, id, query: this.processQuery(document) },
+        { schemaName, id, query: this.processQuery(document), updateProvidedOnly },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -187,13 +192,19 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  updateMany(schemaName: string, filterQuery: any, query: any) {
+  updateMany(
+    schemaName: string,
+    filterQuery: any,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ) {
     return new Promise((resolve, reject) => {
       this.client?.updateMany(
         {
           schemaName,
           filterQuery: this.processQuery(filterQuery),
           query: this.processQuery(query),
+          updateProvidedOnly,
         },
         (err: any, res: any) => {
           if (err || !res) {
