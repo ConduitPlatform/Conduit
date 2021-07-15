@@ -128,7 +128,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
           select: select === null ? undefined : select,
           skip,
           limit,
-          sort: select === null ? undefined : select,
+          sort: sort === null ? undefined : sort,
           populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {
