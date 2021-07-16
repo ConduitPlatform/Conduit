@@ -136,15 +136,11 @@ export class AdminHandlers {
     let user = await this.database.findOne('User', { _id: id });
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
-    }
-
-    if (hasTwoFA) {
-      if (isNil(phoneNumber) && isNil(user.phoneNumber)) {
-        throw new GrpcError(
-          grpc.status.INVALID_ARGUMENT,
-          'Can not enable 2fa without a phone number'
-        );
-      }
+    } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'Can not enable 2fa without a phone number'
+      );
     }
 
     const query = {
@@ -186,9 +182,7 @@ export class AdminHandlers {
 
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
-    }
-
-    if (!user.active) {
+    } else if (!user.active) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'User is already blocked');
     }
 
