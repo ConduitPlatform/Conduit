@@ -6,11 +6,11 @@ import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import ConduitGrpcSdk, {
   ConduitError,
   RouterRequest,
-  RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
+import { GrpcError } from '../../../../libraries/grpc-sdk/src';
 import moment = require('moment');
 
 export class LocalHandlers {
@@ -56,59 +56,34 @@ export class LocalHandlers {
       });
   }
 
-  async register(call: RouterRequest, callback: RouterResponse) {
+  async register(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = JSON.parse(call.request.params);
-    let errorMessage = null;
-
-    if (isNil(email) || isNil(password))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Email and password required',
-      });
 
     if (email.indexOf('+') !== -1) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Email contains unsupported characters',
-      });
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'Email contains unsupported characters'
+      );
     }
 
     email = email.toLowerCase();
 
-    let user = await this.database
-      .findOne('User', { email })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let user = await this.database.findOne('User', { email });
     if (!isNil(user))
-      return callback({
-        code: grpc.status.ALREADY_EXISTS,
-        message: 'User already exists',
-      });
+      throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
 
-    user = await AuthUtils.hashPassword(password)
-      .then((hashedPassword: string) => {
-        const isVerified = this.identifier === 'username';
-        return this.database.create('User', { email, hashedPassword, isVerified });
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    user = await AuthUtils.hashPassword(password).then((hashedPassword: string) => {
+      const isVerified = this.identifier === 'username';
+      return this.database.create('User', { email, hashedPassword, isVerified });
+    });
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
     const config = ConfigController.getInstance().config;
 
-    let serverConfig = await this.grpcSdk.config
-      .getServerConfig()
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let serverConfig = await this.grpcSdk.config.getServerConfig();
     let url = serverConfig.url;
 
     if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
@@ -130,89 +105,54 @@ export class LocalHandlers {
               link,
             },
           });
-        })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        });
     }
 
-    return callback(null, {
+    return {
       result: JSON.stringify({ userId: user._id }),
-    });
+    };
   }
 
-  async authenticate(call: RouterRequest, callback: RouterResponse) {
+  async authenticate(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
-    let errorMessage = null;
 
     if (isNil(context))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+
     const clientId = context.clientId;
 
-    if (isNil(email) || isNil(password))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Email and password required',
-      });
-
     if (email.indexOf('+') !== -1) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Email contains unsupported characters',
-      });
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'Email contains unsupported characters'
+      );
     }
 
     email = email.toLowerCase();
 
-    const user = await this.database
-      .findOne('User', { email }, '+hashedPassword')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const user = await this.database.findOne('User', { email }, '+hashedPassword');
     if (isNil(user))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Invalid login credentials',
-      });
-    if (!user.active)
-      return callback({ code: grpc.status.PERMISSION_DENIED, message: 'Inactive user' });
-
-    const passwordsMatch = await AuthUtils.checkPassword(
-      password,
-      user.hashedPassword
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
+    if (!user.active) throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch)
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Invalid login credentials',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
 
     const config = ConfigController.getInstance().config;
     if (config.local.verificationRequired && !user.isVerified) {
-      return callback({
-        code: grpc.status.PERMISSION_DENIED,
-        message: 'You must verify your account to login',
-      });
+      throw new GrpcError(
+        grpc.status.PERMISSION_DENIED,
+        'You must verify your account to login'
+      );
     }
 
     if (user.hasTwoFA) {
       const verificationSid = await this.sendVerificationCode(user.phoneNumber);
       if (verificationSid === '') {
-        return callback({
-          code: grpc.status.INTERNAL,
-          message: 'Could not send verification code',
-        });
+        throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
       }
 
       await this.database
@@ -222,21 +162,17 @@ export class LocalHandlers {
         })
         .catch(console.error);
 
-      await this.database
-        .create('Token', {
-          userId: user._id,
-          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-          token: verificationSid,
-        })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      await this.database.create('Token', {
+        userId: user._id,
+        type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+        token: verificationSid,
+      });
 
-      return callback(null, {
+      return {
         result: JSON.stringify({
           message: 'Verification code sent',
         }),
-      });
+      };
     }
 
     await Promise.all(
@@ -244,112 +180,80 @@ export class LocalHandlers {
         userId: user._id,
         clientId,
       })
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    );
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    const accessToken = await this.database
-      .create('AccessToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const accessToken = await this.database.create('AccessToken', {
+      userId: user._id,
+      clientId,
+      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
+      expiresOn: moment()
+        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const refreshToken = await this.database.create('RefreshToken', {
+      userId: user._id,
+      clientId,
+      token: AuthUtils.randomToken(),
+      expiresOn: moment()
+        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
 
-    return callback(null, {
+    return {
       result: JSON.stringify({
         userId: user._id.toString(),
         accessToken: accessToken.token,
         refreshToken: refreshToken.token,
       }),
-    });
+    };
   }
 
-  async forgotPassword(call: RouterRequest, callback: RouterResponse) {
+  async forgotPassword(call: RouterRequest) {
     if (!this.initialized || isNil(this.emailModule)) {
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     }
 
     const { email } = JSON.parse(call.request.params);
     const config = ConfigController.getInstance().config;
-    let errorMessage = null;
 
-    const user = await this.database
-      .findOne('User', { email })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const user = await this.database.findOne('User', { email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
+      return { result: JSON.stringify({ message: 'Ok' }) };
 
     this.database
       .findOne('Token', { type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id })
       .then((oldToken: any) => {
         if (!isNil(oldToken)) return this.database.deleteOne('Token', oldToken);
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      });
 
-    const passwordResetTokenDoc = await this.database
-      .create('Token', {
-        type: TokenType.PASSWORD_RESET_TOKEN,
-        userId: user._id,
-        token: uuid(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const passwordResetTokenDoc = await this.database.create('Token', {
+      type: TokenType.PASSWORD_RESET_TOKEN,
+      userId: user._id,
+      token: uuid(),
+    });
 
     let appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-    let mail = await this.emailModule
-      .sendEmail('ForgotPassword', {
-        email: user.email,
-        sender: 'no-reply',
-        variables: {
-          link,
-        },
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
+    await this.emailModule.sendEmail('ForgotPassword', {
+      email: user.email,
+      sender: 'no-reply',
+      variables: {
+        link,
+      },
+    });
+    return { result: JSON.stringify({ message: 'Ok' }) };
   }
 
-  async resetPassword(call: RouterRequest, callback: RouterResponse) {
+  async resetPassword(call: RouterRequest) {
     if (!this.initialized || isNil(this.emailModule)) {
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     }
 
     const {
@@ -357,47 +261,31 @@ export class LocalHandlers {
       password: newPassword,
     } = JSON.parse(call.request.params);
 
-    let errorMessage = null;
-
-    const passwordResetTokenDoc = await this.database
-      .findOne('Token', {
-        type: TokenType.PASSWORD_RESET_TOKEN,
-        token: passwordResetTokenParam,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const passwordResetTokenDoc = await this.database.findOne('Token', {
+      type: TokenType.PASSWORD_RESET_TOKEN,
+      token: passwordResetTokenParam,
+    });
     if (isNil(passwordResetTokenDoc))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Invalid parameters',
-      });
+      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Invalid parameters');
 
-    const user = await this.database
-      .findOne('User', { _id: passwordResetTokenDoc.userId }, '+hashedPassword')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    if (isNil(user))
-      return callback({ code: grpc.status.NOT_FOUND, message: 'User not found' });
+    const user = await this.database.findOne(
+      'User',
+      { _id: passwordResetTokenDoc.userId },
+      '+hashedPassword'
+    );
+    if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
       user.hashedPassword
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    if (passwordsMatch)
-      return callback({
-        code: grpc.status.PERMISSION_DENIED,
-        message: "Password can't be the same as the old one",
-      });
-
-    user.hashedPassword = await AuthUtils.hashPassword(newPassword).catch(
-      (e: any) => (errorMessage = e.message)
     );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    if (passwordsMatch)
+      throw new GrpcError(
+        grpc.status.PERMISSION_DENIED,
+        "Password can't be the same as the old one"
+      );
+
+    user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
     const tokenPromise = this.database.deleteOne('Token', passwordResetTokenDoc);
@@ -408,68 +296,49 @@ export class LocalHandlers {
           userId: user._id,
         })
       )
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    );
 
-    return callback(null, {
+    return {
       result: JSON.stringify({ message: 'Password reset successful' }),
-    });
+    };
   }
 
-  async changePassword(call: RouterRequest, callback: RouterResponse) {
+  async changePassword(call: RouterRequest) {
     const { oldPassword, newPassword } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
     if (oldPassword === newPassword) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'The new password can not be the same as the old password',
-      });
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'The new password can not be the same as the old password'
+      );
     }
 
     let errorMessage: string | null = null;
-    const dbUser = await this.database
-      .findOne('User', { _id: user._id }, '+hashedPassword')
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    const dbUser = await this.database.findOne(
+      'User',
+      { _id: user._id },
+      '+hashedPassword'
+    );
 
     if (isNil(dbUser)) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'user does not exist',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User does not exist');
     }
 
     const passwordsMatch = await AuthUtils.checkPassword(
       oldPassword,
       dbUser.hashedPassword
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    );
     if (!passwordsMatch) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Invalid password',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid password');
     }
 
-    const hashedPassword = await AuthUtils.hashPassword(newPassword).catch(
-      (e: any) => (errorMessage = e.message)
-    );
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
       const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber);
       if (verificationSid === '') {
-        return callback({
-          code: grpc.status.INTERNAL,
-          message: 'Could not send verification code',
-        });
+        throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
       }
 
       await this.database
@@ -479,180 +348,121 @@ export class LocalHandlers {
         })
         .catch(console.error);
 
-      await this.database
-        .create('Token', {
-          userId: dbUser._id,
-          type: TokenType.CHANGE_PASSWORD_TOKEN,
-          token: verificationSid,
-          data: {
-            password: hashedPassword,
-          },
-        })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      await this.database.create('Token', {
+        userId: dbUser._id,
+        type: TokenType.CHANGE_PASSWORD_TOKEN,
+        token: verificationSid,
+        data: {
+          password: hashedPassword,
+        },
+      });
 
-      return callback(null, { result: 'Verification code sent' });
+      return { result: 'Verification code sent' };
     }
 
-    this.database
-      .findByIdAndUpdate('User', dbUser._id, { hashedPassword })
-      .then(() => {
-        callback(null, { result: 'Password changed successfully' });
-      })
-      .catch((e: Error) => {
-        callback({ code: grpc.status.INTERNAL, message: e.message });
-      });
+    await this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword });
+    return {
+      result: 'Password changed successfully',
+    };
   }
 
-  async verifyChangePassword(call: RouterRequest, callback: RouterResponse) {
+  async verifyChangePassword(call: RouterRequest) {
     const { code } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
-    let errorMessage: string | null = null;
-    const token = await this.database
-      .findOne('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    const token = await this.database.findOne('Token', {
+      userId: user._id,
+      type: TokenType.CHANGE_PASSWORD_TOKEN,
+    });
 
     if (isNil(token)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: 'User has no active change_password token',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Change password token not found');
     }
 
-    const verified = await this.sms
-      .verify(token.token, code)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    const verified = await this.sms.verify(token.token, code);
 
     if (!verified) {
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Invalid code' });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid code');
     }
 
     await this.database
       .deleteMany('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
       .catch(console.error);
 
-    this.database
-      .findByIdAndUpdate('User', user._id, { hashedPassword: token.data.password })
-      .then(() => {
-        callback(null, { result: 'Password changed successfully' });
-      })
-      .catch((e: Error) => {
-        callback({ code: grpc.status.INTERNAL, message: e.message });
-      });
+    await this.database.findByIdAndUpdate('User', user._id, {
+      hashedPassword: token.data.password,
+    });
+
+    return { result: 'Password changed successfully' };
   }
 
-  async verifyEmail(call: RouterRequest, callback: RouterResponse) {
+  async verifyEmail(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
 
     const verificationTokenParam = JSON.parse(call.request.params).verificationToken;
-    if (isNil(verificationTokenParam))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Invalid parameters',
-      });
 
-    let errorMessage = null;
     const config = ConfigController.getInstance().config;
 
-    const verificationTokenDoc = await this.database
-      .findOne('Token', {
-        type: TokenType.VERIFICATION_TOKEN,
-        token: verificationTokenParam,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const verificationTokenDoc = await this.database.findOne('Token', {
+      type: TokenType.VERIFICATION_TOKEN,
+      token: verificationTokenParam,
+    });
+
     if (isNil(verificationTokenDoc)) {
       if (config.local.verification_redirect_uri) {
-        return callback(null, { redirect: config.local.verification_redirect_uri });
+        return { redirect: config.local.verification_redirect_uri };
       } else {
-        return callback(null, { result: JSON.stringify({ message: 'Email verified' }) });
+        return { result: JSON.stringify({ message: 'Email verified' }) };
       }
     }
 
-    const user = await this.database
-      .findOne('User', { _id: verificationTokenDoc.userId })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    if (isNil(user))
-      return callback({ code: grpc.status.NOT_FOUND, message: 'User not found' });
+    const user = await this.database.findOne('User', {
+      _id: verificationTokenDoc.userId,
+    });
+    if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
 
     user.isVerified = true;
     const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
     const tokenPromise = this.database.deleteOne('Token', verificationTokenDoc);
 
-    await Promise.all([userPromise, tokenPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    await Promise.all([userPromise, tokenPromise]);
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
     if (config.local.verification_redirect_uri) {
-      return callback(null, { redirect: config.local.verification_redirect_uri });
-    } else {
-      return callback(null, { result: JSON.stringify({ message: 'Email verified' }) });
+      return { redirect: config.local.verification_redirect_uri };
     }
+    return { result: JSON.stringify({ message: 'Email verified' }) };
   }
 
-  async verify(call: RouterRequest, callback: RouterResponse) {
+  async verify(call: RouterRequest) {
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
     const { email, code } = JSON.parse(call.request.params);
 
-    let errorMessage = null;
-    const user = await this.database
-      .findOne('User', { email })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const user = await this.database.findOne('User', { email });
 
-    if (isNil(user))
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'User not found' });
+    if (isNil(user)) throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User not found');
 
-    const verificationRecord = await this.database
-      .findOne('Token', { userId: user._id, type: TokenType.TWO_FA_VERIFICATION_TOKEN })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const verificationRecord = await this.database.findOne('Token', {
+      userId: user._id,
+      type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+    });
     if (isNil(verificationRecord))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'No verification record for this user',
-      });
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'No verification record for this user'
+      );
 
-    const verified = await this.sms
-      .verify(verificationRecord.token, code)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const verified = await this.sms.verify(verificationRecord.token, code);
 
     if (!verified) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'email and code do not match',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
     }
 
     await this.database
@@ -669,65 +479,51 @@ export class LocalHandlers {
         userId: user._id,
         clientId,
       })
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    );
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    const accessToken = await this.database
-      .create('AccessToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const accessToken = await this.database.create('AccessToken', {
+      userId: user._id,
+      clientId,
+      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
+      expiresOn: moment()
+        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const refreshToken = await this.database.create('RefreshToken', {
+      userId: user._id,
+      clientId,
+      token: AuthUtils.randomToken(),
+      expiresOn: moment()
+        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
 
-    return callback(null, {
+    return {
       result: JSON.stringify({
         userId: user._id.toString(),
         accessToken: accessToken.token,
         refreshToken: refreshToken.token,
       }),
-    });
+    };
   }
 
-  async enableTwoFa(call: RouterRequest, callback: RouterResponse) {
+  async enableTwoFa(call: RouterRequest) {
     const { phoneNumber } = JSON.parse(call.request.params);
     const context = JSON.parse(call.request.context);
 
     if (isNil(context) || isNil(context.user)) {
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    let errorMessage: string | null = null;
     const verificationSid = await this.sendVerificationCode(phoneNumber);
     if (verificationSid === '') {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: 'Could not send verification code',
-      });
+      throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
     }
 
     await this.database
@@ -737,63 +533,44 @@ export class LocalHandlers {
       })
       .catch(console.error);
 
-    await this.database
-      .create('Token', {
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-        token: verificationSid,
-        data: {
-          phoneNumber,
-        },
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    await this.database.create('Token', {
+      userId: context.user._id,
+      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      token: verificationSid,
+      data: {
+        phoneNumber,
+      },
+    });
 
-    return callback(null, {
+    return {
       result: JSON.stringify({
         message: 'Verification code sent',
       }),
-    });
+    };
   }
 
-  async verifyPhoneNumber(call: RouterRequest, callback: RouterResponse) {
+  async verifyPhoneNumber(call: RouterRequest) {
     const context = JSON.parse(call.request.context);
     const { code } = JSON.parse(call.request.params);
 
     if (isNil(context) || isEmpty(context)) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    let errorMessage: string | null = null;
-    const verificationRecord = await this.database
-      .findOne('Token', {
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const verificationRecord = await this.database.findOne('Token', {
+      userId: context.user._id,
+      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+    });
     if (isNil(verificationRecord))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'No verification record for this user',
-      });
+      throw new GrpcError(
+        grpc.status.INVALID_ARGUMENT,
+        'No verification record for this user'
+      );
 
-    const verified = await this.sms
-      .verify(verificationRecord.token, code)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const verified = await this.sms.verify(verificationRecord.token, code);
 
     if (!verified) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'email and code do not match',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
     }
 
     await this.database
@@ -803,17 +580,10 @@ export class LocalHandlers {
       })
       .catch(console.error);
 
-    await this.database
-      .findByIdAndUpdate('User', context.user._id, {
-        phoneNumber: verificationRecord.data.phoneNumber,
-        hasTwoFA: true,
-      })
-      .catch((e: any) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    await this.database.findByIdAndUpdate('User', context.user._id, {
+      phoneNumber: verificationRecord.data.phoneNumber,
+      hasTwoFA: true,
+    });
 
     this.grpcSdk.bus?.publish(
       'authentication:enableTwofa:user',
@@ -823,41 +593,33 @@ export class LocalHandlers {
       })
     );
 
-    return callback(null, {
+    return {
       result: JSON.stringify({
         message: 'twofa enabled',
       }),
-    });
+    };
   }
 
-  async disableTwoFa(call: RouterRequest, callback: RouterResponse) {
+  async disableTwoFa(call: RouterRequest) {
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isNil(context.user)) {
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    let errorMessage: string | null = null;
-    await this.database
-      .findByIdAndUpdate('User', context.user._id, {
-        hasTwoFA: false,
-      })
-      .catch((e: any) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
+    await this.database.findByIdAndUpdate('User', context.user._id, {
+      hasTwoFA: false,
+    });
 
     this.grpcSdk.bus?.publish(
       'authentication:disableTwofa:user',
       JSON.stringify({ id: context.user._id })
     );
 
-    return callback(null, {
+    return {
       result: JSON.stringify({
         message: 'twofa disabled',
       }),
-    });
+    };
   }
 
   private async initDbAndEmail() {

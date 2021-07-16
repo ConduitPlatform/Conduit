@@ -2,7 +2,10 @@ import { isNil } from 'lodash';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
-import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  RouterResponse,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 
@@ -19,12 +22,6 @@ export class CommonHandlers {
     const clientId = context.clientId;
 
     const { refreshToken } = JSON.parse(call.request.params);
-    if (isNil(refreshToken)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Invalid parameters',
-      });
-    }
 
     let errorMessage = null;
     const config = ConfigController.getInstance().config;

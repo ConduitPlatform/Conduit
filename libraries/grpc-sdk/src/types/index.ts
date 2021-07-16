@@ -1,43 +1,58 @@
+import grpc from 'grpc';
+
 export type GrpcRequest<T> = { request: T };
 export type GrpcResponse<T> = (
   err: {
-    code: number,
-    message: string
+    code: number;
+    message: string;
   } | null,
-  res?: T,
+  res?: T
 ) => void;
 
+export class GrpcError extends Error {
+  code: grpc.status;
+  message: string;
+
+  constructor(code: grpc.status, message: string) {
+    super(message);
+    this.code = code;
+    this.message = message;
+  }
+}
+
 export type RouterRequest = GrpcRequest<{
-  params: string,
-  path: string,
-  headers: string,
-  context: string
+  params: string;
+  path: string;
+  headers: string;
+  context: string;
 }>;
 
-type Response = { result: string, redirect: string };
+type Response = { result: string; redirect: string };
 type ResponseWithResult = { result: string };
 type ResponseWithRedirect = { redirect: string };
 
-export type RouterResponse = GrpcResponse<Response | ResponseWithResult | ResponseWithRedirect>;
+export type RouterResponse = GrpcResponse<
+  Response | ResponseWithResult | ResponseWithRedirect
+>;
 
 export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
 export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
 
 export type SocketRequest = GrpcRequest<{
-  event: string,
-  socketId: string,
-  params: string,
-  context: string
+  event: string;
+  socketId: string;
+  params: string;
+  context: string;
 }>;
 
 type EventResponse = {
-  event: string,
-  data: string,
-  receivers?: string[]
+  event: string;
+  data: string;
+  receivers?: string[];
 };
 
 type JoinRoomResponse = {
-  rooms: string[]
-}
+  rooms: string[];
+};
 
 export type SocketResponse = GrpcResponse<EventResponse | JoinRoomResponse>;

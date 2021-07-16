@@ -1,6 +1,10 @@
 import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
-import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 
@@ -30,12 +34,6 @@ export class ServiceHandler {
         message: 'Requested resource not found',
       });
     const { serviceName, token } = JSON.parse(call.request.params);
-
-    if (isNil(serviceName) || isNil(token))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service name and password required',
-      });
 
     let errorMessage = null;
 

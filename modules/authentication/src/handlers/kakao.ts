@@ -55,11 +55,6 @@ export class KakaoHandlers {
   async authenticate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const code = params.code;
-    if (isNil(code))
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Invalid parameters',
-      });
 
     let errorMessage = null;
 
