@@ -5,12 +5,12 @@ import { v4 as uuid } from 'uuid';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import ConduitGrpcSdk, {
   ConduitError,
+  GrpcError,
   RouterRequest,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
-import { GrpcError } from '../../../../libraries/grpc-sdk/src';
 import moment = require('moment');
 
 export class LocalHandlers {

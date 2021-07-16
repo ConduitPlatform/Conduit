@@ -1,10 +1,4 @@
-import {
-  GrpcError,
-  GrpcRequest,
-  GrpcResponse,
-  RouterRequest,
-  RouterResponse,
-} from '../types';
+import { GrpcRequest, RouterRequest, RouterResponse } from '../types';
 import grpc from 'grpc';
 
 export function wrapCallObjectForRouter(call: any): RouterRequest {
@@ -34,12 +28,14 @@ export function wrapCallbackFunctionForRouter(callback: any): RouterResponse {
 }
 
 export function wrapGrpcFunction<T>(
-  fun: (call: GrpcRequest<T>) => Promise<any>
+  fun: (call: GrpcRequest<T>, callback?: any) => Promise<any>
 ): (call: any, callback: any) => void {
   return (call: any, callback: any) => {
-    fun(call)
+    fun(call, callback)
       .then((r) => {
-        callback(null, r);
+        if (r) {
+          callback(null, r);
+        }
       })
       .catch((error) => {
         callback({

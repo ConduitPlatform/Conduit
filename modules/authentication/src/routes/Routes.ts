@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   GrpcServer,
   RouterRequest,
   RouterResponse,
-  wrapGrpcFunction,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
@@ -45,36 +44,20 @@ export class AuthenticationRoutes {
   async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
     this.grpcSdk.router
-      .registerRouter(this.server, activeRoutes, {
-        register: wrapGrpcFunction(this.localHandlers.register.bind(this.localHandlers)),
-        authenticateLocal: wrapGrpcFunction(
-          this.localHandlers.authenticate.bind(this.localHandlers)
+      .registerRouterAsync(this.server, activeRoutes, {
+        register: this.localHandlers.register.bind(this.localHandlers),
+        authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
+        forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
+        resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
+        changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
+        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(
+          this.localHandlers
         ),
-        forgotPassword: wrapGrpcFunction(
-          this.localHandlers.forgotPassword.bind(this.localHandlers)
-        ),
-        resetPassword: wrapGrpcFunction(
-          this.localHandlers.resetPassword.bind(this.localHandlers)
-        ),
-        changePassword: wrapGrpcFunction(
-          this.localHandlers.changePassword.bind(this.localHandlers)
-        ),
-        verifyChangePassword: wrapGrpcFunction(
-          this.localHandlers.verifyChangePassword.bind(this.localHandlers)
-        ),
-        verifyEmail: wrapGrpcFunction(
-          this.localHandlers.verifyEmail.bind(this.localHandlers)
-        ),
-        verifyTwoFa: wrapGrpcFunction(this.localHandlers.verify.bind(this.localHandlers)),
-        enableTwoFa: wrapGrpcFunction(
-          this.localHandlers.enableTwoFa.bind(this.localHandlers)
-        ),
-        verifyPhoneNumber: wrapGrpcFunction(
-          this.localHandlers.verifyPhoneNumber.bind(this.localHandlers)
-        ),
-        disableTwoFa: wrapGrpcFunction(
-          this.localHandlers.disableTwoFa.bind(this.localHandlers)
-        ),
+        verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
+        verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
+        enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
+        verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
+        disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
         authenticateFacebook: this.facebookHandlers.authenticate.bind(
           this.facebookHandlers
         ),
@@ -549,7 +532,7 @@ export class AuthenticationRoutes {
     return routesArray;
   }
 
-  middleware(call: RouterRequest, callback: RouterResponse) {
+  async middleware(call: RouterRequest, callback: RouterResponse) {
     let context;
     let headers;
     try {

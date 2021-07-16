@@ -1,6 +1,10 @@
 import { OAuth2Client } from 'google-auth-library';
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  GrpcError,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
@@ -31,62 +35,43 @@ export class GoogleHandlers {
     return true;
   }
 
-  async authenticate(call: RouterRequest, callback: RouterResponse) {
+  async authenticate(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     const { id_token, access_token, expires_in } = JSON.parse(call.request.params);
-
-    let errorMessage = null;
 
     const config = ConfigController.getInstance().config;
 
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
-    const ticket = await this.client
-      .verifyIdToken({
-        idToken: id_token,
-        audience: config.google.clientId,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const ticket = await this.client.verifyIdToken({
+      idToken: id_token,
+      audience: config.google.clientId,
+    });
 
     const payload = ticket.getPayload();
     if (isNil(payload)) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Received invalid response from the Google API',
-      });
+      throw new GrpcError(
+        grpc.status.UNAUTHENTICATED,
+        'Received invalid response from the Google API'
+      );
     }
     if (!payload.email_verified) {
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    let user = await this.database
-      .findOne('User', { email: payload.email })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let user = await this.database.findOne('User', { email: payload.email });
 
     if (!isNil(user)) {
       if (!user.active)
-        return callback({
-          code: grpc.status.PERMISSION_DENIED,
-          message: 'Inactive user',
-        });
+        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
       if (!config.google.accountLinking) {
-        return callback({
-          code: grpc.status.PERMISSION_DENIED,
-          message: 'User with this email already exists',
-        });
+        throw new GrpcError(
+          grpc.status.PERMISSION_DENIED,
+          'User with this email already exists'
+        );
       }
       if (isNil(user.google)) {
         user.google = {
@@ -95,26 +80,18 @@ export class GoogleHandlers {
           tokenExpires: moment().add(expires_in as number, 'milliseconds'),
         };
         if (!user.isVerified) user.isVerified = true;
-        user = await this.database
-          .findByIdAndUpdate('User', user._id, user)
-          .catch((e: any) => (errorMessage = e.message));
-        if (!isNil(errorMessage))
-          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        user = await this.database.findByIdAndUpdate('User', user._id, user);
       }
     } else {
-      user = await this.database
-        .create('User', {
-          email: payload.email,
-          google: {
-            id: payload.sub,
-            token: access_token,
-            tokenExpires: moment().add(expires_in).format(),
-          },
-          isVerified: true,
-        })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      user = await this.database.create('User', {
+        email: payload.email,
+        google: {
+          id: payload.sub,
+          token: access_token,
+          tokenExpires: moment().add(expires_in).format(),
+        },
+        isVerified: true,
+      });
     }
 
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
@@ -124,17 +101,14 @@ export class GoogleHandlers {
         clientId: context.clientId,
         config,
       }
-    ).catch((e) => (errorMessage = e));
+    );
 
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    return callback(null, {
+    return {
       result: JSON.stringify({
         userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
+        accessToken: (accessToken as any).token,
+        refreshToken: (refreshToken as any).token,
       }),
-    });
+    };
   }
 }

@@ -2,8 +2,8 @@ import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, {
   ConduitError,
+  GrpcError,
   RouterRequest,
-  RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
@@ -27,52 +27,30 @@ export class ServiceHandler {
     return true;
   }
 
-  async authenticate(call: RouterRequest, callback: RouterResponse) {
+  async authenticate(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     const { serviceName, token } = JSON.parse(call.request.params);
-
-    let errorMessage = null;
 
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
-    const serviceUser = await this.database
-      .findOne('Service', { name: serviceName }, '+hashedToken')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const serviceUser = await this.database.findOne(
+      'Service',
+      { name: serviceName },
+      '+hashedToken'
+    );
     if (isNil(serviceUser))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Invalid login credentials',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
     if (!serviceUser.active)
-      return callback({
-        code: grpc.status.PERMISSION_DENIED,
-        message: 'Inactive service user',
-      });
+      throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive service user');
 
-    const tokensMatch = await AuthUtils.checkPassword(
-      token,
-      serviceUser.hashedToken
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const tokensMatch = await AuthUtils.checkPassword(token, serviceUser.hashedToken);
     if (!tokensMatch)
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Invalid login credentials',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
 
     const config = ConfigController.getInstance().config;
 
@@ -81,9 +59,7 @@ export class ServiceHandler {
         userId: serviceUser._id,
         clientId,
       })
-    ).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    );
 
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
@@ -92,17 +68,14 @@ export class ServiceHandler {
         clientId: context.clientId,
         config,
       }
-    ).catch((e) => (errorMessage = e));
+    );
 
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    return callback(null, {
+    return {
       result: JSON.stringify({
         serviceId: serviceUser._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
+        accessToken: (accessToken as any).token,
+        refreshToken: (refreshToken as any).token,
       }),
-    });
+    };
   }
 }

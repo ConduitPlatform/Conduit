@@ -1,6 +1,10 @@
 import request, { OptionsWithUrl } from 'request-promise';
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  GrpcError,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
@@ -29,25 +33,16 @@ export class FacebookHandlers {
     return true;
   }
 
-  async authenticate(call: RouterRequest, callback: RouterResponse) {
+  async authenticate(call: RouterRequest) {
     if (!this.initialized)
-      return callback({
-        code: grpc.status.NOT_FOUND,
-        message: 'Requested resource not found',
-      });
-
+      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     const { access_token } = JSON.parse(call.request.params);
-
-    let errorMessage = null;
 
     const config = ConfigController.getInstance().config;
 
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isEmpty(context))
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
     const facebookOptions: OptionsWithUrl = {
       method: 'GET',
@@ -59,36 +54,25 @@ export class FacebookHandlers {
       json: true,
     };
 
-    const facebookResponse = await request(facebookOptions).catch(
-      (e: any) => (errorMessage = e.message)
-    );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const facebookResponse = await request(facebookOptions);
 
     if (isNil(facebookResponse.email) || isNil(facebookResponse.id)) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Authentication with facebook failed',
-      });
+      throw new GrpcError(
+        grpc.status.UNAUTHENTICATED,
+        'Authentication with facebook failed'
+      );
     }
 
-    let user = await this.database
-      .findOne('User', { email: facebookResponse.email })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    let user = await this.database.findOne('User', { email: facebookResponse.email });
 
     if (!isNil(user)) {
       if (!user.active)
-        return callback({
-          code: grpc.status.PERMISSION_DENIED,
-          message: 'Inactive user',
-        });
+        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
       if (!config.facebook.accountLinking) {
-        return callback({
-          code: grpc.status.PERMISSION_DENIED,
-          message: 'User with this email already exists',
-        });
+        throw new GrpcError(
+          grpc.status.PERMISSION_DENIED,
+          'User with this email already exists'
+        );
       }
       if (isNil(user.facebook)) {
         user.facebook = {
@@ -96,24 +80,16 @@ export class FacebookHandlers {
         };
         // TODO look into this again, as the email the user has registered will still not be verified
         if (!user.isVerified) user.isVerified = true;
-        user = await this.database
-          .findByIdAndUpdate('User', user)
-          .catch((e: any) => (errorMessage = e.message));
-        if (!isNil(errorMessage))
-          return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        user = await this.database.findByIdAndUpdate('User', user);
       }
     } else {
-      user = await this.database
-        .create('User', {
-          email: facebookResponse.email,
-          facebook: {
-            id: facebookResponse.id,
-          },
-          isVerified: true,
-        })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      user = await this.database.create('User', {
+        email: facebookResponse.email,
+        facebook: {
+          id: facebookResponse.id,
+        },
+        isVerified: true,
+      });
     }
 
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
@@ -123,17 +99,14 @@ export class FacebookHandlers {
         clientId: context.clientId,
         config,
       }
-    ).catch((e) => (errorMessage = e));
+    );
 
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-
-    return callback(null, {
+    return {
       result: JSON.stringify({
         userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
+        accessToken: (accessToken as any).token,
+        refreshToken: (refreshToken as any).token,
       }),
-    });
+    };
   }
 }

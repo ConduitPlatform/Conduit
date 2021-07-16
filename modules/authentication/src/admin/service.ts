@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcError,
+  RouterRequest,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../utils/auth';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
@@ -13,7 +16,7 @@ export class ServiceAdmin {
     });
   }
 
-  async getServices(call: RouterRequest, callback: RouterResponse) {
+  async getServices(call: RouterRequest) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -25,120 +28,66 @@ export class ServiceAdmin {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const servicesPromise = this.database.findMany(
+    const services = await this.database.findMany(
       'Service',
       {},
       null,
       skipNumber,
-      limitNumber,
+      limitNumber
     );
-    const countPromise = this.database.countDocuments('Service', {});
+    const count = await this.database.countDocuments('Service', {});
 
-    let errorMessage = null;
-    const [services, count] = await Promise.all([servicesPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message),
-    );
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
-    return callback(null, { result: JSON.stringify({ services, count }) });
+    return { result: JSON.stringify({ services, count }) };
   }
 
-  async createService(call: RouterRequest, callback: RouterResponse) {
+  async createService(call: RouterRequest) {
     const { name } = JSON.parse(call.request.params);
 
     if (isNil(name)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service name is required',
-      });
+      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service name is required');
     }
 
-    let errorMessage = null;
     const token = AuthUtils.randomToken();
-    const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message),
-    );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const hashedToken = await AuthUtils.hashPassword(token);
 
-    await this.database
-      .create('Service', { name, hashedToken })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service creation failed',
-      });
-    }
+    await this.database.create('Service', { name, hashedToken });
 
     this.grpcSdk.bus?.publish('authentication:create:service', JSON.stringify({ name }));
 
-    return callback(null, { result: JSON.stringify({ name, token }) });
+    return { result: JSON.stringify({ name, token }) };
   }
 
-  async deleteService(call: RouterRequest, callback: RouterResponse) {
+  async deleteService(call: RouterRequest) {
     const { id } = JSON.parse(call.request.params);
 
     if (isNil(id)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service id is required',
-      });
+      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
     }
 
-    let errorMessage = null;
-    await this.database
-      .deleteOne('Service', { _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service deletion failed',
-      });
-    }
+    await this.database.deleteOne('Service', { _id: id });
 
     this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id }));
 
-    return callback(null, { result: 'OK' });
+    return { result: 'OK' };
   }
 
-  async renewToken(call: RouterRequest, callback: RouterResponse) {
+  async renewToken(call: RouterRequest) {
     const { serviceId } = JSON.parse(call.request.params);
 
     if (isNil(serviceId)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service id is required',
-      });
+      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
     }
 
-    let errorMessage = null;
     const token = AuthUtils.randomToken();
-    const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message),
+    const hashedToken = await AuthUtils.hashPassword(token);
+
+    let service = await this.database.findByIdAndUpdate(
+      'Service',
+      serviceId,
+      { hashedToken },
+      { new: true }
     );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    let service = await this.database
-      .findByIdAndUpdate('Service', serviceId, { hashedToken }, { new: true })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service update failed',
-      });
-    }
-
-    return callback(null, { result: JSON.stringify({ name: service.name, token }) });
+    return { result: JSON.stringify({ name: service.name, token }) };
   }
 }

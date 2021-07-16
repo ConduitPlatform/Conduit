@@ -3,6 +3,7 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import fs from 'fs';
 import { GrpcServer } from '../../classes';
 import { AdminClient } from '../../protoUtils/core';
+import { wrapGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -29,6 +30,7 @@ export default class Admin extends ConduitModule<AdminClient> {
     super(url);
     this.initializeClient(AdminClient);
   }
+
   sleep(ms: number) {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
@@ -62,6 +64,18 @@ export default class Admin extends ConduitModule<AdminClient> {
     // One case is to register to config module X and the admin package to request the url from
     // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it
     return this.sleep(3000).then(() => this.register(paths, protoFile));
+  }
+
+  async registerAdminAsync(
+    server: GrpcServer,
+    paths: any[],
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+  ): Promise<any> {
+    let modifiedFunctions: { [name: string]: Function } = {};
+    Object.keys(functions).forEach((key) => {
+      modifiedFunctions[key] = wrapGrpcFunction(functions[key]);
+    });
+    return this.registerAdmin(server, paths, modifiedFunctions);
   }
 
   register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
