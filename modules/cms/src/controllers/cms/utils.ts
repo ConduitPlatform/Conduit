@@ -94,7 +94,7 @@ export function getOps(schemaName: string, actualSchema: any) {
     )
   );
 
-  let assignableFields = actualSchema.fields;
+  let assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
   delete assignableFields.createdAt;
   delete assignableFields.updatedAt;
