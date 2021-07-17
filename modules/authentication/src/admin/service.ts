@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -6,14 +7,15 @@ import ConduitGrpcSdk, {
 import { AuthUtils } from '../utils/auth';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
+import { Service } from '../models';
 
 export class ServiceAdmin {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     self.grpcSdk.waitForExistence('database-provider').then((r) => {
-      self.database = self.grpcSdk.databaseProvider;
+      self.database = self.grpcSdk.databaseProvider!;
     });
   }
 
@@ -29,14 +31,13 @@ export class ServiceAdmin {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const services = await this.database.findMany(
-      'Service',
+    const services: Service[] = await Service.getInstance().findMany(
       {},
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
-    const count = await this.database.countDocuments('Service', {});
+    const count: number = await Service.getInstance().countDocuments({});
 
     return { services, count };
   }
@@ -51,7 +52,7 @@ export class ServiceAdmin {
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token);
 
-    await this.database.create('Service', { name, hashedToken });
+    await Service.getInstance().create({ name, hashedToken });
 
     this.grpcSdk.bus?.publish('authentication:create:service', JSON.stringify({ name }));
 
@@ -65,7 +66,7 @@ export class ServiceAdmin {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
     }
 
-    await this.database.deleteOne('Service', { _id: id });
+    await Service.getInstance().deleteOne({ _id: id });
 
     this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id }));
 
@@ -82,13 +83,15 @@ export class ServiceAdmin {
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token);
 
-    let service = await this.database.findByIdAndUpdate(
-      'Service',
+    let service: Service | null = await Service.getInstance().findByIdAndUpdate(
       serviceId,
       { hashedToken },
-      { new: true }
+      true
     );
 
+    if (isNil(service)) {
+      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service not found');
+    }
     return { name: service.name, token };
   }
 }

@@ -11,14 +11,12 @@ import querystring from 'querystring';
 import moment from 'moment';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
+import { User } from '../models';
 
 export class KakaoHandlers {
-  private database: any;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider;
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -82,18 +80,20 @@ export class KakaoHandlers {
     if (isNil(userInfo))
       throw new GrpcError(grpc.status.INTERNAL, 'Kakao did not return user info');
 
-    let user = await this.database.findOne('User', { 'kakao.id': userInfo.id });
+    let user: User | null = await User.getInstance().findOne({
+      'kakao.id': userInfo.id,
+    });
 
     if (
       isNil(user) &&
       !isNil(userInfo.kakao_account) &&
       !isNil(userInfo.kakao_account.email)
     ) {
-      user = await this.database.findOne('User', { email: userInfo.email });
+      user = await User.getInstance().findOne({ email: userInfo.email });
     }
 
     if (isNil(user)) {
-      user = await this.database.create('User', {
+      user = await User.getInstance().create({
         email: userInfo?.kakao_account?.email || '',
         kakao: {
           id: userInfo.id,
@@ -109,8 +109,7 @@ export class KakaoHandlers {
       if (!user.active)
         throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
       if (!user.kakao) {
-        user = await this.database.findByIdAndUpdate(
-          'User',
+        user = await User.getInstance().findByIdAndUpdate(
           user._id,
           {
             kakao: {
@@ -133,7 +132,7 @@ export class KakaoHandlers {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
-        userId: user._id,
+        userId: user!._id,
         clientId,
         config,
       }
@@ -147,7 +146,7 @@ export class KakaoHandlers {
         '&refreshToken=' +
         (refreshToken as any).token,
       result: {
-        userId: user._id.toString(),
+        userId: user!._id.toString(),
         accessToken: (accessToken as any).token,
         refreshToken: (refreshToken as any).token,
       },

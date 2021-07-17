@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import grpc from 'grpc';
-import DatabaseProvider from '@quintessential-sft/conduit-grpc-sdk/dist/modules/databaseProvider';
 
 export class CmsHandlers {
   private database?: DatabaseProvider;

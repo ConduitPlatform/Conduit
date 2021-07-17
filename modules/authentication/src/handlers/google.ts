@@ -9,16 +9,15 @@ import ConduitGrpcSdk, {
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
+import { User } from '../models';
 import moment = require('moment');
 
 export class GoogleHandlers {
   private readonly client: OAuth2Client;
-  private database: any;
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.client = new OAuth2Client();
-    this.database = this.grpcSdk.databaseProvider;
   }
 
   async validate(): Promise<Boolean> {
@@ -63,7 +62,7 @@ export class GoogleHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    let user = await this.database.findOne('User', { email: payload.email });
+    let user: User | null = await User.getInstance().findOne({ email: payload.email });
 
     if (!isNil(user)) {
       if (!user.active)
@@ -78,13 +77,15 @@ export class GoogleHandlers {
         user.google = {
           id: payload.sub,
           token: access_token,
-          tokenExpires: moment().add(expires_in as number, 'milliseconds'),
+          tokenExpires: moment()
+            .add(expires_in as number, 'milliseconds')
+            .toDate(),
         };
         if (!user.isVerified) user.isVerified = true;
-        user = await this.database.findByIdAndUpdate('User', user._id, user);
+        user = await User.getInstance().findByIdAndUpdate(user._id, user);
       }
     } else {
-      user = await this.database.create('User', {
+      user = await User.getInstance().create({
         email: payload.email,
         google: {
           id: payload.sub,
@@ -98,14 +99,14 @@ export class GoogleHandlers {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
-        userId: user._id,
+        userId: user!._id,
         clientId: context.clientId,
         config,
       }
     );
 
     return {
-      userId: user._id.toString(),
+      userId: user!._id.toString(),
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };

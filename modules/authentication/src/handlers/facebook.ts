@@ -9,14 +9,12 @@ import ConduitGrpcSdk, {
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
+import { User } from '../models';
 
 export class FacebookHandlers {
-  private database: any;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider;
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -64,7 +62,9 @@ export class FacebookHandlers {
       );
     }
 
-    let user = await this.database.findOne('User', { email: facebookResponse.email });
+    let user: User | null = await User.getInstance().findOne({
+      email: facebookResponse.email,
+    });
 
     if (!isNil(user)) {
       if (!user.active)
@@ -77,14 +77,15 @@ export class FacebookHandlers {
       }
       if (isNil(user.facebook)) {
         user.facebook = {
-          id: facebookResponse.id,
+          id: facebookResponse.id as string,
+          token: access_token,
         };
         // TODO look into this again, as the email the user has registered will still not be verified
         if (!user.isVerified) user.isVerified = true;
-        user = await this.database.findByIdAndUpdate('User', user);
+        user = await User.getInstance().findByIdAndUpdate(user._id, user);
       }
     } else {
-      user = await this.database.create('User', {
+      user = await User.getInstance().create({
         email: facebookResponse.email,
         facebook: {
           id: facebookResponse.id,
@@ -96,14 +97,14 @@ export class FacebookHandlers {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
-        userId: user._id,
+        userId: user!._id,
         clientId: context.clientId,
         config,
       }
     );
 
     return {
-      userId: user._id.toString(),
+      userId: user!._id.toString(),
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };

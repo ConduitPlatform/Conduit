@@ -40,7 +40,7 @@ message SocketResponse {
   repeated string rooms = 4;
 }
 `;
-export default class Router extends ConduitModule<RouterClient> {
+export class Router extends ConduitModule<RouterClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
     this.initializeClient(RouterClient);

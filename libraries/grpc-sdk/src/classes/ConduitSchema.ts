@@ -1,10 +1,10 @@
 import { ConduitModel, ConduitModelOptions } from '../interfaces';
 
 export class ConduitSchema {
-  private readonly _name: string;
-  private readonly _fields: ConduitModel;
-  private readonly _collectionName: string;
-  private readonly _modelOptions: ConduitModelOptions;
+  readonly name: string;
+  readonly fields: ConduitModel;
+  readonly collectionName: string;
+  readonly modelOptions: ConduitModelOptions;
 
   constructor(
     name: string,
@@ -12,30 +12,14 @@ export class ConduitSchema {
     modelOptions?: ConduitModelOptions,
     collectionName?: string
   ) {
-    this._name = name;
-    this._fields = fields;
-    this._modelOptions = modelOptions ? modelOptions : {};
+    this.name = name;
+    this.fields = fields;
+    this.modelOptions = modelOptions ? modelOptions : {};
     // todo should pluralize like mongoose
-    this._collectionName = collectionName ? collectionName : this._name;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-
-  get fields(): ConduitModel {
-    return this._fields;
+    this.collectionName = collectionName ? collectionName : this.name;
   }
 
   get modelSchema(): ConduitModel {
-    return this._fields;
-  }
-
-  get collectionName(): string {
-    return this._collectionName;
-  }
-
-  get modelOptions(): ConduitModelOptions {
-    return this._modelOptions;
+    return this.fields;
   }
 }

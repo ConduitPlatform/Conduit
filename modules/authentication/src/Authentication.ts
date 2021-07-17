@@ -1,8 +1,10 @@
 import * as models from './models';
+import { AccessToken, RefreshToken } from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
@@ -16,7 +18,7 @@ import { AuthUtils } from './utils/auth';
 import moment from 'moment';
 
 export default class AuthenticationModule {
-  private database: any;
+  private database: DatabaseProvider;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private _router: AuthenticationRoutes;
@@ -153,8 +155,8 @@ export default class AuthenticationModule {
       expiresIn: config.tokenInvalidationPeriod,
     };
     let errorMessage = null;
-    const accessToken = await this.database
-      .create('AccessToken', {
+    const accessToken: AccessToken = await AccessToken.getInstance()
+      .create({
         userId: userId,
         clientId,
         token: AuthUtils.signToken({ id: userId }, signTokenOptions),
@@ -166,8 +168,8 @@ export default class AuthenticationModule {
     if (!isNil(errorMessage))
       return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
+    const refreshToken = await RefreshToken.getInstance()
+      .create({
         userId: userId,
         clientId,
         token: AuthUtils.randomToken(),
@@ -199,7 +201,7 @@ export default class AuthenticationModule {
   private async enableModule() {
     await this.updateConfig();
     if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider;
+      this.database = this.grpcSdk.databaseProvider!;
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
@@ -209,8 +211,10 @@ export default class AuthenticationModule {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model) => {
-      return this.database.createSchemaFromAdapter(model);
+    // @ts-ignore
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

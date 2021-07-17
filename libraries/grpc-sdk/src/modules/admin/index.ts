@@ -25,7 +25,7 @@ message AdminResponse {
 }
 `;
 
-export default class Admin extends ConduitModule<AdminClient> {
+export class Admin extends ConduitModule<AdminClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
     this.initializeClient(AdminClient);

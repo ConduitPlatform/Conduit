@@ -8,14 +8,12 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
+import { Service } from '../models';
 
 export class ServiceHandler {
-  private database: any;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider;
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -39,8 +37,7 @@ export class ServiceHandler {
 
     const clientId = context.clientId;
 
-    const serviceUser = await this.database.findOne(
-      'Service',
+    const serviceUser: Service | null = await Service.getInstance().findOne(
       { name: serviceName },
       '+hashedToken'
     );

@@ -9,13 +9,10 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
+import { AccessToken, RefreshToken, User } from '../models';
 
 export class CommonHandlers {
-  private database: any;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = grpcSdk.databaseProvider;
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
@@ -26,10 +23,12 @@ export class CommonHandlers {
 
     const config = ConfigController.getInstance().config;
 
-    const oldRefreshToken = await this.database.findOne('RefreshToken', {
-      token: refreshToken,
-      clientId,
-    });
+    const oldRefreshToken: RefreshToken | null = await RefreshToken.getInstance().findOne(
+      {
+        token: refreshToken,
+        clientId,
+      }
+    );
     if (isNil(oldRefreshToken)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Invalid parameters');
     }
@@ -49,14 +48,14 @@ export class CommonHandlers {
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    const newAccessToken = await this.database.create('AccessToken', {
+    const newAccessToken: AccessToken = await AccessToken.getInstance().create({
       userId: oldRefreshToken.userId,
       clientId,
       token: AuthUtils.signToken({ id: oldRefreshToken.userId }, signTokenOptions),
       expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
     });
 
-    const newRefreshToken = await this.database.create('RefreshToken', {
+    const newRefreshToken: RefreshToken = await RefreshToken.getInstance().create({
       userId: oldRefreshToken.userId,
       clientId,
       token: AuthUtils.randomToken(),
@@ -95,7 +94,7 @@ export class CommonHandlers {
     const context = call.request.context;
 
     const user = context.user;
-    await this.database.deleteOne('User', { _id: user._id });
+    await User.getInstance().deleteOne({ _id: user._id });
 
     Promise.all(
       AuthUtils.deleteUserTokens(this.grpcSdk, {

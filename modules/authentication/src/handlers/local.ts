@@ -5,19 +5,21 @@ import { v4 as uuid } from 'uuid';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import ConduitGrpcSdk, {
   ConduitError,
+  Email,
   GrpcError,
   ParsedRouterRequest,
+  SMS,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
+import { AccessToken, RefreshToken, Token, User } from '../models';
 import moment = require('moment');
 
 export class LocalHandlers {
-  private database: any;
-  private emailModule: any;
-  private sms: any;
+  private emailModule: Email;
+  private sms: SMS;
   private initialized: boolean = false;
   private identifier: string = 'email';
 
@@ -71,13 +73,17 @@ export class LocalHandlers {
 
     email = email.toLowerCase();
 
-    let user = await this.database.findOne('User', { email });
+    let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user))
       throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
 
     let hashedPassword = await AuthUtils.hashPassword(password);
     const isVerified = this.identifier === 'username';
-    user = await this.database.create('User', { email, hashedPassword, isVerified });
+    user = await User.getInstance().create({
+      email,
+      hashedPassword,
+      isVerified,
+    });
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
@@ -87,7 +93,7 @@ export class LocalHandlers {
     let url = serverConfig.url;
 
     if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
-      let verificationToken = await this.database.create('Token', {
+      let verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
         token: uuid(),
@@ -126,10 +132,18 @@ export class LocalHandlers {
 
     email = email.toLowerCase();
 
-    const user = await this.database.findOne('User', { email }, '+hashedPassword');
+    const user: User | null = await User.getInstance().findOne(
+      { email },
+      '+hashedPassword'
+    );
     if (isNil(user))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
     if (!user.active) throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+    if (!user.hashedPassword)
+      throw new GrpcError(
+        grpc.status.PERMISSION_DENIED,
+        'User does not use password authentication'
+      );
     const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch)
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -143,19 +157,19 @@ export class LocalHandlers {
     }
 
     if (user.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(user.phoneNumber);
+      const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
       }
 
-      await this.database
-        .deleteMany('Token', {
+      await Token.getInstance()
+        .deleteMany({
           userId: user._id,
           type: TokenType.TWO_FA_VERIFICATION_TOKEN,
         })
         .catch(console.error);
 
-      await this.database.create('Token', {
+      await Token.getInstance().create({
         userId: user._id,
         type: TokenType.TWO_FA_VERIFICATION_TOKEN,
         token: verificationSid,
@@ -178,7 +192,7 @@ export class LocalHandlers {
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    const accessToken = await this.database.create('AccessToken', {
+    const accessToken: AccessToken = await AccessToken.getInstance().create({
       userId: user._id,
       clientId,
       token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
@@ -187,7 +201,7 @@ export class LocalHandlers {
         .toDate(),
     });
 
-    const refreshToken = await this.database.create('RefreshToken', {
+    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
       userId: user._id,
       clientId,
       token: AuthUtils.randomToken(),
@@ -211,18 +225,18 @@ export class LocalHandlers {
     const { email } = call.request.params;
     const config = ConfigController.getInstance().config;
 
-    const user = await this.database.findOne('User', { email });
+    const user: User | null = await User.getInstance().findOne({ email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
       return { message: 'Ok' };
 
-    let oldToken = await this.database.findOne('Token', {
+    let oldToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
       userId: user._id,
     });
-    if (!isNil(oldToken)) await this.database.deleteOne('Token', oldToken);
+    if (!isNil(oldToken)) await Token.getInstance().deleteOne(oldToken);
 
-    const passwordResetTokenDoc = await this.database.create('Token', {
+    const passwordResetTokenDoc = await Token.getInstance().create({
       type: TokenType.PASSWORD_RESET_TOKEN,
       userId: user._id,
       token: uuid(),
@@ -250,23 +264,27 @@ export class LocalHandlers {
       password: newPassword,
     } = call.request.params;
 
-    const passwordResetTokenDoc = await this.database.findOne('Token', {
+    const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
       token: passwordResetTokenParam,
     });
     if (isNil(passwordResetTokenDoc))
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Invalid parameters');
 
-    const user = await this.database.findOne(
-      'User',
+    const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.userId },
       '+hashedPassword'
     );
     if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
+    if (isNil(user.hashedPassword))
+      throw new GrpcError(
+        grpc.status.PERMISSION_DENIED,
+        'User does not use password authentication'
+      );
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
-      user.hashedPassword
+      user.hashedPassword!
     );
     if (passwordsMatch)
       throw new GrpcError(
@@ -276,8 +294,11 @@ export class LocalHandlers {
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
-    const tokenPromise = this.database.deleteOne('Token', passwordResetTokenDoc);
+    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
+      user._id,
+      user
+    );
+    const tokenPromise = Token.getInstance().deleteOne(passwordResetTokenDoc);
 
     await Promise.all(
       [userPromise, tokenPromise].concat(
@@ -301,14 +322,19 @@ export class LocalHandlers {
       );
     }
 
-    const dbUser = await this.database.findOne(
-      'User',
+    const dbUser: User | null = await User.getInstance().findOne(
       { _id: user._id },
       '+hashedPassword'
     );
 
     if (isNil(dbUser)) {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User does not exist');
+    }
+    if (isNil(dbUser.hashedPassword)) {
+      throw new GrpcError(
+        grpc.status.PERMISSION_DENIED,
+        'User does not use password authentication'
+      );
     }
 
     const passwordsMatch = await AuthUtils.checkPassword(
@@ -322,19 +348,19 @@ export class LocalHandlers {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber);
+      const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
       }
 
-      await this.database
-        .deleteMany('Token', {
+      await Token.getInstance()
+        .deleteMany({
           userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
         })
         .catch(console.error);
 
-      await this.database.create('Token', {
+      await Token.getInstance().create({
         userId: dbUser._id,
         type: TokenType.CHANGE_PASSWORD_TOKEN,
         token: verificationSid,
@@ -346,7 +372,7 @@ export class LocalHandlers {
       return 'Verification code sent';
     }
 
-    await this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword });
+    await User.getInstance().findByIdAndUpdate(dbUser._id, { hashedPassword });
     return 'Password changed successfully';
   }
 
@@ -354,7 +380,7 @@ export class LocalHandlers {
     const { code } = call.request.params;
     const { user } = call.request.context;
 
-    const token = await this.database.findOne('Token', {
+    const token: Token | null = await Token.getInstance().findOne({
       userId: user._id,
       type: TokenType.CHANGE_PASSWORD_TOKEN,
     });
@@ -369,11 +395,11 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid code');
     }
 
-    await this.database
-      .deleteMany('Token', { userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
+    await Token.getInstance()
+      .deleteMany({ userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
       .catch(console.error);
 
-    await this.database.findByIdAndUpdate('User', user._id, {
+    await User.getInstance().findByIdAndUpdate(user._id, {
       hashedPassword: token.data.password,
     });
 
@@ -388,7 +414,7 @@ export class LocalHandlers {
 
     const config = ConfigController.getInstance().config;
 
-    const verificationTokenDoc = await this.database.findOne('Token', {
+    const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
       token: verificationTokenParam,
     });
@@ -401,14 +427,17 @@ export class LocalHandlers {
       }
     }
 
-    const user = await this.database.findOne('User', {
+    const user: User | null = await User.getInstance().findOne({
       _id: verificationTokenDoc.userId,
     });
     if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
 
     user.isVerified = true;
-    const userPromise = this.database.findByIdAndUpdate('User', user._id, user);
-    const tokenPromise = this.database.deleteOne('Token', verificationTokenDoc);
+    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
+      user._id,
+      user
+    );
+    const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
 
     await Promise.all([userPromise, tokenPromise]);
 
@@ -429,11 +458,11 @@ export class LocalHandlers {
 
     const { email, code } = call.request.params;
 
-    const user = await this.database.findOne('User', { email });
+    const user: User | null = await User.getInstance().findOne({ email });
 
     if (isNil(user)) throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User not found');
 
-    const verificationRecord = await this.database.findOne('Token', {
+    const verificationRecord: Token | null = await Token.getInstance().findOne({
       userId: user._id,
       type: TokenType.TWO_FA_VERIFICATION_TOKEN,
     });
@@ -449,8 +478,8 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
     }
 
-    await this.database
-      .deleteMany('Token', {
+    await Token.getInstance()
+      .deleteMany({
         userId: user._id,
         type: TokenType.TWO_FA_VERIFICATION_TOKEN,
       })
@@ -470,7 +499,7 @@ export class LocalHandlers {
       expiresIn: config.tokenInvalidationPeriod,
     };
 
-    const accessToken = await this.database.create('AccessToken', {
+    const accessToken: AccessToken = await AccessToken.getInstance().create({
       userId: user._id,
       clientId,
       token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
@@ -479,7 +508,7 @@ export class LocalHandlers {
         .toDate(),
     });
 
-    const refreshToken = await this.database.create('RefreshToken', {
+    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
       userId: user._id,
       clientId,
       token: AuthUtils.randomToken(),
@@ -508,14 +537,14 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
     }
 
-    await this.database
-      .deleteMany('Token', {
+    await Token.getInstance()
+      .deleteMany({
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
       .catch(console.error);
 
-    await this.database.create('Token', {
+    await Token.getInstance().create({
       userId: context.user._id,
       type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       token: verificationSid,
@@ -537,7 +566,7 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    const verificationRecord = await this.database.findOne('Token', {
+    const verificationRecord: Token | null = await Token.getInstance().findOne({
       userId: context.user._id,
       type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
     });
@@ -553,14 +582,14 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
     }
 
-    await this.database
-      .deleteMany('Token', {
+    await Token.getInstance()
+      .deleteMany({
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
       .catch(console.error);
 
-    await this.database.findByIdAndUpdate('User', context.user._id, {
+    await User.getInstance().findByIdAndUpdate(context.user._id, {
       phoneNumber: verificationRecord.data.phoneNumber,
       hasTwoFA: true,
     });
@@ -584,7 +613,7 @@ export class LocalHandlers {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    await this.database.findByIdAndUpdate('User', context.user._id, {
+    await User.getInstance().findByIdAndUpdate(context.user._id, {
       hasTwoFA: false,
     });
 
@@ -601,14 +630,12 @@ export class LocalHandlers {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    this.database = this.grpcSdk.databaseProvider;
-
     if (config.local.identifier !== 'username') {
       await this.grpcSdk.config.moduleExists('email');
 
       await this.grpcSdk.waitForExistence('email');
 
-      this.emailModule = this.grpcSdk.emailProvider;
+      this.emailModule = this.grpcSdk.emailProvider!;
     }
 
     let errorMessage = null;
@@ -618,7 +645,7 @@ export class LocalHandlers {
     if (config.twofa.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
-      this.sms = this.grpcSdk.sms;
+      this.sms = this.grpcSdk.sms!;
     } else {
       console.log('sms 2fa not active');
     }

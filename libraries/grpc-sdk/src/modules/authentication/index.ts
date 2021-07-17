@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { AuthenticationClient } from '../../protoUtils/authentication';
 
-export default class Authentication extends ConduitModule<AuthenticationClient> {
+export class Authentication extends ConduitModule<AuthenticationClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(AuthenticationClient);

@@ -20,8 +20,8 @@ import { ServiceHandler } from '../handlers/service';
 import { KakaoHandlers } from '../handlers/kakao';
 import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
-import { UserSchema } from '../models';
 import moment from 'moment';
+import { AccessToken, User } from '../models';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -475,7 +475,7 @@ export class AuthenticationRoutes {
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
-            new ConduitRouteReturnDefinition('User', UserSchema.fields),
+            new ConduitRouteReturnDefinition('User', User.getInstance().fields),
             'getUser'
           )
         )
@@ -547,7 +547,7 @@ export class AuthenticationRoutes {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Authorization header malformed');
     }
 
-    let accessToken = await this.grpcSdk.databaseProvider!.findOne('AccessToken', {
+    let accessToken = await AccessToken.getInstance().findOne({
       token: args[1],
       clientId: context.clientId,
     });
@@ -557,7 +557,7 @@ export class AuthenticationRoutes {
         'Token is expired or otherwise not valid'
       );
     }
-    let user = await this.grpcSdk.databaseProvider!.findOne('User', {
+    let user = await User.getInstance().findOne({
       _id: accessToken.userId,
     });
     if (isNil(user)) {

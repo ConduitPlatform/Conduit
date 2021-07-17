@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
@@ -9,16 +10,17 @@ import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
+import { User } from '../models';
 
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
+      self.database = self.grpcSdk.databaseProvider!;
     });
     let serviceAdmin = new ServiceAdmin(this.grpcSdk);
     this.grpcSdk.admin
@@ -67,14 +69,13 @@ export class AdminHandlers {
       query['email'] = { $regex: identifier };
     }
 
-    const users = await this.database.findMany(
-      'User',
+    const users: User[] = await User.getInstance().findMany(
       query,
       undefined,
       skipNumber,
       limitNumber
     );
-    const count = await this.database.countDocuments('User', query);
+    const count: number = await User.getInstance().countDocuments(query);
 
     return { users, count };
   }
@@ -101,13 +102,15 @@ export class AdminHandlers {
       identification = identification.toLowerCase();
     }
 
-    let user = await this.database.findOne('User', { email: identification });
+    let user: User | null = await User.getInstance().findOne({
+      email: identification,
+    });
     if (!isNil(user)) {
       throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
     }
 
     let hashedPassword = await AuthUtils.hashPassword(password);
-    user = await this.database.create('User', {
+    user = await User.getInstance().create({
       email: identification,
       hashedPassword,
       isVerified: true,
@@ -122,7 +125,7 @@ export class AdminHandlers {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
     }
 
-    let user = await this.database.findOne('User', { _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
     } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
@@ -139,7 +142,7 @@ export class AdminHandlers {
       phoneNumber: phoneNumber ?? user.phoneNumber,
     };
 
-    let res = await this.database.findByIdAndUpdate('User', user._id, query);
+    let res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
     return { message: 'user updated' };
   }
@@ -151,12 +154,12 @@ export class AdminHandlers {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
     }
 
-    let user = await this.database.findOne('User', { _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
     }
 
-    let res = await this.database.deleteOne('User', { _id: id });
+    let res = await User.getInstance().deleteOne({ _id: id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return { message: 'user was deleted' };
   }
@@ -167,7 +170,7 @@ export class AdminHandlers {
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
     }
-    let user = await this.database.findOne('User', { _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: id });
 
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
@@ -176,7 +179,7 @@ export class AdminHandlers {
     }
 
     user.active = false;
-    user = await this.database.findByIdAndUpdate('User', user._id, user);
+    user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
     return { message: 'user was blocked' };
   }
@@ -188,7 +191,7 @@ export class AdminHandlers {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
     }
 
-    let user = await this.database.findOne('User', { _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
     }
@@ -198,7 +201,7 @@ export class AdminHandlers {
     }
 
     user.active = true;
-    user = await this.database.findByIdAndUpdate('User', user._id, user);
+    user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
     return { message: 'user was unblocked' };
   }
