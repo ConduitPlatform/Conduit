@@ -3,7 +3,8 @@ import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
@@ -27,12 +28,12 @@ export class ServiceHandler {
     return true;
   }
 
-  async authenticate(call: RouterRequest) {
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
-    const { serviceName, token } = JSON.parse(call.request.params);
+    const { serviceName, token } = call.request.params;
 
-    const context = JSON.parse(call.request.context);
+    const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
@@ -71,11 +72,9 @@ export class ServiceHandler {
     );
 
     return {
-      result: JSON.stringify({
-        serviceId: serviceUser._id.toString(),
-        accessToken: (accessToken as any).token,
-        refreshToken: (refreshToken as any).token,
-      }),
+      serviceId: serviceUser._id.toString(),
+      accessToken: (accessToken as any).token,
+      refreshToken: (refreshToken as any).token,
     };
   }
 }

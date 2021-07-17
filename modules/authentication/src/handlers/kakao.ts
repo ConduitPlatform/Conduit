@@ -1,7 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
@@ -34,21 +35,18 @@ export class KakaoHandlers {
     return true;
   }
 
-  async beginAuth(call: RouterRequest) {
+  async beginAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const config = ConfigController.getInstance().config;
 
     let serverConfig = await this.grpcSdk.config.getServerConfig();
     let redirect = serverConfig.url + '/hook/authentication/kakao';
-    const context = JSON.parse(call.request.context);
+    const context = call.request.context;
     const clientId = context.clientId;
-    let originalUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.clientId}&redirect_uri=${redirect}&response_type=code&state=${clientId}`;
-    return {
-      result: originalUrl,
-    };
+    return `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.clientId}&redirect_uri=${redirect}&response_type=code&state=${clientId}`;
   }
 
-  async authenticate(call: RouterRequest) {
-    const params = JSON.parse(call.request.params);
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
     const code = params.code;
 
     const config = ConfigController.getInstance().config;
@@ -148,11 +146,11 @@ export class KakaoHandlers {
         (accessToken as any).token +
         '&refreshToken=' +
         (refreshToken as any).token,
-      result: JSON.stringify({
+      result: {
         userId: user._id.toString(),
         accessToken: (accessToken as any).token,
         refreshToken: (refreshToken as any).token,
-      }),
+      },
     };
   }
 }

@@ -8,9 +8,10 @@ import ConduitGrpcSdk, {
   ConduitString,
   constructMiddleware,
   constructRoute,
+  GrpcError,
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
@@ -532,66 +533,36 @@ export class AuthenticationRoutes {
     return routesArray;
   }
 
-  async middleware(call: RouterRequest, callback: RouterResponse) {
-    let context;
-    let headers;
-    try {
-      context = JSON.parse(call.request.context);
-      headers = JSON.parse(call.request.headers);
-    } catch (e) {
-      console.log('Failed to parse json');
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No authorization header present',
-      });
-    }
+  async middleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let context = call.request.context;
+    let headers = call.request.headers;
 
     const header = (headers['Authorization'] || headers['authorization']) as string;
     if (isNil(header)) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'No authorization header present',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No authorization header present');
     }
     const args = header.split(' ');
 
     if (args[0] !== 'Bearer' || isNil(args[1])) {
-      return callback({
-        code: grpc.status.UNAUTHENTICATED,
-        message: 'Authorization header malformed',
-      });
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Authorization header malformed');
     }
 
-    this.grpcSdk
-      .databaseProvider!.findOne('AccessToken', {
-        token: args[1],
-        clientId: context.clientId,
-      })
-      .then((accessTokenDoc: any) => {
-        if (isNil(accessTokenDoc) || moment().isAfter(moment(accessTokenDoc.expiresOn))) {
-          return callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'Token is expired or otherwise not valid',
-          });
-        }
-        return this.grpcSdk
-          .databaseProvider!.findOne('User', { _id: accessTokenDoc.userId })
-          .then((user: any) => {
-            if (isNil(user)) {
-              callback({
-                code: grpc.status.UNAUTHENTICATED,
-                message: 'User no longer exists',
-              });
-            } else {
-              callback(null, { result: JSON.stringify({ user: user }) });
-            }
-          });
-      })
-      .catch((err) => {
-        callback({
-          code: grpc.status.INTERNAL,
-          message: err?.message ? err.message : 'Something went wrong',
-        });
-      });
+    let accessToken = await this.grpcSdk.databaseProvider!.findOne('AccessToken', {
+      token: args[1],
+      clientId: context.clientId,
+    });
+    if (isNil(accessToken) || moment().isAfter(moment(accessToken.expiresOn))) {
+      throw new GrpcError(
+        grpc.status.UNAUTHENTICATED,
+        'Token is expired or otherwise not valid'
+      );
+    }
+    let user = await this.grpcSdk.databaseProvider!.findOne('User', {
+      _id: accessToken.userId,
+    });
+    if (isNil(user)) {
+      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User no longer exists');
+    }
+    return { user: user };
   }
 }

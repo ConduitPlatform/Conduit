@@ -1,7 +1,9 @@
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
+  ParsedRouterRequest,
   RouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
@@ -52,8 +54,8 @@ export class TwitchHandlers {
     };
   }
 
-  async authenticate(call: RouterRequest) {
-    const params = JSON.parse(call.request.params);
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
     const code = params.code;
 
     const config = ConfigController.getInstance().config;
@@ -143,11 +145,11 @@ export class TwitchHandlers {
         (accessToken as any).token +
         '&refreshToken=' +
         (refreshToken as any).token,
-      result: JSON.stringify({
+      result: {
         userId: user._id.toString(),
         accessToken: (accessToken as any).token,
         refreshToken: (refreshToken as any).token,
-      }),
+      },
     };
   }
 }

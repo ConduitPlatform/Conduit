@@ -4,7 +4,7 @@ import { GrpcServer } from '../../classes';
 import fs from 'fs';
 import { SocketProtoDescription } from '../../interfaces';
 import { RouterClient } from '../../protoUtils/core';
-import { wrapGrpcFunction } from '../../helpers';
+import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -91,7 +91,7 @@ export default class Router extends ConduitModule<RouterClient> {
   ): Promise<any> {
     let modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach((key) => {
-      modifiedFunctions[key] = wrapGrpcFunction(functions[key]);
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
     });
     return this.registerRouter(server, paths, modifiedFunctions);
   }

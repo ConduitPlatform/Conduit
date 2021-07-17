@@ -4,7 +4,8 @@ import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk, {
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
@@ -16,12 +17,12 @@ export class CommonHandlers {
     this.database = grpcSdk.databaseProvider;
   }
 
-  async renewAuth(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
+  async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
 
     const clientId = context.clientId;
 
-    const { refreshToken } = JSON.parse(call.request.params);
+    const { refreshToken } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
@@ -65,15 +66,13 @@ export class CommonHandlers {
     });
 
     return {
-      result: JSON.stringify({
-        accessToken: newAccessToken.token,
-        refreshToken: newRefreshToken.token,
-      }),
+      accessToken: newAccessToken.token,
+      refreshToken: newRefreshToken.token,
     };
   }
 
-  async logOut(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
+  async logOut(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
 
     const clientId = context.clientId;
     const user = context.user;
@@ -85,15 +84,15 @@ export class CommonHandlers {
       })
     );
 
-    return { result: JSON.stringify({ message: 'Logged out' }) };
+    return { message: 'Logged out' };
   }
 
-  async getUser(call: RouterRequest) {
-    return { result: JSON.stringify(JSON.parse(call.request.context).user) };
+  async getUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return call.request.context.user;
   }
 
-  async deleteUser(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
+  async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
 
     const user = context.user;
     await this.database.deleteOne('User', { _id: user._id });
@@ -103,6 +102,6 @@ export class CommonHandlers {
         userId: user._id,
       })
     ).catch((e: any) => console.log('Failed to delete all access tokens'));
-    return { result: 'done' };
+    return 'done';
   }
 }

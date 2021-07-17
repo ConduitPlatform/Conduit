@@ -1,7 +1,8 @@
 import ConduitGrpcSdk, {
   GrpcError,
   GrpcServer,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { isNil } from 'lodash';
@@ -39,10 +40,8 @@ export class AdminHandlers {
       });
   }
 
-  async getUsers(call: RouterRequest) {
-    const { skip, limit, isActive, provider, identifier } = JSON.parse(
-      call.request.params
-    );
+  async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit, isActive, provider, identifier } = call.request.params;
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -77,11 +76,11 @@ export class AdminHandlers {
     );
     const count = await this.database.countDocuments('User', query);
 
-    return { result: JSON.stringify({ users, count }) };
+    return { users, count };
   }
 
-  async createUser(call: RouterRequest) {
-    let { identification, password } = JSON.parse(call.request.params);
+  async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let { identification, password } = call.request.params;
 
     if (isNil(identification) || isNil(password)) {
       throw new GrpcError(
@@ -107,28 +106,18 @@ export class AdminHandlers {
       throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
     }
 
-    return AuthUtils.hashPassword(password)
-      .then((hashedPassword: string) => {
-        const isVerified = true;
-        return this.database.create('User', {
-          email: identification,
-          hashedPassword,
-          isVerified,
-        });
-      })
-      .then((user: any) => {
-        this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
-        return {
-          result: JSON.stringify({ message: 'Registration was successful' }),
-        };
-      });
+    let hashedPassword = await AuthUtils.hashPassword(password);
+    user = await this.database.create('User', {
+      email: identification,
+      hashedPassword,
+      isVerified: true,
+    });
+    this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
+    return { message: 'Registration was successful' };
   }
 
-  async editUser(call: RouterRequest) {
-    const { id, email, isVerified, hasTwoFA, phoneNumber } = JSON.parse(
-      call.request.params
-    );
-
+  async editUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
     }
@@ -152,11 +141,11 @@ export class AdminHandlers {
 
     let res = await this.database.findByIdAndUpdate('User', user._id, query);
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
-    return { result: JSON.stringify({ message: 'user updated' }) };
+    return { message: 'user updated' };
   }
 
-  async deleteUser(call: RouterRequest) {
-    const { id } = JSON.parse(call.request.params);
+  async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
 
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
@@ -169,11 +158,11 @@ export class AdminHandlers {
 
     let res = await this.database.deleteOne('User', { _id: id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
-    return { result: JSON.stringify({ message: 'user was deleted' }) };
+    return { message: 'user was deleted' };
   }
 
-  async blockUser(call: RouterRequest) {
-    const { id } = JSON.parse(call.request.params);
+  async blockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
 
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
@@ -189,11 +178,11 @@ export class AdminHandlers {
     user.active = false;
     user = await this.database.findByIdAndUpdate('User', user._id, user);
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
-    return { result: JSON.stringify({ message: 'user was blocked' }) };
+    return { message: 'user was blocked' };
   }
 
-  async unblockUser(call: RouterRequest) {
-    const { id } = JSON.parse(call.request.params);
+  async unblockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
 
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
@@ -211,6 +200,6 @@ export class AdminHandlers {
     user.active = true;
     user = await this.database.findByIdAndUpdate('User', user._id, user);
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
-    return { result: JSON.stringify({ message: 'user was unblocked' }) };
+    return { message: 'user was unblocked' };
   }
 }

@@ -1,4 +1,9 @@
-import { GrpcRequest, RouterRequest, RouterResponse } from '../types';
+import {
+  ParsedRouterRequest,
+  RouterRequest,
+  RouterResponse,
+  UnparsedRouterResponse,
+} from '../types';
 import grpc from 'grpc';
 
 export function wrapCallObjectForRouter(call: any): RouterRequest {
@@ -27,14 +32,39 @@ export function wrapCallbackFunctionForRouter(callback: any): RouterResponse {
   };
 }
 
-export function wrapGrpcFunction<T>(
-  fun: (call: GrpcRequest<T>, callback?: any) => Promise<any>
+export function wrapRouterGrpcFunction(
+  fun: (call: ParsedRouterRequest) => Promise<UnparsedRouterResponse>
 ): (call: any, callback: any) => void {
   return (call: any, callback: any) => {
-    fun(call, callback)
+    try {
+      if (typeof call.request.context === 'string') {
+        call.request.context = JSON.parse(call.request.context);
+      }
+      if (typeof call.request.params === 'string') {
+        call.request.params = JSON.parse(call.request.params);
+      }
+      if (typeof call.request.headers === 'string') {
+        call.request.headers = JSON.parse(call.request.headers);
+      }
+    } catch (e) {
+      return callback({
+        code: grpc.status.INTERNAL,
+        message: e.message ?? 'Something went wrong',
+      });
+    }
+    fun(call)
       .then((r) => {
-        if (r) {
-          callback(null, r);
+        if (!r) return;
+        if (typeof r === 'string') {
+          callback(null, { result: r });
+        } else {
+          if (r.result) {
+            callback(null, { result: JSON.stringify(r.result) });
+          } else if (r.redirect) {
+            callback(null, { redirect: r.redirect, result: r.result ?? undefined });
+          } else {
+            callback(null, { result: JSON.stringify(r) });
+          }
         }
       })
       .catch((error) => {

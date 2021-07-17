@@ -6,7 +6,8 @@ import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import * as grpc from 'grpc';
 import * as templates from '../templates';
@@ -56,10 +57,10 @@ export class LocalHandlers {
       });
   }
 
-  async register(call: RouterRequest) {
+  async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
-    let { email, password } = JSON.parse(call.request.params);
+    let { email, password } = call.request.params;
 
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
@@ -87,37 +88,30 @@ export class LocalHandlers {
     let url = serverConfig.url;
 
     if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
-      this.database
-        .create('Token', {
-          type: TokenType.VERIFICATION_TOKEN,
-          userId: user._id,
-          token: uuid(),
-        })
-        .then((verificationToken: any) => {
-          return { verificationToken, hostUrl: url };
-        })
-        .then((result: { hostUrl: Promise<any>; verificationToken: any }) => {
-          const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-          return this.emailModule.sendEmail('EmailVerification', {
-            email: user.email,
-            sender: 'no-reply',
-            variables: {
-              link,
-            },
-          });
-        });
+      let verificationToken = await this.database.create('Token', {
+        type: TokenType.VERIFICATION_TOKEN,
+        userId: user._id,
+        token: uuid(),
+      });
+      let result = { verificationToken, hostUrl: url };
+      const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+      await this.emailModule.sendEmail('EmailVerification', {
+        email: user.email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      });
     }
 
-    return {
-      result: JSON.stringify({ userId: user._id }),
-    };
+    return { userId: user._id };
   }
 
-  async authenticate(call: RouterRequest) {
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
-    let { email, password } = JSON.parse(call.request.params);
-    const context = JSON.parse(call.request.context);
+    let { email, password } = call.request.params;
+    const context = call.request.context;
 
     if (isNil(context))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
@@ -169,9 +163,7 @@ export class LocalHandlers {
       });
 
       return {
-        result: JSON.stringify({
-          message: 'Verification code sent',
-        }),
+        message: 'Verification code sent',
       };
     }
 
@@ -206,26 +198,24 @@ export class LocalHandlers {
     });
 
     return {
-      result: JSON.stringify({
-        userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
-      }),
+      userId: user._id.toString(),
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
     };
   }
 
-  async forgotPassword(call: RouterRequest) {
+  async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized || isNil(this.emailModule)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     }
 
-    const { email } = JSON.parse(call.request.params);
+    const { email } = call.request.params;
     const config = ConfigController.getInstance().config;
 
     const user = await this.database.findOne('User', { email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return { result: JSON.stringify({ message: 'Ok' }) };
+      return { message: 'Ok' };
 
     this.database
       .findOne('Token', { type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id })
@@ -248,10 +238,10 @@ export class LocalHandlers {
         link,
       },
     });
-    return { result: JSON.stringify({ message: 'Ok' }) };
+    return { message: 'Ok' };
   }
 
-  async resetPassword(call: RouterRequest) {
+  async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized || isNil(this.emailModule)) {
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
     }
@@ -259,7 +249,7 @@ export class LocalHandlers {
     const {
       passwordResetToken: passwordResetTokenParam,
       password: newPassword,
-    } = JSON.parse(call.request.params);
+    } = call.request.params;
 
     const passwordResetTokenDoc = await this.database.findOne('Token', {
       type: TokenType.PASSWORD_RESET_TOKEN,
@@ -298,14 +288,12 @@ export class LocalHandlers {
       )
     );
 
-    return {
-      result: JSON.stringify({ message: 'Password reset successful' }),
-    };
+    return { message: 'Password reset successful' };
   }
 
-  async changePassword(call: RouterRequest) {
-    const { oldPassword, newPassword } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
+  async changePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { oldPassword, newPassword } = call.request.params;
+    const { user } = call.request.context;
 
     if (oldPassword === newPassword) {
       throw new GrpcError(
@@ -314,7 +302,6 @@ export class LocalHandlers {
       );
     }
 
-    let errorMessage: string | null = null;
     const dbUser = await this.database.findOne(
       'User',
       { _id: user._id },
@@ -357,18 +344,16 @@ export class LocalHandlers {
         },
       });
 
-      return { result: 'Verification code sent' };
+      return 'Verification code sent';
     }
 
     await this.database.findByIdAndUpdate('User', dbUser._id, { hashedPassword });
-    return {
-      result: 'Password changed successfully',
-    };
+    return 'Password changed successfully';
   }
 
-  async verifyChangePassword(call: RouterRequest) {
-    const { code } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
+  async verifyChangePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { code } = call.request.params;
+    const { user } = call.request.context;
 
     const token = await this.database.findOne('Token', {
       userId: user._id,
@@ -393,14 +378,14 @@ export class LocalHandlers {
       hashedPassword: token.data.password,
     });
 
-    return { result: 'Password changed successfully' };
+    return 'Password changed successfully';
   }
 
-  async verifyEmail(call: RouterRequest) {
+  async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
 
-    const verificationTokenParam = JSON.parse(call.request.params).verificationToken;
+    const verificationTokenParam = call.request.params.verificationToken;
 
     const config = ConfigController.getInstance().config;
 
@@ -413,7 +398,7 @@ export class LocalHandlers {
       if (config.local.verification_redirect_uri) {
         return { redirect: config.local.verification_redirect_uri };
       } else {
-        return { result: JSON.stringify({ message: 'Email verified' }) };
+        return { message: 'Email verified' };
       }
     }
 
@@ -433,17 +418,17 @@ export class LocalHandlers {
     if (config.local.verification_redirect_uri) {
       return { redirect: config.local.verification_redirect_uri };
     }
-    return { result: JSON.stringify({ message: 'Email verified' }) };
+    return { message: 'Email verified' };
   }
 
-  async verify(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
+  async verify(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
-    const { email, code } = JSON.parse(call.request.params);
+    const { email, code } = call.request.params;
 
     const user = await this.database.findOne('User', { email });
 
@@ -505,17 +490,15 @@ export class LocalHandlers {
     });
 
     return {
-      result: JSON.stringify({
-        userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
-      }),
+      userId: user._id.toString(),
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
     };
   }
 
-  async enableTwoFa(call: RouterRequest) {
-    const { phoneNumber } = JSON.parse(call.request.params);
-    const context = JSON.parse(call.request.context);
+  async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { phoneNumber } = call.request.params;
+    const context = call.request.context;
 
     if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
@@ -543,15 +526,13 @@ export class LocalHandlers {
     });
 
     return {
-      result: JSON.stringify({
-        message: 'Verification code sent',
-      }),
+      message: 'Verification code sent',
     };
   }
 
-  async verifyPhoneNumber(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
-    const { code } = JSON.parse(call.request.params);
+  async verifyPhoneNumber(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
+    const { code } = call.request.params;
 
     if (isNil(context) || isEmpty(context)) {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
@@ -594,14 +575,12 @@ export class LocalHandlers {
     );
 
     return {
-      result: JSON.stringify({
-        message: 'twofa enabled',
-      }),
+      message: 'twofa enabled',
     };
   }
 
-  async disableTwoFa(call: RouterRequest) {
-    const context = JSON.parse(call.request.context);
+  async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
     if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
     }
@@ -616,9 +595,7 @@ export class LocalHandlers {
     );
 
     return {
-      result: JSON.stringify({
-        message: 'twofa disabled',
-      }),
+      message: 'twofa disabled',
     };
   }
 

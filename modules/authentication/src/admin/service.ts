@@ -1,6 +1,7 @@
 import ConduitGrpcSdk, {
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../utils/auth';
 import grpc from 'grpc';
@@ -16,8 +17,8 @@ export class ServiceAdmin {
     });
   }
 
-  async getServices(call: RouterRequest) {
-    const { skip, limit } = JSON.parse(call.request.params);
+  async getServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit } = call.request.params;
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -37,11 +38,11 @@ export class ServiceAdmin {
     );
     const count = await this.database.countDocuments('Service', {});
 
-    return { result: JSON.stringify({ services, count }) };
+    return { services, count };
   }
 
-  async createService(call: RouterRequest) {
-    const { name } = JSON.parse(call.request.params);
+  async createService(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name } = call.request.params;
 
     if (isNil(name)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service name is required');
@@ -54,11 +55,11 @@ export class ServiceAdmin {
 
     this.grpcSdk.bus?.publish('authentication:create:service', JSON.stringify({ name }));
 
-    return { result: JSON.stringify({ name, token }) };
+    return { name, token };
   }
 
-  async deleteService(call: RouterRequest) {
-    const { id } = JSON.parse(call.request.params);
+  async deleteService(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
 
     if (isNil(id)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
@@ -68,11 +69,11 @@ export class ServiceAdmin {
 
     this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id }));
 
-    return { result: 'OK' };
+    return 'OK';
   }
 
-  async renewToken(call: RouterRequest) {
-    const { serviceId } = JSON.parse(call.request.params);
+  async renewToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { serviceId } = call.request.params;
 
     if (isNil(serviceId)) {
       throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
@@ -88,6 +89,6 @@ export class ServiceAdmin {
       { new: true }
     );
 
-    return { result: JSON.stringify({ name: service.name, token }) };
+    return { name: service.name, token };
   }
 }

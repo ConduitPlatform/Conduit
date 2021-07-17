@@ -3,7 +3,7 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import fs from 'fs';
 import { GrpcServer } from '../../classes';
 import { AdminClient } from '../../protoUtils/core';
-import { wrapGrpcFunction } from '../../helpers';
+import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -73,7 +73,7 @@ export default class Admin extends ConduitModule<AdminClient> {
   ): Promise<any> {
     let modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach((key) => {
-      modifiedFunctions[key] = wrapGrpcFunction(functions[key]);
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
     });
     return this.registerAdmin(server, paths, modifiedFunctions);
   }

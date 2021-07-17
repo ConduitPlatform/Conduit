@@ -26,6 +26,17 @@ export type RouterRequest = GrpcRequest<{
   headers: string;
   context: string;
 }>;
+export type ParsedRouterRequest = GrpcRequest<{
+  params: { [key: string]: any };
+  path: string;
+  headers: { [key: string]: any };
+  context: { [key: string]: any };
+}>;
+
+export type UnparsedRouterResponse =
+  | { result?: { [key: string]: any }; redirect?: string }
+  | { [key: string]: any }
+  | string;
 
 type Response = { result: string; redirect: string };
 type ResponseWithResult = { result: string };

@@ -3,7 +3,8 @@ import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
@@ -33,14 +34,14 @@ export class FacebookHandlers {
     return true;
   }
 
-  async authenticate(call: RouterRequest) {
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
-    const { access_token } = JSON.parse(call.request.params);
+    const { access_token } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
-    const context = JSON.parse(call.request.context);
+    const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
@@ -102,11 +103,9 @@ export class FacebookHandlers {
     );
 
     return {
-      result: JSON.stringify({
-        userId: user._id.toString(),
-        accessToken: (accessToken as any).token,
-        refreshToken: (refreshToken as any).token,
-      }),
+      userId: user._id.toString(),
+      accessToken: (accessToken as any).token,
+      refreshToken: (refreshToken as any).token,
     };
   }
 }

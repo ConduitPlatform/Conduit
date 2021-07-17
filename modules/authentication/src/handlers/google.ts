@@ -3,7 +3,8 @@ import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
-  RouterRequest,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
@@ -35,14 +36,14 @@ export class GoogleHandlers {
     return true;
   }
 
-  async authenticate(call: RouterRequest) {
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
-    const { id_token, access_token, expires_in } = JSON.parse(call.request.params);
+    const { id_token, access_token, expires_in } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
-    const context = JSON.parse(call.request.context);
+    const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
 
@@ -104,11 +105,9 @@ export class GoogleHandlers {
     );
 
     return {
-      result: JSON.stringify({
-        userId: user._id.toString(),
-        accessToken: (accessToken as any).token,
-        refreshToken: (refreshToken as any).token,
-      }),
+      userId: user._id.toString(),
+      accessToken: (accessToken as any).token,
+      refreshToken: (refreshToken as any).token,
     };
   }
 }
