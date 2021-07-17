@@ -75,10 +75,9 @@ export class LocalHandlers {
     if (!isNil(user))
       throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
 
-    user = await AuthUtils.hashPassword(password).then((hashedPassword: string) => {
-      const isVerified = this.identifier === 'username';
-      return this.database.create('User', { email, hashedPassword, isVerified });
-    });
+    let hashedPassword = await AuthUtils.hashPassword(password);
+    const isVerified = this.identifier === 'username';
+    user = await this.database.create('User', { email, hashedPassword, isVerified });
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
@@ -217,11 +216,11 @@ export class LocalHandlers {
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
       return { message: 'Ok' };
 
-    this.database
-      .findOne('Token', { type: TokenType.PASSWORD_RESET_TOKEN, userId: user._id })
-      .then((oldToken: any) => {
-        if (!isNil(oldToken)) return this.database.deleteOne('Token', oldToken);
-      });
+    let oldToken = await this.database.findOne('Token', {
+      type: TokenType.PASSWORD_RESET_TOKEN,
+      userId: user._id,
+    });
+    if (!isNil(oldToken)) await this.database.deleteOne('Token', oldToken);
 
     const passwordResetTokenDoc = await this.database.create('Token', {
       type: TokenType.PASSWORD_RESET_TOKEN,
