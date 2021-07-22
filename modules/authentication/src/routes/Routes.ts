@@ -2,12 +2,11 @@ import { LocalHandlers } from '../handlers/local';
 import * as grpc from 'grpc';
 import ConduitGrpcSdk, {
   ConduitMiddleware,
-  ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  constructConduitRoute,
   constructMiddleware,
-  constructRoute,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
@@ -95,220 +94,198 @@ export class AuthenticationRoutes {
         .catch(console.error);
 
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/local/new',
-              action: ConduitRouteActions.POST,
-              description: `Creates a new user using either email/password or username/password.
+        constructConduitRoute(
+          {
+            path: '/local/new',
+            action: ConduitRouteActions.POST,
+            description: `Creates a new user using either email/password or username/password.
                The combination depends on the provided configuration. 
                In the case of email/password the email module is required and 
                the user will receive an email before being able to login.`,
-              bodyParams: {
-                email: ConduitString.Required,
-                password: ConduitString.Required,
-              },
-              middlewares:
-                authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+            bodyParams: {
+              email: ConduitString.Required,
+              password: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('RegisterResponse', {
-              userId: ConduitString.Optional,
-            }),
-            'register'
-          )
+            middlewares:
+              authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+          },
+          new ConduitRouteReturnDefinition('RegisterResponse', {
+            userId: ConduitString.Optional,
+          }),
+          'register'
         )
       );
 
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/local',
-              action: ConduitRouteActions.POST,
-              description: `Login endpoint that can be used to authenticate. 
+        constructConduitRoute(
+          {
+            path: '/local',
+            action: ConduitRouteActions.POST,
+            description: `Login endpoint that can be used to authenticate. 
               If 2FA is used for the user then instead of tokens 
               you will receive a message indicating the need for a token from the 2FA mechanism.`,
-              bodyParams: {
-                email: ConduitString.Required,
-                password: ConduitString.Required,
-              },
+            bodyParams: {
+              email: ConduitString.Required,
+              password: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('LoginResponse', {
-              userId: ConduitString.Optional,
-              accessToken: ConduitString.Optional,
-              refreshToken: ConduitString.Optional,
-              message: ConduitString.Optional,
-            }),
-            'authenticateLocal'
-          )
+          },
+          new ConduitRouteReturnDefinition('LoginResponse', {
+            userId: ConduitString.Optional,
+            accessToken: ConduitString.Optional,
+            refreshToken: ConduitString.Optional,
+            message: ConduitString.Optional,
+          }),
+          'authenticateLocal'
         )
       );
 
       if (authConfig.local.identifier !== 'username') {
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/forgot-password',
-                action: ConduitRouteActions.POST,
-                bodyParams: {
-                  email: ConduitString.Required,
-                },
+          constructConduitRoute(
+            {
+              path: '/forgot-password',
+              action: ConduitRouteActions.POST,
+              bodyParams: {
+                email: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
-              'forgotPassword'
-            )
+            },
+            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
+            'forgotPassword'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/reset-password',
-                action: ConduitRouteActions.POST,
-                description: `Used after the user clicks on the 'forgot password' link and
+          constructConduitRoute(
+            {
+              path: '/reset-password',
+              action: ConduitRouteActions.POST,
+              description: `Used after the user clicks on the 'forgot password' link and
                  requires the token from the url and the new password`,
-                bodyParams: {
-                  passwordResetToken: ConduitString.Required,
-                  password: ConduitString.Required,
-                },
+              bodyParams: {
+                passwordResetToken: ConduitString.Required,
+                password: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
-              'resetPassword'
-            )
+            },
+            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+            'resetPassword'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/change-password',
-                action: ConduitRouteActions.POST,
-                description: `Changes the user's password but requires the old password first.
+          constructConduitRoute(
+            {
+              path: '/local/change-password',
+              action: ConduitRouteActions.POST,
+              description: `Changes the user's password but requires the old password first.
                  If 2FA is enabled then a message will be returned asking for token input.`,
-                bodyParams: {
-                  oldPassword: ConduitString.Required,
-                  newPassword: ConduitString.Required,
-                },
-                middlewares: ['authMiddleware'],
+              bodyParams: {
+                oldPassword: ConduitString.Required,
+                newPassword: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-              'changePassword'
-            )
+              middlewares: ['authMiddleware'],
+            },
+            new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
+            'changePassword'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/change-password/verify',
-                action: ConduitRouteActions.POST,
-                description: `Used to provide the 2FA token for password change.`,
-                bodyParams: {
-                  code: ConduitString.Required,
-                },
-                middlewares: ['authMiddleware'],
+          constructConduitRoute(
+            {
+              path: '/local/change-password/verify',
+              action: ConduitRouteActions.POST,
+              description: `Used to provide the 2FA token for password change.`,
+              bodyParams: {
+                code: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-              'verifyChangePassword'
-            )
+              middlewares: ['authMiddleware'],
+            },
+            new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+            'verifyChangePassword'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/hook/verify-email/:verificationToken',
-                action: ConduitRouteActions.GET,
-                description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
-                urlParams: {
-                  verificationToken: ConduitString.Required,
-                },
+          constructConduitRoute(
+            {
+              path: '/hook/verify-email/:verificationToken',
+              action: ConduitRouteActions.GET,
+              description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+              urlParams: {
+                verificationToken: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
-              'verifyEmail'
-            )
+            },
+            new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
+            'verifyEmail'
           )
         );
       }
 
       if (authConfig?.twofa.enabled) {
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/twofa',
-                action: ConduitRouteActions.POST,
-                description: `Verifies the 2FA token.`,
-                bodyParams: {
-                  email: ConduitString.Required,
-                  code: ConduitString.Required,
-                },
+          constructConduitRoute(
+            {
+              path: '/local/twofa',
+              action: ConduitRouteActions.POST,
+              description: `Verifies the 2FA token.`,
+              bodyParams: {
+                email: ConduitString.Required,
+                code: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
-                userId: ConduitString.Optional,
-                accessToken: ConduitString.Optional,
-                refreshToken: ConduitString.Optional,
-                message: ConduitString.Optional,
-              }),
-              'verifyTwoFa'
-            )
+            },
+            new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
+              userId: ConduitString.Optional,
+              accessToken: ConduitString.Optional,
+              refreshToken: ConduitString.Optional,
+              message: ConduitString.Optional,
+            }),
+            'verifyTwoFa'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/enable-twofa',
-                action: ConduitRouteActions.UPDATE,
-                description: `Enables a phone based 2FA method for a user and 
+          constructConduitRoute(
+            {
+              path: '/local/enable-twofa',
+              action: ConduitRouteActions.UPDATE,
+              description: `Enables a phone based 2FA method for a user and 
                 requires their phone number.`,
-                middlewares: ['authMiddleware'],
-                bodyParams: {
-                  phoneNumber: ConduitString.Required,
-                },
+              middlewares: ['authMiddleware'],
+              bodyParams: {
+                phoneNumber: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
-              'enableTwoFa'
-            )
+            },
+            new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
+            'enableTwoFa'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/verifyPhoneNumber',
-                action: ConduitRouteActions.POST,
-                description: `Verifies the phone number provided for the 2FA mechanism.`,
-                middlewares: ['authMiddleware'],
-                bodyParams: {
-                  code: ConduitString.Required,
-                },
+          constructConduitRoute(
+            {
+              path: '/local/verifyPhoneNumber',
+              action: ConduitRouteActions.POST,
+              description: `Verifies the phone number provided for the 2FA mechanism.`,
+              middlewares: ['authMiddleware'],
+              bodyParams: {
+                code: ConduitString.Required,
               },
-              new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
-              'verifyPhoneNumber'
-            )
+            },
+            new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
+            'verifyPhoneNumber'
           )
         );
 
         routesArray.push(
-          constructRoute(
-            new ConduitRoute(
-              {
-                path: '/local/disable-twofa',
-                action: ConduitRouteActions.UPDATE,
-                description: `Disables the user's 2FA mechanism.`,
-                middlewares: ['authMiddleware'],
-              },
-              new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
-              'disableTwoFa'
-            )
+          constructConduitRoute(
+            {
+              path: '/local/disable-twofa',
+              action: ConduitRouteActions.UPDATE,
+              description: `Disables the user's 2FA mechanism.`,
+              middlewares: ['authMiddleware'],
+            },
+            new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
+            'disableTwoFa'
           )
         );
       }
@@ -320,23 +297,21 @@ export class AuthenticationRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/facebook',
-              action: ConduitRouteActions.POST,
-              description: `Login/register with Facebook by providing a token from the client.`,
-              bodyParams: {
-                access_token: ConduitString.Required,
-              },
+        constructConduitRoute(
+          {
+            path: '/facebook',
+            action: ConduitRouteActions.POST,
+            description: `Login/register with Facebook by providing a token from the client.`,
+            bodyParams: {
+              access_token: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('FacebookResponse', {
-              userId: ConduitString.Required,
-              accessToken: ConduitString.Required,
-              refreshToken: ConduitString.Required,
-            }),
-            'authenticateFacebook'
-          )
+          },
+          new ConduitRouteReturnDefinition('FacebookResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateFacebook'
         )
       );
 
@@ -349,25 +324,23 @@ export class AuthenticationRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/google',
-              action: ConduitRouteActions.POST,
-              description: `Login/register with Google by providing a token from the client.`,
-              bodyParams: {
-                id_token: ConduitString.Required,
-                access_token: ConduitString.Required,
-                expires_in: ConduitString.Optional,
-              },
+        constructConduitRoute(
+          {
+            path: '/google',
+            action: ConduitRouteActions.POST,
+            description: `Login/register with Google by providing a token from the client.`,
+            bodyParams: {
+              id_token: ConduitString.Required,
+              access_token: ConduitString.Required,
+              expires_in: ConduitString.Optional,
             },
-            new ConduitRouteReturnDefinition('GoogleResponse', {
-              userId: ConduitString.Required,
-              accessToken: ConduitString.Required,
-              refreshToken: ConduitString.Required,
-            }),
-            'authenticateGoogle'
-          )
+          },
+          new ConduitRouteReturnDefinition('GoogleResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateGoogle'
         )
       );
 
@@ -380,24 +353,22 @@ export class AuthenticationRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/service',
-              action: ConduitRouteActions.POST,
-              description: `Login with service account.`,
-              bodyParams: {
-                serviceName: ConduitString.Required,
-                token: ConduitString.Required,
-              },
+        constructConduitRoute(
+          {
+            path: '/service',
+            action: ConduitRouteActions.POST,
+            description: `Login with service account.`,
+            bodyParams: {
+              serviceName: ConduitString.Required,
+              token: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('VerifyServiceResponse', {
-              serviceId: ConduitString.Required,
-              accessToken: ConduitString.Required,
-              refreshToken: ConduitString.Required,
-            }),
-            'authenticateService'
-          )
+          },
+          new ConduitRouteReturnDefinition('VerifyServiceResponse', {
+            serviceId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateService'
         )
       );
 
@@ -410,38 +381,34 @@ export class AuthenticationRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/hook/kakao',
-              action: ConduitRouteActions.GET,
-              description: `Login/register with KakaoTalk using redirection mechanism.`,
-              urlParams: {
-                code: ConduitString.Required,
-                state: ConduitString.Required,
-              },
+        constructConduitRoute(
+          {
+            path: '/hook/kakao',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with KakaoTalk using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('KakaoResponse', {
-              userId: ConduitString.Required,
-              accessToken: ConduitString.Required,
-              refreshToken: ConduitString.Required,
-            }),
-            'authenticateKakao'
-          )
+          },
+          new ConduitRouteReturnDefinition('KakaoResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateKakao'
         )
       );
 
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/init/kakao',
-              description: `Begins the authentication process with KakaoTalk.`,
-              action: ConduitRouteActions.GET,
-            },
-            new ConduitRouteReturnDefinition('KakaoInitResponse', 'String'),
-            'beginAuthKakao'
-          )
+        constructConduitRoute(
+          {
+            path: '/init/kakao',
+            description: `Begins the authentication process with KakaoTalk.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('KakaoInitResponse', 'String'),
+          'beginAuthKakao'
         )
       );
 
@@ -454,37 +421,33 @@ export class AuthenticationRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/hook/twitch',
-              action: ConduitRouteActions.GET,
-              description: `Login/register with Twitch using redirection mechanism.`,
-              urlParams: {
-                code: ConduitString.Required,
-                state: ConduitString.Required,
-              },
+        constructConduitRoute(
+          {
+            path: '/hook/twitch',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Twitch using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('TwitchResponse', {
-              userId: ConduitString.Required,
-              accessToken: ConduitString.Required,
-              refreshToken: ConduitString.Required,
-            }),
-            'authenticateTwitch'
-          )
+          },
+          new ConduitRouteReturnDefinition('TwitchResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateTwitch'
         )
       );
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/init/twitch',
-              description: `Begins the Twitch authentication.`,
-              action: ConduitRouteActions.GET,
-            },
-            new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
-            'beginAuthTwitch'
-          )
+        constructConduitRoute(
+          {
+            path: '/init/twitch',
+            description: `Begins the Twitch authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
+          'beginAuthTwitch'
         )
       );
       enabled = true;
@@ -492,65 +455,57 @@ export class AuthenticationRoutes {
 
     if (enabled) {
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/user',
-              description: `Returns the authenticated user.`,
-              action: ConduitRouteActions.GET,
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('User', User.getInstance().fields),
-            'getUser'
-          )
+        constructConduitRoute(
+          {
+            path: '/user',
+            description: `Returns the authenticated user.`,
+            action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('User', User.getInstance().fields),
+          'getUser'
         )
       );
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/user',
-              description: `Deletes the authenticated user.`,
-              action: ConduitRouteActions.DELETE,
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
-            'deleteUser'
-          )
+        constructConduitRoute(
+          {
+            path: '/user',
+            description: `Deletes the authenticated user.`,
+            action: ConduitRouteActions.DELETE,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
+          'deleteUser'
         )
       );
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/renew',
-              action: ConduitRouteActions.POST,
-              description: `Renews the access and refresh tokens 
+        constructConduitRoute(
+          {
+            path: '/renew',
+            action: ConduitRouteActions.POST,
+            description: `Renews the access and refresh tokens 
               when provided with a valid refresh token.`,
-              bodyParams: {
-                refreshToken: ConduitString.Required,
-              },
-            },
-            new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-              accessToken: ConduitString.Required,
+            bodyParams: {
               refreshToken: ConduitString.Required,
-            }),
-            'renewAuth'
-          )
+            },
+          },
+          new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'renewAuth'
         )
       );
 
       routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/logout',
-              action: ConduitRouteActions.POST,
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-            'logOut'
-          )
+        constructConduitRoute(
+          {
+            path: '/logout',
+            action: ConduitRouteActions.POST,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+          'logOut'
         )
       );
 
