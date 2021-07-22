@@ -100,6 +100,10 @@ export class AuthenticationRoutes {
             {
               path: '/local/new',
               action: ConduitRouteActions.POST,
+              description: `Creates a new user using either email/password or username/password.
+               The combination depends on the provided configuration. 
+               In the case of email/password the email module is required and 
+               the user will receive an email before being able to login.`,
               bodyParams: {
                 email: ConduitString.Required,
                 password: ConduitString.Required,
@@ -121,6 +125,9 @@ export class AuthenticationRoutes {
             {
               path: '/local',
               action: ConduitRouteActions.POST,
+              description: `Login endpoint that can be used to authenticate. 
+              If 2FA is used for the user then instead of tokens 
+              you will receive a message indicating the need for a token from the 2FA mechanism.`,
               bodyParams: {
                 email: ConduitString.Required,
                 password: ConduitString.Required,
@@ -160,6 +167,8 @@ export class AuthenticationRoutes {
               {
                 path: '/reset-password',
                 action: ConduitRouteActions.POST,
+                description: `Used after the user clicks on the 'forgot password' link and
+                 requires the token from the url and the new password`,
                 bodyParams: {
                   passwordResetToken: ConduitString.Required,
                   password: ConduitString.Required,
@@ -177,6 +186,8 @@ export class AuthenticationRoutes {
               {
                 path: '/local/change-password',
                 action: ConduitRouteActions.POST,
+                description: `Changes the user's password but requires the old password first.
+                 If 2FA is enabled then a message will be returned asking for token input.`,
                 bodyParams: {
                   oldPassword: ConduitString.Required,
                   newPassword: ConduitString.Required,
@@ -195,6 +206,7 @@ export class AuthenticationRoutes {
               {
                 path: '/local/change-password/verify',
                 action: ConduitRouteActions.POST,
+                description: `Used to provide the 2FA token for password change.`,
                 bodyParams: {
                   code: ConduitString.Required,
                 },
@@ -212,6 +224,7 @@ export class AuthenticationRoutes {
               {
                 path: '/hook/verify-email/:verificationToken',
                 action: ConduitRouteActions.GET,
+                description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
                 urlParams: {
                   verificationToken: ConduitString.Required,
                 },
@@ -230,6 +243,7 @@ export class AuthenticationRoutes {
               {
                 path: '/local/twofa',
                 action: ConduitRouteActions.POST,
+                description: `Verifies the 2FA token.`,
                 bodyParams: {
                   email: ConduitString.Required,
                   code: ConduitString.Required,
@@ -252,6 +266,8 @@ export class AuthenticationRoutes {
               {
                 path: '/local/enable-twofa',
                 action: ConduitRouteActions.UPDATE,
+                description: `Enables a phone based 2FA method for a user and 
+                requires their phone number.`,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
                   phoneNumber: ConduitString.Required,
@@ -269,6 +285,7 @@ export class AuthenticationRoutes {
               {
                 path: '/local/verifyPhoneNumber',
                 action: ConduitRouteActions.POST,
+                description: `Verifies the phone number provided for the 2FA mechanism.`,
                 middlewares: ['authMiddleware'],
                 bodyParams: {
                   code: ConduitString.Required,
@@ -286,6 +303,7 @@ export class AuthenticationRoutes {
               {
                 path: '/local/disable-twofa',
                 action: ConduitRouteActions.UPDATE,
+                description: `Disables the user's 2FA mechanism.`,
                 middlewares: ['authMiddleware'],
               },
               new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
@@ -307,9 +325,9 @@ export class AuthenticationRoutes {
             {
               path: '/facebook',
               action: ConduitRouteActions.POST,
+              description: `Login/register with Facebook by providing a token from the client.`,
               bodyParams: {
-                // todo switch to required when the parsing is added
-                access_token: ConduitString.Optional,
+                access_token: ConduitString.Required,
               },
             },
             new ConduitRouteReturnDefinition('FacebookResponse', {
@@ -336,10 +354,11 @@ export class AuthenticationRoutes {
             {
               path: '/google',
               action: ConduitRouteActions.POST,
+              description: `Login/register with Google by providing a token from the client.`,
               bodyParams: {
                 id_token: ConduitString.Required,
                 access_token: ConduitString.Required,
-                expires_in: ConduitString.Required,
+                expires_in: ConduitString.Optional,
               },
             },
             new ConduitRouteReturnDefinition('GoogleResponse', {
@@ -366,6 +385,7 @@ export class AuthenticationRoutes {
             {
               path: '/service',
               action: ConduitRouteActions.POST,
+              description: `Login with service account.`,
               bodyParams: {
                 serviceName: ConduitString.Required,
                 token: ConduitString.Required,
@@ -395,6 +415,7 @@ export class AuthenticationRoutes {
             {
               path: '/hook/kakao',
               action: ConduitRouteActions.GET,
+              description: `Login/register with KakaoTalk using redirection mechanism.`,
               urlParams: {
                 code: ConduitString.Required,
                 state: ConduitString.Required,
@@ -415,6 +436,7 @@ export class AuthenticationRoutes {
           new ConduitRoute(
             {
               path: '/init/kakao',
+              description: `Begins the authentication process with KakaoTalk.`,
               action: ConduitRouteActions.GET,
             },
             new ConduitRouteReturnDefinition('KakaoInitResponse', 'String'),
@@ -437,6 +459,7 @@ export class AuthenticationRoutes {
             {
               path: '/hook/twitch',
               action: ConduitRouteActions.GET,
+              description: `Login/register with Twitch using redirection mechanism.`,
               urlParams: {
                 code: ConduitString.Required,
                 state: ConduitString.Required,
@@ -456,6 +479,7 @@ export class AuthenticationRoutes {
           new ConduitRoute(
             {
               path: '/init/twitch',
+              description: `Begins the Twitch authentication.`,
               action: ConduitRouteActions.GET,
             },
             new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
@@ -472,6 +496,7 @@ export class AuthenticationRoutes {
           new ConduitRoute(
             {
               path: '/user',
+              description: `Returns the authenticated user.`,
               action: ConduitRouteActions.GET,
               middlewares: ['authMiddleware'],
             },
@@ -485,6 +510,7 @@ export class AuthenticationRoutes {
           new ConduitRoute(
             {
               path: '/user',
+              description: `Deletes the authenticated user.`,
               action: ConduitRouteActions.DELETE,
               middlewares: ['authMiddleware'],
             },
@@ -499,6 +525,8 @@ export class AuthenticationRoutes {
             {
               path: '/renew',
               action: ConduitRouteActions.POST,
+              description: `Renews the access and refresh tokens 
+              when provided with a valid refresh token.`,
               bodyParams: {
                 refreshToken: ConduitString.Required,
               },
