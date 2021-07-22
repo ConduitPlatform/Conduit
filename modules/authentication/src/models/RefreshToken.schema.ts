@@ -3,10 +3,11 @@ import {
   DatabaseProvider,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { User } from './User.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  userId: {
+  user: {
     type: TYPE.Relation,
     model: 'User',
     systemRequired: true,
@@ -36,10 +37,11 @@ const schemaOptions = {
   systemRequired: true,
 };
 const collectionName = undefined;
+
 export class RefreshToken extends ConduitActiveSchema<RefreshToken> {
   private static _instance: RefreshToken;
   _id: string;
-  userId: string | any;
+  user: string | User;
   clientId: string;
   token: string;
   expiresOn: Date;

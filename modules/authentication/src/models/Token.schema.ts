@@ -3,6 +3,7 @@ import {
   DatabaseProvider,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { User } from './User.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -10,7 +11,7 @@ const schema = {
     type: TYPE.String,
     systemRequired: true,
   },
-  userId: {
+  user: {
     type: TYPE.Relation,
     model: 'User',
     systemRequired: true,
@@ -31,11 +32,12 @@ const schemaOptions = {
   systemRequired: true,
 };
 const collectionName = undefined;
+
 export class Token extends ConduitActiveSchema<Token> {
   private static _instance: Token;
   _id: string;
   type: string;
-  userId: string | any;
+  user: string | User;
   token: string;
   data?: any;
   createdAt: Date;

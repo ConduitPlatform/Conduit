@@ -38,7 +38,7 @@ export class CommonHandlers {
 
     await Promise.all(
       AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: oldRefreshToken.userId,
+        userId: oldRefreshToken.user,
         clientId,
       })
     );
@@ -49,14 +49,14 @@ export class CommonHandlers {
     };
 
     const newAccessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: oldRefreshToken.userId,
+      userId: oldRefreshToken.user,
       clientId,
-      token: AuthUtils.signToken({ id: oldRefreshToken.userId }, signTokenOptions),
+      token: AuthUtils.signToken({ id: oldRefreshToken.user }, signTokenOptions),
       expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
     });
 
     const newRefreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: oldRefreshToken.userId,
+      userId: oldRefreshToken.user,
       clientId,
       token: AuthUtils.randomToken(),
       expiresOn: moment()

@@ -586,7 +586,7 @@ export class AuthenticationRoutes {
       );
     }
     let user = await User.getInstance().findOne({
-      _id: accessToken.userId,
+      _id: accessToken.user,
     });
     if (isNil(user)) {
       throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User no longer exists');
