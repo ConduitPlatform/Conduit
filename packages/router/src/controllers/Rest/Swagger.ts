@@ -85,6 +85,28 @@ export class SwaggerGenerator {
 
     if (route.input.urlParams !== undefined) {
       for (const name in route.input.urlParams) {
+        let type = '';
+        if (typeof route.input.urlParams[name] === 'object') {
+          // @ts-ignore
+          if (
+            route.input.urlParams[name] &&
+            // @ts-ignore
+            route.input.urlParams[name].type &&
+            // @ts-ignore
+            typeof route.input.urlParams[name].type !== 'object'
+          ) {
+            // @ts-ignore
+            type = route.input.urlParams[name].type.toLowerCase();
+          } else {
+            type = 'object';
+          }
+
+          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
+            type = 'string';
+          }
+        } else {
+          type = route.input.urlParams[name].toString().toLowerCase();
+        }
         routeDoc.parameters.push({
           name,
           in: 'path',
@@ -96,10 +118,32 @@ export class SwaggerGenerator {
 
     if (route.input.queryParams !== undefined) {
       for (const name in route.input.queryParams) {
+        let type = '';
+        if (typeof route.input.queryParams[name] === 'object') {
+          // @ts-ignore
+          if (
+            route.input.queryParams[name] &&
+            // @ts-ignore
+            route.input.queryParams[name].type &&
+            // @ts-ignore
+            typeof route.input.queryParams[name].type !== 'object'
+          ) {
+            // @ts-ignore
+            type = route.input.queryParams[name].type.toLowerCase();
+          } else {
+            type = 'object';
+          }
+
+          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
+            type = 'string';
+          }
+        } else {
+          type = route.input.queryParams[name].toString().toLowerCase();
+        }
         routeDoc.parameters.push({
           name,
           in: 'query',
-          type: route.input.queryParams[name],
+          type: type,
         });
       }
     }
@@ -122,7 +166,7 @@ export class SwaggerGenerator {
             type = 'object';
           }
 
-          if (!['string', 'number', 'array', 'object'].includes(type)) {
+          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
             type = 'string';
           }
         } else {
