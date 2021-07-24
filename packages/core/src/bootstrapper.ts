@@ -33,9 +33,9 @@ export class CoreBootstrapper {
     // NOTE: all core packages with grpc need to be created before grpc server start
     primary = new App();
     const app = primary.get();
-
-    server.bindAsync(_port, ServerCredentials.createInsecure(), (err, port) => {
-      let _url = '0.0.0.0:' + port.toString();
+    let _url = '0.0.0.0:' + _port;
+    server.bindAsync(_url, ServerCredentials.createInsecure(), (err, port) => {
+      _url = '0.0.0.0:' + port.toString();
       const grpcSdk = new ConduitGrpcSdk(_url, 'core');
       if (err) {
         console.error(err);

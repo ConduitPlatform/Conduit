@@ -13,20 +13,20 @@ export class GrpcServer {
     functions: { [name: string]: Function };
   }[] = [];
 
-  constructor(originalPort?: string) {
-    this._port = originalPort || '55155';
+  constructor(originalUrl?: string) {
+    this._url = originalUrl || '0.0.0.0:5000';
   }
 
-  private _port: string;
+  private _url: string;
 
-  get port(): string {
-    return this._port;
+  get url(): string {
+    return this._url;
   }
 
   async createNewServer(): Promise<number> {
-    let serverResult = await createServer(this.port);
+    let serverResult = await createServer(this._url);
     this.grpcServer = serverResult.server;
-    this._port = serverResult.port.toString();
+    this._url = this._url.split(':')[0] + ':' + serverResult.port.toString();
     return serverResult.port;
   }
 

@@ -46,7 +46,7 @@ export default class PaymentsModule implements ConduitServiceModule {
   }
 
   async initialize() {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_PORT);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
     this._port = (await this.grpcServer.createNewServer()).toString();
     await this.grpcServer.addService(
       path.resolve(__dirname, './payments.proto'),

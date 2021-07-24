@@ -16,7 +16,7 @@ WORKDIR /app/modules/authentication
 
 ENV CONDUIT_SERVER conduit_server
 
-ENV SERVICE_PORT 0.0.0.0:5000
+ENV SERVICE_URL 0.0.0.0:5000
 
 ENV REGISTER_NAME true
 
