@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
@@ -37,14 +37,14 @@ export class GoogleHandlers {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { id_token, access_token, expires_in } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const ticket = await this.client.verifyIdToken({
       idToken: id_token,
@@ -54,22 +54,21 @@ export class GoogleHandlers {
     const payload = ticket.getPayload();
     if (isNil(payload)) {
       throw new GrpcError(
-        grpc.status.UNAUTHENTICATED,
+        status.UNAUTHENTICATED,
         'Received invalid response from the Google API'
       );
     }
     if (!payload.email_verified) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
     let user: User | null = await User.getInstance().findOne({ email: payload.email });
 
     if (!isNil(user)) {
-      if (!user.active)
-        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!config.google.accountLinking) {
         throw new GrpcError(
-          grpc.status.PERMISSION_DENIED,
+          status.PERMISSION_DENIED,
           'User with this email already exists'
         );
       }

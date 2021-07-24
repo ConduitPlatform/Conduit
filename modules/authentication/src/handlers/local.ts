@@ -11,10 +11,10 @@ import ConduitGrpcSdk, {
   SMS,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, Token, User } from '../models';
+import { status } from '@grpc/grpc-js';
 import moment = require('moment');
 
 export class LocalHandlers {
@@ -61,12 +61,12 @@ export class LocalHandlers {
 
   async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
 
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'Email contains unsupported characters'
       );
     }
@@ -74,8 +74,7 @@ export class LocalHandlers {
     email = email.toLowerCase();
 
     let user: User | null = await User.getInstance().findOne({ email });
-    if (!isNil(user))
-      throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
+    if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
 
     let hashedPassword = await AuthUtils.hashPassword(password);
     const isVerified = this.identifier === 'username';
@@ -114,18 +113,18 @@ export class LocalHandlers {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
     const context = call.request.context;
 
     if (isNil(context))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'Email contains unsupported characters'
       );
     }
@@ -137,21 +136,21 @@ export class LocalHandlers {
       '+hashedPassword'
     );
     if (isNil(user))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
-    if (!user.active) throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
     if (!user.hashedPassword)
       throw new GrpcError(
-        grpc.status.PERMISSION_DENIED,
+        status.PERMISSION_DENIED,
         'User does not use password authentication'
       );
     const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch)
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
     const config = ConfigController.getInstance().config;
     if (config.local.verificationRequired && !user.isVerified) {
       throw new GrpcError(
-        grpc.status.PERMISSION_DENIED,
+        status.PERMISSION_DENIED,
         'You must verify your account to login'
       );
     }
@@ -159,7 +158,7 @@ export class LocalHandlers {
     if (user.hasTwoFA) {
       const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
       if (verificationSid === '') {
-        throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
+        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
 
       await Token.getInstance()
@@ -219,7 +218,7 @@ export class LocalHandlers {
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized || isNil(this.emailModule)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
     const { email } = call.request.params;
@@ -256,7 +255,7 @@ export class LocalHandlers {
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized || isNil(this.emailModule)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
     const {
@@ -269,16 +268,16 @@ export class LocalHandlers {
       token: passwordResetTokenParam,
     });
     if (isNil(passwordResetTokenDoc))
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Invalid parameters');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.user },
       '+hashedPassword'
     );
-    if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (isNil(user.hashedPassword))
       throw new GrpcError(
-        grpc.status.PERMISSION_DENIED,
+        status.PERMISSION_DENIED,
         'User does not use password authentication'
       );
 
@@ -288,7 +287,7 @@ export class LocalHandlers {
     );
     if (passwordsMatch)
       throw new GrpcError(
-        grpc.status.PERMISSION_DENIED,
+        status.PERMISSION_DENIED,
         "Password can't be the same as the old one"
       );
 
@@ -317,7 +316,7 @@ export class LocalHandlers {
 
     if (oldPassword === newPassword) {
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'The new password can not be the same as the old password'
       );
     }
@@ -328,11 +327,11 @@ export class LocalHandlers {
     );
 
     if (isNil(dbUser)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User does not exist');
+      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
     }
     if (isNil(dbUser.hashedPassword)) {
       throw new GrpcError(
-        grpc.status.PERMISSION_DENIED,
+        status.PERMISSION_DENIED,
         'User does not use password authentication'
       );
     }
@@ -342,7 +341,7 @@ export class LocalHandlers {
       dbUser.hashedPassword
     );
     if (!passwordsMatch) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid password');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
     }
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
@@ -350,7 +349,7 @@ export class LocalHandlers {
     if (dbUser.hasTwoFA) {
       const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber!);
       if (verificationSid === '') {
-        throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
+        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
 
       await Token.getInstance()
@@ -386,13 +385,13 @@ export class LocalHandlers {
     });
 
     if (isNil(token)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Change password token not found');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Change password token not found');
     }
 
     const verified = await this.sms.verify(token.token, code);
 
     if (!verified) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid code');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
     }
 
     await Token.getInstance()
@@ -408,7 +407,7 @@ export class LocalHandlers {
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
     const verificationTokenParam = call.request.params.verificationToken;
 
@@ -430,7 +429,7 @@ export class LocalHandlers {
     const user: User | null = await User.getInstance().findOne({
       _id: verificationTokenDoc.user,
     });
-    if (isNil(user)) throw new GrpcError(grpc.status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     user.isVerified = true;
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
@@ -452,7 +451,7 @@ export class LocalHandlers {
   async verify(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
@@ -460,7 +459,7 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne({ email });
 
-    if (isNil(user)) throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
     const verificationRecord: Token | null = await Token.getInstance().findOne({
       userId: user._id,
@@ -468,14 +467,14 @@ export class LocalHandlers {
     });
     if (isNil(verificationRecord))
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'No verification record for this user'
       );
 
     const verified = await this.sms.verify(verificationRecord.token, code);
 
     if (!verified) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
+      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
 
     await Token.getInstance()
@@ -529,12 +528,12 @@ export class LocalHandlers {
     const context = call.request.context;
 
     if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
     const verificationSid = await this.sendVerificationCode(phoneNumber);
     if (verificationSid === '') {
-      throw new GrpcError(grpc.status.INTERNAL, 'Could not send verification code');
+      throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
 
     await Token.getInstance()
@@ -563,7 +562,7 @@ export class LocalHandlers {
     const { code } = call.request.params;
 
     if (isNil(context) || isEmpty(context)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
     const verificationRecord: Token | null = await Token.getInstance().findOne({
@@ -572,14 +571,14 @@ export class LocalHandlers {
     });
     if (isNil(verificationRecord))
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'No verification record for this user'
       );
 
     const verified = await this.sms.verify(verificationRecord.token, code);
 
     if (!verified) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'email and code do not match');
+      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
 
     await Token.getInstance()
@@ -610,7 +609,7 @@ export class LocalHandlers {
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Unauthorized');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
     await User.getInstance().findByIdAndUpdate(context.user._id, {

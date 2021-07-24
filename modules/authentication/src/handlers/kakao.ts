@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
 import querystring from 'querystring';
@@ -12,6 +11,7 @@ import moment from 'moment';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
+import { status } from '@grpc/grpc-js';
 
 export class KakaoHandlers {
   private initialized: boolean = false;
@@ -78,7 +78,7 @@ export class KakaoHandlers {
     userInfo = response2.data;
 
     if (isNil(userInfo))
-      throw new GrpcError(grpc.status.INTERNAL, 'Kakao did not return user info');
+      throw new GrpcError(status.INTERNAL, 'Kakao did not return user info');
 
     let user: User | null = await User.getInstance().findOne({
       'kakao.id': userInfo.id,
@@ -106,8 +106,7 @@ export class KakaoHandlers {
         isVerified: true,
       });
     } else {
-      if (!user.active)
-        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!user.kakao) {
         user = await User.getInstance().findByIdAndUpdate(
           user._id,

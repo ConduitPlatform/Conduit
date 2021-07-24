@@ -1,4 +1,3 @@
-import request, { OptionsWithUrl } from 'request-promise';
 import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConduitError,
@@ -6,10 +5,11 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
+import axios, { AxiosRequestConfig } from 'axios';
 
 export class FacebookHandlers {
   private initialized: boolean = false;
@@ -34,50 +34,45 @@ export class FacebookHandlers {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { access_token } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
-    const facebookOptions: OptionsWithUrl = {
+    const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
-      qs: {
+      params: {
         access_token,
         fields: 'id,email',
       },
-      json: true,
     };
 
-    const facebookResponse = await request(facebookOptions);
+    const facebookResponse = await axios(facebookOptions);
 
-    if (isNil(facebookResponse.email) || isNil(facebookResponse.id)) {
-      throw new GrpcError(
-        grpc.status.UNAUTHENTICATED,
-        'Authentication with facebook failed'
-      );
+    if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
 
     let user: User | null = await User.getInstance().findOne({
-      email: facebookResponse.email,
+      email: facebookResponse.data.email,
     });
 
     if (!isNil(user)) {
-      if (!user.active)
-        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!config.facebook.accountLinking) {
         throw new GrpcError(
-          grpc.status.PERMISSION_DENIED,
+          status.PERMISSION_DENIED,
           'User with this email already exists'
         );
       }
       if (isNil(user.facebook)) {
         user.facebook = {
-          id: facebookResponse.id as string,
+          id: facebookResponse.data.id as string,
           token: access_token,
         };
         // TODO look into this again, as the email the user has registered will still not be verified
@@ -86,9 +81,9 @@ export class FacebookHandlers {
       }
     } else {
       user = await User.getInstance().create({
-        email: facebookResponse.email,
+        email: facebookResponse.data.email,
         facebook: {
-          id: facebookResponse.id,
+          id: facebookResponse.data.id,
         },
         isVerified: true,
       });

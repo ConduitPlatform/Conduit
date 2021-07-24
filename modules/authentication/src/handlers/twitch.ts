@@ -5,13 +5,13 @@ import ConduitGrpcSdk, {
   RouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
 import { isNil } from 'lodash';
 import axios from 'axios';
 import moment from 'moment';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
+import { status } from '@grpc/grpc-js';
 
 export class TwitchHandlers {
   private initialized: boolean = false;
@@ -107,8 +107,7 @@ export class TwitchHandlers {
         isVerified: true,
       });
     } else {
-      if (!user.active)
-        throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive user');
+      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!user.twitch) {
         user = await User.getInstance().findByIdAndUpdate(
           user._id,

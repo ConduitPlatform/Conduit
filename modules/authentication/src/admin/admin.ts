@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
 import { ConfigController } from '../config/Config.controller';
@@ -85,7 +85,7 @@ export class AdminHandlers {
 
     if (isNil(identification) || isNil(password)) {
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'Identification and password are required'
       );
     }
@@ -94,7 +94,7 @@ export class AdminHandlers {
     if (config.local.identifier === 'email') {
       if (identification.indexOf('+') !== -1) {
         throw new GrpcError(
-          grpc.status.INVALID_ARGUMENT,
+          status.INVALID_ARGUMENT,
           'Email contains unsupported characters'
         );
       }
@@ -106,7 +106,7 @@ export class AdminHandlers {
       email: identification,
     });
     if (!isNil(user)) {
-      throw new GrpcError(grpc.status.ALREADY_EXISTS, 'User already exists');
+      throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
     }
 
     let hashedPassword = await AuthUtils.hashPassword(password);
@@ -122,15 +122,15 @@ export class AdminHandlers {
   async editUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
     if (isNil(id)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
     }
 
     let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
       throw new GrpcError(
-        grpc.status.INVALID_ARGUMENT,
+        status.INVALID_ARGUMENT,
         'Can not enable 2fa without a phone number'
       );
     }
@@ -151,12 +151,12 @@ export class AdminHandlers {
     const { id } = call.request.params;
 
     if (isNil(id)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
     }
 
     let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
 
     let res = await User.getInstance().deleteOne({ _id: id });
@@ -168,14 +168,14 @@ export class AdminHandlers {
     const { id } = call.request.params;
 
     if (isNil(id)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
     }
     let user: User | null = await User.getInstance().findOne({ _id: id });
 
     if (isNil(user)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     } else if (!user.active) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'User is already blocked');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'User is already blocked');
     }
 
     user.active = false;
@@ -188,16 +188,16 @@ export class AdminHandlers {
     const { id } = call.request.params;
 
     if (isNil(id)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
     }
 
     let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(grpc.status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
 
     if (user.active) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'user is not blocked');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'user is not blocked');
     }
 
     user.active = true;

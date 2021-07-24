@@ -1,5 +1,5 @@
 import { LocalHandlers } from '../handlers/local';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitMiddleware,
   ConduitRouteActions,
@@ -522,12 +522,12 @@ export class AuthenticationRoutes {
 
     const header = (headers['Authorization'] || headers['authorization']) as string;
     if (isNil(header)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No authorization header present');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No authorization header present');
     }
     const args = header.split(' ');
 
     if (args[0] !== 'Bearer' || isNil(args[1])) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Authorization header malformed');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header malformed');
     }
 
     let accessToken = await AccessToken.getInstance().findOne({
@@ -536,7 +536,7 @@ export class AuthenticationRoutes {
     });
     if (isNil(accessToken) || moment().isAfter(moment(accessToken.expiresOn))) {
       throw new GrpcError(
-        grpc.status.UNAUTHENTICATED,
+        status.UNAUTHENTICATED,
         'Token is expired or otherwise not valid'
       );
     }
@@ -544,7 +544,7 @@ export class AuthenticationRoutes {
       _id: accessToken.user,
     });
     if (isNil(user)) {
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'User no longer exists');
+      throw new GrpcError(status.UNAUTHENTICATED, 'User no longer exists');
     }
     return { user: user };
   }

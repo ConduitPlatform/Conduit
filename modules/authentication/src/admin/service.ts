@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../utils/auth';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { Service } from '../models';
 
@@ -46,7 +46,7 @@ export class ServiceAdmin {
     const { name } = call.request.params;
 
     if (isNil(name)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service name is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service name is required');
     }
 
     const token = AuthUtils.randomToken();
@@ -63,7 +63,7 @@ export class ServiceAdmin {
     const { id } = call.request.params;
 
     if (isNil(id)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service id is required');
     }
 
     await Service.getInstance().deleteOne({ _id: id });
@@ -77,7 +77,7 @@ export class ServiceAdmin {
     const { serviceId } = call.request.params;
 
     if (isNil(serviceId)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service id is required');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service id is required');
     }
 
     const token = AuthUtils.randomToken();
@@ -90,7 +90,7 @@ export class ServiceAdmin {
     );
 
     if (isNil(service)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Service not found');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service not found');
     }
     return { name: service.name, token };
   }

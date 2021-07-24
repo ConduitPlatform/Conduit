@@ -6,9 +6,9 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
 import { ConfigController } from '../config/Config.controller';
 import { Service } from '../models';
+import { status } from '@grpc/grpc-js';
 
 export class ServiceHandler {
   private initialized: boolean = false;
@@ -28,12 +28,12 @@ export class ServiceHandler {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
-      throw new GrpcError(grpc.status.NOT_FOUND, 'Requested resource not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { serviceName, token } = call.request.params;
 
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'No headers provided');
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
@@ -42,13 +42,13 @@ export class ServiceHandler {
       '+hashedToken'
     );
     if (isNil(serviceUser))
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     if (!serviceUser.active)
-      throw new GrpcError(grpc.status.PERMISSION_DENIED, 'Inactive service user');
+      throw new GrpcError(status.PERMISSION_DENIED, 'Inactive service user');
 
     const tokensMatch = await AuthUtils.checkPassword(token, serviceUser.hashedToken);
     if (!tokensMatch)
-      throw new GrpcError(grpc.status.UNAUTHENTICATED, 'Invalid login credentials');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
     const config = ConfigController.getInstance().config;
 

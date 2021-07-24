@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, User } from '../models';
 
@@ -30,10 +30,10 @@ export class CommonHandlers {
       }
     );
     if (isNil(oldRefreshToken)) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Invalid parameters');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
     }
     if (moment().isAfter(moment(oldRefreshToken.expiresOn))) {
-      throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'Token expired');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
 
     await Promise.all(
