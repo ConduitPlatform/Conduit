@@ -4,7 +4,8 @@ import {
   RouterResponse,
   UnparsedRouterResponse,
 } from '../types';
-import grpc from 'grpc';
+
+import { status } from '@grpc/grpc-js';
 
 export function wrapCallObjectForRouter(call: any): RouterRequest {
   return {
@@ -48,7 +49,7 @@ export function wrapRouterGrpcFunction(
       }
     } catch (e) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: e.message ?? 'Something went wrong',
       });
     }
@@ -69,7 +70,7 @@ export function wrapRouterGrpcFunction(
       })
       .catch((error) => {
         callback({
-          code: error.code ?? grpc.status.INTERNAL,
+          code: error.code ?? status.INTERNAL,
           message: error.message ?? 'Something went wrong',
         });
       });

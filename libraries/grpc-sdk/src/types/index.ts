@@ -1,4 +1,4 @@
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 
 export type GrpcRequest<T> = { request: T };
 export type GrpcResponse<T> = (
@@ -10,10 +10,10 @@ export type GrpcResponse<T> = (
 ) => void;
 
 export class GrpcError extends Error {
-  code: grpc.status;
+  code: status;
   message: string;
 
-  constructor(code: grpc.status, message: string) {
+  constructor(code: status, message: string) {
     super(message);
     this.code = code;
     this.message = message;
