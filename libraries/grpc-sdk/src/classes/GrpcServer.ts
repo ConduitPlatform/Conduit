@@ -1,9 +1,8 @@
-import * as grpc from 'grpc';
 import { addServiceToServer, createServer } from '../helpers';
+import { Server } from '@grpc/grpc-js';
 
 export class GrpcServer {
-  private readonly _url: string;
-  private grpcServer: grpc.Server;
+  private grpcServer?: Server;
   private started: boolean = false;
   private startedOnce: boolean = false;
   private _serviceNames: string[] = [];
@@ -14,17 +13,20 @@ export class GrpcServer {
     functions: { [name: string]: Function };
   }[] = [];
 
-  constructor(originalUrl?: string) {
-    this._url = originalUrl || '0.0.0.0:0';
-    let serverResult = createServer(this._url);
-    this.grpcServer = serverResult.server;
-    this._url = originalUrl || '0.0.0.0:' + serverResult.port;
-    console.log('bound on:', this._url);
+  constructor(originalPort?: string) {
+    this._port = originalPort || '55155';
   }
 
-  createNewServer(): number {
-    let serverResult = createServer(this._url);
+  private _port: string;
+
+  get port(): string {
+    return this._port;
+  }
+
+  async createNewServer(): Promise<number> {
+    let serverResult = await createServer(this.port);
     this.grpcServer = serverResult.server;
+    this._port = serverResult.port.toString();
     return serverResult.port;
   }
 
@@ -50,28 +52,41 @@ export class GrpcServer {
         this.scheduleRefresh();
         return this;
       } else {
-        addServiceToServer(this.grpcServer, protoFilePath, protoDescription, functions);
+        if (!this.grpcServer) {
+          await this.wait(1000);
+        }
+        addServiceToServer(this.grpcServer!, protoFilePath, protoDescription, functions);
         return this;
       }
     }
   }
+
+  async wait(time: number) {
+    return new Promise((resolve, reject) => {
+      let timeout = setTimeout(() => {
+        clearTimeout(timeout);
+        resolve();
+      }, time);
+    });
+  }
+
   async refresh(): Promise<void> {
     if (this.started) {
       this.started = false;
       //gracefully shutdown so that there are no service disruption
-      await new Promise((resolve) => this.grpcServer.tryShutdown(() => resolve()));
+      await new Promise((resolve) => this.grpcServer!.tryShutdown(() => resolve()));
     }
-    this.createNewServer();
+    await this.createNewServer();
     this._services.forEach((service) => {
       addServiceToServer(
-        this.grpcServer,
+        this.grpcServer!,
         service.protoFilePath,
         service.protoDescription,
         service.functions
       );
     });
     if (!this.started && this.startedOnce) {
-      this.grpcServer.start();
+      this.grpcServer!.start();
       this.started = true;
     }
   }
@@ -88,19 +103,15 @@ export class GrpcServer {
     }, 2000);
   }
 
-  get url(): string {
-    return this._url;
-  }
-
   start(): void {
     if (this.started) {
       console.error('Grpc server is already running!');
       return;
-    }else if (!this.started && this.startedOnce) {
+    } else if (!this.started && this.startedOnce) {
       console.error('Grpc server is down for refresh!');
     }
     this.started = true;
     this.startedOnce = true;
-    this.grpcServer.start();
+    this.grpcServer?.start();
   }
 }

@@ -193,7 +193,7 @@ export default class ConduitGrpcSdk {
       })
       .catch((err: any) => {
         console.error('Failed to initialize event bus');
-        return err;
+        throw err;
       });
   }
 
