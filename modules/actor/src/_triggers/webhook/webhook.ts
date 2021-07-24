@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   constructRoute,
   GrpcServer,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 
 export class Webhook implements Trigger<WebhookInterface> {
   private static _instance: Webhook;
@@ -52,7 +52,7 @@ export class Webhook implements Trigger<WebhookInterface> {
 
     if (!route || route.length === 0) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Specified webhook not found',
       });
     } else {

@@ -14,11 +14,15 @@ authentication
     url += authentication.port;
     return grpcSdk.config.registerModule('authentication', url);
   })
-  .then(() => {
-    return authentication.activate();
-  })
   .catch((err: Error) => {
     console.log('Failed to initialize server');
     console.error(err);
     process.exit(-1);
+  })
+  .then(() => {
+    return authentication.activate();
+  })
+  .catch((err: Error) => {
+    console.log('Failed to active module');
+    console.error(err);
   });
