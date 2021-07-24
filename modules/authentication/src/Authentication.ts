@@ -11,12 +11,12 @@ import ConduitGrpcSdk, {
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import * as grpc from 'grpc';
 import { AuthenticationRoutes } from './routes/Routes';
 import { ConfigController } from './config/Config.controller';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import moment from 'moment';
+import { status } from '@grpc/grpc-js';
 
 export default class AuthenticationModule implements ConduitServiceModule {
   private database: DatabaseProvider;
@@ -34,7 +34,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
   }
 
   async initialize() {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this.grpcServer = new GrpcServer(process.env.SERVICE_PORT);
     this._port = (await this.grpcServer.createNewServer()).toString();
     await this.grpcServer.addService(
       path.resolve(__dirname, './authentication.proto'),
@@ -96,7 +96,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
       AuthenticationConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',
       });
     }
@@ -106,13 +106,13 @@ export default class AuthenticationModule implements ConduitServiceModule {
       .updateConfig(newConfig, 'authentication')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (authenticationConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('authentication', 'config-update');
     } else {
       await this.updateConfig(authenticationConfig).catch(() => {
@@ -144,7 +144,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     const refreshToken = await RefreshToken.getInstance()
       .create({
@@ -157,7 +157,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       accessToken: accessToken.token,

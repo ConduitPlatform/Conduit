@@ -80,7 +80,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
   async initialize() {
     await this._activeAdapter.ensureConnected();
-    let grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    let grpcServer = new GrpcServer(process.env.SERVICE_PORT);
 
     this._port = (await grpcServer.createNewServer()).toString();
     await grpcServer.addService(
