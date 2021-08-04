@@ -187,6 +187,8 @@ export class Config extends ConduitModule<ConfigClient> {
     call.on('error', function () {
       // An error has occurred and the stream has been closed.
       call.cancel();
+      //clear event listeners once connection has been closed
+      call.removeAllListeners();
       console.error('Connection to grpc server closed');
     });
     call.on('status', function (status: any) {
