@@ -271,7 +271,7 @@ export class LocalHandlers {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const user: User | null = await User.getInstance().findOne(
-      { _id: passwordResetTokenDoc.user },
+      { _id: passwordResetTokenDoc.userId },
       '+hashedPassword'
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -427,7 +427,7 @@ export class LocalHandlers {
     }
 
     const user: User | null = await User.getInstance().findOne({
-      _id: verificationTokenDoc.user,
+      _id: verificationTokenDoc.userId,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 

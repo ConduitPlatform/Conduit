@@ -7,7 +7,7 @@ import { User } from './User.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  user: {
+  userId: {
     type: TYPE.Relation,
     model: 'User',
     systemRequired: true,
@@ -41,7 +41,7 @@ const collectionName = undefined;
 export class RefreshToken extends ConduitActiveSchema<RefreshToken> {
   private static _instance: RefreshToken;
   _id: string;
-  user: string | User;
+  userId: string | User;
   clientId: string;
   token: string;
   expiresOn: Date;

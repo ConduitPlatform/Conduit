@@ -540,8 +540,15 @@ export class AuthenticationRoutes {
         'Token is expired or otherwise not valid'
       );
     }
+    if (!accessToken.userId) {
+      throw new GrpcError(
+        status.UNAUTHENTICATED,
+        'Token is expired or otherwise not valid'
+      );
+    }
+
     let user = await User.getInstance().findOne({
-      _id: accessToken.user,
+      _id: accessToken.userId,
     });
     if (isNil(user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'User no longer exists');
