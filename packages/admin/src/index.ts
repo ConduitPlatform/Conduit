@@ -1,22 +1,22 @@
 import { isNil } from 'lodash';
 import { hashPassword, verifyToken } from './utils/auth';
-import { Router, Handler, Request, Response, NextFunction } from 'express';
+import { Handler, NextFunction, Request, Response, Router } from 'express';
 import { AuthHandlers } from './handlers/auth';
 import { AdminSchema } from './models/Admin';
 import { ConduitCommons, IConduitAdmin } from '@quintessential-sft/conduit-commons';
 import AdminConfigSchema from './config';
 import * as grpc from 'grpc';
-
-let protoLoader = require('@grpc/proto-loader');
 import fs from 'fs';
 import path from 'path';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
+let protoLoader = require('@grpc/proto-loader');
+
 export default class AdminModule extends IConduitAdmin {
-  private router: Router;
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
-  private _grpcRoutes: Record<string, { path: string, method: string }[]>;
+  private router: Router;
+  private _grpcRoutes: Record<string, { path: string; method: string }[]>;
   private _sdkRoutes: string[];
   private _registeredRoutes: Map<string, Handler>;
 
@@ -24,7 +24,7 @@ export default class AdminModule extends IConduitAdmin {
     grpcSdk: ConduitGrpcSdk,
     conduit: ConduitCommons,
     server: grpc.Server,
-    packageDefinition: any,
+    packageDefinition: any
   ) {
     super(conduit);
     this.conduit = conduit;
@@ -55,7 +55,7 @@ export default class AdminModule extends IConduitAdmin {
       .registerDirectRouter(
         '/admin/login',
         (req: Request, res: Response, next: NextFunction) =>
-          adminHandlers.loginAdmin(req, res, next).catch(next),
+          adminHandlers.loginAdmin(req, res, next).catch(next)
       );
     this.conduit
       .getRouter()
@@ -65,18 +65,23 @@ export default class AdminModule extends IConduitAdmin {
           let response: any[] = [];
           // this is used here as such, because the config manager is simply the config package
           // todo update the config manager interface so that we don't need these castings
-          ((this.conduit.getConfigManager() as any).registeredModules as Map<string,
-            string>).forEach((val: any, key: any) => {
+          ((this.conduit.getConfigManager() as any).registeredModules as Map<
+            string,
+            string
+          >).forEach((val: any, key: any) => {
             response.push(val);
           });
           res.json(response);
-        },
+        }
       );
 
     // todo fix the middlewares
     //@ts-ignore
     this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
+    this.router.post('/admin/create', (req: Request, res: Response, next: NextFunction) =>
+      adminHandlers.createAdmin(req, res, next).catch(next)
+    );
     this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
       this.router(req, res, next);
     });
@@ -112,13 +117,15 @@ export default class AdminModule extends IConduitAdmin {
       let messageParsed = JSON.parse(message);
       self._grpcRoutes[messageParsed.url] = messageParsed.routes;
 
-      self._registerGprcRoute(
-        messageParsed.protofile,
-        messageParsed.routes,
-        messageParsed.url,
-      ).then(() => {
-        this.cleanupRoutes();
-      });
+      self
+        ._registerGprcRoute(
+          messageParsed.protofile,
+          messageParsed.routes,
+          messageParsed.url
+        )
+        .then(() => {
+          this.cleanupRoutes();
+        });
     });
   }
 
@@ -152,41 +159,14 @@ export default class AdminModule extends IConduitAdmin {
         protofile,
         routes,
         url,
-      }),
+      })
     );
-  }
-
-  // @ts-ignore
-  private async handleDatabase() {
-    if (!this.grpcSdk.databaseProvider) {
-      await this.grpcSdk.waitForExistence('database-provider');
-    }
-    const databaseAdapter = this.grpcSdk.databaseProvider!;
-
-    await databaseAdapter.createSchemaFromAdapter(AdminSchema);
-
-    databaseAdapter
-      .findOne('Admin', { username: 'admin' })
-      .then(async (existing: any) => {
-        if (isNil(existing)) {
-          const adminConfig = await this.conduit.getConfigManager().get('admin');
-          const hashRounds = adminConfig.auth.hashRounds;
-          return hashPassword('admin', hashRounds);
-        }
-        return Promise.resolve(null);
-      })
-      .then((result: string | null) => {
-        if (!isNil(result)) {
-          return databaseAdapter.create('Admin', { username: 'admin', password: result });
-        }
-      })
-      .catch(console.log);
   }
 
   findAdmin(object: any) {
     let value;
     const self = this;
-    Object.keys(object).some(function(k) {
+    Object.keys(object).some(function (k) {
       if (k === 'Admin') {
         value = object[k];
         return true;
@@ -242,7 +222,7 @@ export default class AdminModule extends IConduitAdmin {
       });
     }
     let done = await this._registerGprcRoute(protofile, routes, url).catch(
-      (err) => (error = err),
+      (err) => (error = err)
     );
     if (error) {
       callback({
@@ -255,65 +235,6 @@ export default class AdminModule extends IConduitAdmin {
       this.updateState(protofile, routes, url);
       callback(null, null);
     }
-  }
-
-  private async _registerGprcRoute(adminProtofile: any, routes: any, serverIp: string) {
-    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, adminProtofile);
-    var packageDefinition = protoLoader.loadSync(protoPath, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
-    adminDescriptor = this.findAdmin(adminDescriptor);
-
-    let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure(), {
-      'grpc.max_receive_message_length': 1024 * 1024 * 100,
-      'grpc.max_send_message_length': 1024 * 1024 * 100,
-    });
-    routes.forEach((r: any) => {
-      let handler = (req: any, res: any, next: any) => {
-        const context = (req as any).conduit;
-        let params: any = {};
-        if (req.query) {
-          Object.assign(params, req.query);
-        }
-        if (req.body) {
-          Object.assign(params, req.body);
-        }
-        if (req.params) {
-          Object.assign(params, req.params);
-        }
-        if (params.populate) {
-          if (params.populate.includes(',')) {
-            params.populate = params.populate.split(',');
-          } else {
-            params.populate = [params.populate];
-          }
-        }
-        let request = {
-          params: JSON.stringify(params),
-          header: JSON.stringify(req.headers),
-          context: JSON.stringify(context),
-        };
-        client[r.grpcFunction](request, (err: any, result: any) => {
-          if (err) {
-            return res.status(500).send(err);
-          }
-          let sendResult = result.result;
-          try {
-            sendResult = JSON.parse(result.result);
-          } catch (error) {
-            // do nothing
-          }
-          res.status(200).json(sendResult);
-        });
-      };
-      this._registerRoute(r.method, r.path, handler);
-    });
   }
 
   registerRoute(method: string, route: string, handler: Handler) {
@@ -400,15 +321,101 @@ export default class AdminModule extends IConduitAdmin {
     });
   }
 
+  // @ts-ignore
+  private async handleDatabase() {
+    if (!this.grpcSdk.databaseProvider) {
+      await this.grpcSdk.waitForExistence('database-provider');
+    }
+    const databaseAdapter = this.grpcSdk.databaseProvider!;
+
+    await databaseAdapter.createSchemaFromAdapter(AdminSchema);
+
+    databaseAdapter
+      .findOne('Admin', { username: 'admin' })
+      .then(async (existing: any) => {
+        if (isNil(existing)) {
+          const adminConfig = await this.conduit.getConfigManager().get('admin');
+          const hashRounds = adminConfig.auth.hashRounds;
+          return hashPassword('admin', hashRounds);
+        }
+        return Promise.resolve(null);
+      })
+      .then((result: string | null) => {
+        if (!isNil(result)) {
+          return databaseAdapter.create('Admin', { username: 'admin', password: result });
+        }
+      })
+      .catch(console.log);
+  }
+
+  private async _registerGprcRoute(adminProtofile: any, routes: any, serverIp: string) {
+    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+    fs.writeFileSync(protoPath, adminProtofile);
+    var packageDefinition = protoLoader.loadSync(protoPath, {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+    });
+    let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+    adminDescriptor = this.findAdmin(adminDescriptor);
+
+    let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure(), {
+      'grpc.max_receive_message_length': 1024 * 1024 * 100,
+      'grpc.max_send_message_length': 1024 * 1024 * 100,
+    });
+    routes.forEach((r: any) => {
+      let handler = (req: any, res: any, next: any) => {
+        const context = (req as any).conduit;
+        let params: any = {};
+        if (req.query) {
+          Object.assign(params, req.query);
+        }
+        if (req.body) {
+          Object.assign(params, req.body);
+        }
+        if (req.params) {
+          Object.assign(params, req.params);
+        }
+        if (params.populate) {
+          if (params.populate.includes(',')) {
+            params.populate = params.populate.split(',');
+          } else {
+            params.populate = [params.populate];
+          }
+        }
+        let request = {
+          params: JSON.stringify(params),
+          header: JSON.stringify(req.headers),
+          context: JSON.stringify(context),
+        };
+        client[r.grpcFunction](request, (err: any, result: any) => {
+          if (err) {
+            return res.status(500).send(err);
+          }
+          let sendResult = result.result;
+          try {
+            sendResult = JSON.parse(result.result);
+          } catch (error) {
+            // do nothing
+          }
+          res.status(200).json(sendResult);
+        });
+      };
+      this._registerRoute(r.method, r.path, handler);
+    });
+  }
+
   private cleanupRoutes() {
     const self = this;
-    let routes: { path: string, method: string }[] = [];
+    let routes: { path: string; method: string }[] = [];
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       routes.push(...self._grpcRoutes[grpcRoute]);
     });
 
     let newRegisteredRoutes: Map<string, any> = new Map();
-    routes.forEach((route: { path: string, method: string }) => {
+    routes.forEach((route: { path: string; method: string }) => {
       const key = `${route.method}-${route.path}`;
       if (self._registeredRoutes.has(key)) {
         newRegisteredRoutes.set(key, this._registeredRoutes.get(key));
