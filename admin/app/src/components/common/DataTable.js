@@ -10,7 +10,7 @@ import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import { isNumber, orderBy } from 'lodash';
 import * as moment from 'moment';
-import { Button, IconButton } from '@material-ui/core';
+import { IconButton } from '@material-ui/core';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
@@ -75,7 +75,7 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
     if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
       return moment(value).format('DD/MM/YYYY');
     }
-    return value.toString();
+    return value?.toString();
   };
 
   const onMenuItemClick = (action, data) => {

@@ -17,8 +17,18 @@ import {
 } from '../actions/actionTypes';
 
 const initialState = {
-  authUsersState: { users: null, count: 0, loading: false, error: null, success: null },
-  signInMethodsState: { data: null, loading: false, error: null },
+  authUsersState: {
+    users: null,
+    count: 0,
+    loading: false,
+    error: null,
+    success: null,
+  },
+  signInMethodsState: {
+    data: null,
+    loading: false,
+    error: null,
+  },
 };
 
 const authenticationPageReducer = (state = initialState, action) => {

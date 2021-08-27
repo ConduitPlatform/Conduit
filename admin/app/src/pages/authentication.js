@@ -51,14 +51,11 @@ const Authentication = () => {
     users: availableUsers,
     error: authUsersError,
     success: authUsersSuccess,
-    loading: usersLoading,
   } = useSelector((state) => state.authenticationPageReducer.authUsersState);
 
-  const {
-    data: configData,
-    error: authConfigError,
-    loading: configLoading,
-  } = useSelector((state) => state.authenticationPageReducer.signInMethodsState);
+  const { data: configData, error: authConfigError } = useSelector(
+    (state) => state.authenticationPageReducer.signInMethodsState
+  );
 
   const handleFilterChange = (event) => {
     const name = event.target.name;
@@ -69,17 +66,12 @@ const Authentication = () => {
   };
 
   useEffect(() => {
-    dispatch(getAuthUsersData(skip, limit, search, filter));
     dispatch(getConfig());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(getAuthUsersData(skip, limit, search, filter));
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    dispatch(getAuthUsersData(skip, limit, search, filter));
-  }, [filter]);
+  }, [dispatch, filter, limit, search, skip, debouncedSearch]);
 
   useEffect(() => {
     if (configData && !configData.active) {
@@ -100,7 +92,7 @@ const Authentication = () => {
     { title: 'Settings', isDisabled: false },
   ];
 
-  const handleLimitChange = (e, value) => {
+  const handleLimitChange = (e) => {
     setLimit(parseInt(e.target.value, 10));
     setSkip(0);
     setPage(0);
@@ -243,7 +235,6 @@ const Authentication = () => {
       <AppState
         successMessage={successMessage()}
         errorMessage={alertMessage()}
-        loading={usersLoading || configLoading}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}
       />

@@ -1,6 +1,5 @@
 import DataTable from '../common/DataTable';
 import React, { useState } from 'react';
-// import EditUserDialog from '../../components/authentication/EditUserDialog';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import {
   deleteUserThunk,
@@ -8,9 +7,7 @@ import {
   unblockUserUIThunk,
 } from '../../redux/thunks/authenticationThunks';
 import { useDispatch } from 'react-redux';
-import { set } from 'lodash';
 import EditUserDialog from './EditUserDialog';
-import { editUser } from '../../http/requests';
 
 const AuthUsers = ({ users }) => {
   const [openEditUser, setOpenEditUser] = useState(false);
@@ -38,7 +35,6 @@ const AuthUsers = ({ users }) => {
     });
   };
 
-
   const deleteButtonAction = (id) => {
     dispatch(deleteUserThunk(id));
     setOpenDeleteUser(false);
@@ -61,15 +57,12 @@ const AuthUsers = ({ users }) => {
 
   const actions = [toDelete, toEdit, toBlock];
 
-  
   const handleAction = (action, data) => {
     if (action.type === 'Edit') {
       setOpenEditUser(true);
       setData(...users.filter((user) => user._id === data._id));
-      console.log(data);
     } else if (action.type === 'Delete') {
       setOpenDeleteUser(true);
-      console.log(data);
       setData(data);
     } else if (action.type === 'Block/Unblock UI') {
       setOpenBlockUI(true);
@@ -96,7 +89,6 @@ const AuthUsers = ({ users }) => {
           handleAction={handleAction}
         />
       )}
-      
 
       <ConfirmationDialog
         open={openDeleteUser}
