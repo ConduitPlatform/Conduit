@@ -5,10 +5,12 @@ import { AuthHandlers } from './handlers/auth';
 import { AdminSchema } from './models/Admin';
 import { ConduitCommons, IConduitAdmin } from '@quintessential-sft/conduit-commons';
 import AdminConfigSchema from './config';
-import * as grpc from 'grpc';
 import fs from 'fs';
 import path from 'path';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { loadPackageDefinition, Server, status, credentials } from '@grpc/grpc-js';
+
+let protoLoader = require('@grpc/proto-loader');
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -24,7 +26,7 @@ export default class AdminModule extends IConduitAdmin {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     conduit: ConduitCommons,
-    server: grpc.Server,
+    server: Server,
     packageDefinition: any
   ) {
     super(conduit);
@@ -35,7 +37,7 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes = [];
     this._registeredRoutes = new Map();
 
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    var protoDescriptor = loadPackageDefinition(packageDefinition);
 
     //grpc stuff
     // @ts-ignore
@@ -191,11 +193,11 @@ export default class AdminModule extends IConduitAdmin {
       defaults: true,
       oneofs: true,
     });
-    let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+    let adminDescriptor: any = loadPackageDefinition(packageDefinition);
     adminDescriptor = this.findAdmin(adminDescriptor);
     if (!adminDescriptor) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Did not receive proper .proto file - missing Admin service',
       });
     }
@@ -206,7 +208,7 @@ export default class AdminModule extends IConduitAdmin {
       let result = this.conduit.getConfigManager().getModuleUrlByInstance(call.getPeer());
       if (!result) {
         return callback({
-          code: grpc.status.INTERNAL,
+          code: status.INTERNAL,
           message: 'Error when registering routes',
         });
       }
@@ -224,7 +226,7 @@ export default class AdminModule extends IConduitAdmin {
     );
     if (error) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: 'Error when registering routes',
       });
     } else {
@@ -356,10 +358,10 @@ export default class AdminModule extends IConduitAdmin {
       defaults: true,
       oneofs: true,
     });
-    let adminDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+    let adminDescriptor: any = loadPackageDefinition(packageDefinition);
     adminDescriptor = this.findAdmin(adminDescriptor);
 
-    let client = new adminDescriptor(serverIp, grpc.credentials.createInsecure(), {
+    let client = new adminDescriptor(serverIp, credentials.createInsecure(), {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });

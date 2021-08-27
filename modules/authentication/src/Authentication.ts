@@ -1,113 +1,93 @@
 import * as models from './models';
+import { AccessToken, RefreshToken } from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
+  ConduitServiceModule,
+  DatabaseProvider,
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import * as grpc from 'grpc';
 import { AuthenticationRoutes } from './routes/Routes';
 import { ConfigController } from './config/Config.controller';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import moment from 'moment';
+import { status } from '@grpc/grpc-js';
 
-export default class AuthenticationModule {
-  private database: any;
+export default class AuthenticationModule implements ConduitServiceModule {
+  private database: DatabaseProvider;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private _router: AuthenticationRoutes;
-  private readonly grpcServer: GrpcServer;
+  private grpcServer: GrpcServer;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(
-        path.resolve(__dirname, './authentication.proto'),
-        'authentication.Authentication',
-        {
-          setConfig: this.setConfig.bind(this),
-          userLogin: this.userLogin.bind(this),
-        }
-      )
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .then(() => {
-        this.grpcSdk.bus?.subscribe('authentication', (message: string) => {
-          if (message === 'config-update') {
-            this.enableModule()
-              .then(() => {
-                console.log('Updated authentication configuration');
-              })
-              .catch(() => {
-                console.log('Failed to update email config');
-              });
-          }
-        });
-        this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
-          if (message === 'enabled') {
-            this.enableModule()
-              .then(() => {
-                console.log('Updated authentication configuration');
-              })
-              .catch(() => {
-                console.log('Failed to update email config');
-              });
-          }
-        });
-      })
-      .catch(() => {
-        console.log('Bus did not initialize!');
-      })
-      .then(() => {
-        return this.grpcSdk.config.get('authentication');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(
-          AuthenticationConfigSchema.getProperties(),
-          'authentication'
-        );
-      })
-      .then(() => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          AuthenticationConfigSchema.getProperties(),
-          'authentication'
-        );
-      })
-      .catch(() => {
-        console.log('authentication config did not update');
-      })
-      .then((authConfig: any) => {
-        if (authConfig.active) {
-          return this.enableModule();
-        }
-      })
-      .catch(console.log);
+  private _port: string;
+
+  get port(): string {
+    return this._port;
   }
 
-  private _url: string;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
+      path.resolve(__dirname, './authentication.proto'),
+      'authentication.Authentication',
+      {
+        setConfig: this.setConfig.bind(this),
+        userLogin: this.userLogin.bind(this),
+      }
+    );
+    this.grpcServer.start();
+    console.log('Grpc server is online');
+  }
 
-  get url(): string {
-    return this._url;
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    this.grpcSdk.bus!.subscribe('authentication', (message: string) => {
+      if (message === 'config-update') {
+        this.enableModule()
+          .then(() => {
+            console.log('Updated authentication configuration');
+          })
+          .catch(() => {
+            console.log('Failed to update email config');
+          });
+      }
+    });
+    this.grpcSdk.bus!.subscribe('email-provider', (message: string) => {
+      if (message === 'enabled') {
+        this.enableModule()
+          .then(() => {
+            console.log('Updated authentication configuration');
+          })
+          .catch(() => {
+            console.log('Failed to update email config');
+          });
+      }
+    });
+    let config;
+    try {
+      await this.grpcSdk.config.get('authentication');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(
+        AuthenticationConfigSchema.getProperties(),
+        'authentication'
+      );
+    }
+
+    config = await this.grpcSdk.config.addFieldstoConfig(
+      AuthenticationConfigSchema.getProperties(),
+      'authentication'
+    );
+    if (config.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
@@ -116,7 +96,7 @@ export default class AuthenticationModule {
       AuthenticationConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',
       });
     }
@@ -126,13 +106,13 @@ export default class AuthenticationModule {
       .updateConfig(newConfig, 'authentication')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (authenticationConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('authentication', 'config-update');
     } else {
       await this.updateConfig(authenticationConfig).catch(() => {
@@ -153,8 +133,8 @@ export default class AuthenticationModule {
       expiresIn: config.tokenInvalidationPeriod,
     };
     let errorMessage = null;
-    const accessToken = await this.database
-      .create('AccessToken', {
+    const accessToken: AccessToken = await AccessToken.getInstance()
+      .create({
         userId: userId,
         clientId,
         token: AuthUtils.signToken({ id: userId }, signTokenOptions),
@@ -164,10 +144,10 @@ export default class AuthenticationModule {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const refreshToken = await this.database
-      .create('RefreshToken', {
+    const refreshToken = await RefreshToken.getInstance()
+      .create({
         userId: userId,
         clientId,
         token: AuthUtils.randomToken(),
@@ -177,7 +157,7 @@ export default class AuthenticationModule {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       accessToken: accessToken.token,
@@ -199,7 +179,7 @@ export default class AuthenticationModule {
   private async enableModule() {
     await this.updateConfig();
     if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider;
+      this.database = this.grpcSdk.databaseProvider!;
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
@@ -209,8 +189,10 @@ export default class AuthenticationModule {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model) => {
-      return this.database.createSchemaFromAdapter(model);
+    // @ts-ignore
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

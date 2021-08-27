@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ChatClient } from '../../protoUtils/chat';
 
-export default class Chat extends ConduitModule<ChatClient> {
+export class Chat extends ConduitModule<ChatClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(ChatClient);

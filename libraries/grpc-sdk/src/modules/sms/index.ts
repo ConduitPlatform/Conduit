@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { SmsClient } from '../../protoUtils/sms';
 
-export default class SMS extends ConduitModule<SmsClient> {
+export class SMS extends ConduitModule<SmsClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(SmsClient);

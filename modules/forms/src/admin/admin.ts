@@ -1,5 +1,9 @@
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';
 
@@ -57,7 +61,7 @@ export class AdminHandlers {
     );
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -91,7 +95,7 @@ export class AdminHandlers {
     );
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -112,7 +116,7 @@ export class AdminHandlers {
       Object.keys(fields).length === 0
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message:
           'Required data not provided missing name, fields or fields is not a filled array',
       });
@@ -126,7 +130,7 @@ export class AdminHandlers {
 
     if (error) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message:
           'Fields object should contain fields that have their value as a type either String or File',
       });
@@ -143,7 +147,7 @@ export class AdminHandlers {
       .catch((e: any) => (error = e.message));
     if (!isNil(error))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: error,
       });
 
@@ -167,7 +171,7 @@ export class AdminHandlers {
       Object.keys(fields).length === 0
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message:
           'Required data not provided missing name, fields or fields is not a filled array',
       });
@@ -182,7 +186,7 @@ export class AdminHandlers {
 
     if (error) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message:
           'Fields object should contain fields that have their value as a type either String or File',
       });
@@ -200,7 +204,7 @@ export class AdminHandlers {
       .catch((e: any) => (error = e.message));
     if (!isNil(error))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: error,
       });
     this.formsController.refreshRoutes();

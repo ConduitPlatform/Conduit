@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { PaymentsClient } from '../../protoUtils/payments';
 
-export default class Payments extends ConduitModule<PaymentsClient> {
+export class Payments extends ConduitModule<PaymentsClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(PaymentsClient);

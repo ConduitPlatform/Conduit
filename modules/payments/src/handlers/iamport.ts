@@ -1,6 +1,10 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import axios from 'axios';
 import { calculateRenewDate, dateToUnixTimestamp } from '../utils/subscriptions';
 
@@ -54,28 +58,6 @@ export class IamportHandlers {
       });
   }
 
-  private async initDb() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
-  }
-
-  private async getToken(): Promise<string> {
-    let access_token;
-    try {
-      const res = await axios.post(`${BASE_URL}/users/getToken`, {
-        imp_key: this.apiKey,
-        imp_secret: this.secretKey,
-      });
-
-      access_token = res?.data?.response?.access_token;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-
-    return Promise.resolve(access_token);
-  }
-
   async createPayment(
     productId: string,
     quantity?: number,
@@ -93,25 +75,25 @@ export class IamportHandlers {
     }
     if (isNil(product)) {
       return Promise.reject({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'product not found',
       });
     }
     if (product.currency !== 'KRW') {
       return Promise.reject({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'iamport supports only products with KRW currency',
       });
     }
     if (product.isSubscription) {
       return Promise.reject({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'product cant be a subscription',
       });
     }
     if (!isNil(quantity) && quantity <= 0) {
       return Promise.reject({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'quantity must be greater than 0',
       });
     }
@@ -130,14 +112,14 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
     }
 
     const access_token = await this.getToken().catch((e: Error) => {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
     }
 
     const amount = product.value * (quantity || 1);
@@ -156,10 +138,13 @@ export class IamportHandlers {
         }
       );
     } catch (e) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: e.message });
+      return Promise.reject({ code: status.INTERNAL, message: e.message });
     }
 
-    this.grpcSdk.bus?.publish('payments:create:Transaction', JSON.stringify({ userId, productId, amount }));
+    this.grpcSdk.bus?.publish(
+      'payments:create:Transaction',
+      JSON.stringify({ userId, productId, amount })
+    );
 
     return Promise.resolve({ merchant_uid: transaction._id, amount });
   }
@@ -171,7 +156,7 @@ export class IamportHandlers {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
     }
 
     const transaction = await this.database
@@ -180,11 +165,11 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(transaction)) {
       return Promise.reject({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'transaction not found',
       });
     }
@@ -198,7 +183,7 @@ export class IamportHandlers {
       });
       paymentData = paymentData.data.response;
     } catch (e) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: e.message });
+      return Promise.reject({ code: status.INTERNAL, message: e.message });
     }
 
     if (paymentData.amount === transaction.product.value * transaction.quantity) {
@@ -210,20 +195,23 @@ export class IamportHandlers {
             errorMessage = e.message;
           });
         if (!isNil(errorMessage)) {
-          return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
+          return Promise.reject({ code: status.INTERNAL, message: errorMessage });
         }
 
-        this.grpcSdk.bus?.publish('payments:paidIamport:Transaction', JSON.stringify({ merchant_uid, imp_uid }));
+        this.grpcSdk.bus?.publish(
+          'payments:paidIamport:Transaction',
+          JSON.stringify({ merchant_uid, imp_uid })
+        );
         return Promise.resolve(true);
       }
     } else {
       return Promise.reject({
-        code: grpc.status.ABORTED,
+        code: status.ABORTED,
         message: 'Forged payment attempted',
       });
     }
 
-    return Promise.reject({ code: grpc.status.ABORTED, message: 'Payment failed' });
+    return Promise.reject({ code: status.ABORTED, message: 'Payment failed' });
   }
 
   async addCard(call: RouterRequest, callback: RouterResponse) {
@@ -234,7 +222,7 @@ export class IamportHandlers {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
@@ -247,7 +235,7 @@ export class IamportHandlers {
       isNil(postCode)
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'email, buyerName, phoneNumber, address and postCode are required',
       });
     }
@@ -267,14 +255,14 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const access_token = await this.getToken().catch((e: Error) => {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const transaction = await this.database
@@ -289,7 +277,7 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     try {
@@ -306,10 +294,13 @@ export class IamportHandlers {
         }
       );
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: e.message });
     }
 
-    this.grpcSdk.bus?.publish('payments:addCardIamport:PaymentsCustomer', JSON.stringify(customer));
+    this.grpcSdk.bus?.publish(
+      'payments:addCardIamport:PaymentsCustomer',
+      JSON.stringify(customer)
+    );
 
     return callback(null, {
       result: JSON.stringify({ customerId: customer._id, merchant_uid: transaction._id }),
@@ -321,7 +312,7 @@ export class IamportHandlers {
 
     if (isNil(customerId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'customerId is required',
       });
     }
@@ -334,7 +325,7 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     customer.iamport.isCardVerified = true;
@@ -344,10 +335,13 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    this.grpcSdk.bus?.publish('payments:validateCardIamport:PaymentsCustomer', JSON.stringify(customer));
+    this.grpcSdk.bus?.publish(
+      'payments:validateCardIamport:PaymentsCustomer',
+      JSON.stringify(customer)
+    );
 
     return callback(null, {
       result: JSON.stringify({ message: 'card validate successfully' }),
@@ -360,14 +354,14 @@ export class IamportHandlers {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
 
     if (isNil(productId) || isNil(customerId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'productId and customerId are required',
       });
     }
@@ -380,17 +374,17 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(product) || !product.isSubscription) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'productId not found or its not a subscription',
       });
     }
     if (product.currency !== 'KRW') {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'iamport supports only products with KRW currency',
       });
     }
@@ -401,11 +395,11 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
+      return callback({ code: status.INVALID_ARGUMENT, message: errorMessage });
     }
     if (isNil(customer) || !customer.iamport.isCardVerified) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'customerId not found or customer has not verified card',
       });
     }
@@ -414,14 +408,14 @@ export class IamportHandlers {
       .getServerConfig()
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
     const access_token = await this.getToken().catch((e: Error) => {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const transaction = await this.database
@@ -433,7 +427,7 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     let paymentStatus;
@@ -465,7 +459,7 @@ export class IamportHandlers {
         paymentStatus = 'The payment was not approved by the card company';
       }
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: e });
+      return callback({ code: status.INTERNAL, message: e });
     }
 
     transaction.data = {
@@ -478,11 +472,11 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (paymentStatus !== 'paid') {
-      return callback({ code: grpc.status.INTERNAL, message: paymentStatus });
+      return callback({ code: status.INTERNAL, message: paymentStatus });
     }
 
     let renewDate = calculateRenewDate(product.recurring, product.recurringCount);
@@ -499,7 +493,7 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     try {
@@ -534,12 +528,16 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     this.grpcSdk.bus?.publish(
       'payments:subscribeIamport:Subscription',
-      JSON.stringify({ user: context.user._id, product: product._id, activeUntil: renewDate.toISOString() })
+      JSON.stringify({
+        user: context.user._id,
+        product: product._id,
+        activeUntil: renewDate.toISOString(),
+      })
     );
 
     return callback(null, { result: JSON.stringify(subscription) });
@@ -551,14 +549,14 @@ export class IamportHandlers {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
 
     if (isNil(subscriptionId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'subscriptionId is required',
       });
     }
@@ -575,17 +573,17 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(subscription)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'subscription not found',
       });
     }
     if (Date.parse(subscription.activeUntil) < new Date().getTime()) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'subscription is inactive',
       });
     }
@@ -596,17 +594,17 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(customer) || isNil(customer.iamport)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
+      return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
     const access_token = await this.getToken().catch((e: Error) => {
       errorMessage = e.message;
     });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     try {
@@ -623,7 +621,7 @@ export class IamportHandlers {
         }
       );
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: e });
+      return callback({ code: status.INTERNAL, message: e });
     }
 
     this.grpcSdk.bus?.publish(
@@ -646,14 +644,14 @@ export class IamportHandlers {
     });
     if (!isNil(errorMessage)) {
       console.error(errorMessage);
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     let serverConfig = await this.grpcSdk.config
       .getServerConfig()
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     let url = serverConfig.url;
 
     const subscription = await this.database
@@ -665,7 +663,7 @@ export class IamportHandlers {
       });
     if (!isNil(errorMessage)) {
       console.error(errorMessage);
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     try {
@@ -736,7 +734,7 @@ export class IamportHandlers {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
@@ -752,9 +750,31 @@ export class IamportHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { result: JSON.stringify({ paymentMethods }) });
+  }
+
+  private async initDb() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.database = this.grpcSdk.databaseProvider;
+    this.initialized = true;
+  }
+
+  private async getToken(): Promise<string> {
+    let access_token;
+    try {
+      const res = await axios.post(`${BASE_URL}/users/getToken`, {
+        imp_key: this.apiKey,
+        imp_secret: this.secretKey,
+      });
+
+      access_token = res?.data?.response?.access_token;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+
+    return Promise.resolve(access_token);
   }
 }

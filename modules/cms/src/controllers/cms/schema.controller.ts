@@ -1,8 +1,7 @@
-import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import schema from '../../models/schemaDefinitions.schema';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { CmsRoutes } from '../../routes/Routes';
-import { compareFunction, getOps, sortAndConstructRoutes } from './utils';
+import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 
 export class SchemaController {
@@ -26,48 +25,6 @@ export class SchemaController {
         this.refreshRoutes();
       }
     });
-  }
-
-  private async loadExistingSchemas() {
-    let schemaDefinitions = await this._adapter.createSchemaFromAdapter(schema);
-    this._adapter
-      .findMany('SchemaDefinitions', { enabled: true })
-      .then((r: any) => {
-        let promise = new Promise((resolve, reject) => {
-          resolve('ok');
-        });
-        if (r) {
-          r.forEach((r: any) => {
-            if (typeof r.modelOptions === 'string') {
-              r.modelOptions = JSON.parse(r.modelOptions);
-            }
-            const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
-            promise = promise.then((r) => {
-              return this._adapter.createSchemaFromAdapter(schema);
-            });
-          });
-          promise.then((p) => {
-            let routeSchemas: any = {};
-            r.forEach((schema: any) => {
-              if (typeof schema.modelOptions === 'string') {
-                schema.modelOptions = JSON.parse(schema.modelOptions);
-              }
-              if (
-                schema.name !== 'SchemaDefinitions' &&
-                (schema.crudOperations || isNil(schema.crudOperations))
-              ) {
-                routeSchemas[schema.name] = schema;
-              }
-            });
-            this._registerRoutes(routeSchemas);
-            this.router.requestRefresh();
-          });
-        }
-      })
-      .catch((err: Error) => {
-        console.error('Something went wrong when loading schema for cms');
-        console.error(err);
-      });
   }
 
   refreshRoutes() {
@@ -112,6 +69,48 @@ export class SchemaController {
       .catch((err: any) => {
         console.log('Failed to create schema for cms');
         console.log(err);
+      });
+  }
+
+  private async loadExistingSchemas() {
+    let schemaDefinitions = await this._adapter.createSchemaFromAdapter(schema);
+    this._adapter
+      .findMany('SchemaDefinitions', { enabled: true })
+      .then((r: any) => {
+        let promise = new Promise((resolve, reject) => {
+          resolve('ok');
+        });
+        if (r) {
+          r.forEach((r: any) => {
+            if (typeof r.modelOptions === 'string') {
+              r.modelOptions = JSON.parse(r.modelOptions);
+            }
+            const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
+            promise = promise.then((r) => {
+              return this._adapter.createSchemaFromAdapter(schema);
+            });
+          });
+          promise.then((p) => {
+            let routeSchemas: any = {};
+            r.forEach((schema: any) => {
+              if (typeof schema.modelOptions === 'string') {
+                schema.modelOptions = JSON.parse(schema.modelOptions);
+              }
+              if (
+                schema.name !== 'SchemaDefinitions' &&
+                (schema.crudOperations || isNil(schema.crudOperations))
+              ) {
+                routeSchemas[schema.name] = schema;
+              }
+            });
+            this._registerRoutes(routeSchemas);
+            this.router.requestRefresh();
+          });
+        }
+      })
+      .catch((err: Error) => {
+        console.error('Something went wrong when loading schema for cms');
+        console.error(err);
       });
   }
 

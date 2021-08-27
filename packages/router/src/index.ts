@@ -8,7 +8,7 @@ import {
   ConduitSocket,
   IConduitRouter,
 } from '@quintessential-sft/conduit-commons';
-import * as grpc from 'grpc';
+import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
 import { grpcToConduitRoute } from './utils/GrpcConverter';
@@ -26,7 +26,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     app: Application,
     grpcSdk: ConduitGrpcSdk,
     packageDefinition: any,
-    server: grpc.Server
+    server: Server
   ) {
     this._app = app;
     this._routes = [];
@@ -34,7 +34,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter = new ConduitRoutingController(this._app);
     this.initGraphQL();
     this.initSockets();
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    var protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
     var router = protoDescriptor.conduit.core.Router;
@@ -161,7 +161,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           .getModuleUrlByInstance(call.getPeer());
         if (!result) {
           return callback({
-            code: grpc.status.INTERNAL,
+            code: status.INTERNAL,
             message: 'Error when registering routes',
           });
         }
@@ -214,7 +214,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       );
     } catch (err) {
       console.error(err);
-      return callback({ code: grpc.status.INTERNAL, message: 'Well that failed :/' });
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 
     //todo definitely missing an error handler here

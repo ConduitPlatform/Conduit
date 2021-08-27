@@ -1,20 +1,26 @@
-import ConduitGrpcSdk, { RouterResponse, RouterRequest } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  DatabaseProvider,
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { AuthUtils } from '../utils/auth';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
+import { Service } from '../models';
 
 export class ServiceAdmin {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     self.grpcSdk.waitForExistence('database-provider').then((r) => {
-      self.database = self.grpcSdk.databaseProvider;
+      self.database = self.grpcSdk.databaseProvider!;
     });
   }
 
-  async getServices(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+  async getServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit } = call.request.params;
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -25,120 +31,67 @@ export class ServiceAdmin {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const servicesPromise = this.database.findMany(
-      'Service',
+    const services: Service[] = await Service.getInstance().findMany(
       {},
-      null,
+      undefined,
       skipNumber,
-      limitNumber,
+      limitNumber
     );
-    const countPromise = this.database.countDocuments('Service', {});
+    const count: number = await Service.getInstance().countDocuments({});
 
-    let errorMessage = null;
-    const [services, count] = await Promise.all([servicesPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message),
-    );
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
-    return callback(null, { result: JSON.stringify({ services, count }) });
+    return { services, count };
   }
 
-  async createService(call: RouterRequest, callback: RouterResponse) {
-    const { name } = JSON.parse(call.request.params);
+  async createService(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name } = call.request.params;
 
     if (isNil(name)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service name is required',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service name is required');
     }
 
-    let errorMessage = null;
     const token = AuthUtils.randomToken();
-    const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message),
-    );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+    const hashedToken = await AuthUtils.hashPassword(token);
 
-    await this.database
-      .create('Service', { name, hashedToken })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service creation failed',
-      });
-    }
+    await Service.getInstance().create({ name, hashedToken });
 
     this.grpcSdk.bus?.publish('authentication:create:service', JSON.stringify({ name }));
 
-    return callback(null, { result: JSON.stringify({ name, token }) });
+    return { name, token };
   }
 
-  async deleteService(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
+  async deleteService(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
 
     if (isNil(id)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service id is required',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service id is required');
     }
 
-    let errorMessage = null;
-    await this.database
-      .deleteOne('Service', { _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service deletion failed',
-      });
-    }
+    await Service.getInstance().deleteOne({ _id: id });
 
     this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id }));
 
-    return callback(null, { result: 'OK' });
+    return 'OK';
   }
 
-  async renewToken(call: RouterRequest, callback: RouterResponse) {
-    const { serviceId } = JSON.parse(call.request.params);
+  async renewToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { serviceId } = call.request.params;
 
     if (isNil(serviceId)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service id is required',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service id is required');
     }
 
-    let errorMessage = null;
     const token = AuthUtils.randomToken();
-    const hashedToken = await AuthUtils.hashPassword(token).catch(
-      (e: any) => (errorMessage = e.message),
+    const hashedToken = await AuthUtils.hashPassword(token);
+
+    let service: Service | null = await Service.getInstance().findByIdAndUpdate(
+      serviceId,
+      { hashedToken },
+      true
     );
-    if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
 
-    let service = await this.database
-      .findByIdAndUpdate('Service', serviceId, { hashedToken }, { new: true })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Service update failed',
-      });
+    if (isNil(service)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Service not found');
     }
-
-    return callback(null, { result: JSON.stringify({ name: service.name, token }) });
+    return { name: service.name, token };
   }
 }
