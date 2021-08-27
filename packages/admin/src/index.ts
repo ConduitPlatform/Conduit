@@ -12,10 +12,13 @@ import { loadPackageDefinition, Server, status, credentials } from '@grpc/grpc-j
 
 let protoLoader = require('@grpc/proto-loader');
 
+let protoLoader = require('@grpc/proto-loader');
+
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
   private router: Router;
+  private adminHandlers: AuthHandlers;
   private _grpcRoutes: Record<string, { path: string; method: string }[]>;
   private _sdkRoutes: string[];
   private _registeredRoutes: Map<string, Handler>;
@@ -49,13 +52,14 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     await this.handleDatabase().catch(console.log);
-    const adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
+    this.adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
+    const self = this;
     this.conduit
       .getRouter()
       .registerDirectRouter(
         '/admin/login',
         (req: Request, res: Response, next: NextFunction) =>
-          adminHandlers.loginAdmin(req, res, next).catch(next)
+          self.adminHandlers.loginAdmin(req, res, next).catch(next)
       );
     this.conduit
       .getRouter()
@@ -77,8 +81,7 @@ export default class AdminModule extends IConduitAdmin {
 
     // todo fix the middlewares
     //@ts-ignore
-    this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
-    this.router.use((req, res, next) => this.authMiddleware(req, res, next));
+
     this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
       this.router(req, res, next);
     });
@@ -313,7 +316,7 @@ export default class AdminModule extends IConduitAdmin {
     return new Promise((resolve, reject) => {
       const masterkey = req.headers.masterkey;
       if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
-        res.status(401).json({ error: 'Unauthorized' });
+        return res.status(401).json({ error: 'Unauthorized' });
       next();
     });
   }
@@ -431,7 +434,13 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private refreshRouter() {
+    const self = this;
     this.router = Router();
+    this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
+    this.router.use((req, res, next) => this.authMiddleware(req, res, next));
+    this.router.post('/admin/create', (req: Request, res: Response, next: NextFunction) =>
+      self.adminHandlers.createAdmin(req, res, next).catch(next)
+    );
     this._registeredRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');
       switch (method) {
