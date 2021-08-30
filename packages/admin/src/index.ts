@@ -12,8 +12,6 @@ import { loadPackageDefinition, Server, status, credentials } from '@grpc/grpc-j
 
 let protoLoader = require('@grpc/proto-loader');
 
-let protoLoader = require('@grpc/proto-loader');
-
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;

@@ -174,7 +174,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
         message: 'ok',
       });
     } catch (e) {
-      return callback({ code: grpc.status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: e.message });
     }
   }
 
