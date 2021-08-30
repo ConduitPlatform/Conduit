@@ -165,6 +165,19 @@ export default class AuthenticationModule implements ConduitServiceModule {
     });
   }
 
+  // produces login credentials for a user without them having to login
+  async userDelete(call: any, callback: any) {
+    const { userId } = call.request;
+    try {
+      await this.grpcSdk.databaseProvider!.deleteOne('User', { _id: userId });
+      return callback(null, {
+        message: 'ok',
+      });
+    } catch (e) {
+      return callback({ code: grpc.status.INTERNAL, message: e.message });
+    }
+  }
+
   private updateConfig(config?: any) {
     if (config) {
       ConfigController.getInstance().config = config;
