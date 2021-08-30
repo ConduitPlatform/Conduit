@@ -32,6 +32,7 @@ export default class AuthenticationModule {
         {
           setConfig: this.setConfig.bind(this),
           userLogin: this.userLogin.bind(this),
+          userDelete: this.userDelete.bind(this),
         }
       )
       .then(() => {
