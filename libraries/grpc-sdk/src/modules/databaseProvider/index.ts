@@ -112,7 +112,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     select?: string,
     skip?: number,
     limit?: number,
-    sort?: string,
+    sort?: { [key: string]: number },
     populate?: string | string[]
   ) {
     return new Promise((resolve, reject) => {
