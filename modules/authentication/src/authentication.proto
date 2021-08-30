@@ -10,6 +10,10 @@ message UserLoginRequest {
   string clientId = 2;
 }
 
+message UserDeleteRequest {
+  string userId = 1;
+}
+
 message SetConfigResponse {
   string updatedConfig = 1;
 }
@@ -18,8 +22,12 @@ message UserLoginResponse {
   string accessToken = 1;
   string refreshToken = 2;
 }
+message UserDeleteResponse {
+  string message = 1;
+}
 
 service Authentication {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
+  rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
 }
