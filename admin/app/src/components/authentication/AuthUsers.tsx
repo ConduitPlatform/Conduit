@@ -9,11 +9,35 @@ import {
 import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
 
-const AuthUsers = ({ users }) => {
-  const [openEditUser, setOpenEditUser] = useState(false);
-  const [openDeleteUser, setOpenDeleteUser] = useState(false);
-  const [openBlockUI, setOpenBlockUI] = useState(false);
-  const [data, setData] = useState({});
+interface User {
+  active: boolean;
+  createdAt: string;
+  email: string;
+  isVerified: boolean;
+  phoneNumber: string;
+  updatedAt: string;
+  __v: number;
+  _id: string;
+}
+
+interface Props {
+  users: User[];
+}
+
+const AuthUsers: React.FC<Props> = ({ users }) => {
+  const [openEditUser, setOpenEditUser] = useState<boolean>(false);
+  const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
+  const [openBlockUI, setOpenBlockUI] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<User>({
+    active: false,
+    createdAt: '',
+    email: '',
+    isVerified: false,
+    phoneNumber: '',
+    updatedAt: '',
+    __v: 0,
+    _id: '',
+  });
 
   const handleClose = () => {
     setOpenDeleteUser(false);
@@ -23,7 +47,7 @@ const AuthUsers = ({ users }) => {
 
   const dispatch = useDispatch();
 
-  const formatData = (users) => {
+  const formatData = (users: User[]) => {
     return users.map((u) => {
       return {
         _id: u._id,
@@ -35,7 +59,7 @@ const AuthUsers = ({ users }) => {
     });
   };
 
-  const deleteButtonAction = (id) => {
+  const deleteButtonAction = (id: string) => {
     dispatch(deleteUserThunk(id));
     setOpenDeleteUser(false);
   };
@@ -57,25 +81,29 @@ const AuthUsers = ({ users }) => {
 
   const actions = [toDelete, toEdit, toBlock];
 
-  const handleAction = (action, data) => {
+  const handleAction = (
+    action: { type: 'Edit' | 'Delete' | 'Block/Unblock UI' },
+    data: any
+  ) => {
+    const currentUser = users.find((user) => user._id === data._id) as User;
     if (action.type === 'Edit') {
       setOpenEditUser(true);
-      setData(...users.filter((user) => user._id === data._id));
+      setSelectedUser(currentUser);
     } else if (action.type === 'Delete') {
       setOpenDeleteUser(true);
-      setData(data);
+      setSelectedUser(currentUser);
     } else if (action.type === 'Block/Unblock UI') {
       setOpenBlockUI(true);
-      setData(data);
+      setSelectedUser(currentUser);
     }
   };
 
   const handleBlockUI = () => {
-    if (data.Active) {
-      dispatch(blockUserUIThunk(data._id));
+    if (selectedUser.active) {
+      dispatch(blockUserUIThunk(selectedUser._id));
       setOpenBlockUI(false);
     } else {
-      dispatch(unblockUserUIThunk(data._id));
+      dispatch(unblockUserUIThunk(selectedUser._id));
       setOpenBlockUI(false);
     }
   };
@@ -93,25 +121,25 @@ const AuthUsers = ({ users }) => {
       <ConfirmationDialog
         open={openDeleteUser}
         handleClose={handleClose}
-        title={`Delete user ${data.Email} `}
-        description={`Are you sure you want to delete ${data.Email}? \
-        Active: ${data.Active} \
-        Verified: ${data.Verified}`}
-        buttonAction={() => deleteButtonAction(data._id)}
+        title={`Delete user ${selectedUser.email} `}
+        description={`Are you sure you want to delete ${selectedUser.email}? \
+        Active: ${selectedUser.active} \
+        Verified: ${selectedUser.isVerified}`}
+        buttonAction={() => deleteButtonAction(selectedUser._id)}
         buttonText={'Delete'}
       />
-      <EditUserDialog open={openEditUser} data={data} handleClose={handleClose} />
+      <EditUserDialog open={openEditUser} data={selectedUser} handleClose={handleClose} />
       <ConfirmationDialog
         open={openBlockUI}
         handleClose={handleClose}
-        title={data.Active ? 'User has Unblocked UI' : 'User has Blocked UI'}
+        title={selectedUser.active ? 'User has Unblocked UI' : 'User has Blocked UI'}
         description={
-          data.Active
-            ? `Are you sure you want to block the UI of ${data.Email}`
-            : `Are you sure you want to Unblock the UI of ${data.Email}`
+          selectedUser.active
+            ? `Are you sure you want to block the UI of ${selectedUser.email}`
+            : `Are you sure you want to Unblock the UI of ${selectedUser.email}`
         }
         buttonAction={handleBlockUI}
-        buttonText={data.Active === true ? 'Block' : 'Unblock'}
+        buttonText={selectedUser.active ? 'Block' : 'Unblock'}
       />
     </>
   );
