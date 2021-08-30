@@ -29,12 +29,28 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const AuthSettings = ({ handleSave, settingsData, error }) => {
+interface SettingsStateTypes {
+  active: boolean;
+  generateRefreshToken: boolean;
+  rateLimit: number;
+  tokenInvalidationPeriod: number;
+  refreshTokenInvalidationPeriod: number;
+  jwtSecret: string;
+  showSecret?: boolean;
+}
+
+interface Props {
+  handleSave: (data: SettingsStateTypes) => void;
+  settingsData: any;
+  error: any;
+}
+
+const AuthSettings: React.FC<Props> = ({ handleSave, settingsData, error }) => {
   const classes = useStyles();
 
-  const [edit, setEdit] = useState(false);
-  const [settingsState, setSettingsSate] = useState({
-    enabled: false,
+  const [edit, setEdit] = useState<boolean>(false);
+  const [settingsState, setSettingsState] = useState<SettingsStateTypes>({
+    active: false,
     generateRefreshToken: false,
     rateLimit: 3,
     tokenInvalidationPeriod: 10000,
@@ -47,20 +63,21 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
     if (!settingsData) {
       return;
     }
-    setSettingsSate({
-      enabled: settingsData.active,
+    setSettingsState({
+      active: settingsData.active,
       generateRefreshToken: settingsData.generateRefreshToken,
       rateLimit: settingsData.rateLimit,
       tokenInvalidationPeriod: settingsData.tokenInvalidationPeriod,
       refreshTokenInvalidationPeriod: settingsData.refreshTokenInvalidationPeriod,
       jwtSecret: settingsData.jwtSecret,
+      showSecret: false,
     });
   }, [settingsData, error]);
 
   const handleCancel = () => {
     setEdit(false);
-    setSettingsSate({
-      enabled: settingsData.active,
+    setSettingsState({
+      active: settingsData.active,
       generateRefreshToken: settingsData.generateRefreshToken,
       rateLimit: settingsData.rateLimit,
       tokenInvalidationPeriod: settingsData.tokenInvalidationPeriod,
@@ -76,7 +93,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
 
   const save = () => {
     const data = {
-      active: settingsState.enabled,
+      active: settingsState.active,
       generateRefreshToken: settingsState.generateRefreshToken,
       rateLimit: settingsState.rateLimit,
       tokenInvalidationPeriod: settingsState.tokenInvalidationPeriod,
@@ -88,10 +105,10 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
   };
 
   const handleClickShowPassword = () => {
-    setSettingsSate({ ...settingsState, showSecret: !settingsState.showSecret });
+    setSettingsState({ ...settingsState, showSecret: !settingsState.showSecret });
   };
 
-  const handleMouseDownPassword = (event) => {
+  const handleMouseDownPassword = (event: { preventDefault: () => void }) => {
     event.preventDefault();
   };
 
@@ -114,7 +131,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
               shrink: true,
             }}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 rateLimit: Number(event.target.value),
               });
@@ -136,7 +153,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
                   disabled={!edit}
                   checked={settingsState.generateRefreshToken}
                   onChange={() => {
-                    setSettingsSate({
+                    setSettingsState({
                       ...settingsState,
                       generateRefreshToken: !settingsState.generateRefreshToken,
                     });
@@ -168,7 +185,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
             variant="outlined"
             value={settingsState.tokenInvalidationPeriod}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 tokenInvalidationPeriod: Number(event.target.value),
               });
@@ -185,7 +202,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
             variant="outlined"
             value={settingsState.refreshTokenInvalidationPeriod}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 refreshTokenInvalidationPeriod: Number(event.target.value),
               });
@@ -209,7 +226,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
             variant="outlined"
             value={settingsState.jwtSecret}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 jwtSecret: event.target.value,
               });
@@ -247,11 +264,11 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
               control={
                 <Switch
                   disabled={!edit}
-                  checked={settingsState.enabled}
+                  checked={settingsState.active}
                   onChange={() =>
-                    setSettingsSate({
+                    setSettingsState({
                       ...settingsState,
-                      enabled: !settingsState.enabled,
+                      active: !settingsState.active,
                     })
                   }
                   value={'accountLinking'}
@@ -265,7 +282,7 @@ const AuthSettings = ({ handleSave, settingsData, error }) => {
           <Divider className={classes.divider} />
 
           <Grid container spacing={2} className={classes.innerGrid}>
-            {settingsState.enabled && renderSettingsFields()}
+            {settingsState.active && renderSettingsFields()}
           </Grid>
           {edit && (
             <Grid item container xs={12} justify={'flex-end'}>
