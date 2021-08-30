@@ -33,4 +33,16 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
       });
     });
   }
+
+  userDelete(userId: string) {
+    return new Promise((resolve, reject) => {
+      this.client?.userDelete({ userId }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  }
 }

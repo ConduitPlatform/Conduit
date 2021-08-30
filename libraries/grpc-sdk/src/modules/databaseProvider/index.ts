@@ -112,7 +112,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     select?: string,
     skip?: number,
     limit?: number,
-    sort?: string,
+    sort?: { [key: string]: number },
     populate?: string | string[]
   ): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
