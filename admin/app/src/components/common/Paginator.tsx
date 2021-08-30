@@ -17,8 +17,10 @@ const Paginator: React.FC<Props> = ({
   handleLimitChange,
 }) => {
   const docs = useSelector(
-    (state) => state.authenticationPageReducer.authUsersState.count
+    (state: { authenticationPageReducer: { authUsersState: { count: number } } }) =>
+      state.authenticationPageReducer.authUsersState.count
   );
+
   return (
     <Grid container justify="flex-end">
       <TablePagination

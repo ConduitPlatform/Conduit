@@ -39,16 +39,64 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function AuthAccordion({
+interface LocalTypes {
+  enabled: boolean;
+  sendVerificationEmail: boolean;
+  verificationRequired: boolean;
+  identifier: string;
+  verification_redirect_uri: string;
+  forgot_password_redirect_uri: string;
+}
+
+interface GoogleTypes {
+  enabled: boolean;
+  accountLinking: boolean;
+  clientId: string;
+}
+
+interface FacebookTypes {
+  enabled: boolean;
+  accountLinking: boolean;
+  clientId: string;
+}
+
+interface KakaoTypes {
+  enabled: boolean;
+  clientId: string;
+  redirect_uri: string;
+}
+
+interface TwitchTypes {
+  enabled: boolean;
+  clientId: string;
+  redirect_uri: string;
+  clientSecret: string;
+}
+
+type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch' | 'kakao';
+type SocialDataTypes =
+  | LocalTypes
+  | GoogleTypes
+  | FacebookTypes
+  | KakaoTypes
+  | TwitchTypes;
+
+interface Props {
+  configData: any;
+  configDataError: any;
+  handleData: (type: SocialNameTypes, data: SocialDataTypes) => void;
+}
+
+const AuthAccordion: React.FC<Props> = ({
   configData,
   configDataError,
   handleData,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
-  const [expanded, setExpanded] = useState([]);
+  const [expanded, setExpanded] = useState<SocialNameTypes[]>([]);
 
-  const [local, setLocal] = useState({
+  const [local, setLocal] = useState<LocalTypes>({
     enabled: false,
     sendVerificationEmail: false,
     verificationRequired: false,
@@ -57,25 +105,25 @@ export default function AuthAccordion({
     forgot_password_redirect_uri: '',
   });
 
-  const [google, setGoogle] = useState({
+  const [google, setGoogle] = useState<GoogleTypes>({
     enabled: false,
     accountLinking: false,
     clientId: '',
   });
 
-  const [facebook, setFacebook] = useState({
+  const [facebook, setFacebook] = useState<FacebookTypes>({
     enabled: false,
     accountLinking: false,
     clientId: '',
   });
 
-  const [kakao, setKakao] = useState({
+  const [kakao, setKakao] = useState<KakaoTypes>({
     enabled: false,
     clientId: '',
     redirect_uri: '',
   });
 
-  const [twitch, setTwitch] = useState({
+  const [twitch, setTwitch] = useState<TwitchTypes>({
     enabled: false,
     clientId: '',
     redirect_uri: '',
@@ -136,47 +184,47 @@ export default function AuthAccordion({
     }
   }, [configData, configDataError]);
 
-  const handleGoogleClientId = (event) => {
+  const handleGoogleClientId = (event: { target: { value: string } }) => {
     setGoogle({ ...google, clientId: event.target.value });
   };
 
-  const handleFacebookClientID = (event) => {
+  const handleFacebookClientID = (event: { target: { value: string } }) => {
     setFacebook({ ...facebook, clientId: event.target.value });
   };
 
-  const handleKakaoTalkClientId = (event) => {
+  const handleKakaoTalkClientId = (event: { target: { value: string } }) => {
     setKakao({ ...kakao, clientId: event.target.value });
   };
 
-  const handleKakaoTalkRedirectUri = (event) => {
+  const handleKakaoTalkRedirectUri = (event: { target: { value: string } }) => {
     setKakao({ ...kakao, redirect_uri: event.target.value });
   };
 
-  const handleTwitchClientId = (event) => {
+  const handleTwitchClientId = (event: { target: { value: string } }) => {
     setTwitch({ ...twitch, clientId: event.target.value });
   };
 
-  const handleTwitchRedirectUri = (event) => {
+  const handleTwitchRedirectUri = (event: { target: { value: string } }) => {
     setTwitch({ ...twitch, redirect_uri: event.target.value });
   };
 
-  const handleTwitchClientSecret = (event) => {
+  const handleTwitchClientSecret = (event: { target: { value: string } }) => {
     setTwitch({ ...twitch, clientSecret: event.target.value });
   };
 
-  const handleIdentifier = (event) => {
+  const handleIdentifier = (event: { target: { value: string } }) => {
     setLocal({ ...local, identifier: event.target.value });
   };
 
-  const handleVerificationUriChange = (event) => {
+  const handleVerificationUriChange = (event: { target: { value: string } }) => {
     setLocal({ ...local, verification_redirect_uri: event.target.value });
   };
 
-  const handleForgotPasswordUriChange = (event) => {
+  const handleForgotPasswordUriChange = (event: { target: { value: string } }) => {
     setLocal({ ...local, forgot_password_redirect_uri: event.target.value });
   };
 
-  const openExpanded = (type) => {
+  const openExpanded = (type: SocialNameTypes) => {
     if (!expanded.includes(type)) {
       const newExpanded = [...expanded];
       newExpanded.push(type);
@@ -184,7 +232,7 @@ export default function AuthAccordion({
     }
   };
 
-  const closeExpanded = (type) => {
+  const closeExpanded = (type: SocialNameTypes) => {
     if (type !== undefined && expanded && expanded.includes(type)) {
       const newExpanded = [...expanded];
       const arrayIndex = newExpanded.indexOf(type);
@@ -193,12 +241,12 @@ export default function AuthAccordion({
     }
   };
 
-  const handleSubmit = (type, data) => {
+  const handleSubmit = (type: SocialNameTypes, data: SocialDataTypes) => {
     handleData(type, data);
     closeExpanded(type);
   };
 
-  const handleCancel = (type) => {
+  const handleCancel = (type: SocialNameTypes) => {
     switch (type) {
       case 'local':
         if (configData && configData.local) setLocal(configData.local);
@@ -221,7 +269,7 @@ export default function AuthAccordion({
     closeExpanded(type);
   };
 
-  const submitButtons = (typeProvider, provider) => {
+  const submitButtons = (typeProvider: SocialNameTypes, provider: SocialDataTypes) => {
     return (
       <>
         <Button
@@ -241,7 +289,7 @@ export default function AuthAccordion({
     );
   };
 
-  const AccordionGenerator = (providerData) => {
+  const AccordionGenerator = (providerData: SocialNameTypes) => {
     if (!providerData) {
       return;
     }
@@ -351,4 +399,6 @@ export default function AuthAccordion({
       {AccordionGenerator('twitch')}
     </Box>
   );
-}
+};
+
+export default AuthAccordion;
