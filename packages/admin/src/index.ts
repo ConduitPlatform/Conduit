@@ -105,6 +105,7 @@ export default class AdminModule extends IConduitAdmin {
 
             self._grpcRoutes[r.url] = r.routes;
           });
+          self.refreshRouter();
         }
       })
       .catch((err) => {
@@ -436,7 +437,7 @@ export default class AdminModule extends IConduitAdmin {
     this.router = Router();
     this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
-    this.router.post('/admin/create', (req: Request, res: Response, next: NextFunction) =>
+    this.router.post('/create', (req: Request, res: Response, next: NextFunction) =>
       self.adminHandlers.createAdmin(req, res, next).catch(next)
     );
     this._registeredRoutes.forEach((route, key) => {
