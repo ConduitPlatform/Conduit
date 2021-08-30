@@ -7,13 +7,15 @@
     "eslint:recommended",
     "react-app",
     "plugin:react/recommended",
-    "plugin:prettier/recommended"
+    "plugin:prettier/recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier/@typescript-eslint"
   ],
   "parserOptions": {
     "ecmaVersion": 2018,
     "sourceType": "module"
   },
-  "plugins": ["react-hooks"],
+  "plugins": ["@typescript-eslint", "react-hooks"],
   "rules": {
     "no-console": "warn",
     "no-eval": "error",
@@ -22,6 +24,8 @@
     "max-len": ["error", 90],
     "no-case-declarations": 0,
     "react-hooks/rules-of-hooks": "error", 
-    "react-hooks/exhaustive-deps": "warn" 
+    "react-hooks/exhaustive-deps": "warn" ,
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-var-requires": [0]
   }
 }

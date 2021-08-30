@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
-import Pagination from '@material-ui/lab/Pagination';
+import React from 'react';
 import Grid from '@material-ui/core/Grid';
-import ButtonGroup from '@material-ui/core/ButtonGroup';
-import Button from '@material-ui/core/Button';
 import TablePagination from '@material-ui/core/TablePagination';
 import { useSelector } from 'react-redux';
-import { makeStyles } from '@material-ui/core/styles';
 
-const useStyles = makeStyles((theme) => ({
-  paginator: {
-    '& > *': {
-      marginBottom: '10px',
-    },
-  },
-}));
+interface Props {
+  page: number;
+  limit: number;
+  handlePageChange: () => void;
+  handleLimitChange: () => void;
+}
 
-export default function Paginator({ handlePageChange, page, limit, handleLimitChange }) {
-  const classes = useStyles();
-
+const Paginator: React.FC<Props> = ({
+  handlePageChange,
+  page,
+  limit,
+  handleLimitChange,
+}) => {
   const docs = useSelector(
     (state) => state.authenticationPageReducer.authUsersState.count
   );
@@ -35,4 +33,6 @@ export default function Paginator({ handlePageChange, page, limit, handleLimitCh
       />
     </Grid>
   );
-}
+};
+
+export default Paginator;
