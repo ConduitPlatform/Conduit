@@ -1,59 +1,52 @@
 import { AdminHandlers } from './admin/admin';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitServiceModule,
+  GrpcServer,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { CmsRoutes } from './routes/Routes';
 import { SchemaController } from './controllers/cms/schema.controller';
-import process from 'process';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 
-export class CMS {
-  private _url: string;
-  private readonly grpcServer: GrpcServer;
+export class CMS implements ConduitServiceModule {
+  private grpcServer!: GrpcServer;
   private stateActive = true;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    const self = this;
+  private _port!: string;
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .catch(() => {
-        console.error('Failed to wait for database');
-        process.exit(-1);
-      })
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .catch(() => {
-        console.log('Failed to start redis connection');
-        return (this.stateActive = false);
-      })
-      .then(() => {
-        let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk);
-        let schemaController = new SchemaController(
-          self.grpcSdk,
-          consumerRoutes,
-          self.stateActive
-        );
-        let customEndpointController = new CustomEndpointController(
-          self.grpcSdk,
-          consumerRoutes,
-          self.stateActive
-        );
-        new AdminHandlers(
-          self.grpcServer,
-          self.grpcSdk,
-          schemaController,
-          customEndpointController
-        );
-        console.log('bound on:', self._url);
-        self.grpcServer.start();
-      })
-      .catch(console.log);
+  get port(): string {
+    return this._port;
   }
 
-  get url(): string {
-    return this._url;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    this.grpcServer.start();
+    console.log('Grpc server is online');
+  }
+
+  async activate() {
+    const self = this;
+
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk);
+    let schemaController = new SchemaController(
+      self.grpcSdk,
+      consumerRoutes,
+      self.stateActive
+    );
+    let customEndpointController = new CustomEndpointController(
+      self.grpcSdk,
+      consumerRoutes,
+      self.stateActive
+    );
+    new AdminHandlers(
+      self.grpcServer,
+      self.grpcSdk,
+      schemaController,
+      customEndpointController
+    );
   }
 }

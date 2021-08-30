@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { StorageClient } from '../../protoUtils/storage';
 
-export default class Storage extends ConduitModule<StorageClient> {
+export class Storage extends ConduitModule<StorageClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(StorageClient);

@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { DatabaseProviderClient } from '../../protoUtils/database-provider';
 
-export default class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
+export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(DatabaseProviderClient);
@@ -77,12 +77,12 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     return JSON.stringify(query);
   }
 
-  findOne(
+  findOne<T>(
     schemaName: string,
     query: any,
     select?: string,
     populate?: string | string[]
-  ): Promise<any> {
+  ): Promise<T | any | undefined> {
     return new Promise((resolve, reject) => {
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
@@ -106,7 +106,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  findMany(
+  findMany<T>(
     schemaName: string,
     query: any,
     select?: string,
@@ -114,7 +114,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     limit?: number,
     sort?: { [key: string]: number },
     populate?: string | string[]
-  ) {
+  ): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
       const sortStr = sort ? JSON.stringify(sort) : undefined;
       let populateArray = populate;
@@ -142,7 +142,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  create(schemaName: string, query: any) {
+  create<T>(schemaName: string, query: any): Promise<T | any> {
     return new Promise((resolve, reject) => {
       this.client?.create(
         { schemaName, query: this.processQuery(query) },
@@ -157,7 +157,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  createMany(schemaName: string, query: any) {
+  createMany<T>(schemaName: string, query: any): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
       this.client?.createMany(
         { schemaName, query: this.processQuery(query) },
@@ -172,12 +172,12 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  findByIdAndUpdate(
+  findByIdAndUpdate<T>(
     schemaName: string,
     id: string,
     document: any,
     updateProvidedOnly: boolean = false
-  ) {
+  ): Promise<T | any> {
     return new Promise((resolve, reject) => {
       this.client?.findByIdAndUpdate(
         { schemaName, id, query: this.processQuery(document), updateProvidedOnly },
@@ -247,7 +247,7 @@ export default class DatabaseProvider extends ConduitModule<DatabaseProviderClie
     });
   }
 
-  countDocuments(schemaName: string, query: any) {
+  countDocuments(schemaName: string, query: any): Promise<number> {
     return new Promise((resolve, reject) => {
       this.client?.countDocuments(
         { schemaName, query: this.processQuery(query) },

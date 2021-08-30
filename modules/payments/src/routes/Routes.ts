@@ -1,4 +1,4 @@
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRoute,
   ConduitRouteActions,
@@ -58,7 +58,7 @@ export class PaymentsRoutes {
     });
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }
@@ -71,7 +71,7 @@ export class PaymentsRoutes {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
@@ -95,7 +95,7 @@ export class PaymentsRoutes {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { result: JSON.stringify({ subscriptions }) });
@@ -106,7 +106,7 @@ export class PaymentsRoutes {
 
     if (isNil(productId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'productId is required',
       });
     }
@@ -125,7 +125,7 @@ export class PaymentsRoutes {
 
     if (isNil(imp_uid) || isNil(merchant_uid)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'imp_uid and merchant_uid are required',
       });
     }
@@ -141,7 +141,7 @@ export class PaymentsRoutes {
       return callback({ code: e.code, message: e.message });
     }
 
-    return callback({ code: grpc.status.INTERNAL, message: 'Something went wrong' });
+    return callback({ code: status.INTERNAL, message: 'Something went wrong' });
   }
 
   async registerRoutes() {
@@ -248,12 +248,9 @@ export class PaymentsRoutes {
                 userId: TYPE.String,
               },
             },
-            new ConduitRouteReturnDefinition(
-              'CancelPaymentWithSavedCardResponse',
-              {
-                success: TYPE.Boolean
-              }
-            ),
+            new ConduitRouteReturnDefinition('CancelPaymentWithSavedCardResponse', {
+              success: TYPE.Boolean,
+            }),
             'cancelStripePayment'
           )
         )
@@ -271,7 +268,7 @@ export class PaymentsRoutes {
               },
             },
             new ConduitRouteReturnDefinition('RefundStripePaymentResponse', {
-              success: TYPE.Boolean
+              success: TYPE.Boolean,
             }),
             'refundStripePayment'
           )

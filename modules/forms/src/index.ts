@@ -8,20 +8,24 @@ if (!process.env.CONDUIT_SERVER) {
 }
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'forms');
 let forms = new FormsModule(grpcSdk);
-let url = forms.url;
-if (process.env.REGISTER_NAME === 'true') {
-  url = 'forms:' + url.split(':')[1];
-}
-grpcSdk.config
-  .registerModule('forms', url)
-  .catch((err) => {
+forms
+  .initialize()
+  .then(() => {
+    let url = process.env.REGISTER_NAME === 'true' ? 'forms:' : '0.0.0.0:' + forms.port;
+    return grpcSdk.config.registerModule('forms', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
     console.error(err);
     process.exit(-1);
   })
   .then(() => {
-    grpcSdk.admin.register(paths.functions);
+    return forms.activate();
+  })
+  .then(() => {
+    return grpcSdk.admin.register(paths.functions);
   })
   .catch((err: Error) => {
-    console.log('Failed to register admin routes for forms module!');
+    console.log('Failed to active module');
     console.error(err);
   });

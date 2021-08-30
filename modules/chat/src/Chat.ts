@@ -1,83 +1,67 @@
-import ConduitGrpcSdk, { GrpcServer, SetConfigRequest, SetConfigResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitServiceModule,
+  GrpcServer,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import ChatConfigSchema from './config';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isNil } from 'lodash';
 import { ChatRoutes } from './routes/Routes';
 import * as models from './models';
 
-export default class ChatModule {
+export default class ChatModule implements ConduitServiceModule {
   private database: any;
   private isRunning: boolean = false;
-  private _url: string;
-  private readonly grpcServer: GrpcServer;
+  private grpcServer: GrpcServer;
   private _router: ChatRoutes;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(path.resolve(__dirname, './chat.proto'), 'chat.Chat', {
-        setConfig: this.setConfig.bind(this),
-      })
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .then(() => {
-        this.grpcSdk.bus?.subscribe('chat', (message: string) => {
-          if (message === 'config-update') {
-            this.enableModule()
-              .then(() => {
-                console.log('Updated chat configuration');
-              })
-              .catch(() => {
-                console.log('Failed to update chat config');
-              });
-          }
-        });
-      })
-      .catch(() => {
-        console.log('Bus did not initialize!');
-      })
-      .then(() => {
-        return this.grpcSdk.config.get('chat');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(ChatConfigSchema.getProperties(), 'chat');
-      })
-      .then(() => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          ChatConfigSchema.getProperties(),
-          'chat'
-        );
-      })
-      .catch(() => {
-        console.log('chat config did not update');
-      })
-      .then((chatConfig: any) => {
-        if (chatConfig.active) {
-          return this.enableModule();
-        }
-      })
-      .catch(console.log);
+  private _port: string;
+
+  get port(): string {
+    return this._port;
   }
 
-  get url(): string {
-    return this._url;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
+      path.resolve(__dirname, './chat.proto'),
+      'chat.Chat',
+      {
+        setConfig: this.setConfig.bind(this),
+      }
+    );
+    await this.grpcServer.start();
+  }
+
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    this.grpcSdk.bus?.subscribe('chat', (message: string) => {
+      if (message === 'config-update') {
+        this.enableModule()
+          .then(() => {
+            console.log('Updated chat configuration');
+          })
+          .catch(() => {
+            console.log('Failed to update chat config');
+          });
+      }
+    });
+    try {
+      await this.grpcSdk.config.get('chat');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(ChatConfigSchema.getProperties(), 'chat');
+    }
+    let config = await this.grpcSdk.config.addFieldstoConfig(
+      ChatConfigSchema.getProperties(),
+      'chat'
+    );
+    if (config.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
@@ -86,34 +70,34 @@ export default class ChatModule {
       ChatConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Module is not active'
+        code: status.INVALID_ARGUMENT,
+        message: 'Module is not active',
       });
     }
 
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
       .updateConfig(newConfig, 'chat')
-      .catch(((e: Error) => (errorMessage = e.message)));
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const chatConfig = await this.grpcSdk.config.get('chat');
     if (chatConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
       this.grpcSdk.bus?.publish('chat', 'config-update');
     } else {
       return callback({
-        code: grpc.status.FAILED_PRECONDITION,
-        message:'Module is not active'
+        code: status.FAILED_PRECONDITION,
+        message: 'Module is not active',
       });
     }
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });

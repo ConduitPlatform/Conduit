@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { isNil, isPlainObject } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 
@@ -32,7 +32,7 @@ export class CustomEndpointsAdmin {
       .findMany('CustomEndpoints', {})
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     return callback(null, { result: JSON.stringify({ results: customEndpointsDocs }) });
   }
 
@@ -50,7 +50,7 @@ export class CustomEndpointsAdmin {
     } = params;
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'id must not be null',
       });
     }
@@ -63,7 +63,7 @@ export class CustomEndpointsAdmin {
       .catch((e: any) => (errorMessage = e.message));
     if (isNil(found) || !isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Schema not found',
       });
     }
@@ -77,14 +77,14 @@ export class CustomEndpointsAdmin {
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: errorMessage,
         });
       }
     } else if (!isNil(selectedSchemaName)) {
       if (found.operation !== OperationsEnum.GET) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'Only get requests are allowed for schemas from other modules',
         });
       }
@@ -93,7 +93,7 @@ export class CustomEndpointsAdmin {
         .getSchema(selectedSchemaName)
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
 
       findSchema.fields = findSchema.modelSchema;
@@ -101,7 +101,7 @@ export class CustomEndpointsAdmin {
 
     if (isNil(findSchema)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'SelectedSchema not found',
       });
     }
@@ -109,13 +109,13 @@ export class CustomEndpointsAdmin {
     // todo checks for inputs & queries
     if (!Array.isArray(inputs)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Inputs must be an array, even if empty!',
       });
     }
     if (found.operation !== OperationsEnum.POST && !isPlainObject(query)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The query field must be an object',
       });
     }
@@ -126,7 +126,7 @@ export class CustomEndpointsAdmin {
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The assignments field must be an array, and not empty!',
       });
     }
@@ -140,7 +140,7 @@ export class CustomEndpointsAdmin {
     });
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: errorMessage,
       });
     }
@@ -154,7 +154,7 @@ export class CustomEndpointsAdmin {
     }
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: errorMessage,
       });
     }
@@ -187,20 +187,20 @@ export class CustomEndpointsAdmin {
     }
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: errorMessage,
       });
     }
 
     if (paginated && found.operation !== OperationsEnum.GET) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Cannot add pagination to a non-get endpoint',
       });
     }
     if (sorted && found.operation !== OperationsEnum.GET) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Cannot add sorting to non-get endpoint',
       });
     }
@@ -217,7 +217,7 @@ export class CustomEndpointsAdmin {
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     this.customEndpointController.refreshEndpoints();
     return callback(null, { result: JSON.stringify(updatedSchema) });
   }
@@ -226,13 +226,13 @@ export class CustomEndpointsAdmin {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Id is missing',
       });
     }
     if (id.length === 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Id must not be empty',
       });
     }
@@ -241,11 +241,11 @@ export class CustomEndpointsAdmin {
       .findOne('CustomEndpoints', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested Custom Endpoint not found',
       });
     }
@@ -254,7 +254,7 @@ export class CustomEndpointsAdmin {
       .deleteOne('CustomEndpoints', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     this.customEndpointController.refreshEndpoints();
     return callback(null, { result: 'Custom Endpoint deleted' });
   }
@@ -279,25 +279,25 @@ export class CustomEndpointsAdmin {
       (isNil(selectedSchema) && isNil(selectedSchemaName))
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
     if (name.length === 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Name must not be empty',
       });
     }
     if (operation < 0 || operation > 3) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Operation is not valid',
       });
     }
     if (operation !== OperationsEnum.POST && isNil(query)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
@@ -308,7 +308,7 @@ export class CustomEndpointsAdmin {
       isNil(assignments)
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
@@ -318,7 +318,7 @@ export class CustomEndpointsAdmin {
     if (!isNil(selectedSchema)) {
       if (selectedSchema.length === 0) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'SelectedSchema must not be empty',
         });
       }
@@ -330,21 +330,21 @@ export class CustomEndpointsAdmin {
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({
-          code: grpc.status.INTERNAL,
+          code: status.INTERNAL,
           message: errorMessage,
         });
       }
     } else {
       if (selectedSchemaName.length === 0) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'SelectedSchemaName must not be empty',
         });
       }
 
       if (operation !== OperationsEnum.GET) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'Only get requests are allowed for schemas from other modules',
         });
       }
@@ -353,7 +353,7 @@ export class CustomEndpointsAdmin {
         .getSchema(selectedSchemaName)
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
 
       findSchema.fields = findSchema.modelSchema;
@@ -361,20 +361,20 @@ export class CustomEndpointsAdmin {
 
     if (isNil(findSchema)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'SelectedSchema not found',
       });
     }
 
     if (!isNil(inputs) && !Array.isArray(inputs)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Inputs must be an array, even if empty!',
       });
     }
     if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The query field must be an object',
       });
     }
@@ -385,7 +385,7 @@ export class CustomEndpointsAdmin {
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The assigment field must be an array, and not empty!',
       });
     }
@@ -400,7 +400,7 @@ export class CustomEndpointsAdmin {
       });
       if (!isNil(errorMessage)) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: errorMessage,
         });
       }
@@ -422,7 +422,7 @@ export class CustomEndpointsAdmin {
 
     if (paginated && operation !== OperationsEnum.GET) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Cannot add pagination to non-get endpoint',
       });
     } else if (paginated) {
@@ -431,7 +431,7 @@ export class CustomEndpointsAdmin {
 
     if (sorted && operation !== OperationsEnum.GET) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Cannot add sorting to non-get endpoint',
       });
     } else if (sorted) {
@@ -442,7 +442,7 @@ export class CustomEndpointsAdmin {
       let error = queryValidation(query, findSchema, inputs);
       if (error !== true) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: error as string,
         });
       }
@@ -476,7 +476,7 @@ export class CustomEndpointsAdmin {
       );
       if (!isNil(errorMessage)) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: errorMessage,
         });
       }
@@ -489,7 +489,7 @@ export class CustomEndpointsAdmin {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Endpoint Creation failed',
       });
     }
