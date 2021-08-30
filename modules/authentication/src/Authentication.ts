@@ -24,6 +24,9 @@ export default class AuthenticationModule implements ConduitServiceModule {
   private isRunning: boolean = false;
   private _router: AuthenticationRoutes;
   private grpcServer: GrpcServer;
+
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
   private _port: string;
 
   get port(): string {
