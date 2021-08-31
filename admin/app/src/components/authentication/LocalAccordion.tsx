@@ -50,7 +50,7 @@ interface Props {
   setLocal: (values: LocalTypes) => void;
   openExpanded: (value: SocialNameTypes) => void;
   handleIdentifier: (
-    event: React.ChangeEvent<{ name?: string; value: unknown }>,
+    event: React.ChangeEvent<{ name?: string; value: any }>,
     child: React.ReactNode
   ) => void;
   handleVerificationUriChange: (

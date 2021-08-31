@@ -179,7 +179,7 @@ const AuthAccordion: React.FC<Props> = ({
     setTwitch({ ...twitch, clientSecret: event.target.value });
   };
 
-  const handleIdentifier = (event: { target: { value: string } }) => {
+  const handleIdentifier = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
     setLocal({ ...local, identifier: event.target.value });
   };
 
@@ -270,7 +270,6 @@ const AuthAccordion: React.FC<Props> = ({
             local={local}
             expanded={expanded}
             setLocal={setLocal}
-            providerData={providerData}
             openExpanded={openExpanded}
             handleIdentifier={handleIdentifier}
             handleVerificationUriChange={handleVerificationUriChange}

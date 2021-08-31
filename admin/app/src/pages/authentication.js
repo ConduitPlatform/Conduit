@@ -43,7 +43,7 @@ const Authentication = () => {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [filter, setFilter] = useState({ filterValue: 'none' });
+  const [filter, setFilter] = useState('none');
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -58,11 +58,7 @@ const Authentication = () => {
   );
 
   const handleFilterChange = (event) => {
-    const name = event.target.name;
-    setFilter({
-      ...filter,
-      [name]: event.target.value,
-    });
+    setFilter(event.target.value);
   };
 
   useEffect(() => {
@@ -153,7 +149,7 @@ const Authentication = () => {
     setSkip(0);
     setPage(0);
     setSearch('');
-    setFilter({ filterValue: 'none' });
+    setFilter('none');
   };
 
   const handleSettingsSave = (data) => {

@@ -22,7 +22,19 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SearchFilter({ search, setSearch, filter, handleFilterChange }) {
+interface Props {
+  search: string;
+  setSearch: (value: string) => void;
+  filter: string;
+  handleFilterChange: () => void;
+}
+
+const SearchFilter: React.FC<Props> = ({
+  search,
+  setSearch,
+  filter,
+  handleFilterChange,
+}) => {
   const classes = useStyles();
 
   return (
@@ -52,12 +64,8 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
             labelId="demo-simple-select-label"
             id="demo-simple-select"
             label="Provider"
-            value={filter.filterValue}
-            onChange={handleFilterChange}
-            inputProps={{
-              name: 'filterValue',
-              id: 'outlined-age-native-simple',
-            }}>
+            value={filter}
+            onChange={handleFilterChange}>
             <MenuItem value="none">None</MenuItem>
             <MenuItem value="local">Local</MenuItem>
             <MenuItem value="google">Google</MenuItem>
@@ -69,4 +77,6 @@ export default function SearchFilter({ search, setSearch, filter, handleFilterCh
       </Grid>
     </form>
   );
-}
+};
+
+export default SearchFilter;
