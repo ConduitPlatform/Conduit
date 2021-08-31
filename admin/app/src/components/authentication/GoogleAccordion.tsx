@@ -7,10 +7,10 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
 import Accordion from '@material-ui/core/Accordion';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { GoogleTypes, SocialNameTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,12 +42,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GoogleAccordion = ({
+interface Props {
+  expanded: SocialNameTypes[];
+  google: GoogleTypes;
+  setGoogle: (values: GoogleTypes) => void;
+  openExpanded: (value: SocialNameTypes) => void;
+  handleGoogleClientId: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+}
+
+const GoogleAccordion: React.FC<Props> = ({
   google,
   expanded,
   setGoogle,
   children,
-  providerData,
   openExpanded,
   handleGoogleClientId,
 }) => {
@@ -109,7 +118,7 @@ const GoogleAccordion = ({
                     color="primary"
                   />
                 }
-                label={providerData.enabled ? 'Enabled' : 'Disabled'}
+                label={google.enabled ? 'Enabled' : 'Disabled'}
               />
             </Box>
             <Box

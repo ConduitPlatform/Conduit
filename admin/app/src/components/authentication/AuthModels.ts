@@ -43,3 +43,10 @@ export interface TwitchTypes {
 }
 
 export type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch' | 'kakao';
+
+export type SocialDataTypes =
+  | LocalTypes
+  | GoogleTypes
+  | FacebookTypes
+  | KakaoTypes
+  | TwitchTypes;

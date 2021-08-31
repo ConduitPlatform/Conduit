@@ -12,7 +12,13 @@ import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 
-const GetServiceAccountToken = ({ token, open, handleClose, handleCopy }) => {
+interface Props {
+  token: string;
+  open: boolean;
+  handleClose: () => void;
+}
+
+const GetServiceAccountToken: React.FC<Props> = ({ token, open, handleClose }) => {
   const [checked, setChecked] = useState(false);
 
   const copyToClipboard = () => {
@@ -21,9 +27,7 @@ const GetServiceAccountToken = ({ token, open, handleClose, handleCopy }) => {
 
   return (
     <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={open}>
-      <DialogTitle id="customized-dialog-title" onClose={handleClose}>
-        Service Account Created
-      </DialogTitle>
+      <DialogTitle id="customized-dialog-title">Service Account Created</DialogTitle>
       <DialogContent dividers>
         <Typography gutterBottom>
           Your new service account has been create successfully!

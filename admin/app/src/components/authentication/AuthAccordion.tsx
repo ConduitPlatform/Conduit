@@ -15,6 +15,7 @@ import {
   GoogleTypes,
   KakaoTypes,
   SocialNameTypes,
+  SocialDataTypes,
 } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
@@ -46,13 +47,6 @@ const useStyles = makeStyles((theme) => ({
     color: 'red',
   },
 }));
-
-type SocialDataTypes =
-  | LocalTypes
-  | GoogleTypes
-  | FacebookTypes
-  | KakaoTypes
-  | TwitchTypes;
 
 interface Props {
   configData: any;
@@ -294,7 +288,6 @@ const AuthAccordion: React.FC<Props> = ({
             google={google}
             expanded={expanded}
             setGoogle={setGoogle}
-            providerData={providerData}
             openExpanded={openExpanded}
             handleGoogleClientId={handleGoogleClientId}>
             {submitButtons('google', google)}
