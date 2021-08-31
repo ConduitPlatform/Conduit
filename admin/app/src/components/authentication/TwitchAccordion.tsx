@@ -8,8 +8,9 @@ import Switch from '@material-ui/core/Switch';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Accordion from '@material-ui/core/Accordion';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { SocialNameTypes, TwitchTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,7 +42,23 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TwitchAccordion = ({
+interface Props {
+  twitch: TwitchTypes;
+  expanded: SocialNameTypes[];
+  setTwitch: (values: TwitchTypes) => void;
+  openExpanded: (value: SocialNameTypes) => void;
+  handleTwitchClientId: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+  handleTwitchRedirectUri: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+  handleTwitchClientSecret: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+}
+
+const TwitchAccordion: React.FC<Props> = ({
   twitch,
   children,
   expanded,
