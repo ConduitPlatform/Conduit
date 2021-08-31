@@ -17,12 +17,13 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import { useDispatch } from 'react-redux';
 import { editUserThunk } from '../../redux/thunks/authenticationThunks';
-const useStyles = makeStyles((theme) => ({
+import { AuthUser } from './AuthModels';
+
+const useStyles = makeStyles(() => ({
   root: {
     flexGrow: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
     justifyItems: 'center',
     justifySelf: 'center',
   },
@@ -37,34 +38,51 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EditUserDialog({ data, open, handleClose }) {
+interface Values {
+  email: string;
+  phoneNumber: string;
+  active: boolean;
+  isVerified: boolean;
+  hasTwoFA?: boolean;
+  //Todo make hasTwoFA non-optional once its default value gets returned from back
+}
+
+interface Props {
+  data: AuthUser;
+  open: boolean;
+  handleClose: () => void;
+}
+
+const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
   const dispatch = useDispatch();
   const classes = useStyles();
-  const [values, setValues] = useState({
-    // id: data._id || '',
-    // email: data.Email || '',
-    // active: data.Active || '',
-    // verified: data.isVerified || '',
-    // hasTwoFA: data.hasTwoFa || '',
+  const [values, setValues] = useState<Values>({
+    email: '',
+    phoneNumber: '',
+    active: false,
+    isVerified: false,
+    hasTwoFA: false,
   });
 
   useEffect(() => {
     setValues({ ...data });
   }, [data]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
 
     setValues({ ...values, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     dispatch(editUserThunk(values));
     handleClose();
   };
 
-  const handleCheckBoxChange = (event) => {
+  const handleCheckBoxChange = (event: {
+    target: { name: string; checked: boolean };
+  }) => {
     setValues({ ...values, [event.target.name]: event.target.checked });
   };
 
@@ -77,7 +95,7 @@ export default function EditUserDialog({ data, open, handleClose }) {
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <form onSubmit={handleSubmit} style={{}}>
+        <form onSubmit={handleSubmit}>
           <Container className={classes.root} maxWidth="sm">
             <Grid container alignItems="center" className={classes.root} spacing={2}>
               <Grid item sm={12}>
@@ -173,4 +191,6 @@ export default function EditUserDialog({ data, open, handleClose }) {
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default EditUserDialog;

@@ -8,6 +8,14 @@ import FacebookAccordion from './FacebookAccordion';
 import KakaoAccordion from './KakaoAccordion';
 import TwitchAccordion from './TwitchAccordion';
 import Button from '@material-ui/core/Button';
+import {
+  LocalTypes,
+  FacebookTypes,
+  TwitchTypes,
+  GoogleTypes,
+  KakaoTypes,
+  SocialNameTypes,
+} from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -39,41 +47,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface LocalTypes {
-  enabled: boolean;
-  sendVerificationEmail: boolean;
-  verificationRequired: boolean;
-  identifier: string;
-  verification_redirect_uri: string;
-  forgot_password_redirect_uri: string;
-}
-
-interface GoogleTypes {
-  enabled: boolean;
-  accountLinking: boolean;
-  clientId: string;
-}
-
-interface FacebookTypes {
-  enabled: boolean;
-  accountLinking: boolean;
-  clientId: string;
-}
-
-interface KakaoTypes {
-  enabled: boolean;
-  clientId: string;
-  redirect_uri: string;
-}
-
-interface TwitchTypes {
-  enabled: boolean;
-  clientId: string;
-  redirect_uri: string;
-  clientSecret: string;
-}
-
-type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch' | 'kakao';
 type SocialDataTypes =
   | LocalTypes
   | GoogleTypes

@@ -8,34 +8,23 @@ import {
 } from '../../redux/thunks/authenticationThunks';
 import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
-
-interface User {
-  active: boolean;
-  createdAt: string;
-  email: string;
-  isVerified: boolean;
-  phoneNumber: string;
-  updatedAt: string;
-  __v: number;
-  _id: string;
-}
+import { AuthUser } from './AuthModels';
 
 interface Props {
-  users: User[];
+  users: AuthUser[];
 }
 
 const AuthUsers: React.FC<Props> = ({ users }) => {
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
   const [openBlockUI, setOpenBlockUI] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<User>({
+  const [selectedUser, setSelectedUser] = useState<AuthUser>({
     active: false,
     createdAt: '',
     email: '',
     isVerified: false,
     phoneNumber: '',
     updatedAt: '',
-    __v: 0,
     _id: '',
   });
 
@@ -47,7 +36,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const dispatch = useDispatch();
 
-  const formatData = (users: User[]) => {
+  const formatData = (users: AuthUser[]) => {
     return users.map((u) => {
       return {
         _id: u._id,
@@ -85,7 +74,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     action: { type: 'Edit' | 'Delete' | 'Block/Unblock UI' },
     data: any
   ) => {
-    const currentUser = users.find((user) => user._id === data._id) as User;
+    const currentUser = users.find((user) => user._id === data._id) as AuthUser;
     if (action.type === 'Edit') {
       setOpenEditUser(true);
       setSelectedUser(currentUser);

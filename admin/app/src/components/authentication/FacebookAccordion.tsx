@@ -7,10 +7,10 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
 import Accordion from '@material-ui/core/Accordion';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { SocialNameTypes, FacebookTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,7 +42,17 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const FacebookAccordion = ({
+interface Props {
+  expanded: SocialNameTypes[];
+  facebook: FacebookTypes;
+  setFacebook: (values: FacebookTypes) => void;
+  openExpanded: (value: SocialNameTypes) => void;
+  handleFacebookClientID: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+}
+
+const FacebookAccordion: React.FC<Props> = ({
   children,
   expanded,
   facebook,

@@ -9,7 +9,21 @@ import {
 import Button from '@material-ui/core/Button';
 import React from 'react';
 
-const CreateServiceAccount = ({ open, name, setName, handleClose, handleCreate }) => {
+interface Props {
+  open: boolean;
+  name: string;
+  setName: (value: string) => void;
+  handleClose: () => void;
+  handleCreate: () => void;
+}
+
+const CreateServiceAccount: React.FC<Props> = ({
+  open,
+  name,
+  setName,
+  handleClose,
+  handleCreate,
+}) => {
   return (
     <Dialog open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
       <DialogTitle id="form-dialog-title">New Service Account</DialogTitle>
