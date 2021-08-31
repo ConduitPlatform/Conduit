@@ -25,6 +25,7 @@ import ConfirmationDialog from '../common/ConfirmationDialog';
 import GetServiceAccountToken from './GetServiceAccountToken';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import CreateServiceAccount from './CreateServiceAccount';
+import { ServiceAccount } from './AuthModels';
 
 const useStyles = makeStyles({
   table: {
@@ -35,19 +36,22 @@ const useStyles = makeStyles({
 const ServiceAccountsTabs = () => {
   const classes = useStyles();
 
-  const [name, setName] = useState('');
-  const [open, setOpen] = useState(false);
-  const [serviceId, setServiceId] = useState('');
-  const [tokenDialog, setTokenDialog] = useState(false);
-  const [confirmation, setConfirmation] = useState(false);
-  const [createdService, setCreatedService] = useState(null);
-  const [serviceAccounts, setServiceAccounts] = useState([]);
+  const [name, setName] = useState<string>('');
+  const [open, setOpen] = useState<boolean>(false);
+  const [serviceId, setServiceId] = useState<string>('');
+  const [tokenDialog, setTokenDialog] = useState<boolean>(false);
+  const [confirmation, setConfirmation] = useState<boolean>(false);
+  const [createdService, setCreatedService] = useState<{ name: string; token: string }>({
+    name: '',
+    token: '',
+  });
+  const [serviceAccounts, setServiceAccounts] = useState<ServiceAccount[]>([]);
 
   useEffect(() => {
     fetchServiceAccounts();
   }, []);
 
-  const handleDeleteClick = (_id) => {
+  const handleDeleteClick = (_id: string) => {
     setServiceId(_id);
     setConfirmation(true);
   };
@@ -56,7 +60,7 @@ const ServiceAccountsTabs = () => {
     handleCloseConfirmation();
     try {
       await deleteServiceAccounts(serviceId);
-      fetchServiceAccounts();
+      await fetchServiceAccounts();
     } catch (e) {
       console.log(e);
     }
@@ -72,11 +76,11 @@ const ServiceAccountsTabs = () => {
 
   const handleCloseTokenDialog = () => {
     setTokenDialog(false);
-    setCreatedService(null);
+    setCreatedService({ name: '', token: '' });
   };
 
   const handleCloseConfirmation = () => {
-    setServiceId(null);
+    setServiceId('');
     setConfirmation(false);
   };
 
@@ -87,14 +91,14 @@ const ServiceAccountsTabs = () => {
         handleClose();
         setTokenDialog(true);
         setCreatedService(response.data);
-        fetchServiceAccounts();
+        await fetchServiceAccounts();
       } catch (e) {
         console.log(e);
       }
     }
   };
 
-  const handleRefresh = async (serviceId) => {
+  const handleRefresh = async (serviceId: string) => {
     try {
       const response = await refreshServiceAccount(serviceId);
       handleClose();
@@ -192,7 +196,7 @@ const ServiceAccountsTabs = () => {
       <GetServiceAccountToken
         open={tokenDialog}
         handleClose={handleCloseTokenDialog}
-        token={createdService ? createdService.token : ''}
+        token={createdService.token}
       />
       <CreateServiceAccount
         open={open}

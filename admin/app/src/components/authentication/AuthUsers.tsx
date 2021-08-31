@@ -1,6 +1,6 @@
 import DataTable from '../common/DataTable';
 import React, { useState } from 'react';
-import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 import {
   deleteUserThunk,
   blockUserUIThunk,
@@ -8,7 +8,7 @@ import {
 } from '../../redux/thunks/authenticationThunks';
 import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
-import { AuthUser } from './AuthModels';
+import { AuthUser, AuthUserUI } from './AuthModels';
 
 interface Props {
   users: AuthUser[];
@@ -72,7 +72,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const handleAction = (
     action: { type: 'Edit' | 'Delete' | 'Block/Unblock UI' },
-    data: any
+    data: AuthUserUI
   ) => {
     const currentUser = users.find((user) => user._id === data._id) as AuthUser;
     if (action.type === 'Edit') {

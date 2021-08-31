@@ -41,7 +41,7 @@ interface Props {
 
 const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const classes = useStyles();
-  const [values, setValues] = useState({
+  const [values, setValues] = useState<{ email: string; password: string }>({
     email: '',
     password: '',
   });

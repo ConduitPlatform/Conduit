@@ -6,7 +6,16 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 
-const ConfirmationDialog = ({
+interface Props {
+  open: boolean;
+  buttonText: string;
+  title?: string;
+  description?: string;
+  buttonAction: () => void;
+  handleClose: () => void;
+}
+
+const ConfirmationDialog: React.FC<Props> = ({
   open,
   buttonText,
   title,

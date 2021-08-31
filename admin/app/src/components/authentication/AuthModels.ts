@@ -8,6 +8,14 @@ export interface AuthUser {
   _id: string;
 }
 
+export interface AuthUserUI {
+  Active: boolean;
+  Email: string;
+  'Registered At': string;
+  Verified: boolean;
+  _id: string;
+}
+
 export interface LocalTypes {
   enabled: boolean;
   sendVerificationEmail: boolean;
@@ -50,3 +58,12 @@ export type SocialDataTypes =
   | FacebookTypes
   | KakaoTypes
   | TwitchTypes;
+
+export interface ServiceAccount {
+  active: boolean;
+  createdAt: string;
+  hashedToken: string;
+  name: string;
+  updatedAt: string;
+  _id: string;
+}
