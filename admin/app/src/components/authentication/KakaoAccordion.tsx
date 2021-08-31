@@ -8,8 +8,9 @@ import Switch from '@material-ui/core/Switch';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Accordion from '@material-ui/core/Accordion';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { KakaoTypes, SocialNameTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,7 +42,20 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const KakaoAccordion = ({
+interface Props {
+  expanded: SocialNameTypes[];
+  kakao: KakaoTypes;
+  setKakao: (values: KakaoTypes) => void;
+  openExpanded: (value: SocialNameTypes) => void;
+  handleKakaoTalkClientId: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+  handleKakaoTalkRedirectUri: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+}
+
+const KakaoAccordion: React.FC<Props> = ({
   kakao,
   setKakao,
   expanded,

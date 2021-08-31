@@ -14,14 +14,13 @@ import Fab from '@material-ui/core/Fab';
 import Grid from '@material-ui/core/Grid';
 import AddIcon from '@material-ui/icons/Add';
 import Container from '@material-ui/core/Container';
-import { IconButton } from '@material-ui/core';
+import { IconButton, Typography } from '@material-ui/core';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   root: {
     flexGrow: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
     justifyItems: 'center',
     justifySelf: 'center',
   },
@@ -36,27 +35,34 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function NewUserModal({ handleNewUserDispatch }) {
+interface Props {
+  handleNewUserDispatch: (values: { password: string; email: string }) => void;
+}
+
+const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const classes = useStyles();
   const [values, setValues] = useState({
     email: '',
     password: '',
   });
+  const [emptyFieldsError, setEmptyFieldsError] = useState<boolean>(false);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<boolean>(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     const hasEmptyFields = Object.values(values).some((element) => element === '');
 
     if (hasEmptyFields) {
-      toast.error('Please fill the fields');
+      setEmptyFieldsError(true);
+      return;
     }
+    setEmptyFieldsError(false);
     handleNewUserDispatch(values);
     setValues({ email: '', password: '' });
     setOpen(false);
   };
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
 
     setValues({ ...values, [name]: value });
@@ -129,6 +135,11 @@ export default function NewUserModal({ handleNewUserDispatch }) {
                     }}
                   />
                 </Grid>
+                {emptyFieldsError && (
+                  <Grid item sm={12}>
+                    <Typography color="error">Please fill the fields</Typography>
+                  </Grid>
+                )}
                 <Grid item>
                   <Button
                     type="submit"
@@ -146,4 +157,6 @@ export default function NewUserModal({ handleNewUserDispatch }) {
       </Dialog>
     </div>
   );
-}
+};
+
+export default NewUserModal;

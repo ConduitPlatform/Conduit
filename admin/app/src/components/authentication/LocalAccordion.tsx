@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
@@ -12,6 +12,7 @@ import Accordion from '@material-ui/core/Accordion';
 import { makeStyles } from '@material-ui/core/styles';
 import { InputLabel, MenuItem, Select } from '@material-ui/core';
 import FormControl from '@material-ui/core/FormControl';
+import { LocalTypes, SocialNameTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -43,13 +44,29 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const LocalAccordion = ({
+interface Props {
+  expanded: SocialNameTypes[];
+  local: LocalTypes;
+  setLocal: (values: LocalTypes) => void;
+  openExpanded: (value: SocialNameTypes) => void;
+  handleIdentifier: (
+    event: React.ChangeEvent<{ name?: string; value: unknown }>,
+    child: React.ReactNode
+  ) => void;
+  handleVerificationUriChange: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+  handleForgotPasswordUriChange: (
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => void;
+}
+
+const LocalAccordion: React.FC<Props> = ({
   local,
   expanded,
   children,
   setLocal,
   openExpanded,
-  providerData,
   handleIdentifier,
   handleVerificationUriChange,
   handleForgotPasswordUriChange,
@@ -114,7 +131,7 @@ const LocalAccordion = ({
                     color="primary"
                   />
                 }
-                label={providerData.enabled ? 'Enabled' : 'Disabled'}
+                label={local.enabled ? 'Enabled' : 'Disabled'}
               />
             </Box>
             <Box
