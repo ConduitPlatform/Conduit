@@ -20,6 +20,12 @@ import {
   saveEmailTemplateChanges,
   updateEmailSettings,
 } from '../redux/thunks/emailsThunk';
+import {
+  EmailData,
+  EmailSettings,
+  EmailTemplateType,
+} from '../models/emails/EmailModels';
+import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -31,11 +37,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Emails = () => {
+const Emails: React.FC = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const { data, loading, error } = useSelector((state) => state.emailsPageReducer);
+  const { data, loading, error } = useSelector(
+    (state: { emailsPageReducer: { data: EmailData; loading: boolean; error: any } }) =>
+      state.emailsPageReducer
+  );
+
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -64,14 +74,14 @@ const Emails = () => {
     { title: 'Provider details' },
   ];
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
   };
 
   const snackbarAlert = () => {
     if (error) {
       return (
-        <Alert variant={'filled'} onClose={handleClose} severity="error">
+        <Alert variant={'filled'} severity="error">
           {error?.data?.error ? error.data.error : 'Something went wrong!'}
         </Alert>
       );
@@ -80,14 +90,14 @@ const Emails = () => {
     }
   };
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event: React.SyntheticEvent, reason: SnackbarCloseReason) => {
     if (reason === 'clickaway') {
       return;
     }
     setSnackbarOpen(false);
   };
 
-  const saveTemplateChanges = (data) => {
+  const saveTemplateChanges = (data: EmailTemplateType) => {
     const _id = data._id;
     const updatedData = {
       name: data.name,
@@ -98,7 +108,7 @@ const Emails = () => {
     dispatch(saveEmailTemplateChanges(_id, updatedData));
   };
 
-  const createNewTemplate = (data) => {
+  const createNewTemplate = (data: EmailTemplateType) => {
     const newData = {
       name: data.name,
       subject: data.subject,
@@ -108,7 +118,7 @@ const Emails = () => {
     dispatch(createNewEmailTemplate(newData));
   };
 
-  const saveSettings = (data) => {
+  const saveSettings = (data: EmailSettings) => {
     dispatch(updateEmailSettings(data));
   };
 

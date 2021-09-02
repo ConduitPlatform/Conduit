@@ -9,6 +9,18 @@ import {
   CLEAR_EMAIL_PAGE_STORE,
 } from '../actions/actionTypes';
 
+const updateTemplateByID = (updated, templates) => {
+  return templates.map((t) => {
+    if (t._id === updated._id) {
+      return {
+        ...updated,
+      };
+    } else {
+      return t;
+    }
+  });
+};
+
 const initialState = {
   data: { templateDocuments: null, totalCount: 0, settings: null },
   loading: false,
@@ -76,18 +88,6 @@ const emailsPageReducer = (state = initialState, action) => {
     default:
       return state;
   }
-};
-
-const updateTemplateByID = (updated, templates) => {
-  return templates.map((t) => {
-    if (t._id === updated._id) {
-      return {
-        ...updated,
-      };
-    } else {
-      return t;
-    }
-  });
 };
 
 export default emailsPageReducer;
