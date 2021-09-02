@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
     "deepdash": "^5.0.3",
     "escape-string-regexp": "^4.0.0",

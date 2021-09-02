@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@grpc/proto-loader": "^0.5.4",
     "axios": "0.20.0",
     "bcrypt": "^3.0.7",
     "convict": "^6.0.0",

@@ -25,6 +25,7 @@
     "convict": "^6.0.0",
     "@grpc/grpc-js": "^1.3.4",
     "lodash": "^4.17.15",
+    "@grpc/proto-loader": "^0.5.4",
     "twilio": "3.52.0"
   },
   "devDependencies": {
