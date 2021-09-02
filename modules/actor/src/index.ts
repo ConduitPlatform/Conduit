@@ -11,7 +11,7 @@ let actor = new ActorModule(grpcSdk);
 actor
   .initialize()
   .then(() => {
-    let url = process.env.REGISTER_NAME === 'true' ? 'actor:' : '0.0.0.0:' + actor.port;
+    let url = (process.env.REGISTER_NAME === 'true' ? 'actor:' : '0.0.0.0:') + actor.port;
     return grpcSdk.config.registerModule('actor', url);
   })
   .catch((err) => {

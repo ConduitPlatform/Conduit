@@ -10,9 +10,8 @@ notifications
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true'
-        ? 'push-notifications:'
-        : '0.0.0.0:' + notifications.port;
+      (process.env.REGISTER_NAME === 'true' ? 'push-notifications:' : '0.0.0.0:') +
+      notifications.port;
 
     return grpcSdk.config.registerModule('push-notifications', url);
   })

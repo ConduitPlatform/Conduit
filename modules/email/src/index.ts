@@ -11,7 +11,8 @@ email
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true' ? 'email-provider:' : '0.0.0.0:' + email.port;
+      (process.env.REGISTER_NAME === 'true' ? 'email-provider:' : '0.0.0.0:') +
+      email.port;
     return grpcSdk.config.registerModule('email', url);
   })
   .catch((err: Error) => {

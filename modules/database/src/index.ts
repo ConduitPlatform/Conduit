@@ -11,9 +11,8 @@ databaseProvider
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true'
-        ? 'database-provider:'
-        : '0.0.0.0:' + databaseProvider.port;
+      (process.env.REGISTER_NAME === 'true' ? 'database-provider:' : '0.0.0.0:') +
+      databaseProvider.port;
     return grpcSdk.config.registerModule('database-provider', url);
   })
   .catch((err: Error) => {

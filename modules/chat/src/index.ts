@@ -10,7 +10,7 @@ let chat = new ChatModule(grpcSdk);
 chat
   .initialize()
   .then(() => {
-    let url = process.env.REGISTER_NAME === 'true' ? 'chat:' : '0.0.0.0:' + chat.port;
+    let url = (process.env.REGISTER_NAME === 'true' ? 'chat:' : '0.0.0.0:') + chat.port;
     return grpcSdk.config.registerModule('chat', url);
   })
   .catch((err: Error) => {

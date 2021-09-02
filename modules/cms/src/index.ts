@@ -10,7 +10,7 @@ let cms = new CMS(grpcSdk);
 cms
   .initialize()
   .then(() => {
-    let url = process.env.REGISTER_NAME === 'true' ? 'cms:' : '0.0.0.0:' + cms.port;
+    let url = (process.env.REGISTER_NAME === 'true' ? 'cms:' : '0.0.0.0:') + cms.port;
     return grpcSdk.config.registerModule('cms', url);
   })
   .catch((err) => {

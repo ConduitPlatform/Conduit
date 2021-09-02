@@ -12,7 +12,7 @@ sms
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true' ? 'sms-provider:' : '0.0.0.0:' + sms.port;
+      (process.env.REGISTER_NAME === 'true' ? 'sms-provider:' : '0.0.0.0:') + sms.port;
     return grpcSdk.config.registerModule('sms', url);
   })
   .catch((err: Error) => {

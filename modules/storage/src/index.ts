@@ -10,7 +10,7 @@ storage
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true' ? 'storage:' : '0.0.0.0:' + storage.port;
+      (process.env.REGISTER_NAME === 'true' ? 'storage:' : '0.0.0.0:') + storage.port;
     return grpcSdk.config.registerModule('storage', url);
   })
   .catch((err: Error) => {

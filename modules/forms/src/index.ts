@@ -11,7 +11,7 @@ let forms = new FormsModule(grpcSdk);
 forms
   .initialize()
   .then(() => {
-    let url = process.env.REGISTER_NAME === 'true' ? 'forms:' : '0.0.0.0:' + forms.port;
+    let url = (process.env.REGISTER_NAME === 'true' ? 'forms:' : '0.0.0.0:') + forms.port;
     return grpcSdk.config.registerModule('forms', url);
   })
   .catch((err: Error) => {

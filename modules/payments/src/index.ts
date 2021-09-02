@@ -12,9 +12,8 @@ payments
   .initialize()
   .then(() => {
     let url =
-      process.env.REGISTER_NAME === 'true'
-        ? 'payments-provider:'
-        : '0.0.0.0:' + payments.port;
+      (process.env.REGISTER_NAME === 'true' ? 'payments-provider:' : '0.0.0.0:') +
+      payments.port;
 
     return grpcSdk.config.registerModule('payments', url);
   })
