@@ -3,15 +3,17 @@ import { makeStyles } from '@material-ui/core/styles';
 import { Today } from '@material-ui/icons';
 import { DatePicker, MuiPickersUtilsProvider } from '@material-ui/pickers';
 import React from 'react';
+import { MaterialUiPickersDate } from '@material-ui/pickers/typings/date';
+import { ParsableDate } from '@material-ui/pickers/constants/prop-types';
 
 const useStyles = makeStyles((theme) => ({
   dateInput: {
     borderRadius: 4,
     height: 32,
     padding: theme.spacing(0, 1),
-    backgroundColor: theme.palette.selectGrey,
+    backgroundColor: '#C8C6C6',
     fontSize: 14,
-    color: theme.palette.darkMain,
+    color: '#2C2E43',
     fontWeight: 500,
     '& .MuiInputBase-input': {
       cursor: 'pointer',
@@ -19,7 +21,7 @@ const useStyles = makeStyles((theme) => ({
   },
   iconButton: {
     padding: 0,
-    color: theme.palette.darkMain,
+    color: '#2C2E43',
     marginRight: 8,
     cursor: 'pointer',
   },
@@ -28,10 +30,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomDatepicker = ({ value, setValue, placeholder, ...rest }) => {
+interface Props {
+  value: ParsableDate;
+  setValue: (date: MaterialUiPickersDate) => void;
+  placeholder: string;
+}
+
+const CustomDatepicker: React.FC<Props> = ({ value, setValue, placeholder, ...rest }) => {
   const classes = useStyles();
 
-  const handleDateChange = (date) => {
+  const handleDateChange = (date: MaterialUiPickersDate) => {
     setValue(date);
   };
 

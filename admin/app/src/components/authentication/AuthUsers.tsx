@@ -70,10 +70,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const actions = [toDelete, toEdit, toBlock];
 
-  const handleAction = (
-    action: { type: 'Edit' | 'Delete' | 'Block/Unblock UI' },
-    data: AuthUserUI
-  ) => {
+  const handleAction = (action: { title: string; type: string }, data: AuthUserUI) => {
     const currentUser = users.find((user) => user._id === data._id) as AuthUser;
     if (action.type === 'Edit') {
       setOpenEditUser(true);

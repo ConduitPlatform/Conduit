@@ -9,11 +9,13 @@ import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import { isNumber, orderBy } from 'lodash';
-import * as moment from 'moment';
+import moment from 'moment';
 import { IconButton } from '@material-ui/core';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
+import { AuthUserUI } from '../authentication/AuthModels';
+import { SchemaUI } from '../cms/CmsModels';
 
 const useStyles = makeStyles({
   table: {
@@ -21,12 +23,23 @@ const useStyles = makeStyles({
   },
 });
 
-export default function DataTable({ dsData, actions, handleAction, ...rest }) {
+type Action = {
+  title: string;
+  type: string;
+};
+
+interface Props {
+  dsData: SchemaUI[] | AuthUserUI[]; //todo add notification types
+  actions: Action[];
+  handleAction: (action: Action, data: any) => void;
+}
+
+const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) => {
   const classes = useStyles();
 
-  const [order, setOrder] = useState('asc');
-  const [orderById, setOrderById] = useState();
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [order, setOrder] = useState<'desc' | 'asc'>('asc');
+  const [orderById, setOrderById] = useState<string>('_id');
+  const [anchorEl, setAnchorEl] = useState<HTMLElement>();
   const [selectedRow, setSelectedRow] = useState(null);
 
   /** menu items Action button */
@@ -35,14 +48,14 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
 
   useEffect(() => {
     if (dsData) {
-      const initOrder = Object.keys(...dsData)[0];
+      const initOrder = Object.keys(dsData[0])[0];
       setOrderById(initOrder);
     }
   }, [dsData]);
 
   /** table header and rows */
   const rows = dsData;
-  const headerCells = Object.keys(...dsData).map((header, index) => {
+  const headerCells = Object.keys(dsData[0]).map((header, index) => {
     return {
       id: header,
       numeric: isNumber(rows[index]),
@@ -51,17 +64,20 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
     };
   });
 
-  const createSortHandler = (property) => (event) => {
+  const createSortHandler = (property: string) => (event: any) => {
     handleRequestSort(event, property);
   };
 
-  const handleRequestSort = (event, property) => {
+  const handleRequestSort = (event: MouseEvent, property: string) => {
     const isAsc = orderById === property && order === 'desc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderById(property);
   };
 
-  const handleClick = (event, row) => {
+  const handleClick = (
+    event: React.MouseEvent<HTMLAnchorElement> | React.MouseEvent<HTMLButtonElement>,
+    row: any
+  ) => {
     setAnchorEl(event.currentTarget);
     setSelectedRow(row);
   };
@@ -71,16 +87,16 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
     setSelectedRow(null);
   };
 
-  const getValue = (value) => {
+  const getValue = (value: any) => {
     if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
       return moment(value).format('DD/MM/YYYY');
     }
     return value?.toString();
   };
 
-  const onMenuItemClick = (action, data) => {
+  const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
     handleAction(action, data);
-    setAnchorEl(null);
+    setAnchorEl(undefined);
   };
 
   return (
@@ -153,4 +169,6 @@ export default function DataTable({ dsData, actions, handleAction, ...rest }) {
       )}
     </>
   );
-}
+};
+
+export default DataTable;

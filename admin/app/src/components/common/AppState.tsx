@@ -13,7 +13,19 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const AppState = ({ successMessage, errorMessage, snackbarOpen, handleClose }) => {
+interface Props {
+  successMessage: string;
+  errorMessage: string;
+  snackbarOpen: boolean;
+  handleClose: () => void;
+}
+
+const AppState: React.FC<Props> = ({
+  successMessage,
+  errorMessage,
+  snackbarOpen,
+  handleClose,
+}) => {
   const classes = useStyles();
 
   return (
