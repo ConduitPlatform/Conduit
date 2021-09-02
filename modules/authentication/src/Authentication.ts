@@ -1,5 +1,5 @@
 import * as models from './models';
-import { AccessToken, RefreshToken } from './models';
+import { AccessToken, RefreshToken, User } from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
@@ -17,6 +17,7 @@ import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import moment from 'moment';
 import { status } from '@grpc/grpc-js';
+import randomToken = AuthUtils.randomToken;
 
 export default class AuthenticationModule implements ConduitServiceModule {
   private database: DatabaseProvider;
@@ -42,6 +43,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
       {
         setConfig: this.setConfig.bind(this),
         userLogin: this.userLogin.bind(this),
+        userCreate: this.userCreate.bind(this),
         userDelete: this.userDelete.bind(this),
       }
     );
@@ -170,7 +172,26 @@ export default class AuthenticationModule implements ConduitServiceModule {
   async userDelete(call: any, callback: any) {
     const { userId } = call.request;
     try {
-      await this.grpcSdk.databaseProvider!.deleteOne('User', { _id: userId });
+      await User.getInstance().deleteOne({ _id: userId });
+      return callback(null, {
+        message: 'ok',
+      });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: e.message });
+    }
+  }
+
+  async userCreate(call: any, callback: any) {
+    const email = call.request.email;
+    const password = call.request.password ?? randomToken(8);
+    try {
+      let usr = await User.getInstance().findOne({ email });
+      if (usr) {
+        return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
+      }
+      let hashedPassword = await AuthUtils.hashPassword(password);
+      await User.getInstance().create({ email, hashedPassword });
+
       return callback(null, {
         message: 'ok',
       });
