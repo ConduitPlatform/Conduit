@@ -12,7 +12,8 @@
     "snyk-protect": "snyk protect",
     "prepare": "yarn run snyk-protect",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit-admin:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-admin:latest",
-    "clean": "rm -rf public/ .next/"
+    "clean": "rm -rf public/ .next/",
+    "lint": "eslint src/**"
   },
   "dependencies": {
     "@date-io/moment": "1.x",
