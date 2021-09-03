@@ -192,9 +192,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
       let hashedPassword = await AuthUtils.hashPassword(password);
       await User.getInstance().create({ email, hashedPassword });
 
-      return callback(null, {
-        message: 'ok',
-      });
+      return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: e.message });
     }
