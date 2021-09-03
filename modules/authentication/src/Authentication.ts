@@ -183,7 +183,10 @@ export default class AuthenticationModule implements ConduitServiceModule {
 
   async userCreate(call: any, callback: any) {
     const email = call.request.email;
-    const password = call.request.password ?? randomToken(8);
+    let password = call.request.password;
+    if (isNil(password) || password.length === 0) {
+      password = randomToken(8);
+    }
     try {
       let usr = await User.getInstance().findOne({ email });
       if (usr) {
