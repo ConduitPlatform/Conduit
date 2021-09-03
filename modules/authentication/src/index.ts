@@ -10,8 +10,9 @@ let authentication = new AuthenticationModule(grpcSdk);
 authentication
   .initialize()
   .then(() => {
-    let url = process.env.REGISTER_NAME === 'true' ? 'authentication' : '0.0.0.0:';
-    url += authentication.port;
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'authentication:' : '0.0.0.0:') +
+      authentication.port;
     return grpcSdk.config.registerModule('authentication', url);
   })
   .catch((err: Error) => {
