@@ -11,6 +11,7 @@ import Switch from '@material-ui/core/Switch';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
+import { EmailSettings, EmailSettingsState } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -33,38 +34,43 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ProviderData = ({ settings, error, handleSave }) => {
+interface Props {
+  settings: EmailSettings;
+  error: any;
+  handleSave: (data: EmailSettings) => void;
+}
+
+const ProviderData: React.FC<Props> = ({ settings, error, handleSave }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsState] = useState({
-    active: false,
+  const [settingsState, setSettingsState] = useState<EmailSettingsState>({
     transport: '',
+    active: false,
+    transportSettings: {
+      apiKey: '',
+      domain: '',
+      host: '',
+    },
     sendingDomain: '',
-    transportSettings: { apiKey: '', domain: '', host: '' },
   });
 
   useEffect(() => {
     if (!settings) {
       return;
     }
-    setSettingsState({
+    const data = {
       active: settings.active,
       transport: settings.transport,
       sendingDomain: settings.sendingDomain,
       transportSettings: {
-        apiKey:
-          settings.transportSettings && settings.transportSettings[settings.transport]
-            ? settings.transportSettings[settings.transport].apiKey
-            : '',
-        domain:
-          settings.transportSettings && settings.transportSettings[settings.transport]
-            ? settings.transportSettings[settings.transport].domain
-            : '',
-        host:
-          settings.transportSettings && settings.transportSettings[settings.transport]
-            ? settings.transportSettings[settings.transport].host
-            : '',
+        apiKey: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
+          ?.apiKey as string,
+        domain: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
+          ?.domain as string,
+        host: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
+          ?.host as string,
       },
-    });
+    };
+    setSettingsState(data);
   }, [settings, error]);
 
   const handleCancel = () => {
@@ -85,7 +91,6 @@ const ProviderData = ({ settings, error, handleSave }) => {
           apiKey: settingsState.transportSettings.apiKey,
           domain: settingsState.transportSettings.domain,
           host: settingsState.transportSettings.host,
-          proxy: null,
         },
       },
     };
@@ -195,6 +200,7 @@ const ProviderData = ({ settings, error, handleSave }) => {
     );
   };
 
+  // return <></>;
   return (
     <Container>
       <Paper className={classes.paper}>

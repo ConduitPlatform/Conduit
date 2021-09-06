@@ -9,6 +9,7 @@ import Tabs from '@material-ui/core/Tabs';
 import { AddCircleOutline } from '@material-ui/icons';
 import React, { useEffect, useState } from 'react';
 import TabPanel from './TabPanel';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,10 +42,22 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const EmailTemplate = ({ templatesData, error, handleSave, handleCreate }) => {
+interface Props {
+  templatesData: EmailTemplateType[];
+  error: any;
+  handleSave: (data: EmailTemplateType) => void;
+  handleCreate: (data: EmailTemplateType) => void;
+}
+
+const EmailTemplate: React.FC<Props> = ({
+  templatesData,
+  error,
+  handleSave,
+  handleCreate,
+}) => {
   const classes = useStyles();
-  const [value, setValue] = useState(0);
-  const [templatesState, setTemplatesState] = useState([]);
+  const [value, setValue] = useState<number>(0);
+  const [templatesState, setTemplatesState] = useState<EmailTemplateType[]>([]);
 
   useEffect(() => {
     if (!templatesData) {
@@ -53,15 +66,15 @@ const EmailTemplate = ({ templatesData, error, handleSave, handleCreate }) => {
     setTemplatesState(templatesData);
   }, [templatesData, error]);
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);
   };
 
-  const saveTemplateChanges = (data) => {
+  const saveTemplateChanges = (data: EmailTemplateType) => {
     handleSave(data);
   };
 
-  const createNewTemplate = (data) => {
+  const createNewTemplate = (data: EmailTemplateType) => {
     handleCreate(data);
   };
 
@@ -83,7 +96,6 @@ const EmailTemplate = ({ templatesData, error, handleSave, handleCreate }) => {
         <Button
           variant="contained"
           color="primary"
-          className={classes.button}
           startIcon={<AddCircleOutline />}
           onClick={() => newTemplate()}>
           New Template
@@ -107,7 +119,6 @@ const EmailTemplate = ({ templatesData, error, handleSave, handleCreate }) => {
               key={t._id}
               value={value}
               index={index}
-              description={'description needed'}
               template={t}
               handleSave={saveTemplateChanges}
               handleCreate={createNewTemplate}>

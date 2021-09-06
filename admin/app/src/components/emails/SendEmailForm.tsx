@@ -18,6 +18,7 @@ import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import { sendEmailThunk } from '../../redux/thunks/emailsThunk';
 import { useDispatch } from 'react-redux';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,12 +33,27 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SendEmailForm = ({ templates }) => {
+interface IEmailState {
+  email: string;
+  sender: string;
+  subject: string;
+  body: string;
+  template: string;
+  variables: [];
+  variablesValues: { [key: string]: string };
+  templateName: string;
+}
+
+interface Props {
+  templates: EmailTemplateType[];
+}
+
+const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const [withTemplate, setWithTemplate] = useState(false);
-  const [emailState, setEmailState] = useState({
+  const [withTemplate, setWithTemplate] = useState<boolean>(false);
+  const [emailState, setEmailState] = useState<IEmailState>({
     email: '',
     sender: '',
     subject: '',
@@ -82,11 +98,11 @@ const SendEmailForm = ({ templates }) => {
     });
   };
 
-  const handleChangeTemplate = (event) => {
+  const handleChangeTemplate = (event: any) => {
     const selectedTemplate = event.target.value;
 
     let variableValues = {};
-    selectedTemplate.variables.forEach((variable) => {
+    selectedTemplate.variables.forEach((variable: string) => {
       variableValues = { ...variableValues, [variable]: '' };
     });
 
@@ -95,13 +111,13 @@ const SendEmailForm = ({ templates }) => {
       variables: selectedTemplate.variables,
       templateName: selectedTemplate.name,
       subject: selectedTemplate.subject,
-      variableValues: variableValues,
+      variablesValues: variableValues,
       template: selectedTemplate,
       body: selectedTemplate.body,
     });
   };
 
-  const handleVariableChange = (event, variable) => {
+  const handleVariableChange = (event: any, variable: string) => {
     const newValue = event.target.value;
     const variableValues = { ...emailState.variablesValues, [variable]: newValue };
     setEmailState({ ...emailState, variablesValues: variableValues });
@@ -196,10 +212,12 @@ const SendEmailForm = ({ templates }) => {
                   value={emailState.template}
                   onChange={handleChangeTemplate}
                   label="Email Template">
-                  <MenuItem value="">
+                  <MenuItem value="none">
                     <em>None</em>
                   </MenuItem>
                   {templates?.map((template) => (
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
                     <MenuItem key={template._id} value={template}>
                       {template.name}
                     </MenuItem>

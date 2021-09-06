@@ -10,6 +10,7 @@ import { Cancel, Save } from '@material-ui/icons';
 import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import EmailDetails from './EmailDetails';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,17 +43,31 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TabPanel = ({ handleCreate, handleSave, template, value, index }) => {
+interface Props {
+  handleCreate: (templateState: EmailTemplateType) => void;
+  handleSave: (templateState: EmailTemplateType) => void;
+  template: EmailTemplateType;
+  value: number;
+  index: number;
+}
+
+const TabPanel: React.FC<Props> = ({
+  handleCreate,
+  handleSave,
+  template,
+  value,
+  index,
+}) => {
   const classes = useStyles();
 
-  const [edit, setEdit] = useState(false);
-  const [add, setAdd] = useState(false);
+  const [edit, setEdit] = useState<boolean>(false);
+  const [add, setAdd] = useState<boolean>(false);
   const [templateState, setTemplateState] = useState({
     _id: '',
     name: '',
     subject: '',
     body: '',
-    variables: [],
+    variables: [''],
   });
 
   useEffect(() => {
@@ -118,7 +133,6 @@ const TabPanel = ({ handleCreate, handleSave, template, value, index }) => {
             ) : (
               <Typography variant="h6">{templateState.name}</Typography>
             )}
-            {/*<Typography variant="body2">{description}</Typography>*/}
           </Grid>
           <Grid container item xs={2} justify={'flex-end'}>
             {!edit ? (
