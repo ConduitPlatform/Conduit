@@ -46,9 +46,21 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
     });
   }
 
-  userCreate(email: string, password?: string) {
+  userCreate(email: string, verify: boolean = false, password?: string) {
     return new Promise((resolve, reject) => {
-      this.client?.userCreate({ email, password }, (err: any, res: any) => {
+      this.client?.userCreate({ email, verify, password }, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  }
+
+  changePass(email: string, password?: string) {
+    return new Promise((resolve, reject) => {
+      this.client?.changePass({ email, password }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {

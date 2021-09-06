@@ -1,4 +1,3 @@
-#!/usr/bin/bash
 rm -rf ./src/proto
 mkdir ./src/proto
 echo "Copying proto files from module folders"

@@ -1,5 +1,5 @@
 import * as models from './models';
-import { AccessToken, RefreshToken, User } from './models';
+import { AccessToken, RefreshToken, Token, User } from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
@@ -17,6 +17,8 @@ import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import moment from 'moment';
 import { status } from '@grpc/grpc-js';
+import { TokenType } from './constants/TokenType';
+import { v4 as uuid } from 'uuid';
 import randomToken = AuthUtils.randomToken;
 
 export default class AuthenticationModule implements ConduitServiceModule {
@@ -44,6 +46,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
         setConfig: this.setConfig.bind(this),
         userLogin: this.userLogin.bind(this),
         userCreate: this.userCreate.bind(this),
+        changePass: this.changePass.bind(this),
         userDelete: this.userDelete.bind(this),
       }
     );
@@ -184,6 +187,7 @@ export default class AuthenticationModule implements ConduitServiceModule {
   async userCreate(call: any, callback: any) {
     const email = call.request.email;
     let password = call.request.password;
+    let verify = call.request.verify;
     if (isNil(password) || password.length === 0) {
       password = randomToken(8);
     }
@@ -193,7 +197,58 @@ export default class AuthenticationModule implements ConduitServiceModule {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       let hashedPassword = await AuthUtils.hashPassword(password);
-      await User.getInstance().create({ email, hashedPassword });
+      let user = await User.getInstance().create({
+        email,
+        hashedPassword,
+        isVerified: !verify,
+      });
+
+      // if verification is required
+      if (verify) {
+        let serverConfig = await this.grpcSdk.config.getServerConfig();
+        let url = serverConfig.url;
+        let verificationToken: Token = await Token.getInstance().create({
+          type: TokenType.VERIFICATION_TOKEN,
+          userId: user._id,
+          token: uuid(),
+        });
+        let result = { verificationToken, hostUrl: url };
+        const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+        await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
+          email: user.email,
+          sender: 'no-reply',
+          variables: {
+            link,
+          },
+        });
+      }
+
+      return callback(null, { password });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: e.message });
+    }
+  }
+
+  async changePass(call: any, callback: any) {
+    const email = call.request.email;
+    let password = call.request.password;
+    if (isNil(password) || password.length === 0) {
+      password = randomToken(8);
+    }
+    try {
+      let usr = await User.getInstance().findOne({ email });
+      if (!usr) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
+
+      let hashedPassword = await AuthUtils.hashPassword(password);
+      await User.getInstance().findByIdAndUpdate(
+        usr._id,
+        {
+          hashedPassword,
+        },
+        true
+      );
 
       return callback(null, { password });
     } catch (e) {
