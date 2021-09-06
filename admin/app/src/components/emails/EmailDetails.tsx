@@ -7,6 +7,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Add } from '@material-ui/icons';
 import React, { useState } from 'react';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   tabs: {
@@ -37,7 +38,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const EmailDetails = ({ edit, add, templateState, setAdd, setTemplateState }) => {
+interface Props {
+  edit: boolean;
+  add: boolean;
+  templateState: EmailTemplateType;
+  setAdd: (value: boolean) => void;
+  setTemplateState: (values: EmailTemplateType) => void;
+}
+
+const EmailDetails: React.FC<Props> = ({
+  edit,
+  add,
+  templateState,
+  setAdd,
+  setTemplateState,
+}) => {
   const classes = useStyles();
 
   const [variable, setVariable] = useState('');
@@ -46,7 +61,7 @@ const EmailDetails = ({ edit, add, templateState, setAdd, setTemplateState }) =>
     setAdd(!add);
   };
 
-  const handleKeys = (event) => {
+  const handleKeys = (event: { keyCode: number }) => {
     if (event.keyCode === 13) {
       const newVariables = [...templateState.variables, variable];
       setAdd(false);
@@ -62,7 +77,7 @@ const EmailDetails = ({ edit, add, templateState, setAdd, setTemplateState }) =>
     }
   };
 
-  const handleVariableDelete = (index) => {
+  const handleVariableDelete = (index: number) => {
     const newVariables = templateState.variables;
     newVariables.splice(index, 1);
     setTemplateState({
@@ -133,7 +148,7 @@ const EmailDetails = ({ edit, add, templateState, setAdd, setTemplateState }) =>
             <Typography variant={'overline'}>Declared variables</Typography>
           </Box>
           <Box>
-            {templateState.variables.map((v, index) =>
+            {templateState.variables.map((v: string, index: number) =>
               edit ? (
                 <Chip
                   className={classes.chip}

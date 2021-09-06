@@ -62,7 +62,7 @@ const TabPanel: React.FC<Props> = ({
 
   const [edit, setEdit] = useState<boolean>(false);
   const [add, setAdd] = useState<boolean>(false);
-  const [templateState, setTemplateState] = useState({
+  const [templateState, setTemplateState] = useState<EmailTemplateType>({
     _id: '',
     name: '',
     subject: '',
