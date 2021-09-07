@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Drawer } from '@material-ui/core';
+import React from 'react';
+import { Drawer, Theme } from '@material-ui/core';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
@@ -26,7 +26,7 @@ import { logout } from '../../redux/thunks/appAuthThunks';
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
   drawerOpen: {
     width: drawerWidth,
     transition: theme.transitions.create('width', {
@@ -90,15 +90,24 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function CustomDrawer(props) {
+interface IModule {
+  moduleName: string;
+  url: string;
+}
+
+interface Props {
+  open: boolean;
+  itemSelected: number;
+}
+
+const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const enabledModules = useSelector((state) => state.appAuthReducer.enabledModules);
-
-  const { open, itemSelected, ...rest } = props;
-
-  const [selected, setSelected] = useState(0);
+  const enabledModules = useSelector(
+    (state: { appAuthReducer: { enabledModules: IModule[] } }) =>
+      state.appAuthReducer.enabledModules
+  );
 
   const drawerOpen = () => {
     if (open === null || open === undefined) {
@@ -117,20 +126,22 @@ function CustomDrawer(props) {
     marginBottom: '12px',
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     dispatch(logout());
-    Router.replace('/login');
+    await Router.replace('/login');
   };
 
-  const isModuleDisabled = (moduleName) => {
-    const found = enabledModules.find((module) => module.moduleName === moduleName);
+  const isModuleDisabled = (moduleName: string) => {
+    const found = enabledModules.find(
+      (module: IModule) => module.moduleName === moduleName
+    );
     return !found;
   };
 
   return (
     <Drawer
       variant="permanent"
-      className={clsx(classes.drawer, {
+      className={clsx({
         [classes.drawerOpen]: drawerOpen(),
         [classes.drawerClose]: !drawerOpen(),
       })}
@@ -298,6 +309,6 @@ function CustomDrawer(props) {
       </div>
     </Drawer>
   );
-}
+};
 
 export default CustomDrawer;

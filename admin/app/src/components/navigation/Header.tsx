@@ -1,9 +1,10 @@
 import React from 'react';
-import { AppBar, Box } from '@material-ui/core';
+import { AppBar, Box, Theme } from '@material-ui/core';
 import Toolbar from '@material-ui/core/Toolbar';
 import { Menu } from '@material-ui/icons';
 import IconButton from '@material-ui/core/IconButton';
 import Typography from '@material-ui/core/Typography';
+import makeStyles from '@material-ui/styles/makeStyles';
 
 const BoxStyle = {
   width: '100%',
@@ -19,10 +20,25 @@ const EmptyDivStyle = {
   height: '48px',
   marginRight: '2px',
 };
+const useStyles = makeStyles((theme: Theme) => ({
+  appBar: {
+    zIndex: theme.zIndex.drawer + 1,
+  },
+}));
 
-export function CustomAppBar(props) {
-  const { onMenuClick, showMenuButton, onLogoClick, ...rest } = props;
+interface Props {
+  onMenuClick: () => void;
+  showMenuButton?: boolean;
+  onLogoClick?: () => void;
+}
 
+const CustomHeader: React.FC<Props> = ({
+  onMenuClick,
+  showMenuButton,
+  onLogoClick,
+  ...rest
+}) => {
+  const classes = useStyles();
   const handleMenuClick = () => {
     if (onMenuClick === null || onMenuClick === undefined) {
       return;
@@ -48,7 +64,7 @@ export function CustomAppBar(props) {
     menuButton = <div style={EmptyDivStyle} />;
   }
   return (
-    <AppBar color="primary" position="fixed" {...rest}>
+    <AppBar color="primary" position="fixed" className={classes.appBar} {...rest}>
       {' '}
       {rest.children}
       <Toolbar>
@@ -64,4 +80,6 @@ export function CustomAppBar(props) {
       </Toolbar>
     </AppBar>
   );
-}
+};
+
+export default CustomHeader;
