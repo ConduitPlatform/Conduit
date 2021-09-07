@@ -196,6 +196,12 @@ export default class AuthenticationModule implements ConduitServiceModule {
       if (usr) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
+      if (email.indexOf('+') !== -1) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Email contains unsupported characters',
+        });
+      }
       let hashedPassword = await AuthUtils.hashPassword(password);
       let user = await User.getInstance().create({
         email,

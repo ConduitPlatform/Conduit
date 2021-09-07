@@ -1,5 +1,6 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { StorageClient } from '../../protoUtils/storage';
+import { FileResponse, SetConfigResponse, StorageClient } from '../../protoUtils/storage';
+import { ServiceError } from '@grpc/grpc-js';
 
 export class Storage extends ConduitModule<StorageClient> {
   constructor(url: string) {
@@ -7,11 +8,11 @@ export class Storage extends ConduitModule<StorageClient> {
     this.initializeClient(StorageClient);
   }
 
-  setConfig(newConfig: any) {
+  setConfig(newConfig: any): Promise<SetConfigResponse> {
     return new Promise((resolve, reject) => {
       this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
-        (err: any, res: any) => {
+        (err: ServiceError | null, res) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
           } else {
@@ -22,13 +23,13 @@ export class Storage extends ConduitModule<StorageClient> {
     });
   }
 
-  getFile(id: string) {
+  getFile(id: string): Promise<FileResponse> {
     return new Promise((resolve, reject) => {
-      this.client?.getFile({ id }, (err: any, res: any) => {
+      this.client?.getFile({ id }, (err: ServiceError | null, res) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
-          resolve(JSON.parse(res.fileDocument));
+          resolve(res);
         }
       });
     });
@@ -40,11 +41,11 @@ export class Storage extends ConduitModule<StorageClient> {
     data: string,
     folder: string,
     isPublic: boolean = false
-  ) {
+  ): Promise<FileResponse> {
     return new Promise((resolve, reject) => {
       this.client?.createFile(
         { name, mimeType, data, folder, isPublic },
-        (err: any, res: any) => {
+        (err: ServiceError | null, res) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
           } else {
