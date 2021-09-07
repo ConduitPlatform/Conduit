@@ -24,6 +24,10 @@ export class StateManager {
     }
   }
 
+  clearKey(keyName: string): Promise<any> {
+    return this.redisClient.del(keyName);
+  }
+
   getKey(keyName: string): Promise<any> {
     return this.redisClient.get(keyName);
   }
