@@ -29,7 +29,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const StorageSettings = ({ config, handleSave, ...rest }) => {
+interface Props {
+  config: any;
+  handleSave: any;
+}
+
+const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
   const classes = useStyles();
   const [settingsState, setSettingsSate] = useState({
     active: true,
@@ -56,7 +61,7 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
         bucketName: config.google ? config.google.bucketName : '',
       },
     });
-  }, [config]);
+  }, [config, settingsState]);
 
   const handleSelect = (event) => {
     setSettingsSate({
@@ -145,7 +150,9 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
         </Grid>
         <Divider className={classes.divider} />
         <Grid item xs={12}>
-          <Typography variant={'h6'}>The config for the Google storage provide</Typography>
+          <Typography variant={'h6'}>
+            The config for the Google storage provide
+          </Typography>
         </Grid>
         <Grid item xs={6}>
           <TextField
@@ -193,7 +200,11 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
     <Container>
       <Paper className={classes.paper}>
         <Grid container>
-          <Box width={'100%'} display={'inline-flex'} justifyContent={'space-between'} alignItems={'center'}>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
             <Typography variant={'h6'}>Activate Storage Module</Typography>
             <FormControlLabel
               control={
@@ -217,10 +228,17 @@ const StorageSettings = ({ config, handleSave, ...rest }) => {
             {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'} style={{ marginTop: 16 }}>
-            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
+            <Button
+              onClick={() => handleCancel()}
+              style={{ marginRight: 16 }}
+              color={'primary'}>
               Cancel
             </Button>
-            <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }} onClick={() => save()}>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ alignSelf: 'flex-end' }}
+              onClick={() => save()}>
               Save
             </Button>
           </Grid>

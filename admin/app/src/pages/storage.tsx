@@ -14,6 +14,7 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
+import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -26,7 +27,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 const tabs = [{ title: 'Files' }, { title: 'Settings' }];
 
-const Storage = () => {
+const Storage: React.FC = () => {
   const classes = useStyles();
   const [selected, setSelected] = useState(0);
   const dispatch = useDispatch();
@@ -43,7 +44,7 @@ const Storage = () => {
     }
   }, [error]);
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
   };
 
@@ -63,7 +64,7 @@ const Storage = () => {
     }
   };
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => {
     if (reason === 'clickaway') {
       return;
     }
