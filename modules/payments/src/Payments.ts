@@ -13,15 +13,10 @@ import { status } from '@grpc/grpc-js';
 import { PaymentsRoutes } from './routes/Routes';
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
-import { IamportHandlers } from './handlers/iamport';
 import { StripeHandlers } from './handlers/stripe';
 import {
   CancelStripePaymentRequest,
   CancelStripePaymentResponse,
-  CompleteIamportPaymentRequest,
-  CompleteIamportPaymentResponse,
-  CreateIamportPaymentRequest,
-  CreateIamportPaymentResponse,
   CreateStripePaymentRequest,
   CreateStripePaymentResponse,
   RefundStripePaymentRequest,
@@ -34,7 +29,6 @@ export default class PaymentsModule implements ConduitServiceModule {
   private isRunning: boolean = false;
   private grpcServer: GrpcServer;
   private _router: PaymentsRoutes;
-  private iamportHandlers: IamportHandlers | null;
   private stripeHandlers: StripeHandlers | null;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -53,8 +47,6 @@ export default class PaymentsModule implements ConduitServiceModule {
       'payments.Payments',
       {
         setConfig: this.setConfig.bind(this),
-        createIamportPayment: this.createIamportPayment.bind(this),
-        completeIamportPayment: this.completeIamportPayment.bind(this),
         createStripePayment: this.createStripePayment.bind(this),
         cancelStripePayment: this.cancelStripePayment.bind(this),
         refundStripePayment: this.refundStripePayment.bind(this),
@@ -139,53 +131,6 @@ export default class PaymentsModule implements ConduitServiceModule {
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  async createIamportPayment(
-    call: CreateIamportPaymentRequest,
-    callback: CreateIamportPaymentResponse
-  ) {
-    const productId = call.request.productId;
-    const quantity = call.request.quantity;
-    const userId = call.request.userId === '' ? undefined : call.request.userId;
-
-    if (isNil(this.iamportHandlers)) {
-      return callback({ code: status.INTERNAL, message: 'Iamport is deactivated' });
-    }
-
-    try {
-      const res = await this.iamportHandlers.createPayment(productId, quantity, userId);
-
-      return callback(null, res);
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-  }
-
-  async completeIamportPayment(
-    call: CompleteIamportPaymentRequest,
-    callback: CompleteIamportPaymentResponse
-  ) {
-    const imp_uid = call.request.imp_uid;
-    const merchant_uid = call.request.merchant_uid;
-
-    if (isNil(this.iamportHandlers)) {
-      return callback({ code: status.INTERNAL, message: 'Iamport is deactivated' });
-    }
-
-    if (isNil(imp_uid) || isNil(merchant_uid) || imp_uid === '' || merchant_uid === '') {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'imp_uid and merchant_uid are required',
-      });
-    }
-
-    try {
-      const success = await this.iamportHandlers.completePayment(imp_uid, merchant_uid);
-      return callback(null, { success });
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-  }
-
   async createStripePayment(
     call: CreateStripePaymentRequest,
     callback: CreateStripePaymentResponse
@@ -233,7 +178,6 @@ export default class PaymentsModule implements ConduitServiceModule {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
       this.stripeHandlers = await this._router.getStripe();
-      this.iamportHandlers = await this._router.getIamport();
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.stripeHandlers);
       await this.registerSchemas();
       this.isRunning = true;

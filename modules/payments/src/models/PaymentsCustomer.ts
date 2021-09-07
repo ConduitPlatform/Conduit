@@ -16,13 +16,6 @@ export const PaymentsCustomerSchema = new ConduitSchema(
     stripe: {
       customerId: TYPE.String,
     },
-    iamport: {
-      isCardVerified: {
-        type: TYPE.Boolean,
-        default: false,
-        systemRequired: true,
-      },
-    },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },

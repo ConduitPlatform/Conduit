@@ -12,16 +12,13 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
-import { IamportHandlers } from '../handlers/iamport';
 
 export class PaymentsRoutes {
   private database: any;
   private readonly stripeHandlers: StripeHandlers;
-  private readonly iamportHandlers: IamportHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.stripeHandlers = new StripeHandlers(grpcSdk);
-    this.iamportHandlers = new IamportHandlers(grpcSdk);
     const self = this;
 
     grpcSdk.waitForExistence('database-provider').then(() => {
@@ -36,17 +33,6 @@ export class PaymentsRoutes {
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && paymentsActive) {
       return Promise.resolve(this.stripeHandlers);
-    }
-    return Promise.resolve(null);
-  }
-
-  async getIamport(): Promise<IamportHandlers | null> {
-    let errorMessage = null;
-    let paymentsActive = await this.iamportHandlers
-      .validate()
-      .catch((e: any) => (errorMessage = e));
-    if (!errorMessage && paymentsActive) {
-      return Promise.resolve(this.iamportHandlers);
     }
     return Promise.resolve(null);
   }
@@ -101,49 +87,6 @@ export class PaymentsRoutes {
     return callback(null, { result: JSON.stringify({ subscriptions }) });
   }
 
-  async createIamportPayment(call: RouterRequest, callback: RouterResponse) {
-    const { productId, quantity, userId } = JSON.parse(call.request.params);
-
-    if (isNil(productId)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'productId is required',
-      });
-    }
-
-    try {
-      const res = await this.iamportHandlers.createPayment(productId, quantity, userId);
-
-      return callback(null, { result: JSON.stringify(res) });
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-  }
-
-  async completeIamportPayment(call: RouterRequest, callback: RouterResponse) {
-    const { imp_uid, merchant_uid } = JSON.parse(call.request.params);
-
-    if (isNil(imp_uid) || isNil(merchant_uid)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'imp_uid and merchant_uid are required',
-      });
-    }
-
-    try {
-      const success = await this.iamportHandlers.completePayment(imp_uid, merchant_uid);
-      if (success) {
-        return callback(null, {
-          result: JSON.stringify({ message: 'Payment succeeded' }),
-        });
-      }
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-
-    return callback({ code: status.INTERNAL, message: 'Something went wrong' });
-  }
-
   async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
 
@@ -162,22 +105,6 @@ export class PaymentsRoutes {
         ),
         completeStripePayment: this.stripeHandlers.completePayment.bind(
           this.stripeHandlers
-        ),
-        createIamportPayment: this.createIamportPayment.bind(this),
-        completeIamportPayment: this.completeIamportPayment.bind(this),
-        addIamportCard: this.iamportHandlers.addCard.bind(this.iamportHandlers),
-        validateIamportCard: this.iamportHandlers.validateCard.bind(this.iamportHandlers),
-        subscribeToProductIamport: this.iamportHandlers.subscribeToProduct.bind(
-          this.iamportHandlers
-        ),
-        cancelIamportSubscription: this.iamportHandlers.cancelSubscription.bind(
-          this.iamportHandlers
-        ),
-        iamportSubscriptionCallback: this.iamportHandlers.subscriptionCallback.bind(
-          this.iamportHandlers
-        ),
-        getIamportPaymentMethods: this.iamportHandlers.getPaymentMethods.bind(
-          this.iamportHandlers
         ),
       })
       .catch((err: Error) => {
@@ -306,165 +233,6 @@ export class PaymentsRoutes {
     }
 
     errorMessage = null;
-    paymentsActive = await this.iamportHandlers
-      .validate()
-      .catch((e: any) => (errorMessage = e));
-    if (!errorMessage && paymentsActive) {
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/createPayment',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                productId: TYPE.String,
-                quantity: TYPE.Number,
-                userId: TYPE.String,
-              },
-            },
-            new ConduitRouteReturnDefinition('CreateIamportPaymentResponse', {
-              merchant_uid: TYPE.String,
-              amount: TYPE.Number,
-            }),
-            'createIamportPayment'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/addCard',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                email: TYPE.String,
-                buyerName: TYPE.String,
-                phoneNumber: TYPE.String,
-                address: TYPE.String,
-                postCode: TYPE.String,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('AddIamportCardResponse', {
-              customerId: ConduitString.Required,
-              merchant_uid: ConduitString.Required,
-            }),
-            'addIamportCard'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/validateCard/:customerId',
-              action: ConduitRouteActions.POST,
-              urlParams: {
-                customerId: TYPE.String,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('ValidateIamportCardResponse', 'String'),
-            'validateIamportCard'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/completePayment',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                imp_uid: TYPE.String,
-                merchant_uid: TYPE.String,
-              },
-            },
-            new ConduitRouteReturnDefinition('completeIamportPaymentResponse', 'String'),
-            'completeIamportPayment'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/subscribe',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                productId: TYPE.String,
-                customerId: TYPE.String, // this is need because iamport uses customer id as the billing method
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('SubscribeToProductIamportResponse', {
-              subscription: TYPE.String,
-            }),
-            'subscribeToProductIamport'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/cancelSubscription/:subscriptionId',
-              action: ConduitRouteActions.UPDATE,
-              urlParams: {
-                subscriptionId: TYPE.String,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition(
-              'CancelIamportSubscriptionResponse',
-              'String'
-            ),
-            'cancelIamportSubscription'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/hook/iamport/subscriptionCallback',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                imp_uid: TYPE.String,
-                merchant_uid: TYPE.String,
-              },
-            },
-            new ConduitRouteReturnDefinition(
-              'IamportSubscriptionCallbackResponse',
-              'String'
-            ),
-            'iamportSubscriptionCallback'
-          )
-        )
-      );
-
-      routesArray.push(
-        constructRoute(
-          new ConduitRoute(
-            {
-              path: '/iamport/getPaymentMethods',
-              action: ConduitRouteActions.GET,
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('GetIamportPaymentMethodsResponse', {
-              paymentMethods: TYPE.JSON,
-            }),
-            'getIamportPaymentMethods'
-          )
-        )
-      );
-    }
 
     routesArray.push(
       constructRoute(

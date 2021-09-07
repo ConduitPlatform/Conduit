@@ -15,20 +15,4 @@ export default {
       nullable: true,
     },
   },
-  iamport: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-    api_key: {
-      format: 'String',
-      default: null,
-      nullable: true,
-    },
-    secret_key: {
-      format: 'String',
-      default: null,
-      nullable: true,
-    },
-  },
 };
