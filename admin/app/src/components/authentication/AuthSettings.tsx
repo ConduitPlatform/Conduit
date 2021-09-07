@@ -13,6 +13,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import { Visibility, VisibilityOff } from '@material-ui/icons';
 import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
+import { SettingsStateTypes } from './AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -28,16 +29,6 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
   },
 }));
-
-interface SettingsStateTypes {
-  active: boolean;
-  generateRefreshToken: boolean;
-  rateLimit: number;
-  tokenInvalidationPeriod: number;
-  refreshTokenInvalidationPeriod: number;
-  jwtSecret: string;
-  showSecret?: boolean;
-}
 
 interface Props {
   handleSave: (data: SettingsStateTypes) => void;

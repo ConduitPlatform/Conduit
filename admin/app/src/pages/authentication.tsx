@@ -23,6 +23,13 @@ import {
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
 import useDebounce from '../hooks/useDebounce';
+import {
+  AuthUser,
+  SettingsStateTypes,
+  SocialDataTypes,
+  SocialNameTypes,
+} from '../components/authentication/AuthModels';
+import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -37,12 +44,12 @@ const Authentication = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const [page, setPage] = useState(0);
-  const [skip, setSkip] = useState(0);
-  const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(0);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [page, setPage] = useState<number>(0);
+  const [skip, setSkip] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(10);
+  const [search, setSearch] = useState<string>('');
+  const [selected, setSelected] = useState<number>(0);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState('none');
 
   const debouncedSearch = useDebounce(search, 500);
@@ -51,13 +58,32 @@ const Authentication = () => {
     users: availableUsers,
     error: authUsersError,
     success: authUsersSuccess,
-  } = useSelector((state) => state.authenticationPageReducer.authUsersState);
-
-  const { data: configData, error: authConfigError } = useSelector(
-    (state) => state.authenticationPageReducer.signInMethodsState
+  } = useSelector(
+    (state: {
+      authenticationPageReducer: {
+        authUsersState: {
+          users: AuthUser[];
+          error: any;
+          success: any;
+        };
+      };
+    }) => state.authenticationPageReducer.authUsersState
   );
 
-  const handleFilterChange = (event) => {
+  const { data: configData, error: authConfigError } = useSelector(
+    (state: {
+      authenticationPageReducer: {
+        signInMethodsState: {
+          data: any;
+          error: any;
+        };
+      };
+    }) => state.authenticationPageReducer.signInMethodsState
+  );
+
+  const handleFilterChange = (
+    event: React.ChangeEvent<{ name?: string; value: any }>
+  ) => {
     setFilter(event.target.value);
   };
 
@@ -88,13 +114,13 @@ const Authentication = () => {
     { title: 'Settings', isDisabled: false },
   ];
 
-  const handleLimitChange = (e) => {
+  const handleLimitChange = (e: any) => {
     setLimit(parseInt(e.target.value, 10));
     setSkip(0);
     setPage(0);
   };
 
-  const handlePageChange = (e, val) => {
+  const handlePageChange = (e: any, val: number) => {
     if (val > page) {
       setPage(page + 1);
       setSkip(skip + limit);
@@ -104,11 +130,11 @@ const Authentication = () => {
     }
   };
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: any, newValue: number) => {
     setSelected(newValue);
   };
 
-  const handleConfigChange = (type, newValue) => {
+  const handleConfigChange = (type: SocialNameTypes, newValue: SocialDataTypes) => {
     const data = {
       ...configData,
       [type]: {
@@ -137,14 +163,14 @@ const Authentication = () => {
     }
   };
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => {
     if (reason === 'clickaway') {
       return;
     }
     setSnackbarOpen(false);
   };
 
-  const handleNewUserDispatch = (values) => {
+  const handleNewUserDispatch = (values: { password: string; email: string }) => {
     dispatch(addNewUserThunk(values, availableUsers, limit));
     setSkip(0);
     setPage(0);
@@ -152,7 +178,7 @@ const Authentication = () => {
     setFilter('none');
   };
 
-  const handleSettingsSave = (data) => {
+  const handleSettingsSave = (data: SettingsStateTypes) => {
     const body = {
       ...configData,
       ...data,
@@ -182,7 +208,7 @@ const Authentication = () => {
               <Grid item xs={6}>
                 <Paginator
                   handlePageChange={handlePageChange}
-                  skip={skip}
+                  // skip={skip}
                   limit={limit}
                   handleLimitChange={handleLimitChange}
                   page={page}
@@ -199,8 +225,8 @@ const Authentication = () => {
 
           <NewUserModal
             handleNewUserDispatch={handleNewUserDispatch}
-            page={skip}
-            limit={limit}
+            // page={skip}
+            // limit={limit}
           />
         </Box>
         <Box

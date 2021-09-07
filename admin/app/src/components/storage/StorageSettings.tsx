@@ -10,6 +10,7 @@ import Switch from '@material-ui/core/Switch';
 import Divider from '@material-ui/core/Divider';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import { IStorageConfig } from '../../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -30,8 +31,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  config: any;
-  handleSave: any;
+  config: IStorageConfig;
+  handleSave: (data: IStorageConfig) => void;
 }
 
 const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
@@ -44,6 +45,9 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
       serviceAccountKeyPath: '~/google_storage_service_account.json',
       bucketName: 'conduit',
     },
+    azure: {
+      connectionString: '',
+    },
   });
 
   useEffect(() => {
@@ -51,23 +55,14 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
       return;
     }
 
-    setSettingsSate({
-      ...settingsState,
-      active: config.active,
-      provider: config.provider,
-      storagePath: config.storagePath,
-      google: {
-        serviceAccountKeyPath: config.google ? config.google.serviceAccountKeyPath : '',
-        bucketName: config.google ? config.google.bucketName : '',
-      },
-    });
-  }, [config, settingsState]);
+    setSettingsSate(config);
+  }, [config]);
 
-  const handleSelect = (event) => {
-    setSettingsSate({
-      ...settingsState,
+  const handleSelect = (event: any) => {
+    setSettingsSate((prevState) => ({
+      ...prevState,
       providerName: event.target.value,
-    });
+    }));
   };
 
   const handleCancel = () => {
@@ -91,20 +86,14 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
           serviceAccountKeyPath: '~/google_storage_service_account.json',
           bucketName: 'conduit',
         },
+        azure: {
+          connectionString: '',
+        },
       });
     }
   };
   const save = () => {
-    const data = {
-      active: settingsState.active,
-      provider: settingsState.provider,
-      storagePath: settingsState.storagePath,
-      google: {
-        serviceAccountKeyPath: settingsState.google.serviceAccountKeyPath,
-        bucketName: settingsState.google.bucketName,
-      },
-    };
-    handleSave(data);
+    handleSave(settingsState);
   };
 
   const renderSettingsFields = () => {
@@ -126,6 +115,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
                 <em>None</em>
               </MenuItem>
               <MenuItem value={'local'}> Local </MenuItem>
+              <MenuItem value={'azure'}> Azure </MenuItem>
             </Select>
           </FormControl>
         </Grid>

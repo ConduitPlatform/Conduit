@@ -30,10 +30,10 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const StorageFiles = () => {
+const StorageFiles: React.FC = () => {
   const classes = useStyles();
 
-  const handleClick = (event) => {
+  const handleClick = (event: any) => {
     event.preventDefault();
     console.info('You clicked a breadcrumb.');
   };
@@ -45,7 +45,10 @@ const StorageFiles = () => {
           <Link color="inherit" href="/" onClick={handleClick}>
             quint.conduit.gr/store
           </Link>
-          <Link color="inherit" href="/getting-started/installation/" onClick={handleClick}>
+          <Link
+            color="inherit"
+            href="/getting-started/installation/"
+            onClick={handleClick}>
             Core
           </Link>
           <Typography color="textPrimary">Breadcrumb</Typography>

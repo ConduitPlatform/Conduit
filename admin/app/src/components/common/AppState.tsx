@@ -2,6 +2,7 @@ import Snackbar from '@material-ui/core/Snackbar';
 import React from 'react';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
+import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -17,7 +18,7 @@ interface Props {
   successMessage: string;
   errorMessage: string;
   snackbarOpen: boolean;
-  handleClose: () => void;
+  handleClose: (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => void;
 }
 
 const AppState: React.FC<Props> = ({
@@ -38,7 +39,6 @@ const AppState: React.FC<Props> = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
         <Alert
           variant={'filled'}
-          onClose={handleClose}
           severity={successMessage !== undefined ? 'success' : 'error'}>
           {successMessage !== undefined
             ? successMessage

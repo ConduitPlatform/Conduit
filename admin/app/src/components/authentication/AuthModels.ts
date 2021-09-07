@@ -67,3 +67,13 @@ export interface ServiceAccount {
   updatedAt: string;
   _id: string;
 }
+
+export interface SettingsStateTypes {
+  active: boolean;
+  generateRefreshToken: boolean;
+  rateLimit: number;
+  tokenInvalidationPeriod: number;
+  refreshTokenInvalidationPeriod: number;
+  jwtSecret: string;
+  showSecret?: boolean;
+}

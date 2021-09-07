@@ -15,6 +15,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
+import { IStorageConfig } from '../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -31,7 +32,15 @@ const Storage: React.FC = () => {
   const classes = useStyles();
   const [selected, setSelected] = useState(0);
   const dispatch = useDispatch();
-  const { data, loading, error } = useSelector((state) => state.storageReducer);
+  const { data, loading, error } = useSelector(
+    (state: {
+      storageReducer: {
+        data: { config: IStorageConfig };
+        loading: boolean;
+        error: any;
+      };
+    }) => state.storageReducer
+  );
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
@@ -48,14 +57,14 @@ const Storage: React.FC = () => {
     setSelected(newValue);
   };
 
-  const handleStorageSettings = (data) => {
+  const handleStorageSettings = (data: IStorageConfig) => {
     dispatch(saveStorageConfig(data));
   };
 
   const snackbarAlert = () => {
     if (error) {
       return (
-        <Alert variant={'filled'} onClose={handleClose} severity="error">
+        <Alert variant={'filled'} severity="error">
           {error?.data?.error ? error.data.error : 'Something went wrong!'}
         </Alert>
       );

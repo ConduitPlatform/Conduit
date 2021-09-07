@@ -8,6 +8,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import { makeStyles } from '@material-ui/core';
 import SearchIcon from '@material-ui/icons/Search';
 import React from 'react';
+import { SelectInputProps } from '@material-ui/core/Select/SelectInput';
 
 const useStyles = makeStyles((theme) => ({
   margin: {
@@ -26,7 +27,7 @@ interface Props {
   search: string;
   setSearch: (value: string) => void;
   filter: string;
-  handleFilterChange: () => void;
+  handleFilterChange: SelectInputProps['onChange'];
 }
 
 const SearchFilter: React.FC<Props> = ({

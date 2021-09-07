@@ -6,8 +6,11 @@ import { useSelector } from 'react-redux';
 interface Props {
   page: number;
   limit: number;
-  handlePageChange: () => void;
-  handleLimitChange: () => void;
+  handlePageChange: (
+    event: React.MouseEvent<HTMLButtonElement> | null,
+    page: number
+  ) => void;
+  handleLimitChange: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
 }
 
 const Paginator: React.FC<Props> = ({
