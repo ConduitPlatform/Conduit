@@ -21,34 +21,4 @@ export class Payments extends ConduitModule<PaymentsClient> {
       );
     });
   }
-
-  createIamportPayment(productId: string, quantity: number, userId: string = '') {
-    return new Promise((resolve, reject) => {
-      this.client?.createIamportPayment(
-        { productId, quantity, userId },
-        (err: any, res: any) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve({ merchant_uid: res.merchant_uid, amount: res.amount });
-          }
-        }
-      );
-    });
-  }
-
-  completeIamportPayment(impUid: string, merchantUid: string) {
-    return new Promise((resolve, reject) => {
-      this.client?.completeIamportPayment(
-        { impUid, merchantUid },
-        (err: any, res: any) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve(res.success);
-          }
-        }
-      );
-    });
-  }
 }
