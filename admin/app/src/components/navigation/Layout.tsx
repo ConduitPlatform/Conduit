@@ -12,9 +12,6 @@ const useStyles = makeStyles((theme: Theme) => ({
   root: {
     display: 'flex',
   },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-  },
   content: {
     display: 'flex',
     flexDirection: 'column',
