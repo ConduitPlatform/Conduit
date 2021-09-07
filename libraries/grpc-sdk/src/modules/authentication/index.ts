@@ -1,5 +1,12 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { AuthenticationClient } from '../../protoUtils/authentication';
+import {
+  AuthenticationClient,
+  SetConfigResponse,
+  UserCreateResponse,
+  UserDeleteResponse,
+  UserLoginResponse,
+} from '../../protoUtils/authentication';
+import { ServiceError } from '@grpc/grpc-js';
 
 export class Authentication extends ConduitModule<AuthenticationClient> {
   constructor(url: string) {
@@ -7,11 +14,11 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
     this.initializeClient(AuthenticationClient);
   }
 
-  setConfig(newConfig: any) {
+  setConfig(newConfig: any): Promise<SetConfigResponse> {
     return new Promise((resolve, reject) => {
       this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
-        (err: any, res: any) => {
+        (err: ServiceError | null, res) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
           } else {
@@ -22,9 +29,9 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
     });
   }
 
-  userLogin(userId: string, clientId: string) {
+  userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {
     return new Promise((resolve, reject) => {
-      this.client?.userLogin({ userId, clientId }, (err: any, res: any) => {
+      this.client?.userLogin({ userId, clientId }, (err: ServiceError | null, res) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -34,9 +41,9 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
     });
   }
 
-  userDelete(userId: string) {
+  userDelete(userId: string): Promise<UserDeleteResponse> {
     return new Promise((resolve, reject) => {
-      this.client?.userDelete({ userId }, (err: any, res: any) => {
+      this.client?.userDelete({ userId }, (err: ServiceError | null, res) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -46,21 +53,28 @@ export class Authentication extends ConduitModule<AuthenticationClient> {
     });
   }
 
-  userCreate(email: string, verify: boolean = false, password?: string) {
+  userCreate(
+    email: string,
+    verify: boolean = false,
+    password?: string
+  ): Promise<UserCreateResponse> {
     return new Promise((resolve, reject) => {
-      this.client?.userCreate({ email, verify, password }, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
+      this.client?.userCreate(
+        { email, verify, password },
+        (err: ServiceError | null, res) => {
+          if (err || !res) {
+            reject(err || 'Something went wrong');
+          } else {
+            resolve(res);
+          }
         }
-      });
+      );
     });
   }
 
-  changePass(email: string, password?: string) {
+  changePass(email: string, password?: string): Promise<UserCreateResponse> {
     return new Promise((resolve, reject) => {
-      this.client?.changePass({ email, password }, (err: any, res: any) => {
+      this.client?.changePass({ email, password }, (err: ServiceError | null, res) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {

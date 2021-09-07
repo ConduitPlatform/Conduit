@@ -390,7 +390,7 @@ export class LocalHandlers {
 
     const verified = await this.sms.verify(token.token, code);
 
-    if (!verified) {
+    if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
     }
 
@@ -473,7 +473,7 @@ export class LocalHandlers {
 
     const verified = await this.sms.verify(verificationRecord.token, code);
 
-    if (!verified) {
+    if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
 
@@ -577,7 +577,7 @@ export class LocalHandlers {
 
     const verified = await this.sms.verify(verificationRecord.token, code);
 
-    if (!verified) {
+    if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
 
@@ -673,7 +673,7 @@ export class LocalHandlers {
   }
 
   private async sendVerificationCode(to: string) {
-    const verificationSid = await this.sms.sendVerificationCode(to).catch(console.error);
-    return verificationSid || '';
+    const verificationSid = await this.sms.sendVerificationCode(to);
+    return verificationSid.verificationSid || '';
   }
 }
