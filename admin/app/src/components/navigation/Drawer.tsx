@@ -97,7 +97,7 @@ interface IModule {
 
 interface Props {
   open: boolean;
-  itemSelected: number;
+  itemSelected?: number;
 }
 
 const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {

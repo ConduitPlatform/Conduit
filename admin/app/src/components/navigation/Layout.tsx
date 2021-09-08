@@ -24,7 +24,7 @@ const useStyles = makeStyles((theme: Theme) => ({
 
 interface Props {
   menuDisabled?: boolean;
-  itemSelected: number;
+  itemSelected?: number;
 }
 
 export const Layout: React.FC<Props> = ({ menuDisabled, itemSelected, ...rest }) => {

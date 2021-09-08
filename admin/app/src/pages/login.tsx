@@ -17,6 +17,7 @@ import { login } from '../redux/thunks/appAuthThunks';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Router from 'next/router';
+import { RootState } from '../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -45,8 +46,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Login = () => {
-  const authState = useSelector((state) => state.appAuthReducer);
+const Login: React.FC = () => {
+  const authState = useSelector((state: RootState) => state.appAuthReducer);
   const dispatch = useDispatch();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -62,7 +63,11 @@ const Login = () => {
     }
   }, [authState.token]);
 
-  const handleLogin = (values) => {
+  const handleLogin = (values: {
+    username: string;
+    password: string;
+    remember: boolean;
+  }) => {
     dispatch(login(values.username, values.password, values.remember));
   };
 
@@ -80,10 +85,7 @@ const Login = () => {
     }
   };
 
-  const handleClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+  const handleClose = () => {
     setSnackbarOpen(false);
   };
 
@@ -98,7 +100,6 @@ const Login = () => {
           </Avatar>
           <Typography variant="h5">Sign in</Typography>
           <Formik
-            style={{ width: '100%' }}
             initialValues={{ username: '', password: '', remember: false }}
             onSubmit={(values, { setSubmitting, resetForm }) => {
               handleLogin(values);
@@ -162,7 +163,6 @@ const Login = () => {
             open={snackbarOpen}
             className={classes.snackBar}
             autoHideDuration={6000}
-            onClose={handleClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
             {snackbarAlert()}
           </Snackbar>
