@@ -1,5 +1,5 @@
 import { Container } from '@material-ui/core';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
@@ -8,6 +8,7 @@ import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import clsx from 'clsx';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -25,32 +26,37 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SendNotificationForm = ({ handleSend }) => {
+type SendNotificationProps = {
+  handleSend: (value: any) => void;
+};
+
+const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
 
-  const [formState, setFormState] = useState({ title: '', body: '', data: '' });
+  const [formState, setFormState] = useState<NotificationData>({
+    title: '',
+    body: '',
+    data: '',
+    userId: '',
+  });
 
-  const handleTitleChange = (event) => {
-    setFormState({ ...formState, title: event.target.value });
-  };
-
-  const handleBodyChange = (event) => {
-    setFormState({ ...formState, body: event.target.value });
-  };
-
-  const handleDataChange = (event) => {
-    setFormState({ ...formState, data: event.target.value });
+  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormState({
+      ...formState,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSendNotification = () => {
-    handleSend();
+    handleSend(formState);
   };
 
   return (
     <Container maxWidth="md">
       <Paper className={classes.paper} elevation={5}>
         <Typography variant={'h6'} className={classes.typography}>
-          <NotificationsOutlined fontSize={'small'} /> Push notification
+          <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />{' '}
+          Push notification
         </Typography>
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>
@@ -58,8 +64,9 @@ const SendNotificationForm = ({ handleSend }) => {
               <TextField
                 required
                 label="Title"
+                name="title"
                 value={formState.title}
-                onChange={handleTitleChange}
+                onChange={handleDataChange}
                 variant="outlined"
                 className={clsx(classes.textField, classes.simpleTextField)}
               />
@@ -67,18 +74,20 @@ const SendNotificationForm = ({ handleSend }) => {
             <Grid item xs={12}>
               <TextField
                 label="Body"
+                name="body"
                 multiline
                 rows="10"
                 variant="outlined"
                 placeholder="Write your email here..."
                 required
-                onChange={handleBodyChange}
+                onChange={handleDataChange}
                 className={clsx(classes.textField, classes.simpleTextField)}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 label="Data"
+                name="data"
                 multiline
                 rows="10"
                 variant="outlined"

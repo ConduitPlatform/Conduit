@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FC, SyntheticEvent, useEffect, useState } from 'react';
 
 import {
   Container,
@@ -22,6 +22,7 @@ import Switch from '@material-ui/core/Switch';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import { saveConfig } from '../../redux/thunks/notificationThunks';
+import { INotificationSettings } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -54,10 +55,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const NotificationSettings = ({ config, handleSave }) => {
+type NotificationSettingsProps = {
+  handleSave: (value: any) => void;
+  config: any;
+};
+
+const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSave }) => {
   const classes = useStyles();
   const [editProvider, setEditProvider] = useState(true);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<INotificationSettings>({
     active: true,
     providerName: '',
     projectId: '',
@@ -90,7 +96,7 @@ const NotificationSettings = ({ config, handleSave }) => {
     setFormData({ ...data });
   }, [config]);
 
-  const handleSelect = (event) => {
+  const handleSelect = (event: any) => {
     setFormData({
       ...formData,
       providerName: event.target.value,
@@ -106,7 +112,7 @@ const NotificationSettings = ({ config, handleSave }) => {
     setEditProvider(true);
   };
 
-  const onFormSubmit = (values) => {
+  const onFormSubmit = (values: INotificationSettings) => {
     const data = {
       active: values.active,
       providerName: values.providerName,
@@ -152,7 +158,7 @@ const NotificationSettings = ({ config, handleSave }) => {
               }}>
               {({ handleSubmit, handleChange, values, handleReset }) => {
                 return (
-                  <form onSubmit={handleSubmit} className={classes.form}>
+                  <form onSubmit={handleSubmit}>
                     <Grid item xs={12}>
                       <TextField
                         onChange={handleChange}
@@ -255,7 +261,8 @@ const NotificationSettings = ({ config, handleSave }) => {
             justifyContent={'space-between'}
             alignItems={'center'}>
             <Typography variant={'h6'}>
-              <SettingsOutlined fontSize={'small'} /> Notification settings
+              <SettingsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />{' '}
+              Notification settings
             </Typography>
             <FormControlLabel
               control={

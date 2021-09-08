@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { SyntheticEvent, useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { privateRoute } from '../components/utils/privateRoute';
@@ -18,6 +18,11 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
+import {
+  INotificationSettings,
+  NotificationData,
+} from '../models/notifications/NotificationModels';
+import { RootState } from '../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -33,9 +38,11 @@ const Notification: React.FC = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
 
-  const { data, loading, error } = useSelector((state) => state.notificationReducer);
+  const { data, loading, error } = useSelector(
+    (state: RootState) => state.notificationReducer
+  );
 
-  const [selected, setSelected] = useState(-1);
+  const [selected, setSelected] = useState(0);
   const [moduleDisabled, setModuleDisabled] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -61,9 +68,9 @@ const Notification: React.FC = () => {
   }, [error]);
 
   const tabs = [
-    { title: 'Notifications', isDisabled: moduleDisabled },
-    { title: 'Send Notifications', isDisabled: moduleDisabled },
-    { title: 'Settings', isDisabled: moduleDisabled },
+    { title: 'Notifications' },
+    { title: 'Send Notifications' },
+    { title: 'Settings' },
   ];
 
   const snackbarAlert = () => {
@@ -78,28 +85,19 @@ const Notification: React.FC = () => {
     }
   };
 
-  const handleClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+  const handleClose = (event: SyntheticEvent) => {
     setSnackbarOpen(false);
   };
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: SyntheticEvent, newValue: number) => {
     setSelected(newValue);
   };
 
-  const sendNotification = (notificationData) => {
-    const data = {
-      userId: notificationData.userId,
-      title: notificationData.title,
-      data: notificationData.data,
-      body: notificationData.body,
-    };
+  const sendNotification = (data: NotificationData) => {
     dispatch(sendNewNotification(data));
   };
 
-  const handleConfigSave = (data) => {
-    dispatch(saveConfig(data));
+  const handleConfigSave = (data: INotificationSettings) => {
+    // dispatch(saveConfig(data));
   };
 
   return (
@@ -112,7 +110,7 @@ const Notification: React.FC = () => {
             <Typography variant={'h6'}>This module is not available</Typography>
           </Box>
         )}
-        {!moduleDisabled && (
+        {moduleDisabled && (
           <>
             <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
               {data && data.notifications ? (
