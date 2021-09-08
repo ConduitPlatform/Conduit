@@ -29,7 +29,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Notification = () => {
+const Notification: React.FC = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
 

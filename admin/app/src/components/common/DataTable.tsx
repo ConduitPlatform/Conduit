@@ -30,8 +30,8 @@ type Action = {
 
 interface Props {
   dsData: SchemaUI[] | AuthUserUI[]; //todo add notification types
-  actions: Action[];
-  handleAction: (action: Action, data: any) => void;
+  actions?: Action[];
+  handleAction?: (action: Action, data: any) => void;
 }
 
 const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) => {
