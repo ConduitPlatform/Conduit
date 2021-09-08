@@ -3,7 +3,7 @@ import { GetApp } from '@material-ui/icons';
 import Button from '@material-ui/core/Button';
 import React from 'react';
 
-const SdksTab = () => {
+const SdksTab: React.FC = () => {
   return (
     <Container>
       <Grid container>

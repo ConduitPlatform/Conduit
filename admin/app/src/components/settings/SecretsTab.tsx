@@ -18,10 +18,11 @@ import Box from '@material-ui/core/Box';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ClientPlatformEnum from '../../models/ClientPlatformEnum';
 import Button from '@material-ui/core/Button';
-import React, { useState } from 'react';
+import React, { ChangeEvent, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import { useDispatch, useSelector } from 'react-redux';
 import { deleteClient, generateNewClient } from '../../redux/thunks/settingsThunks';
+import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
 
 const useStyles = makeStyles({
   table: {
@@ -29,15 +30,18 @@ const useStyles = makeStyles({
   },
 });
 
-const SecretsTab = () => {
+const SecretsTab: React.FC = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const [platform, setPlatform] = useState(ClientPlatformEnum.WEB);
+  const [platform, setPlatform] = useState<IPlatformTypes>('WEB');
 
-  const { data } = useSelector((state) => state.settingsReducer);
+  const { data } = useSelector(
+    (state: { settingsReducer: { data: { availableClients: IClient[] } } }) =>
+      state.settingsReducer
+  );
 
-  const handleDeletion = (_id) => {
+  const handleDeletion = (_id: string) => {
     dispatch(deleteClient(_id));
   };
   const handleGenerateNew = () => {
@@ -66,7 +70,7 @@ const SecretsTab = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.availableClients.map((client, index) => (
+                {data.availableClients.map((client: IClient, index: number) => (
                   <TableRow key={index}>
                     <TableCell>
                       <Typography variant={'caption'}>{client.clientId}</Typography>
@@ -99,7 +103,7 @@ const SecretsTab = () => {
               labelId="demo-simple-select-label"
               id="demo-simple-select"
               value={platform}
-              onChange={(event) => setPlatform(event.target.value)}>
+              onChange={(event: ChangeEvent<any>) => setPlatform(event.target.value)}>
               <MenuItem value={ClientPlatformEnum.WEB}>WEB</MenuItem>
               <MenuItem value={ClientPlatformEnum.ANDROID}>ANDROID</MenuItem>
               <MenuItem value={ClientPlatformEnum.IOS}>IOS</MenuItem>

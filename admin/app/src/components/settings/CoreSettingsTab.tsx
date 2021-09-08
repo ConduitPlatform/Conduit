@@ -1,9 +1,7 @@
 import { makeStyles } from '@material-ui/core/styles';
-import React, { useState } from 'react';
+import React, { ChangeEvent, useState } from 'react';
 import { Grid, Container, Select, Input, Switch, Button } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
-
-import { useDispatch } from 'react-redux';
 
 const useStyles = makeStyles(() => ({
   textSpacing: {
@@ -26,16 +24,18 @@ const initialStates = {
   toggleGraphQL: true,
 };
 
-const CoreSettingsTab = () => {
+const CoreSettingsTab: React.FC = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
-  const [selectedEnum, setSelectedEnum] = useState(initialStates.selectedEnum);
-  const [url, setUrl] = useState(initialStates.url);
-  const [port, setPort] = useState(initialStates.port);
-  const [toggleRest, setToggleRest] = useState(initialStates.toggleRest);
-  const [toggleGraphQL, setToggleGraphQL] = useState(initialStates.toggleGraphQL);
+  // const dispatch = useDispatch();
+  const [selectedEnum, setSelectedEnum] = useState<string>(initialStates.selectedEnum);
+  const [url, setUrl] = useState<string>(initialStates.url);
+  const [port, setPort] = useState<number>(initialStates.port);
+  const [toggleRest, setToggleRest] = useState<boolean>(initialStates.toggleRest);
+  const [toggleGraphQL, setToggleGraphQL] = useState<boolean>(
+    initialStates.toggleGraphQL
+  );
 
-  const onSelectChange = (event) => {
+  const onSelectChange = (event: ChangeEvent<any>) => {
     setSelectedEnum(event.target.value);
   };
 
@@ -48,13 +48,13 @@ const CoreSettingsTab = () => {
   };
 
   const onSaveClick = () => {
-    const data = {
-      port: port,
-      hostUrl: url,
-      rest: toggleRest,
-      graphql: toggleGraphQL,
-      env: selectedEnum,
-    };
+    // const data = {
+    //   port: port,
+    //   hostUrl: url,
+    //   rest: toggleRest,
+    //   graphql: toggleGraphQL,
+    //   env: selectedEnum,
+    // };
     //dispatch(putCoreSettings(data));
     //console.log(data);
   };
@@ -114,7 +114,10 @@ const CoreSettingsTab = () => {
               value={port}
               placeholder={'PORT'}
               type={'number'}
-              onChange={(e) => setPort(e.target.value)}
+              onChange={(e) => {
+                const integer = parseInt(e.target.value, 10);
+                setPort(integer);
+              }}
             />
           </Grid>
         </Grid>

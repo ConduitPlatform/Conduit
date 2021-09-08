@@ -130,7 +130,7 @@ const Authentication = () => {
     }
   };
 
-  const handleChange = (event: any, newValue: number) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
   };
 

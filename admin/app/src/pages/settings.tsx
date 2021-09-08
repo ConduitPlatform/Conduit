@@ -20,7 +20,7 @@ const Settings = () => {
     dispatch(getAvailableClients());
   }, [dispatch]);
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
   };
 
