@@ -69,7 +69,7 @@ const Types = () => {
   ];
 
   useEffect(() => {
-    dispatch(getCmsSchemas());
+    dispatch(getCmsSchemas(50));
     dispatch(getCustomEndpoints());
   }, [dispatch]);
 
@@ -189,9 +189,11 @@ const Types = () => {
       dispatch(createCustomEndpoints(data));
     }
   };
+
   const handleEditCustomEndpoint = (_id, data) => {
     dispatch(updateCustomEndpoints(_id, data));
   };
+
   const handleDeleteCustomEndpoint = (endpointId) => {
     if (endpointId) {
       dispatch(deleteCustomEndpoints(endpointId));
@@ -199,7 +201,7 @@ const Types = () => {
   };
 
   return (
-    <Layout itemSelected={4}>
+    <Layout itemSelected={5}>
       <Box p={2}>
         <Box
           display={'flex'}
@@ -249,8 +251,6 @@ const Types = () => {
       </Box>
       <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
         <CustomQueries
-          endpoints={data.customEndpoints}
-          availableSchemas={data.schemas}
           handleCreate={handleCreateCustomEndpoint}
           handleEdit={handleEditCustomEndpoint}
           handleDelete={handleDeleteCustomEndpoint}

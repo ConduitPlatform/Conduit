@@ -1,13 +1,21 @@
 import {
+  ADD_NEW_USER,
   ADD_AUTH_USERS,
+  DELETE_USER_ACTION,
+  SEARCH_USERS,
+  BLOCK_USER_UI,
+  UNBLOCK_USER_UI,
+  EDIT_USER_ACTION,
   CLEAR_AUTH_PAGE_STORE,
   SET_AUTH_USERS_ERROR,
+  SET_AUTH_USERS_SUCCESS,
   SET_AUTHENTICATION_CONFIG,
   SET_AUTHENTICATION_CONFIG_ERROR,
   START_AUTH_USERS_LOADING,
   START_AUTHENTICATION_CONFIG_LOADING,
   STOP_AUTH_USERS_LOADING,
   STOP_AUTHENTICATION_CONFIG_LOADING,
+  INCREASE_COUNT,
 } from './actionTypes';
 
 //Auth Users actions
@@ -16,12 +24,51 @@ export const addAuthUsers = (data) => ({
   payload: data,
 });
 
+export const addNewUser = (data) => ({
+  type: ADD_NEW_USER,
+  payload: data,
+});
+
+export const searchUsers = (data) => ({
+  type: SEARCH_USERS,
+  payload: data,
+});
+
+export const deleteUserAction = (id) => ({
+  type: DELETE_USER_ACTION,
+  payload: id,
+});
+
+export const editUserAction = (data) => ({
+  type: EDIT_USER_ACTION,
+  payload: data,
+});
+
+export const blockUserUI = (id) => ({
+  type: BLOCK_USER_UI,
+  payload: id,
+});
+
+export const increaseCount = () => ({
+  type: INCREASE_COUNT,
+});
+
+export const unBlockUserUI = (id) => ({
+  type: UNBLOCK_USER_UI,
+  payload: id,
+});
+
 export const startAuthUsersLoading = () => ({
   type: START_AUTH_USERS_LOADING,
 });
 
 export const stopAuthUsersLoading = () => ({
   type: STOP_AUTH_USERS_LOADING,
+});
+
+export const setAuthUsersSuccess = (message) => ({
+  type: SET_AUTH_USERS_SUCCESS,
+  payload: { message },
 });
 
 export const setAuthUsersError = (error) => ({

@@ -18,6 +18,8 @@ function getOperation(op: number) {
       return ConduitRouteActions.UPDATE;
     case 3:
       return ConduitRouteActions.DELETE;
+    case 4:
+      return ConduitRouteActions.UPDATE;
     // won't ever be called by TS doesn't care about that
     default:
       return ConduitRouteActions.GET;
@@ -81,6 +83,13 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
       ? 'private, max-age=10'
       : 'public, max-age=10';
   }
+  if (endpoint.operation === 4) {
+    inputs.push({
+      name: 'updateProvidedOnly',
+      type: TYPE.Boolean,
+      location: 1,
+    });
+  }
   if (endpoint.paginated) {
     inputs.push({
       name: 'skip',
@@ -102,6 +111,8 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
       name: 'sort',
       type: TYPE.String,
       location: 1,
+      optional: true,
+      array: true,
     });
   }
   Object.assign(input, extractParams(endpoint.inputs));

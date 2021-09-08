@@ -1,0 +1,34 @@
+{
+  "code": "webhook",
+  "name": "Webhook Trigger",
+  "description": "Triggers a flow when a request arrives on a specific route/method combination",
+  "options": {
+    "route": {
+      "type": "string",
+      "nullable": false
+    },
+    "mode": {
+      "enum": [
+        "webhook",
+        "request"
+      ],
+      "nullable": false
+    },
+    "method": {
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS",
+        "HEAD"
+      ],
+      "nullable": false
+    },
+    "auth": {
+      "type": "boolean",
+      "nullable": true
+    }
+  }
+}

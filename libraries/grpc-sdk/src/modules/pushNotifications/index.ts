@@ -1,17 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { PushNotificationsClient } from '../../protoUtils/push-notifications';
 
-export default class PushNotifications extends ConduitModule {
+export class PushNotifications extends ConduitModule<PushNotificationsClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/push-notifications.proto');
-    this.descriptorObj = 'pushnotifications.PushNotifications';
-    this.initializeClient();
+    this.initializeClient(PushNotificationsClient);
   }
 
   setConfig(newConfig: any) {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -26,7 +24,7 @@ export default class PushNotifications extends ConduitModule {
 
   sendNotificationToken(token: string, platform: string, userId: string) {
     return new Promise((resolve, reject) => {
-      this.client.sendNotificationToken(
+      this.client?.setNotificationToken(
         {
           token,
           platform,
@@ -45,7 +43,7 @@ export default class PushNotifications extends ConduitModule {
 
   getNotificationTokens(userId: string) {
     return new Promise((resolve, reject) => {
-      this.client.getNotificationTokens(
+      this.client?.getNotificationTokens(
         {
           userId,
         },

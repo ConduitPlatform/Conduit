@@ -1,19 +1,21 @@
-import Config from './modules/config';
-import Admin from './modules/admin';
-import Router from './modules/router';
-import DatabaseProvider from './modules/databaseProvider';
-import Email from './modules/email';
-import Storage from './modules/storage';
-import PushNotifications from './modules/pushNotifications';
-import Authentication from './modules/authentication';
+import {
+  Admin,
+  Chat,
+  CMS,
+  Config,
+  DatabaseProvider,
+  Email,
+  Payments,
+  PushNotifications,
+  Router,
+  SMS,
+  Storage,
+} from './modules';
+import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
-import CMS from './modules/cms';
-import SMS from './modules/sms';
-import Payments from './modules/payments';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
 import { StateManager } from './utilities/StateManager';
-import Chat from './modules/chat';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -49,90 +51,6 @@ export default class ConduitGrpcSdk {
     this._router = new Router(this.serverUrl, this.name);
     this.initializeModules().then(() => {});
     this.watchModules();
-  }
-
-  watchModules() {
-    this.config.watchModules().on('module-registered', (modules: any) => {
-      Object.keys(this._modules).forEach((r) => {
-        let found = modules.filter((m: any) => m.moduleName === r);
-        if ((!found || found.length === 0) && this._availableModules[r]) {
-          this._modules[r].closeConnection();
-        }
-      });
-      modules.forEach((m: any) => {
-        if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-        } else if (this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName].initializeClient();
-        }
-      });
-    });
-  }
-
-  initializeEventBus(): Promise<any> {
-    return this.config
-      .getRedisDetails()
-      .then((r: any) => {
-        let redisManager = new RedisManager(r.redisHost, r.redisPort);
-        this._eventBus = new EventBus(redisManager);
-        this._stateManager = new StateManager(redisManager, this.name);
-        return this._eventBus;
-      })
-      .catch((err: any) => {
-        console.error('Failed to initialize event bus');
-        return err;
-      });
-  }
-
-  /**
-   * Gets all the registered modules from the config and creates clients for them.
-   * This will only work on known modules, since the primary usage for the sdk is internal
-   */
-  initializeModules() {
-    return this._config
-      .moduleList()
-      .then((r) => {
-        this.lastSearch = Date.now();
-        r.forEach((m) => {
-          if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
-          }
-        });
-        return 'ok';
-      })
-      .catch((err) => {
-        if (err.code !== 5) {
-          console.error(err);
-        }
-      });
-  }
-
-  isAvailable(moduleName: string) {
-    return !!(this._modules[moduleName] && this._modules[moduleName].active);
-  }
-
-  async waitForExistence(moduleName: string) {
-    while (!this._modules[moduleName]) {
-      await this.sleep(1000);
-    }
-    return true;
-  }
-
-  sleep(ms: number) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }
-
-  /**
-   * Used to refresh all modules to check for new registrations
-   * @param force If true will check for new modules no matter the interval
-   */
-  async refreshModules(force?: boolean) {
-    if (this.lastSearch < Date.now() - 3000 || force) {
-      return this.initializeModules();
-    }
-    return 'ok';
   }
 
   get bus(): EventBus | null {
@@ -244,6 +162,90 @@ export default class ConduitGrpcSdk {
       console.warn('Chat module not up yet!');
       return null;
     }
+  }
+
+  watchModules() {
+    this.config.watchModules().on('module-registered', (modules: any) => {
+      Object.keys(this._modules).forEach((r) => {
+        let found = modules.filter((m: any) => m.moduleName === r);
+        if ((!found || found.length === 0) && this._availableModules[r]) {
+          this._modules[r]?.closeConnection();
+        }
+      });
+      modules.forEach((m: any) => {
+        if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+        } else if (this._availableModules[m.moduleName]) {
+          this._modules[m.moduleName]?.initializeClient();
+        }
+      });
+    });
+  }
+
+  initializeEventBus(): Promise<any> {
+    return this.config
+      .getRedisDetails()
+      .then((r: any) => {
+        let redisManager = new RedisManager(r.redisHost, r.redisPort);
+        this._eventBus = new EventBus(redisManager);
+        this._stateManager = new StateManager(redisManager, this.name);
+        return this._eventBus;
+      })
+      .catch((err: any) => {
+        console.error('Failed to initialize event bus');
+        throw err;
+      });
+  }
+
+  /**
+   * Gets all the registered modules from the config and creates clients for them.
+   * This will only work on known modules, since the primary usage for the sdk is internal
+   */
+  initializeModules() {
+    return this._config
+      .moduleList()
+      .then((r) => {
+        this.lastSearch = Date.now();
+        r.forEach((m) => {
+          if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+          }
+        });
+        return 'ok';
+      })
+      .catch((err) => {
+        if (err.code !== 5) {
+          console.error(err);
+        }
+      });
+  }
+
+  isAvailable(moduleName: string) {
+    return !!(this._modules[moduleName] && this._modules[moduleName].active);
+  }
+
+  async waitForExistence(moduleName: string) {
+    while (!this._modules[moduleName]) {
+      await this.sleep(1000);
+    }
+    return true;
+  }
+
+  sleep(ms: number) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  /**
+   * Used to refresh all modules to check for new registrations
+   * @param force If true will check for new modules no matter the interval
+   */
+  async refreshModules(force?: boolean) {
+    if (this.lastSearch < Date.now() - 3000 || force) {
+      return this.initializeModules();
+    }
+    return 'ok';
   }
 }
 

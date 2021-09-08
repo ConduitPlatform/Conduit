@@ -13,8 +13,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { getCmsSchemas } from '../../../../redux/thunks';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -60,8 +61,11 @@ export default function RelationForm({
   ...rest
 }) {
   const classes = useStyles();
+  const dispatch = useDispatch();
 
-  const { data } = useSelector((state) => state.cmsReducer);
+  const {
+    data: { schemas, selectedSchema, schemasFromOtherModules },
+  } = useSelector((state) => state.cmsReducer);
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
@@ -71,6 +75,21 @@ export default function RelationForm({
     isArray: selectedItem ? selectedItem.isArray : false,
     model: selectedItem ? selectedItem.model : '',
   });
+  const [availableSchemas, setAvailableSchemas] = useState([]);
+
+  useEffect(() => {
+    dispatch(getCmsSchemas(1000));
+  }, [dispatch]);
+
+  useEffect(() => {
+    const systemModules = schemasFromOtherModules.map((s) => ({ ...s, enabled: true }));
+    let activeModules = schemas.filter((s) => s.enabled);
+    if (selectedSchema) {
+      activeModules = schemas.filter((s) => s.name !== selectedSchema.name);
+    }
+
+    setAvailableSchemas([...activeModules, ...systemModules]);
+  }, [schemas, schemasFromOtherModules]);
 
   const handleFieldName = (event) => {
     setSimpleData({ ...simpleData, name: event.target.value });
@@ -211,19 +230,12 @@ export default function RelationForm({
           onChange={handleFieldRelation}
           renderValue={(selected) => selected}
           MenuProps={MenuProps}>
-          {data.schemas.map(
-            (schema) =>
-              schema.enabled &&
-              schema.name !== data.selectedSchema?.name && (
-                <MenuItem key={schema.name} value={schema.name}>
-                  <Checkbox
-                    checked={simpleData.model.indexOf(schema.name) > -1}
-                    color={'primary'}
-                  />
-                  <ListItemText primary={schema.name} />
-                </MenuItem>
-              )
-          )}
+          {availableSchemas.map((schema) => (
+            <MenuItem key={schema.name} value={schema.name}>
+              <Checkbox checked={simpleData.model === schema.name} color={'primary'} />
+              <ListItemText primary={schema.name} />
+            </MenuItem>
+          ))}
         </Select>
         <FormHelperText>Select the Relation type</FormHelperText>
       </FormControl>

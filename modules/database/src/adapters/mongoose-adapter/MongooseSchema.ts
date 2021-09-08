@@ -20,10 +20,6 @@ export class MongooseSchema implements SchemaAdapter {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  private async createWithPopulations(document: any): Promise<any> {
-    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
-  }
-
   async create(query: any): Promise<any> {
     query.createdAt = new Date();
     query.updatedAt = new Date();
@@ -42,19 +38,32 @@ export class MongooseSchema implements SchemaAdapter {
     return this.model.insertMany(docs).then((r) => r);
   }
 
-  async findByIdAndUpdate(id: string, query: any): Promise<any> {
-    // check if it is a document
-    if (!query['$set']) {
-      query['updatedAt'] = new Date();
-    } else {
-      query['$set']['updatedAt'] = new Date();
-    }
+  async findByIdAndUpdate(
+    id: string,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
+    query['updatedAt'] = new Date();
     await this.createWithPopulations(query);
+    if (updateProvidedOnly) {
+      query = {
+        $set: query,
+      };
+    }
     return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
   }
 
-  async updateMany(filterQuery: any, query: any): Promise<any> {
+  async updateMany(
+    filterQuery: any,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
     await this.createWithPopulations(query);
+    if (updateProvidedOnly) {
+      query = {
+        $set: query,
+      };
+    }
     return this.model.updateMany(this.parseQuery(filterQuery), query).exec();
   }
 
@@ -68,14 +77,15 @@ export class MongooseSchema implements SchemaAdapter {
 
   calculatePopulates(queryObj: any, population: string[]) {
     population.forEach((r: any, index: number) => {
-      let final = r.toString();
+      let final = r.toString().trim();
       if (r.indexOf('.') !== -1) {
-        final = '';
-        r = r.split('.');
+        r = final.split('.');
         let controlBool = true;
         while (controlBool) {
           if (this.originalSchema.modelSchema[r[0]]) {
             controlBool = false;
+          } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
+            throw new Error("Failed populating '" + final + "'");
           } else {
             r.splice(0, 1);
           }
@@ -126,6 +136,10 @@ export class MongooseSchema implements SchemaAdapter {
 
   countDocuments(query: any) {
     return this.model.find(this.parseQuery(query)).countDocuments().exec();
+  }
+
+  private async createWithPopulations(document: any): Promise<any> {
+    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
   private parseQuery(query: any) {

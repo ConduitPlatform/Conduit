@@ -1,112 +1,80 @@
 import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { FirebaseProvider } from './providers/firebase';
+import { FirebaseProvider } from './providers/Firebase.provider';
 import PushNotificationsConfigSchema from './config';
 import { isNil } from 'lodash';
 import path from 'path';
 import ConduitGrpcSdk, {
+  ConduitServiceModule,
   GrpcServer,
-  GrpcRequest,
-  GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { AdminHandler } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/Routes';
 import * as models from './models';
+import {
+  GetNotificationTokensRequest,
+  GetNotificationTokensResponse,
+  SetNotificationTokenRequest,
+  SetNotificationTokenResponse,
+} from './types';
 
-type SetNotificationTokenRequest = GrpcRequest<{
-  token: string,
-  platform: string,
-  userId: string,
-}>;
-
-type SetNotificationTokenResponse = GrpcResponse<{
-  newTokenDocument: string,
-}>;
-
-type GetNotificationTokensRequest = GrpcRequest<{
-  userId: string,
-}>;
-
-type GetNotificationTokensResponse = GrpcResponse<{
-  tokenDocuments: string[],
-}>;
-
-export default class PushNotificationsModule {
+export default class PushNotificationsModule implements ConduitServiceModule {
   private _provider: IPushNotificationsProvider | undefined;
   private isRunning: boolean = false;
-  private readonly grpcServer: GrpcServer;
-  private _url: string;
-  // @ts-ignore
-  private adminHandler: AdminHandler;
-  private _routes: any[];
+  private grpcServer!: GrpcServer;
+  private adminHandler?: AdminHandler;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(
-        path.resolve(__dirname, './push-notifications.proto'),
-        'pushnotifications.PushNotifications',
-        {
-          setConfig: this.setConfig.bind(this),
-          setNotificationToken: this.setNotificationToken.bind(this),
-          getNotificationTokens: this.getNotificationTokens.bind(this),
-        }
-      )
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-    this._routes = router.registeredRoutes;
+  private _port!: string;
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.config.get('pushNotifications');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(
-          PushNotificationsConfigSchema.getProperties(),
-          'pushNotifications'
-        );
-      })
-      .then(() => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          PushNotificationsConfigSchema.getProperties(),
-          'pushNotifications'
-        );
-      })
-      .catch(() => {
-        console.log('pushNotifications config did not update');
-      })
-      .then((notificationsConfig: any) => {
-        if (notificationsConfig.active) {
-          return this.enableModule();
-        } else {
-          return console.log('Will wait for proper config');
-        }
-      })
-      .catch(console.log);
+  get port(): string {
+    return this._port;
   }
+
+  private _routes!: any[];
 
   get routes() {
     return this._routes;
   }
 
-  get url(): string {
-    return this._url;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
+      path.resolve(__dirname, './push-notifications.proto'),
+      'pushnotifications.PushNotifications',
+      {
+        setConfig: this.setConfig.bind(this),
+        setNotificationToken: this.setNotificationToken.bind(this),
+        getNotificationTokens: this.getNotificationTokens.bind(this),
+      }
+    );
+    this.grpcServer.start();
+    console.log('Grpc server is online');
+
+    let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+    this._routes = router.registeredRoutes;
+  }
+
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    try {
+      await this.grpcSdk.config.get('pushNotifications');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(
+        PushNotificationsConfigSchema.getProperties(),
+        'pushNotifications'
+      );
+    }
+    let notificationsConfig = await this.grpcSdk.config.addFieldstoConfig(
+      PushNotificationsConfigSchema.getProperties(),
+      'pushNotifications'
+    );
+    if (notificationsConfig.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
@@ -116,7 +84,7 @@ export default class PushNotificationsModule {
       PushNotificationsConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',
       });
     }
@@ -134,18 +102,21 @@ export default class PushNotificationsModule {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
     } else {
       return callback({
-        code: grpc.status.FAILED_PRECONDITION,
+        code: status.FAILED_PRECONDITION,
         message: 'Module is not active',
       });
     }
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  async setNotificationToken(call: SetNotificationTokenRequest, callback: SetNotificationTokenResponse) {
+  async setNotificationToken(
+    call: SetNotificationTokenRequest,
+    callback: SetNotificationTokenResponse
+  ) {
     const { token, platform, userId } = call.request;
 
     let errorMessage: any = null;
@@ -157,7 +128,7 @@ export default class PushNotificationsModule {
       })
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     const newTokenDocument = await this.grpcSdk
       .databaseProvider!.create('NotificationToken', {
@@ -167,12 +138,15 @@ export default class PushNotificationsModule {
       })
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { newTokenDocument: JSON.stringify(newTokenDocument) });
   }
 
-  async getNotificationTokens(call: GetNotificationTokensRequest, callback: GetNotificationTokensResponse) {
+  async getNotificationTokens(
+    call: GetNotificationTokensRequest,
+    callback: GetNotificationTokensResponse
+  ) {
     const userId = call.request.userId;
 
     let errorMessage = null;
@@ -180,7 +154,7 @@ export default class PushNotificationsModule {
       .databaseProvider!.findMany('NotificationToken', { userId })
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { tokenDocuments: tokenDocuments });
   }
@@ -197,7 +171,7 @@ export default class PushNotificationsModule {
       this.isRunning = true;
     } else {
       await this.initProvider();
-      this.adminHandler.updateProvider(this._provider!);
+      this.adminHandler!.updateProvider(this._provider!);
     }
   }
 

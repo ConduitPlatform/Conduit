@@ -1,5 +1,10 @@
-import { ConduitMiddleware, ConduitRoute, ConduitSocket } from '../classes';
-import { EventsProtoDescription, SocketProtoDescription } from '../interfaces';
+import {
+  ConduitMiddleware,
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  ConduitSocket,
+} from '../classes';
+import { ConduitRouteOptions, EventsProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {
   let routeObject: any = {
@@ -9,6 +14,9 @@ export function constructRoute(route: ConduitRoute) {
   };
   routeObject.grpcFunction = route.handler;
   routeObject.options = route.input;
+  if (!routeObject.options.middlewares) {
+    routeObject.options.middlewares = [];
+  }
   routeObject.returns = {
     name: route.returnTypeName,
     fields: JSON.stringify(route.returnTypeFields),
@@ -21,6 +29,34 @@ export function constructRoute(route: ConduitRoute) {
 
   return routeObject;
 }
+
+export function constructConduitRoute(
+  input: ConduitRouteOptions,
+  type: ConduitRouteReturnDefinition,
+  handler: string
+) {
+  let routeObject: any = {
+    options: input,
+    returns: {
+      name: type.name,
+      fields: JSON.stringify(type.fields),
+    },
+    grpcFunction: handler,
+  };
+  if (!routeObject.options.middlewares) {
+    routeObject.options.middlewares = [];
+  }
+  if (!routeObject.options.middlewares) {
+    routeObject.options.middlewares = [];
+  }
+  for (let option in routeObject.options) {
+    if (!routeObject.options.hasOwnProperty(option)) continue;
+    if (option === 'middlewares') continue;
+    routeObject.options[option] = JSON.stringify(routeObject.options[option]);
+  }
+  return routeObject;
+}
+
 export function constructMiddleware(route: ConduitMiddleware) {
   let routeObject: any = {
     options: {},
@@ -28,6 +64,8 @@ export function constructMiddleware(route: ConduitMiddleware) {
   };
   routeObject.grpcFunction = route.handler;
   routeObject.options = route.input.path ? route.input : null;
+  routeObject.options.middlewares = [];
+
   for (let option in routeObject.options) {
     if (!routeObject.options.hasOwnProperty(option)) continue;
     routeObject.options[option] = JSON.stringify(routeObject.options[option]);
@@ -37,7 +75,6 @@ export function constructMiddleware(route: ConduitMiddleware) {
 }
 
 export function constructSocket(socket: ConduitSocket) {
-
   let eventsObj: EventsProtoDescription = {};
 
   Object.keys(socket.events).forEach((eventName: string) => {
@@ -47,13 +84,13 @@ export function constructSocket(socket: ConduitSocket) {
       params: JSON.stringify(event.params),
       returns: {
         name: socket.returnTypeName(eventName),
-        fields: JSON.stringify(socket.returnTypeFields(eventName))
-      }
+        fields: JSON.stringify(socket.returnTypeFields(eventName)),
+      },
     };
   });
 
   return {
     options: socket.input,
-    events: JSON.stringify(eventsObj)
+    events: JSON.stringify(eventsObj),
   };
 }

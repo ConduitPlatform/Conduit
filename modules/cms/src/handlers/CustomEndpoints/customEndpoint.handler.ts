@@ -2,8 +2,8 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { constructAssignment, constructQuery, mergeQueries } from './utils';
-import grpc from 'grpc';
+import { constructAssignment, constructQuery } from './utils';
+import { status } from '@grpc/grpc-js';
 import { CustomEndpoint } from '../../models/customEndpoint';
 import { isNil } from 'lodash';
 
@@ -28,13 +28,22 @@ export class CustomEndpointHandler {
     // if operation is not POST (CREATE)
     if (endpoint.operation !== 1) {
       try {
-        searchQuery = constructQuery(endpoint.query, endpoint.inputs, params, JSON.parse(call.request.context));
+        searchQuery = constructQuery(
+          endpoint.query,
+          endpoint.inputs,
+          params,
+          JSON.parse(call.request.context)
+        );
       } catch (e) {
-        return callback({ code: grpc.status.INTERNAL, message: e.message });
+        return callback({ code: status.INTERNAL, message: e.message });
       }
     }
 
-    if (endpoint.operation === 1 || endpoint.operation === 2) {
+    if (
+      endpoint.operation === 1 ||
+      endpoint.operation === 2 ||
+      endpoint.operation === 4
+    ) {
       endpoint.assignments!.forEach(
         (r: {
           schemaField: string;
@@ -53,7 +62,7 @@ export class CustomEndpointHandler {
               }
               stopExecution = true;
               return callback({
-                code: grpc.status.INTERNAL,
+                code: status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from input`,
               });
             }
@@ -66,7 +75,7 @@ export class CustomEndpointHandler {
             if (isNil(call.request.context)) {
               stopExecution = true;
               return callback({
-                code: grpc.status.INTERNAL,
+                code: status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from context`,
               });
             }
@@ -77,7 +86,7 @@ export class CustomEndpointHandler {
               } else {
                 stopExecution = true;
                 return callback({
-                  code: grpc.status.INTERNAL,
+                  code: status.INTERNAL,
                   message: `Field ${r.assignmentField.value} is missing from context`,
                 });
               }
@@ -102,7 +111,7 @@ export class CustomEndpointHandler {
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
       let sort = params.sort;
       sortObj = {};
-      sort.split(',').forEach((sortVal: string) => {
+      sort.forEach((sortVal: string) => {
         sortVal = sortVal.trim();
         if (sortVal.indexOf('-') !== -1) {
           sortObj[sortVal.substr(1)] = -1;
@@ -143,7 +152,10 @@ export class CustomEndpointHandler {
         );
       }
     } else if (endpoint.operation === 1) {
-      promise = this.grpcSdk.databaseProvider!.create(endpoint.selectedSchemaName, createObj);
+      promise = this.grpcSdk.databaseProvider!.create(
+        endpoint.selectedSchemaName,
+        createObj
+      );
     } else if (endpoint.operation === 2) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
@@ -154,6 +166,13 @@ export class CustomEndpointHandler {
       promise = this.grpcSdk.databaseProvider!.deleteMany(
         endpoint.selectedSchemaName,
         searchQuery
+      );
+    } else if (endpoint.operation === 4) {
+      promise = this.grpcSdk.databaseProvider!.updateMany(
+        endpoint.selectedSchemaName,
+        searchQuery,
+        createObj,
+        true
       );
     } else {
       process.exit(-1);
@@ -176,18 +195,18 @@ export class CustomEndpointHandler {
         callback(null, { result: JSON.stringify({ result: r }) });
       })
       .catch((err: any) => {
-        callback({ code: grpc.status.INTERNAL, message: err.message });
+        callback({ code: status.INTERNAL, message: err.message });
       });
   }
 
   private parseCreateQuery(query: string): any {
     // add brackets to each field
-    let arr = query.split(',').map(val => `{${val}}`);
+    let arr = query.split(',').map((val) => `{${val}}`);
     let res: any = {};
     for (const el of arr) {
       let tmp = JSON.parse(el);
       let key = Object.keys(tmp)[0];
-      if(!key) continue;
+      if (!key) continue;
       let innerKey = Object.keys(tmp[key])[0];
       if (!res.hasOwnProperty(key)) res[key] = tmp[key];
       else res[key][innerKey] = tmp[key][innerKey];

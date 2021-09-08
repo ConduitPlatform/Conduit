@@ -1,0 +1,34 @@
+{
+  "code": "condition",
+  "name": "Conditional actor",
+  "description": "This actor checks conditions specified and continues the flow to the relevant actor",
+  "options": {
+    "conditions": {
+      "type": [
+        {
+          "comparisonA": "string",
+          "operator": {
+            "enum": [
+              "and",
+              "or",
+              "xor",
+              "gt",
+              "gte",
+              "lt",
+              "lte"
+            ]
+          },
+          "comparisonB": "string",
+          "successActor": "string"
+        }
+      ],
+      "nullable": false
+    },
+    "defaultConditionActor": {
+      "type": "string",
+      "nullable": false
+    }
+  },
+  "returns": {
+  }
+}

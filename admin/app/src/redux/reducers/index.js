@@ -6,6 +6,7 @@ import notificationReducer from './notificationReducer';
 import storageReducer from './storageReducer';
 import cmsReducer from './cmsReducer';
 import settingsReducer from './settingsReducer';
+import customEndpointsReducer from './customEndpointsReducer';
 
 export default combineReducers({
   authenticationPageReducer,
@@ -15,4 +16,5 @@ export default combineReducers({
   storageReducer,
   cmsReducer,
   settingsReducer,
+  customEndpointsReducer,
 });

@@ -33,17 +33,17 @@ message Schema {
 message FindOneRequest {
     string schemaName = 1;
     string query = 2;
-    string select = 3;
+    optional string select = 3;
     repeated string populate = 4;
 }
 
 message FindRequest {
     string schemaName = 1;
     string query = 2;
-    string select = 3;
-    int32 skip = 4;
-    int32 limit = 5;
-    string sort = 6;
+    optional string select = 3;
+    optional int32 skip = 4;
+    optional int32 limit = 5;
+    optional string sort = 6;
     repeated string populate = 7;
 }
 
@@ -60,12 +60,14 @@ message UpdateRequest {
     string schemaName = 1;
     string id = 2;
     string query = 3;
+    optional bool updateProvidedOnly = 4;
 }
 
 message UpdateManyRequest {
     string schemaName = 1;
     string filterQuery = 2;
     string query = 3;
+    optional bool updateProvidedOnly = 4;
 }
 
 service DatabaseProvider {

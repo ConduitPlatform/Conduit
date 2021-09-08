@@ -3,6 +3,8 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
 import fs from 'fs';
 import { SocketProtoDescription } from '../../interfaces';
+import { RouterClient } from '../../protoUtils/core';
+import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -38,12 +40,14 @@ message SocketResponse {
   repeated string rooms = 4;
 }
 `;
-export default class Router extends ConduitModule {
+export class Router extends ConduitModule<RouterClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
-    this.descriptorObj = 'conduit.core.Router';
-    this.initializeClient();
+    this.initializeClient(RouterClient);
+  }
+
+  getFormattedModuleName() {
+    return this.moduleName.replace('-', '_');
   }
 
   sleep(ms: number) {
@@ -61,11 +65,15 @@ export default class Router extends ConduitModule {
     let protoFile = protofile_template
       .toString()
       .replace('MODULE_FUNCTIONS', protoFunctions);
-    protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
+    protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
 
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protoFile);
-    await server.addService(protoPath, this.moduleName + '.router.Router', functions);
+    await server.addService(
+      protoPath,
+      this.getFormattedModuleName() + '.router.Router',
+      functions
+    );
     // fs.unlinkSync(protoPath);
 
     //added sleep as a precaution
@@ -76,6 +84,18 @@ export default class Router extends ConduitModule {
     return this.sleep(3000).then(() => this.register(paths, protoFile));
   }
 
+  async registerRouterAsync(
+    server: GrpcServer,
+    paths: any[],
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+  ): Promise<any> {
+    let modifiedFunctions: { [name: string]: Function } = {};
+    Object.keys(functions).forEach((key) => {
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
+    });
+    return this.registerRouter(server, paths, modifiedFunctions);
+  }
+
   register(paths: any[], protoFile?: string, url?: string): Promise<any> {
     if (!protoFile) {
       const protoFunctions = this.createProtoFunctions(paths);
@@ -83,7 +103,7 @@ export default class Router extends ConduitModule {
       protoFile = protofile_template
         .toString()
         .replace('MODULE_FUNCTIONS', protoFunctions);
-      protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
+      protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
     }
     let request = {
       routes: paths,
@@ -91,7 +111,7 @@ export default class Router extends ConduitModule {
       routerUrl: url,
     };
     return new Promise((resolve, reject) => {
-      this.client.registerConduitRoute(request, (err: any, res: any) => {
+      this.client?.registerConduitRoute(request, (err: any, res: any) => {
         if (err) {
           reject(err);
         } else {
@@ -115,7 +135,10 @@ export default class Router extends ConduitModule {
     return protoFunctions;
   }
 
-  private createProtoFunctionsForSocket(path: SocketProtoDescription, protoFunctions: string) {
+  private createProtoFunctionsForSocket(
+    path: SocketProtoDescription,
+    protoFunctions: string
+  ) {
     let newFunctions = '';
     const events = JSON.parse(path.events);
     Object.keys(events).forEach((event) => {

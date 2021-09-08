@@ -1,24 +1,32 @@
-import {
-  Box,
-  Button,
-  Divider,
-  Grid,
-  IconButton,
-  TextField,
-  Typography,
-} from '@material-ui/core';
+import { Box, Grid, IconButton, TextField, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import React, { useCallback, useEffect, useState } from 'react';
 import OperationsEnum from '../../../models/OperationsEnum';
 import ConfirmationDialog from '../../common/ConfirmationDialog';
-import EndpointAssignments from './EndpointAssignments';
-import EndpointInputs from './EndpointInputs';
-import EndpointQueries from './EndpointQueries';
 import OperationSection from './OperationSection';
-import Sidelist from './Sidelist';
+import SideList from './Sidelist';
+import {
+  findFieldsWithTypes,
+  getAvailableFieldsOfSchema,
+  hasInvalidAssignments,
+  hasInvalidInputs,
+  hasInvalidQueries,
+  prepareQuery,
+} from '../../../utils/cms';
+import SaveSection from './SaveSection';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  endpointCleanSlate,
+  setEndpointData,
+  setSchemaFields,
+  setSelectedEndpoint,
+} from '../../../redux/actions/customEndpointsActions';
+import QueriesSection from './QueriesSection';
+import AssignmentsSection from './AssignmentsSection';
+import InputsSection from './InputsSection';
+import { v4 as uuidv4 } from 'uuid';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -48,77 +56,96 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomQueries = ({
-  endpoints = [],
-  availableSchemas = [],
-  handleCreate,
-  handleEdit,
-  handleDelete,
-}) => {
+const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
 
-  const [selectedEndpoint, setSelectedEndpoint] = useState();
-  const [availableFieldsOfSchema, setAvailableFieldsOfSchema] = useState([]);
-
-  const [name, setName] = useState('');
-  const [selectedOperation, setSelectedOperation] = useState();
-  const [selectedSchema, setSelectedSchema] = useState();
-  const [authentication, setAuthentication] = useState(false);
-  const [paginated, setPaginated] = useState(false);
-  const [sorted, setSorted] = useState(false);
-  const [selectedInputs, setSelectedInputs] = useState([]);
-  const [selectedQueries, setSelectedQueries] = useState([]);
-  const [selectedAssignments, setSelectedAssignments] = useState([]);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [createMode, setCreateMode] = useState(false);
 
-  const getAvailableFieldsOfSchema = useCallback(
-    (schemaSelected) => {
-      if (schemaSelected) {
-        const found = availableSchemas.find((schema) => schema._id === schemaSelected);
-        if (found) {
-          return found.fields;
-        }
-        return {};
-      }
-    },
-    [availableSchemas]
+  const {
+    data: { schemas, customEndpoints },
+  } = useSelector((state) => state.cmsReducer);
+
+  const { endpoint, selectedEndpoint } = useSelector(
+    (state) => state.customEndpointsReducer
   );
 
   const initializeData = useCallback(() => {
     if (selectedEndpoint) {
-      setName(selectedEndpoint.name);
-      setSelectedOperation(selectedEndpoint.operation);
-      setSelectedSchema(selectedEndpoint.selectedSchema);
-      // if (selectedEndpoint.authentication)
-      setAuthentication(Boolean(selectedEndpoint.authentication));
-      //if (selectedEndpoint.paginated)
-      setPaginated(Boolean(selectedEndpoint.paginated));
-      //if (selectedEndpoint.sorted)
-      setSorted(Boolean(selectedEndpoint.sorted));
-
-      const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema);
+      const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema, schemas);
+      let inputs = [];
+      let queryGroup = [];
+      let assignments = [];
+      let fieldsWithTypes = [];
       if (fields) {
-        const fieldsWithTypes = findFieldsWithTypes(fields);
-        setAvailableFieldsOfSchema(fieldsWithTypes);
-        //setAvailableFieldsOfSchema(Object.keys(fieldsWithTypes));
+        fieldsWithTypes = findFieldsWithTypes(fields);
       }
 
       if (selectedEndpoint.queries) {
-        const queries = selectedEndpoint.queries.map((q) => ({ ...q }));
-        setSelectedQueries(queries);
+        const query = selectedEndpoint.query;
+
+        const keys = Object.keys(query);
+        keys.forEach((k) => {
+          const nodeLevel1 = query[k];
+          const nodeLevel1Queries = nodeLevel1.map((q) => {
+            const keys = Object.keys(q);
+            const isOperator = keys.includes('AND') || keys.includes('OR');
+            if (isOperator) {
+              return { _id: uuidv4(), operator: keys[0], queries: q[keys[0]] };
+            } else {
+              return { _id: uuidv4(), ...q };
+            }
+          });
+
+          const lvl2Node = nodeLevel1Queries.find((q) => 'operator' in q);
+          if (lvl2Node) {
+            const nodeLevel2Queries = lvl2Node.queries.map((q) => {
+              const keys = Object.keys(q);
+              const isOperator = keys.includes('AND') || keys.includes('OR');
+              if (isOperator) {
+                return { _id: uuidv4(), operator: keys[0], queries: q[keys[0]] };
+              } else {
+                return { _id: uuidv4(), ...q };
+              }
+            });
+            lvl2Node.queries = [...nodeLevel2Queries];
+
+            const lvl3Node = nodeLevel2Queries.find((q) => 'operator' in q);
+            if (lvl3Node) {
+              const nodeLevel3Queries = lvl3Node.queries.map((q) => ({
+                _id: uuidv4(),
+                ...q,
+              }));
+              lvl3Node.queries = [...nodeLevel3Queries];
+            }
+          }
+          queryGroup.push({
+            _id: uuidv4(),
+            operator: k,
+            queries: [...nodeLevel1Queries],
+          });
+        });
       }
+
       if (selectedEndpoint.assignments) {
-        const assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
-        setSelectedAssignments(assignments);
+        assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
       }
       if (selectedEndpoint.inputs) {
-        const inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
-        setSelectedInputs(inputs);
+        inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
       }
+
+      dispatch(
+        setEndpointData({
+          queries: queryGroup,
+          inputs,
+          assignments,
+        })
+      );
+      dispatch(setSchemaFields(fieldsWithTypes));
     }
-  }, [getAvailableFieldsOfSchema, selectedEndpoint]);
+  }, [schemas, selectedEndpoint]);
 
   useEffect(() => {
     initializeData();
@@ -137,41 +164,31 @@ const CustomQueries = ({
     setCreateMode(false);
   };
 
-  const handleCreateClick = () => {
-    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
-    const data = {
-      name: name,
-      operation: Number(selectedOperation),
-      selectedSchema: schema._id,
-      authentication: authentication,
-      paginated: paginated,
-      sorted: sorted,
-      inputs: selectedInputs,
-      queries: selectedQueries,
-      assignments: selectedAssignments,
-    };
-    handleCreate(data);
-    setSelectedEndpoint(undefined);
-    setCreateMode(false);
-    setEditMode(false);
-  };
+  const handleSubmit = (edit = false) => {
+    const schema = schemas.find((schema) => schema._id === endpoint.selectedSchema);
 
-  const handleSaveClick = () => {
-    const schema = availableSchemas.find((schema) => schema._id === selectedSchema);
+    const query = prepareQuery(endpoint.queries);
+
     const data = {
-      name: name,
-      operation: Number(selectedOperation),
+      name: endpoint.name,
+      operation: Number(endpoint.operation),
       selectedSchema: schema._id,
-      authentication: authentication,
-      paginated: paginated,
-      sorted: sorted,
-      inputs: selectedInputs,
-      queries: selectedQueries,
-      assignments: selectedAssignments,
+      authentication: endpoint.authentication,
+      paginated: endpoint.paginated,
+      sorted: endpoint.sorted,
+      inputs: endpoint.inputs,
+      query,
+      assignments: endpoint.assignments,
     };
-    const _id = selectedEndpoint._id;
-    handleEdit(_id, data);
-    setSelectedEndpoint(undefined);
+
+    if (edit) {
+      const _id = selectedEndpoint._id;
+      handleEdit(_id, data);
+      dispatch(setSelectedEndpoint(''));
+    } else {
+      handleCreate(data);
+      dispatch(setSelectedEndpoint(''));
+    }
     setCreateMode(false);
     setEditMode(false);
   };
@@ -184,405 +201,56 @@ const CustomQueries = ({
 
   const handleDeleteConfirmed = () => {
     handleConfirmationDialogClose();
-    setSelectedEndpoint(undefined);
+    dispatch(setSelectedEndpoint(undefined));
     handleDelete(selectedEndpoint._id);
   };
 
   const handleListItemSelect = (endpoint) => {
-    setSelectedEndpoint(endpoint);
-  };
-
-  const handleOperationChange = (event) => {
-    setSelectedOperation(Number(event.target.value));
-    if (Number(event.target.value) === 1) {
-      if (selectedSchema) {
-        if (availableFieldsOfSchema.length > 0) {
-          let assignments = [];
-          availableFieldsOfSchema.forEach((field) => {
-            const assignment = {
-              schemaField: field,
-              action: 0,
-              assignmentField: { type: '', value: '' },
-            };
-            assignments.push(assignment);
-          });
-          setSelectedAssignments(assignments);
-        }
-      }
-    } else {
-      setSelectedAssignments([]);
-    }
+    dispatch(setSelectedEndpoint(endpoint));
+    dispatch(setEndpointData({ ...endpoint }));
   };
 
   const handleNameChange = (event) => {
-    setName(event.target.value);
+    dispatch(setEndpointData({ name: event.target.value }));
   };
 
   const handleAddNewEndpoint = () => {
-    setSelectedEndpoint(undefined);
+    dispatch(endpointCleanSlate());
     setEditMode(true);
     setCreateMode(true);
-    setName('');
-    setAuthentication(false);
-    setSelectedOperation(-1);
-    setSelectedSchema('');
-    setSelectedInputs([]);
-    setSelectedQueries([]);
-  };
-
-  const findFieldsWithTypes = (fields) => {
-    const fieldKeys = Object.keys(fields);
-    const fieldsWithTypes = [];
-    fieldKeys.forEach((field) => {
-      fieldsWithTypes.push({ name: field, type: fields[field].type });
-    });
-    return fieldsWithTypes;
-  };
-
-  const handleSchemaChange = (event) => {
-    setSelectedSchema(event.target.value);
-    const fields = getAvailableFieldsOfSchema(event.target.value);
-    const fieldsWithTypes = findFieldsWithTypes(fields);
-    setAvailableFieldsOfSchema(fieldsWithTypes);
-    if (selectedOperation && selectedOperation === OperationsEnum.POST) {
-      const fieldKeys = Object.keys(fields);
-      let assignments = [];
-      fieldKeys.forEach((field) => {
-        const assignment = {
-          schemaField: field,
-          action: 0,
-          assignmentField: { type: '', value: '' },
-        };
-        assignments.push(assignment);
-      });
-      setSelectedAssignments(assignments);
-    } else {
-      setSelectedAssignments([]);
-    }
-  };
-
-  const handleAuthenticationChange = (event) => {
-    setAuthentication(event.target.checked);
-  };
-
-  const handlePaginatedChange = (event) => {
-    setPaginated(event.target.checked);
-  };
-
-  const handleSortedChange = (event) => {
-    setSorted(event.target.checked);
-  };
-
-  const handleInputNameChange = (event, index) => {
-    const value = event.target.value;
-    const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
-    if (input) {
-      input.name = value;
-      setSelectedInputs(currentInputs);
-    }
-  };
-
-  const handleInputTypeChange = (event, index) => {
-    const value = event.target.value;
-    const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
-    if (input) {
-      input.type = value;
-      setSelectedInputs(currentInputs);
-    }
-  };
-
-  const handleInputLocationChange = (event, index) => {
-    const value = event.target.value;
-    const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
-    if (input) {
-      input.location = Number(value);
-      setSelectedInputs(currentInputs);
-    }
-  };
-
-  const handleInputIsArray = (event, index) => {
-    const value = event.target.checked;
-    const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
-    if (input) {
-      input.array = value;
-      setSelectedInputs(currentInputs);
-    }
-  };
-
-  const handleInputIsOptional = (event, index) => {
-    const value = event.target.checked;
-    const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
-    if (input) {
-      input.optional = value;
-      setSelectedInputs(currentInputs);
-    }
-  };
-
-  const handleRemoveInput = (index) => {
-    const input = selectedInputs[index];
-    const currentInputs = selectedInputs.slice();
-    currentInputs.splice(index, 1);
-
-    const updatedQueries = selectedQueries.slice().map((q) => {
-      const comparisonField = q.comparisonField;
-      if (comparisonField.name === input.value) {
-        return {
-          ...q,
-          comparisonField: {
-            type: '',
-            value: '',
-          },
-        };
-      } else {
-        return q;
-      }
-    });
-    const updatedAssignments = selectedAssignments.slice().map((a) => {
-      const assignmentField = a.assignmentField;
-      if (assignmentField.name === input.value) {
-        return {
-          ...a,
-          assignmentField: {
-            type: '',
-            value: '',
-          },
-        };
-      } else {
-        return a;
-      }
-    });
-    setSelectedInputs(currentInputs);
-    setSelectedQueries(updatedQueries);
-    setSelectedAssignments(updatedAssignments);
-  };
-
-  const handleAddInput = () => {
-    const input = {
-      name: '',
-      type: '',
-      location: -1,
-      array: false,
-      optional: false,
-    };
-    setSelectedInputs([...selectedInputs, input]);
-  };
-
-  const handleAddQuery = () => {
-    const query = {
-      schemaField: '',
-      operation: -1,
-      comparisonField: {
-        type: '',
-        value: '',
-        like: false,
-      },
-    };
-    setSelectedQueries([...selectedQueries, query]);
-  };
-
-  const handleQueryFieldChange = (event, index) => {
-    const value = event.target.value;
-    const currentQueries = selectedQueries.slice();
-    const input = currentQueries[index];
-    if (input) {
-      input.schemaField = value;
-      setSelectedQueries(currentQueries);
-    }
-  };
-
-  const handleQueryConditionChange = (event, index) => {
-    const value = event.target.value;
-    const currentQueries = selectedQueries.slice();
-    const input = currentQueries[index];
-    if (input) {
-      input.operation = Number(value);
-      setSelectedQueries(currentQueries);
-    }
-  };
-
-  const handleRemoveQuery = (index) => {
-    const currentQueries = selectedQueries.slice();
-    currentQueries.splice(index, 1);
-    setSelectedQueries(currentQueries);
-  };
-
-  const handleQueryComparisonFieldChange = (event, index) => {
-    const value = event.target.value;
-
-    const type = value.split('-')[0];
-    const actualValue = value.split('-')[1];
-
-    const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.type = type;
-      query.comparisonField.value = actualValue ? actualValue : '';
-      setSelectedQueries(currentQueries);
-    }
-  };
-
-  const handleCustomValueChange = (event, index) => {
-    const value = event;
-    const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.value = value;
-      setSelectedQueries(currentQueries);
-    }
-  };
-
-  const handleLikeValueChange = (event, index) => {
-    const value = event.target.checked;
-    const currentQueries = selectedQueries.slice();
-    const query = currentQueries[index];
-    if (query) {
-      query.comparisonField.like = value;
-      setSelectedQueries(currentQueries);
-    }
-  };
-
-  const handleAddAssignment = () => {
-    const assignment = {
-      schemaField: '',
-      action: 0,
-      assignmentField: { type: '', value: '' },
-    };
-    setSelectedAssignments([...selectedAssignments, assignment]);
-  };
-
-  const handleAssignmentFieldChange = (event, index) => {
-    const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const input = currentAssignments[index];
-    if (input) {
-      input.schemaField = value;
-      setSelectedAssignments(currentAssignments);
-    }
-  };
-
-  const handleAssignmentActionChange = (event, index) => {
-    const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const input = currentAssignments[index];
-    if (input) {
-      input.action = Number(value);
-      setSelectedAssignments(currentAssignments);
-    }
-  };
-
-  const handleAssignmentValueFieldChange = (event, index) => {
-    const value = event.target.value;
-
-    const type = value.split('-')[0];
-    const actualValue = value.split('-')[1];
-
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
-    if (assignment) {
-      assignment.assignmentField.type = type;
-      assignment.assignmentField.value = actualValue ? actualValue : '';
-      setSelectedAssignments(currentAssignments);
-    }
-  };
-
-  const handleAssignmentCustomValueChange = (event, index) => {
-    const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
-    if (assignment) {
-      assignment.assignmentField.value = value;
-      setSelectedAssignments(currentAssignments);
-    }
-  };
-
-  const handleAssignmentContextValueChange = (event, index) => {
-    const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
-    if (assignment) {
-      assignment.assignmentField.value = value;
-      setSelectedAssignments(currentAssignments);
-    }
-  };
-
-  const handleRemoveAssignment = (index) => {
-    const currentAssignments = selectedAssignments.slice();
-    currentAssignments.splice(index, 1);
-    setSelectedAssignments(currentAssignments);
-  };
-
-  const maxInputs = () => {
-    return selectedInputs.length === availableFieldsOfSchema.length;
   };
 
   const disableSubmit = () => {
-    if (!name) return true;
-    if (!selectedSchema) return true;
-    if (selectedOperation === -1) return true;
+    if (!endpoint.name) return true;
+    if (!endpoint.selectedSchema) return true;
+    if (endpoint.operation === -1) return true;
 
     let invalidQueries;
     let invalidAssignments;
 
-    if (selectedOperation === OperationsEnum.POST) {
-      if (!selectedAssignments || selectedAssignments.length === 0) return true;
-      invalidAssignments = selectedAssignments.some(
-        (assignment) =>
-          assignment.schemaField === '' ||
-          assignment.action === -1 ||
-          assignment.assignmentField.type === '' ||
-          assignment.assignmentField.value === ''
-      );
+    if (endpoint.operation === OperationsEnum.POST) {
+      if (!endpoint.assignments || endpoint.assignments.length === 0) return true;
+      invalidAssignments = hasInvalidAssignments(endpoint.assignments);
     }
-    if (selectedOperation === OperationsEnum.PUT) {
-      if (!selectedQueries || selectedQueries.length === 0) return true;
-      invalidQueries = selectedQueries.some(
-        (query) =>
-          query.schemaField === '' ||
-          query.operation === -1 ||
-          query.comparisonField.type === '' ||
-          query.comparisonField.value === ''
-      );
-      if (!selectedAssignments || selectedAssignments.length === 0) return true;
-      invalidAssignments = selectedAssignments.some(
-        (assignment) =>
-          assignment.schemaField === '' ||
-          assignment.action === -1 ||
-          assignment.assignmentField.type === '' ||
-          assignment.assignmentField.value === ''
-      );
+    if (endpoint.operation === OperationsEnum.PUT) {
+      if (!endpoint.queries || endpoint.queries.length === 0) return true;
+      invalidQueries = hasInvalidQueries(endpoint.queries);
+      if (!endpoint.assignments || endpoint.assignments.length === 0) return true;
+      invalidAssignments = hasInvalidAssignments(endpoint.assignments);
     }
-    if (selectedOperation === OperationsEnum.DELETE) {
-      if (!selectedQueries || selectedQueries.length === 0) return true;
-      invalidQueries = selectedQueries.some(
-        (query) =>
-          query.schemaField === '' ||
-          query.operation === -1 ||
-          query.comparisonField.type === '' ||
-          query.comparisonField.value === ''
-      );
+    if (endpoint.operation === OperationsEnum.DELETE) {
+      if (!endpoint.queries || endpoint.queries.length === 0) return true;
+      invalidQueries = hasInvalidQueries(endpoint.queries);
     }
-    if (selectedOperation === OperationsEnum.GET) {
-      if (!selectedQueries || selectedQueries.length === 0) return true;
-      invalidQueries = selectedQueries.some(
-        (query) =>
-          query.schemaField === '' ||
-          query.operation === -1 ||
-          query.comparisonField.type === '' ||
-          query.comparisonField.value === ''
-      );
+    if (endpoint.operation === OperationsEnum.GET) {
+      if (!endpoint.queries || endpoint.queries.length === 0) return true;
+      invalidQueries = hasInvalidQueries(endpoint.queries);
     }
 
     if (invalidQueries || invalidAssignments) {
       return true;
     }
-    const invalidInputs = selectedInputs.some(
-      (input) => input.name === '' || input.type === '' || input.location === -1
-    );
+    const invalidInputs = hasInvalidInputs(endpoint.inputs);
     if (invalidInputs) {
       return true;
     }
@@ -592,135 +260,30 @@ const CustomQueries = ({
     if (!editMode && !createMode) {
       return null;
     }
-    return (
-      <Grid container justify="flex-end" spacing={1} style={{ paddingTop: '30px' }}>
-        <Grid item xs={4} md={2}>
-          <Button variant="contained" color="secondary" onClick={handleCancelClick}>
-            Cancel
-          </Button>
-        </Grid>
 
-        <Grid item xs={4} md={2}>
-          <Button
-            disabled={disableSubmit()}
-            variant="contained"
-            color="primary"
-            onClick={createMode ? handleCreateClick : editMode ? handleSaveClick : ''}>
-            {createMode ? 'Create' : editMode ? 'Save' : ''}
-          </Button>
-        </Grid>
-      </Grid>
+    return (
+      <SaveSection
+        editMode={editMode}
+        createMode={createMode}
+        disableSubmit={disableSubmit()}
+        handleSaveClick={() => handleSubmit(true)}
+        handleCreateClick={() => handleSubmit(false)}
+        handleCancelClick={handleCancelClick}
+      />
     );
   };
 
   const renderDetails = () => {
-    if (!selectedSchema || selectedOperation === -1) return null;
+    if (!endpoint.selectedSchema || endpoint.operation === -1) return null;
     return (
       <>
-        <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-          <Typography>
-            <strong>Inputs</strong>
-          </Typography>
-        </Grid>
-        <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-          <Button
-            disabled={!editMode || maxInputs()}
-            variant="text"
-            color={'primary'}
-            className={classes.button}
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={handleAddInput}>
-            Add another
-          </Button>
-        </Grid>
-        <Grid item xs={12} style={{ padding: '0' }}>
-          <Divider />
-        </Grid>
-        <EndpointInputs
-          selectedInputs={selectedInputs}
-          editMode={editMode}
-          handleInputNameChange={handleInputNameChange}
-          handleInputTypeChange={handleInputTypeChange}
-          handleInputLocationChange={handleInputLocationChange}
-          handleInputIsArray={handleInputIsArray}
-          handleInputIsOptional={handleInputIsOptional}
-          handleRemoveInput={handleRemoveInput}
-        />
-        <Grid item xs={12} style={{ padding: '0' }}>
-          <Divider />
-        </Grid>
-        {selectedOperation !== OperationsEnum.POST && (
-          <>
-            <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-              <Typography>
-                <strong>Query</strong>
-              </Typography>
-            </Grid>
-            <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-              <Button
-                disabled={!editMode}
-                variant="text"
-                color={'primary'}
-                className={classes.button}
-                startIcon={<AddCircleOutlineIcon />}
-                onClick={handleAddQuery}>
-                Add another
-              </Button>
-            </Grid>
-            <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider />
-            </Grid>
-            <EndpointQueries
-              selectedSchema={selectedSchema}
-              selectedQueries={selectedQueries}
-              availableFieldsOfSchema={availableFieldsOfSchema}
-              selectedInputs={selectedInputs}
-              editMode={editMode}
-              handleQueryFieldChange={handleQueryFieldChange}
-              handleQueryComparisonFieldChange={handleQueryComparisonFieldChange}
-              handleCustomValueChange={handleCustomValueChange}
-              handleQueryConditionChange={handleQueryConditionChange}
-              handleLikeValueChange={handleLikeValueChange}
-              handleRemoveQuery={handleRemoveQuery}
-            />
-          </>
+        <InputsSection editMode={editMode} />
+        {endpoint.operation !== OperationsEnum.POST && (
+          <QueriesSection editMode={editMode} />
         )}
-        {(selectedOperation === OperationsEnum.PUT ||
-          selectedOperation === OperationsEnum.POST) && (
-          <>
-            <Grid item xs={6} style={{ padding: '0 0 0 10px' }}>
-              <Typography>
-                <strong>Assignments</strong>
-              </Typography>
-            </Grid>
-            <Grid item xs={6} style={{ textAlign: 'end', padding: '0' }}>
-              <Button
-                disabled={!editMode || selectedOperation === OperationsEnum.POST}
-                variant="text"
-                color={'primary'}
-                className={classes.button}
-                startIcon={<AddCircleOutlineIcon />}
-                onClick={handleAddAssignment}>
-                Add another
-              </Button>
-            </Grid>
-            <Grid item xs={12} style={{ padding: '0' }}>
-              <Divider />
-            </Grid>
-            <EndpointAssignments
-              operationType={selectedOperation}
-              selectedAssignments={selectedAssignments}
-              editMode={editMode}
-              availableFieldsOfSchema={availableFieldsOfSchema}
-              selectedInputs={selectedInputs}
-              handleAssignmentFieldChange={handleAssignmentFieldChange}
-              handleAssignmentActionChange={handleAssignmentActionChange}
-              handleAssignmentValueFieldChange={handleAssignmentValueFieldChange}
-              handleAssignmentCustomValueChange={handleAssignmentCustomValueChange}
-              handleAssignmentContextValueChange={handleAssignmentContextValueChange}
-              handleRemoveAssignment={handleRemoveAssignment}
-            />
-          </>
+        {(endpoint.operation === OperationsEnum.PUT ||
+          endpoint.operation === OperationsEnum.POST) && (
+          <AssignmentsSection editMode={editMode} />
         )}
       </>
     );
@@ -743,7 +306,7 @@ const CustomQueries = ({
                 variant={'outlined'}
                 className={classes.textField}
                 label={'Name'}
-                value={name}
+                value={endpoint.name}
                 onChange={handleNameChange}
               />
             </Grid>
@@ -760,18 +323,9 @@ const CustomQueries = ({
               )}
             </Grid>
             <OperationSection
-              availableSchemas={availableSchemas}
-              selectedSchema={selectedSchema}
-              selectedOperation={selectedOperation}
+              schemas={schemas}
               editMode={editMode}
-              handleOperationChange={handleOperationChange}
-              handleSchemaChange={handleSchemaChange}
-              authentication={authentication}
-              handleAuthenticationChange={handleAuthenticationChange}
-              paginated={paginated}
-              handlePaginatedChange={handlePaginatedChange}
-              sorted={sorted}
-              handleSortedChange={handleSortedChange}
+              availableSchemas={schemas}
             />
             {renderDetails()}
             {renderSaveSection()}
@@ -785,8 +339,8 @@ const CustomQueries = ({
     <Box className={classes.root}>
       <Grid container spacing={2} className={classes.grid}>
         <Grid item xs={3}>
-          <Sidelist
-            endpoints={endpoints}
+          <SideList
+            endpoints={customEndpoints}
             selectedEndpoint={selectedEndpoint}
             handleAddNewEndpoint={handleAddNewEndpoint}
             handleListItemSelect={handleListItemSelect}
@@ -797,11 +351,11 @@ const CustomQueries = ({
         </Grid>
       </Grid>
       <ConfirmationDialog
+        buttonText={'Delete'}
         open={confirmationOpen}
         title={'Custom Endpoint Deletion'}
-        description={`You are about to 
+        description={`You are about to
         delete custom endpoint with name:${selectedEndpoint?.name}`}
-        buttonText={'Delete'}
         handleClose={handleConfirmationDialogClose}
         buttonAction={handleDeleteConfirmed}
       />

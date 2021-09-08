@@ -1,11 +1,11 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
-  TYPE,
   RouterRequest,
   RouterResponse,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { validateSchemaInput } from '../utils/utilities';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
@@ -48,25 +48,30 @@ export class SchemaAdmin {
       documentsCountPromise,
     ]).catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       result: JSON.stringify({ results: schemas, documentsCount }),
     });
   }
 
-  async getSchemasRegisteredByOtherModules(call: RouterRequest, callback: RouterResponse) {
+  async getSchemasRegisteredByOtherModules(
+    call: RouterRequest,
+    callback: RouterResponse
+  ) {
     let errorMessage: string | null = null;
-    const allSchemas = await this.database.getSchemas()
+    const allSchemas = await this.database
+      .getSchemas()
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    const schemasFromCMS = await this.database.findMany('SchemaDefinitions', {})
+    const schemasFromCMS = await this.database
+      .findMany('SchemaDefinitions', {})
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const schemaNamesFromCMS = schemasFromCMS.map((schema: any) => schema.name);
@@ -78,8 +83,8 @@ export class SchemaAdmin {
       result: JSON.stringify({
         results: schemasFromOtherModules.map((schema: any) => {
           return { name: schema.name, fields: schema.modelSchema };
-        })
-      })
+        }),
+      }),
     });
   }
 
@@ -87,7 +92,7 @@ export class SchemaAdmin {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Path parameter "id" is missing',
       });
     }
@@ -97,11 +102,11 @@ export class SchemaAdmin {
       .findOne('SchemaDefinitions', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(requestedSchema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested resource not found',
       });
     }
@@ -121,14 +126,14 @@ export class SchemaAdmin {
 
     if (isNil(name) || isNil(fields)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
 
     if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Names cannot include spaces and - characters',
       });
     }
@@ -136,7 +141,7 @@ export class SchemaAdmin {
     const errorMessage = validateSchemaInput(name, fields, modelOptions, enabled);
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }
@@ -150,6 +155,25 @@ export class SchemaAdmin {
     if (!isNil(modelOptions)) options = JSON.stringify(modelOptions);
 
     let error = null;
+    const allSchemas = await this.database
+      .getSchemas()
+      .catch((e: Error) => (error = e.message));
+    if (!isNil(error)) {
+      return callback({ code: status.INTERNAL, message: error });
+    }
+
+    let nameExists = allSchemas.filter((schema: any) => {
+      return schema.name === name;
+    });
+
+    if (nameExists && nameExists.length !== 0) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Schema already exists!',
+      });
+    }
+
+    error = null;
     const newSchema = await this.database
       .create('SchemaDefinitions', {
         name,
@@ -162,7 +186,7 @@ export class SchemaAdmin {
       .catch((e: any) => (error = e));
     if (!isNil(error))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: error,
       });
 
@@ -180,7 +204,7 @@ export class SchemaAdmin {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Path parameter "id" is missing',
       });
     }
@@ -189,11 +213,11 @@ export class SchemaAdmin {
       .findOne('SchemaDefinitions', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(requestedSchema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested schema not found',
       });
     }
@@ -211,7 +235,7 @@ export class SchemaAdmin {
       .findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     await this.database
       .updateMany(
@@ -221,7 +245,7 @@ export class SchemaAdmin {
       )
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
@@ -239,14 +263,14 @@ export class SchemaAdmin {
     );
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Path parameter "id" is missing',
       });
     }
 
     if (!isNil(name) && name !== '') {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Name of existing schema cannot be edited',
       });
     }
@@ -256,11 +280,11 @@ export class SchemaAdmin {
       .findOne('SchemaDefinitions', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(requestedSchema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested schema not found',
       });
     }
@@ -268,14 +292,14 @@ export class SchemaAdmin {
     errorMessage = validateSchemaInput(name, fields, modelOptions);
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }
 
     // if (Object.keys(requestedSchema.fields).length > Object.keys(fields).length) {
     //   return callback({
-    //     code: grpc.status.INVALID_ARGUMENT,
+    //     code: status.INVALID_ARGUMENT,
     //     message: 'Schema fields may not be deleted...yet',
     //   });
     // }
@@ -294,7 +318,7 @@ export class SchemaAdmin {
       .findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (!isNil(updatedSchema.modelOptions))
       updatedSchema.modelOptions = JSON.parse(updatedSchema.modelOptions);
@@ -317,7 +341,7 @@ export class SchemaAdmin {
     const { id } = JSON.parse(call.request.params);
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Path parameter "id" is missing',
       });
     }
@@ -327,36 +351,40 @@ export class SchemaAdmin {
       .findOne('SchemaDefinitions', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(requestedSchema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested schema not found',
       });
     }
 
-    const endpoints = await this.database.findMany('CustomEndpoints', { selectedSchema: id })
+    const endpoints = await this.database
+      .findMany('CustomEndpoints', { selectedSchema: id })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: errorMessage });
+      return callback({ code: status.INVALID_ARGUMENT, message: errorMessage });
     }
 
     if (!isNil(endpoints) && endpoints.length !== 0) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Can not delete schema because it is used by a custom endpoint' });
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Can not delete schema because it is used by a custom endpoint',
+      });
     }
 
     await this.database
       .deleteOne('SchemaDefinitions', requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     await this.database
       .deleteMany('CustomEndpoints', { selectedSchema: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();

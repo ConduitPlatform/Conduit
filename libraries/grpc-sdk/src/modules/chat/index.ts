@@ -1,19 +1,18 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { ChatClient, SetConfigResponse } from '../../protoUtils/chat';
+import { ServiceError } from '@grpc/grpc-js';
 
-export default class Chat extends ConduitModule {
+export class Chat extends ConduitModule<ChatClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/chat.proto');
-    this.descriptorObj = 'chat.Chat';
-    this.initializeClient();
+    this.initializeClient(ChatClient);
   }
 
-  setConfig(newConfig: any) {
+  setConfig(newConfig: any): Promise<SetConfigResponse> {
     return new Promise((resolve, reject) => {
-      this.client.setConfig(
+      this.client?.setConfig(
         { newConfig: JSON.stringify(newConfig) },
-        (err: any, res: any) => {
+        (err: ServiceError | null, res) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
           } else {

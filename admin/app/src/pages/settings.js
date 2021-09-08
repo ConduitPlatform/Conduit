@@ -25,7 +25,7 @@ const Settings = () => {
   };
 
   return (
-    <Layout itemSelected={6}>
+    <Layout itemSelected={7}>
       <Box p={2}>
         <Typography variant={'h4'}>Global Settings</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />

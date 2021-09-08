@@ -27,7 +27,7 @@ message RegisterAdminRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
-    string adminUrl = 3;
+    optional string adminUrl = 3;
     message PathDefinition {
         string path = 1;
         string method = 2;
@@ -38,26 +38,26 @@ message RegisterConduitRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
-    string routerUrl = 3;
+    optional string routerUrl = 3;
 
     message PathDefinition {
         ConduitRouteOptions options = 1;
-        ConduitRouteReturnDefinition returns = 2;
-        string grpcFunction = 3;
-        bool isMiddleware = 4;
-        string events = 5;
+        optional ConduitRouteReturnDefinition returns = 2;
+        optional string grpcFunction = 3;
+        optional bool isMiddleware = 4;
+        optional string events = 5;
     }
 
     message ConduitRouteOptions {
-        string queryParams = 1;
-        string bodyParams = 2;
-        string urlParams = 3;
-        string action = 4;
+        optional string queryParams = 1;
+        optional string bodyParams = 2;
+        optional string urlParams = 3;
+        optional string action = 4;
         string path = 5;
-        string name = 6;
-        string description = 7;
+        optional string name = 6;
+        optional string description = 7;
         repeated string middlewares = 8;
-        string cacheControl = 9;
+        optional string cacheControl = 9;
     }
 
     message ConduitRouteReturnDefinition {
@@ -86,7 +86,7 @@ message ModuleByInstanceResponse {
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
-    string newConfigSchema = 3;
+    optional string newConfigSchema = 3;
 }
 
 message RegisterModuleResponse {

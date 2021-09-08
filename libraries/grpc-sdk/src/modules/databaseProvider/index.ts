@@ -1,21 +1,15 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
-import { EJSON } from 'bson';
-import parse = EJSON.parse;
-import serialize = EJSON.serialize;
-import stringify = EJSON.stringify;
+import { DatabaseProviderClient } from '../../protoUtils/database-provider';
 
-export default class DatabaseProvider extends ConduitModule {
+export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
   constructor(url: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/database-provider.proto');
-    this.descriptorObj = 'databaseprovider.DatabaseProvider';
-    this.initializeClient();
+    this.initializeClient(DatabaseProviderClient);
   }
 
   getSchema(schemaName: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.getSchema({ schemaName: schemaName }, (err: any, res: any) => {
+      this.client?.getSchema({ schemaName: schemaName }, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
@@ -31,17 +25,21 @@ export default class DatabaseProvider extends ConduitModule {
 
   getSchemas(): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.getSchemas({}, (err: any, res: any) => {
+      this.client?.getSchemas({}, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {
-          resolve(res.schemas.map((schema: { name: string, modelSchema: string, modelOptions: string }) => {
-            return {
-              name: schema.name,
-              modelSchema: JSON.parse(schema.modelSchema),
-              modelOptions: JSON.parse(schema.modelOptions),
-            }
-          }));
+          resolve(
+            res.schemas.map(
+              (schema: { name: string; modelSchema: string; modelOptions: string }) => {
+                return {
+                  name: schema.name,
+                  modelSchema: JSON.parse(schema.modelSchema),
+                  modelOptions: JSON.parse(schema.modelOptions),
+                };
+              }
+            )
+          );
         }
       });
     });
@@ -49,7 +47,7 @@ export default class DatabaseProvider extends ConduitModule {
 
   createSchemaFromAdapter(schema: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.client.createSchemaFromAdapter(
+      this.client?.createSchemaFromAdapter(
         {
           schema: {
             name: schema.name,
@@ -79,23 +77,23 @@ export default class DatabaseProvider extends ConduitModule {
     return JSON.stringify(query);
   }
 
-  findOne(
+  findOne<T>(
     schemaName: string,
     query: any,
     select?: string,
     populate?: string | string[]
-  ): Promise<any> {
+  ): Promise<T | any | undefined> {
     return new Promise((resolve, reject) => {
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
         populateArray = [populate];
       }
-      this.client.findOne(
+      this.client?.findOne(
         {
           schemaName,
           query: this.processQuery(query),
-          select,
-          populate: populateArray,
+          select: select === null ? undefined : select,
+          populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -108,30 +106,30 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  findMany(
+  findMany<T>(
     schemaName: string,
     query: any,
     select?: string,
     skip?: number,
     limit?: number,
-    sort?: any,
+    sort?: { [key: string]: number },
     populate?: string | string[]
-  ) {
+  ): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
-      const sortStr = sort ? JSON.stringify(sort) : null;
+      const sortStr = sort ? JSON.stringify(sort) : undefined;
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
         populateArray = [populate];
       }
-      this.client.findMany(
+      this.client?.findMany(
         {
           schemaName,
           query: this.processQuery(query),
-          select,
+          select: select === null ? undefined : select,
           skip,
           limit,
-          sort: sortStr,
-          populate: populateArray,
+          sort: sortStr === null ? undefined : sortStr,
+          populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -144,9 +142,9 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  create(schemaName: string, query: any) {
+  create<T>(schemaName: string, query: any): Promise<T | any> {
     return new Promise((resolve, reject) => {
-      this.client.create(
+      this.client?.create(
         { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -159,9 +157,9 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  createMany(schemaName: string, query: any) {
+  createMany<T>(schemaName: string, query: any): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
-      this.client.createMany(
+      this.client?.createMany(
         { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -174,10 +172,15 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  findByIdAndUpdate(schemaName: string, id: string, document: any) {
+  findByIdAndUpdate<T>(
+    schemaName: string,
+    id: string,
+    document: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<T | any> {
     return new Promise((resolve, reject) => {
-      this.client.findByIdAndUpdate(
-        { schemaName, id, query: this.processQuery(document) },
+      this.client?.findByIdAndUpdate(
+        { schemaName, id, query: this.processQuery(document), updateProvidedOnly },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -189,13 +192,19 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  updateMany(schemaName: string, filterQuery: any, query: any) {
+  updateMany(
+    schemaName: string,
+    filterQuery: any,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ) {
     return new Promise((resolve, reject) => {
-      this.client.updateMany(
+      this.client?.updateMany(
         {
           schemaName,
           filterQuery: this.processQuery(filterQuery),
           query: this.processQuery(query),
+          updateProvidedOnly,
         },
         (err: any, res: any) => {
           if (err || !res) {
@@ -210,7 +219,7 @@ export default class DatabaseProvider extends ConduitModule {
 
   deleteOne(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
-      this.client.deleteOne(
+      this.client?.deleteOne(
         { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -225,7 +234,7 @@ export default class DatabaseProvider extends ConduitModule {
 
   deleteMany(schemaName: string, query: any) {
     return new Promise((resolve, reject) => {
-      this.client.deleteMany(
+      this.client?.deleteMany(
         { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {
@@ -238,9 +247,9 @@ export default class DatabaseProvider extends ConduitModule {
     });
   }
 
-  countDocuments(schemaName: string, query: any) {
+  countDocuments(schemaName: string, query: any): Promise<number> {
     return new Promise((resolve, reject) => {
-      this.client.countDocuments(
+      this.client?.countDocuments(
         { schemaName, query: this.processQuery(query) },
         (err: any, res: any) => {
           if (err || !res) {

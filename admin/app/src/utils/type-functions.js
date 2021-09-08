@@ -1,3 +1,5 @@
+import { isNil } from 'lodash';
+
 export const cloneItem = (destination, item, droppableDestination) => {
   const clone = Array.from(destination);
 
@@ -142,6 +144,7 @@ const checkIsChildOfObject = (innerFields) => {
 
 const constructFieldType = (field) => {
   const typeField = {};
+
   if (checkIsChildOfObject(field.type)) {
     typeField.isArray = Array.isArray(field.type);
     if (typeField.isArray) {
@@ -152,7 +155,7 @@ const constructFieldType = (field) => {
       if (obj && obj.type === 'Relation') {
         typeField.relation = true;
         typeField.type = 'Relation';
-        typeField.select = obj.select;
+        typeField.select = isNil(obj.select) ? true : obj.select;
         typeField.required = obj.required;
         typeField.model = obj.model;
       } else {
@@ -176,18 +179,19 @@ const constructFieldType = (field) => {
   if (typeField.type !== 'Group') {
     typeField.unique = field.unique ? field.unique : false;
   }
-  if (field.type === 'Relation' && typeField.isArray) {
+  if (typeField.type === 'Relation' && typeField.isArray) {
     typeField.relation = field.relation;
     typeField.type = field.type[0].type;
-    typeField.select = field.type[0].select;
+    typeField.select = typeField.select = isNil(field.type[0].select)
+      ? true
+      : field.type[0].select;
     typeField.required = field.type[0].required;
     typeField.model = field.type[0].model;
   } else {
-    typeField.select = field.select ? field.select : false;
+    typeField.select = isNil(field.select) ? true : field.select;
     typeField.required = field.required ? field.required : false;
   }
-
-  if (typeField.type === 'Relation' && !field.isArray) {
+  if (typeField.type === 'Relation' && !typeField.isArray) {
     typeField.model = field.model.toString();
   }
 
@@ -355,11 +359,21 @@ export const prepareFields = (typeFields) => {
     }
 
     if (clone.isEnum) {
-      fields.enum = clone?.enumValues; //.split(/[\n,]+/);
+      if (Array.isArray(clone?.enumValues)) fields.enum = clone?.enumValues;
+      else fields.enum = clone?.enumValues.split(/[\n,]+/);
     }
 
     if (clone.type === 'Relation' && !clone.isArray) {
       if (clone.model) fields.model = clone.model.toString();
+    }
+
+    // Possible solution to remove default values, this may
+    // solve the issue with auto generated indexes
+    if (fields.select) {
+      delete fields.select;
+    }
+    if (!fields.unique) {
+      delete fields.unique;
     }
 
     delete clone.name;
@@ -369,5 +383,6 @@ export const prepareFields = (typeFields) => {
       deconstructed = { ...deconstructed, [name]: { ...fields } };
     }
   });
+
   return deconstructed;
 };

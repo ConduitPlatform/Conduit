@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Drawer } from '@material-ui/core';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -97,6 +97,8 @@ function CustomDrawer(props) {
   const enabledModules = useSelector((state) => state.appAuthReducer.enabledModules);
 
   const { open, itemSelected, ...rest } = props;
+
+  const [selected, setSelected] = useState(0);
 
   const drawerOpen = () => {
     if (open === null || open === undefined) {

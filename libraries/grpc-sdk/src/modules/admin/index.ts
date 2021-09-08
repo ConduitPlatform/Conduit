@@ -2,6 +2,8 @@ import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import fs from 'fs';
 import { GrpcServer } from '../../classes';
+import { AdminClient } from '../../protoUtils/core';
+import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -23,13 +25,12 @@ message AdminResponse {
 }
 `;
 
-export default class Admin extends ConduitModule {
+export class Admin extends ConduitModule<AdminClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
-    this.protoPath = path.resolve(__dirname, '../../proto/core.proto');
-    this.descriptorObj = 'conduit.core.Admin';
-    this.initializeClient();
+    this.initializeClient(AdminClient);
   }
+
   sleep(ms: number) {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
@@ -65,6 +66,18 @@ export default class Admin extends ConduitModule {
     return this.sleep(3000).then(() => this.register(paths, protoFile));
   }
 
+  async registerAdminAsync(
+    server: GrpcServer,
+    paths: any[],
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+  ): Promise<any> {
+    let modifiedFunctions: { [name: string]: Function } = {};
+    Object.keys(functions).forEach((key) => {
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
+    });
+    return this.registerAdmin(server, paths, modifiedFunctions);
+  }
+
   register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
     let grpcPathArray: any[] = [];
     let protoFunctions = '';
@@ -95,7 +108,7 @@ export default class Admin extends ConduitModule {
     };
 
     return new Promise((resolve, reject) => {
-      this.client.registerAdminRoute(request, (err: any, res: any) => {
+      this.client?.registerAdminRoute(request, (err: any, res: any) => {
         if (err || !res) {
           reject(err || 'Something went wrong');
         } else {

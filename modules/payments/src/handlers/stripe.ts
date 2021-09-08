@@ -1,7 +1,11 @@
 import Stripe from 'stripe';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import ConduitGrpcSdk, {
+  ConduitError,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 
 const PROVIDER_NAME = 'stripe';
 
@@ -48,12 +52,6 @@ export class StripeHandlers {
       });
   }
 
-  private async initDb() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
-  }
-
   async createPayment(call: RouterRequest, callback: RouterResponse) {
     const { productId, userId, saveCard } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
@@ -61,7 +59,7 @@ export class StripeHandlers {
 
     if (isNil(productId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'productId is required',
       });
     }
@@ -72,11 +70,11 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(product)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'product not found',
       });
     }
@@ -88,7 +86,7 @@ export class StripeHandlers {
           errorMessage = e.message;
         });
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
       if (isNil(customerDb) || isNil(customerDb.stripe)) {
         const customer = await this.client.customers.create({
@@ -136,7 +134,7 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     this.grpcSdk.bus?.publish(
@@ -158,14 +156,14 @@ export class StripeHandlers {
 
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
 
     if (isNil(productId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'productId is required',
       });
     }
@@ -178,11 +176,11 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(product)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'product not found',
       });
     }
@@ -193,10 +191,10 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(customer) || isNil(customer.stripe)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
+      return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
     let res: any = {};
@@ -226,7 +224,7 @@ export class StripeHandlers {
           errorMessage = e.message;
         });
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
 
       res.clientSecret = intent.client_secret;
@@ -251,13 +249,14 @@ export class StripeHandlers {
     // TODO maybe check if user is the same as the one that created the payment
     const { paymentId, userId } = JSON.parse(call.request.params);
     let errorMessage: string | null = null;
+
     const intent = await this.client.paymentIntents
       .cancel(paymentId)
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     await this.database
@@ -270,11 +269,14 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    this.grpcSdk.bus?.publish('publish:cancel:Transaction', JSON.stringify({ userId, paymentId }));
-    return callback(null, { result: 'true' });
+    this.grpcSdk.bus?.publish(
+      'publish:cancel:Transaction',
+      JSON.stringify({ userId, paymentId })
+    );
+    return callback(null, { result: JSON.stringify({ success: true }) });
   }
 
   async refundPayment(call: RouterRequest, callback: RouterResponse) {
@@ -283,7 +285,7 @@ export class StripeHandlers {
 
     if (isNil(paymentId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'paymentId is required',
       });
     }
@@ -300,7 +302,7 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     await this.database
@@ -313,11 +315,14 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    this.grpcSdk.bus?.publish('publish:refund:Transaction', JSON.stringify({ userId, paymentId }));
-    return callback(null, { result: 'true' });
+    this.grpcSdk.bus?.publish(
+      'publish:refund:Transaction',
+      JSON.stringify({ userId, paymentId })
+    );
+    return callback(null, { result: JSON.stringify({ success: true }) });
   }
 
   async getPaymentMethods(call: RouterRequest, callback: RouterResponse) {
@@ -325,7 +330,7 @@ export class StripeHandlers {
     const context = JSON.parse(call.request.context);
     if (isNil(context)) {
       return callback({
-        code: grpc.status.UNAUTHENTICATED,
+        code: status.UNAUTHENTICATED,
         message: 'No headers provided',
       });
     }
@@ -335,11 +340,11 @@ export class StripeHandlers {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
+      return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
     if (isNil(customer) || isNil(customer.stripe)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'customer not found' });
+      return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
     const paymentMethods = await this.client.paymentMethods.list({
@@ -367,12 +372,15 @@ export class StripeHandlers {
       });
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }
 
-    this.grpcSdk.bus?.publish('payments:paidStripe:Transaction', JSON.stringify({ userId }));
+    this.grpcSdk.bus?.publish(
+      'payments:paidStripe:Transaction',
+      JSON.stringify({ userId })
+    );
     return callback(null, { result: JSON.stringify('ok') });
   }
 
@@ -382,7 +390,7 @@ export class StripeHandlers {
     unitAmount: number,
     recurring: 'day' | 'week' | 'month' | 'year',
     recurringCount?: number
-  ): Promise<{ subscriptionId: string, priceId: string }> {
+  ): Promise<{ subscriptionId: string; priceId: string }> {
     const product = await this.client.products.create({
       name,
     });
@@ -398,5 +406,11 @@ export class StripeHandlers {
     });
 
     return Promise.resolve({ subscriptionId: product.id, priceId: price.id });
+  }
+
+  private async initDb() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    this.database = this.grpcSdk.databaseProvider;
+    this.initialized = true;
   }
 }

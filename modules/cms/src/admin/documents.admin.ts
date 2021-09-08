@@ -1,6 +1,9 @@
 import { isNil } from 'lodash';
-import grpc from 'grpc';
-import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import ConduitGrpcSdk, {
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaController } from '../controllers/cms/schema.controller';
 
 export class DocumentsAdmin {
@@ -21,11 +24,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -55,7 +58,7 @@ export class DocumentsAdmin {
     ]).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }
@@ -71,11 +74,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -84,11 +87,11 @@ export class DocumentsAdmin {
       .findOne(schemaName, { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(document)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested document not found',
       });
     }
@@ -103,11 +106,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -116,7 +119,7 @@ export class DocumentsAdmin {
       .create(schemaName, inputDocument)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(newDocument) });
   }
@@ -129,11 +132,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -142,7 +145,7 @@ export class DocumentsAdmin {
       .createMany(schemaName, inputDocuments)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ docs: newDocuments }) });
   }
@@ -155,11 +158,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -168,7 +171,7 @@ export class DocumentsAdmin {
       .findOne(schemaName, { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     Object.assign(dbDocument, changedDocument);
 
@@ -176,7 +179,7 @@ export class DocumentsAdmin {
       .findByIdAndUpdate(schemaName, dbDocument._id, dbDocument)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
@@ -189,11 +192,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -227,11 +230,11 @@ export class DocumentsAdmin {
       .findOne('SchemaDefinitions', { name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(schema)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested cms schema not found',
       });
     }
@@ -240,7 +243,7 @@ export class DocumentsAdmin {
       .deleteOne(schemaName, { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: 'Ok' });
   }

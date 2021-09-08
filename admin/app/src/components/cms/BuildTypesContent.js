@@ -14,7 +14,6 @@ import EnumType from './types/EnumType/EnumType';
 import ObjectIdType from './types/ObjectIdType/ObjectIdType';
 import RelationType from './types/RelationType/RelationType';
 import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
 
 const useStyles = makeStyles((theme) => ({
   list: {
@@ -101,10 +100,7 @@ const BuildTypesContent = ({
   };
 
   const checkIfDisabled = (name) => {
-    if (name === '_id' || name === 'createdAt' || name === 'updatedAt') {
-      return true;
-    }
-    return false;
+    return name === '_id' || name === 'createdAt' || name === 'updatedAt';
   };
 
   return (

@@ -33,7 +33,7 @@ export function extractRequestData(req: Request) {
   if (params.populate) {
     if (params.populate.includes(',')) {
       params.populate = params.populate.split(',');
-    } else if (!Array.isArray(params.populate)){
+    } else if (!Array.isArray(params.populate)) {
       params.populate = [params.populate];
     }
   }
@@ -41,14 +41,24 @@ export function extractRequestData(req: Request) {
   return { context, params, headers, path };
 }
 
-export function validateParams(params: { [key: string]: any }, routeDefinedParams: { [key: string]: any }) {
+export function validateParams(
+  params: { [key: string]: any },
+  routeDefinedParams: { [key: string]: any }
+) {
   for (const key of Object.keys(routeDefinedParams)) {
-    if (isArray(routeDefinedParams[key])) {
-      validateArray(key, params[key], routeDefinedParams[key]);
+    if (
+      isArray(routeDefinedParams[key]) ||
+      (routeDefinedParams[key].type && isArray(routeDefinedParams[key].type))
+    ) {
+      params[key] = validateArray(key, params[key], routeDefinedParams[key]);
     } else if (isObject(routeDefinedParams[key])) {
       if (routeDefinedParams[key].hasOwnProperty('type')) {
-        params[key] =
-          validateType(key, routeDefinedParams[key].type, params[key], routeDefinedParams[key]?.required || false);
+        params[key] = validateType(
+          key,
+          routeDefinedParams[key].type,
+          params[key],
+          routeDefinedParams[key]?.required || false
+        );
       } else {
         validateObject(key, params[key], routeDefinedParams[key]);
       }
@@ -60,8 +70,8 @@ export function validateParams(params: { [key: string]: any }, routeDefinedParam
 
 function validateArray(
   fieldName: string,
-  param: { [key: string] : any }[],
-  routeDefinedArray: { [key: string] : any }[] | string[]
+  param: { [key: string]: any }[],
+  routeDefinedArray: { [key: string]: any }[] | string[]
 ) {
   const type = routeDefinedArray[0];
   if (isObject(type)) {
@@ -70,20 +80,31 @@ function validateArray(
     }
   } else {
     if (!isArray(param)) {
-      throw ConduitError.userInput(`${fieldName} must be an array`);
+      if (param) {
+        param = [param];
+      }
+      // throw ConduitError.userInput(`${fieldName} must be an array`);
     }
-
+    if (!param) {
+      return null;
+    }
     param.forEach((obj: any, index: number) => {
       param[index] = validateType(`${fieldName}[${index}]`, type, obj, false);
     });
+
+    return param;
   }
 }
 
-function validateObject(fieldName: string, param: { [key: string]: any }, routeDefinedObject: { [key: string]: any }) {
+function validateObject(
+  fieldName: string,
+  param: { [key: string]: any },
+  routeDefinedObject: { [key: string]: any }
+) {
   if (routeDefinedObject.required && isNil(param)) {
     throw ConduitError.userInput(`${fieldName} is required`);
   } else if (isNil(param)) {
-    return
+    return;
   }
 
   if (!isObject(param) || isArray(param)) {
@@ -92,7 +113,12 @@ function validateObject(fieldName: string, param: { [key: string]: any }, routeD
   validateParams(param, routeDefinedObject);
 }
 
-function validateType(fieldName: string, paramType: string, value: unknown, required: boolean): any {
+function validateType(
+  fieldName: string,
+  paramType: string,
+  value: unknown,
+  required: boolean
+): any {
   if (required && isNil(value)) {
     throw ConduitError.userInput(`${fieldName} is required`);
   } else if (isNil(value)) {
@@ -101,7 +127,8 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
 
   switch (paramType) {
     case TYPE.String:
-      if (typeof value !== 'string') throw ConduitError.userInput(`${fieldName} must be a string`);
+      if (typeof value !== 'string')
+        throw ConduitError.userInput(`${fieldName} must be a string`);
       break;
     case TYPE.Number:
       if (typeof value === 'string') {
@@ -129,7 +156,9 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
       break;
     case TYPE.Date:
       if (typeof value !== 'string' && typeof value !== 'number') {
-        throw ConduitError.userInput(`${fieldName} must be a string representation of a date, or a number timestamp`);
+        throw ConduitError.userInput(
+          `${fieldName} must be a string representation of a date, or a number timestamp`
+        );
       }
 
       value = new Date(value);
@@ -141,7 +170,8 @@ function validateType(fieldName: string, paramType: string, value: unknown, requ
       }
       break;
     case TYPE.ObjectId:
-      if (typeof value !== 'string') throw ConduitError.userInput(`${fieldName} must be a string`);
+      if (typeof value !== 'string')
+        throw ConduitError.userInput(`${fieldName} must be a string`);
       break;
   }
 
@@ -159,7 +189,7 @@ export function extractRouteReturnProperties(returnDefinition: any) {
 
   return {
     type: 'object',
-    properties: _extractRouteReturnProperties(returnDefinition)
+    properties: _extractRouteReturnProperties(returnDefinition),
   };
 }
 
@@ -182,8 +212,7 @@ function _extractRouteReturnProperties(returnDefinition: any) {
 function extractReturnPropertiesFromArray(returnDefinition: any[]) {
   let res: any = {
     type: 'array',
-    items: {
-    }
+    items: {},
   };
 
   if (isObject(returnDefinition[0])) {
@@ -203,24 +232,24 @@ function extractReturnPropertiesFromObject(returnDefinition: any) {
     if (isObject(returnDefinition.type)) {
       res = {
         type: 'object',
-        properties: _extractRouteReturnProperties(returnDefinition.type)
+        properties: _extractRouteReturnProperties(returnDefinition.type),
       };
     } else {
-      res = extractReturnPropertiesFromType(returnDefinition.type)
+      res = extractReturnPropertiesFromType(returnDefinition.type);
     }
   } else {
     res = {
       type: 'object',
-      properties: _extractRouteReturnProperties(returnDefinition)
-    }
+      properties: _extractRouteReturnProperties(returnDefinition),
+    };
   }
 
   return res;
 }
 
 function extractReturnPropertiesFromType(returnDefinition: string) {
-  let res: { type: string, format?: string } = {
-    type: ''
+  let res: { type: string; format?: string } = {
+    type: '',
   };
 
   switch (returnDefinition) {

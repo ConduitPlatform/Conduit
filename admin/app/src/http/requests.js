@@ -55,13 +55,46 @@ axios.interceptors.response.use(
 );
 
 //Requests
-export const getAuthUsersDataReq = (skip, limit) =>
+export const getAuthUsersDataReq = (skip, limit, search, filter) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
       skip,
       limit,
+      identifier: search ? search : undefined,
+      provider: filter.filterValue !== 'none' ? filter.filterValue : undefined,
     },
   });
+
+export const createNewUsers = ({ email, password }) =>
+  axios.post(`${CONDUIT_API}/admin/authentication/users`, {
+    identification: email,
+    password: password,
+  });
+
+export const editUser = (values) =>
+  axios.put(`${CONDUIT_API}/admin/authentication/users/${values._id}`, {
+    ...values,
+  });
+
+export const deleteUser = (id) => {
+  return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
+};
+
+export const searchUser = (identifier) => {
+  return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
+    params: {
+      identifier: identifier,
+    },
+  });
+};
+
+export const blockUser = (id) => {
+  return axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
+};
+
+export const unblockUser = (id) => {
+  return axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/unblock`);
+};
 
 export const getAuthenticationConfig = () =>
   axios.get(`${CONDUIT_API}/admin/config/authentication`);
@@ -81,6 +114,7 @@ export const putEmailTemplateRequest = (templateId, data) =>
 
 export const getEmailSettingsRequest = () =>
   axios.get(`${CONDUIT_API}/admin/config/email`);
+
 export const putEmailSettingsRequest = (data) =>
   axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
 
@@ -102,8 +136,10 @@ export const sendNotification = (data) =>
   axios.post(`${CONDUIT_API}/notifications/send`, {
     ...data,
   });
+
 export const getNotificationConfig = () =>
   axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
+
 export const putNotificationConfig = (projectId, productKey, clientEmail) =>
   axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
     projectId,
@@ -206,4 +242,8 @@ export const createServiceAccount = (name) => {
 
 export const refreshServiceAccount = (serviceId) => {
   return axios.put(`${CONDUIT_API}/admin/authentication/services`, { serviceId });
+};
+
+export const schemasFromOtherModules = () => {
+  return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
 };

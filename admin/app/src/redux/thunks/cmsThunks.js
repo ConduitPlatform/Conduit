@@ -6,6 +6,7 @@ import {
   setMoreCmsSchemas,
   setMoreSchemaDocumentsByName,
   setSchemaDocumentsByName,
+  setSchemasFromModules,
   startCmsLoading,
   stopCmsLoading,
   updateSchemaStatus,
@@ -24,12 +25,13 @@ import {
   deleteCustomEndpointsRequest,
   editCustomEndpointsRequest,
   getCustomEndpointsRequest,
+  schemasFromOtherModules,
 } from '../../http/requests';
 
-export const getCmsSchemas = () => {
+export const getCmsSchemas = (limit = 30) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
-    getCmsSchemasRequest(0, 30)
+    getCmsSchemasRequest(0, limit)
       .then((res) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsSchemas(res.data));
@@ -294,7 +296,7 @@ export const createCustomEndpoints = (endPointData) => {
       paginated: endPointData.paginated,
       sorted: endPointData.sorted,
       inputs: endPointData.inputs,
-      queries: endPointData.queries,
+      query: endPointData.query,
       assignments: endPointData.assignments,
     };
     createCustomEndpointsRequest(body)
@@ -306,6 +308,21 @@ export const createCustomEndpoints = (endPointData) => {
         dispatch(stopCmsLoading());
         dispatch(setCmsError({ err }));
         console.log(err);
+      });
+  };
+};
+
+export const fetchSchemasFromOtherModules = () => {
+  return (dispatch) => {
+    dispatch(startCmsLoading());
+    schemasFromOtherModules()
+      .then((res) => {
+        dispatch(setSchemasFromModules(res.data.results));
+      })
+      .catch((err) => {
+        console.log(err);
+        dispatch(stopCmsLoading());
+        dispatch(setCmsError({ err }));
       });
   };
 };

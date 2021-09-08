@@ -14,15 +14,59 @@ import InputLocationEnum from '../../../models/InputLocationEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
 const EndpointInputs = ({
-  selectedInputs,
   editMode,
-  handleInputNameChange,
-  handleInputTypeChange,
-  handleInputLocationChange,
-  handleInputIsArray,
-  handleInputIsOptional,
+  selectedInputs,
+  setSelectedInputs,
   handleRemoveInput,
 }) => {
+  const handleInputNameChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.name = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputTypeChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.type = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+  const handleInputLocationChange = (event, index) => {
+    const value = event.target.value;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.location = Number(value);
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputIsArray = (event, index) => {
+    const value = event.target.checked;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.array = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
+
+  const handleInputIsOptional = (event, index) => {
+    const value = event.target.checked;
+    const currentInputs = selectedInputs.slice();
+    const input = currentInputs[index];
+    if (input) {
+      input.optional = value;
+      setSelectedInputs(currentInputs);
+    }
+  };
   return selectedInputs.map((input, index) => (
     <Fragment key={`input-${index}`}>
       <Grid item xs={1} key={index}>
@@ -80,6 +124,7 @@ const EndpointInputs = ({
                 onChange={(event) => handleInputIsArray(event, index)}
                 name="Array"
                 size={'small'}
+                disabled={!editMode}
               />
             }
             label="Array"
@@ -94,6 +139,7 @@ const EndpointInputs = ({
                 onChange={(event) => handleInputIsOptional(event, index)}
                 name="Optional"
                 size={'small'}
+                disabled={!editMode}
               />
             }
             label="Optional"

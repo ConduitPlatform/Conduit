@@ -1,0 +1,74 @@
+{
+  "code": "http",
+  "name": "Http Request",
+  "description": "This actor makes an HTTP request to an accessible address with provided variables",
+  "options": {
+    "url": {
+      "type": "string",
+      "nullable": false
+    },
+    "method": {
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS",
+        "HEAD"
+      ],
+      "nullable": false
+    },
+    "timeout": {
+      "type": "int64",
+      "nullable": true
+    },
+    "maxContentLength": {
+      "type": "int64",
+      "nullable": true
+    },
+    "maxBodyLength": {
+      "type": "int64",
+      "nullable": true
+    },
+    "maxRedirects": {
+      "type": "int32",
+      "nullable": true
+    },
+    "headers": {
+      "type": "object",
+      "nullable": true
+    },
+    "body": {
+      "type": "object",
+      "nullable": true
+    },
+    "params": {
+      "type": "object",
+      "nullable": true
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "nullable": true
+    }
+  },
+  "returns": {
+    "data": {
+      "type": "object"
+    },
+    "status": {
+      "type": "int64"
+    },
+    "headers": {
+      "type": "object"
+    }
+  }
+}

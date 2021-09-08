@@ -28,7 +28,7 @@ message SendEmailRequest {
     string variables = 2;
     string sender = 3;
     repeated string cc = 4;
-    string replyTo = 5;
+    optional string replyTo = 5;
     repeated string attachments = 6;
   }
 }

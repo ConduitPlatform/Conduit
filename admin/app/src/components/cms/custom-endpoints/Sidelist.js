@@ -50,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Sidelist = ({
+const SideList = ({
   endpoints,
   selectedEndpoint,
   handleAddNewEndpoint,
@@ -68,7 +68,7 @@ const Sidelist = ({
         onClick={handleAddNewEndpoint}>
         Add endpoint
       </Button>
-      <Divider flexItem variant="middle" className={classes.divider}></Divider>
+      <Divider flexItem variant="middle" className={classes.divider} />
       <List className={classes.list}>
         {endpoints.map((endpoint) => (
           <ListItem
@@ -85,4 +85,4 @@ const Sidelist = ({
   );
 };
 
-export default Sidelist;
+export default SideList;

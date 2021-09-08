@@ -10,7 +10,8 @@ export function createHashKey(path: string, context: any, params: any) {
 }
 
 export function extractCaching(
-  route: ConduitRoute
+  route: ConduitRoute,
+  reqCacheHeader?: string
 ): { caching: boolean; cacheAge?: number; scope?: string } {
   let caching: boolean = false;
   let cacheAge: any | undefined;
@@ -22,13 +23,18 @@ export function extractCaching(
     cacheAge = cache[1].replace('max-age=', '');
     cacheAge = Number.parseInt(cacheAge);
   }
+
+  if (reqCacheHeader && reqCacheHeader === 'no-cache') {
+    caching = false;
+  }
   return { caching, cacheAge, scope };
 }
 
 export function extractCachingGql(
-  route: ConduitRoute
+  route: ConduitRoute,
+  cacheHeader?: string
 ): { caching: boolean; cacheAge?: number; scope?: CacheScope } {
-  let { caching, cacheAge, scope } = extractCaching(route);
+  let { caching, cacheAge, scope } = extractCaching(route, cacheHeader);
   scope = scope === 'public' ? CacheScope.Public : CacheScope.Private;
   return { caching, cacheAge, scope: scope as CacheScope };
 }

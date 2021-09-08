@@ -12,7 +12,6 @@ import {
   addToGroup,
   cloneItem,
   deleteItem,
-  getSchemaFields,
   getSchemaFieldsWithExtra,
   prepareFields,
   reorderItems,
@@ -23,7 +22,12 @@ import {
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
 import { useDispatch, useSelector } from 'react-redux';
-import { createNewSchema, editSchema } from '../../redux/thunks/cmsThunks';
+import {
+  createNewSchema,
+  editSchema,
+  fetchSchemasFromOtherModules,
+  getCmsSchemas,
+} from '../../redux/thunks/cmsThunks';
 import { clearSelectedSchema } from '../../redux/actions';
 
 const items = [
@@ -100,6 +104,11 @@ const BuildTypes = () => {
     type: 'standard',
   });
   const [readOnly, setReadOnly] = useState(false);
+
+  useEffect(() => {
+    dispatch(getCmsSchemas());
+    dispatch(fetchSchemasFromOtherModules());
+  }, [dispatch]);
 
   useEffect(() => {
     if (data.selectedSchema) {

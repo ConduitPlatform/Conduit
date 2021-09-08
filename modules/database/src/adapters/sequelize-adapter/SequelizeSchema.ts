@@ -1,6 +1,7 @@
 import { isNil } from 'lodash';
-import { Sequelize, ModelCtor, FindOptions, Op, DataTypes } from 'sequelize';
+import { DataTypes, FindOptions, ModelCtor, Op, Sequelize } from 'sequelize';
 import { SchemaAdapter } from '../../interfaces';
+
 const deepdash = require('deepdash/standalone');
 
 export class SequelizeSchema implements SchemaAdapter {
@@ -149,7 +150,11 @@ export class SequelizeSchema implements SchemaAdapter {
     return this.model.destroy({ where: this.parseQuery(query) });
   }
 
-  async findByIdAndUpdate(id: any, document: any): Promise<any> {
+  async findByIdAndUpdate(
+    id: any,
+    document: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
     if (document.hasOwnProperty('$inc')) {
       await this.model
         .increment(document['$inc'], { where: { _id: id } })
@@ -157,8 +162,7 @@ export class SequelizeSchema implements SchemaAdapter {
       delete document['$inc'];
     }
 
-    if (document.hasOwnProperty('$set')) {
-      document = document['$set'];
+    if (updateProvidedOnly) {
       const record = await this.model.findByPk(id, { raw: true }).catch(console.error);
       if (!isNil(record)) {
         document = { ...record, ...document };
@@ -199,7 +203,11 @@ export class SequelizeSchema implements SchemaAdapter {
     return this.model.upsert({ _id: id, ...document });
   }
 
-  async updateMany(filterQuery: any, query: any): Promise<any> {
+  async updateMany(
+    filterQuery: any,
+    query: any,
+    updateProvidedOnly: boolean = false
+  ): Promise<any> {
     let parsed = this.parseQuery(filterQuery);
     if (query.hasOwnProperty('$inc')) {
       await this.model
@@ -208,8 +216,7 @@ export class SequelizeSchema implements SchemaAdapter {
       delete query['$inc'];
     }
 
-    if (query.hasOwnProperty('$set')) {
-      query = query['$set'];
+    if (updateProvidedOnly) {
       const record = await this.model
         .findOne({ where: parsed, raw: true })
         .catch(console.error);

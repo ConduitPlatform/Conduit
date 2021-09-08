@@ -1,6 +1,9 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import ConduitGrpcSdk, {
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 
 export class NotificationTokensHandler {
   private database: any;
@@ -18,13 +21,13 @@ export class NotificationTokensHandler {
     const { token, platform } = JSON.parse(call.request.params);
     if (isNil(token) || isNil(platform)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
     const context = JSON.parse(call.request.context);
     if (isNil(context) || isNil(context.user))
-      return callback({ code: grpc.status.UNAUTHENTICATED, message: 'Unauthorized' });
+      return callback({ code: status.UNAUTHENTICATED, message: 'Unauthorized' });
     const userId = context.user._id;
 
     let errorMessage = null;
@@ -36,7 +39,7 @@ export class NotificationTokensHandler {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     const newTokenDocument = await this.database
       .create('NotificationToken', {
@@ -46,7 +49,7 @@ export class NotificationTokensHandler {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       result: JSON.stringify({

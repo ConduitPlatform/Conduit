@@ -35,13 +35,15 @@ export default {
       },
       proxy: {
         doc: 'The email proxy',
-        format: 'String',
+        format: '*',
         default: null,
         nullable: true,
       },
     },
     smtp: {
       doc: 'The SMTP transport settings',
+      nullable: true,
+      default: null,
       port: {
         doc: 'The port the SMTP server is listening on',
         format: 'Number',
