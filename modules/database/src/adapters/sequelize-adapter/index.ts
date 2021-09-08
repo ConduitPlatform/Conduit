@@ -12,17 +12,31 @@ export class SequelizeAdapter implements DatabaseAdapter {
   sequelize: Sequelize;
   models: { [name: string]: SequelizeSchema };
   registeredSchemas: Map<string, ConduitSchema>;
-
+  refreshing = false;
   constructor(connectionUri: string) {
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
-  createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter> {
+  sleep() {
+    return new Promise((resolve, reject) => {
+      let t = setTimeout(() => {
+        resolve();
+      }, 2000);
+    });
+  }
+
+  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter> {
     if (!this.models) {
       this.models = {};
     }
+    if (this.refreshing) {
+      while (this.refreshing) {
+        await this.sleep();
+      }
+    }
+    this.refreshing = true;
 
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
@@ -42,13 +56,9 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
-    return this.syncDb().then(() => {
-      return this.models![schema.name];
-    });
-  }
-
-  private async syncDb() {
-    await this.sequelize.sync().catch(console.error);
+    await this.sequelize.sync();
+    this.refreshing = false;
+    return this.models![schema.name];
   }
 
   getSchema(schemaName: string): ConduitSchema {

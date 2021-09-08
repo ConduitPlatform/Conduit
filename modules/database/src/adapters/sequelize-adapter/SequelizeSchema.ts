@@ -69,19 +69,19 @@ export class SequelizeSchema implements SchemaAdapter {
   async findOne(
     query: any,
     select?: string,
-    populate?: any,
+    populate?: string[],
     relations?: any
   ): Promise<any> {
     let options: FindOptions = { where: this.parseQuery(query), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
-    if (!isNil(select)) {
+    if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
 
     let document = await this.model.findOne(options);
 
     if (!isNil(populate) && !isNil(relations)) {
-      for (const relation of populate.split(' ')) {
+      for (const relation of populate) {
         if (this.relations.hasOwnProperty(relation)) {
           if (relations.hasOwnProperty(this.relations[relation])) {
             document[relation] = await relations[this.relations[relation]].findOne({
@@ -101,7 +101,7 @@ export class SequelizeSchema implements SchemaAdapter {
     limit?: number,
     select?: string,
     sort?: any,
-    populate?: any,
+    populate?: string[],
     relations?: any
   ): Promise<any> {
     let options: FindOptions = { where: this.parseQuery(query), raw: true };
@@ -112,7 +112,7 @@ export class SequelizeSchema implements SchemaAdapter {
     if (!isNil(limit)) {
       options.limit = limit;
     }
-    if (!isNil(select)) {
+    if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
     if (!isNil(sort)) {
@@ -122,7 +122,7 @@ export class SequelizeSchema implements SchemaAdapter {
     const documents = await this.model.findAll(options);
 
     if (!isNil(populate) && !isNil(relations)) {
-      for (const relation of populate.split(' ')) {
+      for (const relation of populate) {
         let cache: any = {};
         for (const document of documents) {
           if (this.relations.hasOwnProperty(relation)) {
@@ -167,6 +167,12 @@ export class SequelizeSchema implements SchemaAdapter {
       if (!isNil(record)) {
         document = { ...record, ...document };
       }
+    } else if (document.hasOwnProperty('$set')) {
+      document = document['$set'];
+      const record = await this.model.findByPk(id, { raw: true }).catch(console.error);
+      if (!isNil(record)) {
+        document = { ...record, ...document };
+      }
     }
 
     if (document.hasOwnProperty('$push')) {
@@ -200,7 +206,8 @@ export class SequelizeSchema implements SchemaAdapter {
     }
 
     document.updatedAt = new Date();
-    return this.model.upsert({ _id: id, ...document });
+    document = (await this.model.upsert({ _id: id, ...document }))[0];
+    return document;
   }
 
   async updateMany(
