@@ -3,28 +3,14 @@ import React, { useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
 import Box from '@material-ui/core/Box';
-
 import { privateRoute } from '../components/utils/privateRoute';
-
-import { makeStyles } from '@material-ui/core/styles';
-
 import SendSms from '../components/sms/SendSms';
 import SmsProviderDetails from '../components/sms/SmsProviderDetails';
 
-const useStyles = makeStyles((theme) => ({
-  backdrop: {
-    zIndex: theme.zIndex.drawer + 1,
-  },
-  snackBar: {
-    maxWidth: '80%',
-    width: 'auto',
-  },
-}));
-
-const Emails = () => {
+const Emails: React.FC = () => {
   const tabs = [{ title: 'Send SMS', isDisabled: false }, { title: 'Provider details' }];
   const [selected, setSelected] = useState(0);
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
   };
 

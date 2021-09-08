@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { makeStyles } from '@material-ui/core/styles';
 
@@ -49,23 +49,23 @@ const config = {
   },
 };
 
-const SmsProviderDetails = () => {
+const SmsProviderDetails: React.FC = () => {
   const classes = useStyles();
 
-  const [number, setNumber] = useState('');
-  const [accountSID, setAccountSID] = useState('');
-  const [authToken, setAuthToken] = useState('');
-  const [serviceID, setServiceID] = useState('');
-  const [verify, setVerify] = useState(false);
-  const [provider, setProvider] = useState('');
+  const [number, setNumber] = useState<string>('');
+  const [accountSID, setAccountSID] = useState<string>('');
+  const [authToken, setAuthToken] = useState<string>('');
+  const [serviceID, setServiceID] = useState<string>('');
+  const [verify, setVerify] = useState<boolean>(false);
+  const [provider, setProvider] = useState<string>('');
 
   useEffect(() => {
-    let selected = config.providerName;
+    const selected = config.providerName;
     setProvider(selected);
   }, []);
 
-  useEffect(() => {
-    const prepareValues = (config) => {
+  const prepareValues = useCallback(
+    (config: any) => {
       if (provider) {
         setNumber(config[provider].phoneNumber);
         setAuthToken(config[provider].authToken);
@@ -73,12 +73,16 @@ const SmsProviderDetails = () => {
         setVerify(config[provider].verify.active);
         setServiceID(config[provider].verify.serviceSid);
       }
-    };
+    },
+    [provider]
+  );
+
+  useEffect(() => {
     prepareValues(config);
-  }, [provider]);
+  }, [prepareValues, provider]);
 
   const onSaveClick = () => {
-    let data = {
+    const data = {
       active: true,
       providerName: provider,
       [provider]: {
@@ -91,11 +95,11 @@ const SmsProviderDetails = () => {
         authToken: authToken,
       },
     };
-    console.log(data);
+    console.log('onSaveClick', data);
   };
 
   const onCancelClick = () => {
-    let selected = config.providerName;
+    const selected = config.providerName;
     setProvider(selected);
   };
 

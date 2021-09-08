@@ -17,11 +17,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SendSms = () => {
+const SendSms: React.FC = () => {
   const classes = useStyles();
 
-  const [number, setNumber] = useState('');
-  const [content, setContent] = useState('');
+  const [number, setNumber] = useState<string>('');
+  const [content, setContent] = useState<string>('');
 
   return (
     <Container>
@@ -37,7 +37,7 @@ const SendSms = () => {
             <TextField
               value={number}
               onChange={(e) => setNumber(e.target.value)}
-              type={'number'}
+              type={'text'}
               variant="outlined"
               label="Phone Number"
               placeholder={'ex. +3069xxxxxxxx'}
@@ -54,7 +54,7 @@ const SendSms = () => {
               fullWidth
               size={'medium'}
               placeholder={'Message'}
-              type={'textarea'}
+              type={'text'}
             />
           </Grid>
           <Grid item container style={{ marginTop: 16 }} justify="flex-end" xs={12}>
@@ -74,7 +74,9 @@ const SendSms = () => {
               color="primary"
               disabled={!number || !content}
               startIcon={<Send />}
-              onClick={() => {}}>
+              onClick={() => {
+                console.log('handle sms send');
+              }}>
               Send
             </Button>
           </Grid>
