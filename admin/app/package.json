@@ -22,6 +22,7 @@
     "@material-ui/lab": "^4.0.0-alpha.44",
     "@material-ui/pickers": "^3.2.10",
     "@material-ui/styles": "latest",
+    "@reduxjs/toolkit": "^1.6.1",
     "axios": "^0.19.2",
     "clsx": "^1.1.0",
     "formik": "^2.1.4",

@@ -4,7 +4,6 @@ export interface EmailTemplateType {
   subject: string;
   variables: string[];
   _id: string;
-
   updatedAt?: string;
   createdAt?: string;
 }
