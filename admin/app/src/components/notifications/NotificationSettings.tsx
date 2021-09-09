@@ -1,5 +1,4 @@
-import React, { FC, SyntheticEvent, useEffect, useState } from 'react';
-
+import React, { FC, useEffect, useState } from 'react';
 import {
   Container,
   FormControl,
@@ -11,7 +10,6 @@ import {
   Typography,
 } from '@material-ui/core';
 import { Edit, Save, SettingsOutlined } from '@material-ui/icons';
-
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import TextField from '@material-ui/core/TextField';
 import clsx from 'clsx';
@@ -96,7 +94,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     setFormData({ ...data });
   }, [config]);
 
-  const handleSelect = (event: any) => {
+  const handleSelect = (event) => {
     setFormData({
       ...formData,
       providerName: event.target.value,
@@ -261,7 +259,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             justifyContent={'space-between'}
             alignItems={'center'}>
             <Typography variant={'h6'}>
-              <SettingsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />{' '}
+              <SettingsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />
               Notification settings
             </Typography>
             <FormControlLabel
