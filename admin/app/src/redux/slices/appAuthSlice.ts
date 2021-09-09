@@ -2,11 +2,17 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
 
 export type AppAuthState = {
-  value: number;
+  token: any;
+  loading: boolean;
+  error: any;
+  enabledModules: any;
 };
 
 const initialState: AppAuthState = {
-  value: 0,
+  token: null,
+  loading: false,
+  error: null,
+  enabledModules: [],
 };
 
 export const appAuthSlice = createSlice({
