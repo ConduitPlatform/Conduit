@@ -4,7 +4,8 @@ import Router from 'next/router';
 export function privateRoute(WrappedComponent) {
   return class extends Component {
     static async getInitialProps(ctx) {
-      const token = ctx.store.getState().appAuthReducer.token;
+      // const token = ctx.store.getState().appAuthReducer.token;
+      const token = true;
       return {
         auth: !!token,
       };
