@@ -15,13 +15,13 @@ export class FileHandlers {
     private readonly grpcSdk: ConduitGrpcSdk,
     storageProvider: IStorageProvider
   ) {
+    this.storageProvider = storageProvider;
     this.initDb(grpcSdk, storageProvider);
   }
 
   async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
     await grpcSdk.waitForExistence('database-provider');
     this.database = grpcSdk.databaseProvider;
-    this.storageProvider = storageProvider;
   }
 
   updateProvider(storageProvider: IStorageProvider) {
