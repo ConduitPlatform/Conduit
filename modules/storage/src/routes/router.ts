@@ -125,7 +125,7 @@ export class FileRoutes {
               folder: TYPE.String,
             },
             action: ConduitRouteActions.UPDATE,
-            path: '/storage/file',
+            path: '/storage/file/:id',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileUpdateResponse', {

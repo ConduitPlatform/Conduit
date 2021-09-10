@@ -15,6 +15,7 @@ import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
+import { AdminRoutes } from './admin/admin';
 
 export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;
@@ -55,6 +56,7 @@ export class StorageModule implements ConduitServiceModule {
     this.storageProvider = createStorageProvider('local', {} as any);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
   }
 
   async activate() {
