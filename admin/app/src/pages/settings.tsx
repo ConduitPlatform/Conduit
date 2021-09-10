@@ -5,20 +5,17 @@ import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
 import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { getAvailableClients } from '../redux/thunks/settingsThunks';
 import CoreSettingsTab from '../components/settings/CoreSettingsTab';
 import SecretsTab from '../components/settings/SecretsTab';
 import SdksTab from '../components/settings/SdksTab';
+import { asyncGetAvailableClients } from '../redux/slices/settingsSlice';
+import { asyncGetNotificationConfig } from '../redux/slices/notificationsSlice';
 
 const tabs = [{ title: 'Client SDKs' }, { title: 'Secrets' }, { title: 'Core' }];
 
 const Settings = () => {
   const dispatch = useDispatch();
   const [selected, setSelected] = useState(0);
-
-  useEffect(() => {
-    dispatch(getAvailableClients());
-  }, [dispatch]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);

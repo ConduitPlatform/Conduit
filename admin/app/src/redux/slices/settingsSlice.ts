@@ -26,7 +26,7 @@ const initialState: INotificationSlice = {
 };
 
 export const asyncGetAvailableClients = createAsyncThunk(
-  'notifications/sendNew',
+  'notifications/getClients',
   async () => {
     try {
       const { data } = await getAvailableClientsRequest();

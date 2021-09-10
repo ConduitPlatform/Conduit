@@ -16,6 +16,11 @@ import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 import { IStorageConfig } from '../models/storage/StorageModels';
+import {
+  asyncGetStorageConfig,
+  asyncSaveStorageConfig,
+} from '../redux/slices/storageSlice';
+import { useAppSelector } from '../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -32,19 +37,13 @@ const Storage: React.FC = () => {
   const classes = useStyles();
   const [selected, setSelected] = useState(0);
   const dispatch = useDispatch();
-  const { data, loading, error } = useSelector(
-    (state: {
-      storageReducer: {
-        data: { config: IStorageConfig };
-        loading: boolean;
-        error: any;
-      };
-    }) => state.storageReducer
-  );
+
+  const { config } = useAppSelector((state) => state.storageSlice.data);
+  const { loading, error } = useAppSelector((state) => state.storageSlice.meta);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(getStorageConfig());
+    dispatch(asyncGetStorageConfig());
   }, [dispatch]);
 
   useEffect(() => {
@@ -58,14 +57,14 @@ const Storage: React.FC = () => {
   };
 
   const handleStorageSettings = (data: IStorageConfig) => {
-    dispatch(saveStorageConfig(data));
+    dispatch(asyncSaveStorageConfig(data));
   };
 
   const snackbarAlert = () => {
     if (error) {
       return (
         <Alert variant={'filled'} severity="error">
-          {error?.data?.error ? error.data.error : 'Something went wrong!'}
+          {error ? error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -89,7 +88,7 @@ const Storage: React.FC = () => {
           <StorageFiles />
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <StorageSettings config={data.config} handleSave={handleStorageSettings} />
+          <StorageSettings config={config} handleSave={handleStorageSettings} />
         </Box>
       </Box>
       <Snackbar

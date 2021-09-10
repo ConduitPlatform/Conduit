@@ -16,6 +16,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
 import { AuthUserUI } from '../authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles({
   table: {
@@ -29,7 +30,7 @@ type Action = {
 };
 
 interface Props {
-  dsData: SchemaUI[] | AuthUserUI[]; //todo add notification types
+  dsData: SchemaUI[] | AuthUserUI[] | NotificationData[]; //todo add notification types
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
 }
