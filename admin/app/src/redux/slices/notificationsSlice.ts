@@ -11,53 +11,53 @@ import {
 
 interface INotificationSlice {
   data: {
-    config: INotificationSettings;
-    notifications: NotificationData;
+    config: INotificationSettings[];
+    notifications: NotificationData[];
   };
   meta: {
     loading: boolean;
-    error: string | null;
+    error: Error | null;
   };
 }
 
 const initialState: INotificationSlice = {
-  data: { config: null, notifications: null },
+  data: { config: [], notifications: [] },
   meta: {
     loading: false,
     error: null,
   },
 };
 
-const asyncSendNewNotification = createAsyncThunk(
+export const asyncSendNewNotification = createAsyncThunk(
   'notifications/sendNew',
   async (data) => {
     try {
-      const sentNotifications = await sendNotification(data);
-      return sentNotifications;
+      await sendNotification(data);
+      return;
     } catch (error) {
       throw error;
     }
   }
 );
 
-const asyncGetNotificationConfig = createAsyncThunk(
+export const asyncGetNotificationConfig = createAsyncThunk(
   'notifications/getConfig',
   async () => {
     try {
-      const config = await getNotificationConfig();
-      return config;
+      const { data } = await getNotificationConfig();
+      return data;
     } catch (error) {
       throw error;
     }
   }
 );
 
-const asyncSaveNotificationConfig = createAsyncThunk(
+export const asyncSaveNotificationConfig = createAsyncThunk(
   'notifications/saveConfig',
   async () => {
     try {
-      const savedConfig = await putNotificationConfig();
-      return savedConfig;
+      const { data } = await putNotificationConfig();
+      return data;
     } catch (error) {
       throw error;
     }
@@ -84,7 +84,7 @@ const notificationsSlice = createSlice({
     });
     builder.addCase(asyncSendNewNotification.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncSendNewNotification.fulfilled, (state) => {
       state.meta.loading = false;
@@ -94,7 +94,7 @@ const notificationsSlice = createSlice({
     });
     builder.addCase(asyncGetNotificationConfig.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetNotificationConfig.fulfilled, (state, action) => {
       state.meta.loading = false;
@@ -106,7 +106,7 @@ const notificationsSlice = createSlice({
     });
     builder.addCase(asyncSaveNotificationConfig.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncSaveNotificationConfig.fulfilled, (state, action) => {
       state.meta.loading = false;
@@ -114,12 +114,6 @@ const notificationsSlice = createSlice({
     });
   },
 });
-
-export {
-  asyncGetNotificationConfig,
-  asyncSaveNotificationConfig,
-  asyncSendNewNotification,
-};
 
 export default notificationsSlice.reducer;
 export const { clearNotificationPageStore, setLoading } = notificationsSlice.actions;

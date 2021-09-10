@@ -2,17 +2,10 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
   deleteClientRequest,
   generateNewClientRequest,
-  getNotificationConfig,
+  getAvailableClientsRequest,
   putCoreRequest,
-  putNotificationConfig,
-  sendNotification,
 } from '../../http/requests';
-import {
-  INotificationSettings,
-  NotificationData,
-} from '../../models/notifications/NotificationModels';
-import { getAvailableClients } from '../thunks/settingsThunks';
-import { IClient } from './../../models/settings/SettingsModels';
+import { IClient, IPlatformTypes } from './../../models/settings/SettingsModels';
 
 interface INotificationSlice {
   data: {
@@ -20,7 +13,7 @@ interface INotificationSlice {
   };
   meta: {
     loading: boolean;
-    error: string | null;
+    error: Error | null;
   };
 }
 
@@ -32,44 +25,53 @@ const initialState: INotificationSlice = {
   },
 };
 
-const asyncGetAvailableClients = createAsyncThunk('notifications/sendNew', async () => {
-  try {
-    const clients = await getAvailableClients();
-    return clients;
-  } catch (error) {
-    throw error;
-  }
-});
-
-const asyncGenerateNewClient = createAsyncThunk(
-  'settings/generateClient',
-  async (platform) => {
+export const asyncGetAvailableClients = createAsyncThunk(
+  'notifications/sendNew',
+  async () => {
     try {
-      const newClient = await generateNewClientRequest(platform);
-      return newClient;
+      const { data } = await getAvailableClientsRequest();
+      return data;
     } catch (error) {
       throw error;
     }
   }
 );
 
-const asyncDeleteClient = createAsyncThunk('settings/deleteClient', async (id) => {
-  try {
-    const deletedClient = await deleteClientRequest(id);
-    return deletedClient;
-  } catch (error) {
-    throw error;
+export const asyncGenerateNewClient = createAsyncThunk(
+  'settings/generateClient',
+  async (platform: IPlatformTypes) => {
+    try {
+      const { data } = await generateNewClientRequest(platform);
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
-});
+);
 
-const asyncPutCoreSettings = createAsyncThunk('settings/saveConfig', async (data) => {
-  try {
-    const savedConfig = await putCoreRequest(data);
-    return savedConfig;
-  } catch (error) {
-    throw error;
+export const asyncDeleteClient = createAsyncThunk(
+  'settings/deleteClient',
+  async (_id: string) => {
+    try {
+      await deleteClientRequest(_id);
+      return _id;
+    } catch (error) {
+      throw error;
+    }
   }
-});
+);
+
+export const asyncPutCoreSettings = createAsyncThunk(
+  'settings/saveConfig',
+  async (data) => {
+    try {
+      const savedConfig = await putCoreRequest(data);
+      return savedConfig;
+    } catch (error) {
+      throw error;
+    }
+  }
+);
 
 const settingsSlice = createSlice({
   name: 'settings',
@@ -88,54 +90,51 @@ const settingsSlice = createSlice({
     });
     builder.addCase(asyncGetAvailableClients.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
-    builder.addCase(asyncGetAvailableClients.fulfilled, (state) => {
+    builder.addCase(asyncGetAvailableClients.fulfilled, (state, action) => {
       state.meta.loading = false;
-      //  TODO state.data.availableClients = action.payload;
+      state.data.availableClients = action.payload;
     });
     builder.addCase(asyncGenerateNewClient.pending, (state) => {
       state.meta.loading = true;
     });
     builder.addCase(asyncGenerateNewClient.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGenerateNewClient.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      //  TODO state.data.availableClients = action.payload;
+      state.data.availableClients.push(action.payload);
     });
     builder.addCase(asyncDeleteClient.pending, (state) => {
       state.meta.loading = true;
     });
     builder.addCase(asyncDeleteClient.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncDeleteClient.fulfilled, (state, action) => {
       state.meta.loading = false;
-      //  TODO  state.data.availableClients =
+      const allClients = state.data.availableClients;
+      const clientIndex = allClients.findIndex((c) => c._id === action.payload);
+      if (clientIndex !== -1) {
+        allClients.splice(clientIndex, 1);
+      }
     });
     builder.addCase(asyncPutCoreSettings.pending, (state) => {
       state.meta.loading = true;
     });
     builder.addCase(asyncPutCoreSettings.rejected, (state, action) => {
       state.meta.loading = false;
-      state.meta.error = action.payload;
+      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncPutCoreSettings.fulfilled, (state, action) => {
       state.meta.loading = true;
     });
   },
 });
-
-export {
-  asyncGetAvailableClients,
-  asyncGenerateNewClient,
-  asyncDeleteClient,
-  asyncPutCoreSettings,
-};
 
 export default settingsSlice.reducer;
 export const { setLoading, setError } = settingsSlice.actions;
