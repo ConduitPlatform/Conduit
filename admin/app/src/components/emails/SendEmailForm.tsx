@@ -16,9 +16,10 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
-import { sendEmailThunk } from '../../redux/thunks/emailsThunk';
 import { useDispatch } from 'react-redux';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import { asyncSendEmail } from '../../redux/slices/emailsSlice';
+import { useAppDispatch } from '../../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -50,7 +51,7 @@ interface Props {
 
 const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
   const [emailState, setEmailState] = useState<IEmailState>({
@@ -82,7 +83,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         body: emailState.body,
       };
     }
-    dispatch(sendEmailThunk(email));
+    dispatch(asyncSendEmail(email));
   };
 
   const clearEmail = () => {

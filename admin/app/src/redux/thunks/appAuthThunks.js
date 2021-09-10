@@ -9,7 +9,8 @@ import {
   startAuthenticationLoading,
   stopAuthenticationLoading,
 } from '../actions';
-import { clearEmailPageStore } from '../actions/emailsActions';
+
+import { clearEmailPageStore } from '../slices/emailsSlice';
 import { getAdminModulesRequest, loginRequest } from '../../http/requests';
 
 export const login = (username, password, remember) => {
