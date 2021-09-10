@@ -11,4 +11,5 @@ export interface INotificationSettings {
   projectId: string;
   privateKey: string;
   clientEmail: string;
+  message?: string;
 }

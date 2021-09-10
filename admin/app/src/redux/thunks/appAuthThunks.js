@@ -1,8 +1,6 @@
 import {
   clearAuthenticationToken,
   clearAuthPageStore,
-  clearNotificationPageStore,
-  clearStoragePageStore,
   setAdminModules,
   setAuthenticationError,
   setAuthenticationToken,
@@ -11,6 +9,8 @@ import {
 } from '../actions';
 import { clearEmailPageStore } from '../actions/emailsActions';
 import { getAdminModulesRequest, loginRequest } from '../../http/requests';
+import { clearNotificationPageStore } from '../slices/notificationsSlice';
+import { clearStoragePageStore } from '../slices/storageSlice';
 
 export const login = (username, password, remember) => {
   return (dispatch) => {

@@ -18,11 +18,16 @@ import Box from '@material-ui/core/Box';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ClientPlatformEnum from '../../models/ClientPlatformEnum';
 import Button from '@material-ui/core/Button';
-import React, { ChangeEvent, useState } from 'react';
+import React, { ChangeEvent, useEffect, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import { useDispatch, useSelector } from 'react-redux';
-import { deleteClient, generateNewClient } from '../../redux/thunks/settingsThunks';
 import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
+import {
+  asyncDeleteClient,
+  asyncGenerateNewClient,
+  asyncGetAvailableClients,
+} from '../../redux/slices/settingsSlice';
+import { useAppSelector } from '../../redux/hooks';
 
 const useStyles = makeStyles({
   table: {
@@ -36,16 +41,23 @@ const SecretsTab: React.FC = () => {
 
   const [platform, setPlatform] = useState<IPlatformTypes>('WEB');
 
-  const { data } = useSelector(
-    (state: { settingsReducer: { data: { availableClients: IClient[] } } }) =>
-      state.settingsReducer
-  );
+  const handleGenerateNew = () => {
+    dispatch(asyncGenerateNewClient(platform));
+    setTimeout(() => {
+      dispatch(asyncGetAvailableClients());
+    }, 140);
+  };
+  //TODO We don't get an _id from the server for each new client we create so as a workaround we have to refetch-all client in
+  // TODO order to be able delete newly made clients
+
+  useEffect(() => {
+    dispatch(asyncGetAvailableClients());
+  }, [dispatch]);
+
+  const { availableClients } = useAppSelector((state) => state.settingsSlice.data);
 
   const handleDeletion = (_id: string) => {
-    dispatch(deleteClient(_id));
-  };
-  const handleGenerateNew = () => {
-    dispatch(generateNewClient(platform));
+    dispatch(asyncDeleteClient(_id));
   };
 
   return (
@@ -70,7 +82,7 @@ const SecretsTab: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.availableClients.map((client: IClient, index: number) => (
+                {availableClients.map((client: IClient, index: number) => (
                   <TableRow key={index}>
                     <TableCell>
                       <Typography variant={'caption'}>{client.clientId}</Typography>

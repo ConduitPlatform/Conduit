@@ -8,11 +8,6 @@ import DataTable from '../components/common/DataTable';
 import SendNotificationForm from '../components/notifications/SendNotificationForm';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  getConfig,
-  saveConfig,
-  sendNewNotification,
-} from '../redux/thunks/notificationThunks';
 import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -22,7 +17,12 @@ import {
   INotificationSettings,
   NotificationData,
 } from '../models/notifications/NotificationModels';
-import { RootState } from '../redux/store';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import {
+  asyncGetNotificationConfig,
+  asyncSaveNotificationConfig,
+  asyncSendNewNotification,
+} from '../redux/slices/notificationsSlice';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -35,31 +35,31 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Notification: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const classes = useStyles();
 
-  const { data, loading, error } = useSelector(
-    (state: RootState) => state.notificationReducer
+  const { config, notifications } = useAppSelector(
+    (state) => state.notificationsSlice.data
   );
-
+  const { loading, error } = useAppSelector((state) => state.notificationsSlice.meta);
   const [selected, setSelected] = useState(0);
   const [moduleDisabled, setModuleDisabled] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    if (data && data.config) {
-      if (data.config.message) {
+    dispatch(asyncGetNotificationConfig());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (config) {
+      if (config.message !== '') {
         setModuleDisabled(true);
       } else {
         setModuleDisabled(false);
         setSelected(0);
       }
     }
-  }, [data, data.config]);
-
-  useEffect(() => {
-    dispatch(getConfig());
-  }, [dispatch]);
+  }, [config]);
 
   useEffect(() => {
     if (error) {
@@ -77,7 +77,7 @@ const Notification: React.FC = () => {
     if (error) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          {error?.data?.error ? error.data.error : 'Something went wrong!'}
+          {error ? error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -93,11 +93,11 @@ const Notification: React.FC = () => {
   };
 
   const sendNotification = (data: NotificationData) => {
-    dispatch(sendNewNotification(data));
+    dispatch(asyncSendNewNotification(data));
   };
 
   const handleConfigSave = (data: INotificationSettings) => {
-    // dispatch(saveConfig(data));
+    dispatch(asyncSaveNotificationConfig(data));
   };
 
   return (
@@ -110,11 +110,11 @@ const Notification: React.FC = () => {
             <Typography variant={'h6'}>This module is not available</Typography>
           </Box>
         )}
-        {moduleDisabled && (
+        {!moduleDisabled && (
           <>
             <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-              {data && data.notifications ? (
-                <DataTable dsData={data.notifications} />
+              {notifications ? (
+                <DataTable dsData={notifications} />
               ) : (
                 <Typography variant={'h6'}>No data available</Typography>
               )}
@@ -125,7 +125,7 @@ const Notification: React.FC = () => {
             <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
               <NotificationSettings
                 handleSave={handleConfigSave}
-                config={data ? data.config : null}
+                config={config ? config : null}
               />
             </Box>
           </>
