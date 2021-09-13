@@ -2,6 +2,7 @@ import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import TablePagination from '@material-ui/core/TablePagination';
 import { useSelector } from 'react-redux';
+import { useAppSelector } from '../../redux/hooks';
 
 interface Props {
   page: number;
@@ -19,10 +20,7 @@ const Paginator: React.FC<Props> = ({
   limit,
   handleLimitChange,
 }) => {
-  const docs = useSelector(
-    (state: { authenticationPageReducer: { authUsersState: { count: number } } }) =>
-      state.authenticationPageReducer.authUsersState.count
-  );
+  const docs = useAppSelector((state) => state.authenticationSlice.data.authUsers.count);
 
   return (
     <Grid container justify="flex-end">

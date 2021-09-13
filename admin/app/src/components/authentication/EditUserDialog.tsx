@@ -16,8 +16,8 @@ import IconButton from '@material-ui/core/IconButton';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import { useDispatch } from 'react-redux';
-import { editUserThunk } from '../../redux/thunks/authenticationThunks';
 import { AuthUser } from './AuthModels';
+import { asyncEditUser } from '../../redux/slices/authenticationSlice';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -44,6 +44,7 @@ interface Values {
   active: boolean;
   isVerified: boolean;
   hasTwoFA?: boolean;
+  _id: string;
   //Todo make hasTwoFA non-optional once its default value gets returned from back
 }
 
@@ -62,7 +63,10 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
     active: false,
     isVerified: false,
     hasTwoFA: false,
+    _id: '',
   });
+
+  console.log(data);
 
   useEffect(() => {
     setValues({ ...data });
@@ -76,7 +80,7 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
 
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    dispatch(editUserThunk(values));
+    dispatch(asyncEditUser(values));
     handleClose();
   };
 

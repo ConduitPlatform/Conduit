@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { AuthUser } from '../../components/authentication/AuthModels';
 import {
   blockUser,
+  createNewUsers,
   deleteUser,
   editUser,
   getAuthenticationConfig,
@@ -11,6 +12,8 @@ import {
   unblockUser,
 } from '../../http/requests';
 import { NotificationData } from '../../models/notifications/NotificationModels';
+import getStore from '../store';
+import { getAuthUsersData } from '../thunks/authenticationThunks';
 
 interface IAuthenticationSlice {
   data: {
@@ -18,10 +21,10 @@ interface IAuthenticationSlice {
       users: AuthUser[];
       count: number;
     };
-    signInMethods: NotificationData[];
+    signInMethods: any;
   };
   meta: {
-    authUsers: { loading: boolean; error: Error | null };
+    authUsers: { loading: boolean; error: Error | null; success: string | null };
     signInMethods: { loading: boolean; error: Error | null };
   };
 }
@@ -32,19 +35,24 @@ const initialState: IAuthenticationSlice = {
       users: [],
       count: 0,
     },
-    signInMethods: [],
+    signInMethods: null,
   },
   meta: {
-    authUsers: { loading: false, error: null },
+    authUsers: { loading: false, error: null, success: '' },
     signInMethods: { loading: false, error: null },
   },
 };
 
 export const asyncGetAuthUserData = createAsyncThunk(
   'authentication/getUserData',
-  async (params: NotificationData) => {
+  async (params: { skip: number; limit: number; search: string; filter: string }) => {
     try {
-      const { data } = await getAuthUsersDataReq(params);
+      const { data } = await getAuthUsersDataReq(
+        params.skip,
+        params.limit,
+        params.search,
+        params.filter
+      );
       return data;
     } catch (error) {
       throw error;
@@ -52,18 +60,26 @@ export const asyncGetAuthUserData = createAsyncThunk(
   }
 );
 
-export const asyncAddNewUser = createAsyncThunk('authentication/addUser', async () => {
-  try {
-    const { data } = await getNotificationConfig();
-    return data;
-  } catch (error) {
-    throw error;
+export const asyncAddNewUser = createAsyncThunk(
+  'authentication/addUser',
+  async (
+    params: { values: { password: string; email: string }; limit: number },
+    thunkApi
+  ) => {
+    try {
+      const filter = { filterValue: 'none' };
+      const { data } = await createNewUsers(params.values);
+      thunkApi.dispatch(getAuthUsersData(0, params.limit, '', filter));
+      return { data, params };
+    } catch (error) {
+      throw error;
+    }
   }
-});
+);
 
 export const asyncEditUser = createAsyncThunk(
   'authentication/editUser',
-  async (values: AuthUser) => {
+  async (values: any) => {
     try {
       await editUser(values);
       return values;
@@ -123,9 +139,9 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
 
 export const asyncUpdateAuthenticationConfig = createAsyncThunk(
   'authentication/updateConfig',
-  async () => {
+  async (body: any) => {
     try {
-      const { data } = await putAuthenticationConfig();
+      const { data } = await putAuthenticationConfig(body);
       return data;
     } catch (error) {
       throw error;
@@ -137,14 +153,14 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
-    clearNotificationPageStore(state) {
+    clearAuthenticationPageStore(state) {
       state = initialState;
     },
     setLoading(state, action) {
-      state.meta.loading = action.payload;
+      state.meta.authUsers.loading = action.payload;
     },
     setError(state, action) {
-      state.meta.error = action.payload;
+      state.meta.authUsers.error = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -168,9 +184,9 @@ const authenticationSlice = createSlice({
       state.meta.authUsers.error = action.error as Error;
     });
     builder.addCase(asyncAddNewUser.fulfilled, (state, action) => {
+      state.meta.authUsers.success = action.payload.data.message;
       state.meta.authUsers.loading = false;
       state.meta.authUsers.error = null;
-      state.data.authUsers = action.payload;
       state.data.authUsers.count++;
     });
     builder.addCase(asyncEditUser.pending, (state) => {
@@ -182,10 +198,10 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
       state.meta.authUsers.loading = false;
-      let userToEdit = state.data.authUsers.users.find(
-        (user) => user._id === action.payload._id
+      //TODO for some reason this does not update the new user's info on the store, probably has to do with immer
+      state.data.authUsers.users.map((user) =>
+        user._id !== action.payload._id ? user : action.payload
       );
-      userToEdit = action.payload;
     });
     builder.addCase(asyncBlockUserUI.pending, (state) => {
       state.meta.authUsers.loading = true;
@@ -259,4 +275,4 @@ const authenticationSlice = createSlice({
 });
 
 export default authenticationSlice.reducer;
-export const { clearNotificationPageStore, setLoading } = authenticationSlice.actions;
+export const { clearAuthenticationPageStore, setLoading } = authenticationSlice.actions;

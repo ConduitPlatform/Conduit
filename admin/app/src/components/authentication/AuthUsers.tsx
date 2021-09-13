@@ -9,6 +9,12 @@ import {
 import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
 import { AuthUser, AuthUserUI } from './AuthModels';
+import { useAppDispatch } from '../../redux/hooks';
+import {
+  asyncBlockUserUI,
+  asyncDeleteUser,
+  asyncUnblockUserUI,
+} from '../../redux/slices/authenticationSlice';
 
 interface Props {
   users: AuthUser[];
@@ -34,7 +40,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     setOpenBlockUI(false);
   };
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const formatData = (users: AuthUser[]) => {
     return users.map((u) => {
@@ -49,7 +55,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
   };
 
   const deleteButtonAction = (id: string) => {
-    dispatch(deleteUserThunk(id));
+    dispatch(asyncDeleteUser(id));
     setOpenDeleteUser(false);
   };
 
@@ -86,13 +92,15 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const handleBlockUI = () => {
     if (selectedUser.active) {
-      dispatch(blockUserUIThunk(selectedUser._id));
+      dispatch(asyncBlockUserUI(selectedUser._id));
       setOpenBlockUI(false);
     } else {
-      dispatch(unblockUserUIThunk(selectedUser._id));
+      dispatch(asyncUnblockUserUI(selectedUser._id));
       setOpenBlockUI(false);
     }
   };
+
+  console.log(users);
 
   return (
     <>
