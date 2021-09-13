@@ -17,7 +17,7 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, schemaName } = JSON.parse(call.request.params);
+    let { skip, limit, schemaName, query } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
     const schema = await this.database
@@ -33,6 +33,10 @@ export class DocumentsAdmin {
       });
     }
 
+    if (!query || query.length === '') {
+      query = {};
+    }
+
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -45,12 +49,12 @@ export class DocumentsAdmin {
 
     const documentsPromise = this.database.findMany(
       schemaName,
-      {},
+      query,
       null,
       skipNumber,
       limitNumber
     );
-    const countPromise = this.database.countDocuments(schemaName, {});
+    const countPromise = this.database.countDocuments(schemaName, query);
 
     const [documents, documentsCount] = await Promise.all([
       documentsPromise,
