@@ -131,7 +131,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       }
 
       this.internalRegisterRoute(
-        call.request.protofile,
+        call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
         moduleName
