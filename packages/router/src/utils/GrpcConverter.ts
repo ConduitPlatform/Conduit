@@ -16,14 +16,7 @@ import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
 
 let protoLoader = require('@grpc/proto-loader');
 
-export function grpcToConduitRoute(
-  request: any,
-  moduleName?: string
-): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
-  let protofile = request.protoFile;
-  let routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
-  ] = request.routes;
+function getDescriptor(protofile: string): any {
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {
@@ -33,7 +26,19 @@ export function grpcToConduitRoute(
     defaults: true,
     oneofs: true,
   });
-  let routerDescriptor: any = loadPackageDefinition(packageDefinition);
+  fs.unlink(protoPath, () => {});
+  return loadPackageDefinition(packageDefinition);
+}
+
+export function grpcToConduitRoute(
+  request: any,
+  moduleName?: string
+): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
+  let routes: [
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+  ] = request.routes;
+
+  let routerDescriptor: any = getDescriptor(request.protoFile);
   //this can break everything change it
   while (Object.keys(routerDescriptor)[0] !== 'Router') {
     routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
