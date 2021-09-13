@@ -1,13 +1,14 @@
 import {
+  isArray,
   isBoolean,
   isEmpty,
   isNil,
   isObject,
   isPlainObject,
   isString,
-  isArray,
 } from 'lodash';
 import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+
 const deepdash = require('deepdash/standalone');
 
 export function validateSchemaInput(

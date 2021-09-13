@@ -13,7 +13,7 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isArray, isNil } from 'lodash';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 
 export class ChatRoutes {
   private database: any;
@@ -30,7 +30,10 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'users array is required and cannot be empty'});
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'users array is required and cannot be empty',
+      });
     }
 
     try {
@@ -40,16 +43,23 @@ export class ChatRoutes {
     }
 
     let errorMessage: string | null = null;
-    const room = await this.database.create('ChatRoom', { name: roomName, participants: Array.from(new Set([user._id, ...users])) })
+    const room = await this.database
+      .create('ChatRoom', {
+        name: roomName,
+        participants: Array.from(new Set([user._id, ...users])),
+      })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    this.grpcSdk.bus?.publish('chat:create:ChatRoom', JSON.stringify({ name: roomName, participants: room.participants }));
-    callback(null, { result: JSON.stringify({ roomId: room._id })});
+    this.grpcSdk.bus?.publish(
+      'chat:create:ChatRoom',
+      JSON.stringify({ name: roomName, participants: room.participants })
+    );
+    callback(null, { result: JSON.stringify({ roomId: room._id }) });
   }
 
   async addUserToRoom(call: RouterRequest, callback: RouterResponse) {
@@ -57,20 +67,24 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     if (isNil(roomId) || isNil(users) || !isArray(users) || users.length === 0) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'roomId and users array are required' });
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'roomId and users array are required',
+      });
     }
 
     let errorMessage: string | null = null;
-    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+    const room = await this.database
+      .findOne('ChatRoom', { _id: roomId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(room) || !room.participants.includes(user._id)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'Room does not exist' });
     }
 
     try {
@@ -80,12 +94,13 @@ export class ChatRoutes {
     }
 
     room.participants = Array.from(new Set([...room.participants, ...users]));
-    await this.database.findByIdAndUpdate('ChatRoom', room._id, room)
+    await this.database
+      .findByIdAndUpdate('ChatRoom', room._id, room)
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
@@ -98,35 +113,40 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     if (isNil(roomId)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'roomId is required' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'roomId is required' });
     }
 
     let errorMessage: string | null = null;
-    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+    const room = await this.database
+      .findOne('ChatRoom', { _id: roomId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(room)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Room does not exist' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'Room does not exist' });
     }
 
     const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
-      await this.database.findByIdAndUpdate('ChatRoom', room._id, room)
+      await this.database
+        .findByIdAndUpdate('ChatRoom', room._id, room)
         .catch((e: Error) => {
           errorMessage = e.message;
         });
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
     }
 
-    this.grpcSdk.bus?.publish('chat:leavRoom:ChatRoom', JSON.stringify({ roomId, user: user._id }))
+    this.grpcSdk.bus?.publish(
+      'chat:leavRoom:ChatRoom',
+      JSON.stringify({ roomId, user: user._id })
+    );
 
     callback(null, { result: 'ok' });
   }
@@ -139,28 +159,40 @@ export class ChatRoutes {
     let countPromise;
     let errorMessage: string | null = null;
     if (isNil(roomId)) {
-      const rooms = await this.database.findMany('ChatRoom', { participants: user._id })
+      const rooms = await this.database
+        .findMany('ChatRoom', { participants: user._id })
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
 
-      const query = { room: { $in: rooms.map((room: any) => room._id) }};
-      messagesPromise = this.database.findMany('ChatMessage', query, undefined, skip, limit, '-createdAt');
+      const query = { room: { $in: rooms.map((room: any) => room._id) } };
+      messagesPromise = this.database.findMany(
+        'ChatMessage',
+        query,
+        undefined,
+        skip,
+        limit,
+        '-createdAt'
+      );
       countPromise = this.database.countDocuments('ChatMessage', query);
     } else {
-      const room = await this.database.findOne('ChatRoom', { _id: roomId })
+      const room = await this.database
+        .findOne('ChatRoom', { _id: roomId })
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
       if (isNil(room) || !room.participants.includes(user._id)) {
-        return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'room does not exist'})
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'room does not exist',
+        });
       }
       messagesPromise = this.database.findMany(
         'ChatMessage',
         {
-          room: roomId
+          room: roomId,
         },
         undefined,
         skip,
@@ -177,8 +209,8 @@ export class ChatRoutes {
       })
       .catch((e: Error) => {
         callback({
-          code: grpc.status.INTERNAL,
-          message: e.message
+          code: status.INTERNAL,
+          message: e.message,
         });
       });
   }
@@ -188,26 +220,28 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const message = await this.database.findOne('ChatMessage', { _id: messageId })
+    const message = await this.database
+      .findOne('ChatMessage', { _id: messageId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
 
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(message) || message.senderUser !== user._id) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid message id' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid message id' });
     }
 
-    this.database.deleteOne('ChatMessage', { _id: messageId })
+    this.database
+      .deleteOne('ChatMessage', { _id: messageId })
       .then(() => {
         this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
         callback(null, { result: 'message deleted successfully' });
       })
       .catch((e: Error) => {
-        callback({ code: grpc.status.INTERNAL, message: e.message });
+        callback({ code: status.INTERNAL, message: e.message });
       });
   }
 
@@ -216,27 +250,32 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const message = await this.database.findOne('ChatMessage', { _id: messageId })
+    const message = await this.database
+      .findOne('ChatMessage', { _id: messageId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
 
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(message) || message.senderUser !== user._id) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid message id' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid message id' });
     }
 
     message.message = newMessage;
-    this.database.findByIdAndUpdate('ChatMessage', message._id, message)
+    this.database
+      .findByIdAndUpdate('ChatMessage', message._id, message)
       .then(() => {
-        this.grpcSdk.bus?.publish('chat:edit:ChatMessage', JSON.stringify({ id: messageId, newMessage: message }));
+        this.grpcSdk.bus?.publish(
+          'chat:edit:ChatMessage',
+          JSON.stringify({ id: messageId, newMessage: message })
+        );
         callback(null, { result: 'message changed successfully' });
       })
       .catch((e: Error) => {
-        callback({ code: grpc.status.INTERNAL, message: e.message });
+        callback({ code: status.INTERNAL, message: e.message });
       });
   }
 
@@ -244,12 +283,13 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const rooms = await this.database.findMany('ChatRoom', { participants: user._id })
+    const rooms = await this.database
+      .findMany('ChatRoom', { participants: user._id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     callback(null, { rooms: rooms?.map((room: any) => room._id) });
@@ -257,99 +297,86 @@ export class ChatRoutes {
 
   async onMessage(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
-    const [ roomId, message ] = JSON.parse(call.request.params);
+    const [roomId, message] = JSON.parse(call.request.params);
 
     let errorMessage: string | null = null;
-    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+    const room = await this.database
+      .findOne('ChatRoom', { _id: roomId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     if (isNil(room) || !room.participants.includes(user._id)) {
-      return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'invalid room' });
+      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
 
-    this.database.create('ChatMessage', {
-      message,
-      senderUser: user._id,
-      room: roomId,
-      readBy: [user._id]
-    }).then(() => {
-      callback(null, {
-        event: 'message',
-        receivers: [roomId],
-        data: JSON.stringify({ sender: user._id, message, room: roomId })
+    this.database
+      .create('ChatMessage', {
+        message,
+        senderUser: user._id,
+        room: roomId,
+        readBy: [user._id],
+      })
+      .then(() => {
+        callback(null, {
+          event: 'message',
+          receivers: [roomId],
+          data: JSON.stringify({ sender: user._id, message, room: roomId }),
+        });
+      })
+      .catch((e: Error) => {
+        callback({
+          code: status.INTERNAL,
+          message: e.message,
+        });
       });
-    }).catch((e: Error) => {
-      callback({
-        code: grpc.status.INTERNAL,
-        message: e.message
-      });
-    });
   }
 
   async onMessagesRead(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
-    const [ roomId ] = JSON.parse(call.request.params);
+    const [roomId] = JSON.parse(call.request.params);
 
     let errorMessage: string | null = null;
-    const room = await this.database.findOne('ChatRoom', { _id: roomId })
+    const room = await this.database
+      .findOne('ChatRoom', { _id: roomId })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
-        message: errorMessage
+        code: status.INTERNAL,
+        message: errorMessage,
       });
     }
 
     if (isNil(room) || !room.participants.includes(user._id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'invalid room'
+        code: status.INVALID_ARGUMENT,
+        message: 'invalid room',
       });
     }
 
     const filterQuery = {
       room: room._id,
-      readBy: { $ne: user._id }
+      readBy: { $ne: user._id },
     };
 
-    this.database.updateMany('ChatMessage', filterQuery, { $push: { readBy: user._id } })
+    this.database
+      .updateMany('ChatMessage', filterQuery, { $push: { readBy: user._id } })
       .then(() => {
         callback(null, {
           event: 'messagesRead',
           receivers: [room._id],
-          data: JSON.stringify({ room: room._id, readBy: user._id })
+          data: JSON.stringify({ room: room._id, readBy: user._id }),
         });
       })
       .catch((e: Error) => {
         callback({
-          code: grpc.status.INTERNAL,
-          message: e.message
+          code: status.INTERNAL,
+          message: e.message,
         });
       });
-  }
-
-  private async validateUsersInput(users: any[]) {
-    const uniqueUsers = Array.from(new Set(users));
-    let errorMessage: string | null = null;
-    const usersToBeAdded = await this.database.findMany('User', { _id: { $in: uniqueUsers } })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return Promise.reject({ code: grpc.status.INTERNAL, message: errorMessage });
-    }
-    if (usersToBeAdded.length != uniqueUsers.length) {
-      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
-      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
-      if (wrongIds.length != 0) {
-        return Promise.reject({ code: grpc.status.INVALID_ARGUMENT, message: `users [${wrongIds}] do not exist` });
-      }
-    }
   }
 
   async registerRoutes() {
@@ -373,6 +400,29 @@ export class ChatRoutes {
       });
   }
 
+  private async validateUsersInput(users: any[]) {
+    const uniqueUsers = Array.from(new Set(users));
+    let errorMessage: string | null = null;
+    const usersToBeAdded = await this.database
+      .findMany('User', { _id: { $in: uniqueUsers } })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
+    }
+    if (usersToBeAdded.length != uniqueUsers.length) {
+      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
+      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
+      if (wrongIds.length != 0) {
+        return Promise.reject({
+          code: status.INVALID_ARGUMENT,
+          message: `users [${wrongIds}] do not exist`,
+        });
+      }
+    }
+  }
+
   private async getRegisteredRoutes(): Promise<any[]> {
     let routesArray: any[] = [];
 
@@ -384,12 +434,12 @@ export class ChatRoutes {
             action: ConduitRouteActions.POST,
             bodyParams: {
               roomName: TYPE.String,
-              users: [TYPE.String]
+              users: [TYPE.String],
             },
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('CreateRoom', {
-            roomId: TYPE.String
+            roomId: TYPE.String,
           }),
           'createRoom'
         )
@@ -406,14 +456,14 @@ export class ChatRoutes {
               roomId: TYPE.String,
             },
             bodyParams: {
-              users: [TYPE.String]
+              users: [TYPE.String],
             },
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
-          'addUserToRoom',
-        ),
-      ),
+          'addUserToRoom'
+        )
+      )
     );
 
     routesArray.push(
@@ -428,9 +478,9 @@ export class ChatRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
-          'leaveRoom',
-        ),
-      ),
+          'leaveRoom'
+        )
+      )
     );
 
     routesArray.push(
@@ -444,19 +494,21 @@ export class ChatRoutes {
               skip: TYPE.Number,
               limit: TYPE.Number,
             },
-            middlewares: ['authMiddleware']
+            middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('MessagesResponse', {
-            messages: [{
-              _id: TYPE.String,
-              message: TYPE.String,
-              senderUser: TYPE.String,
-              room: TYPE.String,
-              readBy: [TYPE.String],
-              createdAt: TYPE.Date,
-              updatedAt: TYPE.Date,
-            }],
-            count: TYPE.Number
+            messages: [
+              {
+                _id: TYPE.String,
+                message: TYPE.String,
+                senderUser: TYPE.String,
+                room: TYPE.String,
+                readBy: [TYPE.String],
+                createdAt: TYPE.Date,
+                updatedAt: TYPE.Date,
+              },
+            ],
+            count: TYPE.Number,
           }),
           'getMessages'
         )
@@ -472,9 +524,9 @@ export class ChatRoutes {
               path: '/messages/:messageId',
               action: ConduitRouteActions.DELETE,
               urlParams: {
-                messageId: TYPE.String
+                messageId: TYPE.String,
               },
-              middlewares: ['authMiddleware']
+              middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
             'deleteMessage'
@@ -491,12 +543,12 @@ export class ChatRoutes {
               path: '/messages/:messageId',
               action: ConduitRouteActions.UPDATE,
               urlParams: {
-                messageId: TYPE.String
+                messageId: TYPE.String,
               },
               bodyParams: {
-                newMessage: TYPE.String
+                newMessage: TYPE.String,
               },
-              middlewares: ['authMiddleware']
+              middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('EditMessageResponse', 'String'),
             'editMessage'
@@ -513,29 +565,29 @@ export class ChatRoutes {
             middlewares: ['authMiddleware'],
           },
           {
-            'connect': {
+            connect: {
               handler: 'connect',
             },
-            'message': {
+            message: {
               handler: 'onMessage',
               params: [TYPE.String, TYPE.String],
               returnType: new ConduitRouteReturnDefinition('MessageResponse', {
                 sender: TYPE.String,
                 message: TYPE.String,
-                room: TYPE.String
-              })
+                room: TYPE.String,
+              }),
             },
-            'messagesRead': {
+            messagesRead: {
               handler: 'onMessagesRead',
               params: [TYPE.String],
               returnType: new ConduitRouteReturnDefinition('MessagesReadResponse', {
                 room: TYPE.String,
-                readBy: TYPE.String
-              })
-            }
-          },
-        ),
-      ),
+                readBy: TYPE.String,
+              }),
+            },
+          }
+        )
+      )
     );
 
     return routesArray;

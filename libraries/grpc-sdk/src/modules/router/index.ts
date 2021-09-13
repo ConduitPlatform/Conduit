@@ -4,6 +4,7 @@ import { GrpcServer } from '../../classes';
 import fs from 'fs';
 import { SocketProtoDescription } from '../../interfaces';
 import { RouterClient } from '../../protoUtils/core';
+import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
 syntax = "proto3";
@@ -39,7 +40,7 @@ message SocketResponse {
   repeated string rooms = 4;
 }
 `;
-export default class Router extends ConduitModule<RouterClient> {
+export class Router extends ConduitModule<RouterClient> {
   constructor(url: string, private readonly moduleName: string) {
     super(url);
     this.initializeClient(RouterClient);
@@ -81,6 +82,18 @@ export default class Router extends ConduitModule<RouterClient> {
     // One case is to register to config module X and the admin package to request the url from
     // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it
     return this.sleep(3000).then(() => this.register(paths, protoFile));
+  }
+
+  async registerRouterAsync(
+    server: GrpcServer,
+    paths: any[],
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+  ): Promise<any> {
+    let modifiedFunctions: { [name: string]: Function } = {};
+    Object.keys(functions).forEach((key) => {
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
+    });
+    return this.registerRouter(server, paths, modifiedFunctions);
   }
 
   register(paths: any[], protoFile?: string, url?: string): Promise<any> {

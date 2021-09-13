@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 
 import path from 'path';
 import { isNil } from 'lodash';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { FlowCreator } from '../controllers/flowCreator';
 
 const { readdirSync, readFileSync } = require('fs');
@@ -77,7 +77,7 @@ export class AdminHandlers {
     );
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -89,7 +89,7 @@ export class AdminHandlers {
 
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument id is required!',
       });
     }
@@ -99,7 +99,7 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ flow }) });
   }
@@ -118,7 +118,7 @@ export class AdminHandlers {
 
     if (isNil(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument id is required!',
       });
     }
@@ -127,7 +127,7 @@ export class AdminHandlers {
       .findOne('ActorFlows', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     const flowRuns = this.database.findMany(
       'ActorRuns',
@@ -144,7 +144,7 @@ export class AdminHandlers {
     );
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -157,26 +157,26 @@ export class AdminHandlers {
     );
     if (!name) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument name is required!',
       });
     }
     if (!trigger) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument trigger is required!',
       });
     }
 
     if (!actors || !Array.isArray(actors) || actors.length === 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument actors is required and must be a non-empty array!',
       });
     }
     if (!actorPaths || !Array.isArray(actorPaths) || actorPaths.length === 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Argument actorPaths is required and must be a non-empty array!',
       });
     }
@@ -184,7 +184,7 @@ export class AdminHandlers {
     let matchingTrigger = triggers.filter((trigr: any) => trigr.code === trigger.code);
     if (matchingTrigger.length === 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: `Trigger ${trigger.code} is not a valid trigger code.`,
       });
     }
@@ -194,7 +194,7 @@ export class AdminHandlers {
       let matchingActor = availableActors.filter((actr: any) => actr.code === actor.code);
       if (matchingActor.length === 0) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: `Actor ${actor.code} is not a valid actor code.`,
         });
       }
@@ -209,18 +209,18 @@ export class AdminHandlers {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     await this.warden.constructFlow(flow).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ flow }) });
   }
 
   //todo
   async editFlowById(call: RouterRequest, callback: RouterResponse) {
-    return callback({ code: grpc.status.UNIMPLEMENTED, message: 'Not implemented yet' });
+    return callback({ code: status.UNIMPLEMENTED, message: 'Not implemented yet' });
   }
 
   private _getActors() {

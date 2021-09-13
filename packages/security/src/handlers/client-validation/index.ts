@@ -1,23 +1,39 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitError, ConduitCommons } from '@quintessential-sft/conduit-commons';
+import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
 import { ClientModel } from '../../models/Client';
 
 export class ClientValidator {
+  prod = false;
+
   constructor(private readonly database: any, private readonly sdk: ConduitCommons) {
+    const self = this;
+    sdk
+      .getConfigManager()
+      .get('core')
+      .then((res) => {
+        if (res.env === 'production') {
+          self.prod = true;
+        }
+      });
     this.database.createSchemaFromAdapter(ClientModel);
   }
 
   async middleware(req: Request, res: Response, next: NextFunction) {
     if (isNil((req as any).conduit)) (req as any).conduit = {};
+
+    // if incoming call is a webhook or an admin call
     if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
       return next();
     }
 
+    // check gql explorer and swagger access
     if (
       (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
       req.method === 'GET'
     ) {
+      // disabled swagger and gql explorer access on production
+      if (this.prod) return next(ConduitError.unauthorized());
       return next();
     }
 
@@ -39,7 +55,8 @@ export class ClientValidator {
         }
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
-        this.sdk.getState().setKey(`${clientid}-${clientsecret}`, true);
+        // expiry to force key refresh in redis so that keys can be revoked without redis restart
+        this.sdk.getState().setKey(`${clientid}-${clientsecret}`, true, 10000);
         next();
       })
       .catch(() => {

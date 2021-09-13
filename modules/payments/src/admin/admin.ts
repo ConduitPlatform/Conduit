@@ -1,5 +1,9 @@
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
@@ -39,7 +43,7 @@ export class AdminHandlers {
 
     if (isNil(name) || isNil(value) || isNil(currency)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'product name, value and currency are required',
       });
     }
@@ -58,7 +62,7 @@ export class AdminHandlers {
     if (isSubscription) {
       if (isNil(recurring)) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'recurring is required for subscription products',
         });
       }
@@ -69,20 +73,26 @@ export class AdminHandlers {
         recurring !== 'year'
       ) {
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'recurring must be one of [day, week, month, year]',
         });
       }
 
       if (!isNil(this.stripeHandlers)) {
         try {
-          const res = await this.stripeHandlers.createSubscriptionProduct(name, currency, value, recurring, recurringCount);
+          const res = await this.stripeHandlers.createSubscriptionProduct(
+            name,
+            currency,
+            value,
+            recurring,
+            recurringCount
+          );
 
           productDoc.stripe = {};
           productDoc.stripe.subscriptionId = res.subscriptionId;
           productDoc.stripe.priceId = res.priceId;
         } catch (e) {
-          return callback({ code: grpc.status.INTERNAL, message: e });
+          return callback({ code: status.INTERNAL, message: e });
         }
       }
     }
@@ -94,7 +104,7 @@ export class AdminHandlers {
       });
     if (!isNil(errorMessage)) {
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     }

@@ -1,5 +1,9 @@
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 
@@ -34,7 +38,7 @@ export class AdminHandlers {
     let errorMessage: string | null = null;
 
     if (isNil(this.provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'No sms provider' });
+      return callback({ code: status.INTERNAL, message: 'No sms provider' });
     }
 
     await this.provider
@@ -42,7 +46,7 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 

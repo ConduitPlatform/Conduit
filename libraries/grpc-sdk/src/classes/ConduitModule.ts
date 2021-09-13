@@ -35,7 +35,6 @@ export class ConduitModule<T extends Client> {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
-    // this.client = createGrpcClient(this._url, this.protoPath!, this.descriptorObj!);
     this.active = true;
   }
 

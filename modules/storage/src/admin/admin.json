@@ -1,0 +1,29 @@
+{
+  "functions": [
+    {
+      "path": "/file",
+      "method": "POST",
+      "protoName": "createFile"
+    },
+    {
+      "path": "/file/:id",
+      "method": "PUT",
+      "protoName": "updateFile"
+    },
+    {
+      "path": "/file/:id",
+      "method": "GET",
+      "protoName": "getFile"
+    },
+    {
+      "path": "/getFileUrl/:id",
+      "method": "GET",
+      "protoName": "getFileUrl"
+    },
+    {
+      "path": "/file/:id",
+      "method": "DELETE",
+      "protoName": "deleteFile"
+    }
+  ]
+}
