@@ -75,5 +75,13 @@ export default {
         },
       },
     },
+    mandrill: {
+      apiKey: {
+        doc: 'The Mandrill API key',
+        format: 'String',
+        default: null,
+        nullable: true,
+      }
+    }
   },
 };

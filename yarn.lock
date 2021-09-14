@@ -3742,6 +3742,13 @@
   resolved "https://registry.yarnpkg.com/@types/long/-/long-4.0.1.tgz#459c65fa1867dafe6a8f322c4c51695663cc55e9"
   integrity sha512-5tXH6Bx/kNGd3MgffdmP4dy2Z+G4eaXw0SE81Tq3BNadtnMR5/ySMzX4SLEzHJzSmPNn4HIdpQsBvXMUykr58w==
 
+"@types/mandrill-api@^1.0.30":
+  version "1.0.30"
+  resolved "https://registry.yarnpkg.com/@types/mandrill-api/-/mandrill-api-1.0.30.tgz#9c7d9df0abaae11e082ae931b5337787e3934fe9"
+  integrity sha512-keV2jBpbnFTVazItnTPPuHMxq3YUK4xteczdj8ZAV4tygbYytPtBkXZrH2dQ5oW7dRSqudaObTGXAy58i8zsBw==
+  dependencies:
+    "@types/node" "*"
+
 "@types/mdast@^3.0.0":
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/@types/mdast/-/mdast-3.0.3.tgz#2d7d671b1cd1ea3deb306ea75036c2a0407d2deb"
@@ -14344,6 +14351,11 @@ mamacro@^0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/mamacro/-/mamacro-0.0.3.tgz#ad2c9576197c9f1abf308d0787865bd975a3f3e4"
   integrity sha512-qMEwh+UujcQ+kbz3T6V+wAmO2U8veoq2w+3wY8MquqwVA3jChfwY+Tk52GZKDfACEPjuZ7r2oJLejwpt8jtwTA==
+
+mandrill-api@^1.0.45:
+  version "1.0.45"
+  resolved "https://registry.yarnpkg.com/mandrill-api/-/mandrill-api-1.0.45.tgz#163939cf486bd18277b0f3baf412c3e65d84a72d"
+  integrity sha1-Fjk5z0hr0YJ3sPO69BLD5l2Epy0=
 
 map-cache@^0.2.2:
   version "0.2.2"

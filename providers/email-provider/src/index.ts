@@ -7,9 +7,10 @@ import { createTransport, SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
 import { EmailOptions } from './interfaces/EmailOptions';
 import { isNil } from 'lodash';
+import { Mandrill } from 'mandrill-api';
 
 export class EmailProvider {
-  _transport?: Mail;
+  _transport?: Mail | Mandrill;
   _transportName?: string;
 
   constructor(transport: string, transportSettings: any) {
@@ -44,6 +45,16 @@ export class EmailProvider {
           rejectUnauthorized: false,
         },
       });
+    } else if (transport === 'mandrill') {
+      this._transportName = 'mandrill';
+
+      const {
+        apiKey,
+        serverPrefix
+      } = transportSettings.mailchimp;
+
+      this._transport = new Mandrill(apiKey);
+
     } else {
       this._transportName = undefined;
       this._transport = undefined;
@@ -52,10 +63,15 @@ export class EmailProvider {
   }
 
   sendEmailDirect(mailOptions: EmailOptions): Promise<SentMessageInfo> {
-    if (!this._transport) {
-      throw new Error('Email  transport not initialized!');
+    if (this._transportName === 'mandrill') {
+      
+    } else {
+      const transport = this._transport as Mail;
+      if (!transport) {
+        throw new Error('Email  transport not initialized!');
+      }
+      return transport.sendMail(mailOptions);
     }
-    return this._transport.sendMail(mailOptions);
   }
 
   emailBuilder(): EmailBuilder {

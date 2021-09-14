@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.20",
+    "mandrill-api": "^1.0.45",
     "nodemailer": "^6.4.16",
     "nodemailer-mailgun-transport": "^2.0.0",
     "snyk": "^1.321.0"
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/lodash": "^4.14.149",
+    "@types/mandrill-api": "^1.0.30",
     "@types/mocha": "^7.0.2",
     "@types/nodemailer": "^6.4.0",
     "@types/nodemailer-mailgun-transport": "^1.4.1",

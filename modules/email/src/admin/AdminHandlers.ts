@@ -117,11 +117,13 @@ export class AdminHandlers {
     const templateDocument = await this.database
       .findOne('EmailTemplate', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
+    if (!isNil(errorMessage)) {
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
       });
+    }
+    
     if (isNil(templateDocument)) {
       return callback({
         code: status.NOT_FOUND,
