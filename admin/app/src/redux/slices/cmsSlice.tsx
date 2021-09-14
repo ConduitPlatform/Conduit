@@ -20,10 +20,10 @@ interface ICmsSlice {
   data: {
     schemas: any;
     schemasFromOtherModules: any;
-    documents: {
-      documents: [];
+    schemaDocuments: {
+      schemaDocuments: any;
     };
-    customEndpoints: [];
+    customEndpoints: any;
     count: number;
     config: any;
     selectedSchema: any;
@@ -38,8 +38,8 @@ const initialState: ICmsSlice = {
   data: {
     schemas: [],
     schemasFromOtherModules: [],
-    documents: {
-      documents: [],
+    schemaDocuments: {
+      schemaDocuments: [],
     },
     customEndpoints: [],
     count: 0,
@@ -216,6 +216,7 @@ export const asyncEditSchemaDocument = createAsyncThunk(
 export const asyncGetCustomEndpoints = createAsyncThunk('cms/getEndpoints', async () => {
   try {
     const { data } = await getCustomEndpointsRequest();
+
     return data;
   } catch (error) {
     throw error;
@@ -309,7 +310,14 @@ const deleteSchemaStatusById = (deleted: any, schemas: any) => {
 const cmsSlice = createSlice({
   name: 'cms',
   initialState,
-  reducers: {},
+  reducers: {
+    setSelectedSchema(state, action) {
+      state.data.selectedSchema = findSchemaById(action.payload, state.data.schemas);
+    },
+    clearSelectedSchema(state) {
+      state.data.selectedSchema = null;
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(asynGetCmsSchemas.pending, (state) => {
       state.meta.loading = true;
@@ -368,7 +376,6 @@ const cmsSlice = createSlice({
     builder.addCase(asyncEditSchema.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncDeleteSelectedSchema.pending, (state) => {
       state.meta.loading = true;
@@ -380,6 +387,7 @@ const cmsSlice = createSlice({
     builder.addCase(asyncDeleteSelectedSchema.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.data.config = action.payload;
+      state.data.schemas = deleteSchemaStatusById(action.payload, state.data.schemas);
     });
     builder.addCase(asyncGetSchemaDocuments.pending, (state) => {
       state.meta.loading = true;
@@ -388,8 +396,9 @@ const cmsSlice = createSlice({
       state.meta.loading = false;
       state.meta.error = action.error as Error;
     });
-    builder.addCase(asyncGetSchemaDocuments.fulfilled, (state) => {
+    builder.addCase(asyncGetSchemaDocuments.fulfilled, (state, action) => {
       state.meta.loading = false;
+      state.data.schemaDocuments = action.payload;
     });
     builder.addCase(asyncGetMoreSchemaDocuments.pending, (state) => {
       state.meta.loading = true;
@@ -401,7 +410,7 @@ const cmsSlice = createSlice({
     builder.addCase(asyncGetMoreSchemaDocuments.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.config = action.payload;
+      state.data.schemaDocuments.schemaDocuments = action.payload.documents;
     });
     builder.addCase(asyncCreateSchemaDocument.pending, (state) => {
       state.meta.loading = true;
@@ -412,7 +421,6 @@ const cmsSlice = createSlice({
     });
     builder.addCase(asyncCreateSchemaDocument.fulfilled, (state, action) => {
       state.meta.loading = false;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncDeleteSchemaDocument.pending, (state) => {
       state.meta.loading = true;
@@ -434,7 +442,6 @@ const cmsSlice = createSlice({
     builder.addCase(asyncEditSchemaDocument.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncGetCustomEndpoints.pending, (state) => {
       state.meta.loading = true;
@@ -445,7 +452,7 @@ const cmsSlice = createSlice({
     });
     builder.addCase(asyncGetCustomEndpoints.fulfilled, (state, action) => {
       state.meta.loading = false;
-      state.data.config = action.payload;
+      state.data.config = action.payload.results;
     });
     builder.addCase(asyncUpdateCustomEndpoints.pending, (state) => {
       state.meta.loading = true;
@@ -457,7 +464,6 @@ const cmsSlice = createSlice({
     builder.addCase(asyncUpdateCustomEndpoints.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncDeleteCustomEndpoints.pending, (state) => {
       state.meta.loading = true;
@@ -468,7 +474,6 @@ const cmsSlice = createSlice({
     });
     builder.addCase(asyncDeleteCustomEndpoints.fulfilled, (state, action) => {
       state.meta.loading = false;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncCreateCustomEndpoints.pending, (state) => {
       state.meta.loading = true;
@@ -480,7 +485,6 @@ const cmsSlice = createSlice({
     builder.addCase(asyncCreateCustomEndpoints.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.config = action.payload;
     });
     builder.addCase(asyncFetchSchemasFromOtherModules.pending, (state) => {
       state.meta.loading = true;
@@ -491,10 +495,9 @@ const cmsSlice = createSlice({
     });
     builder.addCase(asyncFetchSchemasFromOtherModules.fulfilled, (state, action) => {
       state.meta.loading = false;
-      state.data.config = action.payload;
+      state.data.schemasFromOtherModules = action.payload.results;
     });
   },
 });
 
 export default cmsSlice.reducer;
-export const { clearNotificationPageStore, setLoading } = cmsSlice.actions;
