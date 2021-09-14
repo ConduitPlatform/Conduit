@@ -1,17 +1,20 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getAdminModulesRequest, loginRequest } from '../../http/requests';
-import { setCookie } from '../../utils/cookie';
+import { removeCookie, setCookie } from '../../utils/cookie';
+import { IModule } from '../../models/appAuth';
 
 export type AppAuthState = {
   data: {
     token: any;
-    enabledModules: any;
+    enabledModules: IModule[];
   };
   meta: {
     loading: boolean;
     error: any;
   };
 };
+
+//TODO we should probably add types for JWT
 
 const initialState: AppAuthState = {
   data: {
@@ -26,23 +29,15 @@ const initialState: AppAuthState = {
 
 export const asyncLogin = createAsyncThunk(
   'appAuth/login',
-  async (params: { username: string; password: string; remember: boolean }) => {
+  async (values: { username: string; password: string; remember: boolean }) => {
     try {
-      const { data } = await loginRequest(params.username, params.password);
-      return { data, cookie: params.remember };
+      const { data } = await loginRequest(values.username, values.password);
+      return { data, cookie: values.remember };
     } catch (error) {
       throw error;
     }
   }
 );
-
-export const asyncLogout = createAsyncThunk('appAuth/logout', async () => {
-  try {
-    //TODO clearing the state here once we have all the slices done
-  } catch (error) {
-    throw error;
-  }
-});
 
 export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async () => {
   try {
@@ -56,7 +51,12 @@ export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async
 const appAuthSlice = createSlice({
   name: 'appAuth',
   initialState,
-  reducers: {},
+  reducers: {
+    logout(state) {
+      removeCookie('JWT');
+      state = initialState;
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(asyncLogin.pending, (state) => {
       state.meta.loading = true;
@@ -68,7 +68,7 @@ const appAuthSlice = createSlice({
     builder.addCase(asyncLogin.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      setCookie('JWT', action.payload.data, action.payload.cookie);
+      setCookie('JWT', action.payload.data.token, action.payload.cookie);
     });
     builder.addCase(asyncGetAdminModules.pending, (state) => {
       state.meta.loading = true;
@@ -78,6 +78,7 @@ const appAuthSlice = createSlice({
       state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
+      console.log(action.payload);
       state.meta.loading = false;
       state.meta.error = null;
       state.data.enabledModules = action.payload.modules;
@@ -85,4 +86,5 @@ const appAuthSlice = createSlice({
   },
 });
 
+export const { logout } = appAuthSlice.actions;
 export default appAuthSlice.reducer;
