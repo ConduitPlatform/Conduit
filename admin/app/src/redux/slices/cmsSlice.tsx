@@ -15,10 +15,12 @@ import {
   schemasFromOtherModules,
   toggleSchemaByIdRequest,
 } from '../../http/requests';
+import { Schema } from '../../models/cms/CmsModels';
+import { RootState, store } from '../store';
 
 interface ICmsSlice {
   data: {
-    schemas: any;
+    schemas: Schema[];
     schemasFromOtherModules: any;
     schemaDocuments: {
       schemaDocuments: any;
@@ -60,13 +62,14 @@ export const asynGetCmsSchemas = createAsyncThunk(
     }
   }
 );
-
-export const asyncGetMoreCmsSchemas = createAsyncThunk(
+type RootState = ReturnType<typeof store.getState>;
+export const asyncGetMoreCmsSchemas = createAsyncThunk<RootState>(
   'cms/getMoreSchemas',
-  async (tih, thunkApi) => {
+  async (arg, thunkApi: any) => {
     try {
-      let SchemaLength = thunkApi.getState();
-      // Use thunk Api to grab state properly
+      //not sure if this is the correct/optimal way to grab the state
+      //also we need to make the arg optional, didn't find a way to do that for now with typescript/toolkit
+      const SchemaLength = thunkApi.getState().cmsSlice.data.schemas.length;
       const { data } = await getCmsSchemasRequest(SchemaLength, 20);
       return data;
     } catch (error) {
