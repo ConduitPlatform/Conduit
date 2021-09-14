@@ -150,9 +150,7 @@ export class FileHandlers {
 
     return callback(null, {
       result: JSON.stringify({
-        id: file._id,
-        name: file.name,
-        url: file.url,
+        data: data.toString('base64'),
       }),
     });
   }
