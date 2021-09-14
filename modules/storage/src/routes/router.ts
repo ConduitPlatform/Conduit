@@ -137,7 +137,6 @@ export class FileRoutes {
         )
       )
     );
-
     return routesArray;
   }
 }

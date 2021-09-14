@@ -48,6 +48,7 @@ export class StorageModule implements ConduitServiceModule {
         getFile: this.getFileGrpc.bind(this),
         createFile: this.createFileGrpc.bind(this),
         updateFile: this.updateFileGrpc.bind(this),
+        getFileData: this.getFileData.bind(this),
       }
     );
     this.grpcServer.start();
@@ -134,6 +135,18 @@ export class StorageModule implements ConduitServiceModule {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.getFile(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
+  }
+
+  async getFileData(call: any, callback: any) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    await this._fileHandlers.getFileData(
       wrapCallObjectForRouter(call),
       wrapCallbackFunctionForRouter(callback)
     );
