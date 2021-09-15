@@ -1,6 +1,7 @@
 import { isNil } from 'lodash';
-import { DataTypes, FindOptions, ModelCtor, Op, Sequelize } from 'sequelize';
+import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
 import { SchemaAdapter } from '../../interfaces';
+import { parseQuery } from './utils';
 
 const deepdash = require('deepdash/standalone');
 
@@ -72,7 +73,7 @@ export class SequelizeSchema implements SchemaAdapter {
     populate?: string[],
     relations?: any
   ): Promise<any> {
-    let options: FindOptions = { where: this.parseQuery(query), raw: true };
+    let options: FindOptions = { where: parseQuery(query), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
@@ -104,7 +105,7 @@ export class SequelizeSchema implements SchemaAdapter {
     populate?: string[],
     relations?: any
   ): Promise<any> {
-    let options: FindOptions = { where: this.parseQuery(query), raw: true };
+    let options: FindOptions = { where: parseQuery(query), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
     if (!isNil(skip)) {
       options.offset = skip;
@@ -143,11 +144,11 @@ export class SequelizeSchema implements SchemaAdapter {
   }
 
   deleteOne(query: any): Promise<any> {
-    return this.model.destroy({ where: this.parseQuery(query), limit: 1 });
+    return this.model.destroy({ where: parseQuery(query), limit: 1 });
   }
 
   deleteMany(query: any): Promise<any> {
-    return this.model.destroy({ where: this.parseQuery(query) });
+    return this.model.destroy({ where: parseQuery(query) });
   }
 
   async findByIdAndUpdate(
@@ -215,7 +216,7 @@ export class SequelizeSchema implements SchemaAdapter {
     query: any,
     updateProvidedOnly: boolean = false
   ): Promise<any> {
-    let parsed = this.parseQuery(filterQuery);
+    let parsed = parseQuery(filterQuery);
     if (query.hasOwnProperty('$inc')) {
       await this.model
         .increment(query['$inc'] as any, { where: parsed })
@@ -269,35 +270,7 @@ export class SequelizeSchema implements SchemaAdapter {
   }
 
   countDocuments(query: any): Promise<number> {
-    return this.model.count({ where: this.parseQuery(query) });
-  }
-
-  private parseQuery(query: any) {
-    let parsed: any = {};
-
-    for (const key in query) {
-      if (query[key].hasOwnProperty('$ne')) {
-        parsed[key] = { [Op.ne]: query[key]['$ne'] };
-      } else if (query[key].hasOwnProperty('$gt')) {
-        parsed[key] = { [Op.gt]: query[key]['$gt'] };
-      } else if (query[key].hasOwnProperty('$gte')) {
-        parsed[key] = { [Op.gte]: query[key]['$gte'] };
-      } else if (query[key].hasOwnProperty('$lt')) {
-        parsed[key] = { [Op.lt]: query[key]['$lt'] };
-      } else if (query[key].hasOwnProperty('$lte')) {
-        parsed[key] = { [Op.lte]: query[key]['$lte'] };
-      } else if (query[key].hasOwnProperty('$in')) {
-        parsed[key] = { [Op.in]: query[key]['$in'] };
-      } else if (query[key].hasOwnProperty('$nin')) {
-        parsed[key] = { [Op.notIn]: query[key]['$nin'] };
-      } else if (query[key].hasOwnProperty('$contains')) {
-        parsed[key] = { [Op.contains]: query[key]['$contains'] };
-      } else {
-        parsed[key] = query[key];
-      }
-    }
-
-    return parsed;
+    return this.model.count({ where: parseQuery(query) });
   }
 
   private parseSelect(select: string): string[] | { exclude: string[] } {
