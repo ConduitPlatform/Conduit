@@ -7,19 +7,12 @@ import SendEmailForm from '../components/emails/SendEmailForm';
 import EmailTemplate from '../components/emails/EmailTemplate';
 import { privateRoute } from '../components/utils/privateRoute';
 import ProviderData from '../components/emails/ProviderData';
-import { useDispatch, useSelector } from 'react-redux';
-import { getEmailTemplates } from '../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
-import {
-  createNewEmailTemplate,
-  getEmailSettings,
-  saveEmailTemplateChanges,
-  updateEmailSettings,
-} from '../redux/thunks/emailsThunk';
+
 import {
   EmailData,
   EmailSettings,
@@ -114,7 +107,7 @@ const Emails: React.FC = () => {
       variables: data.variables,
     };
 
-    dispatch(asyncSaveEmailTemplateChanges({ _id, dataForEmail: updatedData }));
+    dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
   };
 
   const createNewTemplate = (data: any) => {
@@ -127,7 +120,7 @@ const Emails: React.FC = () => {
     dispatch(asyncCreateNewEmailTemplate(newData));
   };
 
-  const saveSettings = (data: EmailSettings) => {
+  const saveSettings = (data: any) => {
     dispatch(asyncUpdateEmailSettings(data));
   };
 

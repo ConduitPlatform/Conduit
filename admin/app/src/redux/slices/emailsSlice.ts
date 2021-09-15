@@ -52,13 +52,13 @@ export const asyncGetEmailTemplates = createAsyncThunk(
 
 export const asyncSaveEmailTemplateChanges = createAsyncThunk(
   'emails/saveTemplateChanges',
-  async (dataForThunk: { _id: string; dataForEmail: any }) => {
+  async (dataForThunk: { _id: string; data: any }) => {
     try {
-      const { data } = await putEmailTemplateRequest(
+      const { data: updateEmailData } = await putEmailTemplateRequest(
         dataForThunk._id,
-        dataForThunk.dataForEmail
+        dataForThunk.data
       );
-      return data;
+      return updateEmailData;
     } catch (error) {
       throw error;
     }
@@ -91,9 +91,10 @@ export const asyncGetEmailSettings = createAsyncThunk(
 
 export const asyncUpdateEmailSettings = createAsyncThunk(
   'emails/updateSettings',
-  async (updatedSettings: EmailSettings) => {
+  async (updatedSettings: any) => {
     try {
       const { data } = await putEmailSettingsRequest(updatedSettings);
+
       return data;
     } catch (error) {
       throw error;

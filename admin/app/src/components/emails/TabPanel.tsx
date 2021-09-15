@@ -67,8 +67,10 @@ const TabPanel: React.FC<Props> = ({
     name: '',
     subject: '',
     body: '',
-    variables: [''],
+    variables: [],
   });
+
+  console.log(templateState);
 
   useEffect(() => {
     setTemplateState({
