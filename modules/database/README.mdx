@@ -35,7 +35,11 @@ direct-model access, mongoose schema generation through .json models.
 This module will be required by the database-adapter, depending on configuration,
 and will allow for basic query execution through its functions, access to the underlying connector,
 direct-model access, sql schema generation through .json models.
-
+## Sequelize Caveats
+Currently the sequelize implementation has the following limitations:
+- No index creation
+- Update queries always update only the provided fields without the option to replace entire rows unless all columns are provided
+- Like operations do not work
 #NOTE
 
 Mongoose and sequelize where selected due to their similar nature, so that we can maintain
