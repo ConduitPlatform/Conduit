@@ -22,6 +22,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
   sleep() {
     return new Promise((resolve, reject) => {
       let t = setTimeout(() => {
+        clearTimeout(t);
         resolve();
       }, 2000);
     });
