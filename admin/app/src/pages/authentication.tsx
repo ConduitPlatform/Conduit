@@ -13,12 +13,6 @@ import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
-import {
-  addNewUserThunk,
-  getAuthUsersData,
-  getConfig,
-  updateConfig,
-} from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
 import useDebounce from '../hooks/useDebounce';
@@ -57,13 +51,13 @@ const Authentication = () => {
   const [selected, setSelected] = useState<number>(0);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState('none');
-
-  const debouncedSearch = useDebounce(search, 500);
+  const debouncedSearch: string = useDebounce(search, 500);
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
   const { loading: authLoading, error: authError, success: authSuccess } = useAppSelector(
     (state) => state.authenticationSlice.meta.authUsers
   );
+
   const { signInMethods: configData } = useAppSelector(
     (state) => state.authenticationSlice.data
   );
@@ -82,8 +76,7 @@ const Authentication = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(asyncGetAuthUserData({ skip, limit, search, filter }));
-    console.log('hi');
+    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [dispatch, filter, limit, search, skip, debouncedSearch]);
 
   useEffect(() => {
@@ -93,10 +86,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authError || authConfigError) {
+    if (authError || authConfigError || authSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authError, authConfigError]);
+  }, [authError, authConfigError, authSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -132,7 +125,7 @@ const Authentication = () => {
         ...newValue,
       },
     };
-    dispatch(updateConfig(data));
+    dispatch(asyncUpdateAuthenticationConfig(data));
   };
 
   const alertMessage = () => {
@@ -241,12 +234,12 @@ const Authentication = () => {
           />
         </Box>
       </Box>
-      {/* <AppState
+      <AppState
         successMessage={successMessage()}
         errorMessage={alertMessage()}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}
-      /> */}
+      />
     </Layout>
   );
 };

@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
 import { AuthUser } from '../../components/authentication/AuthModels';
 import {
   blockUser,
@@ -7,12 +7,9 @@ import {
   editUser,
   getAuthenticationConfig,
   getAuthUsersDataReq,
-  getNotificationConfig,
   putAuthenticationConfig,
   unblockUser,
 } from '../../http/requests';
-import { NotificationData } from '../../models/notifications/NotificationModels';
-import getStore from '../store';
 import { getAuthUsersData } from '../thunks/authenticationThunks';
 
 interface IAuthenticationSlice {
@@ -70,6 +67,9 @@ export const asyncAddNewUser = createAsyncThunk(
       const filter = { filterValue: 'none' };
       const { data } = await createNewUsers(params.values);
       thunkApi.dispatch(getAuthUsersData(0, params.limit, '', filter));
+      setTimeout(() => {
+        thunkApi.dispatch(clearSuccesMsg());
+      }, 6300);
       return { data, params };
     } catch (error) {
       throw error;
@@ -79,7 +79,7 @@ export const asyncAddNewUser = createAsyncThunk(
 
 export const asyncEditUser = createAsyncThunk(
   'authentication/editUser',
-  async (values: any) => {
+  async (values: AuthUser) => {
     try {
       await editUser(values);
       return values;
@@ -153,6 +153,9 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
+    clearSuccesMsg(state) {
+      state.meta.authUsers.success = null;
+    },
     clearAuthenticationPageStore(state) {
       state = initialState;
     },
@@ -198,10 +201,11 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
       state.meta.authUsers.loading = false;
-      //TODO for some reason this does not update the new user's info on the store, probably has to do with immer
-      state.data.authUsers.users.map((user) =>
-        user._id !== action.payload._id ? user : action.payload
+      const foundIndex = state.data.authUsers.users.findIndex(
+        (user) => user._id === action.payload._id
       );
+      if (foundIndex !== -1)
+        state.data.authUsers.users.splice(foundIndex, 1, action.payload);
     });
     builder.addCase(asyncBlockUserUI.pending, (state) => {
       state.meta.authUsers.loading = true;
@@ -245,7 +249,10 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncDeleteUser.fulfilled, (state, action) => {
       state.meta.authUsers.loading = false;
-      state.data.authUsers.users.filter((user) => user._id !== action.payload);
+      const foundIndex = state.data.authUsers.users.findIndex(
+        (user) => user._id === action.payload
+      );
+      if (foundIndex !== -1) state.data.authUsers.users.splice(foundIndex, 1);
       state.data.authUsers.count--;
     });
     builder.addCase(asyncGetAuthenticationConfig.pending, (state) => {
@@ -275,4 +282,8 @@ const authenticationSlice = createSlice({
 });
 
 export default authenticationSlice.reducer;
-export const { clearAuthenticationPageStore, setLoading } = authenticationSlice.actions;
+export const {
+  clearAuthenticationPageStore,
+  setLoading,
+  clearSuccesMsg,
+} = authenticationSlice.actions;

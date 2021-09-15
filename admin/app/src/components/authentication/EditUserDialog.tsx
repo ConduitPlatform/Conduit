@@ -18,6 +18,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import { useDispatch } from 'react-redux';
 import { AuthUser } from './AuthModels';
 import { asyncEditUser } from '../../redux/slices/authenticationSlice';
+import { useAppDispatch } from '../../redux/hooks';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -55,18 +56,18 @@ interface Props {
 }
 
 const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const classes = useStyles();
-  const [values, setValues] = useState<Values>({
+  const [values, setValues] = useState<AuthUser>({
     email: '',
     phoneNumber: '',
     active: false,
     isVerified: false,
     hasTwoFA: false,
+    updatedAt: '',
+    createdAt: '',
     _id: '',
   });
-
-  console.log(data);
 
   useEffect(() => {
     setValues({ ...data });

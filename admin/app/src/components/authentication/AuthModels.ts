@@ -5,6 +5,7 @@ export interface AuthUser {
   isVerified: boolean;
   phoneNumber: string;
   updatedAt: string;
+  hasTwoFA?: boolean;
   _id: string;
 }
 

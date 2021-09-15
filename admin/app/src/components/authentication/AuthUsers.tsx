@@ -1,12 +1,6 @@
 import DataTable from '../common/DataTable';
 import React, { useState } from 'react';
 import ConfirmationDialog from '../common/ConfirmationDialog';
-import {
-  deleteUserThunk,
-  blockUserUIThunk,
-  unblockUserUIThunk,
-} from '../../redux/thunks/authenticationThunks';
-import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
 import { AuthUser, AuthUserUI } from './AuthModels';
 import { useAppDispatch } from '../../redux/hooks';
@@ -21,6 +15,7 @@ interface Props {
 }
 
 const AuthUsers: React.FC<Props> = ({ users }) => {
+  const dispatch = useAppDispatch();
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
   const [openBlockUI, setOpenBlockUI] = useState<boolean>(false);
@@ -39,8 +34,6 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     setOpenEditUser(false);
     setOpenBlockUI(false);
   };
-
-  const dispatch = useAppDispatch();
 
   const formatData = (users: AuthUser[]) => {
     return users.map((u) => {
@@ -99,8 +92,6 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
       setOpenBlockUI(false);
     }
   };
-
-  console.log(users);
 
   return (
     <>
