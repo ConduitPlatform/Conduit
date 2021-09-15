@@ -35,7 +35,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
-    } else if (dbType === 'sequelize') {
+    } else if (dbType === 'sql') {
       this._activeAdapter = new SequelizeAdapter(databaseUrl);
     } else {
       throw new Error('Arguments not supported');
