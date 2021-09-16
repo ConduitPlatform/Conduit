@@ -1,6 +1,6 @@
 import axios from 'axios';
 import store from '../redux/store';
-import { logout } from '../redux/thunks/appAuthThunks';
+import { asyncLogout } from '../redux/slices/appAuthSlice';
 import Router from 'next/router';
 import getConfig from 'next/config';
 
@@ -25,7 +25,7 @@ axios.interceptors.request.use(
     if (!store) {
       return config;
     }
-    const token = store().getState().appAuthReducer.token;
+    const token = store().getState().appAuthSlice.data.token;
     if (token) {
       config.headers = JWT_CONFIG(token);
     }
@@ -45,7 +45,7 @@ axios.interceptors.response.use(
     console.log(error);
     if (error.response.status === 401) {
       if (store) {
-        store().dispatch(logout());
+        store().dispatch(asyncLogout());
         Router.replace('/login');
       }
     }
