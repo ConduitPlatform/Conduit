@@ -78,13 +78,12 @@ const EmailDetails: React.FC<Props> = ({
   };
 
   const handleVariableDelete = (index: number) => {
-    const newVariables = [...templateState.variables.splice(index, 1)];
-
-    console.log(newVariables);
+    const oldVars = [...templateState.variables];
+    oldVars.splice(index, 1);
 
     setTemplateState({
       ...templateState,
-      variables: newVariables,
+      variables: oldVars,
     });
   };
 

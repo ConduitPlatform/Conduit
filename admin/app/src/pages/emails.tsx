@@ -12,7 +12,6 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
-
 import {
   EmailData,
   EmailSettings,
@@ -120,7 +119,7 @@ const Emails: React.FC = () => {
     dispatch(asyncCreateNewEmailTemplate(newData));
   };
 
-  const saveSettings = (data: any) => {
+  const saveSettings = (data: EmailSettings) => {
     dispatch(asyncUpdateEmailSettings(data));
   };
 

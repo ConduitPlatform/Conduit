@@ -7,7 +7,11 @@ import {
   putEmailTemplateRequest,
   sendEmailRequest,
 } from '../../http/requests';
-import { EmailTemplateType, EmailSettings } from './../../models/emails/EmailModels';
+import {
+  EmailTemplateType,
+  EmailSettings,
+  EmailSettingsState,
+} from './../../models/emails/EmailModels';
 
 interface IEmailSlice {
   data: {
@@ -91,10 +95,9 @@ export const asyncGetEmailSettings = createAsyncThunk(
 
 export const asyncUpdateEmailSettings = createAsyncThunk(
   'emails/updateSettings',
-  async (updatedSettings: any) => {
+  async (updatedSettings: EmailSettings) => {
     try {
       const { data } = await putEmailSettingsRequest(updatedSettings);
-
       return data;
     } catch (error) {
       throw error;

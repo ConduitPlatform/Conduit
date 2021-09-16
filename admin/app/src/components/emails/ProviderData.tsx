@@ -83,6 +83,7 @@ const ProviderData: React.FC<Props> = ({ settings, error, handleSave }) => {
 
   const onSaveClick = () => {
     const data = {
+      doc: settings.doc,
       active: settingsState.active,
       transport: settingsState.transport,
       sendingDomain: settingsState.sendingDomain,
