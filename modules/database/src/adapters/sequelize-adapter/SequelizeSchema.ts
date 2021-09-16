@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import _, { isNil } from 'lodash';
 import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
 import { SchemaAdapter } from '../../interfaces';
 import { parseQuery } from './utils';
@@ -229,7 +229,7 @@ export class SequelizeSchema implements SchemaAdapter {
         .findOne({ where: parsed, raw: true })
         .catch(console.error);
       if (!isNil(record)) {
-        document = { ...record, ...document };
+        document = _.mergeWith(record, document);
       }
     }
 

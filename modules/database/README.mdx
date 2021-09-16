@@ -38,7 +38,8 @@ direct-model access, sql schema generation through .json models.
 ## Sequelize Caveats
 Currently the sequelize implementation has the following limitations:
 - No index creation
-- Update queries always update only the provided fields without the option to replace entire rows unless all columns are provided
+- Update queries always update only the provided fields without the option to replace entire rows unless all columns are provided.
+This behaviour is supported only for not changing
 - Like operations do not work
 #NOTE
 
