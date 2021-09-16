@@ -4,9 +4,9 @@ import CustomDrawer from './Drawer';
 import CustomHeader from './Header';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { useRouter } from 'next/router';
-import { getAdminModules } from '../../redux/thunks/appAuthThunks';
-import { useDispatch } from 'react-redux';
 import { Theme } from '@material-ui/core';
+import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
+import { useAppDispatch } from '../../redux/hooks';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -32,9 +32,9 @@ export const Layout: React.FC<Props> = ({ menuDisabled, itemSelected, ...rest })
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   useEffect(() => {
-    dispatch(getAdminModules());
+    dispatch(asyncGetAdminModules());
   }, [dispatch]);
 
   const handleDrawerOpen = () => {

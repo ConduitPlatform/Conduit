@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux';
-import appAuthReducer from './appAuthReducer';
+import appAuthSlice from '../slices/appAuthSlice';
 import authenticationPageReducer from './authenticationPageReducer';
 import emailsPageReducer from './emailsPageReducer';
 import notificationReducer from './notificationReducer';
@@ -11,7 +11,7 @@ import customEndpointsReducer from './customEndpointsReducer';
 
 export default combineReducers({
   authenticationPageReducer,
-  appAuthReducer,
+  appAuthSlice,
   emailsPageReducer,
   notificationsSlice,
   storageSlice,

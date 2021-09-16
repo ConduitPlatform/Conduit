@@ -31,7 +31,10 @@ export const asyncLogin = createAsyncThunk(
   'appAuth/login',
   async (values: { username: string; password: string; remember: boolean }) => {
     try {
-      const { data } = await loginRequest(values.username, values.password);
+      const username = values.username;
+      const password = values.password;
+      const { data } = await loginRequest(username, password);
+
       return { data, cookie: values.remember };
     } catch (error) {
       throw error;
@@ -69,6 +72,7 @@ const appAuthSlice = createSlice({
       state.meta.loading = false;
       state.meta.error = null;
       setCookie('JWT', action.payload.data.token, action.payload.cookie);
+      state.data.token = action.payload.data.token;
     });
     builder.addCase(asyncGetAdminModules.pending, (state) => {
       state.meta.loading = true;
@@ -78,7 +82,6 @@ const appAuthSlice = createSlice({
       state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
-      console.log(action.payload);
       state.meta.loading = false;
       state.meta.error = null;
       state.data.enabledModules = action.payload.modules;
