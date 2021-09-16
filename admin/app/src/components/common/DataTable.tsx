@@ -14,7 +14,7 @@ import { IconButton } from '@material-ui/core';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
-import { AuthUserUI } from '../authentication/AuthModels';
+import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 

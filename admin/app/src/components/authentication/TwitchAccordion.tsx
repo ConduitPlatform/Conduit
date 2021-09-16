@@ -10,7 +10,7 @@ import TextField from '@material-ui/core/TextField';
 import Accordion from '@material-ui/core/Accordion';
 import React, { ChangeEvent } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { SocialNameTypes, TwitchTypes } from './AuthModels';
+import { SocialNameTypes, TwitchTypes } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
