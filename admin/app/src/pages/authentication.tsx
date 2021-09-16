@@ -17,7 +17,6 @@ import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTab
 import AppState from '../components/common/AppState';
 import useDebounce from '../hooks/useDebounce';
 import {
-  AuthUser,
   SettingsStateTypes,
   SocialDataTypes,
   SocialNameTypes,
@@ -54,14 +53,14 @@ const Authentication = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { loading: authLoading, error: authError, success: authSuccess } = useAppSelector(
+  const { error: authError, success: authSuccess } = useAppSelector(
     (state) => state.authenticationSlice.meta.authUsers
   );
 
   const { signInMethods: configData } = useAppSelector(
     (state) => state.authenticationSlice.data
   );
-  const { loading: authConfigLoading, error: authConfigError } = useAppSelector(
+  const { error: authConfigError } = useAppSelector(
     (state) => state.authenticationSlice.meta.signInMethods
   );
 
