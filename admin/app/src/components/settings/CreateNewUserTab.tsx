@@ -57,6 +57,7 @@ const CreateNewUserTab: React.FC = () => {
                   margin="normal"
                   required
                   fullWidth
+                  name="username"
                   label="Username"
                 />
                 <TextField
