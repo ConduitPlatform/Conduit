@@ -16,6 +16,7 @@ import {
   KakaoTypes,
   SocialNameTypes,
   SocialDataTypes,
+  SignInMethods,
 } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
@@ -49,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  configData: any;
+  configData: SignInMethods;
   configDataError: any;
   handleData: (type: SocialNameTypes, data: SocialDataTypes) => void;
 }

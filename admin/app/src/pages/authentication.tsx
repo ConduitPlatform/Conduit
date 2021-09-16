@@ -1,7 +1,6 @@
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import AuthAccordion from '../components/authentication/AuthAccordion';
 import NewUserModal from '../components/authentication/NewUserModal';
 import AuthSettings from '../components/authentication/AuthSettings';
@@ -14,22 +13,22 @@ import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
-import {
-  addNewUserThunk,
-  getAuthUsersData,
-  getConfig,
-  updateConfig,
-} from '../redux/thunks/authenticationThunks';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
 import useDebounce from '../hooks/useDebounce';
 import {
-  AuthUser,
   SettingsStateTypes,
   SocialDataTypes,
   SocialNameTypes,
 } from '../models/authentication/AuthModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import {
+  asyncAddNewUser,
+  asyncGetAuthenticationConfig,
+  asyncGetAuthUserData,
+  asyncUpdateAuthenticationConfig,
+} from '../redux/slices/authenticationSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
 
 const Authentication = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
@@ -51,34 +50,18 @@ const Authentication = () => {
   const [selected, setSelected] = useState<number>(0);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState('none');
+  const debouncedSearch: string = useDebounce(search, 500);
 
-  const debouncedSearch = useDebounce(search, 500);
-
-  const {
-    users: availableUsers,
-    error: authUsersError,
-    success: authUsersSuccess,
-  } = useSelector(
-    (state: {
-      authenticationPageReducer: {
-        authUsersState: {
-          users: AuthUser[];
-          error: any;
-          success: any;
-        };
-      };
-    }) => state.authenticationPageReducer.authUsersState
+  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+  const { error: authError, success: authSuccess } = useAppSelector(
+    (state) => state.authenticationSlice.meta.authUsers
   );
 
-  const { data: configData, error: authConfigError } = useSelector(
-    (state: {
-      authenticationPageReducer: {
-        signInMethodsState: {
-          data: any;
-          error: any;
-        };
-      };
-    }) => state.authenticationPageReducer.signInMethodsState
+  const { signInMethods: configData } = useAppSelector(
+    (state) => state.authenticationSlice.data
+  );
+  const { error: authConfigError } = useAppSelector(
+    (state) => state.authenticationSlice.meta.signInMethods
   );
 
   const handleFilterChange = (
@@ -88,12 +71,12 @@ const Authentication = () => {
   };
 
   useEffect(() => {
-    dispatch(getConfig());
+    dispatch(asyncGetAuthenticationConfig());
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(getAuthUsersData(skip, limit, search, filter));
-  }, [dispatch, filter, limit, search, skip, debouncedSearch]);
+    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
+  }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   useEffect(() => {
     if (configData && !configData.active) {
@@ -102,10 +85,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authUsersError || authConfigError || authUsersSuccess) {
+    if (authError || authConfigError || authSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authUsersError, authConfigError, authUsersSuccess]);
+  }, [authError, authConfigError, authSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -141,25 +124,21 @@ const Authentication = () => {
         ...newValue,
       },
     };
-    dispatch(updateConfig(data));
+    dispatch(asyncUpdateAuthenticationConfig(data));
   };
 
   const alertMessage = () => {
-    if (authUsersError) {
-      return authUsersError.data?.error
-        ? authUsersError.data.error
-        : 'Something went wrong!';
+    if (authError) {
+      return authError ? authError : 'Something went wrong!';
     }
     if (authConfigError) {
-      return authConfigError.data?.error
-        ? authConfigError.data.error
-        : 'Something went wrong!';
+      return authConfigError ? authConfigError : 'Something went wrong!';
     }
   };
 
   const successMessage = () => {
-    if (authUsersSuccess) {
-      return authUsersSuccess;
+    if (authSuccess) {
+      return authSuccess;
     }
   };
 
@@ -171,7 +150,7 @@ const Authentication = () => {
   };
 
   const handleNewUserDispatch = (values: { password: string; email: string }) => {
-    dispatch(addNewUserThunk(values, availableUsers, limit));
+    dispatch(asyncAddNewUser({ values, limit }));
     setSkip(0);
     setPage(0);
     setSearch('');
@@ -183,7 +162,7 @@ const Authentication = () => {
       ...configData,
       ...data,
     };
-    dispatch(updateConfig(body));
+    dispatch(asyncUpdateAuthenticationConfig(body));
   };
 
   return (
@@ -217,8 +196,8 @@ const Authentication = () => {
             </Grid>
           </Paper>
 
-          {availableUsers ? (
-            <AuthUsers users={availableUsers} />
+          {users ? (
+            <AuthUsers users={users} />
           ) : (
             <Typography>No users available</Typography>
           )}
