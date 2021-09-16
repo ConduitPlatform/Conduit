@@ -8,7 +8,7 @@ import {
 } from '../../redux/thunks/authenticationThunks';
 import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
-import { AuthUser, AuthUserUI } from './AuthModels';
+import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 
 interface Props {
   users: AuthUser[];

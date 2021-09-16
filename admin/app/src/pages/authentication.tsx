@@ -28,7 +28,7 @@ import {
   SettingsStateTypes,
   SocialDataTypes,
   SocialNameTypes,
-} from '../components/authentication/AuthModels';
+} from '../models/authentication/AuthModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 
 const useStyles = makeStyles((theme) => ({

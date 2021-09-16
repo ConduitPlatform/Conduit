@@ -17,7 +17,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import { useDispatch } from 'react-redux';
 import { editUserThunk } from '../../redux/thunks/authenticationThunks';
-import { AuthUser } from './AuthModels';
+import { AuthUser } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles(() => ({
   root: {

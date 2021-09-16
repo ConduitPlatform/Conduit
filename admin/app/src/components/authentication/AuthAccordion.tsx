@@ -16,7 +16,7 @@ import {
   KakaoTypes,
   SocialNameTypes,
   SocialDataTypes,
-} from './AuthModels';
+} from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
