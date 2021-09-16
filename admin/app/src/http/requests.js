@@ -247,3 +247,7 @@ export const refreshServiceAccount = (serviceId) => {
 export const schemasFromOtherModules = () => {
   return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
 };
+
+export const postNewAdminUser = (endpointData) => {
+  return axios.post(`${CONDUIT_API}/admin/create`, endpointData);
+};

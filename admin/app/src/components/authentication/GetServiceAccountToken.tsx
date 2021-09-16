@@ -68,7 +68,7 @@ const GetServiceAccountToken: React.FC<Props> = ({ token, open, handleClose }) =
                 name="coped"
               />
             }
-            label="I have coped the generated token"
+            label="I have copied the generated token"
           />
         </Box>
       </DialogContent>

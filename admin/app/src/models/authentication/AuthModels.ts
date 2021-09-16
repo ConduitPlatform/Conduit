@@ -5,6 +5,7 @@ export interface AuthUser {
   isVerified: boolean;
   phoneNumber: string;
   updatedAt: string;
+  hasTwoFA?: boolean;
   _id: string;
 }
 
@@ -76,4 +77,20 @@ export interface SettingsStateTypes {
   refreshTokenInvalidationPeriod: number;
   jwtSecret: string;
   showSecret?: boolean;
+}
+
+export interface SignInMethods {
+  active: boolean;
+  generateRefreshToken: boolean;
+  jwtSecret: string;
+  rateLimit: number;
+  refreshTokenInvalidationPeriod: number;
+  tokenInvalidationPeriod: number;
+  twofa: { enabled: boolean };
+  service: { enabled: boolean };
+  facebook: FacebookTypes;
+  google: GoogleTypes;
+  local: LocalTypes;
+  kakao: KakaoTypes;
+  twitch: TwitchTypes;
 }

@@ -25,7 +25,7 @@ import ConfirmationDialog from '../common/ConfirmationDialog';
 import GetServiceAccountToken from './GetServiceAccountToken';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import CreateServiceAccount from './CreateServiceAccount';
-import { ServiceAccount } from './AuthModels';
+import { ServiceAccount } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles({
   table: {

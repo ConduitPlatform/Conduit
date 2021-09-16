@@ -13,7 +13,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import { Visibility, VisibilityOff } from '@material-ui/icons';
 import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
-import { SettingsStateTypes } from './AuthModels';
+import { SettingsStateTypes } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
