@@ -9,7 +9,7 @@ import { clearAuthPageStore } from '../actions';
 
 export type AppAuthState = {
   data: {
-    token: string;
+    token: any;
     enabledModules: IModule[];
   };
   meta: {
@@ -22,7 +22,7 @@ export type AppAuthState = {
 
 const initialState: AppAuthState = {
   data: {
-    token: '',
+    token: null,
     enabledModules: [],
   },
   meta: {
@@ -101,7 +101,7 @@ const appAuthSlice = createSlice({
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
-      state.data.token = '';
+      state.data.token = null;
       state.data.enabledModules = [];
       state.meta.loading = false;
       state.meta.error = null;
