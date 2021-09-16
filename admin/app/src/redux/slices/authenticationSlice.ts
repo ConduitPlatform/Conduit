@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
-import { AuthUser } from '../../components/authentication/AuthModels';
+import { AuthUser } from '../../models/authentication/AuthModels';
 import {
   blockUser,
   createNewUsers,
@@ -10,6 +10,7 @@ import {
   putAuthenticationConfig,
   unblockUser,
 } from '../../http/requests';
+import { SignInMethods } from '../../models/authentication/AuthModels';
 import { getAuthUsersData } from '../thunks/authenticationThunks';
 
 interface IAuthenticationSlice {
@@ -18,7 +19,7 @@ interface IAuthenticationSlice {
       users: AuthUser[];
       count: number;
     };
-    signInMethods: any;
+    signInMethods: SignInMethods | null;
   };
   meta: {
     authUsers: { loading: boolean; error: Error | null; success: string | null };
@@ -266,6 +267,7 @@ const authenticationSlice = createSlice({
       state.meta.signInMethods.loading = false;
       state.meta.signInMethods.error = null;
       state.data.signInMethods = action.payload;
+      console.log(state.data.signInMethods);
     });
     builder.addCase(asyncUpdateAuthenticationConfig.pending, (state) => {
       state.meta.signInMethods.loading = true;
