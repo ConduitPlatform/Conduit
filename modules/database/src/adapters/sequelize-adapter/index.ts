@@ -57,7 +57,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
-    await this.sequelize.sync();
+    await this.sequelize.sync({ alter: true });
     this.refreshing = false;
     return this.models![schema.name];
   }
