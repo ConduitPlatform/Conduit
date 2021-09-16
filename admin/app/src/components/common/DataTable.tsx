@@ -84,7 +84,7 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
   };
 
   const handleClose = () => {
-    setAnchorEl(null);
+    setAnchorEl(undefined);
     setSelectedRow(null);
   };
 
@@ -96,7 +96,9 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
   };
 
   const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
-    handleAction(action, data);
+    if (handleAction) {
+      handleAction(action, data);
+    }
     setAnchorEl(undefined);
   };
 
