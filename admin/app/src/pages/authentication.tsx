@@ -77,7 +77,7 @@ const Authentication = () => {
 
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
-  }, [dispatch, filter, limit, search, skip, debouncedSearch]);
+  }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   useEffect(() => {
     if (configData && !configData.active) {
