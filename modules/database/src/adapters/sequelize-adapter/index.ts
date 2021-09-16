@@ -12,32 +12,17 @@ export class SequelizeAdapter implements DatabaseAdapter {
   sequelize: Sequelize;
   models: { [name: string]: SequelizeSchema };
   registeredSchemas: Map<string, ConduitSchema>;
-  refreshing = false;
+
   constructor(connectionUri: string) {
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
-  sleep() {
-    return new Promise((resolve, reject) => {
-      let t = setTimeout(() => {
-        clearTimeout(t);
-        resolve();
-      }, 2000);
-    });
-  }
-
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter> {
     if (!this.models) {
       this.models = {};
     }
-    if (this.refreshing) {
-      while (this.refreshing) {
-        await this.sleep();
-      }
-    }
-    this.refreshing = true;
 
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
@@ -57,8 +42,8 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
-    await this.sequelize.sync({ alter: true });
-    this.refreshing = false;
+    await this.models[schema.name].sync();
+
     return this.models![schema.name];
   }
 

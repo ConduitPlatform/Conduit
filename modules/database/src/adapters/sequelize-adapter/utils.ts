@@ -75,6 +75,6 @@ export function parseQuery(query: any) {
     // console.log('Key: ', key);
     // console.log('ParentValue: ', parentValue);
   });
-  console.log(parsed);
+  console.log('Sequelize Parse Debug: ', parsed);
   return parsed;
 }
