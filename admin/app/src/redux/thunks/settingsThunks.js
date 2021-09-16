@@ -10,6 +10,7 @@ import {
   deleteClientRequest,
   generateNewClientRequest,
   getAvailableClientsRequest,
+  postNewAdminUser,
   putCoreRequest,
 } from '../../http/requests';
 
@@ -70,6 +71,27 @@ export const putCoreSettings = (data) => {
         dispatch(setSettingsError(null));
       })
       .catch((err) => {
+        dispatch(stopSettingsLoading());
+        dispatch(setSettingsError(err));
+      });
+  };
+};
+
+export const createNewAdminUser = (values) => {
+  return (dispatch) => {
+    dispatch(startSettingsLoading());
+    const body = {
+      username: values.username,
+      password: values.password,
+    };
+    postNewAdminUser(body)
+      .then((res) => {
+        console.log('postNewAdminUser res', res.data);
+        dispatch(stopSettingsLoading());
+        dispatch(setSettingsError(null));
+      })
+      .catch((err) => {
+        console.log('postNewAdminUser error', err);
         dispatch(stopSettingsLoading());
         dispatch(setSettingsError(err));
       });

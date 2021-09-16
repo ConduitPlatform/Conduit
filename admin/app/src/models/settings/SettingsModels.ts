@@ -15,3 +15,8 @@ export type IPlatformTypes =
   | 'WINDOWS'
   | 'MACOS'
   | 'LINUX';
+
+export interface INewAdminUser {
+  username: string;
+  password: string;
+}
