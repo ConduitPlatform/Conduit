@@ -20,9 +20,8 @@ import {
 import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../redux/thunks/appAuthThunks';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { asyncLogout } from '../../redux/slices/appAuthSlice';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -125,7 +124,7 @@ const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
   };
 
   const handleLogout = async () => {
-    dispatch(logout());
+    dispatch(asyncLogout());
     await Router.replace('/login');
   };
 

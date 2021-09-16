@@ -2,10 +2,14 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getAdminModulesRequest, loginRequest } from '../../http/requests';
 import { removeCookie, setCookie } from '../../utils/cookie';
 import { IModule } from '../../models/appAuth';
+import { clearEmailPageStore } from '../actions/emailsActions';
+import { clearNotificationPageStore } from './notificationsSlice';
+import { clearStoragePageStore } from './storageSlice';
+import { clearAuthPageStore } from '../actions';
 
 export type AppAuthState = {
   data: {
-    token: any;
+    token: string;
     enabledModules: IModule[];
   };
   meta: {
@@ -18,7 +22,7 @@ export type AppAuthState = {
 
 const initialState: AppAuthState = {
   data: {
-    token: null,
+    token: '',
     enabledModules: [],
   },
   meta: {
@@ -42,6 +46,13 @@ export const asyncLogin = createAsyncThunk(
   }
 );
 
+export const asyncLogout = createAsyncThunk('appAuth/logout', async (arg, thunkAPI) => {
+  thunkAPI.dispatch(clearAuthPageStore());
+  thunkAPI.dispatch(clearEmailPageStore());
+  thunkAPI.dispatch(clearNotificationPageStore());
+  thunkAPI.dispatch(clearStoragePageStore());
+});
+
 export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async () => {
   try {
     const { data } = await getAdminModulesRequest();
@@ -54,12 +65,7 @@ export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async
 const appAuthSlice = createSlice({
   name: 'appAuth',
   initialState,
-  reducers: {
-    logout(state) {
-      removeCookie('JWT');
-      state = initialState;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder.addCase(asyncLogin.pending, (state) => {
       state.meta.loading = true;
@@ -86,8 +92,21 @@ const appAuthSlice = createSlice({
       state.meta.error = null;
       state.data.enabledModules = action.payload.modules;
     });
+    builder.addCase(asyncLogout.pending, (state) => {
+      state.meta.loading = true;
+    });
+    builder.addCase(asyncLogout.rejected, (state, action) => {
+      state.meta.loading = false;
+      state.meta.error = action.error as Error;
+    });
+    builder.addCase(asyncLogout.fulfilled, (state) => {
+      removeCookie('JWT');
+      state.data.token = '';
+      state.data.enabledModules = [];
+      state.meta.loading = false;
+      state.meta.error = null;
+    });
   },
 });
 
-export const { logout } = appAuthSlice.actions;
 export default appAuthSlice.reducer;

@@ -52,10 +52,6 @@ const Types = () => {
 
   const { data, loading, error } = useSelector((state) => state.cmsReducer);
 
-  useEffect(() => {
-    console.log('data', data);
-  }, [data]);
-
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);

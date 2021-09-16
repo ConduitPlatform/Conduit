@@ -1,6 +1,6 @@
 import axios from 'axios';
 import store from '../redux/store';
-import { logout } from '../redux/slices/appAuthSlice';
+import { asyncLogout } from '../redux/slices/appAuthSlice';
 import Router from 'next/router';
 import getConfig from 'next/config';
 
@@ -45,7 +45,7 @@ axios.interceptors.response.use(
     console.log(error);
     if (error.response.status === 401) {
       if (store) {
-        store().dispatch(logout());
+        store().dispatch(asyncLogout());
         Router.replace('/login');
       }
     }
