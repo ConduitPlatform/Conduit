@@ -8,51 +8,28 @@ import {
   Response,
   Router,
 } from 'express';
+
 import {
-  ConduitCommons,
   ConduitError,
-  ConduitMiddleware,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteParameters,
 } from '@quintessential-sft/conduit-commons';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
+import { ConduitRouter } from '../Router';
 
 const swaggerUi = require('swagger-ui-express');
-const crypto = require('crypto');
 
-export class RestController {
-  private _router!: Router;
-  private _middlewares?: { [field: string]: ConduitMiddleware };
-  private _registeredRoutes: Map<string, ConduitRoute>;
+export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler>;
   private _swagger: SwaggerGenerator;
 
-  constructor(private readonly app: Application) {
-    this._registeredRoutes = new Map();
+  constructor(readonly app: Application) {
+    super(app);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator();
     this.initializeRouter();
-  }
-
-  handleRequest(req: Request, res: Response, next: NextFunction): void {
-    this._router(req, res, next);
-  }
-
-  cleanupRoutes(routes: any[]) {
-    let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
-    routes.forEach((route: any) => {
-      let key = `${route.action}-${route.path}`;
-      if (this._registeredRoutes.has(key)) {
-        newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
-      }
-    });
-
-    this._registeredRoutes.clear();
-    this._registeredRoutes = newRegisteredRoutes;
-    this.refreshRouter();
   }
 
   registerRoute(
@@ -81,55 +58,11 @@ export class RestController {
     }
   }
 
-  registerMiddleware(middleware: ConduitMiddleware) {
-    if (!this._middlewares) {
-      this._middlewares = {};
-    }
-    this._middlewares[middleware.name] = middleware;
-  }
-
-  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
-    let primaryPromise = new Promise((resolve, reject) => {
-      resolve({});
-    });
-    const self = this;
-    if (this._middlewares && middlewares) {
-      middlewares.forEach((m) => {
-        if (!this._middlewares?.hasOwnProperty(m))
-          primaryPromise = Promise.reject('Middleware does not exist');
-        primaryPromise = primaryPromise.then((r) => {
-          return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
-            params
-          ).then((p: any) => {
-            if (p.result) {
-              Object.assign(r, JSON.parse(p.result));
-            }
-            return r;
-          });
-        });
-      });
-    }
-
-    return primaryPromise;
-  }
-
   private addRoute(
     path: string,
     router: Router | ((req: Request, res: Response, next: NextFunction) => void)
   ) {
-    this._router.use(path, router);
-  }
-
-  private findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitCommons)
-      .getState()
-      .getKey('hash-' + hashKey);
-  }
-
-  private storeInCache(hashKey: string, data: any, cacheAge: number) {
-    ((this.app as any).conduit as ConduitCommons)
-      .getState()
-      .setKey('hash-' + hashKey, JSON.stringify(data), cacheAge * 1000);
+    this._expressRouter.use(path, router);
   }
 
   private addConduitRoute(route: ConduitRoute) {
@@ -138,23 +71,23 @@ export class RestController {
 
     switch (route.input.action) {
       case ConduitRouteActions.GET: {
-        routerMethod = this._router.get.bind(this._router);
+        routerMethod = this._expressRouter.get.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.POST: {
-        routerMethod = this._router.post.bind(this._router);
+        routerMethod = this._expressRouter.post.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.DELETE: {
-        routerMethod = this._router.delete.bind(this._router);
+        routerMethod = this._expressRouter.delete.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.UPDATE: {
-        routerMethod = this._router.put.bind(this._router);
+        routerMethod = this._expressRouter.put.bind(this._expressRouter);
         break;
       }
       default: {
-        routerMethod = this._router.get.bind(this._router);
+        routerMethod = this._expressRouter.get.bind(this._expressRouter);
       }
     }
 
@@ -277,7 +210,7 @@ export class RestController {
     this._swagger.addRouteSwaggerDocumentation(route);
   }
 
-  private refreshRouter() {
+  protected refreshRouter() {
     this.initializeRouter();
     this._registeredLocalRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');
@@ -289,16 +222,16 @@ export class RestController {
   }
 
   private initializeRouter() {
-    this._router = Router();
+    this._expressRouter = Router();
     const self = this;
-    this._router.use('/swagger', swaggerUi.serve);
-    this._router.get('/swagger', (req, res, next) =>
+    this._expressRouter.use('/swagger', swaggerUi.serve);
+    this._expressRouter.get('/swagger', (req, res, next) =>
       swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next)
     );
-    this._router.get('/swagger.json', (req, res) => {
+    this._expressRouter.get('/swagger.json', (req, res) => {
       res.send(JSON.stringify(this._swagger.swaggerDoc));
     });
-    this._router.use((req: Request, res: Response, next: NextFunction) => {
+    this._expressRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });
   }

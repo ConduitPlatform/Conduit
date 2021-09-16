@@ -41,74 +41,35 @@ export class ConduitDefaultRouter implements IConduitRouter {
     server.addService(router.service, {
       registerConduitRoute: this.registerGrpcRoute.bind(this),
     });
-    this.highAvailability();
+    this.highAvailability().catch(() => {
+      console.log('Failed to recover state');
+    });
   }
 
-  highAvailability() {
-    const self = this;
+  async highAvailability() {
     let sdk: ConduitCommons = (this._app as any).conduit;
-    sdk
-      .getState()
-      .getKey('router')
-      .then((r: any) => {
-        if (!r || r.length === 0) return;
-        let state = JSON.parse(r);
-        if (state.routes) {
-          state.routes.forEach((r: any) => {
-            try {
-              let routes: (
-                | ConduitRoute
-                | ConduitMiddleware
-                | ConduitSocket
-              )[] = grpcToConduitRoute({
-                protoFile: r.protofile,
-                routes: r.routes,
-                routerUrl: r.url,
-              });
-              this._grpcRoutes[r.url] = r.routes;
-              routes.forEach((r) => {
-                if (r instanceof ConduitMiddleware) {
-                  this.registerRouteMiddleware(r);
-                } else if (r instanceof ConduitSocket) {
-                  this.registerSocket(r);
-                } else {
-                  this._registerRoute(r);
-                }
-              });
-            } catch (err) {
-              console.error(err);
-            }
-          });
-          console.log('Recovered routes');
+    let r = await sdk.getState().getKey('router');
+    if (!r || r.length === 0) return;
+    let state = JSON.parse(r);
+    if (state.routes) {
+      state.routes.forEach((r: any) => {
+        try {
+          this.internalRegisterRoute(r.protofile, r.routes, r.url);
+        } catch (err) {
+          console.error(err);
         }
-      })
-      .catch(() => {
-        console.log('Failed to recover state');
       });
+      console.log('Recovered routes');
+    }
 
     sdk.getBus().subscribe('router', (message: string) => {
+      let messageParsed = JSON.parse(message);
       try {
-        let messageParsed = JSON.parse(message);
-        let routes: (
-          | ConduitRoute
-          | ConduitMiddleware
-          | ConduitSocket
-        )[] = grpcToConduitRoute({
-          protoFile: messageParsed.protofile,
-          routes: messageParsed.routes,
-          routerUrl: messageParsed.url,
-        });
-        this._grpcRoutes[messageParsed.url] = messageParsed.routes;
-        routes.forEach((r) => {
-          if (r instanceof ConduitMiddleware) {
-            this.registerRouteMiddleware(r);
-          } else if (r instanceof ConduitSocket) {
-            this.registerSocket(r);
-          } else {
-            this._registerRoute(r);
-          }
-        });
-        this.cleanupRoutes();
+        this.internalRegisterRoute(
+          messageParsed.protofile,
+          messageParsed.routes,
+          messageParsed.url
+        );
       } catch (err) {
         console.error(err);
       }
@@ -167,46 +128,14 @@ export class ConduitDefaultRouter implements IConduitRouter {
         }
         call.request.routerUrl = result.url;
         moduleName = result!.moduleName;
-        // do not enable yet, it requires further consideration
       }
 
-      let routes: (
-        | ConduitRoute
-        | ConduitMiddleware
-        | ConduitSocket
-      )[] = grpcToConduitRoute(call.request, moduleName);
-
-      routes.forEach((r) => {
-        if (r instanceof ConduitMiddleware) {
-          console.log(
-            'New middleware registered: ' +
-              r.input.path +
-              ' handler url: ' +
-              call.request.routerUrl
-          );
-          this.registerRouteMiddleware(r);
-        } else if (r instanceof ConduitSocket) {
-          console.log(
-            'New socker registered: ' +
-              r.input.path +
-              ' handler url: ' +
-              call.request.routerUrl
-          );
-          this.registerSocket(r);
-        } else {
-          console.log(
-            'New route registered: ' +
-              r.input.action +
-              ' ' +
-              r.input.path +
-              ' handler url: ' +
-              call.request.routerUrl
-          );
-          this._registerRoute(r);
-        }
-      });
-      this._grpcRoutes[call.request.routerUrl] = call.request.routes;
-      this.cleanupRoutes();
+      this.internalRegisterRoute(
+        call.request.protoFile,
+        call.request.routes,
+        call.request.routerUrl,
+        moduleName
+      );
       this.updateState(
         call.request.protoFile,
         call.request.routes,
@@ -220,6 +149,45 @@ export class ConduitDefaultRouter implements IConduitRouter {
     //todo definitely missing an error handler here
     //perhaps wrong(?) we send an empty response
     callback(null, null);
+  }
+
+  internalRegisterRoute(protofile: any, routes: any[], url: any, moduleName?: string) {
+    let processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+    )[] = grpcToConduitRoute(
+      {
+        protoFile: protofile,
+        routes: routes,
+        routerUrl: url,
+      },
+      moduleName
+    );
+
+    processedRoutes.forEach((r) => {
+      if (r instanceof ConduitMiddleware) {
+        console.log(
+          'New middleware registered: ' + r.input.path + ' handler url: ' + url
+        );
+        this.registerRouteMiddleware(r);
+      } else if (r instanceof ConduitSocket) {
+        console.log('New socker registered: ' + r.input.path + ' handler url: ' + url);
+        this.registerSocket(r);
+      } else {
+        console.log(
+          'New route registered: ' +
+            r.input.action +
+            ' ' +
+            r.input.path +
+            ' handler url: ' +
+            url
+        );
+        this._registerRoute(r);
+      }
+    });
+    this._grpcRoutes[url] = routes;
+    this.cleanupRoutes();
   }
 
   cleanupRoutes() {

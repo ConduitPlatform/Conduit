@@ -124,6 +124,37 @@ export class FileHandlers {
     });
   }
 
+  async getFileData(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+    if (!isString(id)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'The provided id is invalid',
+      });
+    }
+
+    let errorMessage = null;
+    const file = await this.database
+      .findOne('File', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    if (isNil(file))
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'File not found',
+      });
+
+    let data: Buffer = await this.storageProvider.folder(file.folder).get(file.name);
+    data.toString('base64');
+
+    return callback(null, {
+      result: JSON.stringify({
+        data: data.toString('base64'),
+      }),
+    });
+  }
+
   async getFileUrl(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
