@@ -1,7 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { deleteClientRequest, generateNewClientRequest, putCoreRequest } from '../../http/requests';
 import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
-import { getAvailableClientsRequest } from '../../http/SettingsRequests';
+import {
+  getAvailableClientsRequest,
+  generateNewClientRequest,
+  deleteClientRequest,
+  putCoreRequest,
+} from '../../http/SettingsRequests';
 
 interface INotificationSlice {
   data: {

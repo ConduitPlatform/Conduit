@@ -8,7 +8,7 @@ const {
   publicRuntimeConfig: { CONDUIT_URL, MASTER_KEY },
 } = getConfig();
 
-const CONDUIT_API = process.env.IS_DEV ? process.env.CONDUIT_URL : CONDUIT_URL;
+export const CONDUIT_API = process.env.IS_DEV ? process.env.CONDUIT_URL : CONDUIT_URL;
 
 const config = {
   masterkey: process.env.IS_DEV ? process.env.MASTER_KEY : MASTER_KEY,
@@ -168,6 +168,10 @@ export const toggleSchemaByIdRequest = (_id) =>
 
 export const getCmsDocumentsByNameRequest = (name, skip = 0, limit = 10) =>
   axios.get(`${CONDUIT_API}/admin/cms/content/${name}`, { params: { skip, limit } });
+
+export const schemasFromOtherModules = () => {
+  return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
+};
 //-----------------------//
 
 /** Cloud storage requests **/
@@ -206,48 +210,3 @@ export const createCustomEndpointsRequest = (endpointData) => {
   return axios.post(`${CONDUIT_API}/admin/cms/customEndpoints`, endpointData);
 };
 //-----------------------//
-
-//Settings
-export const getAvailableClientsRequest = () => {
-  return axios.get(`${CONDUIT_API}/admin/security/client`);
-};
-
-export const generateNewClientRequest = (platform) => {
-  return axios.post(`${CONDUIT_API}/admin/security/client`, { platform });
-};
-
-export const deleteClientRequest = (_id) => {
-  return axios.delete(`${CONDUIT_API}/admin/security/client/${_id}`);
-};
-
-export const putCoreRequest = (data) => {
-  return axios.put(`${CONDUIT_API}/config/core`, data);
-};
-
-export const getAdminModulesRequest = () => {
-  return axios.get(`${CONDUIT_API}/admin/config/modules`);
-};
-
-export const getServiceAccounts = () => {
-  return axios.get(`${CONDUIT_API}/admin/authentication/services`);
-};
-
-export const deleteServiceAccounts = (_id) => {
-  return axios.delete(`${CONDUIT_API}/admin/authentication/services/${_id}`);
-};
-
-export const createServiceAccount = (name) => {
-  return axios.post(`${CONDUIT_API}/admin/authentication/services`, { name });
-};
-
-export const refreshServiceAccount = (serviceId) => {
-  return axios.put(`${CONDUIT_API}/admin/authentication/services`, { serviceId });
-};
-
-export const schemasFromOtherModules = () => {
-  return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
-};
-
-export const postNewAdminUser = (endpointData) => {
-  return axios.post(`${CONDUIT_API}/admin/create`, endpointData);
-};

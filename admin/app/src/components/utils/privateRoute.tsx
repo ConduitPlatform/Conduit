@@ -4,14 +4,14 @@ import { useAppSelector } from '../../redux/hooks';
 
 export const privateRoute = (Component: any) => {
   const Auth = (props: any) => {
-    const { token } = useAppSelector((state) => state.appAuthSlice.data.token);
-    const isLoggedIn = !!token;
-
-    useEffect(() => {
-      if (!isLoggedIn) {
-        Router.replace('/login');
-      }
-    }, [isLoggedIn]);
+    // const { token } = useAppSelector((state) => state.appAuthSlice.data.token);
+    // const isLoggedIn = !!token;
+    //
+    // useEffect(() => {
+    //   if (!isLoggedIn) {
+    //     Router.replace('/login');
+    //   }
+    // }, [isLoggedIn]);
 
     return <Component {...props} />;
   };
