@@ -4,8 +4,7 @@ import {
   startNotificationLoading,
   stopNotificationLoading,
 } from '../actions';
-
-import { putNotificationConfig } from '../../http/requests';
+import { putNotificationConfig } from '../../http/NotificationsRequests';
 
 export const saveConfig = () => {
   return (dispatch) => {

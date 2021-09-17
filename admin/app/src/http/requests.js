@@ -130,19 +130,3 @@ export const loginRequest = (username, password) =>
     },
     { headers: config }
   );
-
-/** Notifications  requests **/
-export const sendNotification = (data) =>
-  axios.post(`${CONDUIT_API}/notifications/send`, {
-    ...data,
-  });
-
-export const getNotificationConfig = () =>
-  axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
-
-export const putNotificationConfig = (projectId, productKey, clientEmail) =>
-  axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
-    projectId,
-    productKey,
-    clientEmail,
-  });
