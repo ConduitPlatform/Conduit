@@ -14,8 +14,9 @@ import { IconButton } from '@material-ui/core';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
-import { AuthUserUI } from '../authentication/AuthModels';
+import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles({
   table: {
@@ -29,7 +30,7 @@ type Action = {
 };
 
 interface Props {
-  dsData: SchemaUI[] | AuthUserUI[]; //todo add notification types
+  dsData: SchemaUI[] | AuthUserUI[] | NotificationData[]; //todo add notification types
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
 }
@@ -83,7 +84,7 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
   };
 
   const handleClose = () => {
-    setAnchorEl(null);
+    setAnchorEl(undefined);
     setSelectedRow(null);
   };
 
@@ -95,7 +96,9 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
   };
 
   const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
-    handleAction(action, data);
+    if (handleAction) {
+      handleAction(action, data);
+    }
     setAnchorEl(undefined);
   };
 

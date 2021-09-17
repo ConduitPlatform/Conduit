@@ -44,7 +44,7 @@ export const asyncGetStorageConfig = createAsyncThunk('storage/getConfig', async
 
 export const asyncSaveStorageConfig = createAsyncThunk(
   'storage/saveConfig',
-  async (dataForConfig) => {
+  async (dataForConfig: IStorageConfig) => {
     try {
       const { data } = await putStorageSettings(dataForConfig);
       return data;

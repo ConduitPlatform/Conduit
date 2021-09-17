@@ -11,7 +11,7 @@ import {
 
 interface INotificationSlice {
   data: {
-    config: INotificationSettings[];
+    config: INotificationSettings;
     notifications: NotificationData[];
   };
   meta: {
@@ -21,7 +21,17 @@ interface INotificationSlice {
 }
 
 const initialState: INotificationSlice = {
-  data: { config: [], notifications: [] },
+  data: {
+    config: {
+      active: false,
+      providerName: '',
+      projectId: '',
+      privateKey: '',
+      clientEmail: '',
+      message: '',
+    },
+    notifications: [],
+  },
   meta: {
     loading: false,
     error: null,
@@ -30,7 +40,7 @@ const initialState: INotificationSlice = {
 
 export const asyncSendNewNotification = createAsyncThunk(
   'notifications/sendNew',
-  async (data) => {
+  async (data: NotificationData) => {
     try {
       await sendNotification(data);
       return;
@@ -54,9 +64,14 @@ export const asyncGetNotificationConfig = createAsyncThunk(
 
 export const asyncSaveNotificationConfig = createAsyncThunk(
   'notifications/saveConfig',
-  async () => {
+  async (settings: INotificationSettings) => {
     try {
-      const { data } = await putNotificationConfig();
+      const { data } = await putNotificationConfig({
+        projectId: settings.projectId,
+        privateKey: settings.privateKey,
+        clientEmail: settings.clientEmail,
+      });
+
       return data;
     } catch (error) {
       throw error;

@@ -3,22 +3,21 @@ import { Layout } from '../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
-import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { getAvailableClients } from '../redux/thunks/settingsThunks';
+import React, { useState } from 'react';
 import CoreSettingsTab from '../components/settings/CoreSettingsTab';
 import SecretsTab from '../components/settings/SecretsTab';
 import SdksTab from '../components/settings/SdksTab';
+import CreateNewUserTab from '../components/settings/CreateNewUserTab';
 
-const tabs = [{ title: 'Client SDKs' }, { title: 'Secrets' }, { title: 'Core' }];
+const tabs = [
+  { title: 'Client SDKs' },
+  { title: 'Secrets' },
+  { title: 'Core' },
+  { title: 'Create New User' },
+];
 
 const Settings = () => {
-  const dispatch = useDispatch();
-  const [selected, setSelected] = useState(0);
-
-  useEffect(() => {
-    dispatch(getAvailableClients());
-  }, [dispatch]);
+  const [selected, setSelected] = useState(3);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
@@ -37,6 +36,9 @@ const Settings = () => {
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
           <CoreSettingsTab />
+        </Box>
+        <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
+          <CreateNewUserTab />
         </Box>
       </Box>
     </Layout>

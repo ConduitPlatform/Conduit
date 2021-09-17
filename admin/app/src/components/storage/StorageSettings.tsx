@@ -37,7 +37,7 @@ interface Props {
 
 const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsSate] = useState({
+  const [settingsState, setSettingsState] = useState({
     active: true,
     provider: 'local',
     storagePath: '/var/tmp',
@@ -55,11 +55,11 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
       return;
     }
 
-    setSettingsSate(config);
+    setSettingsState(config);
   }, [config]);
 
   const handleSelect = (event: any) => {
-    setSettingsSate((prevState) => ({
+    setSettingsState((prevState) => ({
       ...prevState,
       providerName: event.target.value,
     }));
@@ -67,7 +67,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
 
   const handleCancel = () => {
     if (config) {
-      setSettingsSate({
+      setSettingsState({
         ...settingsState,
         active: config.active,
         provider: config.provider,
@@ -78,7 +78,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
         },
       });
     } else {
-      setSettingsSate({
+      setSettingsState({
         active: true,
         provider: 'local',
         storagePath: '/var/tmp',
@@ -122,7 +122,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
         <Grid item xs={6}>
           <TextField
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 storagePath: event.target.value,
               });
@@ -153,7 +153,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
             fullWidth
             value={settingsState.google.serviceAccountKeyPath}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 google: {
                   ...settingsState.google,
@@ -172,7 +172,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
             fullWidth
             value={settingsState.google.bucketName}
             onChange={(event) => {
-              setSettingsSate({
+              setSettingsState({
                 ...settingsState,
                 google: {
                   ...settingsState.google,
@@ -201,7 +201,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
                 <Switch
                   checked={settingsState.active}
                   onChange={() =>
-                    setSettingsSate({
+                    setSettingsState({
                       ...settingsState,
                       active: !settingsState.active,
                     })
