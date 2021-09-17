@@ -4,46 +4,61 @@ route: /database
 menu: Modules
 ---
 
-# Database Adapter module
+# Database module
 
-This module should allow for basic functionality on both SQL DBs
-through (TyperORM or Sequelize) and MongoDB (Through Mongoose).
-It should actually generate schemas as files and the rest of the packages
-should use this package for all their needs.
+This module allows for basic functionality on both SQL DBs
+through Sequelize and MongoDB through Mongoose.
 
-This package should not implement EVERYTHING. Instead it should implement
-simple find/get queries for both scenarios and the schemas. After that it
-should allow the other packages to get direct access to the schemas and the
-connection instances for any advanced query needs.
+Mongoose and Sequelize are used for their similar functions and architectures,
+which allow us to have a very consistent API. There isn't support for all operations
+that are available in the 2 ORMs, in order to have a compatibility layer. New features
+are being added on-demand and when it can be adapted to both systems.
 
-It should also support multiple connections, either to different same tech DBs
-ex. 2 MongoDBs or to different tech DBs. Each connection must have different schemas.
-To the application each DB will be referenced by an assigned name so that the package
-will know which DB to query.
+The query language of the module is BSON, since it is easy to serialize into string and deserialize into
+query objects that can be easily manipulated in JS. This means that the database module will almost always have
+better support for mongo operations than SQL, since SQL operations need to go through parsers that are otherwise
+unnecessary for mongo.
 
-It is important to implement all logic in files and not 'create' all schemas during
-runtime and have their existance be logical. We need them in file format to guarantee performance
+# Supported operations:
+- Equality - either by simple field check (ex: {name:"John"}) or by operator (ex: {name:{$eq:"John"}})
+- Inequality - (ex: {name:{$neq:"John"}})
+- In
+- Not In
+- Contains
+- Greater Than
+- Greater Than Equal
+- Less Than
+- Less Than Equal
+- AND
+- OR
 
-# Mongoose Adapter module
+These operators have been tested thoroughly in varying levels of complexity
 
-This module will be required by the database-adapter, depending on configuration,
-and will allow for basic query execution through its functions, access to the underlying connector,
-direct-model access, mongoose schema generation through .json models.
+# Populations & relations
+Relations have been implemented with MongoDB in mind(for now). This means that they do not really exist inside the databases.
+Every relation is logical, and relation data is retrieved using mongoose's population functionality. The same reasoning has been
+carried over to sequelize, but is not as efficient(this is a todo item to create a sequelize-native solution with associations).
 
-# Sequelize Adapter module
+## Getting related fields
+Each field that is actually a relation can be filled(or populated), but supplying the relevant array. This creates a
+join operation that gets all the objects.
 
-This module will be required by the database-adapter, depending on configuration,
-and will allow for basic query execution through its functions, access to the underlying connector,
-direct-model access, sql schema generation through .json models.
+## Setting related fields
+While we advise creating each document seperately and setting the relation inside a model after the "child" document
+has been created, the database module supports "create with population" operations, where if you supply an entire object
+instead of an id in the place of the relation field, then the module will automatically create the associated document and
+add its id in place of the data.
+
+
 ## Sequelize Caveats
 Currently the sequelize implementation has the following limitations:
 - No index creation
 - Update queries always update only the provided fields without the option to replace entire rows unless all columns are provided.
 This behaviour is supported only for not changing
 - Like operations do not work
-#NOTE
 
+#NOTE
 Mongoose and sequelize where selected due to their similar nature, so that we can maintain
 a compatibility layer fairly easily. This provider would probably be best to be exported as
-a library down the road. The purpose of the library should be to provide a compatibility between MongoDB
+a library down the road. The purpose of the library is to provide a compatibility between MongoDB
 and sequelize.
