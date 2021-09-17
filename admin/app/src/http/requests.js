@@ -172,13 +172,3 @@ export const getCmsDocumentsByNameRequest = (name, skip = 0, limit = 10) =>
 export const schemasFromOtherModules = () => {
   return axios.get(`${CONDUIT_API}/admin/cms/schemasFromOtherModules`);
 };
-//-----------------------//
-
-/** Cloud storage requests **/
-export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
-
-export const putStorageSettings = (storageData) =>
-  axios.put(`${CONDUIT_API}/admin/config/storage`, {
-    ...storageData,
-  });
-//-----------------------//
