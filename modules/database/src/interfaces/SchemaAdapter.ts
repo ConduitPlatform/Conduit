@@ -1,10 +1,10 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 
-export interface SchemaAdapter {
+export interface SchemaAdapter<T> {
   /**
    * The actual underlying model
    */
-  model: any;
+  model: T;
   /**
    * The original model used to generate this
    */

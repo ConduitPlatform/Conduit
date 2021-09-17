@@ -5,7 +5,7 @@ import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { createWithPopulations } from './utils';
 import { EJSON } from 'bson';
 
-export class MongooseSchema implements SchemaAdapter {
+export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
   originalSchema: ConduitSchema;
 

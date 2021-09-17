@@ -177,7 +177,7 @@ export class DatabaseProvider implements ConduitServiceModule {
     }
     this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: SchemaAdapter) => {
+      .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),

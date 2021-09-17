@@ -2,16 +2,22 @@ import _, { isNil } from 'lodash';
 import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
 import { SchemaAdapter } from '../../interfaces';
 import { parseQuery } from './utils';
-
+import { createWithPopulations } from './utils';
+import { SequelizeAdapter } from './index';
 const deepdash = require('deepdash/standalone');
 
-export class SequelizeSchema implements SchemaAdapter {
+export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
   originalSchema: any;
   excludedFields: any[];
   relations: any;
 
-  constructor(sequelize: Sequelize, schema: any, originalSchema: any) {
+  constructor(
+    sequelize: Sequelize,
+    schema: any,
+    originalSchema: any,
+    private readonly adapter: SequelizeAdapter
+  ) {
     this.originalSchema = originalSchema;
     this.excludedFields = [];
     this.relations = {};
@@ -55,20 +61,26 @@ export class SequelizeSchema implements SchemaAdapter {
     return this.model.sync({ alter: true });
   }
 
-  create(query: string): Promise<any> {
+  private async createWithPopulations(document: any): Promise<any> {
+    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
+  }
+
+  async create(query: string): Promise<any> {
     let parsedQuery = JSON.parse(query);
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
+    await this.createWithPopulations(parsedQuery);
     return this.model.create(parsedQuery, { raw: true });
   }
 
-  createMany(query: string): Promise<any> {
+  async createMany(query: string): Promise<any> {
     let parsedQuery: any[] = JSON.parse(query);
     let date = new Date();
-    parsedQuery.forEach((doc: any) => {
+    for (const doc of parsedQuery) {
       doc.createdAt = date;
       doc.updatedAt = date;
-    });
+      await this.createWithPopulations(doc);
+    }
 
     return this.model.bulkCreate(parsedQuery);
   }
@@ -218,6 +230,7 @@ export class SequelizeSchema implements SchemaAdapter {
     }
 
     parsedQuery.updatedAt = new Date();
+    await this.createWithPopulations(parsedQuery);
     parsedQuery = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
     return parsedQuery;
   }
@@ -279,6 +292,7 @@ export class SequelizeSchema implements SchemaAdapter {
     }
 
     parsedQuery.updatedAt = new Date();
+    await this.createWithPopulations(parsedQuery);
     return this.model.update(parsedQuery, { where: parsedFilter });
   }
 

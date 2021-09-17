@@ -1,10 +1,9 @@
-import { DatabaseAdapter } from '../../interfaces/DatabaseAdapter';
+import { DatabaseAdapter } from '../../interfaces';
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
-import { SchemaAdapter } from '../../interfaces';
 
 export class SequelizeAdapter implements DatabaseAdapter {
   connected: boolean = false;
@@ -19,7 +18,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
-  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter> {
+  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
     if (!this.models) {
       this.models = {};
     }
@@ -41,7 +40,12 @@ export class SequelizeAdapter implements DatabaseAdapter {
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
-    this.models[schema.name] = new SequelizeSchema(this.sequelize, newSchema, schema);
+    this.models[schema.name] = new SequelizeSchema(
+      this.sequelize,
+      newSchema,
+      schema,
+      this
+    );
     await this.models[schema.name].sync();
 
     return this.models![schema.name];
@@ -65,7 +69,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
     });
   }
 
-  getSchemaModel(schemaName: string): { model: SchemaAdapter; relations: any } {
+  getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
     if (this.models) {
       const self = this;
       let relations: any = {};
