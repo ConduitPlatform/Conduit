@@ -9,10 +9,10 @@ import {
 import {
   deleteClientRequest,
   generateNewClientRequest,
-  getAvailableClientsRequest,
   postNewAdminUser,
   putCoreRequest,
 } from '../../http/requests';
+import { getAvailableClientsRequest } from '../../http/SettingsRequests';
 
 export const getAvailableClients = () => {
   return (dispatch) => {
@@ -86,7 +86,6 @@ export const createNewAdminUser = (values) => {
     };
     postNewAdminUser(body)
       .then((res) => {
-        console.log('postNewAdminUser res', res.data);
         dispatch(stopSettingsLoading());
         dispatch(setSettingsError(null));
       })
