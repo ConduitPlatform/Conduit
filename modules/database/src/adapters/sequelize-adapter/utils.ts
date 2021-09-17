@@ -50,6 +50,11 @@ function replaceInPath(parsed: any, path: any[], replacedValue: any) {
   } else if (path.indexOf('$and') !== -1) {
     path.splice(path.indexOf('$and'), 1);
     path.push(Op.and);
+  } else if (path.indexOf('$regex') !== -1) {
+    path.splice(path.indexOf('$regex'), 1);
+    path.push(Op.like);
+    replacedValue = replacedValue.replace('.*', '%');
+    replacedValue = replacedValue.replace('.*', '%');
   }
   return _.set(parsed, path, replacedValue);
 }
@@ -61,7 +66,8 @@ export function parseQuery(query: any) {
     if (
       !parentValue?.hasOwnProperty(key) ||
       Array.isArray(parentValue) ||
-      context._item.strPath.indexOf('[') !== -1
+      context._item.strPath.indexOf('[') !== -1 ||
+      key === '$options'
     ) {
       return true;
     }
