@@ -18,9 +18,6 @@ import {
   postCmsSchemaRequest,
   putCmsSchemaRequest,
   toggleSchemaByIdRequest,
-  createSchemaDocumentRequest,
-  deleteSchemaDocumentRequest,
-  editSchemaDocumentRequest,
   schemasFromOtherModules,
 } from '../../http/requests';
 import {
@@ -29,6 +26,11 @@ import {
   editCustomEndpointsRequest,
   getCustomEndpointsRequest,
 } from '../../http/CustomEndpointsRequests';
+import {
+  createSchemaDocumentRequest,
+  deleteSchemaDocumentRequest,
+  editSchemaDocumentRequest,
+} from '../../http/SchemasRequests';
 
 export const getCmsSchemas = (limit = 30) => {
   return (dispatch) => {
