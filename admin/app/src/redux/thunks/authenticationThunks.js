@@ -4,7 +4,7 @@ import {
   startAuthUsersLoading,
   stopAuthUsersLoading,
 } from '../actions';
-import { getAuthUsersDataReq } from '../../http/requests';
+import { getAuthUsersDataReq } from '../../http/AuthenticationRequests';
 
 export const getAuthUsersData = (skip, limit, search, filter) => {
   return (dispatch) => {

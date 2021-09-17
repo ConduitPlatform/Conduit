@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { CONDUIT_API } from './requests';
+import { CONDUIT_API } from './requestsConfig';
 
 export const sendNotification = (data) =>
   axios.post(`${CONDUIT_API}/notifications/send`, {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { CONDUIT_API } from './requests';
+import { CONDUIT_API } from './requestsConfig';
 
 export const getCmsSchemasRequest = (skip, limit) =>
   axios.get(`${CONDUIT_API}/admin/cms/schemas`, { params: { skip, limit } });

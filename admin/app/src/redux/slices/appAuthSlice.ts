@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { loginRequest } from '../../http/requests';
 import { removeCookie, setCookie } from '../../utils/cookie';
 import { IModule } from '../../models/appAuth';
 import { clearEmailPageStore } from '../actions/emailsActions';
@@ -7,6 +6,7 @@ import { clearNotificationPageStore } from './notificationsSlice';
 import { clearStoragePageStore } from './storageSlice';
 import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
+import { loginRequest } from '../../http/AuthenticationRequests';
 
 export type AppAuthState = {
   data: {

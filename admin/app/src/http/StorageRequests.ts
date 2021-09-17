@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { CONDUIT_API } from './requests';
+import { CONDUIT_API } from './requestsConfig';
 
 export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
 
