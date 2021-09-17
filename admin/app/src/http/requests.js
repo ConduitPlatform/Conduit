@@ -102,25 +102,6 @@ export const getAuthenticationConfig = () =>
 export const putAuthenticationConfig = (body) =>
   axios.put(`${CONDUIT_API}/admin/config/authentication`, body);
 
-//REQUEST FOR EMAILS
-export const getEmailTemplateRequest = () =>
-  axios.get(`${CONDUIT_API}/admin/email/templates`);
-
-export const postEmailTemplateRequest = (data) =>
-  axios.post(`${CONDUIT_API}/admin/email/templates`, { ...data });
-
-export const putEmailTemplateRequest = (templateId, data) =>
-  axios.put(`${CONDUIT_API}/admin/email/templates/${templateId}`, { ...data });
-
-export const getEmailSettingsRequest = () =>
-  axios.get(`${CONDUIT_API}/admin/config/email`);
-
-export const putEmailSettingsRequest = (data) =>
-  axios.put(`${CONDUIT_API}/admin/config/email`, { ...data });
-
-export const sendEmailRequest = (data) =>
-  axios.post(`${CONDUIT_API}/admin/email/send`, { ...data });
-
 export const loginRequest = (username, password) =>
   axios.post(
     `${CONDUIT_API}/admin/login`,
