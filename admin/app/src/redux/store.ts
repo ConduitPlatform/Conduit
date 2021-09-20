@@ -4,6 +4,7 @@ import appAuthSlice from './slices/appAuthSlice';
 import notificationsSlice from './slices/notificationsSlice';
 import storageSlice from './slices/storageSlice';
 import settingsSlice from './slices/settingsSlice';
+import emailsSlice from './slices/emailsSlice';
 import { useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 
@@ -17,6 +18,7 @@ export const makeStore = (preloadedState: any) =>
       notificationsSlice,
       storageSlice,
       settingsSlice,
+      emailsSlice,
     },
     preloadedState,
   });
