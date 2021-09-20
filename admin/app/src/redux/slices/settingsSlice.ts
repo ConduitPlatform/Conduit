@@ -135,5 +135,6 @@ const settingsSlice = createSlice({
   },
 });
 
-export default settingsSlice.reducer;
 export const { setLoading, setError } = settingsSlice.actions;
+
+export default settingsSlice.reducer;

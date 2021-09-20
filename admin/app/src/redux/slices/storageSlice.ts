@@ -95,9 +95,10 @@ const storageSlice = createSlice({
   },
 });
 
-export default storageSlice.reducer;
 export const {
   setStorageLoading,
   setStorageError,
   clearStoragePageStore,
 } = storageSlice.actions;
+
+export default storageSlice.reducer;

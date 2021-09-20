@@ -283,9 +283,10 @@ const authenticationSlice = createSlice({
   },
 });
 
-export default authenticationSlice.reducer;
 export const {
   clearAuthenticationPageStore,
   setLoading,
   clearSuccessMsg,
 } = authenticationSlice.actions;
+
+export default authenticationSlice.reducer;
