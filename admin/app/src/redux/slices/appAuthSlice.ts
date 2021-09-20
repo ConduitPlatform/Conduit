@@ -6,7 +6,7 @@ import { clearNotificationPageStore } from './notificationsSlice';
 import { clearStoragePageStore } from './storageSlice';
 import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
-import { loginRequest } from '../../http/AuthenticationRequests';
+import { loginRequest } from '../../http/AppAuthRequests';
 
 export type AppAuthState = {
   data: {

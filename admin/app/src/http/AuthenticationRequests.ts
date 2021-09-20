@@ -1,16 +1,6 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 
-export const loginRequest = (username, password) =>
-  axios.post(
-    `${CONDUIT_API}/admin/login`,
-    {
-      username,
-      password,
-    },
-    { headers: config }
-  );
-
 export const getAuthUsersDataReq = (skip, limit, search, filter) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {

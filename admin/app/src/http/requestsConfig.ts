@@ -10,7 +10,7 @@ const {
 
 export const CONDUIT_API = process.env.IS_DEV ? process.env.CONDUIT_URL : CONDUIT_URL;
 
-const config = {
+export const config = {
   masterkey: process.env.IS_DEV ? process.env.MASTER_KEY : MASTER_KEY,
 };
 
