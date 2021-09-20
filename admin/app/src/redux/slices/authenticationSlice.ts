@@ -1,17 +1,17 @@
-import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { AuthUser } from '../../models/authentication/AuthModels';
-import {
-  blockUser,
-  createNewUsers,
-  deleteUser,
-  editUser,
-  getAuthenticationConfig,
-  getAuthUsersDataReq,
-  putAuthenticationConfig,
-  unblockUser,
-} from '../../http/requests';
 import { SignInMethods } from '../../models/authentication/AuthModels';
 import { getAuthUsersData } from '../thunks/authenticationThunks';
+import {
+  getAuthUsersDataReq,
+  createNewUsers,
+  editUser,
+  blockUser,
+  unblockUser,
+  deleteUser,
+  getAuthenticationConfig,
+  putAuthenticationConfig,
+} from '../../http/AuthenticationRequests';
 
 interface IAuthenticationSlice {
   data: {
@@ -69,7 +69,7 @@ export const asyncAddNewUser = createAsyncThunk(
       const { data } = await createNewUsers(params.values);
       thunkApi.dispatch(getAuthUsersData(0, params.limit, '', filter));
       setTimeout(() => {
-        thunkApi.dispatch(clearSuccesMsg());
+        thunkApi.dispatch(clearSuccessMsg());
       }, 6300);
       return { data, params };
     } catch (error) {
@@ -154,7 +154,7 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
-    clearSuccesMsg(state) {
+    clearSuccessMsg(state) {
       state.meta.authUsers.success = null;
     },
     clearAuthenticationPageStore(state) {
@@ -217,7 +217,7 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncBlockUserUI.fulfilled, (state, action) => {
       state.meta.authUsers.loading = false;
-      let userToBlock = state.data.authUsers.users.find(
+      const userToBlock = state.data.authUsers.users.find(
         (user) => user._id === action.payload
       );
       if (userToBlock) {
@@ -234,7 +234,7 @@ const authenticationSlice = createSlice({
     builder.addCase(asyncUnblockUserUI.fulfilled, (state, action) => {
       state.meta.authUsers.loading = false;
       state.meta.authUsers.error = null;
-      let userToUnBlock = state.data.authUsers.users.find(
+      const userToUnBlock = state.data.authUsers.users.find(
         (user) => user._id === action.payload
       );
       if (userToUnBlock) {
@@ -286,7 +286,7 @@ const authenticationSlice = createSlice({
 export const {
   clearAuthenticationPageStore,
   setLoading,
-  clearSuccesMsg,
+  clearSuccessMsg,
 } = authenticationSlice.actions;
 
 export default authenticationSlice.reducer;
