@@ -5,7 +5,6 @@ import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import { Formik } from 'formik';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -17,8 +16,10 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Router from 'next/router';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { asyncLogin } from '../redux/slices/appAuthSlice';
+import { Theme } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
   paper: {
     marginTop: theme.spacing(8),
     display: 'flex',
@@ -58,7 +59,6 @@ const Login: React.FC = () => {
   }, [error]);
 
   useEffect(() => {
-    console.log(token);
     if (token) {
       Router.replace('/');
     }
