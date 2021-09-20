@@ -50,11 +50,12 @@ const initialState: ICmsSlice = {
   meta: { loading: false, error: null },
 };
 
-export const asynGetCmsSchemas = createAsyncThunk(
+export const asyncGetCmsSchemas = createAsyncThunk(
   'cms/getSchemas',
   async (limit: number = 30) => {
     try {
       const { data } = await getCmsSchemasRequest(0, limit);
+
       return data;
     } catch (error) {
       throw error;
@@ -152,7 +153,9 @@ const prepareDocumentField = (doc: any) => {
   let field = { [doc.name]: null };
   if (doc.fields) {
     doc.fields.forEach((subField: any) => {
-      field[doc.name] = { ...field[doc.name], ...prepareDocumentField(subField) };
+      const tempObj = field[doc.name];
+      const preppedFields = prepareDocumentField(subField);
+      field[doc.name] = Object.assign({ tempObj, ...preppedFields });
     });
   } else {
     field[doc.name] = doc.value;
@@ -162,13 +165,14 @@ const prepareDocumentField = (doc: any) => {
 
 export const asyncCreateSchemaDocument = createAsyncThunk(
   'cms/createDoc',
-  async (params: { schemaName: string; documentData: any }, thunkApi) => {
+  async (params: { schemaName: string; document: any }, thunkApi) => {
     try {
       const body = { schemaName: params.schemaName, inputDocument: {} };
-      params.documentData.forEach((d: any) => {
+      params.document.forEach((d: any) => {
         let field = prepareDocumentField(d);
         body.inputDocument = { ...body.inputDocument, ...field };
       });
+
       await createSchemaDocumentRequest(params.schemaName, body);
       thunkApi.dispatch(asyncGetSchemaDocuments(params.schemaName));
       return;
@@ -325,14 +329,14 @@ const cmsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(asynGetCmsSchemas.pending, (state) => {
+    builder.addCase(asyncGetCmsSchemas.pending, (state) => {
       state.meta.loading = true;
     });
-    builder.addCase(asynGetCmsSchemas.rejected, (state, action) => {
+    builder.addCase(asyncGetCmsSchemas.rejected, (state, action) => {
       state.meta.loading = false;
       state.meta.error = action.error as Error;
     });
-    builder.addCase(asynGetCmsSchemas.fulfilled, (state, action) => {
+    builder.addCase(asyncGetCmsSchemas.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.data.schemas = action.payload.results;
       state.data.count = action.payload.documentsCount;
@@ -416,7 +420,7 @@ const cmsSlice = createSlice({
     builder.addCase(asyncGetMoreSchemaDocuments.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.documents.documents.push(action.payload.documents);
+      state.data.documents.documents.push(...action.payload.documents);
     });
     builder.addCase(asyncCreateSchemaDocument.pending, (state) => {
       state.meta.loading = true;

@@ -3,9 +3,9 @@ import OperationsEnum from '../../../models/OperationsEnum';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EndpointAssignments from './EndpointAssignments';
 import React from 'react';
-import { setEndpointData } from '../../../redux/actions/customEndpointsActions';
-import { useDispatch, useSelector } from 'react-redux';
+import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -16,9 +16,11 @@ const useStyles = makeStyles((theme) => ({
 
 const AssignmentsSection = ({ editMode }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { endpoint, schemaFields } = useSelector((state) => state.customEndpointsReducer);
+  const { endpoint, schemaFields } = useAppSelector(
+    (state) => state.customEndpointsSlice.data
+  );
 
   const handleAddAssignment = () => {
     const assignment = {

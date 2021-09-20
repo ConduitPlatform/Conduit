@@ -7,7 +7,7 @@ interface ICustomEndpointSlice {
   data: {
     endpoint: {
       name: string;
-      operation: typeof OperationsEnum | number;
+      operation: any;
       selectedSchema: string;
       authentication: boolean;
       paginated: boolean;
@@ -17,7 +17,7 @@ interface ICustomEndpointSlice {
       assignments: [];
     };
     schemaFields: [];
-    selectedEndpoint: string | undefined;
+    selectedEndpoint: any;
   };
 }
 
@@ -50,7 +50,7 @@ const customEndpointsSlice = createSlice({
       state.data.schemaFields = action.payload;
     },
     setEndpointData(state, action) {
-      state.data.endpoint = action.payload;
+      state.data.endpoint = { ...action.payload };
     },
     endpointCleanSlate(state) {
       state = initialState;

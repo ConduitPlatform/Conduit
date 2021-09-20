@@ -10,11 +10,11 @@ import {
 import { makeStyles } from '@material-ui/core/styles';
 import OperationsEnum from '../../../models/OperationsEnum';
 import { findFieldsWithTypes, getAvailableFieldsOfSchema } from '../../../utils/cms';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   setEndpointData,
   setSchemaFields,
-} from '../../../redux/actions/customEndpointsActions';
+} from '../../../redux/slices/customEndpointsSlice';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -32,9 +32,13 @@ const useStyles = makeStyles((theme) => ({
 
 const OperationSection = ({ schemas, editMode, availableSchemas }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { endpoint, schemaFields } = useSelector((state) => state.customEndpointsReducer);
+  const { endpoint, schemaFields } = useAppSelector(
+    (state) => state.customEndpointsSlice.data
+  );
+
+  console.log('EndpointData:', endpoint);
 
   const handleOperationChange = (event) => {
     const operation = Number(event.target.value);

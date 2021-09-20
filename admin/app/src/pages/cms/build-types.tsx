@@ -21,14 +21,15 @@ import {
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  createNewSchema,
-  editSchema,
-  fetchSchemasFromOtherModules,
-  getCmsSchemas,
-} from '../../redux/thunks/cmsThunks';
+
 import { clearSelectedSchema } from '../../redux/actions';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import {
+  asyncCreateNewSchema,
+  asyncEditSchema,
+  asyncFetchSchemasFromOtherModules,
+  asyncGetCmsSchemas,
+} from '../../redux/slices/cmsSlice';
 
 const items = [
   'Text',
@@ -83,9 +84,9 @@ const BuildTypes = () => {
 
   const classes = useStyles();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { data } = useSelector((state) => state.cmsReducer);
+  const { data } = useAppSelector((state) => state.cmsSlice);
 
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
@@ -106,8 +107,8 @@ const BuildTypes = () => {
   const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
-    dispatch(getCmsSchemas());
-    dispatch(fetchSchemasFromOtherModules());
+    dispatch(asyncGetCmsSchemas());
+    dispatch(asyncFetchSchemasFromOtherModules());
   }, [dispatch]);
 
   useEffect(() => {
@@ -428,7 +429,7 @@ const BuildTypes = () => {
         fields: { ...editableSchemaFields },
       };
 
-      dispatch(editSchema(_id, editableSchema));
+      dispatch(asyncEditSchema({ _id, data: editableSchema }));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
       const newSchema = {
@@ -437,7 +438,7 @@ const BuildTypes = () => {
         crudOperations,
         fields: newSchemaFields,
       };
-      dispatch(createNewSchema(newSchema));
+      dispatch(asyncCreateNewSchema(newSchema));
     }
     dispatch(clearSelectedSchema());
     router.push({ pathname: '/cms' });

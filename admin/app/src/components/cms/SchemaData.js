@@ -3,7 +3,6 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -22,12 +21,13 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import CreateDialog from './DocumentCreateDialog';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
-  createSchemaDocument,
-  deleteSchemaDocument,
-  editSchemaDocument,
-  getMoreSchemaDocuments,
-} from '../../redux/thunks/cmsThunks';
+  asyncCreateSchemaDocument,
+  asyncDeleteSchemaDocument,
+  asyncEditSchemaDocument,
+  asyncGetMoreSchemaDocuments,
+} from '../../redux/slices/cmsSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -99,10 +99,12 @@ const ITEM_HEIGHT = 48;
 
 const SchemaData = ({ schemas, handleSchemaChange }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { documents } = useSelector((state) => state.cmsReducer.data.documents);
-  const documentsObj = useSelector((state) => state.cmsReducer.data.documents);
+  const { documents } = useAppSelector((state) => state.cmsSlice?.data.documents);
+  const documentsObj = useAppSelector((state) => state.cmsSlice.data?.documents);
+
+  console.log('documents:', documents);
 
   const [selectedSchema, setSelectedSchema] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -173,20 +175,23 @@ const SchemaData = ({ schemas, handleSchemaChange }) => {
   };
 
   const handleDelete = () => {
-    const _id = documents[docIndex]._id;
+    const documentId = documents[docIndex]._id;
     const schemaName = schemas[selectedSchema].name;
-    dispatch(deleteSchemaDocument(schemaName, _id));
+    dispatch(asyncDeleteSchemaDocument({ schemaName, documentId }));
     handleCloseDeleteConfirmationDialog();
   };
 
   const handleCreateDocument = (schemaName, document) => {
-    dispatch(createSchemaDocument(schemaName, document));
+    console.log('document:', document);
+    dispatch(asyncCreateSchemaDocument({ schemaName, document }));
     setCreateDocument(false);
   };
 
   const handleEditDocument = (schemaName, document) => {
     const _id = selectedDocument._id;
-    dispatch(editSchemaDocument(schemaName, _id, document));
+    dispatch(
+      asyncEditSchemaDocument({ schemaName, documentId: _id, documentData: document })
+    );
     setCreateDocument(false);
   };
 
@@ -226,10 +231,12 @@ const SchemaData = ({ schemas, handleSchemaChange }) => {
 
   const onViewMorePress = () => {
     const schemaName = schemas[selectedSchema].name;
+    console.log(schemas);
+    console.log('selectedSchema', selectedSchema);
     const documentLength = documents.length;
     // const documentsCount = schemaDocuments.documentsCount;
     // console.log(documentLength, documentsCount);
-    dispatch(getMoreSchemaDocuments(schemaName, documentLength));
+    dispatch(asyncGetMoreSchemaDocuments({ name: schemaName, skip: documentLength }));
   };
 
   return (

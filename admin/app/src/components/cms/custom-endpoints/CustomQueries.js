@@ -16,17 +16,17 @@ import {
   prepareQuery,
 } from '../../../utils/cms';
 import SaveSection from './SaveSection';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  endpointCleanSlate,
-  setEndpointData,
-  setSchemaFields,
-  setSelectedEndpoint,
-} from '../../../redux/actions/customEndpointsActions';
 import QueriesSection from './QueriesSection';
 import AssignmentsSection from './AssignmentsSection';
 import InputsSection from './InputsSection';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  endpointCleanSlate,
+  setEndpointData,
+  setSchemaFields,
+  setSelectedEndPoint,
+} from '../../../redux/slices/customEndpointsSlice';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -58,18 +58,16 @@ const useStyles = makeStyles((theme) => ({
 
 const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [createMode, setCreateMode] = useState(false);
 
-  const {
-    data: { schemas, customEndpoints },
-  } = useSelector((state) => state.cmsReducer);
+  const { schemas, customEndpoints } = useAppSelector((state) => state.cmsSlice.data);
 
-  const { endpoint, selectedEndpoint } = useSelector(
-    (state) => state.customEndpointsReducer
+  const { endpoint, selectedEndpoint } = useAppSelector(
+    (state) => state.customEndpointsSlice.data
   );
 
   const initializeData = useCallback(() => {
@@ -184,10 +182,10 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
     if (edit) {
       const _id = selectedEndpoint._id;
       handleEdit(_id, data);
-      dispatch(setSelectedEndpoint(''));
+      dispatch(setSelectedEndPoint(''));
     } else {
       handleCreate(data);
-      dispatch(setSelectedEndpoint(''));
+      dispatch(setSelectedEndPoint(''));
     }
     setCreateMode(false);
     setEditMode(false);
@@ -201,12 +199,12 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
 
   const handleDeleteConfirmed = () => {
     handleConfirmationDialogClose();
-    dispatch(setSelectedEndpoint(undefined));
+    dispatch(setSelectedEndPoint(undefined));
     handleDelete(selectedEndpoint._id);
   };
 
   const handleListItemSelect = (endpoint) => {
-    dispatch(setSelectedEndpoint(endpoint));
+    dispatch(setSelectedEndPoint(endpoint));
     dispatch(setEndpointData({ ...endpoint }));
   };
 

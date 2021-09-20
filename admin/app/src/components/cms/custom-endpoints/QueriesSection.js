@@ -1,12 +1,12 @@
 import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import EndpointQueries from './EndpointQueries';
 import React from 'react';
-import { setEndpointData } from '../../../redux/actions/customEndpointsActions';
-import { useDispatch, useSelector } from 'react-redux';
+import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { recursiveNodeIteration } from '../../../utils/cms';
 import { v4 as uuidv4 } from 'uuid';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -17,9 +17,11 @@ const useStyles = makeStyles((theme) => ({
 
 const QueriesSection = ({ editMode }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { endpoint, schemaFields } = useSelector((state) => state.customEndpointsReducer);
+  const { endpoint, schemaFields } = useAppSelector(
+    (state) => state.customEndpointsSlice.data
+  );
 
   const handleQueryChanges = (queries) => {
     dispatch(setEndpointData({ queries }));

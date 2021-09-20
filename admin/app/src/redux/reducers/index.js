@@ -4,10 +4,10 @@ import authenticationPageReducer from './authenticationPageReducer';
 import emailsPageReducer from './emailsPageReducer';
 import notificationReducer from './notificationReducer';
 import settingsSlice from '../slices/settingsSlice';
-import cmsReducer from './cmsReducer';
+import cmsSlice from '../slices/cmsSlice';
 import storageSlice from '../slices/storageSlice';
 import notificationsSlice from '../slices/notificationsSlice';
-import customEndpointsReducer from './customEndpointsReducer';
+import customEndpointsSlice from '../slices/customEndpointsSlice';
 
 export default combineReducers({
   authenticationPageReducer,
@@ -15,7 +15,7 @@ export default combineReducers({
   emailsPageReducer,
   notificationsSlice,
   storageSlice,
-  cmsReducer,
+  cmsSlice,
   settingsSlice,
-  customEndpointsReducer,
+  customEndpointsSlice,
 });
