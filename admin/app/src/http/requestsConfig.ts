@@ -14,7 +14,7 @@ export const config = {
   masterkey: process.env.IS_DEV ? process.env.MASTER_KEY : MASTER_KEY,
 };
 
-const JWT_CONFIG = (token) => ({
+const JWT_CONFIG = (token: string) => ({
   ...config,
   Authorization: `JWT ${token}`,
 });
