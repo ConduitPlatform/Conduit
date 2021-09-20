@@ -5,7 +5,6 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-import makeStyles from '@material-ui/styles/makeStyles';
 import {
   Email,
   ExitToApp,
@@ -22,6 +21,7 @@ import Link from 'next/link';
 import Router from 'next/router';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
+import { makeStyles } from '@material-ui/core/styles';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
