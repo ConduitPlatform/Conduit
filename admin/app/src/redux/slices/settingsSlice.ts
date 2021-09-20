@@ -1,11 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
 import {
-  deleteClientRequest,
-  generateNewClientRequest,
   getAvailableClientsRequest,
+  generateNewClientRequest,
+  deleteClientRequest,
   putCoreRequest,
-} from '../../http/requests';
-import { IClient, IPlatformTypes } from './../../models/settings/SettingsModels';
+} from '../../http/SettingsRequests';
 
 interface INotificationSlice {
   data: {
@@ -65,8 +65,7 @@ export const asyncPutCoreSettings = createAsyncThunk(
   'settings/saveConfig',
   async (data) => {
     try {
-      const savedConfig = await putCoreRequest(data);
-      return savedConfig;
+      return await putCoreRequest(data);
     } catch (error) {
       throw error;
     }
@@ -130,11 +129,12 @@ const settingsSlice = createSlice({
       state.meta.loading = false;
       state.meta.error = action.error as Error;
     });
-    builder.addCase(asyncPutCoreSettings.fulfilled, (state, action) => {
+    builder.addCase(asyncPutCoreSettings.fulfilled, (state) => {
       state.meta.loading = true;
     });
   },
 });
 
-export default settingsSlice.reducer;
 export const { setLoading, setError } = settingsSlice.actions;
+
+export default settingsSlice.reducer;
