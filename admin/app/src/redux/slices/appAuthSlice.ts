@@ -46,12 +46,15 @@ export const asyncLogin = createAsyncThunk(
   }
 );
 
-export const asyncLogout = createAsyncThunk('appAuth/logout', async (arg, thunkAPI) => {
-  thunkAPI.dispatch(clearAuthPageStore());
-  thunkAPI.dispatch(clearEmailPageStore());
-  thunkAPI.dispatch(clearNotificationPageStore());
-  thunkAPI.dispatch(clearStoragePageStore());
-});
+export const asyncLogout = createAsyncThunk(
+  'appAuth/logout',
+  async (arg: void, thunkAPI) => {
+    thunkAPI.dispatch(clearAuthPageStore());
+    thunkAPI.dispatch(clearEmailPageStore());
+    thunkAPI.dispatch(clearNotificationPageStore());
+    thunkAPI.dispatch(clearStoragePageStore());
+  }
+);
 
 export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async () => {
   try {
@@ -65,7 +68,11 @@ export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async
 const appAuthSlice = createSlice({
   name: 'appAuth',
   initialState,
-  reducers: {},
+  reducers: {
+    setToken: (state, action) => {
+      state.data.token = action.payload.token;
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(asyncLogin.pending, (state) => {
       state.meta.loading = true;
@@ -108,5 +115,7 @@ const appAuthSlice = createSlice({
     });
   },
 });
+
+export const { setToken } = appAuthSlice.actions;
 
 export default appAuthSlice.reducer;

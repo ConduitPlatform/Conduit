@@ -130,5 +130,6 @@ const notificationsSlice = createSlice({
   },
 });
 
-export default notificationsSlice.reducer;
 export const { clearNotificationPageStore, setLoading } = notificationsSlice.actions;
+
+export default notificationsSlice.reducer;

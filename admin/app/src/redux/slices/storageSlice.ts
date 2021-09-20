@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getStorageSettings, putStorageSettings } from '../../http/requests';
-import { IStorageConfig } from './../../models/storage/StorageModels';
+import { IStorageConfig } from '../../models/storage/StorageModels';
 
 interface IStorageSlice {
   data: {
@@ -95,9 +95,10 @@ const storageSlice = createSlice({
   },
 });
 
-export default storageSlice.reducer;
 export const {
   setStorageLoading,
   setStorageError,
   clearStoragePageStore,
 } = storageSlice.actions;
+
+export default storageSlice.reducer;

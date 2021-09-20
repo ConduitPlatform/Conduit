@@ -5,7 +5,7 @@ import {
   getAvailableClientsRequest,
   putCoreRequest,
 } from '../../http/requests';
-import { IClient, IPlatformTypes } from './../../models/settings/SettingsModels';
+import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
 
 interface INotificationSlice {
   data: {
@@ -136,5 +136,6 @@ const settingsSlice = createSlice({
   },
 });
 
-export default settingsSlice.reducer;
 export const { setLoading, setError } = settingsSlice.actions;
+
+export default settingsSlice.reducer;

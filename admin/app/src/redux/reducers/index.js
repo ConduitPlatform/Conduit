@@ -8,13 +8,4 @@ import storageSlice from '../slices/storageSlice';
 import notificationsSlice from '../slices/notificationsSlice';
 import customEndpointsReducer from './customEndpointsReducer';
 
-export default combineReducers({
-  authenticationSlice,
-  appAuthSlice,
-  emailsPageReducer,
-  notificationsSlice,
-  storageSlice,
-  cmsReducer,
-  settingsSlice,
-  customEndpointsReducer,
-});
+export default combineReducers({});

@@ -58,6 +58,7 @@ const Login: React.FC = () => {
   }, [error]);
 
   useEffect(() => {
+    console.log(token);
     if (token) {
       Router.replace('/');
     }
