@@ -12,11 +12,11 @@ export const getNotificationConfig = () =>
 
 export const putNotificationConfig = (data: {
   projectId: string;
-  productKey: string;
+  privateKey: string;
   clientEmail: string;
 }) =>
   axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
     projectId: data.projectId,
-    productKey: data.productKey,
+    privateKey: data.privateKey,
     clientEmail: data.clientEmail,
   });
