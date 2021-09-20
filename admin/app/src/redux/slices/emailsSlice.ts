@@ -6,7 +6,7 @@ import {
   putEmailSettingsRequest,
   putEmailTemplateRequest,
   sendEmailRequest,
-} from '../../http/requests';
+} from '../../http/EmailRequests';
 import {
   EmailTemplateType,
   EmailSettings,
