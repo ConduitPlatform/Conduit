@@ -69,7 +69,7 @@ export const asyncAddNewUser = createAsyncThunk(
       const { data } = await createNewUsers(params.values);
       thunkApi.dispatch(getAuthUsersData(0, params.limit, '', filter));
       setTimeout(() => {
-        thunkApi.dispatch(clearSuccesMsg());
+        thunkApi.dispatch(clearSuccessMsg());
       }, 6300);
       return { data, params };
     } catch (error) {
@@ -154,7 +154,7 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
-    clearSuccesMsg(state) {
+    clearSuccessMsg(state) {
       state.meta.authUsers.success = null;
     },
     clearAuthenticationPageStore(state) {
@@ -287,5 +287,5 @@ export default authenticationSlice.reducer;
 export const {
   clearAuthenticationPageStore,
   setLoading,
-  clearSuccesMsg,
+  clearSuccessMsg,
 } = authenticationSlice.actions;
