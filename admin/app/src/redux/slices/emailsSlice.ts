@@ -7,11 +7,7 @@ import {
   putEmailTemplateRequest,
   sendEmailRequest,
 } from '../../http/EmailRequests';
-import {
-  EmailTemplateType,
-  EmailSettings,
-  EmailSettingsState,
-} from './../../models/emails/EmailModels';
+import { EmailTemplateType, EmailSettings } from '../../models/emails/EmailModels';
 
 interface IEmailSlice {
   data: {
