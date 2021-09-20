@@ -27,7 +27,9 @@ const EndpointAssignments = ({
   const handleAssignmentFieldChange = (event, index) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
+
     const input = currentAssignments[index];
+
     if (input) {
       input.schemaField = value;
       setSelectedAssignments(currentAssignments);
@@ -71,9 +73,9 @@ const EndpointAssignments = ({
 
     const type = value.split('-')[0];
     const actualValue = value.split('-')[1];
-
+    //TODO this needs work
     const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
+    const assignment = { ...currentAssignments[index] };
     if (assignment) {
       assignment.assignmentField.type = type;
       assignment.assignmentField.value = actualValue ? actualValue : '';
@@ -84,9 +86,10 @@ const EndpointAssignments = ({
   const handleAssignmentCustomValueChange = (event, index) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
+    const assignment = { ...currentAssignments[index] };
     if (assignment) {
       assignment.assignmentField.value = value;
+      currentAssignments[index] = assignment;
       setSelectedAssignments(currentAssignments);
     }
   };
@@ -94,9 +97,10 @@ const EndpointAssignments = ({
   const handleAssignmentContextValueChange = (event, index) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
-    const assignment = currentAssignments[index];
+    const assignment = { ...currentAssignments[index] };
     if (assignment) {
       assignment.assignmentField.value = value;
+      currentAssignments[index] = assignment;
       setSelectedAssignments(currentAssignments);
     }
   };

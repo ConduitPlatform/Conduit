@@ -42,6 +42,8 @@ const InputsSection = ({ editMode }) => {
     (state) => state.customEndpointsSlice.data
   );
 
+  console.log('endPoint:', endpoint);
+
   const handleAddInput = () => {
     const input = {
       name: '',
@@ -92,6 +94,7 @@ const InputsSection = ({ editMode }) => {
         return q;
       }
     });
+
     const updatedAssignments = endpoint.assignments.slice().map((a) => {
       const assignmentField = a.assignmentField;
       if (assignmentField.name === input.value) {
@@ -117,6 +120,7 @@ const InputsSection = ({ editMode }) => {
   };
 
   const handleInputsChanges = (inputs) => {
+    console.log('inputs:', inputs);
     dispatch(setEndpointData({ inputs }));
   };
 

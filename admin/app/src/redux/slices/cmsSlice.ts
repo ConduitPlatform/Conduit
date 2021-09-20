@@ -55,7 +55,6 @@ export const asyncGetCmsSchemas = createAsyncThunk(
   async (limit: number = 30) => {
     try {
       const { data } = await getCmsSchemasRequest(0, limit);
-
       return data;
     } catch (error) {
       throw error;
@@ -511,3 +510,4 @@ const cmsSlice = createSlice({
 });
 
 export default cmsSlice.reducer;
+export const { setSelectedSchema, clearSelectedSchema } = cmsSlice.actions;

@@ -111,6 +111,8 @@ const BuildTypes = () => {
     dispatch(asyncFetchSchemasFromOtherModules());
   }, [dispatch]);
 
+  console.log('selectedSchema', data.selectedSchema);
+
   useEffect(() => {
     if (data.selectedSchema) {
       setReadOnly(true);

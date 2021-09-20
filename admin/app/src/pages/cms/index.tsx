@@ -15,7 +15,7 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
-import { setSelectedSchema } from '../../redux/actions';
+import { setSelectedSchema } from '../../redux/slices/cmsSlice';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
 import {
   asyncCreateCustomEndpoints,
@@ -197,7 +197,7 @@ const Types = () => {
   };
 
   const handleEditCustomEndpoint = (_id: string, data) => {
-    dispatch(asyncUpdateCustomEndpoints(_id, data));
+    dispatch(asyncUpdateCustomEndpoints({ _id, endpointData: data }));
   };
 
   const handleDeleteCustomEndpoint = (endpointId: string) => {

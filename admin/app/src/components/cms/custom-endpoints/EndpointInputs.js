@@ -22,9 +22,12 @@ const EndpointInputs = ({
   const handleInputNameChange = (event, index) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
+    const input = { ...currentInputs[index] };
+    console.log('input:', input);
+    console.log('currentInputs:', currentInputs);
     if (input) {
       input.name = value;
+      currentInputs[index] = input;
       setSelectedInputs(currentInputs);
     }
   };
@@ -32,18 +35,21 @@ const EndpointInputs = ({
   const handleInputTypeChange = (event, index) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
+    const input = { ...currentInputs[index] };
+
     if (input) {
       input.type = value;
+      currentInputs[index] = input;
       setSelectedInputs(currentInputs);
     }
   };
   const handleInputLocationChange = (event, index) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
+    const input = { ...currentInputs[index] };
     if (input) {
       input.location = Number(value);
+      currentInputs[index] = input;
       setSelectedInputs(currentInputs);
     }
   };
@@ -51,9 +57,10 @@ const EndpointInputs = ({
   const handleInputIsArray = (event, index) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
+    const input = { ...currentInputs[index] };
     if (input) {
       input.array = value;
+      currentInputs[index] = input;
       setSelectedInputs(currentInputs);
     }
   };
@@ -61,9 +68,10 @@ const EndpointInputs = ({
   const handleInputIsOptional = (event, index) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
-    const input = currentInputs[index];
+    const input = { ...currentInputs[index] };
     if (input) {
       input.optional = value;
+      currentInputs[index] = input;
       setSelectedInputs(currentInputs);
     }
   };
