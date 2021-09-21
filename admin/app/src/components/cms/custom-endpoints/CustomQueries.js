@@ -70,10 +70,6 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
     (state) => state.customEndpointsSlice.data
   );
 
-  console.log('endpoint:', endpoint);
-
-  console.log('schemas', schemas);
-
   const initializeData = useCallback(() => {
     if (selectedEndpoint) {
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema, schemas);
@@ -168,10 +164,9 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
 
   const handleSubmit = (edit = false) => {
     const schema = schemas.find((schema) => schema._id === endpoint.selectedSchema);
-    console.log('schema', schema);
 
     const query = prepareQuery(endpoint.queries);
-    console.log('query', query);
+
     const data = {
       name: endpoint.name,
       operation: Number(endpoint.operation),

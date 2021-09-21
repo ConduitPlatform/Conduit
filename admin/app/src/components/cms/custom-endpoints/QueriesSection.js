@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
+import { deepClone } from '../../utils/deepClone';
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -28,9 +29,8 @@ const QueriesSection = ({ editMode }) => {
   };
 
   const handleAddParentNode = () => {
-    dispatch(
-      setEndpointData({ queries: [{ _id: uuidv4(), operator: 'AND', queries: [] }] })
-    );
+    const query = { _id: uuidv4(), operator: 'AND', queries: [] };
+    dispatch(setEndpointData({ queries: [...endpoint.queries, query] }));
   };
 
   const handleAddQuery = (nodeId) => {
@@ -47,7 +47,7 @@ const QueriesSection = ({ editMode }) => {
       },
     };
 
-    const queries = endpoint.queries;
+    const queries = deepClone(endpoint.queries);
 
     queries.forEach((q) => {
       const found = recursiveNodeIteration(q, nodeId);
@@ -64,7 +64,7 @@ const QueriesSection = ({ editMode }) => {
   const handleAddNode = (nodeId) => {
     if (!nodeId) return;
 
-    const queries = endpoint.queries.slice();
+    const queries = deepClone(endpoint.queries);
     const query = {
       _id: uuidv4(),
       schemaField: '',
@@ -78,14 +78,14 @@ const QueriesSection = ({ editMode }) => {
 
     queries.forEach((q) => {
       const found = recursiveNodeIteration(q, nodeId);
+
       if (found) {
         if ('queries' in found) {
           found.queries.push({ _id: uuidv4(), operator: 'AND', queries: [query] });
         }
+        dispatch(setEndpointData({ queries }));
       }
     });
-
-    dispatch(setEndpointData({ queries }));
   };
 
   const handleRemoveNode = (nodeId) => {
@@ -127,7 +127,7 @@ const QueriesSection = ({ editMode }) => {
   };
 
   const handleChangeNodeOperator = (nodeId, oldOperator, newOperator) => {
-    const queries = endpoint.queries.slice();
+    const queries = JSON.parse(JSON.stringify(endpoint.queries));
 
     if (!nodeId) return;
 

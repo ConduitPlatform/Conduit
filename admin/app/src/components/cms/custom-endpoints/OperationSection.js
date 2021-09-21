@@ -38,8 +38,6 @@ const OperationSection = ({ schemas, editMode, availableSchemas }) => {
     (state) => state.customEndpointsSlice.data
   );
 
-  console.log('EndpointData:', endpoint);
-
   const handleOperationChange = (event) => {
     const operation = Number(event.target.value);
     let assignments = [];

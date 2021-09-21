@@ -11,6 +11,8 @@ import React, { Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
+import { cloneDeep } from 'lodash';
+import { deepClone } from '../../utils/deepClone';
 
 const useStyles = makeStyles(() => ({}));
 
@@ -61,11 +63,10 @@ const EndpointAssignments = ({
 
   const handleAssignmentActionChange = (event, index) => {
     const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const input = JSON.parse(JSON.stringify(currentAssignments[index]));
+    const currentAssignments = deepClone(selectedAssignments);
+    const input = currentAssignments[index];
     if (input) {
       input.action = Number(value);
-      currentAssignments[index] = input;
       setSelectedAssignments(currentAssignments);
     }
   };
@@ -76,34 +77,32 @@ const EndpointAssignments = ({
     const type = value.split('-')[0];
     const actualValue = value.split('-')[1];
     //TODO this needs work
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = JSON.parse(JSON.stringify(currentAssignments[index]));
+    const currentAssignments = deepClone(selectedAssignments);
+    const assignment = currentAssignments[index];
     if (assignment) {
       assignment.assignmentField.type = type;
       assignment.assignmentField.value = actualValue ? actualValue : '';
-      currentAssignments[index] = assignment;
+
       setSelectedAssignments(currentAssignments);
     }
   };
 
   const handleAssignmentCustomValueChange = (event, index) => {
     const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = JSON.parse(JSON.stringify(currentAssignments[index]));
+    const currentAssignments = deepClone(selectedAssignments);
+    const assignment = currentAssignments[index];
     if (assignment) {
       assignment.assignmentField.value = value;
-      currentAssignments[index] = assignment;
       setSelectedAssignments(currentAssignments);
     }
   };
 
   const handleAssignmentContextValueChange = (event, index) => {
     const value = event.target.value;
-    const currentAssignments = selectedAssignments.slice();
-    const assignment = JSON.parse(JSON.stringify(currentAssignments[index]));
+    const currentAssignments = deepClone(selectedAssignments);
+    const assignment = currentAssignments[index];
     if (assignment) {
       assignment.assignmentField.value = value;
-      currentAssignments[index] = assignment;
       setSelectedAssignments(currentAssignments);
     }
   };

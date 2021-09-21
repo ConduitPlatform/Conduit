@@ -42,8 +42,6 @@ const InputsSection = ({ editMode }) => {
     (state) => state.customEndpointsSlice.data
   );
 
-  console.log('endPoint:', endpoint);
-
   const handleAddInput = () => {
     const input = {
       name: '',
@@ -120,7 +118,6 @@ const InputsSection = ({ editMode }) => {
   };
 
   const handleInputsChanges = (inputs) => {
-    console.log('inputs:', inputs);
     dispatch(setEndpointData({ inputs }));
   };
 

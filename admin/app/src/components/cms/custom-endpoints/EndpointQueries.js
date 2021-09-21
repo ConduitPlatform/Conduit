@@ -9,6 +9,7 @@ import { TreeView } from '@material-ui/lab';
 import MinusSquare from '../../svgs/MinusSquare';
 import PlusSquare from '../../svgs/PlusSquare';
 import CloseSquare from '../../svgs/CloseSquare';
+import { deepClone } from '../../utils/deepClone';
 
 const useStyles = makeStyles({
   root: {
@@ -49,7 +50,7 @@ const EndpointQueries = ({
   };
 
   const handleQueryFieldChange = (event, queryId) => {
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
     const value = event.target.value;
     if (foundQuery) {
@@ -59,7 +60,7 @@ const EndpointQueries = ({
   };
 
   const handleQueryComparisonFieldChange = (event, queryId) => {
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
 
     const value = event.target.value;
@@ -74,7 +75,7 @@ const EndpointQueries = ({
 
   const handleCustomValueChange = (event, queryId) => {
     const value = event;
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
     if (foundQuery) {
       foundQuery.comparisonField.value = value;
@@ -84,7 +85,7 @@ const EndpointQueries = ({
 
   const handleQueryConditionChange = (event, queryId) => {
     const value = event.target.value;
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
     if (foundQuery) {
       foundQuery.operation = Number(value);
@@ -93,7 +94,7 @@ const EndpointQueries = ({
   };
 
   const handleLikeValueChange = (event, queryId) => {
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
 
     const value = event.target.checked;
@@ -104,7 +105,7 @@ const EndpointQueries = ({
   };
 
   const handleRemoveQuery = (queryId) => {
-    const currentQueries = selectedQueries.slice();
+    const currentQueries = deepClone(selectedQueries);
     let foundIndex = -1;
 
     currentQueries.forEach((topNode) => {
