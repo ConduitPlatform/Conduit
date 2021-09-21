@@ -9,7 +9,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
 import Link from 'next/link';
 import { useDispatch } from 'react-redux';
-import { clearSelectedSchema } from '../../redux/actions';
+import { clearSelectedSchema } from '../../redux/slices/cmsSlice';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 
@@ -113,7 +113,7 @@ const Header = ({
   return (
     <Box className={clsx(classes.header, classes.colorWhite)} {...rest}>
       <Box display={'flex'} alignItems={'center'}>
-        <Link href="/cms">
+        <Link href="/cms" onClick={() => clearSelectedSchema}>
           {/* TODO call dispatch clear cms */}
           <a style={{ textDecoration: 'none' }} onClick={handleBackButtonClick}>
             <Box className={classes.backIconContainer}>

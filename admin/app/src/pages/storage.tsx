@@ -17,6 +17,7 @@ import {
   asyncGetStorageConfig,
   asyncSaveStorageConfig,
 } from '../redux/slices/storageSlice';
+import { useAppDispatch } from '../redux/store';
 import { useAppSelector } from '../redux/hooks';
 
 const useStyles = makeStyles((theme) => ({
@@ -33,7 +34,7 @@ const tabs = [{ title: 'Files' }, { title: 'Settings' }];
 const Storage: React.FC = () => {
   const classes = useStyles();
   const [selected, setSelected] = useState(0);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const { config } = useAppSelector((state) => state.storageSlice.data);
   const { loading, error } = useAppSelector((state) => state.storageSlice.meta);

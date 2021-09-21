@@ -66,9 +66,9 @@ export default function RelationForm({
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const {
-    data: { schemas, selectedSchema, schemasFromOtherModules },
-  } = useAppSelector((state) => state.cmsSlice.data);
+  const { schemas, selectedSchema, schemasFromOtherModules } = useAppSelector(
+    (state) => state.cmsSlice.data
+  );
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',

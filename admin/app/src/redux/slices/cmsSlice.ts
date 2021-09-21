@@ -86,6 +86,7 @@ export const asyncCreateNewSchema = createAsyncThunk(
   async (dataForSchema: any) => {
     try {
       const { data } = await postCmsSchemaRequest(dataForSchema);
+      console.log('newSchemaData', data);
       return data;
     } catch (error) {
       throw error;

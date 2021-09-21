@@ -21,14 +21,13 @@ import {
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
-
-import { clearSelectedSchema } from '../../redux/actions';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
   asyncCreateNewSchema,
   asyncEditSchema,
   asyncFetchSchemasFromOtherModules,
   asyncGetCmsSchemas,
+  clearSelectedSchema,
 } from '../../redux/slices/cmsSlice';
 
 const items = [
@@ -110,8 +109,6 @@ const BuildTypes = () => {
     dispatch(asyncGetCmsSchemas());
     dispatch(asyncFetchSchemasFromOtherModules());
   }, [dispatch]);
-
-  console.log('selectedSchema', data.selectedSchema);
 
   useEffect(() => {
     if (data.selectedSchema) {
