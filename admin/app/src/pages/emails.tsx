@@ -12,13 +12,8 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
-import {
-  EmailData,
-  EmailSettings,
-  EmailTemplateType,
-} from '../models/emails/EmailModels';
+import { EmailSettings } from '../models/emails/EmailModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
-import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import {
   asyncCreateNewEmailTemplate,
   asyncGetEmailSettings,
@@ -26,6 +21,7 @@ import {
   asyncSaveEmailTemplateChanges,
   asyncUpdateEmailSettings,
 } from '../redux/slices/emailsSlice';
+import { useAppDispatch, useAppSelector } from '../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -41,7 +37,7 @@ const Emails: React.FC = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const { templateDocuments, totalCount, settings } = useAppSelector(
+  const { templateDocuments, settings } = useAppSelector(
     (state) => state.emailsSlice.data
   );
   const { loading, error } = useAppSelector((state) => state.emailsSlice.meta);

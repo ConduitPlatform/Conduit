@@ -1,6 +1,4 @@
-import React, { useEffect } from 'react';
-import Router from 'next/router';
-import { useAppSelector } from '../../redux/hooks';
+import React from 'react';
 
 export const privateRoute = (Component: any) => {
   const Auth = (props: any) => {

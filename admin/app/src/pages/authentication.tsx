@@ -22,13 +22,13 @@ import {
   SocialNameTypes,
 } from '../models/authentication/AuthModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
-import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import {
   asyncAddNewUser,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
   asyncUpdateAuthenticationConfig,
 } from '../redux/slices/authenticationSlice';
+import { useAppDispatch, useAppSelector } from '../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {

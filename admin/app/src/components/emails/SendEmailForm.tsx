@@ -16,10 +16,9 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
-import { useDispatch } from 'react-redux';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { asyncSendEmail } from '../../redux/slices/emailsSlice';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   paper: {

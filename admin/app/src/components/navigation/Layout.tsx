@@ -4,9 +4,9 @@ import CustomHeader from './Header';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { useRouter } from 'next/router';
 import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { Theme } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {

@@ -14,10 +14,10 @@ import { LockOutlined } from '@material-ui/icons';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Router from 'next/router';
-import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { asyncLogin } from '../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppDispatch, useAppSelector } from '../redux/store';
 
 const useStyles = makeStyles((theme: Theme) => ({
   paper: {

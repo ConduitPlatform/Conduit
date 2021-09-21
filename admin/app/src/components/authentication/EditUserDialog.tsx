@@ -17,7 +17,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import { asyncEditUser } from '../../redux/slices/authenticationSlice';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -37,16 +37,6 @@ const useStyles = makeStyles(() => ({
     color: 'gray',
   },
 }));
-
-interface Values {
-  email: string;
-  phoneNumber: string;
-  active: boolean;
-  isVerified: boolean;
-  hasTwoFA?: boolean;
-  _id: string;
-  //Todo make hasTwoFA non-optional once its default value gets returned from back
-}
 
 interface Props {
   data: AuthUser;
