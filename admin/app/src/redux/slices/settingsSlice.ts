@@ -1,10 +1,15 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
+import {
+  IClient,
+  INewAdminUser,
+  IPlatformTypes,
+} from '../../models/settings/SettingsModels';
 import {
   getAvailableClientsRequest,
   generateNewClientRequest,
   deleteClientRequest,
   putCoreRequest,
+  postNewAdminUser,
 } from '../../http/SettingsRequests';
 
 interface INotificationSlice {
@@ -66,6 +71,21 @@ export const asyncPutCoreSettings = createAsyncThunk(
   async (data) => {
     try {
       return await putCoreRequest(data);
+    } catch (error) {
+      throw error;
+    }
+  }
+);
+
+export const asyncCreateAdminUser = createAsyncThunk(
+  'settings/createAdminUser',
+  async (values: INewAdminUser) => {
+    try {
+      const body = {
+        username: values.username,
+        password: values.password,
+      };
+      const { data } = await postNewAdminUser(body);
     } catch (error) {
       throw error;
     }

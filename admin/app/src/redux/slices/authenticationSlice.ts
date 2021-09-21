@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import { SignInMethods } from '../../models/authentication/AuthModels';
-import { getAuthUsersData } from '../thunks/authenticationThunks';
 import {
   getAuthUsersDataReq,
   createNewUsers,
@@ -65,9 +64,10 @@ export const asyncAddNewUser = createAsyncThunk(
     thunkApi
   ) => {
     try {
-      const filter = { filterValue: 'none' };
       const { data } = await createNewUsers(params.values);
-      thunkApi.dispatch(getAuthUsersData(0, params.limit, '', filter));
+      thunkApi.dispatch(
+        asyncGetAuthUserData({ skip: 0, limit: params.limit, search: '', filter: 'none' })
+      );
       setTimeout(() => {
         thunkApi.dispatch(clearSuccessMsg());
       }, 6300);
