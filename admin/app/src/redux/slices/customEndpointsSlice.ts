@@ -50,11 +50,10 @@ const customEndpointsSlice = createSlice({
       state.data.schemaFields = action.payload;
     },
     setEndpointData(state, action) {
-      console.log({ ...state.data.endpoint, ...action.payload });
       state.data.endpoint = { ...state.data.endpoint, ...action.payload };
     },
     endpointCleanSlate(state) {
-      state = initialState;
+      state.data = initialState.data;
     },
   },
 });
