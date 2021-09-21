@@ -11,7 +11,6 @@ import SearchFilter from '../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
-import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
@@ -166,7 +165,7 @@ const Authentication = () => {
   };
 
   return (
-    <Layout itemSelected={1}>
+    <>
       <Box p={2}>
         <Typography variant={'h4'}>Authentication</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
@@ -239,7 +238,7 @@ const Authentication = () => {
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}
       />
-    </Layout>
+    </>
   );
 };
 

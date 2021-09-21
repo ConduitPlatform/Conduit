@@ -2,7 +2,6 @@ import React, { SyntheticEvent, useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { privateRoute } from '../components/utils/privateRoute';
-import { Layout } from '../components/navigation/Layout';
 import CustomTabs from '../components/common/CustomTabs';
 import DataTable from '../components/common/DataTable';
 import SendNotificationForm from '../components/notifications/SendNotificationForm';
@@ -100,7 +99,7 @@ const Notification: React.FC = () => {
   };
 
   return (
-    <Layout itemSelected={2}>
+    <>
       <Box p={2}>
         <Typography variant={'h4'}>Push Notifications</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
@@ -141,7 +140,7 @@ const Notification: React.FC = () => {
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
-    </Layout>
+    </>
   );
 };
 

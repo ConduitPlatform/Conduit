@@ -1,4 +1,3 @@
-import { Layout } from '../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
@@ -77,7 +76,7 @@ const Storage: React.FC = () => {
   };
 
   return (
-    <Layout itemSelected={6}>
+    <>
       <Box p={2}>
         <Typography variant={'h4'}>Storage</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
@@ -99,7 +98,7 @@ const Storage: React.FC = () => {
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
-    </Layout>
+    </>
   );
 };
 

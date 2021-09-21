@@ -9,11 +9,9 @@ import Container from '@material-ui/core/Container';
 import { Formik } from 'formik';
 import Snackbar from '@material-ui/core/Snackbar';
 import Alert from '@material-ui/lab/Alert';
-import { Layout } from '../components/navigation/Layout';
 import { LockOutlined } from '@material-ui/icons';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Router from 'next/router';
 import { asyncLogin } from '../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
@@ -60,7 +58,7 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (token) {
-      Router.replace('/');
+      // Router.replace('/');
     }
   }, [token]);
 
@@ -91,86 +89,84 @@ const Login: React.FC = () => {
   const classes = useStyles();
 
   return (
-    <Layout menuDisabled>
-      <Container maxWidth="xs">
-        <div className={classes.paper}>
-          <Avatar className={classes.avatar}>
-            <LockOutlined />
-          </Avatar>
-          <Typography variant="h5">Sign in</Typography>
-          <Formik
-            initialValues={{ username: '', password: '', remember: false }}
-            onSubmit={(values, { setSubmitting, resetForm }) => {
-              handleLogin(values);
-              resetForm({
-                values: { username: '', password: '', remember: false },
-              });
-              setSubmitting(false);
-            }}>
-            {({ handleSubmit, handleChange, values }) => {
-              return (
-                <form onSubmit={handleSubmit} className={classes.form}>
-                  <TextField
-                    onChange={handleChange}
-                    value={values.username}
-                    variant="outlined"
-                    margin="normal"
-                    required
-                    fullWidth
-                    id="username"
-                    label="Username"
-                    type="text"
-                    name="username"
-                    autoComplete="username"
-                    autoFocus
-                  />
-                  <TextField
-                    onChange={handleChange}
-                    value={values.password}
-                    variant="outlined"
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="password"
-                    label="Password"
-                    type="password"
-                    id="password"
-                    autoComplete="current-password"
-                  />
-                  <FormControlLabel
-                    value={values.remember}
-                    onChange={handleChange}
-                    name={'remember'}
-                    id={'remember'}
-                    control={<Checkbox value="remember" color="primary" />}
-                    label="Remember me"
-                  />
-                  <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    className={classes.submit}
-                    disabled={loading}>
-                    Sign In
-                  </Button>
-                </form>
-              );
-            }}
-          </Formik>
-          <Snackbar
-            open={snackbarOpen}
-            className={classes.snackBar}
-            autoHideDuration={6000}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-            {snackbarAlert()}
-          </Snackbar>
-          <Backdrop open={loading} className={classes.backdrop}>
-            <CircularProgress color="secondary" />
-          </Backdrop>
-        </div>
-      </Container>
-    </Layout>
+    <Container maxWidth="xs">
+      <div className={classes.paper}>
+        <Avatar className={classes.avatar}>
+          <LockOutlined />
+        </Avatar>
+        <Typography variant="h5">Sign in</Typography>
+        <Formik
+          initialValues={{ username: '', password: '', remember: false }}
+          onSubmit={(values, { setSubmitting, resetForm }) => {
+            handleLogin(values);
+            resetForm({
+              values: { username: '', password: '', remember: false },
+            });
+            setSubmitting(false);
+          }}>
+          {({ handleSubmit, handleChange, values }) => {
+            return (
+              <form onSubmit={handleSubmit} className={classes.form}>
+                <TextField
+                  onChange={handleChange}
+                  value={values.username}
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="username"
+                  label="Username"
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  autoFocus
+                />
+                <TextField
+                  onChange={handleChange}
+                  value={values.password}
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                />
+                <FormControlLabel
+                  value={values.remember}
+                  onChange={handleChange}
+                  name={'remember'}
+                  id={'remember'}
+                  control={<Checkbox value="remember" color="primary" />}
+                  label="Remember me"
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  className={classes.submit}
+                  disabled={loading}>
+                  Sign In
+                </Button>
+              </form>
+            );
+          }}
+        </Formik>
+        <Snackbar
+          open={snackbarOpen}
+          className={classes.snackBar}
+          autoHideDuration={6000}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          {snackbarAlert()}
+        </Snackbar>
+        <Backdrop open={loading} className={classes.backdrop}>
+          <CircularProgress color="secondary" />
+        </Backdrop>
+      </div>
+    </Container>
   );
 };
 

@@ -27,7 +27,12 @@ interface Props {
   itemSelected?: number;
 }
 
-export const Layout: React.FC<Props> = ({ menuDisabled, itemSelected, ...rest }) => {
+export const Layout: React.FC<Props> = ({
+  menuDisabled,
+  itemSelected,
+  children,
+  ...rest
+}) => {
   const classes = useStyles();
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -80,7 +85,7 @@ export const Layout: React.FC<Props> = ({ menuDisabled, itemSelected, ...rest })
       {drawer}
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        {rest.children}
+        {children}
       </main>
     </div>
   );

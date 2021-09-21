@@ -1,4 +1,3 @@
-import { Layout } from '../components/navigation/Layout';
 import React, { useEffect, useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
@@ -120,7 +119,7 @@ const Emails: React.FC = () => {
   };
 
   return (
-    <Layout itemSelected={4}>
+    <>
       <Box p={2}>
         <Typography variant={'h4'}>Emails</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
@@ -150,7 +149,7 @@ const Emails: React.FC = () => {
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
-    </Layout>
+    </>
   );
 };
 
