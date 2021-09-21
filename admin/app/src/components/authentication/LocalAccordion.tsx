@@ -12,7 +12,7 @@ import Accordion from '@material-ui/core/Accordion';
 import { makeStyles } from '@material-ui/core/styles';
 import { InputLabel, MenuItem, Select } from '@material-ui/core';
 import FormControl from '@material-ui/core/FormControl';
-import { LocalTypes, SocialNameTypes } from './AuthModels';
+import { LocalTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {

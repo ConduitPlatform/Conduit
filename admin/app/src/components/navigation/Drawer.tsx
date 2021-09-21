@@ -5,7 +5,6 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-import makeStyles from '@material-ui/styles/makeStyles';
 import {
   Email,
   ExitToApp,
@@ -20,8 +19,9 @@ import {
 import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../redux/thunks/appAuthThunks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { asyncLogout } from '../../redux/slices/appAuthSlice';
+import { makeStyles } from '@material-ui/core/styles';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -102,12 +102,9 @@ interface Props {
 
 const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const enabledModules = useSelector(
-    (state: { appAuthReducer: { enabledModules: IModule[] } }) =>
-      state.appAuthReducer.enabledModules
-  );
+  const { enabledModules } = useAppSelector((state) => state.appAuthSlice.data);
 
   const drawerOpen = () => {
     if (open === null || open === undefined) {
@@ -127,7 +124,7 @@ const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
   };
 
   const handleLogout = async () => {
-    dispatch(logout());
+    dispatch(asyncLogout());
     await Router.replace('/login');
   };
 

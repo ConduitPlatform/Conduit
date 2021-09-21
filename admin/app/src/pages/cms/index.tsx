@@ -54,10 +54,6 @@ const Types = () => {
 
   const { loading, error } = useAppSelector((state) => state.cmsSlice.meta);
 
-  useEffect(() => {
-    console.log('data', data);
-  }, [data]);
-
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);

@@ -1,20 +1,24 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
-  createCustomEndpointsRequest,
-  createSchemaDocumentRequest,
   deleteCmsSchemaRequest,
-  deleteCustomEndpointsRequest,
-  deleteSchemaDocumentRequest,
-  editCustomEndpointsRequest,
-  editSchemaDocumentRequest,
   getCmsDocumentsByNameRequest,
   getCmsSchemasRequest,
-  getCustomEndpointsRequest,
   postCmsSchemaRequest,
   putCmsSchemaRequest,
   schemasFromOtherModules,
   toggleSchemaByIdRequest,
-} from '../../http/requests';
+} from '../../http/CmsRequests';
+import {
+  createSchemaDocumentRequest,
+  editSchemaDocumentRequest,
+  deleteSchemaDocumentRequest,
+} from '../../http/SchemasRequests';
+import {
+  getCustomEndpointsRequest,
+  createCustomEndpointsRequest,
+  editCustomEndpointsRequest,
+  deleteCustomEndpointsRequest,
+} from '../../http/CustomEndpointsRequests';
 import { Schema } from '../../models/cms/CmsModels';
 
 interface ICmsSlice {

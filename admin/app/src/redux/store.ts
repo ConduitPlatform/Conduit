@@ -1,57 +1,59 @@
-import { applyMiddleware } from 'redux';
-import rootReducer from './reducers';
-import thunk from 'redux-thunk';
 import { Action, configureStore, ThunkAction } from '@reduxjs/toolkit';
+import authenticationSlice from './slices/authenticationSlice';
+import appAuthSlice from './slices/appAuthSlice';
+import notificationsSlice from './slices/notificationsSlice';
+import storageSlice from './slices/storageSlice';
+import settingsSlice from './slices/settingsSlice';
+import emailsSlice from './slices/emailsSlice';
+import cmsSlice from './slices/cmsSlice';
+import customEndpointsSlice from './slices/customEndpointsSlice';
+import { useMemo } from 'react';
+import { useDispatch } from 'react-redux';
 
-// declare global {
-//   interface Window {
-//     __REDUX_DEVTOOLS_EXTENSION_COMPOSE__?: typeof compose;
-//   }
-// }
+let store: any;
 
-// let store: any;
+export const makeStore = (preloadedState: any) =>
+  configureStore({
+    reducer: {
+      authenticationSlice,
+      appAuthSlice,
+      cmsSlice,
+      customEndpointsSlice,
+      notificationsSlice,
+      storageSlice,
+      settingsSlice,
+      emailsSlice,
+    },
+    preloadedState,
+  });
 
-export const store = configureStore(
-  {
-    reducer: rootReducer,
+export const initializeStore = (preloadedState: any) => {
+  let _store = store ?? makeStore(preloadedState);
+
+  if (preloadedState && store) {
+    _store = makeStore({ ...store.getState(), ...preloadedState });
+    store = undefined;
   }
-  // initialState,
-  // composeEnhancers(applyMiddleware(thunk))
-);
 
-// export const initStore = (initialState = {}): any => {
-//   const composeEnhancers =
-//     (typeof window !== 'undefined' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) ||
-//     compose;
-//   if (process.env.IS_DEV) {
-//     store = createStore(
-//       rootReducer,
-//       initialState,
-//       composeEnhancers(applyMiddleware(thunk))
-//     );
-//   } else {
-//     store = createStore(rootReducer, initialState, applyMiddleware(thunk));
-//   }
-//
-//   return store;
-// };
+  // For SSG and SSR always create a new store
+  if (typeof window === 'undefined') return _store;
+  // Create the store once in the client
+  if (!store) store = _store;
 
-// export const initStore = (initialState = {}) => {
-//   store = createStore(rootReducer, initialState, applyMiddleware(thunk));
-//   return store;
-// };
+  return _store;
+};
 
-const getStore = (): any => {
+export const getCurrentStore = () => {
   return store;
 };
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-export type AppThunk<ReturnType = void> = ThunkAction<
-  ReturnType,
-  RootState,
-  unknown,
-  Action<string>
->;
+export const useStore = (initialState: any) => {
+  return useMemo(() => initializeStore(initialState), [initialState]);
+};
 
-export default getStore;
+export type AppDispatch = typeof store.dispatch;
+export type RootState = ReturnType<typeof store.getState>;
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export type AppThunk = ThunkAction<void, RootState, unknown, Action<string>>;
+
+export default store;

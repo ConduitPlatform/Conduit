@@ -15,9 +15,9 @@ import CloseIcon from '@material-ui/icons/Close';
 import IconButton from '@material-ui/core/IconButton';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
-import { useDispatch } from 'react-redux';
-import { editUserThunk } from '../../redux/thunks/authenticationThunks';
-import { AuthUser } from './AuthModels';
+import { AuthUser } from '../../models/authentication/AuthModels';
+import { asyncEditUser } from '../../redux/slices/authenticationSlice';
+import { useAppDispatch } from '../../redux/hooks';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -44,6 +44,7 @@ interface Values {
   active: boolean;
   isVerified: boolean;
   hasTwoFA?: boolean;
+  _id: string;
   //Todo make hasTwoFA non-optional once its default value gets returned from back
 }
 
@@ -54,14 +55,17 @@ interface Props {
 }
 
 const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const classes = useStyles();
-  const [values, setValues] = useState<Values>({
+  const [values, setValues] = useState<AuthUser>({
     email: '',
     phoneNumber: '',
     active: false,
     isVerified: false,
     hasTwoFA: false,
+    updatedAt: '',
+    createdAt: '',
+    _id: '',
   });
 
   useEffect(() => {
@@ -76,7 +80,7 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
 
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    dispatch(editUserThunk(values));
+    dispatch(asyncEditUser(values));
     handleClose();
   };
 

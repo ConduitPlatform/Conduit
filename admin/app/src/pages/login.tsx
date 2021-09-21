@@ -5,21 +5,21 @@ import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import { Formik } from 'formik';
 import Snackbar from '@material-ui/core/Snackbar';
 import Alert from '@material-ui/lab/Alert';
 import { Layout } from '../components/navigation/Layout';
 import { LockOutlined } from '@material-ui/icons';
-import { useDispatch, useSelector } from 'react-redux';
-import { login } from '../redux/thunks/appAuthThunks';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Router from 'next/router';
-import { RootState } from '../redux/store';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import { asyncLogin } from '../redux/slices/appAuthSlice';
+import { Theme } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
   paper: {
     marginTop: theme.spacing(8),
     display: 'flex',
@@ -47,37 +47,36 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Login: React.FC = () => {
-  const authState = useSelector((state: RootState) => state.appAuthReducer);
-  const dispatch = useDispatch();
+  const { token } = useAppSelector((state) => state.appAuthSlice.data);
+  const { loading, error } = useAppSelector((state) => state.appAuthSlice.meta);
+  const dispatch = useAppDispatch();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    if (authState.error) {
+    if (error) {
       setSnackbarOpen(true);
     }
-  }, [authState.error]);
+  }, [error]);
 
   useEffect(() => {
-    if (authState.token) {
+    if (token) {
       Router.replace('/');
     }
-  }, [authState.token]);
+  }, [token]);
 
   const handleLogin = (values: {
     username: string;
     password: string;
     remember: boolean;
   }) => {
-    dispatch(login(values.username, values.password, values.remember));
+    dispatch(asyncLogin(values));
   };
 
   const snackbarAlert = () => {
-    if (authState.error) {
+    if (error) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          {authState?.error?.data?.error
-            ? authState.error.data.error
-            : 'Something went wrong!'}
+          {error?.data?.error ? error.data.error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -152,7 +151,7 @@ const Login: React.FC = () => {
                     variant="contained"
                     color="primary"
                     className={classes.submit}
-                    disabled={authState.loading}>
+                    disabled={loading}>
                     Sign In
                   </Button>
                 </form>
@@ -166,7 +165,7 @@ const Login: React.FC = () => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
             {snackbarAlert()}
           </Snackbar>
-          <Backdrop open={authState.loading} className={classes.backdrop}>
+          <Backdrop open={loading} className={classes.backdrop}>
             <CircularProgress color="secondary" />
           </Backdrop>
         </div>

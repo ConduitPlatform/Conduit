@@ -12,21 +12,25 @@ import {
   updateSchemaStatus,
 } from '../actions';
 import {
+  createCustomEndpointsRequest,
+  deleteCustomEndpointsRequest,
+  editCustomEndpointsRequest,
+  getCustomEndpointsRequest,
+} from '../../http/CustomEndpointsRequests';
+import {
+  createSchemaDocumentRequest,
+  deleteSchemaDocumentRequest,
+  editSchemaDocumentRequest,
+} from '../../http/SchemasRequests';
+import {
   deleteCmsSchemaRequest,
   getCmsDocumentsByNameRequest,
   getCmsSchemasRequest,
   postCmsSchemaRequest,
   putCmsSchemaRequest,
-  toggleSchemaByIdRequest,
-  createSchemaDocumentRequest,
-  deleteSchemaDocumentRequest,
-  editSchemaDocumentRequest,
-  createCustomEndpointsRequest,
-  deleteCustomEndpointsRequest,
-  editCustomEndpointsRequest,
-  getCustomEndpointsRequest,
   schemasFromOtherModules,
-} from '../../http/requests';
+  toggleSchemaByIdRequest,
+} from '../../http/CmsRequests';
 
 export const getCmsSchemas = (limit = 30) => {
   return (dispatch) => {
@@ -257,7 +261,7 @@ export const updateCustomEndpoints = (_id, endpointData) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
     editCustomEndpointsRequest(_id, endpointData)
-      .then((res) => {
+      .then(() => {
         dispatch(stopCmsLoading());
         dispatch(getCustomEndpoints());
       })
@@ -273,7 +277,7 @@ export const deleteCustomEndpoints = (_id) => {
   return (dispatch) => {
     dispatch(startCmsLoading());
     deleteCustomEndpointsRequest(_id)
-      .then((res) => {
+      .then(() => {
         dispatch(stopCmsLoading());
         dispatch(getCustomEndpoints());
       })
@@ -300,7 +304,7 @@ export const createCustomEndpoints = (endPointData) => {
       assignments: endPointData.assignments,
     };
     createCustomEndpointsRequest(body)
-      .then((res) => {
+      .then(() => {
         dispatch(stopCmsLoading());
         dispatch(getCustomEndpoints());
       })

@@ -67,7 +67,7 @@ const TabPanel: React.FC<Props> = ({
     name: '',
     subject: '',
     body: '',
-    variables: [''],
+    variables: [],
   });
 
   useEffect(() => {

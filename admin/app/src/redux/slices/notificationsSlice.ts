@@ -1,13 +1,13 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
-  getNotificationConfig,
-  putNotificationConfig,
-  sendNotification,
-} from '../../http/requests';
-import {
   INotificationSettings,
   NotificationData,
 } from '../../models/notifications/NotificationModels';
+import {
+  sendNotification,
+  getNotificationConfig,
+  putNotificationConfig,
+} from '../../http/NotificationsRequests';
 
 interface INotificationSlice {
   data: {
@@ -130,5 +130,6 @@ const notificationsSlice = createSlice({
   },
 });
 
-export default notificationsSlice.reducer;
 export const { clearNotificationPageStore, setLoading } = notificationsSlice.actions;
+
+export default notificationsSlice.reducer;

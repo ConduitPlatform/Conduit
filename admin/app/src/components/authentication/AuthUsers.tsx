@@ -1,20 +1,21 @@
 import DataTable from '../common/DataTable';
 import React, { useState } from 'react';
 import ConfirmationDialog from '../common/ConfirmationDialog';
-import {
-  deleteUserThunk,
-  blockUserUIThunk,
-  unblockUserUIThunk,
-} from '../../redux/thunks/authenticationThunks';
-import { useDispatch } from 'react-redux';
 import EditUserDialog from './EditUserDialog';
-import { AuthUser, AuthUserUI } from './AuthModels';
+import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
+import { useAppDispatch } from '../../redux/hooks';
+import {
+  asyncBlockUserUI,
+  asyncDeleteUser,
+  asyncUnblockUserUI,
+} from '../../redux/slices/authenticationSlice';
 
 interface Props {
   users: AuthUser[];
 }
 
 const AuthUsers: React.FC<Props> = ({ users }) => {
+  const dispatch = useAppDispatch();
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
   const [openBlockUI, setOpenBlockUI] = useState<boolean>(false);
@@ -34,8 +35,6 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     setOpenBlockUI(false);
   };
 
-  const dispatch = useDispatch();
-
   const formatData = (users: AuthUser[]) => {
     return users.map((u) => {
       return {
@@ -49,7 +48,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
   };
 
   const deleteButtonAction = (id: string) => {
-    dispatch(deleteUserThunk(id));
+    dispatch(asyncDeleteUser(id));
     setOpenDeleteUser(false);
   };
 
@@ -86,10 +85,10 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const handleBlockUI = () => {
     if (selectedUser.active) {
-      dispatch(blockUserUIThunk(selectedUser._id));
+      dispatch(asyncBlockUserUI(selectedUser._id));
       setOpenBlockUI(false);
     } else {
-      dispatch(unblockUserUIThunk(selectedUser._id));
+      dispatch(asyncUnblockUserUI(selectedUser._id));
       setOpenBlockUI(false);
     }
   };

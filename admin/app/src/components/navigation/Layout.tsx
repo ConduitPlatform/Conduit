@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import makeStyles from '@material-ui/styles/makeStyles';
 import CustomDrawer from './Drawer';
 import CustomHeader from './Header';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { useRouter } from 'next/router';
-import { getAdminModules } from '../../redux/thunks/appAuthThunks';
-import { useDispatch } from 'react-redux';
+import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { Theme } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -31,11 +31,14 @@ export const Layout: React.FC<Props> = ({ menuDisabled, itemSelected, ...rest })
   const classes = useStyles();
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { token } = useAppSelector((state) => state.appAuthSlice.data);
 
-  const dispatch = useDispatch();
   useEffect(() => {
-    dispatch(getAdminModules());
-  }, [dispatch]);
+    if (token) {
+      dispatch(asyncGetAdminModules());
+    }
+  }, [dispatch, token]);
 
   const handleDrawerOpen = () => {
     setOpen(true);

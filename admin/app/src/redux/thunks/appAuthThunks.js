@@ -7,7 +7,7 @@ import {
   startAuthenticationLoading,
   stopAuthenticationLoading,
 } from '../actions';
-import { clearEmailPageStore } from '../actions/emailsActions';
+import { clearEmailPageStore } from '../slices/emailsSlice';
 import { getAdminModulesRequest, loginRequest } from '../../http/requests';
 import { clearNotificationPageStore } from '../slices/notificationsSlice';
 import { clearStoragePageStore } from '../slices/storageSlice';

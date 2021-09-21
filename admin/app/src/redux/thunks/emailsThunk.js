@@ -14,7 +14,7 @@ import {
   putEmailSettingsRequest,
   putEmailTemplateRequest,
   sendEmailRequest,
-} from '../../http/requests';
+} from '../../http/EmailRequests';
 
 export const getEmailTemplates = () => {
   return (dispatch) => {

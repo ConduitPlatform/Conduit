@@ -15,17 +15,17 @@ import Button from '@material-ui/core/Button';
 import React, { useEffect, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import {
-  createServiceAccount,
-  deleteServiceAccounts,
   getServiceAccounts,
+  deleteServiceAccounts,
+  createServiceAccount,
   refreshServiceAccount,
-} from '../../http/requests';
+} from '../../http/SettingsRequests';
 import moment from 'moment';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import GetServiceAccountToken from './GetServiceAccountToken';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import CreateServiceAccount from './CreateServiceAccount';
-import { ServiceAccount } from './AuthModels';
+import { ServiceAccount } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles({
   table: {

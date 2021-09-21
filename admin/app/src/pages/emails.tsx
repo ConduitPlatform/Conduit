@@ -7,25 +7,25 @@ import SendEmailForm from '../components/emails/SendEmailForm';
 import EmailTemplate from '../components/emails/EmailTemplate';
 import { privateRoute } from '../components/utils/privateRoute';
 import ProviderData from '../components/emails/ProviderData';
-import { useDispatch, useSelector } from 'react-redux';
-import { getEmailTemplates } from '../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { makeStyles } from '@material-ui/core/styles';
 import Alert from '@material-ui/lab/Alert';
 import {
-  createNewEmailTemplate,
-  getEmailSettings,
-  saveEmailTemplateChanges,
-  updateEmailSettings,
-} from '../redux/thunks/emailsThunk';
-import {
   EmailData,
   EmailSettings,
   EmailTemplateType,
 } from '../models/emails/EmailModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import {
+  asyncCreateNewEmailTemplate,
+  asyncGetEmailSettings,
+  asyncGetEmailTemplates,
+  asyncSaveEmailTemplateChanges,
+  asyncUpdateEmailSettings,
+} from '../redux/slices/emailsSlice';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -39,26 +39,26 @@ const useStyles = makeStyles((theme) => ({
 
 const Emails: React.FC = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const { data, loading, error } = useSelector(
-    (state: { emailsPageReducer: { data: EmailData; loading: boolean; error: any } }) =>
-      state.emailsPageReducer
+  const { templateDocuments, totalCount, settings } = useAppSelector(
+    (state) => state.emailsSlice.data
   );
+  const { loading, error } = useAppSelector((state) => state.emailsSlice.meta);
 
   const [selected, setSelected] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(getEmailTemplates());
-    dispatch(getEmailSettings());
+    dispatch(asyncGetEmailTemplates());
+    dispatch(asyncGetEmailSettings());
   }, [dispatch]);
 
   useEffect(() => {
-    if (data.settings && !data.settings.active) {
+    if (settings && !settings.active) {
       setSelected(2);
     }
-  }, [data.settings]);
+  }, [settings]);
 
   useEffect(() => {
     if (error) {
@@ -69,8 +69,8 @@ const Emails: React.FC = () => {
   }, [error]);
 
   const tabs = [
-    { title: 'Templates', isDisabled: data.settings ? !data.settings.active : true },
-    { title: 'Send email', isDisabled: data.settings ? !data.settings.active : true },
+    { title: 'Templates', isDisabled: settings ? !settings.active : true },
+    { title: 'Send email', isDisabled: settings ? !settings.active : true },
     { title: 'Provider details' },
   ];
 
@@ -82,7 +82,7 @@ const Emails: React.FC = () => {
     if (error) {
       return (
         <Alert variant={'filled'} severity="error">
-          {error?.data?.error ? error.data.error : 'Something went wrong!'}
+          {error ? error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -97,7 +97,7 @@ const Emails: React.FC = () => {
     setSnackbarOpen(false);
   };
 
-  const saveTemplateChanges = (data: EmailTemplateType) => {
+  const saveTemplateChanges = (data: any) => {
     const _id = data._id;
     const updatedData = {
       name: data.name,
@@ -105,21 +105,22 @@ const Emails: React.FC = () => {
       body: data.body,
       variables: data.variables,
     };
-    dispatch(saveEmailTemplateChanges(_id, updatedData));
+
+    dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
   };
 
-  const createNewTemplate = (data: EmailTemplateType) => {
+  const createNewTemplate = (data: any) => {
     const newData = {
       name: data.name,
       subject: data.subject,
       body: data.body,
       variables: data.variables,
     };
-    dispatch(createNewEmailTemplate(newData));
+    dispatch(asyncCreateNewEmailTemplate(newData));
   };
 
   const saveSettings = (data: EmailSettings) => {
-    dispatch(updateEmailSettings(data));
+    dispatch(asyncUpdateEmailSettings(data));
   };
 
   return (
@@ -129,21 +130,17 @@ const Emails: React.FC = () => {
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
         <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
           <EmailTemplate
-            templatesData={data.templateDocuments}
+            templatesData={templateDocuments}
             error={error}
             handleSave={saveTemplateChanges}
             handleCreate={createNewTemplate}
           />
         </Box>
         <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <SendEmailForm templates={data.templateDocuments} />
+          <SendEmailForm templates={templateDocuments} />
         </Box>
         <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-          <ProviderData
-            settings={data.settings}
-            handleSave={saveSettings}
-            error={error}
-          />
+          <ProviderData settings={settings} handleSave={saveSettings} error={error} />
         </Box>
       </Box>
       <Snackbar
