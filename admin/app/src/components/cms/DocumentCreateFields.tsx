@@ -3,7 +3,7 @@ import Grid from '@material-ui/core/Grid';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { FC } from 'react';
 import CustomDatepicker from '../common/CustomDatepicker';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -44,7 +44,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const DocumentCreateFields = ({ disabled, document, setDocument }) => {
+interface Props {
+  disabled: boolean;
+  document: any;
+  setDocument: any;
+}
+
+const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
   const getCorrectType = (type, event) => {
     let lowerCaseType = type.toString().toLowerCase();

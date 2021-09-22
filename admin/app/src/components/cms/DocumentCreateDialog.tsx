@@ -4,7 +4,8 @@ import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
+import { Schema } from '../../models/cms/CmsModels';
 import DocumentCreateFields from './DocumentCreateFields';
 
 const useStyles = makeStyles((theme) => ({
@@ -29,7 +30,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CreateDialog = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
+interface Props {
+  schema: Schema;
+  handleCreate: any;
+  handleEdit: any;
+  handleCancel: any;
+  editData: any;
+}
+
+const CreateDialog: FC<Props> = ({
+  schema,
+  handleCreate,
+  handleEdit,
+  handleCancel,
+  editData,
+}) => {
   const classes = useStyles();
   const [document, setDocument] = useState([]);
   const [isDisabled, setIsDisabled] = useState(true);

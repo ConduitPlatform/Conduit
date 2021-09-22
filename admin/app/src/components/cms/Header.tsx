@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
@@ -73,7 +73,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Header = ({
+interface Props {
+  name: string;
+  authentication: boolean;
+  crudOperations: boolean;
+  readOnly: boolean;
+  handleSave: (name: string, readOnly: boolean) => void;
+}
+
+const Header: FC<Props> = ({
   name,
   authentication,
   crudOperations,
