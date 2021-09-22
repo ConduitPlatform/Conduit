@@ -51,16 +51,10 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   configData: SignInMethods;
-  configDataError: any;
   handleData: (type: SocialNameTypes, data: SocialDataTypes) => void;
 }
 
-const AuthAccordion: React.FC<Props> = ({
-  configData,
-  configDataError,
-  handleData,
-  ...rest
-}) => {
+const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => {
   const classes = useStyles();
   const [expanded, setExpanded] = useState<SocialNameTypes[]>([]);
 
@@ -150,7 +144,7 @@ const AuthAccordion: React.FC<Props> = ({
         });
       }
     }
-  }, [configData, configDataError]);
+  }, [configData]);
 
   const handleGoogleClientId = (event: { target: { value: string } }) => {
     setGoogle({ ...google, clientId: event.target.value });

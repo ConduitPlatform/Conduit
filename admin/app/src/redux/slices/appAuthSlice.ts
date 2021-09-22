@@ -7,7 +7,7 @@ import { clearStoragePageStore } from './storageSlice';
 import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
-import { setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 
 export type AppAuthState = {
@@ -34,8 +34,7 @@ export const asyncLogin = createAsyncThunk(
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(setAppError(getErrorData('none')));
+      thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
@@ -61,8 +60,7 @@ export const asyncGetAdminModules = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getAdminModulesRequest();
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(setAppError(getErrorData('none')));
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));

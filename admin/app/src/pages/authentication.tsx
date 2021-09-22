@@ -52,15 +52,12 @@ const Authentication = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { error: authError, success: authSuccess } = useAppSelector(
+  const { success: authSuccess } = useAppSelector(
     (state) => state.authenticationSlice.meta.authUsers
   );
 
   const { signInMethods: configData } = useAppSelector(
     (state) => state.authenticationSlice.data
-  );
-  const { error: authConfigError } = useAppSelector(
-    (state) => state.authenticationSlice.meta.signInMethods
   );
 
   const handleFilterChange = (
@@ -84,10 +81,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authError || authConfigError || authSuccess) {
+    if (authSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authError, authConfigError, authSuccess]);
+  }, [authSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -124,15 +121,6 @@ const Authentication = () => {
       },
     };
     dispatch(asyncUpdateAuthenticationConfig(data));
-  };
-
-  const alertMessage = () => {
-    if (authError) {
-      return authError ? authError : 'Something went wrong!';
-    }
-    if (authConfigError) {
-      return authConfigError ? authConfigError : 'Something went wrong!';
-    }
   };
 
   const successMessage = () => {
@@ -212,11 +200,7 @@ const Authentication = () => {
           hidden={selected !== 1 || (configData && !configData.active)}
           id={`tabpanel-1`}>
           {configData ? (
-            <AuthAccordion
-              configData={configData}
-              configDataError={authConfigError}
-              handleData={handleConfigChange}
-            />
+            <AuthAccordion configData={configData} handleData={handleConfigChange} />
           ) : (
             <Typography>No config available</Typography>
           )}
@@ -225,16 +209,11 @@ const Authentication = () => {
           <ServiceAccountsTabs />
         </Box>
         <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
-          <AuthSettings
-            handleSave={handleSettingsSave}
-            settingsData={configData}
-            error={authConfigError}
-          />
+          <AuthSettings handleSave={handleSettingsSave} settingsData={configData} />
         </Box>
       </Box>
       <AppState
         successMessage={successMessage()}
-        errorMessage={alertMessage()}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}
       />

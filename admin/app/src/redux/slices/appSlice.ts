@@ -28,9 +28,13 @@ const appSlice = createSlice({
     setAppError: (state, action) => {
       state.error = action.payload;
     },
+    setAppDefaults: (state) => {
+      state.loading = initialState.loading;
+      state.error = initialState.error;
+    },
   },
 });
 
-export const { setAppLoading, setAppError } = appSlice.actions;
+export const { setAppLoading, setAppError, setAppDefaults } = appSlice.actions;
 
 export default appSlice.reducer;
