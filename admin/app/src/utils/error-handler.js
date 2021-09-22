@@ -1,17 +1,14 @@
-export const getErrorData = (error) => {
-  if (!error) {
+export const getErrorData = (errorProp) => {
+  if (!errorProp) {
     return;
   }
-  if (error === 'none') {
-    return {
-      message: '',
-      status: null,
-      statusText: '',
-    };
-  }
+  const { data = { error: '' } } = errorProp ? errorProp.data : {};
+  const { error = '' } = data ? data : {};
+  const { status = null, statusText = '' } = errorProp ? errorProp : {};
+
   return {
-    message: error.data.error,
-    status: error.status,
-    statusText: error.statusText,
+    message: error,
+    status: status,
+    statusText: statusText,
   };
 };
