@@ -1,6 +1,7 @@
 import { Action, configureStore, ThunkAction } from '@reduxjs/toolkit';
-import authenticationSlice from './slices/authenticationSlice';
+import appSlice from './slices/appSlice';
 import appAuthSlice from './slices/appAuthSlice';
+import authenticationSlice from './slices/authenticationSlice';
 import notificationsSlice from './slices/notificationsSlice';
 import storageSlice from './slices/storageSlice';
 import settingsSlice from './slices/settingsSlice';
@@ -13,8 +14,9 @@ let store: any;
 export const makeStore = (preloadedState: any) =>
   configureStore({
     reducer: {
-      authenticationSlice,
+      appSlice,
       appAuthSlice,
+      authenticationSlice,
       notificationsSlice,
       storageSlice,
       settingsSlice,

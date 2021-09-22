@@ -7,6 +7,8 @@ import { clearStoragePageStore } from './storageSlice';
 import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
+import { setAppError, setAppLoading } from './appSlice';
+import { getErrorData } from '../../utils/error-handler';
 
 export type AppAuthState = {
   data: {
@@ -34,14 +36,18 @@ const initialState: AppAuthState = {
 
 export const asyncLogin = createAsyncThunk(
   'appAuth/login',
-  async (values: { username: string; password: string; remember: boolean }) => {
+  async (values: { username: string; password: string; remember: boolean }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
-
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(''));
       return { data, cookie: values.remember };
     } catch (error) {
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }

@@ -2,12 +2,20 @@ import { createSlice } from '@reduxjs/toolkit';
 
 export type AppState = {
   loading: boolean;
-  error: string;
+  error: {
+    message: string;
+    status: number | null;
+    statusText: string;
+  };
 };
 
 const initialState: AppState = {
   loading: false,
-  error: '',
+  error: {
+    message: '',
+    status: null,
+    statusText: '',
+  },
 };
 
 const appSlice = createSlice({

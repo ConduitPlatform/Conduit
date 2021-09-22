@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { initializeStore, useStore } from '../redux/store';
 import { getCookie } from '../utils/cookie';
 import { setToken } from '../redux/slices/appAuthSlice';
+import { Layout } from '../components/navigation/Layout';
 
 const ConduitApp = ({ Component, pageProps }: AppProps) => {
   const reduxStore = useStore(pageProps.initialReduxState);
@@ -32,7 +33,9 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Component {...pageProps} />
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
         </ThemeProvider>
       </Provider>
     </>
