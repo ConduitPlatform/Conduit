@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
@@ -56,7 +56,27 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesContent = ({
+interface Props {
+  dataKey: any;
+  data: any;
+  handleDrawer: (item: any, index: number) => void;
+  handleDelete: (index: number) => void;
+  handleGroupDrawer: (groupItem: any, index: number, groupIndex: number) => void;
+  handleGroupDelete: (index: number, groupIndex: number) => void;
+  handleGroupInGroupDelete: (
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => void;
+  handleGroupInGroupDrawer: (
+    groupItem: any,
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => void;
+}
+
+const BuildTypesContent: FC<Props> = ({
   dataKey,
   data,
   handleDrawer,
@@ -69,7 +89,7 @@ const BuildTypesContent = ({
 }) => {
   const classes = useStyles();
 
-  const handleItemContent = (item, index) => {
+  const handleItemContent = (item: any, index: number) => {
     switch (item.type) {
       case 'Text':
         return item.isEnum ? <EnumType item={item} /> : <SimpleType item={item} />;
@@ -99,7 +119,7 @@ const BuildTypesContent = ({
     }
   };
 
-  const checkIfDisabled = (name) => {
+  const checkIfDisabled = (name: string) => {
     return name === '_id' || name === 'createdAt' || name === 'updatedAt';
   };
 

@@ -19,19 +19,19 @@ import {
   editCustomEndpointsRequest,
   deleteCustomEndpointsRequest,
 } from '../../http/CustomEndpointsRequests';
-import { Schema } from '../../models/cms/CmsModels';
+import { EndpointTypes, Schema, ToggleSchma } from '../../models/cms/CmsModels';
 
-interface ICmsSlice {
+export interface ICmsSlice {
   data: {
     schemas: Schema[];
-    schemasFromOtherModules: any;
+    schemasFromOtherModules: Schema[];
     documents: {
       documents: any;
     };
-    customEndpoints: any;
+    customEndpoints: EndpointTypes[];
     count: number;
     config: any;
-    selectedSchema: any;
+    selectedSchema: Schema | null;
   };
   meta: {
     loading: boolean;
@@ -54,61 +54,66 @@ const initialState: ICmsSlice = {
   meta: { loading: false, error: null },
 };
 
-export const asyncGetCmsSchemas = createAsyncThunk(
-  'cms/getSchemas',
-  async (limit: number = 30) => {
-    try {
-      const { data } = await getCmsSchemasRequest(0, limit);
-      return data;
-    } catch (error) {
-      throw error;
-    }
+export const asyncGetCmsSchemas = createAsyncThunk<
+  { results: Schema[]; documentsCount: number },
+  number
+>('cms/getSchemas', async (limit = 30) => {
+  try {
+    const { data } = await getCmsSchemasRequest(0, limit);
+    console.log('data', data);
+    return {
+      results: data.results as Schema[],
+      documentsCount: data.documentsCount as number,
+    };
+  } catch (error) {
+    throw error;
   }
-);
+});
 
-export const asyncGetMoreCmsSchemas = createAsyncThunk(
-  'cms/getMoreSchemas',
-  async (arg, thunkApi: any) => {
-    try {
-      //not sure if this is the correct/optimal way to grab the state
-      //also we need to make the arg optional, didn't find a way to do that for now with typescript/toolkit
-      const SchemaLength = thunkApi.getState().cmsSlice.data.schemas.length;
-      const { data } = await getCmsSchemasRequest(SchemaLength, 20);
-      return data;
-    } catch (error) {
-      throw error;
-    }
+export const asyncGetMoreCmsSchemas = createAsyncThunk<
+  { results: Schema[]; documentsCount: number },
+  any
+>('cms/getMoreSchemas', async (arg, thunkApi: any) => {
+  try {
+    const SchemaLength = thunkApi.getState().cmsSlice.data.schemas.length;
+    const { data } = await getCmsSchemasRequest(SchemaLength, 20);
+    return {
+      results: data.results as Schema[],
+      documentsCount: data.documentsCount as number,
+    };
+  } catch (error) {
+    throw error;
   }
-);
+});
 
-export const asyncCreateNewSchema = createAsyncThunk(
+export const asyncCreateNewSchema = createAsyncThunk<Schema, any>(
   'cms/createNewSchema',
-  async (dataForSchema: any) => {
+  async (dataForSchema) => {
     try {
       const { data } = await postCmsSchemaRequest(dataForSchema);
       console.log('newSchemaData', data);
-      return data;
+      return data as Schema;
     } catch (error) {
       throw error;
     }
   }
 );
 
-export const asyncToggleSchema = createAsyncThunk(
+export const asyncToggleSchema = createAsyncThunk<ToggleSchma, string>(
   'cms/toggleSchema',
-  async (_id: string) => {
+  async (_id) => {
     try {
       const { data } = await toggleSchemaByIdRequest(_id);
-      return data;
+      return data as ToggleSchma;
     } catch (error) {
       throw error;
     }
   }
 );
 
-export const asyncEditSchema = createAsyncThunk(
+export const asyncEditSchema = createAsyncThunk<any, { _id: string; data: any }>(
   'cms/editSchema',
-  async (params: { _id: string; data: any }) => {
+  async (params) => {
     try {
       await putCmsSchemaRequest(params._id, params.data);
     } catch (error) {
@@ -117,23 +122,24 @@ export const asyncEditSchema = createAsyncThunk(
   }
 );
 
-export const asyncDeleteSelectedSchema = createAsyncThunk(
+export const asyncDeleteSelectedSchema = createAsyncThunk<string, { _id: string }>(
   'cms/deleteSchema',
-  async (_id: string) => {
+  async (args) => {
     try {
-      await deleteCmsSchemaRequest(_id);
-      return _id;
+      await deleteCmsSchemaRequest(args._id);
+      return args._id;
     } catch (error) {
       throw error;
     }
   }
 );
 
-export const asyncGetSchemaDocuments = createAsyncThunk(
+export const asyncGetSchemaDocuments = createAsyncThunk<any, string>(
   'cms/getDocs',
-  async (name: string) => {
+  async (name) => {
     try {
       const { data } = await getCmsDocumentsByNameRequest(name);
+      console.log('schemadocs:', data);
       return data;
     } catch (error) {
       throw error;
@@ -141,17 +147,17 @@ export const asyncGetSchemaDocuments = createAsyncThunk(
   }
 );
 
-export const asyncGetMoreSchemaDocuments = createAsyncThunk(
-  'cms/getMoreDocs',
-  async (params: { name: string; skip: number }) => {
-    try {
-      const { data } = await getCmsDocumentsByNameRequest(params.name, params.skip, 20);
-      return data;
-    } catch (error) {
-      throw error;
-    }
+export const asyncGetMoreSchemaDocuments = createAsyncThunk<
+  any,
+  { name: string; skip: number }
+>('cms/getMoreDocs', async (params) => {
+  try {
+    const { data } = await getCmsDocumentsByNameRequest(params.name, params.skip, 20);
+    return data;
+  } catch (error) {
+    throw error;
   }
-);
+});
 
 const prepareDocumentField = (doc: any) => {
   let field = { [doc.name]: null };
@@ -167,36 +173,36 @@ const prepareDocumentField = (doc: any) => {
   return field;
 };
 
-export const asyncCreateSchemaDocument = createAsyncThunk(
-  'cms/createDoc',
-  async (params: { schemaName: string; document: any }, thunkApi) => {
-    try {
-      const body = { schemaName: params.schemaName, inputDocument: {} };
-      params.document.forEach((d: any) => {
-        let field = prepareDocumentField(d);
-        body.inputDocument = { ...body.inputDocument, ...field };
-      });
+export const asyncCreateSchemaDocument = createAsyncThunk<
+  any,
+  { schemaName: string; document: any }
+>('cms/createDoc', async (params, thunkApi) => {
+  try {
+    const body = { schemaName: params.schemaName, inputDocument: {} };
+    params.document.forEach((d: any) => {
+      let field = prepareDocumentField(d);
+      body.inputDocument = { ...body.inputDocument, ...field };
+    });
 
-      await createSchemaDocumentRequest(params.schemaName, body);
-      thunkApi.dispatch(asyncGetSchemaDocuments(params.schemaName));
-      return;
-    } catch (error) {
-      throw error;
-    }
+    await createSchemaDocumentRequest(params.schemaName, body);
+    thunkApi.dispatch(asyncGetSchemaDocuments(params.schemaName));
+    return;
+  } catch (error) {
+    throw error;
   }
-);
+});
 
-export const asyncDeleteSchemaDocument = createAsyncThunk(
-  'cms/deleteDoc',
-  async (params: { schemaName: string; documentId: string }, thunkApi) => {
-    try {
-      await deleteSchemaDocumentRequest(params.schemaName, params.documentId);
-      thunkApi.dispatch(asyncGetSchemaDocuments(params.schemaName));
-    } catch (error) {
-      throw error;
-    }
+export const asyncDeleteSchemaDocument = createAsyncThunk<
+  any,
+  { schemaName: string; documentId: string }
+>('cms/deleteDoc', async (params, thunkApi) => {
+  try {
+    await deleteSchemaDocumentRequest(params.schemaName, params.documentId);
+    thunkApi.dispatch(asyncGetSchemaDocuments(params.schemaName));
+  } catch (error) {
+    throw error;
   }
-);
+});
 
 export const asyncEditSchemaDocument = createAsyncThunk(
   'cms/editDoc',
@@ -225,9 +231,26 @@ export const asyncEditSchemaDocument = createAsyncThunk(
   }
 );
 
-export const asyncGetCustomEndpoints = createAsyncThunk('cms/getEndpoints', async () => {
+export const asyncGetCustomEndpoints = createAsyncThunk<EndpointTypes[], any>(
+  'cms/getEndpoints',
+  async () => {
+    try {
+      const { data } = await getCustomEndpointsRequest();
+      console.log('customEndpoints:', data);
+      return data.results as EndpointTypes[];
+    } catch (error) {
+      throw error;
+    }
+  }
+);
+
+export const asyncUpdateCustomEndpoints = createAsyncThunk<
+  any,
+  { _id: string; endpointData: any }
+>('cms/updateEndpoints', async (params, thunkApi) => {
   try {
-    const { data } = await getCustomEndpointsRequest();
+    const { data } = await editCustomEndpointsRequest(params._id, params.endpointData);
+    thunkApi.dispatch(asyncGetCustomEndpoints(''));
 
     return data;
   } catch (error) {
@@ -235,36 +258,23 @@ export const asyncGetCustomEndpoints = createAsyncThunk('cms/getEndpoints', asyn
   }
 });
 
-export const asyncUpdateCustomEndpoints = createAsyncThunk(
-  'cms/updateEndpoints',
-  async (params: { _id: string; endpointData: any }, thunkApi) => {
-    try {
-      const { data } = await editCustomEndpointsRequest(params._id, params.endpointData);
-      thunkApi.dispatch(asyncGetCustomEndpoints());
-
-      return data;
-    } catch (error) {
-      throw error;
-    }
-  }
-);
-
-export const asyncDeleteCustomEndpoints = createAsyncThunk(
+export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
   'cms/deleteEndpoints',
-  async (_id: string, thunkApi) => {
+  async (_id, thunkApi) => {
     try {
       const { data } = await deleteCustomEndpointsRequest(_id);
-      thunkApi.dispatch(asyncGetCustomEndpoints());
-      return data;
+      thunkApi.dispatch(asyncGetCustomEndpoints(''));
+      console.log('delete:', data);
+      return data.results;
     } catch (error) {
       throw error;
     }
   }
 );
 
-export const asyncCreateCustomEndpoints = createAsyncThunk(
+export const asyncCreateCustomEndpoints = createAsyncThunk<any, any>(
   'cms/createEndpoints',
-  async (endPointData: any, thunkApi) => {
+  async (endPointData, thunkApi) => {
     try {
       const body = {
         name: endPointData.name,
@@ -278,18 +288,19 @@ export const asyncCreateCustomEndpoints = createAsyncThunk(
         assignments: endPointData.assignments,
       };
       await createCustomEndpointsRequest(body);
-      thunkApi.dispatch(asyncGetCustomEndpoints());
+      thunkApi.dispatch(asyncGetCustomEndpoints(''));
     } catch (error) {
       throw error;
     }
   }
 );
 
-export const asyncFetchSchemasFromOtherModules = createAsyncThunk(
+export const asyncFetchSchemasFromOtherModules = createAsyncThunk<any, any>(
   'cms/schemasFromOtherModules',
   async ({}, thunkApi) => {
     try {
       const { data } = await schemasFromOtherModules();
+      console.log('schemasFromOtherModules', data);
       return data;
     } catch (error) {
       throw error;
@@ -341,6 +352,7 @@ const cmsSlice = createSlice({
       state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetCmsSchemas.fulfilled, (state, action) => {
+      console.log('payload', action.payload);
       state.meta.loading = false;
       state.data.schemas = action.payload.results;
       state.data.count = action.payload.documentsCount;
@@ -355,7 +367,7 @@ const cmsSlice = createSlice({
     builder.addCase(asyncGetMoreCmsSchemas.fulfilled, (state, action) => {
       state.meta.loading = false;
       state.meta.error = null;
-      state.data.schemas.push(action.payload.results);
+      state.data.schemas.push(...action.payload.results);
       state.data.count = action.payload.documentsCount;
     });
     builder.addCase(asyncCreateNewSchema.pending, (state) => {
@@ -466,7 +478,7 @@ const cmsSlice = createSlice({
     });
     builder.addCase(asyncGetCustomEndpoints.fulfilled, (state, action) => {
       state.meta.loading = false;
-      state.data.customEndpoints = action.payload.results;
+      state.data.customEndpoints = action.payload;
     });
     builder.addCase(asyncUpdateCustomEndpoints.pending, (state) => {
       state.meta.loading = true;

@@ -15,7 +15,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
 
-import { useAppSelector, useAppDispatch } from '../../../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
 import { asyncGetCmsSchemas } from '../../../../redux/slices/cmsSlice';
 
 import { getCmsSchemas } from '../../../../redux/thunks';

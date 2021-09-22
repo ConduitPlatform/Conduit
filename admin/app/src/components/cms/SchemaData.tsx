@@ -2,7 +2,7 @@ import Box from '@material-ui/core/Box';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Container from '@material-ui/core/Container';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
@@ -28,6 +28,7 @@ import {
   asyncEditSchemaDocument,
   asyncGetMoreSchemaDocuments,
 } from '../../redux/slices/cmsSlice';
+import { Schema } from '../../models/cms/CmsModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -97,7 +98,12 @@ const TabPanel = ({ children }) => {
 
 const ITEM_HEIGHT = 48;
 
-const SchemaData = ({ schemas, handleSchemaChange }) => {
+interface Props {
+  schemas: Schema[];
+  handleSchemaChange: any;
+}
+
+const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -181,13 +187,13 @@ const SchemaData = ({ schemas, handleSchemaChange }) => {
     handleCloseDeleteConfirmationDialog();
   };
 
-  const handleCreateDocument = (schemaName, document) => {
+  const handleCreateDocument = (schemaName: string, document) => {
     console.log('document:', document);
     dispatch(asyncCreateSchemaDocument({ schemaName, document }));
     setCreateDocument(false);
   };
 
-  const handleEditDocument = (schemaName, document) => {
+  const handleEditDocument = (schemaName: string, document) => {
     const _id = selectedDocument._id;
     dispatch(
       asyncEditSchemaDocument({ schemaName, documentId: _id, documentData: document })

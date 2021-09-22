@@ -2,7 +2,7 @@ import { Box, Grid, IconButton, TextField, Typography } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles';
 import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import OperationsEnum from '../../../models/OperationsEnum';
 import ConfirmationDialog from '../../common/ConfirmationDialog';
 import OperationSection from './OperationSection';
@@ -27,6 +27,7 @@ import {
   setSelectedEndPoint,
 } from '../../../redux/slices/customEndpointsSlice';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
+import { Schema } from '../../../models/cms/CmsModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -56,7 +57,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
+interface Props {
+  handleCreate: any;
+  handleEdit: any;
+  handleDelete: any;
+}
+
+const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -163,7 +170,9 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
   };
 
   const handleSubmit = (edit = false) => {
-    const schema = schemas.find((schema) => schema._id === endpoint.selectedSchema);
+    const schema = schemas.find(
+      (schema: Schema) => schema._id === endpoint.selectedSchema
+    );
 
     const query = prepareQuery(endpoint.queries);
 
@@ -203,12 +212,12 @@ const CustomQueries = ({ handleCreate, handleEdit, handleDelete }) => {
     handleDelete(selectedEndpoint._id);
   };
 
-  const handleListItemSelect = (endpoint) => {
+  const handleListItemSelect = (endpoint: any) => {
     dispatch(setSelectedEndPoint(endpoint));
     dispatch(setEndpointData({ ...endpoint }));
   };
 
-  const handleNameChange = (event) => {
+  const handleNameChange = (event: any) => {
     dispatch(setEndpointData({ name: event.target.value }));
   };
 

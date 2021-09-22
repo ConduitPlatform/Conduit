@@ -4,7 +4,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import Button from '@material-ui/core/Button';
 import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
@@ -27,7 +27,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const DisableSchemaDialog = ({
+interface Props {
+  open: boolean;
+  handleClose: () => void;
+  handleToggle: any;
+  handleDelete: any;
+  selectedSchema: any;
+}
+
+const DisableSchemaDialog: FC<Props> = ({
   open,
   handleClose,
   handleToggle,
@@ -36,7 +44,9 @@ const DisableSchemaDialog = ({
 }) => {
   const classes = useStyles();
 
-  const createDialogTitle = (action) => {
+  console.log('selectedSchema', selectedSchema);
+
+  const createDialogTitle = (action: 'enable' | 'disable' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable CMS schema:';
@@ -52,7 +62,7 @@ const DisableSchemaDialog = ({
     }
   };
 
-  const createDialogInfo = (action) => {
+  const createDialogInfo = (action: 'enable' | 'disable' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'This operation with enable the schema.';
@@ -68,7 +78,7 @@ const DisableSchemaDialog = ({
     }
   };
 
-  const generateButtonClass = (action) => {
+  const generateButtonClass = (action: 'enable' | 'disable' | 'delete') => {
     switch (action) {
       case 'enable': {
         return classes.enableButton;
@@ -84,7 +94,7 @@ const DisableSchemaDialog = ({
     }
   };
 
-  const generateButtonName = (action) => {
+  const generateButtonName = (action: 'enable' | 'disable' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable';

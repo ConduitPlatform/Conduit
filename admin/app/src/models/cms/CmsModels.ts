@@ -13,6 +13,18 @@ export interface Schema {
   updatedAt: string;
 }
 
+export interface EditableSchemaFields {
+  name: string;
+  authentication: boolean;
+  crudOperations: boolean;
+  fields: SchemaFields[];
+}
+
+export interface ToggleSchma {
+  enabled: boolean;
+  name: string;
+}
+
 export interface EndpointTypes {
   _id: string;
   enabled: boolean;

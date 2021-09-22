@@ -96,6 +96,7 @@ const BuildTypes = () => {
     type: '',
     destination: null,
   });
+
   const [duplicateId, setDuplicateId] = useState(false);
   const [invalidName, setInvalidName] = useState(false);
   const [selectedProps, setSelectedProps] = useState({
@@ -106,8 +107,8 @@ const BuildTypes = () => {
   const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
-    dispatch(asyncGetCmsSchemas());
-    dispatch(asyncFetchSchemasFromOtherModules());
+    dispatch(asyncGetCmsSchemas(30));
+    dispatch(asyncFetchSchemasFromOtherModules(''));
   }, [dispatch]);
 
   useEffect(() => {
@@ -365,7 +366,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleDelete = (index) => {
+  const handleDelete = (index: number) => {
     setSchemaFields({
       newTypeFields: deleteItem(schemaFields.newTypeFields, index),
     });
@@ -386,7 +387,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupDelete = (index, groupIndex) => {
+  const handleGroupDelete = (index: number, groupIndex: number) => {
     const deleted = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content.splice(index, 1);
     setSchemaFields({
@@ -394,7 +395,12 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupInGroupDrawer = (item, index, groupIndex, itemIndex) => {
+  const handleGroupInGroupDrawer = (
+    item: any,
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => {
     setSelectedProps({ item: item, index: index, type: 'group-child' });
     setDrawerData({
       ...drawerData,
@@ -410,7 +416,11 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupInGroupDelete = (index, groupIndex, itemIndex) => {
+  const handleGroupInGroupDelete = (
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => {
     const deleted = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content[itemIndex].content.splice(index, 1);
     setSchemaFields({
@@ -418,7 +428,9 @@ const BuildTypes = () => {
     });
   };
 
-  const handleSave = (name, authentication) => {
+  const handleSave = (name: string, authentication: boolean) => {
+    console.log('name', name);
+    console.log('auth', authentication);
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);

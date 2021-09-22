@@ -15,7 +15,7 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
-import { setSelectedSchema } from '../../redux/slices/cmsSlice';
+import { ICmsSlice, setSelectedSchema } from '../../redux/slices/cmsSlice';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
 import {
   asyncCreateCustomEndpoints,
@@ -29,6 +29,7 @@ import {
   asyncUpdateCustomEndpoints,
 } from '../../redux/slices/cmsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { Schema } from '../../models/cms/CmsModels';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -72,12 +73,12 @@ const Types = () => {
 
   useEffect(() => {
     dispatch(asyncGetCmsSchemas(50));
-    dispatch(asyncGetCustomEndpoints());
+    dispatch(asyncGetCustomEndpoints(''));
   }, [dispatch]);
 
   useEffect(() => {
     if (data.schemas?.length > 0) {
-      const schemaFound = data.schemas.find((schema) => schema.enabled === true);
+      const schemaFound = data.schemas.find((schema: Schema) => schema.enabled === true);
       if (schemaFound) {
         const { name } = schemaFound;
         dispatch(asyncGetSchemaDocuments(name));
@@ -141,14 +142,14 @@ const Types = () => {
     if (!data || !data.schemas) {
       return [];
     }
-    return data.schemas.filter((s) => s.enabled);
+    return data.schemas.filter((s: Schema) => s.enabled);
   };
 
   const getDisabledSchemas = () => {
     if (!data || !data.schemas) {
       return [];
     }
-    return data.schemas.filter((s) => !s.enabled);
+    return data.schemas.filter((s: Schema) => !s.enabled);
   };
 
   const enabledActions = [
@@ -237,7 +238,7 @@ const Types = () => {
               color="primary"
               variant={'outlined'}
               disabled={data.schemas.length === data.count}
-              onClick={() => dispatch(asyncGetMoreCmsSchemas())}>
+              onClick={() => dispatch(asyncGetMoreCmsSchemas({}))}>
               LOAD MORE SCHEMAS
             </Button>
           </Box>

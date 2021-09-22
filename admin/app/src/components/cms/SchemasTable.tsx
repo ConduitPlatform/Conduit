@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import DataTable from '../common/DataTable';
 import Container from '@material-ui/core/Container';
 import Box from '@material-ui/core/Box';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import { makeStyles } from '@material-ui/core/styles';
+import { Schema } from '../../models/cms/CmsModels';
 
 const useStyles = makeStyles((theme) => ({
   toggleButton: {
@@ -29,7 +30,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SchemasTable = ({
+interface Props {
+  activeSchemas: Schema[];
+  disabledSchemas: Schema[];
+  activeActions: any;
+  disabledActions: any;
+  handleActions: any;
+}
+
+const SchemasTable: FC<Props> = ({
   activeSchemas,
   disabledSchemas,
   activeActions,
@@ -39,7 +48,7 @@ const SchemasTable = ({
   const classes = useStyles();
   const [active, setActive] = useState(true);
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: any, newValue: any) => {
     setActive(newValue);
   };
 

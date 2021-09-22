@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import SimpleForm from './types/SimpleType/SimpleForm';
@@ -29,7 +29,23 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesDrawer = ({
+interface DrawerDataProps {
+  open: boolean;
+  type: string;
+  destination: any;
+}
+
+interface Props {
+  drawerData: DrawerDataProps;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: any;
+  duplicateId: boolean;
+  invalidName: boolean;
+}
+
+const BuildTypesDrawer: FC<Props> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -41,7 +57,7 @@ const BuildTypesDrawer = ({
 }) => {
   const classes = useStyles();
 
-  const handleForm = (data) => {
+  const handleForm = (data: DrawerDataProps) => {
     switch (data.type) {
       case 'Text':
         return (
@@ -140,7 +156,6 @@ const BuildTypesDrawer = ({
       anchor="right"
       open={drawerData.open}
       classes={{ paper: classes.drawerPaper }}
-      className={classes.drawer}
       {...rest}>
       <Typography variant={'subtitle1'} className={classes.title}>
         Configuration of {drawerData.type} field
