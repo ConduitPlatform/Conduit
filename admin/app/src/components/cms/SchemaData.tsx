@@ -110,8 +110,6 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
   const { documents } = useAppSelector((state) => state.cmsSlice?.data.documents);
   const documentsObj = useAppSelector((state) => state.cmsSlice.data?.documents);
 
-  console.log('documents:', documents);
-
   const [selectedSchema, setSelectedSchema] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docIndex, setDocIndex] = useState(null);
@@ -188,7 +186,6 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
   };
 
   const handleCreateDocument = (schemaName: string, document) => {
-    console.log('document:', document);
     dispatch(asyncCreateSchemaDocument({ schemaName, document }));
     setCreateDocument(false);
   };
@@ -237,8 +234,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
 
   const onViewMorePress = () => {
     const schemaName = schemas[selectedSchema].name;
-    console.log(schemas);
-    console.log('selectedSchema', selectedSchema);
+
     const documentLength = documents.length;
     // const documentsCount = schemaDocuments.documentsCount;
     // console.log(documentLength, documentsCount);

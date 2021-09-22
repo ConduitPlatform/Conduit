@@ -60,7 +60,7 @@ export const asyncGetCmsSchemas = createAsyncThunk<
 >('cms/getSchemas', async (limit = 30) => {
   try {
     const { data } = await getCmsSchemasRequest(0, limit);
-    console.log('data', data);
+
     return {
       results: data.results as Schema[],
       documentsCount: data.documentsCount as number,
@@ -91,7 +91,7 @@ export const asyncCreateNewSchema = createAsyncThunk<Schema, any>(
   async (dataForSchema) => {
     try {
       const { data } = await postCmsSchemaRequest(dataForSchema);
-      console.log('newSchemaData', data);
+
       return data as Schema;
     } catch (error) {
       throw error;
@@ -139,7 +139,7 @@ export const asyncGetSchemaDocuments = createAsyncThunk<any, string>(
   async (name) => {
     try {
       const { data } = await getCmsDocumentsByNameRequest(name);
-      console.log('schemadocs:', data);
+
       return data;
     } catch (error) {
       throw error;
@@ -236,7 +236,7 @@ export const asyncGetCustomEndpoints = createAsyncThunk<EndpointTypes[], any>(
   async () => {
     try {
       const { data } = await getCustomEndpointsRequest();
-      console.log('customEndpoints:', data);
+
       return data.results as EndpointTypes[];
     } catch (error) {
       throw error;
@@ -264,7 +264,7 @@ export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
     try {
       const { data } = await deleteCustomEndpointsRequest(_id);
       thunkApi.dispatch(asyncGetCustomEndpoints(''));
-      console.log('delete:', data);
+
       return data.results;
     } catch (error) {
       throw error;
@@ -300,7 +300,7 @@ export const asyncFetchSchemasFromOtherModules = createAsyncThunk<any, any>(
   async ({}, thunkApi) => {
     try {
       const { data } = await schemasFromOtherModules();
-      console.log('schemasFromOtherModules', data);
+
       return data;
     } catch (error) {
       throw error;
@@ -352,7 +352,6 @@ const cmsSlice = createSlice({
       state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetCmsSchemas.fulfilled, (state, action) => {
-      console.log('payload', action.payload);
       state.meta.loading = false;
       state.data.schemas = action.payload.results;
       state.data.count = action.payload.documentsCount;

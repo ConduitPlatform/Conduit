@@ -44,8 +44,6 @@ const DisableSchemaDialog: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  console.log('selectedSchema', selectedSchema);
-
   const createDialogTitle = (action: 'enable' | 'disable' | 'delete') => {
     switch (action) {
       case 'enable': {

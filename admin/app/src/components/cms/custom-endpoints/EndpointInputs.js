@@ -23,8 +23,7 @@ const EndpointInputs = ({
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
-    console.log('input:', input);
-    console.log('currentInputs:', currentInputs);
+
     if (input) {
       input.name = value;
       currentInputs[index] = input;

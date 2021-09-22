@@ -355,7 +355,7 @@ const BuildTypes = () => {
     handleDrawerClose();
   };
 
-  const handleDrawer = (item, index) => {
+  const handleDrawer = (item: any, index: number) => {
     setSelectedProps({ item: item, index: index, type: 'standard' });
     setDrawerData({
       ...drawerData,
@@ -429,8 +429,6 @@ const BuildTypes = () => {
   };
 
   const handleSave = (name: string, authentication: boolean) => {
-    console.log('name', name);
-    console.log('auth', authentication);
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
