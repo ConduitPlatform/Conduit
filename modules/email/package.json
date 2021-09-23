@@ -24,12 +24,13 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@grpc/grpc-js": "^1.3.4",
+    "@grpc/proto-loader": "^0.5.4",
     "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
     "@quintessential-sft/email-provider": "^1.0.0",
-    "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
-    "@grpc/grpc-js": "^1.3.4",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "nodemailer-mandrill-transport": "^1.2.0"
   },
   "devDependencies": {
     "@types/convict": "^4.2.1",

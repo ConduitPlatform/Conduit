@@ -8,7 +8,8 @@ import { MailgunConfig } from './transports/mailgun/mailgun.config';
 import { EmailOptions } from './interfaces/EmailOptions';
 import { isNil } from 'lodash';
 import { Mandrill } from 'mandrill-api';
-
+import { MandrillConfig } from './transports/mandrill/mandrill.config';
+var mandrillTransport = require('nodemailer-mandrill-transport');
 export class EmailProvider {
   _transport?: Mail | Mandrill;
   _transportName?: string;
@@ -48,12 +49,15 @@ export class EmailProvider {
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
 
-      const {
-        apiKey,
-        serverPrefix
-      } = transportSettings.mailchimp;
+      const  mandrillSettings: MandrillConfig = {
 
-      this._transport = new Mandrill(apiKey);
+        auth: {
+          apiKey: transportSettings.mandrill.apiKey
+        }
+
+      }
+  
+      this._transport = createTransport(mandrillTransport(mandrillSettings));
 
     } else {
       this._transportName = undefined;
@@ -63,15 +67,13 @@ export class EmailProvider {
   }
 
   sendEmailDirect(mailOptions: EmailOptions): Promise<SentMessageInfo> {
-    if (this._transportName === 'mandrill') {
-      
-    } else {
+
       const transport = this._transport as Mail;
       if (!transport) {
         throw new Error('Email  transport not initialized!');
       }
       return transport.sendMail(mailOptions);
-    }
+    
   }
 
   emailBuilder(): EmailBuilder {
@@ -89,6 +91,7 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    return this._transport.sendMail(email.getMailObject());
+    return (this._transport as Mail).sendMail(email.getMailObject());
   }
 }
+//import './test';  test script for sending emails

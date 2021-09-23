@@ -76,6 +76,9 @@ export default {
       },
     },
     mandrill: {
+      doc: 'The Mandrill config',
+      nullable: true,
+      default: null,
       apiKey: {
         doc: 'The Mandrill API key',
         format: 'String',
