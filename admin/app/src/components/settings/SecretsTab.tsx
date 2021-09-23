@@ -20,14 +20,14 @@ import ClientPlatformEnum from '../../models/ClientPlatformEnum';
 import Button from '@material-ui/core/Button';
 import React, { ChangeEvent, useEffect, useState } from 'react';
 import makeStyles from '@material-ui/core/styles/makeStyles';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { IClient, IPlatformTypes } from '../../models/settings/SettingsModels';
 import {
   asyncDeleteClient,
   asyncGenerateNewClient,
   asyncGetAvailableClients,
 } from '../../redux/slices/settingsSlice';
-import { useAppSelector } from '../../redux/hooks';
+import { useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles({
   table: {
@@ -47,7 +47,8 @@ const SecretsTab: React.FC = () => {
       dispatch(asyncGetAvailableClients());
     }, 140);
   };
-  //TODO We don't get an _id from the server for each new client we create so as a workaround we have to refetch-all client in
+  //TODO We don't get an _id from the server for each new client we create
+  // so as a workaround we have to refetch-all client in
   // TODO order to be able delete newly made clients
 
   useEffect(() => {

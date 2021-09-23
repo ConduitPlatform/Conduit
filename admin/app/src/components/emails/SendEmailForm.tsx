@@ -1,13 +1,4 @@
-import {
-  Box,
-  Checkbox,
-  Container,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-} from '@material-ui/core';
+import { Box, Container, MenuItem } from '@material-ui/core';
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -16,10 +7,14 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
-import { useDispatch } from 'react-redux';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { asyncSendEmail } from '../../redux/slices/emailsSlice';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch } from '../../redux/store';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import FormControl from '@material-ui/core/FormControl';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -34,16 +29,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface IEmailState {
-  email: string;
-  sender: string;
-  subject: string;
-  body: string;
-  template: string;
-  variables: [];
-  variablesValues: { [key: string]: string };
-  templateName: string;
-}
+// interface IEmailState {
+//   email: string;
+//   sender: string;
+//   subject: string;
+//   body: string;
+//   template: string;
+//   variables: [];
+//   variablesValues: { [key: string]: string };
+//   templateName: string;
+// }
 
 interface Props {
   templates: EmailTemplateType[];
@@ -54,7 +49,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
-  const [emailState, setEmailState] = useState<IEmailState>({
+  const [emailState, setEmailState] = useState({
     email: '',
     sender: '',
     subject: '',

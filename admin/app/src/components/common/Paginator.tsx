@@ -1,8 +1,7 @@
 import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import TablePagination from '@material-ui/core/TablePagination';
-import { useSelector } from 'react-redux';
-import { useAppSelector } from '../../redux/hooks';
+import { useAppSelector } from '../../redux/store';
 
 interface Props {
   page: number;
