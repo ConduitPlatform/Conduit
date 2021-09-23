@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { EndpointInputs } from '../../models/cms/CmsModels';
 import { Assignment, Input } from '../../models/customEndpoints/customEndpointsModels';
 import OperationsEnum from '../../models/OperationsEnum';
 
@@ -7,15 +8,21 @@ import OperationsEnum from '../../models/OperationsEnum';
 interface ICustomEndpointSlice {
   data: {
     endpoint: {
+      _id: string;
       name: string;
       operation: any;
       selectedSchema: string;
       authentication: boolean;
-      paginated: boolean;
-      sorted: boolean;
-      inputs: [];
+      paginated?: boolean;
+      sorted?: boolean;
+      inputs: EndpointInputs[];
       queries: [];
       assignments: Assignment[];
+      enabled?: boolean;
+      selectedSchemaName?: string;
+      returns?: string;
+      createdAt?: string;
+      updatedAt?: string;
     };
     schemaFields: [];
     selectedEndpoint: any;
@@ -25,6 +32,7 @@ interface ICustomEndpointSlice {
 const initialState: ICustomEndpointSlice = {
   data: {
     endpoint: {
+      _id: '',
       name: '',
       operation: -1,
       selectedSchema: '',

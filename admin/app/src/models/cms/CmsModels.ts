@@ -47,6 +47,8 @@ export interface EndpointInputs {
   name: string;
   type: string;
   location: number;
+  array?: boolean;
+  optional?: boolean;
 }
 
 export interface CMSData {
