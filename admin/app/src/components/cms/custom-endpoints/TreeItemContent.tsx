@@ -1,9 +1,18 @@
 import { Box, Button, Grid, Switch, Typography } from '@material-ui/core';
-import React from 'react';
+import React, { FC } from 'react';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
-const TreeItemContent = ({
+interface Props {
+  operator: any;
+  editMode: boolean;
+  handleOperatorChange: any;
+  handleAddNode: any;
+  handleRemoveNode: any;
+  handleAddQuery: any;
+}
+
+const TreeItemContent: FC<Props> = ({
   operator,
   editMode,
   handleOperatorChange,

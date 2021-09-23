@@ -70,7 +70,7 @@ const InputsSection = ({ editMode }) => {
     return allQueries;
   };
 
-  const handleRemoveInput = (index) => {
+  const handleRemoveInput = (index: number) => {
     const input = endpoint.inputs[index];
     const currentInputs = endpoint.inputs.slice();
     currentInputs.splice(index, 1);

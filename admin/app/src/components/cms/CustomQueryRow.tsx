@@ -9,7 +9,7 @@ import {
   Select,
   TextField,
 } from '@material-ui/core';
-import React, { useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import { makeStyles } from '@material-ui/core/styles';
@@ -34,7 +34,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomQueryRow = ({
+interface Props {
+  index: number;
+  query: any;
+  availableFieldsOfSchema: any;
+  selectedInputs: any;
+  editMode: boolean;
+  handleQueryFieldChange: any;
+  handleQueryConditionChange: any;
+  handleQueryComparisonFieldChange: any;
+  handleCustomValueChange: any;
+  handleLikeValueChange: any;
+  handleRemoveQuery: any;
+}
+
+const CustomQueryRow: FC<Props> = ({
   index,
   query,
   availableFieldsOfSchema,

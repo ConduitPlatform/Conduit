@@ -1,7 +1,16 @@
 import { Button, Grid } from '@material-ui/core';
-import React from 'react';
+import React, { FC } from 'react';
 
-const SaveSection = ({
+interface Props {
+  editMode: boolean;
+  createMode: boolean;
+  disableSubmit: any;
+  handleSaveClick: any;
+  handleCreateClick: any;
+  handleCancelClick: () => void;
+}
+
+const SaveSection: FC<Props> = ({
   editMode,
   createMode,
   disableSubmit,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import {
   Checkbox,
   FormControl,
@@ -30,7 +30,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const OperationSection = ({ schemas, editMode, availableSchemas }) => {
+interface Props {
+  schemas: any;
+  editMode: boolean;
+  availableSchemas: any;
+}
+
+const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -127,7 +133,7 @@ const OperationSection = ({ schemas, editMode, availableSchemas }) => {
               id: 'select_schema',
             }}>
             <option aria-label="None" value="" />
-            {availableSchemas.map((schema, index) => (
+            {availableSchemas.map((schema, index: number) => (
               <option key={`schema-${index}`} value={schema._id}>
                 {schema.name}
               </option>

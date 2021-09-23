@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React, { FC, Fragment } from 'react';
 import {
   Checkbox,
   FormControl,
@@ -13,13 +13,20 @@ import {
 import InputLocationEnum from '../../../models/InputLocationEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 
-const EndpointInputs = ({
+interface Props {
+  editMode: boolean;
+  selectedInputs: any;
+  setSelectedInputs: (inputs: any) => void;
+  handleRemoveInput: (index: number) => void;
+}
+
+const EndpointInputs: FC<Props> = ({
   editMode,
   selectedInputs,
   setSelectedInputs,
   handleRemoveInput,
 }) => {
-  const handleInputNameChange = (event, index) => {
+  const handleInputNameChange = (event, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -31,7 +38,7 @@ const EndpointInputs = ({
     }
   };
 
-  const handleInputTypeChange = (event, index) => {
+  const handleInputTypeChange = (event, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -42,7 +49,7 @@ const EndpointInputs = ({
       setSelectedInputs(currentInputs);
     }
   };
-  const handleInputLocationChange = (event, index) => {
+  const handleInputLocationChange = (event, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -53,7 +60,7 @@ const EndpointInputs = ({
     }
   };
 
-  const handleInputIsArray = (event, index) => {
+  const handleInputIsArray = (event, index: number) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -64,7 +71,7 @@ const EndpointInputs = ({
     }
   };
 
-  const handleInputIsOptional = (event, index) => {
+  const handleInputIsOptional = (event, index: number) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -74,7 +81,7 @@ const EndpointInputs = ({
       setSelectedInputs(currentInputs);
     }
   };
-  return selectedInputs.map((input, index) => (
+  return selectedInputs.map((input, index: number) => (
     <Fragment key={`input-${index}`}>
       <Grid item xs={1} key={index}>
         <Typography>{index + 1}.</Typography>

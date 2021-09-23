@@ -1,7 +1,7 @@
 import { Box, Button, Divider, List, ListItem, ListItemText } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
-import React from 'react';
+import React, { FC } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   listBox: {
@@ -50,7 +50,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const SideList = ({
+interface Props {
+  endpoints: any;
+  selectedEndpoint: any;
+  handleAddNewEndpoint: () => void;
+  handleListItemSelect: (endpoint: any) => void;
+}
+
+const SideList: FC<Props> = ({
   endpoints,
   selectedEndpoint,
   handleAddNewEndpoint,

@@ -29,14 +29,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function BooleanForm({
+export default BooleanForm = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [booleanData, setBooleanData] = useState({
@@ -289,4 +289,4 @@ export default function BooleanForm({
       </Box>
     </form>
   );
-}
+};

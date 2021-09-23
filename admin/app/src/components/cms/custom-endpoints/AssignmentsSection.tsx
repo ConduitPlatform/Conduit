@@ -14,7 +14,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const AssignmentsSection = ({ editMode }) => {
+interface Props {
+  editMode: boolean;
+}
+
+const AssignmentsSection: FC<Props> = ({ editMode }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 

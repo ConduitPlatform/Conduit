@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import CustomQueryRow from '../CustomQueryRow';
 import StyledTreeItem from '../../custom/StyledTreeItem';
 import TreeItemContent from './TreeItemContent';
@@ -10,6 +10,7 @@ import MinusSquare from '../../svgs/MinusSquare';
 import PlusSquare from '../../svgs/PlusSquare';
 import CloseSquare from '../../svgs/CloseSquare';
 import { deepClone } from '../../utils/deepClone';
+import { Any } from '@react-spring/types';
 
 const useStyles = makeStyles({
   root: {
@@ -17,7 +18,20 @@ const useStyles = makeStyles({
   },
 });
 
-const EndpointQueries = ({
+interface Props {
+  editMode: boolean;
+  selectedInputs: any;
+  selectedSchema: any;
+  selectedQueries: any;
+  handleAddQuery: (nodeId: any) => void;
+  handleAddNode: (nodeId: any) => void;
+  handleRemoveNode: (nodeId: any) => void;
+  setSelectedQueries: (queries: any) => void;
+  availableFieldsOfSchema: any;
+  handleChangeNodeOperator: (nodeId: any, oldOperator: any, newOperator: any) => void;
+}
+
+const EndpointQueries: FC<Props> = ({
   editMode,
   selectedSchema,
   selectedQueries,
@@ -104,12 +118,12 @@ const EndpointQueries = ({
     }
   };
 
-  const handleRemoveQuery = (queryId) => {
+  const handleRemoveQuery = (queryId: string) => {
     const currentQueries = deepClone(selectedQueries);
     let foundIndex = -1;
 
     currentQueries.forEach((topNode) => {
-      topNode.queries.forEach((q1, index1) => {
+      topNode.queries.forEach((q1, index1: number) => {
         if (q1._id === queryId) {
           foundIndex = index1;
         }
@@ -117,14 +131,14 @@ const EndpointQueries = ({
           topNode.queries.splice(foundIndex, 1);
         } else {
           if ('queries' in q1) {
-            q1.queries.forEach((q2, index2) => {
+            q1.queries.forEach((q2, index2: number) => {
               if (q2._id === queryId) {
                 foundIndex = index2;
               }
               if (foundIndex !== -1) {
                 q1.queries.splice(foundIndex, 1);
               } else {
-                q2.queries.forEach((q3, index3) => {
+                q2.queries.forEach((q3, index3: number) => {
                   if (q3._id === queryId) {
                     foundIndex = index3;
                   }
@@ -142,7 +156,7 @@ const EndpointQueries = ({
     setSelectedQueries(currentQueries);
   };
 
-  const handleOperatorChange = (index, oldOperator, newOperator) => {
+  const handleOperatorChange = (index: number, oldOperator, newOperator) => {
     handleChangeNodeOperator(index, oldOperator, newOperator);
   };
 

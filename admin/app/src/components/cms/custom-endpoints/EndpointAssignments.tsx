@@ -7,16 +7,24 @@ import {
   Typography,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import React, { Fragment, useCallback } from 'react';
+import React, { FC, Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
-import { cloneDeep } from 'lodash';
 import { deepClone } from '../../utils/deepClone';
 
 const useStyles = makeStyles(() => ({}));
 
-const EndpointAssignments = ({
+interface Props {
+  editMode: boolean;
+  operationType: typeof OperationEnum;
+  selectedInputs: any;
+  selectedAssignments: any;
+  setSelectedAssignments: any;
+  availableFieldsOfSchema: any;
+}
+
+const EndpointAssignments: FC<Props> = ({
   editMode,
   operationType,
   selectedInputs,
@@ -26,7 +34,7 @@ const EndpointAssignments = ({
 }) => {
   const classes = useStyles();
 
-  const handleAssignmentFieldChange = (event, index) => {
+  const handleAssignmentFieldChange = (event, index: number) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
 
