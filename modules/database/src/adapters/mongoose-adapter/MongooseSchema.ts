@@ -12,10 +12,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   constructor(
     mongoose: Mongoose,
     schema: ConduitSchema,
+    originalSchema: any,
     deepPopulate: any,
     private readonly adapter: MongooseAdapter
   ) {
-    this.originalSchema = schema;
+    this.originalSchema = originalSchema;
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
