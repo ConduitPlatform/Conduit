@@ -10,6 +10,7 @@ export class RouteBuilder extends ConduitRouteBuilder {
     get: any;
     put: any;
     post: any;
+    patch: any;
     delete: any;
   };
 
@@ -20,6 +21,7 @@ export class RouteBuilder extends ConduitRouteBuilder {
       get: null,
       put: null,
       post: null,
+      patch: null,
       delete: null,
     };
   }
@@ -36,6 +38,11 @@ export class RouteBuilder extends ConduitRouteBuilder {
 
   put(options: ConduitRouteOptions, middleware: []): RouteBuilder {
     this._routes.put = middleware;
+    return this;
+  }
+
+  patch(options: ConduitRouteOptions, middleware: []): RouteBuilder {
+    this._routes.patch = middleware;
     return this;
   }
 
@@ -58,6 +65,10 @@ export class RouteBuilder extends ConduitRouteBuilder {
     }
     if (this._routes.delete) {
       router.get(this._routes.delete);
+    }
+
+    if (this._routes.patch) {
+      router.get(this._routes.patch);
     }
   }
 }

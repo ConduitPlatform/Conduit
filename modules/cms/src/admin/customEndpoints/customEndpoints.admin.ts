@@ -12,7 +12,7 @@ const OperationsEnum = {
   POST: 1, //'CREATE'
   PUT: 2, //'UPDATE/EDIT'
   DELETE: 3, //'DELETE'
-  PUTSELECTED: 4, //'DELETE'
+  PATCH: 4, //'PATCH'
 };
 
 export class CustomEndpointsAdmin {
@@ -122,7 +122,7 @@ export class CustomEndpointsAdmin {
     if (
       (found.operation === OperationsEnum.POST ||
         found.operation === OperationsEnum.PUT ||
-        found.operation === OperationsEnum.PUTSELECTED) &&
+        found.operation === OperationsEnum.PATCH) &&
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
@@ -162,7 +162,7 @@ export class CustomEndpointsAdmin {
     if (
       found.operation === OperationsEnum.POST ||
       found.operation === OperationsEnum.PUT ||
-      found.operation === OperationsEnum.PUTSELECTED
+      found.operation === OperationsEnum.PATCH
     ) {
       errorMessage = null;
       assignments.forEach(
@@ -304,7 +304,7 @@ export class CustomEndpointsAdmin {
     if (
       (operation === OperationsEnum.POST ||
         operation === OperationsEnum.PUT ||
-        operation === OperationsEnum.PUTSELECTED) &&
+        operation === OperationsEnum.PATCH) &&
       isNil(assignments)
     ) {
       return callback({
@@ -381,7 +381,7 @@ export class CustomEndpointsAdmin {
     if (
       (operation === OperationsEnum.POST ||
         operation === OperationsEnum.PUT ||
-        operation === OperationsEnum.PUTSELECTED) &&
+        operation === OperationsEnum.PATCH) &&
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
       return callback({
@@ -452,7 +452,7 @@ export class CustomEndpointsAdmin {
     if (
       operation === OperationsEnum.POST ||
       operation === OperationsEnum.PUT ||
-      operation === OperationsEnum.PUTSELECTED
+      operation === OperationsEnum.PATCH
     ) {
       errorMessage = null;
       assignments.forEach(
