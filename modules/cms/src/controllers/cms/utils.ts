@@ -47,6 +47,22 @@ export function compareFunction(schemaA: any, schemaB: any): number {
   }
 }
 
+function removeRequiredFields(fields: any) {
+  for (let field in fields) {
+    if (fields[field].required === true) {
+      fields[field].required = false;
+    }
+    if (Array.isArray(fields[field].type)) {
+      if (typeof fields[field].type[0] === 'object') {
+        fields[field].type[0] = removeRequiredFields(fields[field].type[0]);
+      }
+    } else if (typeof fields[field].type === 'object') {
+      fields[field].type = removeRequiredFields(fields[field].type);
+    }
+  }
+  return fields;
+}
+
 export function getOps(schemaName: string, actualSchema: any) {
   let routesArray: any = [];
   routesArray.push(
@@ -164,7 +180,12 @@ export function getOps(schemaName: string, actualSchema: any) {
           action: ConduitRouteActions.PATCH,
           bodyParams: {
             docs: {
-              type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
+              type: [
+                {
+                  ...removeRequiredFields(Object.assign({}, assignableFields)),
+                  _id: { type: 'String', unique: true },
+                },
+              ],
               required: true,
             },
           },
@@ -208,7 +229,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           urlParams: {
             id: { type: TYPE.String, required: true },
           },
-          bodyParams: assignableFields,
+          bodyParams: removeRequiredFields(Object.assign({}, assignableFields)),
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`patch${schemaName}`, actualSchema.fields),
