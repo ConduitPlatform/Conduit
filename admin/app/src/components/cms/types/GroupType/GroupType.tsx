@@ -14,7 +14,7 @@ import { EnumGroupType } from '../EnumType/EnumType';
 import { ObjectIdGroupType } from '../ObjectIdType/ObjectIdType';
 import { RelationGroupType } from '../RelationType/RelationType';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
-import { GroupGroupType } from './GroupTypeChild';
+import GroupGroupType from './GroupTypeChild';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -50,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupType({
+const GroupType = ({
   item,
   groupIndex,
   handleDelete,
@@ -58,7 +58,7 @@ export default function GroupType({
   handleGroupDelete,
   handleGroupDrawer,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const handleGroupContent = (item, index) => {
@@ -170,4 +170,6 @@ export default function GroupType({
       </Droppable>
     </Box>
   );
-}
+};
+
+export default GroupType;

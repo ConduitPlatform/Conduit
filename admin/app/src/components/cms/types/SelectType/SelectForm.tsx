@@ -24,14 +24,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SelectForm({
+const SelectForm = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [selectData, setSelectData] = useState({
@@ -143,4 +143,6 @@ export default function SelectForm({
       </Box>
     </form>
   );
-}
+};
+
+export default SelectForm;

@@ -14,7 +14,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ColorType(props) {
+const ColorType = (props) => {
   const { item, ...rest } = props;
   const classes = useStyles();
 
@@ -29,9 +29,11 @@ export default function ColorType(props) {
       </Box>
     </Box>
   );
-}
+};
 
-export function ColorGroupType(props) {
+export default ColorType;
+
+export const ColorGroupType = (props) => {
   const { item, ...rest } = props;
   const classes = useStyles();
 
@@ -46,4 +48,4 @@ export function ColorGroupType(props) {
       </Box>
     </Box>
   );
-}
+};

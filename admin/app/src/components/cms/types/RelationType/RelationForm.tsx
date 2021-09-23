@@ -52,14 +52,14 @@ const MenuProps = {
   },
 };
 
-export default function RelationForm({
+const RelationForm = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -254,4 +254,6 @@ export default function RelationForm({
       </Box>
     </form>
   );
-}
+};
+
+export default RelationForm;

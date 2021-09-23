@@ -27,14 +27,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ObjectIdForm({
+const ObjectIdForm = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
@@ -185,4 +185,6 @@ export default function ObjectIdForm({
       </Box>
     </form>
   );
-}
+};
+
+export default ObjectIdForm;

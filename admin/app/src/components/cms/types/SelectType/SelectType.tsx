@@ -4,7 +4,7 @@ import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 
-export default function SelectType(props) {
+const SelectType = (props) => {
   const { item, ...rest } = props;
 
   const [select, setSelect] = useState('');
@@ -43,9 +43,11 @@ export default function SelectType(props) {
       </FormControl>
     </Box>
   );
-}
+};
 
-export function SelectGroupType(props) {
+export default SelectType;
+
+export const SelectGroupType = (props) => {
   const { item, ...rest } = props;
 
   const [select, setSelect] = useState('');
@@ -84,4 +86,4 @@ export function SelectGroupType(props) {
       </FormControl>
     </Box>
   );
-}
+};

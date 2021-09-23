@@ -18,7 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ObjectIdType({ item, ...rest }) {
+const ObjectIdType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -42,9 +42,11 @@ export default function ObjectIdType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function ObjectIdGroupType({ item, ...rest }) {
+export default ObjectIdType;
+
+export const ObjectIdGroupType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -68,4 +70,4 @@ export function ObjectIdGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};

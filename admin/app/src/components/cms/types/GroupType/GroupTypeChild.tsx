@@ -48,8 +48,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export function GroupGroupType(props) {
-  const { item, groupIndex, itemIndex, handleGroupDelete, handleGroupDrawer, ...rest } = props;
+const GroupGroupType = (props) => {
+  const {
+    item,
+    groupIndex,
+    itemIndex,
+    handleGroupDelete,
+    handleGroupDrawer,
+    ...rest
+  } = props;
   const classes = useStyles();
 
   const handleGroupContent = (item) => {
@@ -91,11 +98,17 @@ export function GroupGroupType(props) {
       </Grid>
       <Droppable droppableId={groupId} isCombineEnabled>
         {(provided, snapshot) => (
-          <Box ref={provided.innerRef} className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
+          <Box
+            ref={provided.innerRef}
+            className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
             {item.content && Array.isArray(item.content) && item.content.length > 0 ? (
               item.content.map((groupItem, index) => {
                 return (
-                  <Draggable key={groupItem.name} draggableId={groupItem.name} index={index} isDragDisabled>
+                  <Draggable
+                    key={groupItem.name}
+                    draggableId={groupItem.name}
+                    index={index}
+                    isDragDisabled>
                     {(provided) => (
                       <Box
                         className={classes.item}
@@ -103,8 +116,15 @@ export function GroupGroupType(props) {
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}>
                         <Box width={'99%'}>{handleGroupContent(groupItem)}</Box>
-                        <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
-                          <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
+                        <Box
+                          display={'flex'}
+                          flexDirection={'column'}
+                          width={'99%'}
+                          mb={2}>
+                          <Box
+                            display={'flex'}
+                            width={'100%'}
+                            justifyContent={'space-between'}>
                             <Box display={'flex'}>
                               <Typography variant={'body2'} style={{ marginRight: 8 }}>
                                 {groupItem.name}
@@ -113,11 +133,20 @@ export function GroupGroupType(props) {
                             <Box display={'flex'}>
                               <DeleteIcon
                                 className={classes.icon}
-                                onClick={() => handleGroupDelete(index, groupIndex, itemIndex)}
+                                onClick={() =>
+                                  handleGroupDelete(index, groupIndex, itemIndex)
+                                }
                               />
                               <SettingsIcon
                                 className={classes.icon}
-                                onClick={() => handleGroupDrawer(groupItem, index, groupIndex, itemIndex)}
+                                onClick={() =>
+                                  handleGroupDrawer(
+                                    groupItem,
+                                    index,
+                                    groupIndex,
+                                    itemIndex
+                                  )
+                                }
                               />
                             </Box>
                           </Box>
@@ -136,4 +165,6 @@ export function GroupGroupType(props) {
       </Droppable>
     </Box>
   );
-}
+};
+
+export default GroupGroupType;

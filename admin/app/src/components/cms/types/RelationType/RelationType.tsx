@@ -18,7 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function RelationType({ item, ...rest }) {
+const RelationType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -42,9 +42,11 @@ export default function RelationType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function RelationGroupType({ item, ...rest }) {
+export default RelationType;
+
+export const RelationGroupType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -68,4 +70,4 @@ export function RelationGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};

@@ -18,7 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EnumType(props) {
+const EnumType = (props) => {
   const { item, ...rest } = props;
   const classes = useStyles();
 
@@ -43,9 +43,11 @@ export default function EnumType(props) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function EnumGroupType(props) {
+export default EnumType;
+
+export const EnumGroupType = (props) => {
   const { item, ...rest } = props;
   const classes = useStyles();
 
@@ -70,4 +72,4 @@ export function EnumGroupType(props) {
       </Grid>
     </Box>
   );
-}
+};

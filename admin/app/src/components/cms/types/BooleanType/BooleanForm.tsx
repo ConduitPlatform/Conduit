@@ -29,7 +29,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default BooleanForm = ({
+const BooleanForm: React.FC = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -290,3 +290,5 @@ export default BooleanForm = ({
     </form>
   );
 };
+
+export default BooleanForm;

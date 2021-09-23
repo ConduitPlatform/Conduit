@@ -24,7 +24,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ColorForm(props) {
+const ColorForm = (props) => {
   const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
   const classes = useStyles();
 
@@ -99,4 +99,6 @@ export default function ColorForm(props) {
       </Box>
     </form>
   );
-}
+};
+
+export default ColorForm;

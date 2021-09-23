@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
@@ -28,14 +28,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupForm({
+const GroupForm = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [groupData, setGroupData] = useState({
@@ -192,4 +192,6 @@ export default function GroupForm({
       </Box>
     </form>
   );
-}
+};
+
+export default GroupForm;

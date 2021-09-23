@@ -5,7 +5,7 @@ import Switch from '@material-ui/core/Switch';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
 
-export default function BooleanType({ item, ...rest }) {
+const BooleanType: React.FC = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>
@@ -28,9 +28,11 @@ export default function BooleanType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function BooleanGroupType({ item, ...rest }) {
+export default BooleanType;
+
+export const BooleanGroupType: React.FC = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>
@@ -53,4 +55,4 @@ export function BooleanGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};

@@ -36,14 +36,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EnumForm({
-  drawerData,
-  readOnly,
-  onSubmit,
-  onClose,
-  selectedItem,
-  ...rest
-}) {
+const EnumForm = ({ drawerData, readOnly, onSubmit, onClose, selectedItem, ...rest }) => {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
@@ -203,4 +196,6 @@ export default function EnumForm({
       </Box>
     </form>
   );
-}
+};
+
+export default EnumForm;
