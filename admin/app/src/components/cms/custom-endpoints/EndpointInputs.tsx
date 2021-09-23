@@ -12,6 +12,7 @@ import {
 } from '@material-ui/core';
 import InputLocationEnum from '../../../models/InputLocationEnum';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
+import { Input } from '../../../models/customEndpoints/customEndpointsModels';
 
 interface Props {
   editMode: boolean;
@@ -26,7 +27,10 @@ const EndpointInputs: FC<Props> = ({
   setSelectedInputs,
   handleRemoveInput,
 }) => {
-  const handleInputNameChange = (event, index: number) => {
+  const handleInputNameChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -38,7 +42,10 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputTypeChange = (event, index: number) => {
+  const handleInputTypeChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -49,7 +56,10 @@ const EndpointInputs: FC<Props> = ({
       setSelectedInputs(currentInputs);
     }
   };
-  const handleInputLocationChange = (event, index: number) => {
+  const handleInputLocationChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -60,7 +70,10 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputIsArray = (event, index: number) => {
+  const handleInputIsArray = (
+    event: React.ChangeEvent<{ checked: boolean }>,
+    index: number
+  ) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -71,7 +84,12 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputIsOptional = (event, index: number) => {
+  console.log(selectedInputs);
+
+  const handleInputIsOptional = (
+    event: React.ChangeEvent<{ checked: any }>,
+    index: number
+  ) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -81,7 +99,7 @@ const EndpointInputs: FC<Props> = ({
       setSelectedInputs(currentInputs);
     }
   };
-  return selectedInputs.map((input, index: number) => (
+  return selectedInputs.map((input: Input, index: number) => (
     <Fragment key={`input-${index}`}>
       <Grid item xs={1} key={index}>
         <Typography>{index + 1}.</Typography>

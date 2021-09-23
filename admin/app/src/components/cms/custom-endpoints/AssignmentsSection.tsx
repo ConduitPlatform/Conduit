@@ -6,6 +6,7 @@ import React, { FC } from 'react';
 import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
+import { Assignment } from '../../../models/customEndpoints/customEndpointsModels';
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -27,7 +28,7 @@ const AssignmentsSection: FC<Props> = ({ editMode }) => {
   );
 
   const handleAddAssignment = () => {
-    const assignment = {
+    const assignment: Assignment = {
       schemaField: '',
       action: 0,
       assignmentField: { type: '', value: '' },
@@ -35,7 +36,8 @@ const AssignmentsSection: FC<Props> = ({ editMode }) => {
     dispatch(setEndpointData({ assignments: [...endpoint.assignments, assignment] }));
   };
 
-  const handleAssignmentChanges = (assignments) => {
+  const handleAssignmentChanges = (assignments: Assignment[]) => {
+    console.log('assignment:', assignments);
     dispatch(setEndpointData({ assignments }));
   };
 

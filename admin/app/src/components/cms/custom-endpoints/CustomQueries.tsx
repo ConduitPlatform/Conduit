@@ -77,11 +77,13 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
     (state) => state.customEndpointsSlice.data
   );
 
+  console.log('selectedEndpoint:', selectedEndpoint);
+
   const initializeData = useCallback(() => {
     if (selectedEndpoint) {
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema, schemas);
       let inputs = [];
-      const queryGroup = [];
+      const queryGroup: any = [];
       let assignments = [];
       let fieldsWithTypes = [];
       if (fields) {
@@ -94,7 +96,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
         const keys = Object.keys(query);
         keys.forEach((k) => {
           const nodeLevel1 = query[k];
-          const nodeLevel1Queries = nodeLevel1.map((q) => {
+          const nodeLevel1Queries = nodeLevel1.map((q: any) => {
             const keys = Object.keys(q);
             const isOperator = keys.includes('AND') || keys.includes('OR');
             if (isOperator) {
@@ -104,9 +106,9 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
             }
           });
 
-          const lvl2Node = nodeLevel1Queries.find((q) => 'operator' in q);
+          const lvl2Node = nodeLevel1Queries.find((q: any) => 'operator' in q);
           if (lvl2Node) {
-            const nodeLevel2Queries = lvl2Node.queries.map((q) => {
+            const nodeLevel2Queries = lvl2Node.queries.map((q: any) => {
               const keys = Object.keys(q);
               const isOperator = keys.includes('AND') || keys.includes('OR');
               if (isOperator) {
@@ -117,9 +119,9 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
             });
             lvl2Node.queries = [...nodeLevel2Queries];
 
-            const lvl3Node = nodeLevel2Queries.find((q) => 'operator' in q);
+            const lvl3Node = nodeLevel2Queries.find((q: any) => 'operator' in q);
             if (lvl3Node) {
-              const nodeLevel3Queries = lvl3Node.queries.map((q) => ({
+              const nodeLevel3Queries = lvl3Node.queries.map((q: any) => ({
                 _id: uuidv4(),
                 ...q,
               }));
@@ -135,10 +137,10 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
       }
 
       if (selectedEndpoint.assignments) {
-        assignments = selectedEndpoint.assignments.map((q) => ({ ...q }));
+        assignments = selectedEndpoint.assignments.map((q: any) => ({ ...q }));
       }
       if (selectedEndpoint.inputs) {
-        inputs = selectedEndpoint.inputs.map((i) => ({ ...i }));
+        inputs = selectedEndpoint.inputs.map((i: any) => ({ ...i }));
       }
 
       dispatch(
@@ -179,7 +181,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
     const data = {
       name: endpoint.name,
       operation: Number(endpoint.operation),
-      selectedSchema: schema._id,
+      selectedSchema: schema?._id,
       authentication: endpoint.authentication,
       paginated: endpoint.paginated,
       sorted: endpoint.sorted,

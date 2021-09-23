@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { Assignment, Input } from '../../models/customEndpoints/customEndpointsModels';
 import OperationsEnum from '../../models/OperationsEnum';
 
 // TODO create proper Interface for the slices' initial state
@@ -14,7 +15,7 @@ interface ICustomEndpointSlice {
       sorted: boolean;
       inputs: [];
       queries: [];
-      assignments: [];
+      assignments: Assignment[];
     };
     schemaFields: [];
     selectedEndpoint: any;

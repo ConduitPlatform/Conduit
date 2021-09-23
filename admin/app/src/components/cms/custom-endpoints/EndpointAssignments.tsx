@@ -6,22 +6,20 @@ import {
   TextField,
   Typography,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
 import React, { FC, Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
 import { deepClone } from '../../utils/deepClone';
-
-const useStyles = makeStyles(() => ({}));
+import { Assignment, Input } from '../../../models/customEndpoints/customEndpointsModels';
 
 interface Props {
   editMode: boolean;
-  operationType: typeof OperationEnum;
-  selectedInputs: any;
+  operationType: number;
+  selectedInputs: Input[];
   selectedAssignments: any;
-  setSelectedAssignments: any;
-  availableFieldsOfSchema: any;
+  setSelectedAssignments: (assignments: Assignment[]) => void;
+  availableFieldsOfSchema: [];
 }
 
 const EndpointAssignments: FC<Props> = ({
@@ -32,9 +30,10 @@ const EndpointAssignments: FC<Props> = ({
   setSelectedAssignments,
   availableFieldsOfSchema,
 }) => {
-  const classes = useStyles();
-
-  const handleAssignmentFieldChange = (event, index: number) => {
+  const handleAssignmentFieldChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
 
@@ -47,9 +46,15 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
+  console.log('availableFields', availableFieldsOfSchema);
+
+  console.log(operationType);
+
+  console.log(selectedAssignments);
+
   const isArrayType = useCallback(
     (fieldName) => {
-      const field = availableFieldsOfSchema.find((f) => f.name === fieldName);
+      const field: any = availableFieldsOfSchema.find((f: any) => f.name === fieldName);
       if (field) {
         return Array.isArray(field.type);
       }
@@ -60,7 +65,7 @@ const EndpointAssignments: FC<Props> = ({
 
   const isNumberType = useCallback(
     (fieldName) => {
-      const field = availableFieldsOfSchema.find((f) => f.name === fieldName);
+      const field: any = availableFieldsOfSchema.find((f: any) => f.name === fieldName);
       if (field) {
         return field.type === 'Number';
       }
@@ -69,7 +74,10 @@ const EndpointAssignments: FC<Props> = ({
     [availableFieldsOfSchema]
   );
 
-  const handleAssignmentActionChange = (event, index) => {
+  const handleAssignmentActionChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentAssignments = deepClone(selectedAssignments);
     const input = currentAssignments[index];
@@ -79,12 +87,13 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
-  const handleAssignmentValueFieldChange = (event, index) => {
+  const handleAssignmentValueFieldChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
-
     const type = value.split('-')[0];
     const actualValue = value.split('-')[1];
-    //TODO this needs work
     const currentAssignments = deepClone(selectedAssignments);
     const assignment = currentAssignments[index];
     if (assignment) {
@@ -95,7 +104,10 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
-  const handleAssignmentCustomValueChange = (event, index) => {
+  const handleAssignmentCustomValueChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentAssignments = deepClone(selectedAssignments);
     const assignment = currentAssignments[index];
@@ -105,7 +117,10 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
-  const handleAssignmentContextValueChange = (event, index) => {
+  const handleAssignmentContextValueChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    index: number
+  ) => {
     const value = event.target.value;
     const currentAssignments = deepClone(selectedAssignments);
     const assignment = currentAssignments[index];
@@ -115,128 +130,132 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
-  const handleRemoveAssignment = (index) => {
+  const handleRemoveAssignment = (index: number) => {
     const currentAssignments = selectedAssignments.slice();
     currentAssignments.splice(index, 1);
     setSelectedAssignments(currentAssignments);
   };
 
-  return selectedAssignments.map((assignment, index) => (
-    <Fragment key={`assignment-${index}`}>
-      <Grid item xs={1}>
-        <Typography>{index + 1}.</Typography>
-      </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
-          <Select
-            fullWidth
-            disabled={!editMode}
-            native
-            value={assignment.schemaField}
-            onChange={(event) => handleAssignmentFieldChange(event, index)}>
-            <option aria-label="None" value="" />
-            {availableFieldsOfSchema.map((field, index) => (
-              <option key={`idx-${index}-field`} value={field.name}>
-                {field.name}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={3}>
-        <FormControl className={classes.formControl}>
-          <Select
-            disabled={!editMode}
-            native
-            fullWidth
-            value={assignment.action}
-            onChange={(event) => handleAssignmentActionChange(event, index)}>
-            <option aria-label="None" value="" />
-            <option value={ActionTypes.SET}>SET</option>
-            <option
-              disabled={!isNumberType(assignment.schemaField)}
-              value={ActionTypes.INCREMENT}>
-              INCREMENT
-            </option>
-            <option
-              disabled={!isNumberType(assignment.schemaField)}
-              value={ActionTypes.DECREMENT}>
-              DECREMENT
-            </option>
-            <option
-              disabled={!isArrayType(assignment.schemaField)}
-              value={ActionTypes.APPEND}>
-              APPEND
-            </option>
-            <option
-              disabled={!isArrayType(assignment.schemaField)}
-              value={ActionTypes.REMOVE}>
-              REMOVE
-            </option>
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={2}>
-        <FormControl className={classes.formControl}>
-          <Select
-            fullWidth
-            disabled={!editMode}
-            native
-            value={
-              assignment.assignmentField.type === 'Custom' ||
-              assignment.assignmentField.type === 'Context'
-                ? assignment.assignmentField.type
-                : assignment.assignmentField.type + '-' + assignment.assignmentField.value
-            }
-            onChange={(event) => handleAssignmentValueFieldChange(event, index)}>
-            <option aria-label="None" value="" />
-            <optgroup label="Custom Value">
-              <option value={'Custom'}>Add a custom value</option>
-            </optgroup>
-            <optgroup label="Context Value">
-              <option value={'Context'}>Add a value from context</option>
-            </optgroup>
-            <optgroup label="Input Fields">
-              {selectedInputs.map((input, index) => (
-                <option key={`idx-${index}-input`} value={'Input-' + input.name}>
-                  {input.name}
+  return selectedAssignments.map((assignment: Assignment, index: number) => (
+    <>
+      <Fragment key={`assignment-${index}`}>
+        <Grid item xs={1}>
+          <Typography>{index + 1}.</Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <FormControl>
+            <Select
+              fullWidth
+              disabled={!editMode}
+              native
+              value={assignment.schemaField}
+              onChange={(event) => handleAssignmentFieldChange(event, index)}>
+              <option aria-label="None" value="" />
+              {availableFieldsOfSchema.map((field: any, index: number) => (
+                <option key={`idx-${index}-field`} value={field.name}>
+                  {field.name}
                 </option>
               ))}
-            </optgroup>
-          </Select>
-        </FormControl>
-      </Grid>
-      {assignment.assignmentField.type === 'Custom' ||
-      assignment.assignmentField.type === 'Context' ? (
-        <Grid item xs={2}>
-          <TextField
-            label={assignment.assignmentField.type + ' Value'}
-            variant={'outlined'}
-            disabled={!editMode}
-            fullWidth
-            placeholder={'Value'}
-            value={assignment.assignmentField.value}
-            onChange={(event) =>
-              assignment.assignmentField.type === 'Custom'
-                ? handleAssignmentCustomValueChange(event, index)
-                : handleAssignmentContextValueChange(event, index)
-            }
-          />
+            </Select>
+          </FormControl>
         </Grid>
-      ) : (
-        <Grid item xs={2} />
-      )}
-      <Grid item xs={1}>
-        {operationType !== OperationEnum.POST && (
-          <IconButton
-            disabled={!editMode}
-            size="small"
-            onClick={() => handleRemoveAssignment(index)}>
-            <RemoveCircleOutlineIcon />
-          </IconButton>
+        <Grid item xs={3}>
+          <FormControl>
+            <Select
+              disabled={!editMode}
+              native
+              fullWidth
+              value={assignment.action}
+              onChange={(event) => handleAssignmentActionChange(event, index)}>
+              <option aria-label="None" value="" />
+              <option value={ActionTypes.SET}>SET</option>
+              <option
+                disabled={!isNumberType(assignment.schemaField)}
+                value={ActionTypes.INCREMENT}>
+                INCREMENT
+              </option>
+              <option
+                disabled={!isNumberType(assignment.schemaField)}
+                value={ActionTypes.DECREMENT}>
+                DECREMENT
+              </option>
+              <option
+                disabled={!isArrayType(assignment.schemaField)}
+                value={ActionTypes.APPEND}>
+                APPEND
+              </option>
+              <option
+                disabled={!isArrayType(assignment.schemaField)}
+                value={ActionTypes.REMOVE}>
+                REMOVE
+              </option>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={2}>
+          <FormControl>
+            <Select
+              fullWidth
+              disabled={!editMode}
+              native
+              value={
+                assignment.assignmentField.type === 'Custom' ||
+                assignment.assignmentField.type === 'Context'
+                  ? assignment.assignmentField.type
+                  : assignment.assignmentField.type +
+                    '-' +
+                    assignment.assignmentField.value
+              }
+              onChange={(event) => handleAssignmentValueFieldChange(event, index)}>
+              <option aria-label="None" value="" />
+              <optgroup label="Custom Value">
+                <option value={'Custom'}>Add a custom value</option>
+              </optgroup>
+              <optgroup label="Context Value">
+                <option value={'Context'}>Add a value from context</option>
+              </optgroup>
+              <optgroup label="Input Fields">
+                {selectedInputs.map((input: any, index: number) => (
+                  <option key={`idx-${index}-input`} value={'Input-' + input.name}>
+                    {input.name}
+                  </option>
+                ))}
+              </optgroup>
+            </Select>
+          </FormControl>
+        </Grid>
+        {assignment.assignmentField.type === 'Custom' ||
+        assignment.assignmentField.type === 'Context' ? (
+          <Grid item xs={2}>
+            <TextField
+              label={assignment.assignmentField.type + ' Value'}
+              variant={'outlined'}
+              disabled={!editMode}
+              fullWidth
+              placeholder={'Value'}
+              value={assignment.assignmentField.value}
+              onChange={(event) =>
+                assignment.assignmentField.type === 'Custom'
+                  ? handleAssignmentCustomValueChange(event, index)
+                  : handleAssignmentContextValueChange(event, index)
+              }
+            />
+          </Grid>
+        ) : (
+          <Grid item xs={2} />
         )}
-      </Grid>
-    </Fragment>
+        <Grid item xs={1}>
+          {operationType !== OperationEnum.POST && (
+            <IconButton
+              disabled={!editMode}
+              size="small"
+              onClick={() => handleRemoveAssignment(index)}>
+              <RemoveCircleOutlineIcon />
+            </IconButton>
+          )}
+        </Grid>
+      </Fragment>
+    </>
   ));
 };
 
