@@ -1,4 +1,3 @@
-console.log('edw pera sto import sto email provider test');
 import { EmailProvider } from "./index";
 
 let provider = new EmailProvider('mandrill',{
