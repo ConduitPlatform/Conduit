@@ -49,8 +49,12 @@ export const useStore = (initialState: any) => {
   return useMemo(() => initializeStore(initialState), [initialState]);
 };
 
+const tempState = () => {
+  return makeStore(null).getState();
+};
+
 export type AppDispatch = typeof store.dispatch;
-export type RootState = ReturnType<typeof store.getState>;
+export type RootState = ReturnType<typeof tempState>;
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 export type AppThunk = ThunkAction<void, RootState, unknown, Action<string>>;
