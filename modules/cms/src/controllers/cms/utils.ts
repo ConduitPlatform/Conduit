@@ -160,6 +160,28 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
+          path: `/${schemaName}/many`,
+          action: ConduitRouteActions.PATCH,
+          bodyParams: {
+            docs: {
+              type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
+              required: true,
+            },
+          },
+          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+        },
+        new ConduitRouteReturnDefinition(`patchMany${schemaName}`, {
+          docs: [actualSchema.fields],
+        }),
+        'patchManyDocuments'
+      )
+    )
+  );
+
+  routesArray.push(
+    constructRoute(
+      new ConduitRoute(
+        {
           path: `/${schemaName}/:id`,
           action: ConduitRouteActions.UPDATE,
           urlParams: {
@@ -173,6 +195,24 @@ export function getOps(schemaName: string, actualSchema: any) {
         },
         new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
         'editDocument'
+      )
+    )
+  );
+
+  routesArray.push(
+    constructRoute(
+      new ConduitRoute(
+        {
+          path: `/${schemaName}/:id`,
+          action: ConduitRouteActions.PATCH,
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          bodyParams: assignableFields,
+          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+        },
+        new ConduitRouteReturnDefinition(`patch${schemaName}`, actualSchema.fields),
+        'patchDocument'
       )
     )
   );

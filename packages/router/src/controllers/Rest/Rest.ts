@@ -86,6 +86,10 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter.put.bind(this._expressRouter);
         break;
       }
+      case ConduitRouteActions.PATCH: {
+        routerMethod = this._expressRouter.patch.bind(this._expressRouter);
+        break;
+      }
       default: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
       }

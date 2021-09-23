@@ -30,6 +30,7 @@ export enum ConduitRouteActions {
   GET = 'GET',
   POST = 'POST',
   UPDATE = 'PUT',
+  PATCH = 'PATCH',
   DELETE = 'DELETE',
 }
 
