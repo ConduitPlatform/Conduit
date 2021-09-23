@@ -7,8 +7,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { FC, useState } from 'react';
+import React, { FC, MouseEventHandler, useState } from 'react';
 import slugify from '../../../../utils/slugify';
+import { IBooleanData, IDrawerData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   textField: {
@@ -29,7 +30,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BooleanForm: FC = ({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (booleanData: IBooleanData) => void;
+  onClose: MouseEventHandler;
+  selectedItem: IBooleanData;
+}
+
+const BooleanForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -51,16 +60,16 @@ const BooleanForm: FC = ({
     isArray: selectedItem ? selectedItem.isArray : false,
   });
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     const slug = slugify(event.target.value);
     setBooleanData({ ...booleanData, name: event.target.value, id: slug });
   };
 
-  const handleFalsePlaceholder = (event) => {
+  const handleFalsePlaceholder = (event: { target: { value: string } }) => {
     setBooleanData({ ...booleanData, placeholderFalse: event.target.value });
   };
 
-  const handleTruePlaceholder = (event) => {
+  const handleTruePlaceholder = (event: { target: { value: string } }) => {
     setBooleanData({ ...booleanData, placeholderTrue: event.target.value });
   };
 
@@ -84,7 +93,7 @@ const BooleanForm: FC = ({
     setBooleanData({ ...booleanData, isArray: !booleanData.isArray });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(booleanData);
     event.preventDefault();
   };
