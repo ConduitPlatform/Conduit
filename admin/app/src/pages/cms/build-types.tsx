@@ -21,7 +21,6 @@ import {
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
   asyncCreateNewSchema,
   asyncEditSchema,
@@ -29,6 +28,7 @@ import {
   asyncGetCmsSchemas,
   clearSelectedSchema,
 } from '../../redux/slices/cmsSlice';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const items = [
   'Text',
@@ -139,7 +139,7 @@ const BuildTypes = () => {
 
   useEffect(() => {
     if (!data.selectedSchema) {
-      let initialFields = [
+      const initialFields = [
         {
           default: '',
           isArray: false,
@@ -195,8 +195,8 @@ const BuildTypes = () => {
       });
     }
 
-    let droppableIdString = `${destination.droppableId}`;
-    let groupIsGroupChild = droppableIdString.slice(0, 5);
+    const droppableIdString = `${destination.droppableId}`;
+    const groupIsGroupChild = droppableIdString.slice(0, 5);
 
     if (draggableId === 'Group' && groupIsGroupChild === 'child') {
       return;

@@ -21,7 +21,6 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import CreateDialog from './DocumentCreateDialog';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
   asyncCreateSchemaDocument,
   asyncDeleteSchemaDocument,
@@ -29,6 +28,7 @@ import {
   asyncGetMoreSchemaDocuments,
 } from '../../redux/slices/cmsSlice';
 import { Schema } from '../../models/cms/CmsModels';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {

@@ -2,10 +2,10 @@ import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import OperationsEnum from '../../../models/OperationsEnum';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EndpointAssignments from './EndpointAssignments';
-import React from 'react';
+import React, { FC } from 'react';
 import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   button: {

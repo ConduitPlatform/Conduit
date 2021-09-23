@@ -26,8 +26,8 @@ import {
   setSchemaFields,
   setSelectedEndPoint,
 } from '../../../redux/slices/customEndpointsSlice';
-import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { Schema } from '../../../models/cms/CmsModels';
+import { useAppDispatch, useAppSelector } from '../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -81,7 +81,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
     if (selectedEndpoint) {
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema, schemas);
       let inputs = [];
-      let queryGroup = [];
+      const queryGroup = [];
       let assignments = [];
       let fieldsWithTypes = [];
       if (fields) {

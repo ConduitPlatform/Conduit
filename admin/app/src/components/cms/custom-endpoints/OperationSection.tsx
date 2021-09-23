@@ -14,7 +14,7 @@ import {
   setEndpointData,
   setSchemaFields,
 } from '../../../redux/slices/customEndpointsSlice';
-import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -46,7 +46,7 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
 
   const handleOperationChange = (event) => {
     const operation = Number(event.target.value);
-    let assignments = [];
+    const assignments = [];
     if (operation === 1) {
       if (endpoint.selectedSchema) {
         if (schemaFields.length > 0) {
@@ -65,7 +65,7 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
   };
 
   const handleSchemaChange = (event) => {
-    let assignments = [];
+    const assignments = [];
     const selectedSchema = event.target.value;
     const fields = getAvailableFieldsOfSchema(selectedSchema, schemas);
     const fieldsWithTypes = findFieldsWithTypes(fields);

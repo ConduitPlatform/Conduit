@@ -4,7 +4,7 @@ import EndpointInputs from './EndpointInputs';
 import React from 'react';
 import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {

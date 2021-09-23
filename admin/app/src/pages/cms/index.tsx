@@ -1,4 +1,4 @@
-import React, { SyntheticEvent, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
@@ -14,7 +14,7 @@ import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
-import { ICmsSlice, setSelectedSchema } from '../../redux/slices/cmsSlice';
+import { setSelectedSchema } from '../../redux/slices/cmsSlice';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
 import {
   asyncCreateCustomEndpoints,
@@ -27,8 +27,8 @@ import {
   asyncToggleSchema,
   asyncUpdateCustomEndpoints,
 } from '../../redux/slices/cmsSlice';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { Schema } from '../../models/cms/CmsModels';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {

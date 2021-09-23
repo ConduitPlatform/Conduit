@@ -14,11 +14,8 @@ import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
-
-import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
 import { asyncGetCmsSchemas } from '../../../../redux/slices/cmsSlice';
-
-import { getCmsSchemas } from '../../../../redux/thunks';
+import { useAppDispatch, useAppSelector } from '../../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   form: {
