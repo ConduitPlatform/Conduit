@@ -3,7 +3,7 @@ import { Draggable, Droppable } from 'react-beautiful-dnd';
 import Typography from '@material-ui/core/Typography';
 import DeleteIcon from '@material-ui/icons/Delete';
 import SettingsIcon from '@material-ui/icons/Settings';
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
 import { ColorGroupType } from '../ColorType/ColorType';
@@ -48,15 +48,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GroupGroupType = (props) => {
-  const {
-    item,
-    groupIndex,
-    itemIndex,
-    handleGroupDelete,
-    handleGroupDrawer,
-    ...rest
-  } = props;
+const GroupGroupType: FC = ({
+  item,
+  groupIndex,
+  itemIndex,
+  handleGroupDelete,
+  handleGroupDrawer,
+  ...rest
+}) => {
   const classes = useStyles();
 
   const handleGroupContent = (item) => {

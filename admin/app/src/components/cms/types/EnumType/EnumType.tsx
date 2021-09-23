@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import Box from '@material-ui/core/Box';
 import FieldIndicators from '../../FieldIndicators';
 import Typography from '@material-ui/core/Typography';
@@ -18,8 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const EnumType = (props) => {
-  const { item, ...rest } = props;
+const EnumType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -47,8 +46,7 @@ const EnumType = (props) => {
 
 export default EnumType;
 
-export const EnumGroupType = (props) => {
-  const { item, ...rest } = props;
+export const EnumGroupType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (

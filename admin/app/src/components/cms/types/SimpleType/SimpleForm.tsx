@@ -7,7 +7,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -28,14 +28,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SimpleForm({
+const SimpleForm: FC = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
@@ -235,4 +235,6 @@ export default function SimpleForm({
       </Box>
     </form>
   );
-}
+};
+
+export default SimpleForm;

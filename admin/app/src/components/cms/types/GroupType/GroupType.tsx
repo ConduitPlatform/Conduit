@@ -6,7 +6,7 @@ import Typography from '@material-ui/core/Typography';
 import DeleteIcon from '@material-ui/icons/Delete';
 import GroupIcon from '@material-ui/icons/PlaylistAdd';
 import SettingsIcon from '@material-ui/icons/Settings';
-import React from 'react';
+import React, { FC } from 'react';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
 import FieldIndicators from '../../FieldIndicators';
 import { BooleanGroupType } from '../BooleanType/BooleanType';
@@ -50,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GroupType = ({
+const GroupType: FC = ({
   item,
   groupIndex,
   handleDelete,

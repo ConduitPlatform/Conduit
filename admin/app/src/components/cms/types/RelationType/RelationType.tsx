@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
@@ -18,7 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const RelationType = ({ item, ...rest }) => {
+const RelationType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -46,7 +46,7 @@ const RelationType = ({ item, ...rest }) => {
 
 export default RelationType;
 
-export const RelationGroupType = ({ item, ...rest }) => {
+export const RelationGroupType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import ColorIcon from '@material-ui/icons/ColorLens';
@@ -14,8 +14,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ColorType = (props) => {
-  const { item, ...rest } = props;
+const ColorType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -33,8 +32,7 @@ const ColorType = (props) => {
 
 export default ColorType;
 
-export const ColorGroupType = (props) => {
-  const { item, ...rest } = props;
+export const ColorGroupType = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (

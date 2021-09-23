@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 
-const SelectType = (props) => {
-  const { item, ...rest } = props;
-
+const SelectType: FC = ({ item, ...rest }) => {
   const [select, setSelect] = useState('');
 
   const handleChange = (event) => {
@@ -47,7 +45,7 @@ const SelectType = (props) => {
 
 export default SelectType;
 
-export const SelectGroupType = (props) => {
+export const SelectGroupType: FC = (props) => {
   const { item, ...rest } = props;
 
   const [select, setSelect] = useState('');

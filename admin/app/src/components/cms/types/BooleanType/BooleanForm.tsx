@@ -7,7 +7,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import slugify from '../../../../utils/slugify';
 
 const useStyles = makeStyles((theme) => ({
@@ -29,7 +29,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BooleanForm: React.FC = ({
+const BooleanForm: FC = ({
   drawerData,
   readOnly,
   onSubmit,

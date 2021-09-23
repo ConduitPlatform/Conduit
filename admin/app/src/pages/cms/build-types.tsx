@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, resetServerContext } from 'react-beautiful-dnd';
-import { renderToString } from 'react-dom/server';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import BuildTypesList from '../../components/cms/BuildTypesList';
@@ -29,6 +28,8 @@ import {
   clearSelectedSchema,
 } from '../../redux/slices/cmsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+
+resetServerContext();
 
 const items = [
   'Text',
@@ -78,9 +79,6 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const BuildTypes = () => {
-  resetServerContext();
-  renderToString(BuildTypes);
-
   const classes = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();

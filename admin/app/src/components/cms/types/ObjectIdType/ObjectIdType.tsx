@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import CodeIcon from '@material-ui/icons/Code';
@@ -18,7 +18,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ObjectIdType = ({ item, ...rest }) => {
+const ObjectIdType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -46,7 +46,7 @@ const ObjectIdType = ({ item, ...rest }) => {
 
 export default ObjectIdType;
 
-export const ObjectIdGroupType = ({ item, ...rest }) => {
+export const ObjectIdGroupType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (

@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { FC } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Switch from '@material-ui/core/Switch';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
 
-const BooleanType: React.FC = ({ item, ...rest }) => {
+const BooleanType: FC = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>
@@ -32,7 +32,7 @@ const BooleanType: React.FC = ({ item, ...rest }) => {
 
 export default BooleanType;
 
-export const BooleanGroupType: React.FC = ({ item, ...rest }) => {
+export const BooleanGroupType: FC = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>

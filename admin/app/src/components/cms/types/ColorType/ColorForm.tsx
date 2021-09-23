@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import slugify from '../../../../utils/slugify';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
@@ -24,8 +24,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ColorForm = (props) => {
-  const { drawerData, onSubmit, onClose, selectedItem, ...rest } = props;
+const ColorForm: FC = ({ drawerData, onSubmit, onClose, selectedItem, ...rest }) => {
   const classes = useStyles();
 
   const [colorData, setColorData] = useState({

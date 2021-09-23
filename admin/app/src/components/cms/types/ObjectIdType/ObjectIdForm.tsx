@@ -6,7 +6,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -27,7 +27,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ObjectIdForm = ({
+const ObjectIdForm: FC = ({
   drawerData,
   readOnly,
   onSubmit,

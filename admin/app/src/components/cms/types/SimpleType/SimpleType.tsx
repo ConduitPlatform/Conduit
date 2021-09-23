@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import TextIcon from '@material-ui/icons/Title';
@@ -45,7 +45,7 @@ const handleIcon = (item, classes) => {
   }
 };
 
-export default function SimpleType({ item, ...rest }) {
+const SimpleType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -67,9 +67,11 @@ export default function SimpleType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function SimpleGroupType({ item, ...rest }) {
+export default SimpleType;
+
+export const SimpleGroupType: FC = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -91,4 +93,4 @@ export function SimpleGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
