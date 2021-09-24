@@ -6,6 +6,7 @@ import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import { makeStyles } from '@material-ui/core/styles';
 import { Schema } from '../../models/cms/CmsModels';
+import { SchemaUI } from './CmsModels';
 
 const useStyles = makeStyles((theme) => ({
   toggleButton: {
@@ -31,8 +32,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  activeSchemas: Schema[];
-  disabledSchemas: Schema[];
+  activeSchemas: SchemaUI[];
+  disabledSchemas: SchemaUI[];
   activeActions: any;
   disabledActions: any;
   handleActions: any;
@@ -55,9 +56,9 @@ const SchemasTable: FC<Props> = ({
   const visibleData = () => {
     let displayedData;
     if (active) {
-      displayedData = activeSchemas.length > 0 ? activeSchemas : null;
+      displayedData = activeSchemas.length > 0 ? (activeSchemas as SchemaUI[]) : null;
     } else {
-      displayedData = disabledSchemas.length > 0 ? disabledSchemas : null;
+      displayedData = disabledSchemas.length > 0 ? (disabledSchemas as SchemaUI[]) : null;
     }
 
     return displayedData

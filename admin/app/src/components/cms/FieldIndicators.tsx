@@ -1,6 +1,6 @@
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
@@ -14,7 +14,18 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const FieldIndicators = ({ item }) => {
+interface Props {
+  item: {
+    isArray: boolean;
+    name: string;
+    required: boolean;
+    select: boolean;
+    type: string;
+    unique: boolean;
+  };
+}
+
+const FieldIndicators: FC<Props> = ({ item }) => {
   const classes = useStyles();
 
   return (

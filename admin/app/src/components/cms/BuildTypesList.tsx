@@ -34,14 +34,32 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  item: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Relation';
+  item:
+    | 'Text'
+    | 'Number'
+    | 'Date'
+    | 'Boolean'
+    | 'Enum'
+    | 'ObjectId'
+    | 'Group'
+    | 'Relation';
   index: number;
 }
 
 const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   const classes = useStyles();
 
-  const handleIcon = (item) => {
+  const handleIcon = (
+    item:
+      | 'Text'
+      | 'Number'
+      | 'Date'
+      | 'Boolean'
+      | 'Enum'
+      | 'ObjectId'
+      | 'Group'
+      | 'Relation'
+  ) => {
     switch (item) {
       case 'Text':
         return <TextIcon />;
@@ -64,7 +82,17 @@ const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
     }
   };
 
-  const handleItem = (item) => {
+  const handleItem = (
+    item:
+      | 'Text'
+      | 'Number'
+      | 'Date'
+      | 'Boolean'
+      | 'Enum'
+      | 'ObjectId'
+      | 'Group'
+      | 'Relation'
+  ) => {
     return (
       <>
         <Box display={'flex'} alignItems={'center'}>

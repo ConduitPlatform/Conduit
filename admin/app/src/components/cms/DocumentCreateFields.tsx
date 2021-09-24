@@ -52,7 +52,7 @@ interface Props {
 
 const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
-  const getCorrectType = (type, event) => {
+  const getCorrectType = (type: any, event: any) => {
     let lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
       return Boolean(event.target.checked);
@@ -68,15 +68,12 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   //Documents do not have standard params so we type them as any
   //TODO indexes are numbers but we initialize them with null
   const handleValueChange = (
-    firstIndex: number | null = null,
-    secondIndex = null,
-    thirdIndex = null,
-    arrayIndex = null,
+    firstIndex: number,
+    secondIndex: number,
+    thirdIndex: number,
+    arrayIndex: number,
     event: React.ChangeEvent<{ value: any }>
   ) => {
-    console.log('firstIndex', firstIndex);
-    console.log('secondIndex:', secondIndex);
-    console.log('arrayIndex', arrayIndex);
     const documentCopy = document.slice();
     if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
       if (arrayIndex !== null) {
@@ -123,8 +120,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     }
   };
 
-  const findType = (type) => {
-    console.log(type);
+  const findType = (type: any) => {
     if (!type) {
       return 'Object';
     }
@@ -190,7 +186,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     );
   };
 
-  const getCorrectInitialType = (type) => {
+  const getCorrectInitialType = (type: 'boolean' | 'number' | 'date') => {
     let lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
       return false;
@@ -204,16 +200,13 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return '';
   };
 
-  const addElementOnArray = (
-    index: any = null,
-    secondIndex: any = null,
-    thirdIndex: any = null
-  ) => {
+  const addElementOnArray = (index: number, secondIndex: number, thirdIndex: number) => {
     const documentCopy = document.slice();
     let newItem;
     let iterableArray;
     if (index !== null && secondIndex === null && thirdIndex === null) {
       newItem = getCorrectInitialType(documentCopy[index].type[0]);
+
       iterableArray = documentCopy[index].value;
       iterableArray = iterableArray ? [...iterableArray] : [];
       documentCopy[index].value = [...iterableArray, newItem];
@@ -242,7 +235,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     setDocument(documentCopy);
   };
 
-  const renderNormalField = (doc: any, index) => {
+  const renderNormalField = (doc: any, index: number) => {
     const isArray = Array.isArray(doc.type) && typeof doc.type[0] === 'string';
     return (
       <Grid
@@ -283,7 +276,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   //TODO function has less params than what we pass on it later on
-  const renderObjectField = (doc: any, index: any = null, innerIndexParam = null) => {
+  const renderObjectField = (doc: any, index: number, innerIndexParam: any = null) => {
     return (
       <Grid
         key={'key-' + doc.name}
@@ -300,7 +293,6 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         </Grid>
         <Grid item xs={12}>
           {doc?.fields?.map((innerDoc: any, indexInner: number) => {
-            console.log('innerDoc', innerDoc);
             if (!innerDoc.type) {
               return renderObjectField(innerDoc, index, indexInner, innerIndexParam);
             }
@@ -365,7 +357,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   const renderFields = () => {
-    return document.map((doc, index) => {
+    return document.map((doc: any, index: number) => {
       return doc.type ? renderNormalField(doc, index) : renderObjectField(doc, index);
     });
   };
@@ -373,10 +365,10 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   //TODO more-fields-available
   const renderInputFields = (
     doc: any,
-    firstIndex: any,
-    secondIndex: any,
-    thirdIndex?: any,
-    arrayIndex?: any
+    firstIndex: number,
+    secondIndex: number,
+    thirdIndex: number,
+    arrayIndex: number
   ) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
