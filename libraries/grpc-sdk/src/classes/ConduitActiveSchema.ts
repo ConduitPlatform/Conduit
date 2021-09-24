@@ -8,11 +8,11 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   constructor(
     dbInstance: DatabaseProvider,
     name: string,
-    fields: ConduitModel,
+    fields?: ConduitModel,
     modelOptions?: ConduitModelOptions,
     collectionName?: string
   ) {
-    super(name, fields, modelOptions, collectionName);
+    super(name, fields ?? {}, modelOptions, collectionName);
     this.dbInstance = dbInstance;
   }
 

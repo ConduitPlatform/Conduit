@@ -53,6 +53,5 @@ export function parseFieldsToTs(fields: any) {
       )}};\n`;
     }
   }
-  console.log(typings);
   return typings;
 }

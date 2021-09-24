@@ -8,19 +8,13 @@ import {
   DatabaseProvider,
 } from '@quintessential-sft/conduit-grpc-sdk';
 
-const schemaOptions = {
-  SCHEMA_OPTIONS
-};
-const collectionName = COLLECTION_NAME;
-const schema = SCHEMA_FIELDS;
-
 export class MODEL_CLASS_NAME extends ConduitActiveSchema<MODEL_CLASS_NAME> {
   private static _instance: MODEL_CLASS_NAME;
   
   FIELDS_PLACEHOLDER
 
   constructor(database: DatabaseProvider) {
-    super(database, MODEL_CLASS_NAME.name, schema, schemaOptions, collectionName);
+    super(database, MODEL_CLASS_NAME.name);
   }
 
   static getInstance(database?: DatabaseProvider) {
@@ -41,9 +35,6 @@ function generateText(schema: SchemaModel) {
     usableText = usableText.replace('MODEL_CLASS_NAME', schemaName);
   }
 
-  usableText = usableText.replace('SCHEMA_OPTIONS', '');
-  usableText = usableText.replace('COLLECTION_NAME', 'undefined');
-  usableText = usableText.replace('SCHEMA_FIELDS', JSON.stringify(schema.fields));
   usableText = usableText.replace('FIELDS_PLACEHOLDER', parseFieldsToTs(schema.fields));
   return usableText;
 }
