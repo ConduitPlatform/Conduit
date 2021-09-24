@@ -69,7 +69,7 @@ const CustomQueryRow: FC<Props> = ({
 }) => {
   let classes = useStyles();
 
-  console.log('selectedInputs', selectedInputs);
+  const [selectedType, setSelectedType] = useState('');
 
   useEffect(() => {
     let type = 'string';
@@ -117,6 +117,7 @@ const CustomQueryRow: FC<Props> = ({
     });
   };
 
+  //TODO more-fields-available
   const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
     let keys = Object?.keys(field?.type);
     let itemTop = (
@@ -155,7 +156,7 @@ const CustomQueryRow: FC<Props> = ({
     return [itemTop, ...restItems];
   };
 
-  const getSubFields = (field, indexQuery) => {
+  const getSubFields = (field: any, indexQuery: any) => {
     if (field?.type) {
       let keys = Object?.keys(field?.type);
 
@@ -206,7 +207,7 @@ const CustomQueryRow: FC<Props> = ({
     return 'ex. John snow';
   };
 
-  const inputCustomChange = (e, i) => {
+  const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i) => {
     let value = e.target.value;
     if (selectedType === 'boolean') {
       value = value !== 'false';
@@ -306,7 +307,7 @@ const CustomQueryRow: FC<Props> = ({
               <option value={'Custom'}>Add a custom value</option>
             </optgroup>
             <optgroup label="Schema Fields">
-              {availableFieldsOfSchema.map((field, index) => (
+              {availableFieldsOfSchema.map((field: any, index: number) => (
                 <option key={`idxS-${index}-field`} value={'Schema-' + field.name}>
                   {field.name}
                 </option>

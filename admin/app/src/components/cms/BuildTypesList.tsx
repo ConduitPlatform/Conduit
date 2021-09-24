@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
@@ -33,8 +33,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesList = (props) => {
-  const { item, index, ...rest } = props;
+interface Props {
+  item: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Relation';
+  index: number;
+}
+
+const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   const classes = useStyles();
 
   const handleIcon = (item) => {
@@ -60,7 +64,7 @@ const BuildTypesList = (props) => {
     }
   };
 
-  const handleItem = (item: any) => {
+  const handleItem = (item) => {
     return (
       <>
         <Box display={'flex'} alignItems={'center'}>

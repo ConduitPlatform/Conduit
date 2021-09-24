@@ -65,14 +65,18 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     }
     return event.target ? event.target.value : event;
   };
-
+  //Documents do not have standard params so we type them as any
+  //TODO indexes are numbers but we initialize them with null
   const handleValueChange = (
-    firstIndex = null,
+    firstIndex: number | null = null,
     secondIndex = null,
     thirdIndex = null,
     arrayIndex = null,
     event: React.ChangeEvent<{ value: any }>
   ) => {
+    console.log('firstIndex', firstIndex);
+    console.log('secondIndex:', secondIndex);
+    console.log('arrayIndex', arrayIndex);
     const documentCopy = document.slice();
     if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
       if (arrayIndex !== null) {
@@ -120,6 +124,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   const findType = (type) => {
+    console.log(type);
     if (!type) {
       return 'Object';
     }
@@ -130,10 +135,10 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   const renderArrayContent = (
-    docs,
-    firstIndex = null,
-    secondIndex = null,
-    thirdIndex = null
+    docs: any,
+    firstIndex: any = null,
+    secondIndex: any = null,
+    thirdIndex: any = null
   ) => {
     return (
       <Accordion className={classes.accordion}>
@@ -146,7 +151,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         </AccordionSummary>
         <AccordionDetails
           style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {docs?.value?.map((doc, arrayIndex) => {
+          {docs?.value?.map((doc: any, arrayIndex: number) => {
             let data = { value: doc, type: docs.type[0] };
             return (
               <Grid
@@ -199,7 +204,11 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return '';
   };
 
-  const addElementOnArray = (index = null, secondIndex = null, thirdIndex = null) => {
+  const addElementOnArray = (
+    index: any = null,
+    secondIndex: any = null,
+    thirdIndex: any = null
+  ) => {
     const documentCopy = document.slice();
     let newItem;
     let iterableArray;
@@ -272,7 +281,9 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
       </Grid>
     );
   };
-  const renderObjectField = (doc, index = null, innerIndexParam = null) => {
+
+  //TODO function has less params than what we pass on it later on
+  const renderObjectField = (doc: any, index: any = null, innerIndexParam = null) => {
     return (
       <Grid
         key={'key-' + doc.name}
@@ -288,7 +299,8 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
           <Divider />
         </Grid>
         <Grid item xs={12}>
-          {doc?.fields?.map((innerDoc, indexInner) => {
+          {doc?.fields?.map((innerDoc: any, indexInner: number) => {
+            console.log('innerDoc', innerDoc);
             if (!innerDoc.type) {
               return renderObjectField(innerDoc, index, indexInner, innerIndexParam);
             }
@@ -358,7 +370,14 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     });
   };
 
-  const renderInputFields = (doc, firstIndex, secondIndex, thirdIndex, arrayIndex) => {
+  //TODO more-fields-available
+  const renderInputFields = (
+    doc: any,
+    firstIndex: any,
+    secondIndex: any,
+    thirdIndex?: any,
+    arrayIndex?: any
+  ) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
         <Switch
