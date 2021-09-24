@@ -10,6 +10,7 @@ import Button from '@material-ui/core/Button';
 import EnumForm from './types/EnumType/EnumForm';
 import ObjectIdForm from './types/ObjectIdType/ObjectIdForm';
 import RelationForm from './types/RelationType/RelationForm';
+import { IDrawerData } from '../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   drawerPaper: {
@@ -29,14 +30,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface DrawerDataProps {
-  open: boolean;
-  type: string;
-  destination: any;
-}
-
 interface Props {
-  drawerData: DrawerDataProps;
+  drawerData: IDrawerData;
   readOnly: boolean;
   onSubmit: (data: any) => void;
   onClose: () => void;
@@ -57,7 +52,7 @@ const BuildTypesDrawer: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const handleForm = (data: DrawerDataProps) => {
+  const handleForm = (data: IDrawerData) => {
     switch (data.type) {
       case 'Text':
         return (

@@ -7,7 +7,6 @@ import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
 import { BooleanGroupType } from '../BooleanType/BooleanType';
-import { SelectGroupType } from '../SelectType/SelectType';
 import Tooltip from '@material-ui/core/Tooltip';
 import GroupIcon from '@material-ui/icons/PlaylistAdd';
 import FieldIndicators from '../../FieldIndicators';
@@ -67,8 +66,6 @@ const GroupGroupType: FC = ({
         return <SimpleGroupType item={item} />;
       case 'Boolean':
         return <BooleanGroupType item={item} />;
-      case 'Select':
-        return <SelectGroupType item={item} />;
       default:
         return null;
     }

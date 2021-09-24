@@ -55,3 +55,13 @@ export interface IRelationData {
   select: boolean;
   type: 'Relation';
 }
+
+export interface ISimpleData {
+  default: string;
+  isArray: boolean;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'Text' | 'Number' | 'Date';
+  unique: boolean;
+}
