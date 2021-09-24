@@ -29,3 +29,12 @@ export interface IBooleanData {
   type: 'Boolean';
   unique: boolean;
 }
+
+export interface IEnumData {
+  enumValues: string;
+  isEnum: boolean;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'Text' | 'Number';
+}

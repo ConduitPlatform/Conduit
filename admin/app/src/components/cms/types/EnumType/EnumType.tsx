@@ -6,6 +6,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { makeStyles } from '@material-ui/core/styles';
 import SelectIcon from '@material-ui/icons/FormatListBulleted';
 import Grid from '@material-ui/core/Grid';
+import { IEnumData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -18,7 +19,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const EnumType: FC = ({ item, ...rest }) => {
+interface IProps {
+  item: IEnumData;
+}
+
+const EnumType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -30,7 +35,7 @@ const EnumType: FC = ({ item, ...rest }) => {
               <SelectIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              enum placeholder
             </Typography>
           </Box>
         </Grid>
@@ -46,7 +51,7 @@ const EnumType: FC = ({ item, ...rest }) => {
 
 export default EnumType;
 
-export const EnumGroupType = ({ item, ...rest }) => {
+export const EnumGroupType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -58,7 +63,7 @@ export const EnumGroupType = ({ item, ...rest }) => {
               <SelectIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              enum placeholder
             </Typography>
           </Box>
         </Grid>

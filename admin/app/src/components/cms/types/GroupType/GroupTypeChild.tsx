@@ -6,7 +6,6 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
-import { ColorGroupType } from '../ColorType/ColorType';
 import { BooleanGroupType } from '../BooleanType/BooleanType';
 import { SelectGroupType } from '../SelectType/SelectType';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -66,8 +65,6 @@ const GroupGroupType: FC = ({
         return <SimpleGroupType item={item} />;
       case 'Date':
         return <SimpleGroupType item={item} />;
-      case 'Color':
-        return <ColorGroupType item={item} />;
       case 'Boolean':
         return <BooleanGroupType item={item} />;
       case 'Select':

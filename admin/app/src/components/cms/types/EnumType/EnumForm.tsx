@@ -12,6 +12,7 @@ import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { FC, useState } from 'react';
+import { IDrawerData, IEnumData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -36,7 +37,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const EnumForm: FC = ({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IEnumData;
+}
+
+const EnumForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -55,11 +64,11 @@ const EnumForm: FC = ({
     isEnum: selectedItem ? selectedItem.isEnum : true,
   });
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
-  const handleFieldType = (event) => {
+  const handleFieldType = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
     setSimpleData({ ...simpleData, type: event.target.value });
   };
 
@@ -71,11 +80,11 @@ const EnumForm: FC = ({
     setSimpleData({ ...simpleData, select: !simpleData.select });
   };
 
-  const handleOptions = (event) => {
+  const handleOptions = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, enumValues: event.target.value });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(simpleData);
     event.preventDefault();
   };
@@ -90,7 +99,7 @@ const EnumForm: FC = ({
         variant="outlined"
         className={classes.textField}
         fullWidth
-        requiredInputProps={{
+        inputProps={{
           readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
