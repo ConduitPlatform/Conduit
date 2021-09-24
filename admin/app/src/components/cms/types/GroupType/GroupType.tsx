@@ -15,6 +15,11 @@ import { ObjectIdGroupType } from '../ObjectIdType/ObjectIdType';
 import { RelationGroupType } from '../RelationType/RelationType';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
 import GroupGroupType from './GroupTypeChild';
+import {
+  IGroupChildContentData,
+  IGroupChildData,
+  IGroupData,
+} from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -50,7 +55,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GroupType: FC = ({
+interface IProps {
+  item: IGroupData;
+  groupIndex: number;
+  handleDelete: (index: number, groupIndex: number) => void;
+  handleDrawer: any;
+  handleGroupDelete: any;
+  handleGroupDrawer: any;
+}
+
+const GroupType: FC<IProps> = ({
   item,
   groupIndex,
   handleDelete,
@@ -61,11 +75,14 @@ const GroupType: FC = ({
 }) => {
   const classes = useStyles();
 
-  const handleGroupContent = (item, index) => {
+  const handleGroupContent = (
+    item: IGroupChildContentData | IGroupChildData,
+    index: number
+  ) => {
     switch (item.type) {
       case 'Text':
         return item.isEnum ? (
-          <EnumGroupType item={item} />
+          <EnumGroupType item={item} /> //needs changes
         ) : (
           <SimpleGroupType item={item} />
         );

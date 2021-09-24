@@ -8,6 +8,7 @@ import Grid from '@material-ui/core/Grid';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Checkbox from '@material-ui/core/Checkbox';
+import { IDrawerData, IGroupData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -28,7 +29,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GroupForm: FC = ({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IGroupData;
+}
+
+const GroupForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -53,7 +62,7 @@ const GroupForm: FC = ({
   //   setGroupData({ ...groupData, type: drawerData.type });
   // }, [drawerData.open, drawerData.type, groupData]);
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setGroupData({ ...groupData, name: event.target.value });
   };
 
@@ -69,7 +78,7 @@ const GroupForm: FC = ({
     setGroupData({ ...groupData, isArray: !groupData.isArray });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(groupData);
     event.preventDefault();
   };

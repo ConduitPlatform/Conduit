@@ -11,6 +11,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import GroupIcon from '@material-ui/icons/PlaylistAdd';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
+import { IGroupChildData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -46,7 +47,20 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const GroupGroupType: FC = ({
+interface IProps {
+  item: IGroupChildData;
+  groupIndex: number;
+  itemIndex: number;
+  handleGroupDelete: (index: number, groupIndex: number, itemIndex: number) => void;
+  handleGroupDrawer: (
+    groupItem: any,
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => void;
+}
+
+const GroupGroupType: FC<IProps> = ({
   item,
   groupIndex,
   itemIndex,
@@ -56,7 +70,7 @@ const GroupGroupType: FC = ({
 }) => {
   const classes = useStyles();
 
-  const handleGroupContent = (item) => {
+  const handleGroupContent = (item: any) => {
     switch (item.type) {
       case 'Text':
         return <SimpleGroupType item={item} />;

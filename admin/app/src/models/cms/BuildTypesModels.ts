@@ -17,6 +17,28 @@ export interface IDrawerData {
   type: IDrawerTypes;
 }
 
+export type ISimpleDataTypes = 'Text' | 'Number' | 'Date';
+
+export interface ISimpleData {
+  default: string;
+  isArray: boolean;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: ISimpleDataTypes;
+  unique: boolean;
+  isEnum?: boolean;
+}
+
+export interface IEnumData {
+  enumValues: string;
+  isEnum: boolean;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'Text' | 'Number';
+}
+
 export interface IBooleanData {
   default: boolean;
   id: string;
@@ -28,15 +50,6 @@ export interface IBooleanData {
   select: boolean;
   type: 'Boolean';
   unique: boolean;
-}
-
-export interface IEnumData {
-  enumValues: string;
-  isEnum: boolean;
-  name: string;
-  required: boolean;
-  select: boolean;
-  type: 'Text' | 'Number';
 }
 
 export interface IObjectData {
@@ -56,14 +69,31 @@ export interface IRelationData {
   type: 'Relation';
 }
 
-export type ISimpleDataTypes = 'Text' | 'Number' | 'Date';
+export type IGroupContentData = IGroupChildContentData | IGroupChildData | [];
 
-export interface ISimpleData {
-  default: string;
+export interface IGroupData {
+  content: IGroupContentData;
   isArray: boolean;
   name: string;
   required: boolean;
   select: boolean;
-  type: ISimpleDataTypes;
+  type: 'Group';
+  unique: boolean;
+}
+
+export type IGroupChildContentData =
+  | ISimpleData
+  | IBooleanData
+  | IEnumData
+  | IRelationData
+  | IObjectData;
+
+export interface IGroupChildData {
+  content: IGroupChildContentData;
+  isArray: boolean;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'Group';
   unique: boolean;
 }
