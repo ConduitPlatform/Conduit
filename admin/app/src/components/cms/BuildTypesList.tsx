@@ -60,7 +60,7 @@ const BuildTypesList = (props) => {
     }
   };
 
-  const handleItem = (item) => {
+  const handleItem = (item: any) => {
     return (
       <>
         <Box display={'flex'} alignItems={'center'}>
@@ -81,11 +81,11 @@ const BuildTypesList = (props) => {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}>
-            {handleItem(item, index)}
+            {handleItem(item)}
           </Card>
           {snapshot.isDragging && (
             <Card className={clsx(classes.item, classes.itemClone)}>
-              {handleItem(item, index)}
+              {handleItem(item)}
             </Card>
           )}
         </>

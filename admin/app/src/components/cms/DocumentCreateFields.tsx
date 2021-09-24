@@ -45,7 +45,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  disabled: boolean;
+  disabled: any;
   document: any;
   setDocument: any;
 }
@@ -71,7 +71,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     secondIndex = null,
     thirdIndex = null,
     arrayIndex = null,
-    event
+    event: React.ChangeEvent<{ value: any }>
   ) => {
     const documentCopy = document.slice();
     if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
@@ -233,7 +233,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     setDocument(documentCopy);
   };
 
-  const renderNormalField = (doc, index) => {
+  const renderNormalField = (doc: any, index) => {
     const isArray = Array.isArray(doc.type) && typeof doc.type[0] === 'string';
     return (
       <Grid

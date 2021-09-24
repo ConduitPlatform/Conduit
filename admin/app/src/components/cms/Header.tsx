@@ -106,7 +106,7 @@ const Header: FC<Props> = ({
     }
   }, [authentication, crudOperations, name]);
 
-  const handleDataName = (event) => {
+  const handleDataName = (event: React.ChangeEvent<{ value: any }>) => {
     setSchemaName(event.target.value);
   };
 
@@ -121,11 +121,14 @@ const Header: FC<Props> = ({
   return (
     <Box className={clsx(classes.header, classes.colorWhite)} {...rest}>
       <Box display={'flex'} alignItems={'center'}>
-        <Link href="/cms" onClick={() => clearSelectedSchema}>
+        <Link href="/cms">
           {/* TODO call dispatch clear cms */}
           <a style={{ textDecoration: 'none' }} onClick={handleBackButtonClick}>
             <Box className={classes.backIconContainer}>
-              <ArrowBackIcon className={clsx(classes.backIcon, classes.colorWhite)} />
+              <ArrowBackIcon
+                onClick={() => clearSelectedSchema}
+                className={clsx(classes.backIcon, classes.colorWhite)}
+              />
             </Box>
           </a>
         </Link>

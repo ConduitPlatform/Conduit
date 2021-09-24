@@ -38,7 +38,13 @@ interface Props {
   index: number;
   query: any;
   availableFieldsOfSchema: any;
-  selectedInputs: any;
+  selectedInputs: {
+    array: boolean;
+    location: number;
+    name: string;
+    optional: boolean;
+    type: string;
+  }[];
   editMode: boolean;
   handleQueryFieldChange: any;
   handleQueryConditionChange: any;
@@ -63,7 +69,7 @@ const CustomQueryRow: FC<Props> = ({
 }) => {
   let classes = useStyles();
 
-  const [selectedType, setSelectedType] = useState('');
+  console.log('selectedInputs', selectedInputs);
 
   useEffect(() => {
     let type = 'string';
@@ -94,8 +100,8 @@ const CustomQueryRow: FC<Props> = ({
     selectedInputs,
   ]);
 
-  const prepareOptions = (schemaField, indexQuery) => {
-    return availableFieldsOfSchema.map((field, index) => {
+  const prepareOptions = (schemaField: any, indexQuery: any) => {
+    return availableFieldsOfSchema.map((field: any, index: number) => {
       if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
           <MenuItem
@@ -111,7 +117,7 @@ const CustomQueryRow: FC<Props> = ({
     });
   };
 
-  const getSecondSubField = (field, valuePrefix, suffix) => {
+  const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
     let keys = Object?.keys(field?.type);
     let itemTop = (
       <MenuItem
