@@ -56,12 +56,14 @@ export interface IRelationData {
   type: 'Relation';
 }
 
+export type ISimpleDataTypes = 'Text' | 'Number' | 'Date';
+
 export interface ISimpleData {
   default: string;
   isArray: boolean;
   name: string;
   required: boolean;
   select: boolean;
-  type: 'Text' | 'Number' | 'Date';
+  type: ISimpleDataTypes;
   unique: boolean;
 }
