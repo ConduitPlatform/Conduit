@@ -16,6 +16,7 @@ import Typography from '@material-ui/core/Typography';
 import React, { FC, useEffect, useState } from 'react';
 import { asyncGetCmsSchemas } from '../../../../redux/slices/cmsSlice';
 import { useAppDispatch, useAppSelector } from '../../../../redux/store';
+import { IDrawerData, IRelationData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -52,7 +53,15 @@ const MenuProps = {
   },
 };
 
-const RelationForm: FC = ({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IRelationData;
+}
+
+const RelationForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -75,7 +84,7 @@ const RelationForm: FC = ({
     isArray: selectedItem ? selectedItem.isArray : false,
     model: selectedItem ? selectedItem.model : '',
   });
-  const [availableSchemas, setAvailableSchemas] = useState([]);
+  const [availableSchemas, setAvailableSchemas] = useState<any>([]);
 
   useEffect(() => {
     dispatch(asyncGetCmsSchemas(1000));
@@ -89,9 +98,9 @@ const RelationForm: FC = ({
     }
 
     setAvailableSchemas([...activeModules, ...systemModules]);
-  }, [schemas, schemasFromOtherModules]);
+  }, [schemas, schemasFromOtherModules, selectedSchema]);
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
@@ -107,11 +116,13 @@ const RelationForm: FC = ({
     setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
   };
 
-  const handleFieldRelation = (event) => {
-    setSimpleData({ ...simpleData, model: event.target.value });
+  const handleFieldRelation = (
+    event: React.ChangeEvent<{ name?: string; value: unknown }>
+  ) => {
+    setSimpleData({ ...simpleData, model: event.target.value as string });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(simpleData);
     event.preventDefault();
   };
@@ -228,9 +239,9 @@ const RelationForm: FC = ({
           label={'Relation'}
           value={simpleData.model}
           onChange={handleFieldRelation}
-          renderValue={(selected) => selected}
+          renderValue={() => simpleData.model}
           MenuProps={MenuProps}>
-          {availableSchemas.map((schema) => (
+          {availableSchemas.map((schema: any) => (
             <MenuItem key={schema.name} value={schema.name}>
               <Checkbox checked={simpleData.model === schema.name} color={'primary'} />
               <ListItemText primary={schema.name} />

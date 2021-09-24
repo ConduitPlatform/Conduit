@@ -46,3 +46,12 @@ export interface IObjectData {
   type: 'ObjectId';
   unique: boolean;
 }
+
+export interface IRelationData {
+  isArray: boolean;
+  model: string;
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'Relation';
+}

@@ -6,6 +6,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import FieldIndicators from '../../FieldIndicators';
 import DeviceHubIcon from '@material-ui/icons/DeviceHub';
 import Grid from '@material-ui/core/Grid';
+import { IRelationData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -18,7 +19,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const RelationType: FC = ({ item, ...rest }) => {
+interface IProps {
+  item: IRelationData;
+}
+
+const RelationType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -30,7 +35,7 @@ const RelationType: FC = ({ item, ...rest }) => {
               <DeviceHubIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              relation placeholder
             </Typography>
           </Box>
         </Grid>
@@ -46,7 +51,7 @@ const RelationType: FC = ({ item, ...rest }) => {
 
 export default RelationType;
 
-export const RelationGroupType: FC = ({ item, ...rest }) => {
+export const RelationGroupType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -58,7 +63,7 @@ export const RelationGroupType: FC = ({ item, ...rest }) => {
               <DeviceHubIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              relation placeholder
             </Typography>
           </Box>
         </Grid>
