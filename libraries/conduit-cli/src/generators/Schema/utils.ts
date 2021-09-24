@@ -25,19 +25,32 @@ export function parseFieldsToTs(fields: any) {
       typings += `${field}${fields[field].required ? '!' : ''}: ${types};\n`;
     } else if (fields[field].type === 'Relation') {
       let name =
-        fields[field].model.charAt(0).toUpperCase() +
-        fields[field].model.slice(1) +
-        'ActiveSchema';
+        fields[field].model.charAt(0).toUpperCase() + fields[field].model.slice(1);
       typings += `${field}${fields[field].required ? '!' : ''}: ${name};\n`;
     } else if (typeof fields[field].type === 'string') {
       typings += `${field}${fields[field].required ? '!' : ''}: ${extractType(
         fields[field].type
       )};\n`;
+    } else if (
+      Array.isArray(fields[field].type) &&
+      typeof fields[field].type[0] === 'object'
+    ) {
+      if (fields[field].type[0].type) {
+        let fieldParse = parseFieldsToTs({ [field]: fields[field].type[0] });
+        fieldParse = fieldParse.replace(';', '[];');
+        typings += fieldParse;
+      } else {
+        let fieldParse = parseFieldsToTs(fields[field].type[0]);
+        typings += `${field}${fields[field].required ? '!' : ''}: {${fieldParse}}[];\n`;
+      }
     } else if (Array.isArray(fields[field].type)) {
-      console.log(parseFieldsToTs(fields[field].type[0]));
-      typings += `${field}${fields[field].required ? '!' : ''}: {${parseFieldsToTs(
+      typings += `${field}${fields[field].required ? '!' : ''}: ${extractType(
         fields[field].type[0]
-      )}}[];\n`;
+      )}[];\n`;
+    } else if (typeof fields[field].type === 'object') {
+      typings += `${field}${fields[field].required ? '!' : ''}: {${parseFieldsToTs(
+        fields[field].type
+      )}};\n`;
     }
   }
   console.log(typings);

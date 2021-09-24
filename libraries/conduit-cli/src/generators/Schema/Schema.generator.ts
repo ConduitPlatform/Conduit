@@ -37,7 +37,6 @@ export class MODEL_CLASS_NAME extends ConduitActiveSchema<MODEL_CLASS_NAME> {
 function generateText(schema: SchemaModel) {
   let usableText = MODEL_TEMPLATE.toString();
   let schemaName = schema.name.charAt(0).toUpperCase() + schema.name.slice(1);
-  schemaName += 'ActiveSchema';
   while (usableText.indexOf('MODEL_CLASS_NAME') !== -1) {
     usableText = usableText.replace('MODEL_CLASS_NAME', schemaName);
   }

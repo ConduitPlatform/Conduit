@@ -13,6 +13,11 @@ export async function recoverCredentials(command: Command) {
   return requestClient;
 }
 
+export async function recoverUrl(command: Command) {
+  const apiConfig = await fs.readJSON(path.join(command.config.configDir, 'config.json'));
+  return { url: apiConfig.url, masterKey: apiConfig.masterKey };
+}
+
 export async function storeCredentials(
   command: Command,
   environment: { url: string; masterKey: string },

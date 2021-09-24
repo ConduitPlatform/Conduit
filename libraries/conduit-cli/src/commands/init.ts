@@ -1,7 +1,7 @@
 import { Command, flags } from '@oclif/command';
 import cli from 'cli-ux';
 import { Requests } from '../http/http';
-import { storeCredentials } from '../utils/requestUtils';
+import { recoverUrl, storeCredentials } from '../utils/requestUtils';
 
 export default class Init extends Command {
   static description = 'Initialize the CLI to communicate with Conduit';
@@ -14,12 +14,20 @@ You have logged in!
 
   static flags = {
     help: flags.help({ char: 'h' }),
+    relogin: flags.string({ char: 'r', description: 'Reuses url and master key' }),
   };
 
   async run() {
     const { args, flags } = this.parse(Init);
-    const url = await cli.prompt('Add the API url of your conduit installation');
-    const masterKey = await cli.prompt('Add the master key of your conduit installation');
+    let url, masterKey;
+    if (flags.relogin) {
+      let obj = await recoverUrl(this);
+      url = obj.url;
+      masterKey = obj.masterKey;
+    } else {
+      url = await cli.prompt('Add the API url of your conduit installation');
+      masterKey = await cli.prompt('Add the master key of your conduit installation');
+    }
     const adminUsername = await cli.prompt('Add the admin username');
     const adminPassword = await cli.prompt('Add the admin password');
     let requestInstance = new Requests(url, masterKey);
