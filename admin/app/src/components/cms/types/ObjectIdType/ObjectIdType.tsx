@@ -6,6 +6,7 @@ import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
+import { IObjectData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -18,7 +19,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ObjectIdType: FC = ({ item, ...rest }) => {
+interface IProps {
+  item: IObjectData;
+}
+
+const ObjectIdType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -30,7 +35,7 @@ const ObjectIdType: FC = ({ item, ...rest }) => {
               <CodeIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              object placeholder
             </Typography>
           </Box>
         </Grid>
@@ -46,7 +51,7 @@ const ObjectIdType: FC = ({ item, ...rest }) => {
 
 export default ObjectIdType;
 
-export const ObjectIdGroupType: FC = ({ item, ...rest }) => {
+export const ObjectIdGroupType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -58,7 +63,7 @@ export const ObjectIdGroupType: FC = ({ item, ...rest }) => {
               <CodeIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              object placeholder
             </Typography>
           </Box>
         </Grid>

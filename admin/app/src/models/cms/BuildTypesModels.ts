@@ -38,3 +38,11 @@ export interface IEnumData {
   select: boolean;
   type: 'Text' | 'Number';
 }
+
+export interface IObjectData {
+  name: string;
+  required: boolean;
+  select: boolean;
+  type: 'ObjectId';
+  unique: boolean;
+}

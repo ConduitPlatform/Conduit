@@ -7,6 +7,7 @@ import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { FC, useState } from 'react';
+import { IDrawerData, IObjectData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -27,7 +28,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ObjectIdForm: FC = ({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IObjectData;
+}
+
+const ObjectIdForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
@@ -45,7 +54,7 @@ const ObjectIdForm: FC = ({
     required: selectedItem ? selectedItem.required : false,
   });
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
@@ -61,7 +70,7 @@ const ObjectIdForm: FC = ({
     setSimpleData({ ...simpleData, select: !simpleData.select });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(simpleData);
     event.preventDefault();
   };
