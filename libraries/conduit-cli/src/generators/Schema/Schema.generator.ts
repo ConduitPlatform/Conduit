@@ -8,6 +8,8 @@ import {
   DatabaseProvider,
 } from '@quintessential-sft/conduit-grpc-sdk';
 
+IMPORTS_PLACEHOLDER
+
 export class MODEL_CLASS_NAME extends ConduitActiveSchema<MODEL_CLASS_NAME> {
   private static _instance: MODEL_CLASS_NAME;
   
@@ -34,8 +36,10 @@ function generateText(schema: SchemaModel) {
   while (usableText.indexOf('MODEL_CLASS_NAME') !== -1) {
     usableText = usableText.replace('MODEL_CLASS_NAME', schemaName);
   }
+  let parsing = parseFieldsToTs(schema.fields);
 
-  usableText = usableText.replace('FIELDS_PLACEHOLDER', parseFieldsToTs(schema.fields));
+  usableText = usableText.replace('FIELDS_PLACEHOLDER', parsing.typings);
+  usableText = usableText.replace('IMPORTS_PLACEHOLDER', parsing.imports);
   return usableText;
 }
 
