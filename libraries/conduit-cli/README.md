@@ -15,11 +15,11 @@ The CLI to help you when developing conduit
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g conduit-cli
+$ npm install -g @quintessential-sft/conduit-cli
 $ conduit COMMAND
 running command...
 $ conduit (-v|--version|version)
-conduit-cli/0.0.1 darwin-x64 node-v14.16.0
+@quintessential-sft/conduit-cli/0.0.2 darwin-x64 node-v14.16.0
 $ conduit --help [COMMAND]
 USAGE
   $ conduit COMMAND
@@ -49,7 +49,7 @@ EXAMPLE
   You have logged in!
 ```
 
-_See code: [src/commands/generateSchema.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.1/src/commands/generateSchema.ts)_
+_See code: [src/commands/generateSchema.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.2/src/commands/generateSchema.ts)_
 
 ## `conduit hello [FILE]`
 
@@ -69,7 +69,7 @@ EXAMPLE
   hello world from ./src/hello.ts!
 ```
 
-_See code: [src/commands/hello.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.1/src/commands/hello.ts)_
+_See code: [src/commands/hello.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.2/src/commands/hello.ts)_
 
 ## `conduit help [COMMAND]`
 
@@ -105,5 +105,5 @@ EXAMPLE
   You have logged in!
 ```
 
-_See code: [src/commands/init.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.1/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/Quintessential-SFT/conduit/blob/v0.0.2/src/commands/init.ts)_
 <!-- commandsstop -->

@@ -1,7 +1,7 @@
 {
-  "name": "conduit-cli",
+  "name": "@quintessential-sft/conduit-cli",
   "description": "The CLI to help you when developing conduit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Quintessential SFT",
   "bin": {
     "conduit": "./bin/run"
