@@ -54,7 +54,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
   }, [typeName]);
 
   const handleTypeName = (event: React.ChangeEvent<{ value: any }>) => {
-    setTypeName(event.target.value);
+    setTypeName(event.target.value.split(' ').join(''));
   };
 
   const handleAddType = () => {
