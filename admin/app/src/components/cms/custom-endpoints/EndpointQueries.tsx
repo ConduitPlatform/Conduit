@@ -60,7 +60,7 @@ const EndpointQueries: FC<Props> = ({
 
   const findModifiedQuery = (allQueries: any, queryId: any) => {
     allQueries = deconstructQueries(allQueries);
-    return allQueries.find((q) => q._id === queryId);
+    return allQueries.find((q: any) => q._id === queryId);
   };
 
   const handleQueryFieldChange = (
@@ -182,7 +182,7 @@ const EndpointQueries: FC<Props> = ({
           <StyledTreeItem
             key={node._id}
             nodeId={node._id}
-            onLabelClick={(e) => e.preventDefault()}
+            onLabelClick={(e: any) => e.preventDefault()}
             label={
               <TreeItemContent
                 editMode={editMode}
@@ -190,12 +190,12 @@ const EndpointQueries: FC<Props> = ({
                 handleAddQuery={() => handleAddQuery(node._id)}
                 handleAddNode={() => handleAddNode(node._id)}
                 handleRemoveNode={() => handleRemoveNode(node._id)}
-                handleOperatorChange={(operator) =>
+                handleOperatorChange={(operator: any) =>
                   handleOperatorChange(node._id, node.operator, operator)
                 }
               />
             }>
-            {node.queries.map((q) => renderItem(q))}
+            {node.queries.map((q: any) => renderItem(q))}
           </StyledTreeItem>
         </Box>
       );
@@ -205,7 +205,7 @@ const EndpointQueries: FC<Props> = ({
         <StyledTreeItem
           key={node._id}
           nodeId={node._id}
-          onLabelClick={(e) => e.preventDefault()}
+          onLabelClick={(e: any) => e.preventDefault()}
           label={
             <Grid
               container
@@ -239,7 +239,7 @@ const EndpointQueries: FC<Props> = ({
         defaultCollapseIcon={<MinusSquare />}
         defaultExpandIcon={<PlusSquare />}
         defaultEndIcon={<CloseSquare />}
-        onNodeSelect={(e) => e.preventDefault()}
+        onNodeSelect={(e: React.ChangeEvent<{}>) => e.preventDefault()}
         onNodeToggle={(e) => e.preventDefault()}>
         {selectedQueries.map((q: any) => renderItem(q))}
       </TreeView>
