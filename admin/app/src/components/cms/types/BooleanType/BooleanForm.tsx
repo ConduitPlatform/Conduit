@@ -1,3 +1,4 @@
+import React, { FC, MouseEventHandler, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
@@ -7,7 +8,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { FC, MouseEventHandler, useState } from 'react';
 import slugify from '../../../../utils/slugify';
 import { IBooleanData, IDrawerData } from '../../../../models/cms/BuildTypesModels';
 
@@ -45,7 +45,7 @@ const BooleanForm: FC<IProps> = ({
   onClose,
   selectedItem,
   ...rest
-}) => {
+}) {
   const classes = useStyles();
 
   const [booleanData, setBooleanData] = useState({
@@ -298,6 +298,6 @@ const BooleanForm: FC<IProps> = ({
       </Box>
     </form>
   );
-};
+}
 
 export default BooleanForm;

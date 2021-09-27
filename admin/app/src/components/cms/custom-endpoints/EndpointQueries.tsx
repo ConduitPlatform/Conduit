@@ -45,9 +45,9 @@ const EndpointQueries: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const deconstructQueries = (queries) => {
-    let allQueries = [];
-    queries.forEach((query) => {
+  const deconstructQueries = (queries: any) => {
+    let allQueries: any = [];
+    queries.forEach((query: any) => {
       if ('operator' in query) {
         allQueries = allQueries.concat(deconstructQueries(query.queries));
       } else {
@@ -58,12 +58,15 @@ const EndpointQueries: FC<Props> = ({
     return allQueries;
   };
 
-  const findModifiedQuery = (allQueries, queryId) => {
+  const findModifiedQuery = (allQueries: any, queryId: any) => {
     allQueries = deconstructQueries(allQueries);
-    return allQueries.find((q) => q._id === queryId);
+    return allQueries.find((q: any) => q._id === queryId);
   };
 
-  const handleQueryFieldChange = (event, queryId) => {
+  const handleQueryFieldChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    queryId: string
+  ) => {
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
     const value = event.target.value;
@@ -73,7 +76,10 @@ const EndpointQueries: FC<Props> = ({
     }
   };
 
-  const handleQueryComparisonFieldChange = (event, queryId) => {
+  const handleQueryComparisonFieldChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    queryId: string
+  ) => {
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
 
@@ -87,7 +93,10 @@ const EndpointQueries: FC<Props> = ({
     }
   };
 
-  const handleCustomValueChange = (event, queryId) => {
+  const handleCustomValueChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    queryId: string
+  ) => {
     const value = event;
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
@@ -97,7 +106,10 @@ const EndpointQueries: FC<Props> = ({
     }
   };
 
-  const handleQueryConditionChange = (event, queryId) => {
+  const handleQueryConditionChange = (
+    event: React.ChangeEvent<{ value: any }>,
+    queryId: string
+  ) => {
     const value = event.target.value;
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
@@ -107,7 +119,10 @@ const EndpointQueries: FC<Props> = ({
     }
   };
 
-  const handleLikeValueChange = (event, queryId) => {
+  const handleLikeValueChange = (
+    event: React.ChangeEvent<{ checked: boolean }>,
+    queryId: string
+  ) => {
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
 
@@ -122,8 +137,8 @@ const EndpointQueries: FC<Props> = ({
     const currentQueries = deepClone(selectedQueries);
     let foundIndex = -1;
 
-    currentQueries.forEach((topNode) => {
-      topNode.queries.forEach((q1, index1: number) => {
+    currentQueries.forEach((topNode: any) => {
+      topNode.queries.forEach((q1: any, index1: number) => {
         if (q1._id === queryId) {
           foundIndex = index1;
         }
@@ -131,14 +146,14 @@ const EndpointQueries: FC<Props> = ({
           topNode.queries.splice(foundIndex, 1);
         } else {
           if ('queries' in q1) {
-            q1.queries.forEach((q2, index2: number) => {
+            q1.queries.forEach((q2: any, index2: number) => {
               if (q2._id === queryId) {
                 foundIndex = index2;
               }
               if (foundIndex !== -1) {
                 q1.queries.splice(foundIndex, 1);
               } else {
-                q2.queries.forEach((q3, index3: number) => {
+                q2.queries.forEach((q3: any, index3: number) => {
                   if (q3._id === queryId) {
                     foundIndex = index3;
                   }
@@ -156,18 +171,18 @@ const EndpointQueries: FC<Props> = ({
     setSelectedQueries(currentQueries);
   };
 
-  const handleOperatorChange = (index: number, oldOperator, newOperator) => {
+  const handleOperatorChange = (index: number, oldOperator: any, newOperator: any) => {
     handleChangeNodeOperator(index, oldOperator, newOperator);
   };
 
-  const renderItem = (node) => {
+  const renderItem = (node: any) => {
     if ('operator' in node && node.queries) {
       return (
         <Box key={node._id}>
           <StyledTreeItem
             key={node._id}
             nodeId={node._id}
-            onLabelClick={(e) => e.preventDefault()}
+            onLabelClick={(e: any) => e.preventDefault()}
             label={
               <TreeItemContent
                 editMode={editMode}
@@ -175,12 +190,12 @@ const EndpointQueries: FC<Props> = ({
                 handleAddQuery={() => handleAddQuery(node._id)}
                 handleAddNode={() => handleAddNode(node._id)}
                 handleRemoveNode={() => handleRemoveNode(node._id)}
-                handleOperatorChange={(operator) =>
+                handleOperatorChange={(operator: any) =>
                   handleOperatorChange(node._id, node.operator, operator)
                 }
               />
             }>
-            {node.queries.map((q) => renderItem(q))}
+            {node.queries.map((q: any) => renderItem(q))}
           </StyledTreeItem>
         </Box>
       );
@@ -190,7 +205,7 @@ const EndpointQueries: FC<Props> = ({
         <StyledTreeItem
           key={node._id}
           nodeId={node._id}
-          onLabelClick={(e) => e.preventDefault()}
+          onLabelClick={(e: any) => e.preventDefault()}
           label={
             <Grid
               container
@@ -224,9 +239,9 @@ const EndpointQueries: FC<Props> = ({
         defaultCollapseIcon={<MinusSquare />}
         defaultExpandIcon={<PlusSquare />}
         defaultEndIcon={<CloseSquare />}
-        onNodeSelect={(e) => e.preventDefault()}
+        onNodeSelect={(e: React.ChangeEvent<{}>) => e.preventDefault()}
         onNodeToggle={(e) => e.preventDefault()}>
-        {selectedQueries.map((q) => renderItem(q))}
+        {selectedQueries.map((q: any) => renderItem(q))}
       </TreeView>
     </Box>
   );

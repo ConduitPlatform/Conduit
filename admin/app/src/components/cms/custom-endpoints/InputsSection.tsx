@@ -1,10 +1,11 @@
 import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import EndpointInputs from './EndpointInputs';
-import React from 'react';
+import React, { FC } from 'react';
 import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
+import { Input } from '../../../models/customEndpoints/customEndpointsModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -34,7 +35,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const InputsSection = ({ editMode }) => {
+interface Props {
+  editMode: boolean;
+}
+
+const InputsSection: FC<Props> = ({ editMode }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -57,9 +62,9 @@ const InputsSection = ({ editMode }) => {
     return endpoint.inputs.length === schemaFields.length;
   };
 
-  const deconstructQueries = (queries) => {
-    let allQueries = [];
-    queries.forEach((query) => {
+  const deconstructQueries = (queries: any) => {
+    let allQueries: any = [];
+    queries.forEach((query: any) => {
       if ('operator' in query) {
         allQueries = allQueries.concat(deconstructQueries(query.queries));
       } else {
@@ -71,14 +76,14 @@ const InputsSection = ({ editMode }) => {
   };
 
   const handleRemoveInput = (index: number) => {
-    const input = endpoint.inputs[index];
+    const input: any = endpoint.inputs[index];
     const currentInputs = endpoint.inputs.slice();
     currentInputs.splice(index, 1);
 
     const updatedQueries = endpoint.queries.slice();
     const queries = deconstructQueries(updatedQueries);
 
-    queries.map((q) => {
+    queries.map((q: any) => {
       const comparisonField = q.comparisonField;
       if (comparisonField.name === input.value) {
         return {
@@ -94,7 +99,7 @@ const InputsSection = ({ editMode }) => {
     });
 
     const updatedAssignments = endpoint.assignments.slice().map((a) => {
-      const assignmentField = a.assignmentField;
+      const assignmentField: any = a.assignmentField;
       if (assignmentField.name === input.value) {
         return {
           ...a,
@@ -117,7 +122,8 @@ const InputsSection = ({ editMode }) => {
     );
   };
 
-  const handleInputsChanges = (inputs) => {
+  const handleInputsChanges = (inputs: Input) => {
+    console.log('inpits:', inputs);
     dispatch(setEndpointData({ inputs }));
   };
 
