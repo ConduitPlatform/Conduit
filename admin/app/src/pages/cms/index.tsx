@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Layout } from '../../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
@@ -201,7 +200,7 @@ const Types = () => {
   };
 
   return (
-    <Layout itemSelected={5}>
+    <>
       <Box p={2}>
         <Box
           display={'flex'}
@@ -278,7 +277,7 @@ const Types = () => {
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
-    </Layout>
+    </>
   );
 };
 

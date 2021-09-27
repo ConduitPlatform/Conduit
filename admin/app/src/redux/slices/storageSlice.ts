@@ -1,14 +1,12 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { IStorageConfig } from '../../models/storage/StorageModels';
 import { getStorageSettings, putStorageSettings } from '../../http/StorageRequests';
+import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { getErrorData } from '../../utils/error-handler';
 
 interface IStorageSlice {
   data: {
     config: IStorageConfig;
-  };
-  meta: {
-    loading: boolean;
-    error: Error | null;
   };
 }
 
@@ -27,28 +25,35 @@ const initialState: IStorageSlice = {
       },
     },
   },
-  meta: {
-    loading: false,
-    error: null,
-  },
 };
 
-export const asyncGetStorageConfig = createAsyncThunk('storage/getConfig', async () => {
-  try {
-    const { data } = await getStorageSettings();
-    return data;
-  } catch (error) {
-    throw error;
+export const asyncGetStorageConfig = createAsyncThunk(
+  'storage/getConfig',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getStorageSettings();
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      throw error;
+    }
   }
-});
+);
 
 export const asyncSaveStorageConfig = createAsyncThunk(
   'storage/saveConfig',
-  async (dataForConfig: IStorageConfig) => {
+  async (dataForConfig: IStorageConfig, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await putStorageSettings(dataForConfig);
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -61,44 +66,17 @@ const storageSlice = createSlice({
     clearStoragePageStore(state) {
       state = initialState;
     },
-    setStorageLoading(state, action) {
-      state.meta.loading = action.payload;
-    },
-    setStorageError(state, action) {
-      state.meta.error = action.payload;
-    },
   },
   extraReducers: (builder) => {
-    builder.addCase(asyncGetStorageConfig.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetStorageConfig.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetStorageConfig.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.config = action.payload;
     });
-    builder.addCase(asyncSaveStorageConfig.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncSaveStorageConfig.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncSaveStorageConfig.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       state.data.config = action.payload;
     });
   },
 });
 
-export const {
-  setStorageLoading,
-  setStorageError,
-  clearStoragePageStore,
-} = storageSlice.actions;
+export const { clearStoragePageStore } = storageSlice.actions;
 
 export default storageSlice.reducer;

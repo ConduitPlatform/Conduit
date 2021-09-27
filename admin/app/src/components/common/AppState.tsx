@@ -16,7 +16,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   successMessage: string | undefined;
-  errorMessage: Error | string | undefined;
+  errorMessage?: Error | string | undefined;
   snackbarOpen: boolean;
   handleClose: (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => void;
 }

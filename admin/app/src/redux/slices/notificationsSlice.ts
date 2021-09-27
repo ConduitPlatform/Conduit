@@ -8,15 +8,13 @@ import {
   getNotificationConfig,
   putNotificationConfig,
 } from '../../http/NotificationsRequests';
+import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { getErrorData } from '../../utils/error-handler';
 
 interface INotificationSlice {
   data: {
     config: INotificationSettings;
     notifications: NotificationData[];
-  };
-  meta: {
-    loading: boolean;
-    error: Error | null;
   };
 }
 
@@ -32,19 +30,19 @@ const initialState: INotificationSlice = {
     },
     notifications: [],
   },
-  meta: {
-    loading: false,
-    error: null,
-  },
 };
 
 export const asyncSendNewNotification = createAsyncThunk(
   'notifications/sendNew',
-  async (data: NotificationData) => {
+  async (data: NotificationData, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       await sendNotification(data);
+      thunkAPI.dispatch(setAppDefaults());
       return;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -52,11 +50,15 @@ export const asyncSendNewNotification = createAsyncThunk(
 
 export const asyncGetNotificationConfig = createAsyncThunk(
   'notifications/getConfig',
-  async () => {
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getNotificationConfig();
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -64,16 +66,19 @@ export const asyncGetNotificationConfig = createAsyncThunk(
 
 export const asyncSaveNotificationConfig = createAsyncThunk(
   'notifications/saveConfig',
-  async (settings: INotificationSettings) => {
+  async (settings: INotificationSettings, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await putNotificationConfig({
         projectId: settings.projectId,
         privateKey: settings.privateKey,
         clientEmail: settings.clientEmail,
       });
-
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -86,50 +91,17 @@ const notificationsSlice = createSlice({
     clearNotificationPageStore(state) {
       state = initialState;
     },
-    setLoading(state, action) {
-      state.meta.loading = action.payload;
-    },
-    setError(state, action) {
-      state.meta.error = action.payload;
-    },
   },
   extraReducers: (builder) => {
-    builder.addCase(asyncSendNewNotification.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncSendNewNotification.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncSendNewNotification.fulfilled, (state) => {
-      state.meta.loading = false;
-    });
-    builder.addCase(asyncGetNotificationConfig.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetNotificationConfig.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetNotificationConfig.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       state.data.config = action.payload;
     });
-    builder.addCase(asyncSaveNotificationConfig.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncSaveNotificationConfig.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncSaveNotificationConfig.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.config = action.payload;
     });
   },
 });
 
-export const { clearNotificationPageStore, setLoading } = notificationsSlice.actions;
+export const { clearNotificationPageStore } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer;

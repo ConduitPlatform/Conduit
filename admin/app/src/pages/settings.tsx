@@ -1,5 +1,4 @@
 import { privateRoute } from '../components/utils/privateRoute';
-import { Layout } from '../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
@@ -24,24 +23,22 @@ const Settings = () => {
   };
 
   return (
-    <Layout itemSelected={7}>
-      <Box p={2}>
-        <Typography variant={'h4'}>Global Settings</Typography>
-        <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
-        <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-          <SdksTab />
-        </Box>
-        <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <SecretsTab />
-        </Box>
-        <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
-          <CoreSettingsTab />
-        </Box>
-        <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
-          <CreateNewUserTab />
-        </Box>
+    <Box p={2}>
+      <Typography variant={'h4'}>Global Settings</Typography>
+      <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
+      <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
+        <SdksTab />
       </Box>
-    </Layout>
+      <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
+        <SecretsTab />
+      </Box>
+      <Box role="tabpanel" hidden={selected !== 2} id={`tabpanel-2`}>
+        <CoreSettingsTab />
+      </Box>
+      <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
+        <CreateNewUserTab />
+      </Box>
+    </Box>
   );
 };
 

@@ -1,6 +1,8 @@
 import axios from 'axios';
 import getConfig from 'next/config';
 import { getCurrentStore } from '../redux/store';
+import { asyncLogout } from '../redux/slices/appAuthSlice';
+import Router from 'next/router';
 
 const {
   publicRuntimeConfig: { CONDUIT_URL, MASTER_KEY },
@@ -40,11 +42,11 @@ axios.interceptors.response.use(
   (error) => {
     console.log(error);
     if (error.response.status === 401) {
-      // const reduxStore = getCurrentStore();
-      // if (reduxStore) {
-      //   reduxStore.dispatch(asyncLogout());
-      //   Router.replace('/login');
-      // }
+      const reduxStore = getCurrentStore();
+      if (reduxStore) {
+        reduxStore.dispatch(asyncLogout());
+        Router.replace('/login');
+      }
     }
     console.log(error);
     return Promise.reject(error.response);

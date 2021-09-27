@@ -44,17 +44,11 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   templatesData: EmailTemplateType[];
-  error: any;
   handleSave: (data: EmailTemplateType) => void;
   handleCreate: (data: EmailTemplateType) => void;
 }
 
-const EmailTemplate: React.FC<Props> = ({
-  templatesData,
-  error,
-  handleSave,
-  handleCreate,
-}) => {
+const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreate }) => {
   const classes = useStyles();
   const [value, setValue] = useState<number>(0);
   const [templatesState, setTemplatesState] = useState<EmailTemplateType[]>([]);
@@ -64,7 +58,7 @@ const EmailTemplate: React.FC<Props> = ({
       return;
     }
     setTemplatesState(templatesData);
-  }, [templatesData, error]);
+  }, [templatesData]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);

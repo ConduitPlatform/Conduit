@@ -36,11 +36,10 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   settings: EmailSettings;
-  error: any;
   handleSave: (data: EmailSettings) => void;
 }
 
-const ProviderData: React.FC<Props> = ({ settings, error, handleSave }) => {
+const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
   const classes = useStyles();
   const [settingsState, setSettingsState] = useState<EmailSettingsState>({
     transport: '',
@@ -71,7 +70,7 @@ const ProviderData: React.FC<Props> = ({ settings, error, handleSave }) => {
       },
     };
     setSettingsState(data);
-  }, [settings, error]);
+  }, [settings]);
 
   const handleCancel = () => {
     setSettingsState({

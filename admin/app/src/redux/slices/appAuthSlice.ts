@@ -7,15 +7,13 @@ import { clearStoragePageStore } from './storageSlice';
 import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
+import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { getErrorData } from '../../utils/error-handler';
 
 export type AppAuthState = {
   data: {
     token: any;
     enabledModules: IModule[];
-  };
-  meta: {
-    loading: boolean;
-    error: any;
   };
 };
 
@@ -26,22 +24,21 @@ const initialState: AppAuthState = {
     token: null,
     enabledModules: [],
   },
-  meta: {
-    loading: false,
-    error: null,
-  },
 };
 
 export const asyncLogin = createAsyncThunk(
   'appAuth/login',
-  async (values: { username: string; password: string; remember: boolean }) => {
+  async (values: { username: string; password: string; remember: boolean }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
-
+      thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -57,14 +54,21 @@ export const asyncLogout = createAsyncThunk(
   }
 );
 
-export const asyncGetAdminModules = createAsyncThunk('appAuth/getModules', async () => {
-  try {
-    const { data } = await getAdminModulesRequest();
-    return data;
-  } catch (error) {
-    throw error;
+export const asyncGetAdminModules = createAsyncThunk(
+  'appAuth/getModules',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getAdminModulesRequest();
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(setAppLoading(false));
+      throw error;
+    }
   }
-});
+);
 
 const appAuthSlice = createSlice({
   name: 'appAuth',
@@ -75,44 +79,17 @@ const appAuthSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(asyncLogin.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncLogin.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncLogin.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       setCookie('JWT', action.payload.data.token, action.payload.cookie);
       state.data.token = action.payload.data.token;
     });
-    builder.addCase(asyncGetAdminModules.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetAdminModules.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       state.data.enabledModules = action.payload.modules;
-    });
-    builder.addCase(asyncLogout.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncLogout.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
       state.data.token = null;
       state.data.enabledModules = [];
-      state.meta.loading = false;
-      state.meta.error = null;
     });
   },
 });

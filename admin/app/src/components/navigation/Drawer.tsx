@@ -19,9 +19,9 @@ import {
 import clsx from 'clsx';
 import Link from 'next/link';
 import Router from 'next/router';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
