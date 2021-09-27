@@ -1,12 +1,18 @@
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
+import FormControl from '@material-ui/core/FormControl';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import FormHelperText from '@material-ui/core/FormHelperText';
 import Grid from '@material-ui/core/Grid';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
 import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
+import { IDrawerData, IEnumData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -25,32 +31,45 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(3),
     opacity: '0.5',
   },
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 120,
+  },
 }));
 
-export default function ObjectIdForm({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IEnumData;
+}
+
+const EnumForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
     name: selectedItem ? selectedItem.name : '',
     type: selectedItem ? selectedItem.type : drawerData.type,
-    unique: selectedItem ? selectedItem.unique : false,
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
+    enumValues: selectedItem ? selectedItem.enumValues : '',
+    isEnum: selectedItem ? selectedItem.isEnum : true,
   });
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
-  const handleFieldUnique = () => {
-    setSimpleData({ ...simpleData, unique: !simpleData.unique });
+  const handleFieldType = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
+    setSimpleData({ ...simpleData, type: event.target.value });
   };
 
   const handleFieldRequired = () => {
@@ -61,7 +80,11 @@ export default function ObjectIdForm({
     setSimpleData({ ...simpleData, select: !simpleData.select });
   };
 
-  const handleSubmit = (event) => {
+  const handleOptions = (event: { target: { value: string } }) => {
+    setSimpleData({ ...simpleData, enumValues: event.target.value });
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(simpleData);
     event.preventDefault();
   };
@@ -76,42 +99,46 @@ export default function ObjectIdForm({
         variant="outlined"
         className={classes.textField}
         fullWidth
-        required
-        InputProps={{
+        inputProps={{
           readOnly: readOnly && !!selectedItem,
         }}
         helperText={'It will appear in the entry editor'}
       />
-      <Box width={'100%'}>
-        <Grid container>
-          <Grid item xs={12}>
-            <Box
-              width={'100%'}
-              display={'inline-flex'}
-              justifyContent={'space-between'}
-              alignItems={'center'}>
-              <Typography variant={'button'} style={{ width: '100%' }}>
-                Unique field
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={simpleData.unique}
-                    onChange={handleFieldUnique}
-                    color="primary"
-                  />
-                }
-                label=""
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'subtitle1'} className={classes.info}>
-              {"If active, this field's value must be unique"}
-            </Typography>
-          </Grid>
-        </Grid>
+      <FormControl
+        className={classes.formControl}
+        variant={'outlined'}
+        fullWidth
+        required>
+        <InputLabel id="field-type">Type</InputLabel>
+        <Select
+          labelId="field-type"
+          id="field type"
+          label={'Type'}
+          value={simpleData.type}
+          onChange={handleFieldType}>
+          <MenuItem value="">
+            <em>None</em>
+          </MenuItem>
+          <MenuItem value={'Text'}>Text</MenuItem>
+          <MenuItem value={'Number'}>Number</MenuItem>
+        </Select>
+        <FormHelperText>Select the type of enum values</FormHelperText>
+      </FormControl>
+      <TextField
+        id="Options"
+        label="Options"
+        multiline
+        rows="4"
+        onChange={handleOptions}
+        value={simpleData.enumValues}
+        variant="outlined"
+        className={classes.textField}
+        fullWidth
+        required
+        helperText={'(Define one option per line)'}
+      />
 
+      <Box width={'100%'}>
         <Grid container>
           <Grid item xs={12}>
             <Box
@@ -185,4 +212,6 @@ export default function ObjectIdForm({
       </Box>
     </form>
   );
-}
+};
+
+export default EnumForm;

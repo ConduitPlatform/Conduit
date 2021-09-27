@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
-import CodeIcon from '@material-ui/icons/Code';
 import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip';
 import FieldIndicators from '../../FieldIndicators';
+import DeviceHubIcon from '@material-ui/icons/DeviceHub';
 import Grid from '@material-ui/core/Grid';
+import { IRelationData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -18,7 +19,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ObjectIdType({ item, ...rest }) {
+interface IProps {
+  item: IRelationData;
+}
+
+const RelationType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -26,11 +31,11 @@ export default function ObjectIdType({ item, ...rest }) {
       <Grid container>
         <Grid container item xs={6} alignItems={'center'}>
           <Box display={'flex'} alignItems={'center'}>
-            <Tooltip title={'ObjectId field'}>
-              <CodeIcon className={classes.icon} />
+            <Tooltip title={'Date field'}>
+              <DeviceHubIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              relation placeholder
             </Typography>
           </Box>
         </Grid>
@@ -42,9 +47,11 @@ export default function ObjectIdType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function ObjectIdGroupType({ item, ...rest }) {
+export default RelationType;
+
+export const RelationGroupType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -52,11 +59,11 @@ export function ObjectIdGroupType({ item, ...rest }) {
       <Grid container>
         <Grid container item xs={6} alignItems={'center'}>
           <Box display={'flex'} alignItems={'center'}>
-            <Tooltip title={'ObjectId field'}>
-              <CodeIcon className={classes.icon} />
+            <Tooltip title={'Date field'}>
+              <DeviceHubIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              relation placeholder
             </Typography>
           </Box>
         </Grid>
@@ -68,4 +75,4 @@ export function ObjectIdGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
