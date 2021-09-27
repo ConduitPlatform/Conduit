@@ -1,6 +1,6 @@
 import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import EndpointQueries from './EndpointQueries';
-import React from 'react';
+import React, { FC } from 'react';
 import { setEndpointData } from '../../../redux/slices/customEndpointsSlice';
 import { recursiveNodeIteration } from '../../../utils/cms';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +16,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const QueriesSection = ({ editMode }) => {
+interface Props {
+  editMode: boolean;
+}
+
+const QueriesSection: FC<Props> = ({ editMode }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -24,7 +28,7 @@ const QueriesSection = ({ editMode }) => {
     (state) => state.customEndpointsSlice.data
   );
 
-  const handleQueryChanges = (queries) => {
+  const handleQueryChanges = (queries: any) => {
     dispatch(setEndpointData({ queries }));
   };
 
@@ -33,7 +37,7 @@ const QueriesSection = ({ editMode }) => {
     dispatch(setEndpointData({ queries: [...endpoint.queries, query] }));
   };
 
-  const handleAddQuery = (nodeId) => {
+  const handleAddQuery = (nodeId: any) => {
     if (!nodeId) return;
 
     const query = {
@@ -49,7 +53,7 @@ const QueriesSection = ({ editMode }) => {
 
     const queries = deepClone(endpoint.queries);
 
-    queries.forEach((q) => {
+    queries.forEach((q: any) => {
       const found = recursiveNodeIteration(q, nodeId);
       if (found) {
         if ('queries' in found) {
@@ -61,7 +65,7 @@ const QueriesSection = ({ editMode }) => {
     dispatch(setEndpointData({ queries }));
   };
 
-  const handleAddNode = (nodeId) => {
+  const handleAddNode = (nodeId: any) => {
     if (!nodeId) return;
 
     const queries = deepClone(endpoint.queries);
@@ -76,7 +80,7 @@ const QueriesSection = ({ editMode }) => {
       },
     };
 
-    queries.forEach((q) => {
+    queries.forEach((q: any) => {
       const found = recursiveNodeIteration(q, nodeId);
 
       if (found) {
@@ -88,11 +92,11 @@ const QueriesSection = ({ editMode }) => {
     });
   };
 
-  const handleRemoveNode = (nodeId) => {
+  const handleRemoveNode = (nodeId: any) => {
     const queries = endpoint.queries.slice();
     let foundIndex = -1;
 
-    queries.forEach((q, index) => {
+    queries.forEach((q: any, index: number) => {
       if (q._id === nodeId) {
         foundIndex = index;
       }
@@ -100,7 +104,7 @@ const QueriesSection = ({ editMode }) => {
         queries.splice(foundIndex, 1);
       } else {
         if ('queries' in q) {
-          q.queries.forEach((q1, index1) => {
+          q.queries.forEach((q1: any, index1: number) => {
             if (q1._id === nodeId) {
               foundIndex = index1;
             }
@@ -108,7 +112,7 @@ const QueriesSection = ({ editMode }) => {
               q.queries.splice(foundIndex, 1);
             } else {
               if ('queries' in q1) {
-                q1.queries.forEach((q2, index2) => {
+                q1.queries.forEach((q2: any, index2: number) => {
                   if (q2._id === nodeId) {
                     foundIndex = index2;
                   }
@@ -126,12 +130,12 @@ const QueriesSection = ({ editMode }) => {
     dispatch(setEndpointData({ queries }));
   };
 
-  const handleChangeNodeOperator = (nodeId, oldOperator, newOperator) => {
+  const handleChangeNodeOperator = (nodeId: any, oldOperator: any, newOperator: any) => {
     const queries = JSON.parse(JSON.stringify(endpoint.queries));
 
     if (!nodeId) return;
 
-    queries.forEach((q) => {
+    queries.forEach((q: any) => {
       const found = recursiveNodeIteration(q, nodeId);
       if (found) {
         if ('operator' in found) {

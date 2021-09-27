@@ -17,7 +17,7 @@ export const headerHeight = 64;
 
 const useStyles = makeStyles((theme) => ({
   header: {
-    zIndex: 999,
+    zIndex: 9999,
     height: headerHeight,
     backgroundColor: theme.palette.primary.main,
     display: 'flex',

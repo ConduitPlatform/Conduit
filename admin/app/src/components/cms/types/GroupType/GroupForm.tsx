@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FC, useState } from 'react';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
@@ -8,6 +8,7 @@ import Grid from '@material-ui/core/Grid';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Checkbox from '@material-ui/core/Checkbox';
+import { IDrawerData, IGroupData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -28,14 +29,22 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupForm({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: IGroupData;
+}
+
+const GroupForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [groupData, setGroupData] = useState({
@@ -53,7 +62,7 @@ export default function GroupForm({
   //   setGroupData({ ...groupData, type: drawerData.type });
   // }, [drawerData.open, drawerData.type, groupData]);
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setGroupData({ ...groupData, name: event.target.value });
   };
 
@@ -69,7 +78,7 @@ export default function GroupForm({
     setGroupData({ ...groupData, isArray: !groupData.isArray });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     onSubmit(groupData);
     event.preventDefault();
   };
@@ -192,4 +201,6 @@ export default function GroupForm({
       </Box>
     </form>
   );
-}
+};
+
+export default GroupForm;

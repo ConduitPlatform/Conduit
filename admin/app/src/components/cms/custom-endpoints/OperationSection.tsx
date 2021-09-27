@@ -15,6 +15,8 @@ import {
   setSchemaFields,
 } from '../../../redux/slices/customEndpointsSlice';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
+import { Schema } from '../../../models/cms/CmsModels';
+import { Assignment } from '../../../models/customEndpoints/customEndpointsModels';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -33,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   schemas: any;
   editMode: boolean;
-  availableSchemas: any;
+  availableSchemas: Schema[];
 }
 
 const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) => {
@@ -44,14 +46,14 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
     (state) => state.customEndpointsSlice.data
   );
 
-  const handleOperationChange = (event) => {
+  const handleOperationChange = (event: React.ChangeEvent<{ value: any }>) => {
     const operation = Number(event.target.value);
-    const assignments = [];
+    const assignments: Assignment[] = [];
     if (operation === 1) {
       if (endpoint.selectedSchema) {
         if (schemaFields.length > 0) {
           schemaFields.forEach((field) => {
-            const assignment = {
+            const assignment: Assignment = {
               schemaField: field,
               action: 0,
               assignmentField: { type: '', value: '' },
@@ -64,8 +66,8 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
     dispatch(setEndpointData({ operation, assignments }));
   };
 
-  const handleSchemaChange = (event) => {
-    const assignments = [];
+  const handleSchemaChange = (event: React.ChangeEvent<{ value: any }>) => {
+    const assignments: Assignment[] = [];
     const selectedSchema = event.target.value;
     const fields = getAvailableFieldsOfSchema(selectedSchema, schemas);
     const fieldsWithTypes = findFieldsWithTypes(fields);
@@ -73,7 +75,7 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
       const fieldKeys = Object.keys(fields);
 
       fieldKeys.forEach((field) => {
-        const assignment = {
+        const assignment: Assignment = {
           schemaField: field,
           action: 0,
           assignmentField: { type: '', value: '' },
@@ -85,15 +87,15 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
     dispatch(setSchemaFields(fieldsWithTypes));
   };
 
-  const handleAuthenticationChange = (event) => {
+  const handleAuthenticationChange = (event: React.ChangeEvent<{ checked: boolean }>) => {
     dispatch(setEndpointData({ authentication: event.target.checked }));
   };
 
-  const handlePaginatedChange = (event) => {
+  const handlePaginatedChange = (event: React.ChangeEvent<{ checked: boolean }>) => {
     dispatch(setEndpointData({ paginated: event.target.checked }));
   };
 
-  const handleSortedChange = (event) => {
+  const handleSortedChange = (event: React.ChangeEvent<{ checked: boolean }>) => {
     dispatch(setEndpointData({ sorted: event.target.checked }));
   };
 
