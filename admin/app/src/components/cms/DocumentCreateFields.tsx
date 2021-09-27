@@ -65,8 +65,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     }
     return event.target ? event.target.value : event;
   };
-  //Documents do not have standard params so we type them as any
-  //TODO indexes are numbers but we initialize them with null
+
   const handleValueChange = (
     firstIndex: number,
     secondIndex: number,
@@ -271,7 +270,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         </Grid>
         <Grid item container justify={'center'} xs={4}>
           {!isArray ? (
-            renderInputFields(doc, index, null)
+            renderInputFields(doc, index)
           ) : (
             <Button
               disabled={disabled}
@@ -288,7 +287,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   //TODO function has less params than what we pass on it later on
-  const renderObjectField = (doc: any, index: number, innerIndexParam: any = null) => {
+  const renderObjectField = (doc: any, index: number, innerIndexParam: any) => {
     return (
       <Grid
         key={'key-' + doc.name}
