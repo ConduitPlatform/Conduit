@@ -45,7 +45,7 @@ const BooleanForm: FC<IProps> = ({
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [booleanData, setBooleanData] = useState({
@@ -298,6 +298,6 @@ const BooleanForm: FC<IProps> = ({
       </Box>
     </form>
   );
-}
+};
 
 export default BooleanForm;
