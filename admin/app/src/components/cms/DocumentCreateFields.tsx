@@ -75,8 +75,12 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     event: React.ChangeEvent<{ value: any }>
   ) => {
     const documentCopy = document.slice();
-    if (firstIndex !== null && secondIndex === null && thirdIndex === null) {
-      if (arrayIndex !== null) {
+    if (
+      firstIndex !== undefined &&
+      secondIndex === undefined &&
+      thirdIndex === undefined
+    ) {
+      if (arrayIndex !== undefined) {
         let type = documentCopy[firstIndex].type[0];
         documentCopy[firstIndex].value[arrayIndex] = getCorrectType(type, event);
         setDocument(documentCopy);
@@ -86,8 +90,12 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         setDocument(documentCopy);
       }
     }
-    if (firstIndex !== null && secondIndex !== null && thirdIndex === null) {
-      if (arrayIndex !== null) {
+    if (
+      firstIndex !== undefined &&
+      secondIndex !== undefined &&
+      thirdIndex === undefined
+    ) {
+      if (arrayIndex !== undefined) {
         let type = documentCopy[firstIndex].fields[secondIndex].type[0];
         documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = getCorrectType(
           type,
@@ -100,8 +108,12 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         setDocument(documentCopy);
       }
     }
-    if (firstIndex !== null && secondIndex !== null && thirdIndex !== null) {
-      if (arrayIndex !== null) {
+    if (
+      firstIndex !== undefined &&
+      secondIndex !== undefined &&
+      thirdIndex !== undefined
+    ) {
+      if (arrayIndex !== undefined) {
         let type =
           documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type[0];
 
@@ -132,9 +144,9 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
 
   const renderArrayContent = (
     docs: any,
-    firstIndex: any = null,
-    secondIndex: any = null,
-    thirdIndex: any = null
+    firstIndex: number,
+    secondIndex: number,
+    thirdIndex: number
   ) => {
     return (
       <Accordion className={classes.accordion}>
@@ -204,14 +216,14 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     const documentCopy = document.slice();
     let newItem;
     let iterableArray;
-    if (index !== null && secondIndex === null && thirdIndex === null) {
+    if (index !== undefined && secondIndex === undefined && thirdIndex === undefined) {
       newItem = getCorrectInitialType(documentCopy[index].type[0]);
 
       iterableArray = documentCopy[index].value;
       iterableArray = iterableArray ? [...iterableArray] : [];
       documentCopy[index].value = [...iterableArray, newItem];
     }
-    if (index !== null && secondIndex !== null && thirdIndex === null) {
+    if (index !== undefined && secondIndex !== undefined && thirdIndex === undefined) {
       newItem = getCorrectInitialType(documentCopy[index].fields[secondIndex].type[0]);
 
       iterableArray = documentCopy[index].fields[secondIndex].value;
@@ -219,7 +231,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
       documentCopy[index].fields[secondIndex].value = [...iterableArray, newItem];
     }
 
-    if (index !== null && secondIndex !== null && thirdIndex !== null) {
+    if (index !== undefined && secondIndex !== undefined && thirdIndex !== undefined) {
       newItem = getCorrectInitialType(
         documentCopy[index].fields[secondIndex].fields[thirdIndex].type[0]
       );
