@@ -19,8 +19,8 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
-import { saveConfig } from '../../redux/thunks/notificationThunks';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';
+import { asyncSaveNotificationConfig } from '../../redux/slices/notificationsSlice';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -292,7 +292,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                 variant="contained"
                 color="primary"
                 style={{ alignSelf: 'flex-end' }}
-                onClick={() => saveConfig()}>
+                onClick={() => asyncSaveNotificationConfig(formData)}>
                 Save
               </Button>
             </Grid>

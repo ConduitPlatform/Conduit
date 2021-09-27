@@ -5,6 +5,7 @@ import { INewAdminUser } from '../../models/settings/SettingsModels';
 import { Formik } from 'formik';
 import { useDispatch } from 'react-redux';
 import { createNewAdminUser } from '../../redux/thunks/settingsThunks';
+import { asyncCreateAdminUser } from '../../redux/slices/settingsSlice';
 
 const useStyles = makeStyles((theme: Theme) => ({
   title: {
@@ -27,7 +28,7 @@ const CreateNewUserTab: React.FC = () => {
   const dispatch = useDispatch();
 
   const handleRegister = (values: INewAdminUser) => {
-    dispatch(createNewAdminUser(values));
+    dispatch(asyncCreateAdminUser(values));
   };
 
   return (
