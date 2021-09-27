@@ -1,4 +1,3 @@
-import { Layout } from '../components/navigation/Layout';
 import React, { useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import CustomTabs from '../components/common/CustomTabs';
@@ -15,19 +14,17 @@ const Emails: React.FC = () => {
   };
 
   return (
-    <Layout itemSelected={3}>
-      <Box p={2}>
-        <Typography variant={'h4'}>SMS</Typography>
-        <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
+    <Box p={2}>
+      <Typography variant={'h4'}>SMS</Typography>
+      <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
 
-        <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-1`}>
-          <SendSms />
-        </Box>
-        <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-2`}>
-          <SmsProviderDetails />
-        </Box>
+      <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-1`}>
+        <SendSms />
       </Box>
-    </Layout>
+      <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-2`}>
+        <SmsProviderDetails />
+      </Box>
+    </Box>
   );
 };
 

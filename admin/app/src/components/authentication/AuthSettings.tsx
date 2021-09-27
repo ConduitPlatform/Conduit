@@ -33,10 +33,9 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   handleSave: (data: SettingsStateTypes) => void;
   settingsData: any;
-  error: any;
 }
 
-const AuthSettings: React.FC<Props> = ({ handleSave, settingsData, error }) => {
+const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const classes = useStyles();
 
   const [edit, setEdit] = useState<boolean>(false);
@@ -63,7 +62,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData, error }) => {
       jwtSecret: settingsData.jwtSecret,
       showSecret: false,
     });
-  }, [settingsData, error]);
+  }, [settingsData]);
 
   const handleCancel = () => {
     setEdit(false);

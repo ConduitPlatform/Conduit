@@ -1,7 +1,11 @@
 import MomentUtils from '@date-io/moment';
 import { makeStyles } from '@material-ui/core/styles';
 import { Today } from '@material-ui/icons';
-import { DatePicker, MuiPickersUtilsProvider } from '@material-ui/pickers';
+import {
+  DatePicker,
+  DatePickerProps,
+  MuiPickersUtilsProvider,
+} from '@material-ui/pickers';
 import React from 'react';
 import { MaterialUiPickersDate } from '@material-ui/pickers/typings/date';
 import { ParsableDate } from '@material-ui/pickers/constants/prop-types';
@@ -33,10 +37,17 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   value: ParsableDate;
   setValue: (date: MaterialUiPickersDate) => void;
-  placeholder: string;
+  placeholder?: string;
+  disabled: boolean;
 }
 
-const CustomDatepicker: React.FC<Props> = ({ value, setValue, placeholder, ...rest }) => {
+const CustomDatepicker: React.FC<Props> = ({
+  value,
+  setValue,
+  placeholder,
+  disabled,
+  ...rest
+}) => {
   const classes = useStyles();
 
   const handleDateChange = (date: MaterialUiPickersDate) => {

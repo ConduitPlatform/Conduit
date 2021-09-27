@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Layout } from '../../components/navigation/Layout';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
@@ -10,25 +9,26 @@ import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
-import { useDispatch, useSelector } from 'react-redux';
-import { getCmsSchemas } from '../../redux/thunks';
 import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
-import { setSelectedSchema } from '../../redux/actions';
-import {
-  toggleSchema,
-  deleteSelectedSchema,
-  getSchemaDocuments,
-  deleteCustomEndpoints,
-  createCustomEndpoints,
-  updateCustomEndpoints,
-  getCustomEndpoints,
-  getMoreCmsSchemas,
-} from '../../redux/thunks/cmsThunks';
+import { setSelectedSchema } from '../../redux/slices/cmsSlice';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
+import {
+  asyncCreateCustomEndpoints,
+  asyncDeleteCustomEndpoints,
+  asyncDeleteSelectedSchema,
+  asyncGetCmsSchemas,
+  asyncGetCustomEndpoints,
+  asyncGetMoreCmsSchemas,
+  asyncGetSchemaDocuments,
+  asyncToggleSchema,
+  asyncUpdateCustomEndpoints,
+} from '../../redux/slices/cmsSlice';
+import { Schema } from '../../models/cms/CmsModels';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   backdrop: {
@@ -47,10 +47,12 @@ const useStyles = makeStyles((theme) => ({
 
 const Types = () => {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const classes = useStyles();
 
-  const { data, loading, error } = useSelector((state) => state.cmsReducer);
+  const data = useAppSelector((state) => state.cmsSlice.data);
+
+  const { loading, error } = useAppSelector((state) => state.cmsSlice.meta);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
@@ -69,25 +71,25 @@ const Types = () => {
   ];
 
   useEffect(() => {
-    dispatch(getCmsSchemas(50));
-    dispatch(getCustomEndpoints());
+    dispatch(asyncGetCmsSchemas(50));
+    dispatch(asyncGetCustomEndpoints(''));
   }, [dispatch]);
 
   useEffect(() => {
     if (data.schemas?.length > 0) {
-      const schemaFound = data.schemas.find((schema) => schema.enabled === true);
+      const schemaFound = data.schemas.find((schema: Schema) => schema.enabled === true);
       if (schemaFound) {
         const { name } = schemaFound;
-        dispatch(getSchemaDocuments(name));
+        dispatch(asyncGetSchemaDocuments(name));
       }
     }
   }, [data.schemas, dispatch]);
 
-  const handleSelectSchema = (name) => {
-    dispatch(getSchemaDocuments(name));
+  const handleSelectSchema = (name: string) => {
+    dispatch(asyncGetSchemaDocuments(name));
   };
 
-  const handleClose = (event, reason) => {
+  const handleClose = (event: any, reason: any) => {
     if (reason === 'clickaway') {
       return;
     }
@@ -98,7 +100,7 @@ const Types = () => {
     if (error) {
       return (
         <Alert variant={'filled'} onClose={handleClose} severity="error">
-          {error?.data?.error ? error.data.error : 'Something went wrong!'}
+          {error ? error : 'Something went wrong!'}
         </Alert>
       );
     } else {
@@ -124,13 +126,13 @@ const Types = () => {
   };
 
   const handleDeleteSchema = () => {
-    dispatch(deleteSelectedSchema(selectedSchemaForAction.data._id));
+    dispatch(asyncDeleteSelectedSchema(selectedSchemaForAction.data._id));
     setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };
 
   const handleToggleSchema = () => {
-    dispatch(toggleSchema(selectedSchemaForAction.data._id));
+    dispatch(asyncToggleSchema(selectedSchemaForAction.data._id));
     setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };
@@ -139,14 +141,14 @@ const Types = () => {
     if (!data || !data.schemas) {
       return [];
     }
-    return data.schemas.filter((s) => s.enabled);
+    return data.schemas.filter((s: Schema) => s.enabled);
   };
 
   const getDisabledSchemas = () => {
     if (!data || !data.schemas) {
       return [];
     }
-    return data.schemas.filter((s) => !s.enabled);
+    return data.schemas.filter((s: Schema) => !s.enabled);
   };
 
   const enabledActions = [
@@ -186,22 +188,22 @@ const Types = () => {
 
   const handleCreateCustomEndpoint = (data) => {
     if (data) {
-      dispatch(createCustomEndpoints(data));
+      dispatch(asyncCreateCustomEndpoints(data));
     }
   };
 
-  const handleEditCustomEndpoint = (_id, data) => {
-    dispatch(updateCustomEndpoints(_id, data));
+  const handleEditCustomEndpoint = (_id: string, data) => {
+    dispatch(asyncUpdateCustomEndpoints({ _id, endpointData: data }));
   };
 
-  const handleDeleteCustomEndpoint = (endpointId) => {
+  const handleDeleteCustomEndpoint = (endpointId: string) => {
     if (endpointId) {
-      dispatch(deleteCustomEndpoints(endpointId));
+      dispatch(asyncDeleteCustomEndpoints(endpointId));
     }
   };
 
   return (
-    <Layout itemSelected={5}>
+    <>
       <Box p={2}>
         <Box
           display={'flex'}
@@ -235,7 +237,7 @@ const Types = () => {
               color="primary"
               variant={'outlined'}
               disabled={data.schemas.length === data.count}
-              onClick={() => dispatch(getMoreCmsSchemas())}>
+              onClick={() => dispatch(asyncGetMoreCmsSchemas({}))}>
               LOAD MORE SCHEMAS
             </Button>
           </Box>
@@ -278,7 +280,7 @@ const Types = () => {
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
-    </Layout>
+    </>
   );
 };
 

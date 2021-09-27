@@ -11,7 +11,6 @@ import SearchFilter from '../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
-import { Layout } from '../components/navigation/Layout';
 import { privateRoute } from '../components/utils/privateRoute';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
 import AppState from '../components/common/AppState';
@@ -22,13 +21,13 @@ import {
   SocialNameTypes,
 } from '../models/authentication/AuthModels';
 import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
-import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import {
   asyncAddNewUser,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
   asyncUpdateAuthenticationConfig,
 } from '../redux/slices/authenticationSlice';
+import { useAppDispatch, useAppSelector } from '../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -53,15 +52,12 @@ const Authentication = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { error: authError, success: authSuccess } = useAppSelector(
+  const { success: authSuccess } = useAppSelector(
     (state) => state.authenticationSlice.meta.authUsers
   );
 
   const { signInMethods: configData } = useAppSelector(
     (state) => state.authenticationSlice.data
-  );
-  const { error: authConfigError } = useAppSelector(
-    (state) => state.authenticationSlice.meta.signInMethods
   );
 
   const handleFilterChange = (
@@ -85,10 +81,10 @@ const Authentication = () => {
   }, [configData]);
 
   useEffect(() => {
-    if (authError || authConfigError || authSuccess) {
+    if (authSuccess) {
       setSnackbarOpen(true);
     }
-  }, [authError, authConfigError, authSuccess]);
+  }, [authSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -127,15 +123,6 @@ const Authentication = () => {
     dispatch(asyncUpdateAuthenticationConfig(data));
   };
 
-  const alertMessage = () => {
-    if (authError) {
-      return authError ? authError : 'Something went wrong!';
-    }
-    if (authConfigError) {
-      return authConfigError ? authConfigError : 'Something went wrong!';
-    }
-  };
-
   const successMessage = () => {
     if (authSuccess) {
       return authSuccess;
@@ -166,7 +153,7 @@ const Authentication = () => {
   };
 
   return (
-    <Layout itemSelected={1}>
+    <>
       <Box p={2}>
         <Typography variant={'h4'}>Authentication</Typography>
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
@@ -213,11 +200,7 @@ const Authentication = () => {
           hidden={selected !== 1 || (configData && !configData.active)}
           id={`tabpanel-1`}>
           {configData ? (
-            <AuthAccordion
-              configData={configData}
-              configDataError={authConfigError}
-              handleData={handleConfigChange}
-            />
+            <AuthAccordion configData={configData} handleData={handleConfigChange} />
           ) : (
             <Typography>No config available</Typography>
           )}
@@ -226,20 +209,15 @@ const Authentication = () => {
           <ServiceAccountsTabs />
         </Box>
         <Box role="tabpanel" hidden={selected !== 3} id={`tabpanel-3`}>
-          <AuthSettings
-            handleSave={handleSettingsSave}
-            settingsData={configData}
-            error={authConfigError}
-          />
+          <AuthSettings handleSave={handleSettingsSave} settingsData={configData} />
         </Box>
       </Box>
       <AppState
         successMessage={successMessage()}
-        errorMessage={alertMessage()}
         snackbarOpen={snackbarOpen}
         handleClose={handleClose}
       />
-    </Layout>
+    </>
   );
 };
 

@@ -11,6 +11,8 @@ import {
   getAuthenticationConfig,
   putAuthenticationConfig,
 } from '../../http/AuthenticationRequests';
+import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { getErrorData } from '../../utils/error-handler';
 
 interface IAuthenticationSlice {
   data: {
@@ -21,8 +23,9 @@ interface IAuthenticationSlice {
     signInMethods: SignInMethods | null;
   };
   meta: {
-    authUsers: { loading: boolean; error: Error | null; success: string | null };
-    signInMethods: { loading: boolean; error: Error | null };
+    authUsers: {
+      success: string | null;
+    };
   };
 }
 
@@ -35,14 +38,19 @@ const initialState: IAuthenticationSlice = {
     signInMethods: null,
   },
   meta: {
-    authUsers: { loading: false, error: null, success: '' },
-    signInMethods: { loading: false, error: null },
+    authUsers: {
+      success: '',
+    },
   },
 };
 
 export const asyncGetAuthUserData = createAsyncThunk(
   'authentication/getUserData',
-  async (params: { skip: number; limit: number; search: string; filter: string }) => {
+  async (
+    params: { skip: number; limit: number; search: string; filter: string },
+    thunkAPI
+  ) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getAuthUsersDataReq(
         params.skip,
@@ -50,8 +58,11 @@ export const asyncGetAuthUserData = createAsyncThunk(
         params.search,
         params.filter
       );
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -61,18 +72,22 @@ export const asyncAddNewUser = createAsyncThunk(
   'authentication/addUser',
   async (
     params: { values: { password: string; email: string }; limit: number },
-    thunkApi
+    thunkAPI
   ) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await createNewUsers(params.values);
-      thunkApi.dispatch(
+      thunkAPI.dispatch(
         asyncGetAuthUserData({ skip: 0, limit: params.limit, search: '', filter: 'none' })
       );
       setTimeout(() => {
-        thunkApi.dispatch(clearSuccessMsg());
+        thunkAPI.dispatch(clearSuccessMsg());
       }, 6300);
+      thunkAPI.dispatch(setAppDefaults());
       return { data, params };
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -80,11 +95,15 @@ export const asyncAddNewUser = createAsyncThunk(
 
 export const asyncEditUser = createAsyncThunk(
   'authentication/editUser',
-  async (values: AuthUser) => {
+  async (values: AuthUser, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       await editUser(values);
+      thunkAPI.dispatch(setAppDefaults());
       return values;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -92,11 +111,15 @@ export const asyncEditUser = createAsyncThunk(
 
 export const asyncBlockUserUI = createAsyncThunk(
   'authentication/blockUser',
-  async (id: string) => {
+  async (id: string, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       await blockUser(id);
+      thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -104,11 +127,15 @@ export const asyncBlockUserUI = createAsyncThunk(
 
 export const asyncUnblockUserUI = createAsyncThunk(
   'authentication/unblockUser',
-  async (id: string) => {
+  async (id: string, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       await unblockUser(id);
+      thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -116,11 +143,15 @@ export const asyncUnblockUserUI = createAsyncThunk(
 
 export const asyncDeleteUser = createAsyncThunk(
   'authentication/deleteUser',
-  async (id: string) => {
+  async (id: string, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteUser(id);
+      thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -128,11 +159,15 @@ export const asyncDeleteUser = createAsyncThunk(
 
 export const asyncGetAuthenticationConfig = createAsyncThunk(
   'authentication/getConfig',
-  async () => {
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getAuthenticationConfig();
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -140,11 +175,15 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
 
 export const asyncUpdateAuthenticationConfig = createAsyncThunk(
   'authentication/updateConfig',
-  async (body: any) => {
+  async (body: any, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await putAuthenticationConfig(body);
+      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }
@@ -160,63 +199,24 @@ const authenticationSlice = createSlice({
     clearAuthenticationPageStore(state) {
       state = initialState;
     },
-    setLoading(state, action) {
-      state.meta.authUsers.loading = action.payload;
-    },
-    setError(state, action) {
-      state.meta.authUsers.error = action.payload;
-    },
   },
   extraReducers: (builder) => {
-    builder.addCase(asyncGetAuthUserData.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncGetAuthUserData.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncGetAuthUserData.fulfilled, (state, action) => {
-      state.meta.authUsers.loading = false;
       state.data.authUsers.users = action.payload.users;
       state.data.authUsers.count = action.payload.count;
     });
-    builder.addCase(asyncAddNewUser.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncAddNewUser.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncAddNewUser.fulfilled, (state, action) => {
       state.meta.authUsers.success = action.payload.data.message;
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = null;
       state.data.authUsers.count++;
     });
-    builder.addCase(asyncEditUser.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncEditUser.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
-      state.meta.authUsers.loading = false;
       const foundIndex = state.data.authUsers.users.findIndex(
         (user) => user._id === action.payload._id
       );
       if (foundIndex !== -1)
         state.data.authUsers.users.splice(foundIndex, 1, action.payload);
     });
-    builder.addCase(asyncBlockUserUI.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncBlockUserUI.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncBlockUserUI.fulfilled, (state, action) => {
-      state.meta.authUsers.loading = false;
       const userToBlock = state.data.authUsers.users.find(
         (user) => user._id === action.payload
       );
@@ -224,16 +224,7 @@ const authenticationSlice = createSlice({
         userToBlock.active = false;
       }
     });
-    builder.addCase(asyncUnblockUserUI.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncUnblockUserUI.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncUnblockUserUI.fulfilled, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = null;
       const userToUnBlock = state.data.authUsers.users.find(
         (user) => user._id === action.payload
       );
@@ -241,43 +232,17 @@ const authenticationSlice = createSlice({
         userToUnBlock.active = true;
       }
     });
-    builder.addCase(asyncDeleteUser.pending, (state) => {
-      state.meta.authUsers.loading = true;
-    });
-    builder.addCase(asyncDeleteUser.rejected, (state, action) => {
-      state.meta.authUsers.loading = false;
-      state.meta.authUsers.error = action.error as Error;
-    });
     builder.addCase(asyncDeleteUser.fulfilled, (state, action) => {
-      state.meta.authUsers.loading = false;
       const foundIndex = state.data.authUsers.users.findIndex(
         (user) => user._id === action.payload
       );
       if (foundIndex !== -1) state.data.authUsers.users.splice(foundIndex, 1);
       state.data.authUsers.count--;
     });
-    builder.addCase(asyncGetAuthenticationConfig.pending, (state) => {
-      state.meta.signInMethods.loading = true;
-    });
-    builder.addCase(asyncGetAuthenticationConfig.rejected, (state, action) => {
-      state.meta.signInMethods.loading = false;
-      state.meta.signInMethods.error = action.error as Error;
-    });
     builder.addCase(asyncGetAuthenticationConfig.fulfilled, (state, action) => {
-      state.meta.signInMethods.loading = false;
-      state.meta.signInMethods.error = null;
       state.data.signInMethods = action.payload;
-      console.log(state.data.signInMethods);
-    });
-    builder.addCase(asyncUpdateAuthenticationConfig.pending, (state) => {
-      state.meta.signInMethods.loading = true;
-    });
-    builder.addCase(asyncUpdateAuthenticationConfig.rejected, (state, action) => {
-      state.meta.signInMethods.loading = false;
-      state.meta.signInMethods.error = action.error as Error;
     });
     builder.addCase(asyncUpdateAuthenticationConfig.fulfilled, (state, action) => {
-      state.meta.signInMethods.loading = false;
       state.data.signInMethods = action.payload;
     });
   },
@@ -285,7 +250,6 @@ const authenticationSlice = createSlice({
 
 export const {
   clearAuthenticationPageStore,
-  setLoading,
   clearSuccessMsg,
 } = authenticationSlice.actions;
 

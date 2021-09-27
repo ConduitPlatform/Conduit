@@ -48,6 +48,8 @@
     "@types/material-ui": "^0.21.9",
     "@types/node": "^16.7.3",
     "@types/react": "^17.0.19",
+    "@types/react-beautiful-dnd": "^13.1.2",
+    "@types/react-dom": "^17.0.9",
     "@types/react-redux": "^7.1.18",
     "@types/redux": "^3.6.0",
     "@typescript-eslint/eslint-plugin": "^4.29.3",

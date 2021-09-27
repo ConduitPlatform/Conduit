@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import EditUserDialog from './EditUserDialog';
 import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
-import { useAppDispatch } from '../../redux/hooks';
 import {
   asyncBlockUserUI,
   asyncDeleteUser,
   asyncUnblockUserUI,
 } from '../../redux/slices/authenticationSlice';
+import { useAppDispatch } from '../../redux/store';
 
 interface Props {
   users: AuthUser[];
