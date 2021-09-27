@@ -63,7 +63,7 @@ const GroupForm: FC<IProps> = ({
   // }, [drawerData.open, drawerData.type, groupData]);
 
   const handleFieldName = (event: { target: { value: string } }) => {
-    setGroupData({ ...groupData, name: event.target.value });
+    setGroupData({ ...groupData, name: event.target.value.split(' ').join('') });
   };
 
   const handleFieldRequired = () => {

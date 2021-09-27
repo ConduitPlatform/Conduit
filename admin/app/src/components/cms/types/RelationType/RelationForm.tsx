@@ -101,7 +101,7 @@ const RelationForm: FC<IProps> = ({
   }, [schemas, schemasFromOtherModules, selectedSchema]);
 
   const handleFieldName = (event: { target: { value: string } }) => {
-    setSimpleData({ ...simpleData, name: event.target.value });
+    setSimpleData({ ...simpleData, name: event.target.value.split(' ').join('') });
   };
 
   const handleFieldRequired = () => {

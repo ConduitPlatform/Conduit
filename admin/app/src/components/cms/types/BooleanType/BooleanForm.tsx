@@ -62,7 +62,11 @@ const BooleanForm: FC<IProps> = ({
 
   const handleFieldName = (event: { target: { value: string } }) => {
     const slug = slugify(event.target.value);
-    setBooleanData({ ...booleanData, name: event.target.value, id: slug });
+    setBooleanData({
+      ...booleanData,
+      name: event.target.value.split(' ').join(''),
+      id: slug,
+    });
   };
 
   const handleFalsePlaceholder = (event: { target: { value: string } }) => {
