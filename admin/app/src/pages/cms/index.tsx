@@ -9,10 +9,6 @@ import NewSchemaDialog from '../../components/cms/NewSchemaDialog';
 import DisableSchemaDialog from '../../components/cms/DisableSchemaDialog';
 import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
-import Snackbar from '@material-ui/core/Snackbar';
-import Backdrop from '@material-ui/core/Backdrop';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Alert from '@material-ui/lab/Alert';
 import { makeStyles } from '@material-ui/core/styles';
 import { setSelectedSchema } from '../../redux/slices/cmsSlice';
 import CustomQueries from '../../components/cms/custom-endpoints/CustomQueries';
@@ -52,9 +48,6 @@ const Types = () => {
 
   const data = useAppSelector((state) => state.cmsSlice.data);
 
-  const { loading, error } = useAppSelector((state) => state.cmsSlice.meta);
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
@@ -87,25 +80,6 @@ const Types = () => {
 
   const handleSelectSchema = (name: string) => {
     dispatch(asyncGetSchemaDocuments(name));
-  };
-
-  const handleClose = (event: any, reason: any) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbarOpen(false);
-  };
-
-  const snackbarAlert = () => {
-    if (error) {
-      return (
-        <Alert variant={'filled'} onClose={handleClose} severity="error">
-          {error ? error : 'Something went wrong!'}
-        </Alert>
-      );
-    } else {
-      return undefined;
-    }
   };
 
   const handleChange = (event, newValue) => {
@@ -203,7 +177,7 @@ const Types = () => {
   };
 
   return (
-    <>
+    <Box>
       <Box p={2}>
         <Box
           display={'flex'}
@@ -269,18 +243,7 @@ const Types = () => {
         handleDelete={handleDeleteSchema}
         selectedSchema={selectedSchemaForAction}
       />
-      <Snackbar
-        open={snackbarOpen}
-        className={classes.snackBar}
-        autoHideDuration={6000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        {snackbarAlert()}
-      </Snackbar>
-      <Backdrop open={loading} className={classes.backdrop}>
-        <CircularProgress color="secondary" />
-      </Backdrop>
-    </>
+    </Box>
   );
 };
 
