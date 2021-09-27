@@ -351,7 +351,7 @@ const CustomQueryRow: FC<Props> = ({
               fullWidth
               placeholder={
                 query.comparisonField.type === 'Custom'
-                  ? getCustomPlaceHolder(index)
+                  ? getCustomPlaceHolder()
                   : 'ex. user._id'
               }
               value={query.comparisonField.value}

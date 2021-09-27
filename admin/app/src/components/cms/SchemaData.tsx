@@ -261,7 +261,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
           })}
         </Tabs>
 
-        <TabPanel value={selectedSchema}>
+        <TabPanel>
           {documents.length > 0 ? (
             <>
               {documents.map((doc: any, index: number) => {

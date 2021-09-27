@@ -71,7 +71,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     secondIndex: number,
     thirdIndex: number,
     arrayIndex: number,
-    event: React.ChangeEvent<{ value: any }>
+    event: any
   ) => {
     const documentCopy = document.slice();
     if (
@@ -144,8 +144,8 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   const renderArrayContent = (
     docs: any,
     firstIndex: number,
-    secondIndex: number,
-    thirdIndex: number
+    secondIndex?: number,
+    thirdIndex?: number
   ) => {
     return (
       <Accordion className={classes.accordion}>
@@ -211,7 +211,11 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return '';
   };
 
-  const addElementOnArray = (index: number, secondIndex: number, thirdIndex: number) => {
+  const addElementOnArray = (
+    index: number,
+    secondIndex?: number,
+    thirdIndex?: number
+  ) => {
     const documentCopy = document.slice();
     let newItem;
     let iterableArray;
@@ -287,7 +291,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   //TODO function has less params than what we pass on it later on
-  const renderObjectField = (doc: any, index: number, innerIndexParam: any) => {
+  const renderObjectField = (doc: any, index: number, innerIndexParam?: number) => {
     return (
       <Grid
         key={'key-' + doc.name}
@@ -305,7 +309,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         <Grid item xs={12}>
           {doc?.fields?.map((innerDoc: any, indexInner: number) => {
             if (!innerDoc.type) {
-              return renderObjectField(innerDoc, index, indexInner, innerIndexParam);
+              return renderObjectField(innerDoc, index, indexInner);
             }
 
             const isArray =
@@ -377,9 +381,9 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   const renderInputFields = (
     doc: any,
     firstIndex: number,
-    secondIndex: number,
-    thirdIndex: number,
-    arrayIndex: number
+    secondIndex?: number,
+    thirdIndex?: number,
+    arrayIndex?: number
   ) => {
     if (doc?.type?.toString().toLowerCase() === 'boolean') {
       return (
