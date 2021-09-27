@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import TextIcon from '@material-ui/icons/Title';
@@ -8,6 +8,7 @@ import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
+import { ISimpleData, ISimpleDataTypes } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -20,8 +21,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const handleIcon = (item, classes) => {
-  switch (item) {
+interface ISimpleIconProps {
+  type: ISimpleDataTypes;
+}
+
+const SimpleIcon: FC<ISimpleIconProps> = ({ type }) => {
+  const classes = useStyles();
+  switch (type) {
     case 'Text':
       return (
         <Tooltip title={'Text field'}>
@@ -41,21 +47,23 @@ const handleIcon = (item, classes) => {
         </Tooltip>
       );
     default:
-      return null;
+      return <></>;
   }
 };
 
-export default function SimpleType({ item, ...rest }) {
-  const classes = useStyles();
+interface IProps {
+  item: ISimpleData;
+}
 
+const SimpleType: FC<IProps> = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>
         <Grid item xs={6}>
           <Box display={'flex'} alignItems={'center'}>
-            {handleIcon(item.type, classes)}
+            <SimpleIcon type={item.type} />
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              simple placeholder
             </Typography>
           </Box>
         </Grid>
@@ -67,19 +75,19 @@ export default function SimpleType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function SimpleGroupType({ item, ...rest }) {
-  const classes = useStyles();
+export default SimpleType;
 
+export const SimpleGroupType: FC<IProps> = ({ item, ...rest }) => {
   return (
     <Box {...rest}>
       <Grid container>
         <Grid item xs={6}>
           <Box display={'flex'} alignItems={'center'}>
-            {handleIcon(item.type, classes)}
+            <SimpleIcon type={item.type} />
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              simple placeholder
             </Typography>
           </Box>
         </Grid>
@@ -91,4 +99,4 @@ export function SimpleGroupType({ item, ...rest }) {
       </Grid>
     </Box>
   );
-}
+};

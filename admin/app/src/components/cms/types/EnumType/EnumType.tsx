@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import Box from '@material-ui/core/Box';
 import FieldIndicators from '../../FieldIndicators';
 import Typography from '@material-ui/core/Typography';
@@ -6,6 +6,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { makeStyles } from '@material-ui/core/styles';
 import SelectIcon from '@material-ui/icons/FormatListBulleted';
 import Grid from '@material-ui/core/Grid';
+import { IEnumData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {
@@ -18,8 +19,11 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EnumType(props) {
-  const { item, ...rest } = props;
+interface IProps {
+  item: IEnumData;
+}
+
+const EnumType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -31,7 +35,7 @@ export default function EnumType(props) {
               <SelectIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              enum placeholder
             </Typography>
           </Box>
         </Grid>
@@ -43,10 +47,11 @@ export default function EnumType(props) {
       </Grid>
     </Box>
   );
-}
+};
 
-export function EnumGroupType(props) {
-  const { item, ...rest } = props;
+export default EnumType;
+
+export const EnumGroupType: FC<IProps> = ({ item, ...rest }) => {
   const classes = useStyles();
 
   return (
@@ -58,7 +63,7 @@ export function EnumGroupType(props) {
               <SelectIcon className={classes.icon} />
             </Tooltip>
             <Typography variant={'body2'} style={{ opacity: 0.4 }}>
-              {item.placeholder}
+              enum placeholder
             </Typography>
           </Box>
         </Grid>
@@ -70,4 +75,4 @@ export function EnumGroupType(props) {
       </Grid>
     </Box>
   );
-}
+};

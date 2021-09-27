@@ -6,7 +6,7 @@ import Typography from '@material-ui/core/Typography';
 import DeleteIcon from '@material-ui/icons/Delete';
 import GroupIcon from '@material-ui/icons/PlaylistAdd';
 import SettingsIcon from '@material-ui/icons/Settings';
-import React from 'react';
+import React, { FC } from 'react';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
 import FieldIndicators from '../../FieldIndicators';
 import { BooleanGroupType } from '../BooleanType/BooleanType';
@@ -14,7 +14,12 @@ import { EnumGroupType } from '../EnumType/EnumType';
 import { ObjectIdGroupType } from '../ObjectIdType/ObjectIdType';
 import { RelationGroupType } from '../RelationType/RelationType';
 import { SimpleGroupType } from '../SimpleType/SimpleType';
-import { GroupGroupType } from './GroupTypeChild';
+import GroupGroupType from './GroupTypeChild';
+import {
+  IGroupChildContentData,
+  IGroupChildData,
+  IGroupData,
+} from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -50,7 +55,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function GroupType({
+interface IProps {
+  item: IGroupData;
+  groupIndex: number;
+  handleDelete: (index: number, groupIndex: number) => void;
+  handleDrawer: any;
+  handleGroupDelete: any;
+  handleGroupDrawer: any;
+}
+
+const GroupType: FC<IProps> = ({
   item,
   groupIndex,
   handleDelete,
@@ -58,14 +72,17 @@ export default function GroupType({
   handleGroupDelete,
   handleGroupDrawer,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
-  const handleGroupContent = (item, index) => {
+  const handleGroupContent = (
+    item: IGroupChildContentData | IGroupChildData,
+    index: number
+  ) => {
     switch (item.type) {
       case 'Text':
         return item.isEnum ? (
-          <EnumGroupType item={item} />
+          <EnumGroupType item={item} /> //needs changes
         ) : (
           <SimpleGroupType item={item} />
         );
@@ -170,4 +187,6 @@ export default function GroupType({
       </Droppable>
     </Box>
   );
-}
+};
+
+export default GroupType;

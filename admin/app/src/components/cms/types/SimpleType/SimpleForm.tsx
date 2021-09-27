@@ -7,7 +7,8 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
+import { IDrawerData, ISimpleData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   form: {
@@ -28,14 +29,22 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SimpleForm({
+interface IProps {
+  drawerData: IDrawerData;
+  readOnly: boolean;
+  onSubmit: (data: any) => void;
+  onClose: () => void;
+  selectedItem: ISimpleData;
+}
+
+const SimpleForm: FC<IProps> = ({
   drawerData,
   readOnly,
   onSubmit,
   onClose,
   selectedItem,
   ...rest
-}) {
+}) => {
   const classes = useStyles();
 
   const [simpleData, setSimpleData] = useState({
@@ -48,11 +57,11 @@ export default function SimpleForm({
     isArray: selectedItem ? selectedItem.isArray : false,
   });
 
-  const handleFieldName = (event) => {
+  const handleFieldName = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, name: event.target.value });
   };
 
-  const handleFieldDefault = (event) => {
+  const handleFieldDefault = (event: { target: { value: string } }) => {
     setSimpleData({ ...simpleData, default: event.target.value });
   };
 
@@ -72,7 +81,7 @@ export default function SimpleForm({
     setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit(simpleData);
   };
@@ -235,4 +244,6 @@ export default function SimpleForm({
       </Box>
     </form>
   );
-}
+};
+
+export default SimpleForm;
