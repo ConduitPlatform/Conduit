@@ -33,7 +33,6 @@ export const asyncGetAvailableClients = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -49,7 +48,6 @@ export const asyncGenerateNewClient = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -65,7 +63,6 @@ export const asyncDeleteClient = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return _id;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -80,7 +77,6 @@ export const asyncPutCoreSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return await putCoreRequest(data);
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -89,14 +85,17 @@ export const asyncPutCoreSettings = createAsyncThunk(
 
 export const asyncCreateAdminUser = createAsyncThunk(
   'settings/createAdminUser',
-  async (values: INewAdminUser) => {
+  async (values: INewAdminUser, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
     try {
       const body = {
         username: values.username,
         password: values.password,
       };
-      const { data } = await postNewAdminUser(body);
+      thunkAPI.dispatch(setAppDefaults());
+      const { data } = await postNewAdminUser(body); //fix this
     } catch (error) {
+      thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
   }

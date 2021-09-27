@@ -36,10 +36,6 @@ export interface ICmsSlice {
     config: any;
     selectedSchema: Schema | null;
   };
-  meta: {
-    loading: boolean;
-    error: Error | null;
-  };
 }
 
 const initialState: ICmsSlice = {
@@ -55,7 +51,6 @@ const initialState: ICmsSlice = {
     config: null,
     selectedSchema: null,
   },
-  meta: { loading: false, error: null },
 };
 
 export const asyncGetCmsSchemas = createAsyncThunk<
@@ -72,7 +67,6 @@ export const asyncGetCmsSchemas = createAsyncThunk<
     };
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -92,7 +86,6 @@ export const asyncGetMoreCmsSchemas = createAsyncThunk<
     };
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -107,7 +100,6 @@ export const asyncCreateNewSchema = createAsyncThunk<Schema, any>(
       return data as Schema;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -123,7 +115,6 @@ export const asyncToggleSchema = createAsyncThunk<ToggleSchma, string>(
       return data as ToggleSchma;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -138,7 +129,6 @@ export const asyncEditSchema = createAsyncThunk<any, { _id: string; data: any }>
       thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -154,7 +144,6 @@ export const asyncDeleteSelectedSchema = createAsyncThunk<string, { _id: string 
       return args._id;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -170,7 +159,6 @@ export const asyncGetSchemaDocuments = createAsyncThunk<any, string>(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -187,7 +175,6 @@ export const asyncGetMoreSchemaDocuments = createAsyncThunk<
     return data;
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -222,7 +209,6 @@ export const asyncCreateSchemaDocument = createAsyncThunk<
     return;
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -237,7 +223,6 @@ export const asyncDeleteSchemaDocument = createAsyncThunk<
     thunkAPI.dispatch(asyncGetSchemaDocuments(params.schemaName));
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -266,7 +251,6 @@ export const asyncEditSchemaDocument = createAsyncThunk(
       return params.schemaName;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -282,7 +266,6 @@ export const asyncGetCustomEndpoints = createAsyncThunk<EndpointTypes[], any>(
       return data.results as EndpointTypes[];
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -299,7 +282,6 @@ export const asyncUpdateCustomEndpoints = createAsyncThunk<
     return data;
   } catch (error) {
     thunkAPI.dispatch(setAppError(getErrorData(error)));
-    thunkAPI.dispatch(setAppLoading(false));
     throw error;
   }
 });
@@ -315,7 +297,6 @@ export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
       return data.results;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -341,7 +322,6 @@ export const asyncCreateCustomEndpoints = createAsyncThunk<any, any>(
       thunkAPI.dispatch(asyncGetCustomEndpoints(''));
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -357,7 +337,6 @@ export const asyncFetchSchemasFromOtherModules = createAsyncThunk<any, any>(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -399,182 +378,30 @@ const cmsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(asyncGetCmsSchemas.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetCmsSchemas.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetCmsSchemas.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.schemas = action.payload.results;
       state.data.count = action.payload.documentsCount;
     });
-    builder.addCase(asyncGetMoreCmsSchemas.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetMoreCmsSchemas.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetMoreCmsSchemas.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       state.data.schemas.push(...action.payload.results);
       state.data.count = action.payload.documentsCount;
     });
-    builder.addCase(asyncCreateNewSchema.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncCreateNewSchema.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncCreateNewSchema.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncToggleSchema.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncToggleSchema.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncToggleSchema.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.schemas = updateSchemaStatusByName(action.payload, state.data.schemas);
     });
-    builder.addCase(asyncEditSchema.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncEditSchema.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncEditSchema.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncDeleteSelectedSchema.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncDeleteSelectedSchema.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncDeleteSelectedSchema.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.schemas = deleteSchemaStatusById(action.payload, state.data.schemas);
-      state.meta.error = null;
-    });
-    builder.addCase(asyncGetSchemaDocuments.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetSchemaDocuments.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
     });
     builder.addCase(asyncGetSchemaDocuments.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.documents = action.payload;
     });
-    builder.addCase(asyncGetMoreSchemaDocuments.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetMoreSchemaDocuments.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetMoreSchemaDocuments.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
       state.data.documents.documents.push(...action.payload.documents);
     });
-    builder.addCase(asyncCreateSchemaDocument.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncCreateSchemaDocument.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncCreateSchemaDocument.fulfilled, (state, action) => {
-      state.meta.loading = false;
-    });
-    builder.addCase(asyncDeleteSchemaDocument.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncDeleteSchemaDocument.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncDeleteSchemaDocument.fulfilled, (state) => {
-      state.meta.loading = false;
-    });
-    builder.addCase(asyncEditSchemaDocument.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncEditSchemaDocument.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncEditSchemaDocument.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncGetCustomEndpoints.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncGetCustomEndpoints.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncGetCustomEndpoints.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.customEndpoints = action.payload;
     });
-    builder.addCase(asyncUpdateCustomEndpoints.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncUpdateCustomEndpoints.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncUpdateCustomEndpoints.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncDeleteCustomEndpoints.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncDeleteCustomEndpoints.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncDeleteCustomEndpoints.fulfilled, (state, action) => {
-      state.meta.loading = false;
-    });
-    builder.addCase(asyncCreateCustomEndpoints.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncCreateCustomEndpoints.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
-    builder.addCase(asyncCreateCustomEndpoints.fulfilled, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = null;
-    });
-    builder.addCase(asyncFetchSchemasFromOtherModules.pending, (state) => {
-      state.meta.loading = true;
-    });
-    builder.addCase(asyncFetchSchemasFromOtherModules.rejected, (state, action) => {
-      state.meta.loading = false;
-      state.meta.error = action.error as Error;
-    });
     builder.addCase(asyncFetchSchemasFromOtherModules.fulfilled, (state, action) => {
-      state.meta.loading = false;
       state.data.schemasFromOtherModules = action.payload.results;
     });
   },

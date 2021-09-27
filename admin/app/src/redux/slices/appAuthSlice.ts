@@ -38,7 +38,6 @@ export const asyncLogin = createAsyncThunk(
       return { data, cookie: values.remember };
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -64,7 +63,6 @@ export const asyncGetAdminModules = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppError(getErrorData(error)));
-      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }

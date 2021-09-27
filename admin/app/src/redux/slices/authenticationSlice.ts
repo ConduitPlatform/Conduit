@@ -61,7 +61,6 @@ export const asyncGetAuthUserData = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -86,7 +85,6 @@ export const asyncAddNewUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return { data, params };
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -102,7 +100,6 @@ export const asyncEditUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return values;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -118,7 +115,6 @@ export const asyncBlockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -134,7 +130,6 @@ export const asyncUnblockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -150,7 +145,6 @@ export const asyncDeleteUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -166,7 +160,6 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -182,7 +175,6 @@ export const asyncUpdateAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }

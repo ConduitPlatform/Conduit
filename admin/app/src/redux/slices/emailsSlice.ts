@@ -41,7 +41,6 @@ export const asyncGetEmailTemplates = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -60,7 +59,6 @@ export const asyncSaveEmailTemplateChanges = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return updateEmailData;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -76,7 +74,6 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -92,7 +89,6 @@ export const asyncGetEmailSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -108,7 +104,6 @@ export const asyncUpdateEmailSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -124,7 +119,6 @@ export const asyncSendEmail = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
