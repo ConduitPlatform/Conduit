@@ -4,7 +4,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import { INewAdminUser } from '../../models/settings/SettingsModels';
 import { Formik } from 'formik';
 import { useDispatch } from 'react-redux';
-import { createNewAdminUser } from '../../redux/thunks/settingsThunks';
 import { asyncCreateAdminUser } from '../../redux/slices/settingsSlice';
 
 const useStyles = makeStyles((theme: Theme) => ({

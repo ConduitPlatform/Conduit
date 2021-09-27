@@ -1,14 +1,14 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { removeCookie, setCookie } from '../../utils/cookie';
 import { IModule } from '../../models/appAuth';
-import { clearEmailPageStore } from '../actions/emailsActions';
 import { clearNotificationPageStore } from './notificationsSlice';
 import { clearStoragePageStore } from './storageSlice';
-import { clearAuthPageStore } from '../actions';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
 import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
+import { clearEmailPageStore } from './emailsSlice';
+import { clearAuthenticationPageStore } from './authenticationSlice';
 
 export type AppAuthState = {
   data: {
@@ -47,7 +47,7 @@ export const asyncLogin = createAsyncThunk(
 export const asyncLogout = createAsyncThunk(
   'appAuth/logout',
   async (arg: void, thunkAPI) => {
-    thunkAPI.dispatch(clearAuthPageStore());
+    thunkAPI.dispatch(clearAuthenticationPageStore());
     thunkAPI.dispatch(clearEmailPageStore());
     thunkAPI.dispatch(clearNotificationPageStore());
     thunkAPI.dispatch(clearStoragePageStore());

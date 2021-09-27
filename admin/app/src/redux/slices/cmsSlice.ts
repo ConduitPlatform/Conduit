@@ -162,7 +162,7 @@ export const asyncGetMoreSchemaDocuments = createAsyncThunk<
 });
 
 const prepareDocumentField = (doc: any) => {
-  let field = { [doc.name]: null };
+  const field = { [doc.name]: null };
   if (doc.fields) {
     doc.fields.forEach((subField: any) => {
       const tempObj = field[doc.name];
@@ -182,7 +182,7 @@ export const asyncCreateSchemaDocument = createAsyncThunk<
   try {
     const body = { schemaName: params.schemaName, inputDocument: {} };
     params.document.forEach((d: any) => {
-      let field = prepareDocumentField(d);
+      const field = prepareDocumentField(d);
       body.inputDocument = { ...body.inputDocument, ...field };
     });
 
@@ -220,7 +220,7 @@ export const asyncEditSchemaDocument = createAsyncThunk(
       };
 
       params.documentData.forEach((d: any) => {
-        let field = prepareDocumentField(d);
+        const field = prepareDocumentField(d);
         body.changedDocument = { ...body.changedDocument, ...field };
       });
 
