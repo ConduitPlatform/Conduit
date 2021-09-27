@@ -3,9 +3,9 @@ import appAuthSlice from '../slices/appAuthSlice';
 import authenticationSlice from '../slices/authenticationSlice';
 import emailsPageReducer from './emailsPageReducer';
 import settingsSlice from '../slices/settingsSlice';
-import cmsReducer from './cmsReducer';
+import cmsSlice from '../slices/cmsSlice';
 import storageSlice from '../slices/storageSlice';
 import notificationsSlice from '../slices/notificationsSlice';
-import customEndpointsReducer from './customEndpointsReducer';
+import customEndpointsSlice from '../slices/customEndpointsSlice';
 
 export default combineReducers({});

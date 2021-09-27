@@ -6,6 +6,8 @@ import notificationsSlice from './slices/notificationsSlice';
 import storageSlice from './slices/storageSlice';
 import settingsSlice from './slices/settingsSlice';
 import emailsSlice from './slices/emailsSlice';
+import cmsSlice from './slices/cmsSlice';
+import customEndpointsSlice from './slices/customEndpointsSlice';
 import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 
@@ -17,6 +19,8 @@ export const makeStore = (preloadedState: any) =>
       appSlice,
       appAuthSlice,
       authenticationSlice,
+      cmsSlice,
+      customEndpointsSlice,
       notificationsSlice,
       storageSlice,
       settingsSlice,

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, resetServerContext } from 'react-beautiful-dnd';
-import { renderToString } from 'react-dom/server';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import BuildTypesList from '../../components/cms/BuildTypesList';
@@ -21,14 +20,16 @@ import {
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
 import { privateRoute } from '../../components/utils/privateRoute';
-import { useDispatch, useSelector } from 'react-redux';
 import {
-  createNewSchema,
-  editSchema,
-  fetchSchemasFromOtherModules,
-  getCmsSchemas,
-} from '../../redux/thunks/cmsThunks';
-import { clearSelectedSchema } from '../../redux/actions';
+  asyncCreateNewSchema,
+  asyncEditSchema,
+  asyncFetchSchemasFromOtherModules,
+  asyncGetCmsSchemas,
+  clearSelectedSchema,
+} from '../../redux/slices/cmsSlice';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
+
+resetServerContext();
 
 const items = [
   'Text',
@@ -77,15 +78,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypes = () => {
-  resetServerContext();
-  renderToString(BuildTypes);
-
+const BuildTypes: React.FC = () => {
   const classes = useStyles();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
+  resetServerContext();
+  // renderToString(BuildTypes);
 
-  const { data } = useSelector((state) => state.cmsReducer);
+  const { data } = useAppSelector((state) => state.cmsSlice);
 
   const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
   const [schemaName, setSchemaName] = useState('');
@@ -96,6 +96,7 @@ const BuildTypes = () => {
     type: '',
     destination: null,
   });
+
   const [duplicateId, setDuplicateId] = useState(false);
   const [invalidName, setInvalidName] = useState(false);
   const [selectedProps, setSelectedProps] = useState({
@@ -106,8 +107,8 @@ const BuildTypes = () => {
   const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
-    dispatch(getCmsSchemas());
-    dispatch(fetchSchemasFromOtherModules());
+    dispatch(asyncGetCmsSchemas(30));
+    dispatch(asyncFetchSchemasFromOtherModules(''));
   }, [dispatch]);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ const BuildTypes = () => {
 
   useEffect(() => {
     if (!data.selectedSchema) {
-      let initialFields = [
+      const initialFields = [
         {
           default: '',
           isArray: false,
@@ -194,8 +195,8 @@ const BuildTypes = () => {
       });
     }
 
-    let droppableIdString = `${destination.droppableId}`;
-    let groupIsGroupChild = droppableIdString.slice(0, 5);
+    const droppableIdString = `${destination.droppableId}`;
+    const groupIsGroupChild = droppableIdString.slice(0, 5);
 
     if (draggableId === 'Group' && groupIsGroupChild === 'child') {
       return;
@@ -354,7 +355,7 @@ const BuildTypes = () => {
     handleDrawerClose();
   };
 
-  const handleDrawer = (item, index) => {
+  const handleDrawer = (item: any, index: number) => {
     setSelectedProps({ item: item, index: index, type: 'standard' });
     setDrawerData({
       ...drawerData,
@@ -365,7 +366,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleDelete = (index) => {
+  const handleDelete = (index: number) => {
     setSchemaFields({
       newTypeFields: deleteItem(schemaFields.newTypeFields, index),
     });
@@ -386,7 +387,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupDelete = (index, groupIndex) => {
+  const handleGroupDelete = (index: number, groupIndex: number) => {
     const deleted = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content.splice(index, 1);
     setSchemaFields({
@@ -394,7 +395,12 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupInGroupDrawer = (item, index, groupIndex, itemIndex) => {
+  const handleGroupInGroupDrawer = (
+    item: any,
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => {
     setSelectedProps({ item: item, index: index, type: 'group-child' });
     setDrawerData({
       ...drawerData,
@@ -410,7 +416,11 @@ const BuildTypes = () => {
     });
   };
 
-  const handleGroupInGroupDelete = (index, groupIndex, itemIndex) => {
+  const handleGroupInGroupDelete = (
+    index: number,
+    groupIndex: number,
+    itemIndex: number
+  ) => {
     const deleted = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content[itemIndex].content.splice(index, 1);
     setSchemaFields({
@@ -418,7 +428,7 @@ const BuildTypes = () => {
     });
   };
 
-  const handleSave = (name, authentication) => {
+  const handleSave = (name: string, authentication: boolean) => {
     if (data && data.selectedSchema) {
       const { _id } = data.selectedSchema;
       const editableSchemaFields = prepareFields(schemaFields.newTypeFields);
@@ -428,7 +438,7 @@ const BuildTypes = () => {
         fields: { ...editableSchemaFields },
       };
 
-      dispatch(editSchema(_id, editableSchema));
+      dispatch(asyncEditSchema({ _id, data: editableSchema }));
     } else {
       const newSchemaFields = prepareFields(schemaFields.newTypeFields);
       const newSchema = {
@@ -437,7 +447,7 @@ const BuildTypes = () => {
         crudOperations,
         fields: newSchemaFields,
       };
-      dispatch(createNewSchema(newSchema));
+      dispatch(asyncCreateNewSchema(newSchema));
     }
     dispatch(clearSelectedSchema());
     router.push({ pathname: '/cms' });

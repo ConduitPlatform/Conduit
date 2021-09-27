@@ -33,18 +33,16 @@ const Storage: React.FC = () => {
   };
 
   return (
-    <>
-      <Box p={2}>
-        <Typography variant={'h4'}>Storage</Typography>
-        <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
-        <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
-          <StorageFiles />
-        </Box>
-        <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
-          <StorageSettings config={config} handleSave={handleStorageSettings} />
-        </Box>
+    <Box p={2}>
+      <Typography variant={'h4'}>Storage</Typography>
+      <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
+      <Box role="tabpanel" hidden={selected !== 0} id={`tabpanel-0`}>
+        <StorageFiles />
       </Box>
-    </>
+      <Box role="tabpanel" hidden={selected !== 1} id={`tabpanel-1`}>
+        <StorageSettings config={config} handleSave={handleStorageSettings} />
+      </Box>
+    </Box>
   );
 };
 
