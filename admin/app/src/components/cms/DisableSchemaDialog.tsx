@@ -87,8 +87,6 @@ const DisableSchemaDialog: FC<Props> = ({
       case 'delete': {
         return classes.deleteButton;
       }
-      default:
-        return null;
     }
   };
 
@@ -142,7 +140,7 @@ const DisableSchemaDialog: FC<Props> = ({
         </Button>
         <Button
           onClick={handleClick}
-          className={generateButtonClass(selectedSchema.action)}
+          className={generateButtonClass(selectedSchema?.action)}
           variant="contained"
           style={{ textTransform: 'none' }}>
           {generateButtonName(selectedSchema.action)}

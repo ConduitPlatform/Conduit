@@ -98,6 +98,11 @@ const TabPanel = ({ children }) => {
 
 const ITEM_HEIGHT = 48;
 
+interface Nodes {
+  id: string;
+  data: any;
+}
+
 interface Props {
   schemas: Schema[];
   handleSchemaChange: any;
@@ -111,22 +116,22 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
   const documentsObj = useAppSelector((state) => state.cmsSlice.data?.documents);
 
   const [selectedSchema, setSelectedSchema] = useState(0);
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [docIndex, setDocIndex] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [docIndex, setDocIndex] = useState<any>(null);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDocument, setCreateDocument] = useState(false);
 
   const open = Boolean(anchorEl);
 
-  const handleCreateDialog = (create) => {
+  const handleCreateDialog = (create: boolean) => {
     if (!create) {
       setSelectedDocument(null);
     }
     setCreateDocument(!createDocument);
   };
 
-  const handleClick = (event, idx) => {
+  const handleClick = (event: any, idx: number) => {
     setDocIndex(idx);
     setAnchorEl(event.currentTarget);
   };
@@ -137,13 +142,13 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
     setAnchorEl(null);
   };
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelectedSchema(newValue);
     const name = schemas[newValue].name;
     handleSchemaChange(name);
   };
 
-  const createDocumentArray = (document) => {
+  const createDocumentArray = (document: any) => {
     return Object.keys(document).map((key) => {
       return { id: key, data: document[key] };
     });
@@ -185,20 +190,20 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
     handleCloseDeleteConfirmationDialog();
   };
 
-  const handleCreateDocument = (schemaName: string, document) => {
+  const handleCreateDocument = (schemaName: string, document: any) => {
     dispatch(asyncCreateSchemaDocument({ schemaName, document }));
     setCreateDocument(false);
   };
 
-  const handleEditDocument = (schemaName: string, document) => {
-    const _id = selectedDocument._id;
+  const handleEditDocument = (schemaName: string, document: any) => {
+    const _id = selectedDocument?._id;
     dispatch(
       asyncEditSchemaDocument({ schemaName, documentId: _id, documentData: document })
     );
     setCreateDocument(false);
   };
 
-  const renderTree = (nodes) => {
+  const renderTree = (nodes: Nodes) => {
     return (
       <TreeItem
         key={nodes.id}
@@ -220,7 +225,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
           </Typography>
         }>
         {Array.isArray(nodes.data)
-          ? nodes.data.map((node, index) =>
+          ? nodes.data.map((node: any, index: number) =>
               renderTree({ id: index.toString(), data: node })
             )
           : typeof nodes.data !== 'string' &&
@@ -259,7 +264,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
         <TabPanel value={selectedSchema}>
           {documents.length > 0 ? (
             <>
-              {documents.map((doc, index) => {
+              {documents.map((doc: any, index: number) => {
                 return (
                   <Card
                     key={`card${index}`}

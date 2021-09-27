@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
@@ -33,11 +33,33 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const BuildTypesList = (props) => {
-  const { item, index, ...rest } = props;
+interface Props {
+  item:
+    | 'Text'
+    | 'Number'
+    | 'Date'
+    | 'Boolean'
+    | 'Enum'
+    | 'ObjectId'
+    | 'Group'
+    | 'Relation';
+  index: number;
+}
+
+const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   const classes = useStyles();
 
-  const handleIcon = (item) => {
+  const handleIcon = (
+    item:
+      | 'Text'
+      | 'Number'
+      | 'Date'
+      | 'Boolean'
+      | 'Enum'
+      | 'ObjectId'
+      | 'Group'
+      | 'Relation'
+  ) => {
     switch (item) {
       case 'Text':
         return <TextIcon />;
@@ -60,7 +82,17 @@ const BuildTypesList = (props) => {
     }
   };
 
-  const handleItem = (item) => {
+  const handleItem = (
+    item:
+      | 'Text'
+      | 'Number'
+      | 'Date'
+      | 'Boolean'
+      | 'Enum'
+      | 'ObjectId'
+      | 'Group'
+      | 'Relation'
+  ) => {
     return (
       <>
         <Box display={'flex'} alignItems={'center'}>
@@ -81,11 +113,11 @@ const BuildTypesList = (props) => {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}>
-            {handleItem(item, index)}
+            {handleItem(item)}
           </Card>
           {snapshot.isDragging && (
             <Card className={clsx(classes.item, classes.itemClone)}>
-              {handleItem(item, index)}
+              {handleItem(item)}
             </Card>
           )}
         </>

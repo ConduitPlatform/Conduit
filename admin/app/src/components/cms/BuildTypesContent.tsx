@@ -129,7 +129,7 @@ const BuildTypesContent: FC<Props> = ({
         {(provided, snapshot) => (
           <Box className={classes.list} ref={provided.innerRef}>
             {data && Array.isArray(data[dataKey]) && data[dataKey].length > 0 ? (
-              data[dataKey].map((item, index) => (
+              data[dataKey].map((item: any, index: number) => (
                 <Draggable key={item.name} draggableId={item.name} index={index}>
                   {(provided) => (
                     <Box

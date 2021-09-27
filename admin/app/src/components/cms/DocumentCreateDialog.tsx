@@ -54,7 +54,7 @@ const CreateDialog: FC<Props> = ({
       const keys = Object.keys(editData);
       // eslint-disable-next-line no-unused-expressions
       keys?.forEach((k) => {
-        const found = documentsData?.find((d) => d.name === k);
+        const found = documentsData?.find((d: any) => d.name === k);
         if (found) {
           found.value = editData[k];
         }
@@ -65,7 +65,7 @@ const CreateDialog: FC<Props> = ({
 
   const deconstructFields = useCallback((fields) => {
     const documentKeys = Object.keys(fields);
-    let documentFields = [];
+    let documentFields: any = [];
     documentKeys.forEach((k) => {
       if (typeof fields[k] !== 'string') {
         if (
@@ -88,12 +88,12 @@ const CreateDialog: FC<Props> = ({
     return documentFields;
   }, []);
 
-  const prepareField = (field, editData) => {
+  const prepareField = (field: any, editData: any) => {
     let newField = field;
     if (newField.fields) {
-      newField.fields.forEach((f, i) => {
+      newField.fields.forEach((f: any, i: number) => {
         if (newField.fields[i].fields) {
-          newField.fields[i].fields.forEach((ff, j) => {
+          newField.fields[i].fields.forEach((ff: any, j: number) => {
             newField.fields[i].fields[j].value = editData[newField.name][f.name][ff.name];
           });
         } else {
@@ -115,7 +115,7 @@ const CreateDialog: FC<Props> = ({
     const documentFields = deconstructFields(fields);
     populateEditData(documentFields);
     if (editData) {
-      let newData = documentFields.map((field) => {
+      let newData = documentFields.map((field: any) => {
         return prepareField(field, editData);
       });
       setDocument(newData);

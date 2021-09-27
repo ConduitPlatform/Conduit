@@ -38,7 +38,13 @@ interface Props {
   index: number;
   query: any;
   availableFieldsOfSchema: any;
-  selectedInputs: any;
+  selectedInputs: {
+    array: boolean;
+    location: number;
+    name: string;
+    optional: boolean;
+    type: string;
+  }[];
   editMode: boolean;
   handleQueryFieldChange: any;
   handleQueryConditionChange: any;
@@ -94,8 +100,8 @@ const CustomQueryRow: FC<Props> = ({
     selectedInputs,
   ]);
 
-  const prepareOptions = (schemaField, indexQuery) => {
-    return availableFieldsOfSchema.map((field, index) => {
+  const prepareOptions = (schemaField: any, indexQuery: any) => {
+    return availableFieldsOfSchema.map((field: any, index: number) => {
       if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
           <MenuItem
@@ -111,7 +117,8 @@ const CustomQueryRow: FC<Props> = ({
     });
   };
 
-  const getSecondSubField = (field, valuePrefix, suffix) => {
+  //TODO more-fields-available
+  const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
     let keys = Object?.keys(field?.type);
     let itemTop = (
       <MenuItem
@@ -149,7 +156,7 @@ const CustomQueryRow: FC<Props> = ({
     return [itemTop, ...restItems];
   };
 
-  const getSubFields = (field, indexQuery) => {
+  const getSubFields = (field: any, indexQuery: any) => {
     if (field?.type) {
       let keys = Object?.keys(field?.type);
 
@@ -200,7 +207,7 @@ const CustomQueryRow: FC<Props> = ({
     return 'ex. John snow';
   };
 
-  const inputCustomChange = (e, i) => {
+  const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i) => {
     let value = e.target.value;
     if (selectedType === 'boolean') {
       value = value !== 'false';
@@ -300,7 +307,7 @@ const CustomQueryRow: FC<Props> = ({
               <option value={'Custom'}>Add a custom value</option>
             </optgroup>
             <optgroup label="Schema Fields">
-              {availableFieldsOfSchema.map((field, index) => (
+              {availableFieldsOfSchema.map((field: any, index: number) => (
                 <option key={`idxS-${index}-field`} value={'Schema-' + field.name}>
                   {field.name}
                 </option>
