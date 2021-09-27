@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { EndpointInputs } from '../../models/cms/CmsModels';
-import { Assignment, Input } from '../../models/customEndpoints/customEndpointsModels';
-import OperationsEnum from '../../models/OperationsEnum';
+import { Assignment } from '../../models/customEndpoints/customEndpointsModels';
 
 // TODO create proper Interface for the slices' initial state
 

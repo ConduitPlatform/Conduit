@@ -36,7 +36,6 @@ export const asyncGetStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }
@@ -52,7 +51,6 @@ export const asyncSaveStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(setAppError(getErrorData(error)));
       throw error;
     }

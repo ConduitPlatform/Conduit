@@ -26,11 +26,11 @@ const appSlice = createSlice({
       state.loading = action.payload;
     },
     setAppError: (state, action) => {
+      state.loading = initialState.loading;
       state.error = action.payload;
     },
-    setAppDefaults: (state) => {
-      state.loading = initialState.loading;
-      state.error = initialState.error;
+    setAppDefaults: () => {
+      return initialState;
     },
   },
 });
