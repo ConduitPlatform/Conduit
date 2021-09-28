@@ -65,7 +65,7 @@ const EnumForm: FC<IProps> = ({
   });
 
   const handleFieldName = (event: { target: { value: string } }) => {
-    setSimpleData({ ...simpleData, name: event.target.value });
+    setSimpleData({ ...simpleData, name: event.target.value.split(' ').join('') });
   };
 
   const handleFieldType = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
