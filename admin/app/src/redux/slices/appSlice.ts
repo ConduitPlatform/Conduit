@@ -25,16 +25,13 @@ const appSlice = createSlice({
     setAppLoading: (state, action) => {
       state.loading = action.payload;
     },
-    setAppError: (state, action) => {
-      state.loading = initialState.loading;
-      state.error = action.payload;
-    },
+
     setAppDefaults: () => {
       return initialState;
     },
   },
 });
 
-export const { setAppLoading, setAppError, setAppDefaults } = appSlice.actions;
+export const { setAppLoading, setAppDefaults } = appSlice.actions;
 
 export default appSlice.reducer;

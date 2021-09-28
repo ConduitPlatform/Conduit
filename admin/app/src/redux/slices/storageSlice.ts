@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { IStorageConfig } from '../../models/storage/StorageModels';
 import { getStorageSettings, putStorageSettings } from '../../http/StorageRequests';
-import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
+import { notify } from 'reapop';
 
 interface IStorageSlice {
   data: {
@@ -36,7 +37,9 @@ export const asyncGetStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -51,7 +54,9 @@ export const asyncSaveStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }

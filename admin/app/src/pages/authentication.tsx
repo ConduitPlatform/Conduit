@@ -13,14 +13,12 @@ import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import { privateRoute } from '../components/utils/privateRoute';
 import ServiceAccountsTabs from '../components/authentication/ServiceAccountsTabs';
-import AppState from '../components/common/AppState';
 import useDebounce from '../hooks/useDebounce';
 import {
   SettingsStateTypes,
   SocialDataTypes,
   SocialNameTypes,
 } from '../models/authentication/AuthModels';
-import { SnackbarCloseReason } from '@material-ui/core/Snackbar/Snackbar';
 import {
   asyncAddNewUser,
   asyncGetAuthenticationConfig,
@@ -47,15 +45,9 @@ const Authentication = () => {
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<number>(0);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState('none');
   const debouncedSearch: string = useDebounce(search, 500);
-
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { success: authSuccess } = useAppSelector(
-    (state) => state.authenticationSlice.meta.authUsers
-  );
-
   const { signInMethods: configData } = useAppSelector(
     (state) => state.authenticationSlice.data
   );
@@ -79,12 +71,6 @@ const Authentication = () => {
       setSelected(2);
     }
   }, [configData]);
-
-  useEffect(() => {
-    if (authSuccess) {
-      setSnackbarOpen(true);
-    }
-  }, [authSuccess]);
 
   const tabs = [
     { title: 'Users', isDisabled: configData ? !configData.active : true },
@@ -121,19 +107,6 @@ const Authentication = () => {
       },
     };
     dispatch(asyncUpdateAuthenticationConfig(data));
-  };
-
-  const successMessage = () => {
-    if (authSuccess) {
-      return authSuccess;
-    }
-  };
-
-  const handleClose = (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbarOpen(false);
   };
 
   const handleNewUserDispatch = (values: { password: string; email: string }) => {
@@ -212,11 +185,6 @@ const Authentication = () => {
           <AuthSettings handleSave={handleSettingsSave} settingsData={configData} />
         </Box>
       </Box>
-      <AppState
-        successMessage={successMessage()}
-        snackbarOpen={snackbarOpen}
-        handleClose={handleClose}
-      />
     </>
   );
 };

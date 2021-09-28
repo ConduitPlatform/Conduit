@@ -5,10 +5,11 @@ import { clearNotificationPageStore } from './notificationsSlice';
 import { clearStoragePageStore } from './storageSlice';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
-import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
+import { notify } from 'reapop';
 
 export type AppAuthState = {
   data: {
@@ -34,10 +35,19 @@ export const asyncLogin = createAsyncThunk(
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
+      thunkAPI.dispatch(
+        notify(`Successfully logged in ${username}!`, 'success', {
+          dismissAfter: 3000,
+        })
+      );
       thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`Could not login! error msg:${getErrorData(error)}`, 'error', {
+          dismissAfter: 3000,
+        })
+      );
       throw error;
     }
   }
@@ -62,7 +72,9 @@ export const asyncGetAdminModules = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }

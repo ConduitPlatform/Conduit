@@ -8,8 +8,9 @@ import {
   getNotificationConfig,
   putNotificationConfig,
 } from '../../http/NotificationsRequests';
-import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
+import { notify } from 'reapop';
 
 interface INotificationSlice {
   data: {
@@ -41,7 +42,9 @@ export const asyncSendNewNotification = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -56,7 +59,9 @@ export const asyncGetNotificationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -75,7 +80,9 @@ export const asyncSaveNotificationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }

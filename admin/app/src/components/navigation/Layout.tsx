@@ -6,11 +6,9 @@ import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import Snackbar from '@material-ui/core/Snackbar';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Alert from '@material-ui/lab/Alert';
-import Box from '@material-ui/core/Box';
+import NotificationsSystem, { atalhoTheme, dismissNotification } from 'reapop';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -38,17 +36,11 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.appAuthSlice.data);
-  const { loading, error } = useAppSelector((state) => state.appSlice);
+  const notifications = useAppSelector((state) => state.notifications);
+  const { loading } = useAppSelector((state) => state.appSlice);
   const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
   const [itemSelected, setItemSelected] = useState<number>(0);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  useEffect(() => {
-    if (error) {
-      setSnackbarOpen(true);
-    }
-  }, [error]);
 
   useEffect(() => {
     switch (router.pathname) {
@@ -111,25 +103,6 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     appBar = <CustomHeader showMenuButton={false} onMenuClick={() => menuClick()} />;
   }
 
-  const handleClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const snackbarAlert = () => {
-    const isError = Object.values(error).some((values) => values);
-    if (isError) {
-      return (
-        <Alert variant={'filled'} onClose={handleClose} severity="error">
-          <Box>
-            {error.status} - {error.statusText} - {error.message}
-          </Box>
-        </Alert>
-      );
-    } else {
-      return <div />;
-    }
-  };
-
   return (
     <div className={classes.root} {...rest}>
       {appBar}
@@ -138,14 +111,11 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         <div className={classes.toolbar} />
         {children}
       </main>
-      <Snackbar
-        open={snackbarOpen}
-        className={classes.snackBar}
-        autoHideDuration={6000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        {snackbarAlert()}
-      </Snackbar>
+      <NotificationsSystem
+        notifications={notifications}
+        dismissNotification={(id) => dispatch(dismissNotification(id))}
+        theme={atalhoTheme}
+      />
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>
