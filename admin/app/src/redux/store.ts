@@ -1,5 +1,4 @@
 import { Action, configureStore, ThunkAction } from '@reduxjs/toolkit';
-import appSlice from './slices/appSlice';
 import appAuthSlice from './slices/appAuthSlice';
 import authenticationSlice from './slices/authenticationSlice';
 import notificationsSlice from './slices/notificationsSlice';
@@ -10,12 +9,15 @@ import cmsSlice from './slices/cmsSlice';
 import customEndpointsSlice from './slices/customEndpointsSlice';
 import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import { reducer as appNotif } from 'reapop';
+import appSlice from './slices/appSlice';
 
 let store: any;
 
 export const makeStore = (preloadedState: any) =>
   configureStore({
     reducer: {
+      notifications: appNotif(),
       appSlice,
       appAuthSlice,
       authenticationSlice,

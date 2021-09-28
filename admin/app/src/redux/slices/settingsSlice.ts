@@ -11,8 +11,9 @@ import {
   putCoreRequest,
   postNewAdminUser,
 } from '../../http/SettingsRequests';
-import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
+import { notify } from 'reapop';
 
 interface INotificationSlice {
   data: {
@@ -33,7 +34,9 @@ export const asyncGetAvailableClients = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -46,9 +49,12 @@ export const asyncGenerateNewClient = createAsyncThunk(
     try {
       const { data } = await generateNewClientRequest(platform);
       thunkAPI.dispatch(setAppDefaults());
+
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -63,7 +69,9 @@ export const asyncDeleteClient = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return _id;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -77,7 +85,9 @@ export const asyncPutCoreSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return await putCoreRequest(data);
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -92,10 +102,17 @@ export const asyncCreateAdminUser = createAsyncThunk(
         username: values.username,
         password: values.password,
       };
+      thunkAPI.dispatch(
+        notify(`Successfully created user ${body.username}!`, 'success', {
+          dismissAfter: 3000,
+        })
+      );
       thunkAPI.dispatch(setAppDefaults());
       const { data } = await postNewAdminUser(body); //fix this
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }

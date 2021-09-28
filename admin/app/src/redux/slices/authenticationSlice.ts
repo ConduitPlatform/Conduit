@@ -11,8 +11,9 @@ import {
   getAuthenticationConfig,
   putAuthenticationConfig,
 } from '../../http/AuthenticationRequests';
-import { setAppDefaults, setAppError, setAppLoading } from './appSlice';
+import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
+import { notify } from 'reapop';
 
 interface IAuthenticationSlice {
   data: {
@@ -21,11 +22,6 @@ interface IAuthenticationSlice {
       count: number;
     };
     signInMethods: SignInMethods | null;
-  };
-  meta: {
-    authUsers: {
-      success: string | null;
-    };
   };
 }
 
@@ -36,11 +32,6 @@ const initialState: IAuthenticationSlice = {
       count: 0,
     },
     signInMethods: null,
-  },
-  meta: {
-    authUsers: {
-      success: '',
-    },
   },
 };
 
@@ -61,7 +52,9 @@ export const asyncGetAuthUserData = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -79,13 +72,17 @@ export const asyncAddNewUser = createAsyncThunk(
       thunkAPI.dispatch(
         asyncGetAuthUserData({ skip: 0, limit: params.limit, search: '', filter: 'none' })
       );
-      setTimeout(() => {
-        thunkAPI.dispatch(clearSuccessMsg());
-      }, 6300);
+      thunkAPI.dispatch(
+        notify(`Successfully added ${params.values.email}!`, 'success', {
+          dismissAfter: 3000,
+        })
+      );
       thunkAPI.dispatch(setAppDefaults());
       return { data, params };
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -97,10 +94,17 @@ export const asyncEditUser = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await editUser(values);
+      thunkAPI.dispatch(
+        notify(`Successfully edited user ${values.email}!`, 'success', {
+          dismissAfter: 3000,
+        })
+      );
       thunkAPI.dispatch(setAppDefaults());
       return values;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -115,7 +119,9 @@ export const asyncBlockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -130,7 +136,9 @@ export const asyncUnblockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -142,10 +150,17 @@ export const asyncDeleteUser = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteUser(id);
+      thunkAPI.dispatch(
+        notify(`Successfully deleted user!`, 'warning', {
+          dismissAfter: 3000,
+        })
+      );
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -160,7 +175,9 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -175,7 +192,9 @@ export const asyncUpdateAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(setAppError(getErrorData(error)));
+      thunkAPI.dispatch(
+        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
+      );
       throw error;
     }
   }
@@ -185,9 +204,6 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
-    clearSuccessMsg(state) {
-      state.meta.authUsers.success = null;
-    },
     clearAuthenticationPageStore(state) {
       state = initialState;
     },
@@ -198,7 +214,6 @@ const authenticationSlice = createSlice({
       state.data.authUsers.count = action.payload.count;
     });
     builder.addCase(asyncAddNewUser.fulfilled, (state, action) => {
-      state.meta.authUsers.success = action.payload.data.message;
       state.data.authUsers.count++;
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
@@ -240,9 +255,6 @@ const authenticationSlice = createSlice({
   },
 });
 
-export const {
-  clearAuthenticationPageStore,
-  clearSuccessMsg,
-} = authenticationSlice.actions;
+export const { clearAuthenticationPageStore } = authenticationSlice.actions;
 
 export default authenticationSlice.reducer;
