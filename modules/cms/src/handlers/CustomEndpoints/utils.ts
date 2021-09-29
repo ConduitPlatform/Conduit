@@ -20,7 +20,7 @@ export function getOpName(name: string, op: number) {
       operation = ConduitRouteActions.DELETE;
       break;
     case 4:
-      operation = ConduitRouteActions.UPDATE;
+      operation = ConduitRouteActions.PATCH;
       break;
     // won't ever be called by TS doesn't care about that
     default:

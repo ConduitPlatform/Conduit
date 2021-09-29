@@ -1,0 +1,88 @@
+import React, { useEffect } from 'react';
+import { ThemeProvider } from '@material-ui/core/styles';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import theme from '../utils/theme';
+import type { AppContext, AppProps } from 'next/app';
+import App from 'next/app';
+import { Provider } from 'react-redux';
+import Head from 'next/head';
+import { initializeStore, useStore } from '../redux/store';
+import { getCookie } from '../utils/cookie';
+import { setToken } from '../redux/slices/appAuthSlice';
+import { Layout } from '../components/navigation/Layout';
+import { setUpNotifications } from 'reapop';
+
+setUpNotifications({
+  defaultProps: {
+    position: 'bottom-right',
+    dismissible: true,
+  },
+});
+
+const ConduitApp = ({ Component, pageProps }: AppProps) => {
+  const reduxStore = useStore(pageProps.initialReduxState);
+
+  useEffect(() => {
+    const jssStyles = document.querySelector('#jss-server-side');
+    if (jssStyles && jssStyles.parentElement) {
+      jssStyles.parentElement.removeChild(jssStyles);
+    }
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <title>Conduit - App</title>
+        <meta
+          name="viewport"
+          content="minimum-scale=1, initial-scale=1, width=device-width"
+        />
+      </Head>
+      <Provider store={reduxStore}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </ThemeProvider>
+      </Provider>
+    </>
+  );
+};
+
+ConduitApp.getInitialProps = async (appContext: AppContext) => {
+  // calls page's `getInitialProps` and fills `appProps.pageProps`
+  const appProps = await App.getInitialProps(appContext);
+  const ctx = appContext.ctx;
+  //initialize redux store on server side
+  const reduxStore = initializeStore({});
+  const { dispatch } = reduxStore;
+
+  const cookie = getCookie('JWT', ctx.req);
+
+  if (
+    typeof window === 'undefined' &&
+    appContext &&
+    appContext.ctx &&
+    appContext.ctx.res &&
+    appContext.ctx.res.writeHead
+  ) {
+    if (!cookie && ctx.pathname !== '/login') {
+      appContext.ctx.res.writeHead(302, { Location: '/login' });
+      appContext.ctx.res.end();
+    }
+  }
+
+  //if user is already logged in and auth-token cookie exist, add it to redux auth-state
+  dispatch(setToken({ token: cookie }));
+
+  appProps.pageProps = {
+    ...appProps.pageProps,
+    cookie,
+    initialReduxState: reduxStore.getState(),
+  };
+
+  return appProps;
+};
+
+export default ConduitApp;

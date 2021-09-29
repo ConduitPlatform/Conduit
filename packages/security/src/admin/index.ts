@@ -33,7 +33,7 @@ export class Admin {
     let clientSecret = randomBytes(64).toString('hex');
     let error;
 
-    await this.grpcSdk.databaseProvider
+    let client = await this.grpcSdk.databaseProvider
       ?.create('Client', {
         clientId,
         clientSecret,
@@ -45,7 +45,7 @@ export class Admin {
       return res.status(500).json({ message: 'Something went wrong!' });
     }
 
-    return res.json({ clientId, clientSecret, platform });
+    return res.json({ id: client._id, clientId, clientSecret, platform });
   }
 
   async deleteClient(req: Request, res: Response, next: NextFunction) {

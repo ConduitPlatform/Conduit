@@ -138,7 +138,7 @@ export class AdminHandlers {
         return res.status(404).json({ error: 'Resource not found' });
     }
 
-    if (!isNil(errorMessage)) return res.status(403).json({ error: errorMessage });
+    if (!isNil(errorMessage)) return res.status(500).json({ error: errorMessage });
     return res.json(updatedConfig);
   }
 }
