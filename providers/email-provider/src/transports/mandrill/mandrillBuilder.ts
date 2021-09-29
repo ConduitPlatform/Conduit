@@ -29,8 +29,7 @@ export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
     this._mailOptions.mandrillOptions.message.merge = true;
     this._mailOptions.mandrillOptions.message.merge_language = "handlebars";
     this._mailOptions.mandrillOptions.message.global_merge_vars = globalVariables;
-    
-    console.log(this._mailOptions);
+
     return this;
   }
 

@@ -5,7 +5,6 @@ import { NodemailerBuilder } from './transports/nodemailer/nodemailerBuilder';
 import { EmailBuilder } from './interfaces/EmailBuilder';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { EmailOptions } from './interfaces/EmailOptions';
 import { isNil, template, times } from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
 import { Mandrill } from 'mandrill-api';
@@ -91,7 +90,7 @@ export class EmailProvider {
     if (this._transportName === 'mailgun') {
       return new MailgunMailBuilder();
     } else if ( this._transportName === 'mandrill') {
-      console.log('edw2');
+
       return new MandrillBuilder();
     }
     else{

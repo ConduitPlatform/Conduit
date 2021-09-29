@@ -46,12 +46,3 @@ let mail = (provider.emailBuilder() as MandrillBuilder)
           .catch( (err) => {
               console.log('err',err);
           });
-// provider.sendEmailDirect(mailOptions).then( (res) => {
-//     console.log('Done');
-// })
-// .catch(err =>{
-//     console.log(err);
-// });
-// provider.listMandrillTemplates({
-//     key: '***REMOVED***'
-// });
