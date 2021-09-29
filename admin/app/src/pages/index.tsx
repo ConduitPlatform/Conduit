@@ -10,17 +10,28 @@ import {
   makeStyles,
   Paper,
   Theme,
+  IconButton,
+  Divider,
 } from '@material-ui/core';
+import EmailIcon from '@material-ui/icons/Email';
+import LockIcon from '@material-ui/icons/Lock';
+import SchemaIcon from '@material-ui/icons/VerticalSplit';
+import SectetIcon from '@material-ui/icons/VpnKey';
+import { ArrowForward } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     paper: {
-      height: 100,
-      width: 260,
+      height: 160,
+      width: 270,
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.palette.primary.main,
+      padding: '20px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.palette.primary.main,
+      flexDirection: 'column',
+      backgroundColor: theme.palette.background.default,
+
       color: '#fff',
       '&:hover': {
         borderWidth: '1px',
@@ -32,6 +43,17 @@ const useStyles = makeStyles((theme: Theme) =>
         borderStyle: 'solid',
         borderColor: theme.palette.secondary.main,
       },
+    },
+    iconButton: {
+      color: theme.palette.secondary.main,
+    },
+    headerIcon: {
+      color: theme.palette.secondary.main,
+      marginLeft: '1px',
+    },
+    divider: {
+      color: theme.palette.primary.main,
+      marginBottom: '10px',
     },
   })
 );
@@ -51,20 +73,89 @@ const Home = () => {
         alignItems="center"
         alignSelf="center"
         marginTop="300px">
-        <Grid container justify="center" alignItems="center" spacing={3}>
-          <Grid item xs={4}>
+        <Grid container justify="center" alignItems="center" spacing={6}>
+          <Grid item xs={6} sm={6} md={3}>
             <Paper className={classes.paper} variant="elevation">
-              <Typography>set up emails</Typography>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}>
+                <SectetIcon className={classes.headerIcon} />
+                <Typography>set up an auth method</Typography>
+              </div>
+              <Divider className={classes.divider} />
+              <Typography variant="subtitle2">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
+                quam.
+                <IconButton className={classes.iconButton} size="small">
+                  <ArrowForward />
+                </IconButton>
+              </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6} sm={6} md={3}>
             <Paper className={classes.paper} variant="elevation">
-              <Typography align="center">choose Provider</Typography>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}>
+                <SchemaIcon className={classes.headerIcon} />
+                <Typography align="center">create a schema</Typography>
+              </div>
+              <Divider className={classes.divider} />
+              <Typography variant="subtitle2">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
+                quam.
+                <IconButton className={classes.iconButton} size="small">
+                  <ArrowForward />
+                </IconButton>
+              </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6} sm={6} md={3}>
             <Paper className={classes.paper} variant="elevation">
-              <Typography>manage your schemas</Typography>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}>
+                <EmailIcon className={classes.headerIcon} />
+                <Typography>set up email provider</Typography>
+              </div>
+              <Divider className={classes.divider} />
+              <Typography variant="subtitle2">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
+                quam.
+                <IconButton className={classes.iconButton} size="small">
+                  <ArrowForward />
+                </IconButton>
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <Paper className={classes.paper} variant="elevation">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}>
+                <LockIcon className={classes.headerIcon} />
+                <Typography>set up client secrets</Typography>
+              </div>
+              <Divider className={classes.divider} />
+              <Typography variant="subtitle2">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
+                quam.
+                <IconButton className={classes.iconButton} size="small">
+                  <ArrowForward />
+                </IconButton>
+              </Typography>
             </Paper>
           </Grid>
         </Grid>
@@ -75,8 +166,7 @@ const Home = () => {
 
 export default Home;
 
-{
-  /* <Box p={2} display={'flex'} alignItems={'center'} flex={1}>
+/* <Box p={2} display={'flex'} alignItems={'center'} flex={1}>
 <Typography
   variant={'h1'}
   style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
@@ -89,4 +179,3 @@ export default Home;
   nduit!
 </Typography>
 </Box> */
-}
