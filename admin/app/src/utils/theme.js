@@ -1,14 +1,16 @@
 import { createMuiTheme } from '@material-ui/core/styles';
 
-const primary = '#00539C';
-const secondary = '#FFD662';
+const primary = '#5B44F2';
+const secondary = '#07D9C4';
 const error = '#DC004E';
+const warning = '#E265AB';
 
 const theme = createMuiTheme({
   palette: {
+    type: 'dark',
     primary: {
       main: primary,
-      contrastText: '#fff',
+      contrastText: '#F2F2F2',
     },
     secondary: {
       main: secondary,
@@ -18,6 +20,16 @@ const theme = createMuiTheme({
       main: error,
       contrastText: '#fff',
     },
+    warning: {
+      main: warning,
+    },
+    background: {
+      paper: '#303030',
+      default: '#262840',
+    },
+  },
+  typography: {
+    fontFamily: 'JetBrains Mono',
   },
 });
 

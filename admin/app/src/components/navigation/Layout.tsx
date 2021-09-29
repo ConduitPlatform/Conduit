@@ -93,20 +93,13 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     await router.push('/');
   };
 
-  let appBar, drawer;
-  if (!menuDisabled) {
-    appBar = (
-      <CustomHeader onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />
-    );
-    drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
-  } else {
-    appBar = <CustomHeader showMenuButton={false} onMenuClick={() => menuClick()} />;
-  }
-
   return (
     <div className={classes.root} {...rest}>
-      {appBar}
-      {drawer}
+      {token ? (
+        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+      ) : (
+        ''
+      )}
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}

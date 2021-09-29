@@ -24,7 +24,7 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
   },
   titleContent: {
-    backgroundColor: theme.palette.grey[200],
+    backgroundColor: theme.palette.primary.main,
     height: theme.spacing(6),
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
