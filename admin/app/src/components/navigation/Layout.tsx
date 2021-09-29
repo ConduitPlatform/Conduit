@@ -99,8 +99,6 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       <CustomHeader onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />
     );
     drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
-  } else {
-    appBar = <CustomHeader showMenuButton={false} onMenuClick={() => menuClick()} />;
   }
 
   return (
@@ -108,7 +106,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       {appBar}
       {drawer}
       <main className={classes.content}>
-        <div className={classes.toolbar} />
+        {!menuDisabled && <div className={classes.toolbar} />}
         {children}
       </main>
       <NotificationsSystem
