@@ -1,36 +1,28 @@
-import cookie from 'js-cookie';
+import Cookies from 'js-cookie';
 
 export const setCookie = (key, value, remember) => {
   if (typeof window !== 'undefined') {
     if (remember) {
       let sixHours = new Date(new Date().getTime() + 6 * 60 * 60 * 1000);
 
-      cookie.set(key, value, {
+      Cookies.set(key, value, {
         expires: sixHours,
-        path: '/',
       });
     } else {
-      cookie.set(key, value, {
-        path: '/',
-      });
+      Cookies.set(key, value);
     }
   }
 };
 export const removeCookie = (key) => {
   if (typeof window !== 'undefined') {
-    cookie.remove(key, {
+    Cookies.remove(key, {
       expires: 1,
     });
   }
 };
-export const getCookie = (key, req) => {
-  return typeof window !== 'undefined'
-    ? getCookieFromBrowser(key)
-    : getCookieFromServer(key, req);
-};
 
 const getCookieFromBrowser = (key) => {
-  return cookie.get(key);
+  return Cookies.get(key);
 };
 
 const getCookieFromServer = (key, req) => {
@@ -44,4 +36,10 @@ const getCookieFromServer = (key, req) => {
     return undefined;
   }
   return rawCookie.split('=')[1];
+};
+
+export const getCookie = (key, req) => {
+  return typeof window !== 'undefined'
+    ? getCookieFromBrowser(key)
+    : getCookieFromServer(key, req);
 };

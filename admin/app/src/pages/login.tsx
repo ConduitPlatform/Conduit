@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
@@ -7,9 +6,8 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
 import Container from '@material-ui/core/Container';
 import { Formik } from 'formik';
-import { LockOutlined } from '@material-ui/icons';
 import { asyncLogin } from '../redux/slices/appAuthSlice';
-import { Box, Theme } from '@material-ui/core';
+import { Theme } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../redux/store';
 import { useRouter } from 'next/router';
@@ -69,14 +67,11 @@ const Login: React.FC = () => {
   const classes = useStyles();
 
   return (
-    <Grid container xs={12} className={classes.root}>
+    <Grid container className={classes.root}>
       <Grid container item xs={8} className={classes.illustrationContainer}>
         <LoginIllustration />
       </Grid>
       <Grid container item xs={4} className={classes.paper}>
-        {/*<Avatar className={classes.avatar}>*/}
-        {/*  <LockOutlined />*/}
-        {/*</Avatar>*/}
         <Typography variant="h3" className={classes.title}>
           Conduit
         </Typography>
