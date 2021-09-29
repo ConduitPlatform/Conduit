@@ -18722,6 +18722,16 @@ react-spring@^9.1.2:
     "@react-spring/web" "~9.1.2"
     "@react-spring/zdog" "~9.1.2"
 
+react-transition-group@4.4.2:
+  version "4.4.2"
+  resolved "https://registry.yarnpkg.com/react-transition-group/-/react-transition-group-4.4.2.tgz#8b59a56f09ced7b55cbd53c36768b922890d5470"
+  integrity sha512-/RNYfRAMlZwDSr6z4zNKV6xu53/e2BuaBbGhbyYIXTrmgu/bGHzmqOs7mJSJBHy9Ud+ApHx3QjrkKSp1pxvlFg==
+  dependencies:
+    "@babel/runtime" "^7.5.5"
+    dom-helpers "^5.0.1"
+    loose-envify "^1.4.0"
+    prop-types "^15.6.2"
+
 react-transition-group@^4.0.0, react-transition-group@^4.4.0:
   version "4.4.1"
   resolved "https://registry.yarnpkg.com/react-transition-group/-/react-transition-group-4.4.1.tgz#63868f9325a38ea5ee9535d828327f85773345c9"
@@ -18943,6 +18953,13 @@ readdirp@~3.5.0:
   integrity sha512-cMhu7c/8rdhkHXWsY+osBhfSy0JikwpHK/5+imo+LpeasTF8ouErHrlYkwT0++njiyuDvc7OFY5T3ukvZ8qmFQ==
   dependencies:
     picomatch "^2.2.1"
+
+reapop@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/reapop/-/reapop-4.0.2.tgz#006d9906d9d4c4b9e56562b91376d52c4c8dcc59"
+  integrity sha512-V+yUyxexO8miP1Y0hQy+5GDw/iDJU+O3K5uSvPJNFP1bcAxFiIfJcahjUOfakISkyDeb/xks4uGIb5I3mdkDRA==
+  dependencies:
+    react-transition-group "4.4.2"
 
 recast@^0.17.3:
   version "0.17.6"
