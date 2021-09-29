@@ -6,12 +6,17 @@ import { EmailBuilder } from './interfaces/EmailBuilder';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
 import { EmailOptions } from './interfaces/EmailOptions';
-import { isNil } from 'lodash';
-import { Mandrill } from 'mandrill-api';
+import { isNil, template, times } from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
+import { Mandrill } from 'mandrill-api';
+import { MandrillBuilder } from './transports/mandrill/mandrillBuilder';
+import { EmailBuilderClass } from './models/EmailBuilderClass';
+import { MandrillEmailOptions } from './interfaces/MandrillEmailOptions';
+
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class EmailProvider {
-  _transport?: Mail | Mandrill;
+  _transport?: Mail;
+  _mandrillTransport?: Mandrill;
   _transportName?: string;
 
   constructor(transport: string, transportSettings: any) {
@@ -59,14 +64,17 @@ export class EmailProvider {
   
       this._transport = createTransport(mandrillTransport(mandrillSettings));
 
+      this._mandrillTransport = new Mandrill(transportSettings.mandrill.apiKey);
+
     } else {
       this._transportName = undefined;
       this._transport = undefined;
+      this._mandrillTransport = undefined;
       throw new Error('You need to specify a correct transport');
     }
   }
 
-  sendEmailDirect(mailOptions: EmailOptions): Promise<SentMessageInfo> {
+  sendEmailDirect(mailOptions: Mail.Options): Promise<SentMessageInfo> {
 
       const transport = this._transport as Mail;
       if (!transport) {
@@ -76,22 +84,50 @@ export class EmailProvider {
     
   }
 
-  emailBuilder(): EmailBuilder {
+  emailBuilder(): EmailBuilder | MandrillBuilder {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
     if (this._transportName === 'mailgun') {
       return new MailgunMailBuilder();
-    } else {
-      return new NodemailerBuilder();
+    } else if ( this._transportName === 'mandrill') {
+      console.log('edw2');
+      return new MandrillBuilder();
+    }
+    else{
+       return new NodemailerBuilder();
     }
   }
 
-  sendEmail(email: EmailBuilder): Promise<SentMessageInfo> {
+  sendEmail(email: EmailBuilder | EmailBuilderClass<MandrillEmailOptions>): Promise<SentMessageInfo> {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
     return (this._transport as Mail).sendMail(email.getMailObject());
   }
+
+  getMandrillTemplateInfo(templateName: string ){
+    this._mandrillTransport?.templates.info(templateName, res => {
+      console.log(res);
+    },
+    err => {
+      console.log(err);
+    });
+  }
+  
+  listMandrillTemplates(apiKey:any){
+
+    this._mandrillTransport?.templates.list(apiKey, res =>{
+      console.log(res);
+    },
+    err => {
+      console.log(err);
+    });
+  }
+  
 }
-//import './test';  test script for sending emails
+import './test';  
+
+
+
+

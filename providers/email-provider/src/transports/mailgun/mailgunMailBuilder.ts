@@ -53,7 +53,7 @@ export class MailgunMailBuilder implements EmailBuilder {
     }
     return this;
   }
-
+  
   getReceiver(): string | string[] | undefined {
     return this._to;
   }
@@ -105,6 +105,7 @@ export class MailgunMailBuilder implements EmailBuilder {
 
   setBCC(bcc: string | string[], clearBCC?: boolean): EmailBuilder {
     if (typeof bcc === 'string') {
+      
       if (this._bcc && this._bcc.length > 0) {
         if (typeof this._bcc !== 'string') {
           if (clearBCC) {

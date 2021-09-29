@@ -17,7 +17,8 @@ export class EmailService {
     this.emailer = emailer;
   }
 
-  async registerTemplate(params: IRegisterTemplateParams) {
+  async  registerTemplate(params: IRegisterTemplateParams) {
+    console.log('edw');
     const { name, body, subject, variables } = params;
 
     const existing = await this.database.findOne('EmailTemplate', { name });
