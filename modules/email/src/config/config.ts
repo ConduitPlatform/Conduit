@@ -85,6 +85,23 @@ export default {
         default: null,
         nullable: true,
       }
+    },
+    sendgrid: {
+      doc: 'The SendGrid config',
+      nullable: true,
+      default: null,
+      apiKey: {
+        doc: 'The SendGrid API key',
+        format: 'String',
+        default: null,
+        nullable: true,
+      },
+      apiUser: {
+        doc: 'The SendGrid API username',
+        format: 'String',
+        default: null,
+        nullable: true,
+      }
     }
   },
 };

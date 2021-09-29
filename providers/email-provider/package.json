@@ -20,6 +20,8 @@
     "nodemailer": "^6.4.16",
     "nodemailer-mailgun-transport": "^2.0.0",
     "nodemailer-mandrill-transport": "^1.2.0",
+    "nodemailer-sendgrid": "^1.0.3",
+    "nodemailer-sendgrid-transport": "^0.2.0",
     "snyk": "^1.321.0"
   },
   "directories": {

@@ -32,6 +32,5 @@ export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
 
     return this;
   }
-
   
 }

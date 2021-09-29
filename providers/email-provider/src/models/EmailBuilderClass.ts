@@ -56,7 +56,7 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
     return this;
   }
 
-  setReceiver(receiver:  string | Address | Array<string | Address>, clearReceiver?: boolean): EmailBuilderClass<T> {
+  setReceiver(receiver:  string | Address | Array< string | Address>, clearReceiver?: boolean): EmailBuilderClass<T> {
     if (typeof receiver === 'string') {
       if (this._mailOptions.to && (this._mailOptions.to as Array<string | Address>).length > 0) {
         if (typeof this._mailOptions.to !== 'string') {
