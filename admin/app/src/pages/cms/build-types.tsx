@@ -87,11 +87,11 @@ const BuildTypes: React.FC = () => {
 
   const { data } = useAppSelector((state) => state.cmsSlice);
 
-  const [schemaFields, setSchemaFields] = useState({ newTypeFields: [] });
-  const [schemaName, setSchemaName] = useState('');
+  const [schemaFields, setSchemaFields] = useState<any>({ newTypeFields: [] });
+  const [schemaName, setSchemaName] = useState<any>('');
   const [authentication, setAuthentication] = useState(false);
   const [crudOperations, setCrudOperations] = useState(false);
-  const [drawerData, setDrawerData] = useState({
+  const [drawerData, setDrawerData] = useState<any>({
     open: false,
     type: '',
     destination: null,
@@ -99,7 +99,7 @@ const BuildTypes: React.FC = () => {
 
   const [duplicateId, setDuplicateId] = useState(false);
   const [invalidName, setInvalidName] = useState(false);
-  const [selectedProps, setSelectedProps] = useState({
+  const [selectedProps, setSelectedProps] = useState<any>({
     item: undefined,
     index: undefined,
     type: 'standard',
@@ -178,7 +178,7 @@ const BuildTypes: React.FC = () => {
     }
   }, [router.query.name, router.query.schema, router.query.schemaId]);
 
-  const onDragEnd = (result) => {
+  const onDragEnd = (result: any) => {
     const { source, destination, draggableId } = result;
 
     if (!destination) {
@@ -218,7 +218,7 @@ const BuildTypes: React.FC = () => {
     setDuplicateId(false);
   };
 
-  const handleSubmit = (typeData) => {
+  const handleSubmit = (typeData: any) => {
     const array = schemaFields.newTypeFields;
     if (!Array.isArray(array)) {
       return;
@@ -229,7 +229,7 @@ const BuildTypes: React.FC = () => {
     let isGroup = '';
     let groupId = '';
     if (drawerData.destination) {
-      droppableIdString = `${drawerData.destination.droppableId}`;
+      droppableIdString = `${drawerData?.destination?.droppableId}`;
       isGroup = droppableIdString.slice(0, 5);
       groupId = droppableIdString.substr(6);
     }
@@ -256,7 +256,7 @@ const BuildTypes: React.FC = () => {
         return;
       }
       const content = group.content;
-      hasDuplicate = content.some((item) => {
+      hasDuplicate = content.some((item: any) => {
         if (selectedProps.item) {
           if (selectedProps.item.name === item.name) {
             return false;
@@ -268,17 +268,19 @@ const BuildTypes: React.FC = () => {
       const allGroups = array.filter((s) => s.type === 'Group');
       const parentGroup = allGroups.find((object) => {
         if (object.content) {
-          return object.content.find((content) => content.name === groupId);
+          return object.content.find((content: any) => content.name === groupId);
         }
         return false;
       });
       if (!parentGroup) return;
-      const innerGroup = parentGroup.content.find((object2) => object2.name === groupId);
+      const innerGroup = parentGroup.content.find(
+        (object2: any) => object2.name === groupId
+      );
       if (!innerGroup) return;
       const content = innerGroup.content;
-      hasDuplicate = content.some((item) => {
+      hasDuplicate = content.some((item: any) => {
         if (selectedProps.item) {
-          if (selectedProps.item.name === item.name) {
+          if (selectedProps?.item?.name === item.name) {
             return false;
           }
         }
@@ -355,7 +357,7 @@ const BuildTypes: React.FC = () => {
     handleDrawerClose();
   };
 
-  const handleDrawer = (item: any, index: number) => {
+  const handleDrawer = (item: any, index: any) => {
     setSelectedProps({ item: item, index: index, type: 'standard' });
     setDrawerData({
       ...drawerData,
@@ -372,7 +374,7 @@ const BuildTypes: React.FC = () => {
     });
   };
 
-  const handleGroupDrawer = (item, index, groupIndex) => {
+  const handleGroupDrawer = (item: any, index: number, groupIndex: number) => {
     setSelectedProps({ item: item, index: index, type: 'group' });
     setDrawerData({
       ...drawerData,
@@ -388,7 +390,7 @@ const BuildTypes: React.FC = () => {
   };
 
   const handleGroupDelete = (index: number, groupIndex: number) => {
-    const deleted = Array.from(schemaFields.newTypeFields);
+    const deleted: any = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content.splice(index, 1);
     setSchemaFields({
       newTypeFields: deleted,
@@ -421,7 +423,7 @@ const BuildTypes: React.FC = () => {
     groupIndex: number,
     itemIndex: number
   ) => {
-    const deleted = Array.from(schemaFields.newTypeFields);
+    const deleted: any = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content[itemIndex].content.splice(index, 1);
     setSchemaFields({
       newTypeFields: deleted,
@@ -484,12 +486,12 @@ const BuildTypes: React.FC = () => {
           <Box className={classes.listContainer}>
             <Droppable droppableId="ITEMS" isDropDisabled={true}>
               {(provided) => (
-                <Box className={classes.list} ref={provided.innerRef}>
+                <div className={classes.list} ref={provided.innerRef}>
                   {items.map((item, index) => (
                     <BuildTypesList item={item} index={index} key={item} />
                   ))}
                   {provided.placeholder}
-                </Box>
+                </div>
               )}
             </Droppable>
           </Box>

@@ -63,7 +63,7 @@ export class AuthHandlers {
     }
     const adminConfig = await this.conduit.getConfigManager().get('admin');
     const hashRounds = adminConfig.auth.hashRounds;
-    let pass = hashPassword(password, hashRounds);
+    let pass = await hashPassword(password, hashRounds);
     await database.create('Admin', { username: username, password: pass });
     return res.json({ message: 'OK' });
   }

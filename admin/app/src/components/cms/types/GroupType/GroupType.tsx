@@ -135,18 +135,21 @@ const GroupType: FC<IProps> = ({
       </Grid>
       <Droppable droppableId={groupId} isCombineEnabled>
         {(provided, snapshot) => (
-          <Box
+          <div
             ref={provided.innerRef}
             className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
             {item.content && Array.isArray(item.content) && item.content.length > 0 ? (
-              item.content.map((groupItem, index) => (
+              item.content.map((
+                groupItem: any, //todo fix this
+                index: number
+              ) => (
                 <Draggable
                   key={groupItem.name}
                   draggableId={groupItem.name}
                   index={index}
                   isDragDisabled>
                   {(provided) => (
-                    <Box
+                    <div
                       className={classes.item}
                       ref={provided.innerRef}
                       {...provided.draggableProps}
@@ -174,7 +177,7 @@ const GroupType: FC<IProps> = ({
                           </Box>
                         </Box>
                       </Box>
-                    </Box>
+                    </div>
                   )}
                 </Draggable>
               ))
@@ -182,7 +185,7 @@ const GroupType: FC<IProps> = ({
               <Box>Place items</Box>
             )}
             {provided.placeholder}
-          </Box>
+          </div>
         )}
       </Droppable>
     </Box>

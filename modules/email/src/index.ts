@@ -7,11 +7,24 @@ if (!process.env.CONDUIT_SERVER) {
 }
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'email');
 let email = new EmailModule(grpcSdk);
-let url = email.url;
-if (process.env.REGISTER_NAME === 'true') {
-  url = 'email-provider:' + url.split(':')[1];
-}
-grpcSdk.config.registerModule('email', url).catch((err: any) => {
-  console.error(err);
-  process.exit(-1);
-});
+email
+  .initialize()
+  .then(() => {
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'email-provider:' : '0.0.0.0:') +
+      email.port;
+    return grpcSdk.config.registerModule('email', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
+    console.error(err);
+    process.exit(-1);
+  })
+  .then(() => {
+    return email.activate();
+  })
+
+  .catch((err: Error) => {
+    console.log('Failed to active module');
+    console.error(err);
+  });

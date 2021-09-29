@@ -1,4 +1,4 @@
-import * as grpc from 'grpc';
+import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
@@ -19,11 +19,11 @@ export default class ConfigManager implements IConfigManager {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     private readonly sdk: ConduitCommons,
-    server: grpc.Server,
+    server: Server,
     packageDefinition: any,
     databaseCallback: any
   ) {
-    var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+    var protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
     var config = protoDescriptor.conduit.core.Config;
@@ -169,7 +169,7 @@ export default class ConfigManager implements IConfigManager {
         });
     } else {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: 'Database provider not set',
       });
     }
@@ -201,7 +201,7 @@ export default class ConfigManager implements IConfigManager {
       })
       .catch((err) => {
         callback({
-          code: grpc.status.INTERNAL,
+          code: status.INTERNAL,
           message: err.message ? err.message : err,
         });
       });
@@ -255,13 +255,13 @@ export default class ConfigManager implements IConfigManager {
         })
         .catch((err) => {
           callback({
-            code: grpc.status.INTERNAL,
+            code: status.INTERNAL,
             message: err.message ? err.message : err,
           });
         });
     } else {
       callback({
-        code: grpc.status.FAILED_PRECONDITION,
+        code: status.FAILED_PRECONDITION,
         message: 'Database provider not set',
       });
     }
@@ -301,13 +301,13 @@ export default class ConfigManager implements IConfigManager {
         })
         .catch((err) => {
           callback({
-            code: grpc.status.INTERNAL,
+            code: status.INTERNAL,
             message: err.message ? err.message : err,
           });
         });
     } else {
       callback({
-        code: grpc.status.FAILED_PRECONDITION,
+        code: status.FAILED_PRECONDITION,
         message: 'Database provider not set',
       });
     }
@@ -340,7 +340,7 @@ export default class ConfigManager implements IConfigManager {
       callback(null, this.registeredModules.get(call.request.moduleName));
     } else {
       callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Module is missing',
       });
     }
@@ -400,7 +400,7 @@ export default class ConfigManager implements IConfigManager {
       callback(null, { modules });
     } else {
       callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Modules not available',
       });
     }
@@ -438,36 +438,6 @@ export default class ConfigManager implements IConfigManager {
     callback(null, { result: true });
   }
 
-  private async _registerModule(
-    moduleName: string,
-    moduleUrl: string,
-    instancePeer: string,
-    fromGrpc = false
-  ) {
-    let dbInit = false;
-    if (!fromGrpc) {
-      let failed: any;
-      let success = await request.get('http://' + moduleUrl).catch((err) => {
-        failed = err;
-      });
-      if (failed && failed.message.indexOf('Error: Parse Error') === -1) {
-        throw new Error('Failed to register dead module');
-      }
-    }
-    if (
-      moduleName === 'database-provider' &&
-      this.registeredModules.has('database-provider')
-    ) {
-      dbInit = true;
-    }
-    this.registeredModules.set(moduleName, moduleUrl);
-    if (moduleName === 'database-provider' && !dbInit) {
-      this.databaseCallback();
-    }
-    this.updateModuleHealth(moduleName, instancePeer);
-    this.moduleRegister.emit('module-registered');
-  }
-
   getModuleUrlByInstanceGrpc(call: any, callback: any) {
     let instance = call.request.instancePeer;
     let result = this.getModuleUrlByInstance(instance);
@@ -475,7 +445,7 @@ export default class ConfigManager implements IConfigManager {
       callback(null, { moduleUrl: result.url, moduleName: result.moduleName });
     } else {
       callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Module not found',
       });
     }
@@ -498,6 +468,36 @@ export default class ConfigManager implements IConfigManager {
     } else {
       return undefined;
     }
+  }
+
+  private async _registerModule(
+    moduleName: string,
+    moduleUrl: string,
+    instancePeer: string,
+    fromGrpc = false
+  ) {
+    let dbInit = false;
+    if (!fromGrpc) {
+      let failed: any;
+      let success = await request.get('http://' + moduleUrl).catch((err: any) => {
+        failed = err;
+      });
+      if (failed && failed.message.indexOf('Error: Parse Error') === -1) {
+        throw new Error('Failed to register dead module');
+      }
+    }
+    if (
+      moduleName === 'database-provider' &&
+      this.registeredModules.has('database-provider')
+    ) {
+      dbInit = true;
+    }
+    this.registeredModules.set(moduleName, moduleUrl);
+    if (moduleName === 'database-provider' && !dbInit) {
+      this.databaseCallback();
+    }
+    this.updateModuleHealth(moduleName, instancePeer);
+    this.moduleRegister.emit('module-registered');
   }
 
   private registerAdminRoutes() {

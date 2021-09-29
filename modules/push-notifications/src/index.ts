@@ -1,20 +1,29 @@
 import PushNotifications from './PushNotifications';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 
-let paths = require('./admin/admin.json');
-
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'pushnotifications');
 let notifications = new PushNotifications(grpcSdk);
+notifications
+  .initialize()
+  .then(() => {
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'push-notifications:' : '0.0.0.0:') +
+      notifications.port;
 
-let url = notifications.url;
-if (process.env.REGISTER_NAME === 'true') {
-  url = 'storage:' + url.split(':')[1];
-}
-
-grpcSdk.config.registerModule('push-notifications', notifications.url).catch((err) => {
-  console.error(err);
-  process.exit(-1);
-});
+    return grpcSdk.config.registerModule('push-notifications', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
+    console.error(err);
+    process.exit(-1);
+  })
+  .then(() => {
+    return notifications.activate();
+  })
+  .catch((err: Error) => {
+    console.log('Failed to active module');
+    console.error(err);
+  });

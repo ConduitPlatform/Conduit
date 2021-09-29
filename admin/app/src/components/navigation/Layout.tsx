@@ -72,7 +72,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         setItemSelected(0);
     }
 
-    if (router.pathname === '/login') {
+    if (router.pathname === '/login' || router.pathname === '/cms/build-types') {
       setMenuDisabled(true);
       return;
     }

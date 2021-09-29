@@ -1,11 +1,11 @@
-import { isString, isNil } from 'lodash';
+import { isNil, isString } from 'lodash';
 import { IStorageProvider } from '@quintessential-sft/storage-provider';
 import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 
 export class FileHandlers {
   private database: any;
@@ -15,13 +15,13 @@ export class FileHandlers {
     private readonly grpcSdk: ConduitGrpcSdk,
     storageProvider: IStorageProvider
   ) {
+    this.storageProvider = storageProvider;
     this.initDb(grpcSdk, storageProvider);
   }
 
   async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
     await grpcSdk.waitForExistence('database-provider');
     this.database = grpcSdk.databaseProvider;
-    this.storageProvider = storageProvider;
   }
 
   updateProvider(storageProvider: IStorageProvider) {
@@ -33,14 +33,14 @@ export class FileHandlers {
 
     if (!isString(data)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid data provided',
       });
     }
 
     if (!isString(folder)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'No folder provided',
       });
     }
@@ -61,7 +61,7 @@ export class FileHandlers {
       })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     let publicUrl = null;
     if (isPublic) {
@@ -70,7 +70,7 @@ export class FileHandlers {
         .getPublicUrl(name)
         .catch((e) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const newFile = await this.database
@@ -83,7 +83,7 @@ export class FileHandlers {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       result: JSON.stringify({
@@ -98,7 +98,7 @@ export class FileHandlers {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The provided id is invalid',
       });
     }
@@ -108,10 +108,10 @@ export class FileHandlers {
       .findOne('File', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     if (isNil(file))
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'File not found',
       });
 
@@ -124,11 +124,42 @@ export class FileHandlers {
     });
   }
 
+  async getFileData(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+    if (!isString(id)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'The provided id is invalid',
+      });
+    }
+
+    let errorMessage = null;
+    const file = await this.database
+      .findOne('File', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    if (isNil(file))
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'File not found',
+      });
+
+    let data: Buffer = await this.storageProvider.folder(file.folder).get(file.name);
+    data.toString('base64');
+
+    return callback(null, {
+      result: JSON.stringify({
+        data: data.toString('base64'),
+      }),
+    });
+  }
+
   async getFileUrl(call: RouterRequest, callback: RouterResponse) {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The provided id is invalid',
       });
     }
@@ -138,10 +169,10 @@ export class FileHandlers {
       .findOne('File', { _id: id })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     if (isNil(found)) {
-      return callback({ code: grpc.status.NOT_FOUND, message: 'File not found' });
+      return callback({ code: status.NOT_FOUND, message: 'File not found' });
     }
     if (found.isPublic) {
       return callback(null, { redirect: found.url });
@@ -155,7 +186,7 @@ export class FileHandlers {
     const { id } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The provided id is invalid',
       });
     }
@@ -184,7 +215,7 @@ export class FileHandlers {
     const { id, data, name, folder, mimeType } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'The provided id is invalid',
       });
     }
@@ -194,9 +225,9 @@ export class FileHandlers {
       .findOne('File', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     if (isNil(found)) {
-      return callback({ code: grpc.status.NOT_FOUND, message: 'File not found' });
+      return callback({ code: status.NOT_FOUND, message: 'File not found' });
     }
 
     // Create temporary file to make the changes so the original is not corrupted if anything fails
@@ -208,14 +239,14 @@ export class FileHandlers {
         errorMessage = 'Error reading file';
       });
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     const exists = await this.storageProvider
       .folder('temp')
       .exists('')
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (!exists) {
       await this.storageProvider
@@ -223,7 +254,7 @@ export class FileHandlers {
         .createFolder('')
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     await this.storageProvider
@@ -234,7 +265,7 @@ export class FileHandlers {
         errorMessage = 'I/O Error';
       });
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     let failed = false;
 
@@ -262,8 +293,8 @@ export class FileHandlers {
         .delete(tempFileName)
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
-      return callback({ code: grpc.status.INTERNAL, message: '' });
+        return callback({ code: status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: '' });
     }
     await this.storageProvider
       .folder('temp')
@@ -272,7 +303,7 @@ export class FileHandlers {
         errorMessage = 'I/O Error';
       });
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (shouldRemove) {
       await this.storageProvider
@@ -280,7 +311,7 @@ export class FileHandlers {
         .delete(found.name)
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     found.name = newName;
@@ -290,7 +321,7 @@ export class FileHandlers {
       .findByIdAndUpdate('File', found)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, {
       result: JSON.stringify({

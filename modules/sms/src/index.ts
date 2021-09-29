@@ -8,21 +8,25 @@ if (!process.env.CONDUIT_SERVER) {
 }
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'sms');
 let sms = new SmsModule(grpcSdk);
-let url = sms.url;
-if (process.env.REGISTER_NAME === 'true') {
-  url = 'sms-provider:' + url.split(':')[1];
-}
-
-grpcSdk.config
-  .registerModule('sms', url)
-  .catch((err: any) => {
+sms
+  .initialize()
+  .then(() => {
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'sms-provider:' : '0.0.0.0:') + sms.port;
+    return grpcSdk.config.registerModule('sms', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
     console.error(err);
     process.exit(-1);
   })
   .then(() => {
-    grpcSdk.admin.register(paths.functions);
+    return sms.activate();
+  })
+  .then(() => {
+    return grpcSdk.admin.register(paths.functions);
   })
   .catch((err: Error) => {
-    console.log('Failed to register admin routes for sms module!');
+    console.log('Failed to active module');
     console.error(err);
   });

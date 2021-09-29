@@ -9,26 +9,6 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
-message CreateIamportPaymentRequest {
-  string productId = 1;
-  int32 quantity = 2;
-  string userId = 3;
-}
-
-message CreateIamportPaymentResponse {
-  string merchant_uid = 1;
-  int32 amount = 2;
-}
-
-message CompleteIamportPaymentRequest {
-  string imp_uid = 1;
-  string merchant_uid = 2;
-}
-
-message CompleteIamportPaymentResponse {
-  bool success = 1;
-}
-
 message CreateStripePaymentRequest {
   string productId = 1;
   string userId = 2;
@@ -60,8 +40,6 @@ message RefundStripePaymentResponse {
 
 service Payments {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-  rpc CreateIamportPayment(CreateIamportPaymentRequest) returns (CreateIamportPaymentResponse);
-  rpc CompleteIamportPayment(CompleteIamportPaymentRequest) returns (CompleteIamportPaymentResponse);
   rpc CreateStripePayment(CreateStripePaymentRequest) returns (CreateStripePaymentResponse);
   rpc CancelStripePayment(CancelStripePaymentRequest) returns (CancelStripePaymentResponse);
   rpc RefundStripePayment(RefundStripePaymentRequest) returns (RefundStripePaymentResponse);

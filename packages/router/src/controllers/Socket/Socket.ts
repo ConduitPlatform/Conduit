@@ -5,30 +5,32 @@ import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
   ConduitError,
-  ConduitMiddleware,
-  ConduitRouteParameters,
   ConduitSocket,
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
 } from '@quintessential-sft/conduit-commons';
-import { isNil, isArray } from 'lodash';
+import { isNil } from 'lodash';
+import { ConduitRouter } from '../Router';
 
-export class SocketController {
+export class SocketController extends ConduitRouter {
+  protected refreshRouter(): void {
+    throw new Error('Method not implemented.');
+  }
   private readonly httpServer: httpServer;
   private io: IOServer;
   private readonly options: Partial<ServerOptions>;
   private _registeredNamespaces: Map<string, ConduitSocket>;
   private pubClient: RedisClient;
   private subClient: RedisClient;
-  private _middlewares?: { [field: string]: ConduitMiddleware };
   private globalMiddlewares: ((
     req: Request,
     res: Response,
     next: NextFunction
   ) => void)[];
 
-  constructor(private readonly app: Application) {
+  constructor(readonly app: Application) {
+    super(app);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
       console.error('Redis IP not defined');
       process.exit(-1);
@@ -50,42 +52,10 @@ export class SocketController {
     this.globalMiddlewares = [];
   }
 
-  registerMiddleware(middleware: ConduitMiddleware) {
-    if (!this._middlewares) {
-      this._middlewares = {};
-    }
-    this._middlewares[middleware.name] = middleware;
-  }
-
   registerGlobalMiddleware(
     middleware: (req: Request, res: Response, next: NextFunction) => void
   ) {
     this.globalMiddlewares.push(middleware);
-  }
-
-  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
-    let primaryPromise = new Promise((resolve, reject) => {
-      resolve({});
-    });
-    const self = this;
-    if (this._middlewares && middlewares) {
-      middlewares.forEach((m) => {
-        if (!this._middlewares?.hasOwnProperty(m))
-          primaryPromise = Promise.reject('Middleware does not exist');
-        primaryPromise = primaryPromise.then((r) => {
-          return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
-            params
-          ).then((p: any) => {
-            if (p.result) {
-              Object.assign(r, JSON.parse(p.result));
-            }
-            return r;
-          });
-        });
-      });
-    }
-
-    return primaryPromise;
   }
 
   registerConduitSocket(conduitSocket: ConduitSocket) {

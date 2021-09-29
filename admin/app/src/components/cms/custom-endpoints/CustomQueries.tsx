@@ -77,8 +77,6 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
     (state) => state.customEndpointsSlice.data
   );
 
-  console.log('selectedEndpoint:', selectedEndpoint);
-
   const initializeData = useCallback(() => {
     if (selectedEndpoint) {
       const fields = getAvailableFieldsOfSchema(selectedEndpoint.selectedSchema, schemas);

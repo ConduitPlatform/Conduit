@@ -1,29 +1,22 @@
 import path from 'path';
 import fs from 'fs';
-import grpc from 'grpc';
 import {
+  ConduitMiddleware,
   ConduitRoute,
   ConduitRouteParameters,
-  ConduitMiddleware,
   ConduitSocket,
-  SocketProtoDescription,
-  instanceOfSocketProtoDescription,
+  ConduitSocketEvent,
   ConduitSocketParameters,
   EventResponse,
+  instanceOfSocketProtoDescription,
   JoinRoomResponse,
-  ConduitSocketEvent,
+  SocketProtoDescription,
 } from '@quintessential-sft/conduit-commons';
+import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
 
 let protoLoader = require('@grpc/proto-loader');
 
-export function grpcToConduitRoute(
-  request: any,
-  moduleName?: string,
-): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
-  let protofile = request.protoFile;
-  let routes: [
-      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
-  ] = request.routes;
+function getDescriptor(protofile: string): any {
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {
@@ -33,14 +26,26 @@ export function grpcToConduitRoute(
     defaults: true,
     oneofs: true,
   });
-  let routerDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+  fs.unlink(protoPath, () => {});
+  return loadPackageDefinition(packageDefinition);
+}
+
+export function grpcToConduitRoute(
+  request: any,
+  moduleName?: string
+): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
+  let routes: [
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+  ] = request.routes;
+
+  let routerDescriptor: any = getDescriptor(request.protoFile);
   //this can break everything change it
   while (Object.keys(routerDescriptor)[0] !== 'Router') {
     routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   let serverIp = request.routerUrl;
-  let client = new routerDescriptor(serverIp, grpc.credentials.createInsecure(), {
+  let client = new routerDescriptor(serverIp, credentials.createInsecure(), {
     'grpc.max_receive_message_length': 1024 * 1024 * 100,
     'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
@@ -50,10 +55,10 @@ export function grpcToConduitRoute(
 
 function createHandlers(
   routes: [
-      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ],
   client: any,
-  moduleName?: string,
+  moduleName?: string
 ) {
   let finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
@@ -77,7 +82,7 @@ function createHandlers(
 function createHandlerForRoute(
   route: { options: any; returns?: any; grpcFunction: string },
   client: any,
-  moduleName?: string,
+  moduleName?: string
 ) {
   let handler = (req: ConduitRouteParameters) => {
     let request = {
@@ -101,8 +106,7 @@ function createHandlerForRoute(
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   let returns: any = route.returns;
@@ -111,8 +115,7 @@ function createHandlerForRoute(
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
   if (!options.path.startsWith('/')) {
@@ -147,7 +150,7 @@ function createHandlerForRoute(
 function createHandlerForSocket(
   socket: SocketProtoDescription,
   client: any,
-  moduleName?: string,
+  moduleName?: string
 ) {
   let eventHandlers = new Map<string, ConduitSocketEvent>();
   const events = JSON.parse(socket.events);
@@ -165,13 +168,13 @@ function createHandlerForSocket(
           request,
           (
             err: { code: number; message: string },
-            result: EventResponse | JoinRoomResponse,
+            result: EventResponse | JoinRoomResponse
           ) => {
             if (err) {
               return reject(err);
             }
             resolve(result);
-          },
+          }
         );
       });
     };

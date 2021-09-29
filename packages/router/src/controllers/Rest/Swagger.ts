@@ -48,6 +48,9 @@ export class SwaggerGenerator {
       case ConduitRouteActions.UPDATE: {
         return 'put';
       }
+      case ConduitRouteActions.PATCH: {
+        return 'patch';
+      }
       default: {
         return 'get';
       }

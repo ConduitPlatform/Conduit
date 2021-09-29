@@ -20,6 +20,7 @@ export class FileRoutes {
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
+        getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
         updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
       })
@@ -84,6 +85,25 @@ export class FileRoutes {
               id: { type: TYPE.String, required: true },
             },
             action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware'],
+            path: '/storage/file/data/:id',
+          },
+          new ConduitRouteReturnDefinition('File', {
+            data: TYPE.String,
+          }),
+          'getFileData'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            urlParams: {
+              id: { type: TYPE.String, required: true },
+            },
+            action: ConduitRouteActions.GET,
             path: '/storage/getFileUrl/:id',
           },
           new ConduitRouteReturnDefinition('FileUrl', 'String'),
@@ -125,7 +145,7 @@ export class FileRoutes {
               folder: TYPE.String,
             },
             action: ConduitRouteActions.UPDATE,
-            path: '/storage/file',
+            path: '/storage/file/:id',
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileUpdateResponse', {
