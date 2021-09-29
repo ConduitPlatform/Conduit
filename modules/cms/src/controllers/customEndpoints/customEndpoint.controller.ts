@@ -15,7 +15,8 @@ export class CustomEndpointController {
     private readonly stateActive: boolean
   ) {
     this._adapter = this.grpcSdk.databaseProvider!;
-    this._adapter.createSchemaFromAdapter(schema)
+    this._adapter
+      .createSchemaFromAdapter(schema)
       .then(() => {
         console.log('Registered custom endpoints schema');
         return migrateCustomEndpoints(this.grpcSdk);
@@ -31,6 +32,7 @@ export class CustomEndpointController {
       this.initializeState();
     }
   }
+
   initializeState() {
     this.grpcSdk.bus?.subscribe('cms', (message: string) => {
       if (message === 'customEndpoint') {

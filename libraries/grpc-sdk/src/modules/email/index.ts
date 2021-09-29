@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { EmailClient } from '../../protoUtils/email';
 
-export default class Email extends ConduitModule<EmailClient> {
+export class Email extends ConduitModule<EmailClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(EmailClient);

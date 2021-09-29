@@ -6,95 +6,29 @@ import File from './models/File';
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
+  ConduitServiceModule,
   GrpcServer,
-  wrapCallObjectForRouter,
   wrapCallbackFunctionForRouter,
+  wrapCallObjectForRouter,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
+import { AdminRoutes } from './admin/admin';
 
-let protoLoader = require('@grpc/proto-loader');
-
-export class StorageModule {
+export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;
   private isRunning: boolean = false;
-  private readonly _url: string;
   private _fileHandlers: FileHandlers;
-  private grpcServer: any;
+  private grpcServer: GrpcServer;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(path.resolve(__dirname, './storage.proto'), 'storage.Storage', {
-        setConfig: this.setConfig.bind(this),
-        getFile: this.getFileGrpc.bind(this),
-        createFile: this.createFileGrpc.bind(this),
-        updateFile: this.updateFileGrpc.bind(this),
-      })
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
-    this.storageProvider = createStorageProvider('local', {} as any);
-    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .then(() => {
-        const self = this;
-        this.grpcSdk.bus?.subscribe('storage', (message: string) => {
-          if (message === 'config-update') {
-            this.enableModule()
-              .then((r) => {
-                console.log('Updated storage configuration');
-              })
-              .catch((e: Error) => {
-                console.log('Failed to update email config');
-              });
-          }
-        });
-      })
-      .catch(() => {
-        console.log('Bus did not initialize!');
-      })
-      .then(() => {
-        return this.grpcSdk.config.get('storage');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(
-          StorageConfigSchema.getProperties(),
-          'storage'
-        );
-      })
-      .then((storageConfig: any) => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          StorageConfigSchema.getProperties(),
-          'storage'
-        );
-      })
-      .catch(() => {
-        console.log('storage config did not update');
-      })
-      .then((storageConfig: any) => {
-        if (storageConfig.active) {
-          return this.enableModule();
-        }
-      })
-      .catch(console.log);
+  private _port: string;
+
+  get port() {
+    return this._port;
   }
 
   private _routes: any[];
@@ -103,8 +37,56 @@ export class StorageModule {
     return this._routes;
   }
 
-  get url() {
-    return this._url;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
+      path.resolve(__dirname, './storage.proto'),
+      'storage.Storage',
+      {
+        setConfig: this.setConfig.bind(this),
+        getFile: this.getFileGrpc.bind(this),
+        createFile: this.createFileGrpc.bind(this),
+        updateFile: this.updateFileGrpc.bind(this),
+        getFileData: this.getFileData.bind(this),
+      }
+    );
+    this.grpcServer.start();
+    console.log('Grpc server is online');
+
+    this.storageProvider = createStorageProvider('local', {} as any);
+    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+    new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+  }
+
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    this.grpcSdk.bus?.subscribe('storage', (message: string) => {
+      if (message === 'config-update') {
+        this.enableModule()
+          .then((r) => {
+            console.log('Updated storage configuration');
+          })
+          .catch((e: Error) => {
+            console.log('Failed to update email config');
+          });
+      }
+    });
+    try {
+      await this.grpcSdk.config.get('storage');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(
+        StorageConfigSchema.getProperties(),
+        'storage'
+      );
+    }
+    let storageConfig = await this.grpcSdk.config.addFieldstoConfig(
+      StorageConfigSchema.getProperties(),
+      'storage'
+    );
+    if (storageConfig.active) await this.enableModule();
   }
 
   async setConfig(call: any, callback: any) {
@@ -114,7 +96,7 @@ export class StorageModule {
       StorageConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration values',
       });
     }
@@ -124,23 +106,23 @@ export class StorageModule {
       .updateConfig(newConfig, 'storage')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const storageConfig = await this.grpcSdk.config.get('storage');
     if (storageConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('storage', 'config-update');
     } else {
       return callback({
-        code: grpc.status.FAILED_PRECONDITION,
+        code: status.FAILED_PRECONDITION,
         message: 'Module is not active',
       });
     }
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
@@ -149,7 +131,7 @@ export class StorageModule {
   async getFileGrpc(call: any, callback: any) {
     if (!this._fileHandlers)
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.getFile(
@@ -158,10 +140,22 @@ export class StorageModule {
     );
   }
 
+  async getFileData(call: any, callback: any) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    await this._fileHandlers.getFileData(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
+  }
+
   async createFileGrpc(call: any, callback: any) {
     if (!this._fileHandlers)
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.createFile(
@@ -173,7 +167,7 @@ export class StorageModule {
   async updateFileGrpc(call: any, callback: any) {
     if (!this._fileHandlers)
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
 

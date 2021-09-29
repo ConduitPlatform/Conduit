@@ -1,9 +1,14 @@
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
 
 let paths = require('./admin.json').functions;
+
 export class AdminHandler {
   private provider: IPushNotificationsProvider;
   private databaseAdapter: any;
@@ -42,7 +47,7 @@ export class AdminHandler {
     const { title, body, data, userId } = JSON.parse(call.request.params);
     if (isNil(title) || isNil(userId))
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     const params = {
@@ -53,7 +58,7 @@ export class AdminHandler {
     };
     if (isNil(params))
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
 
@@ -62,7 +67,7 @@ export class AdminHandler {
       .sendToDevice(params, this.databaseAdapter)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
@@ -72,7 +77,7 @@ export class AdminHandler {
     const params = requestParams.map((param: any) => {
       if (isNil(param.title) || isNil(param.userId))
         return callback({
-          code: grpc.status.INVALID_ARGUMENT,
+          code: status.INVALID_ARGUMENT,
           message: 'Required fields are missing',
         });
 
@@ -85,7 +90,7 @@ export class AdminHandler {
     });
     if (isNil(params))
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
 
@@ -94,7 +99,7 @@ export class AdminHandler {
       .sendMany(params, this.databaseAdapter)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
@@ -104,7 +109,7 @@ export class AdminHandler {
 
     if (isNil(title) || isNil(userIds) || isEmpty(userIds))
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
 
@@ -116,7 +121,7 @@ export class AdminHandler {
     };
     if (isNil(params))
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
 
@@ -125,7 +130,7 @@ export class AdminHandler {
       .sendToManyDevices(params, this.databaseAdapter)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
@@ -134,7 +139,7 @@ export class AdminHandler {
     const { userId } = JSON.parse(call.request.params);
     if (isNil(userId)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'User id parameter was not provided',
       });
     }
@@ -144,7 +149,7 @@ export class AdminHandler {
       .findMany('NotificationToken', { userId })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify({ tokenDocuments }) });
   }

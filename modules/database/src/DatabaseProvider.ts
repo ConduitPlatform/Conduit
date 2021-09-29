@@ -3,9 +3,10 @@ import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { DatabaseAdapter, SchemaAdapter } from './interfaces';
 import ConduitGrpcSdk, {
   ConduitSchema,
+  ConduitServiceModule,
   GrpcServer,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
   CreateSchemaRequest,
@@ -20,11 +21,10 @@ import {
   UpdateManyRequest,
   UpdateRequest,
 } from './types';
-const EJSON = require('mongodb-extended-json');
 
 const MODULE_NAME = 'database';
 
-export class DatabaseProvider {
+export class DatabaseProvider implements ConduitServiceModule {
   private readonly _activeAdapter: DatabaseAdapter;
 
   constructor(private readonly conduit: ConduitGrpcSdk) {
@@ -35,79 +35,17 @@ export class DatabaseProvider {
 
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
-    } else if (dbType === 'sequelize') {
+    } else if (dbType === 'sql') {
       this._activeAdapter = new SequelizeAdapter(databaseUrl);
     } else {
       throw new Error('Arguments not supported');
     }
   }
 
-  private _url: string;
+  private _port: string;
 
-  get url() {
-    return this._url;
-  }
-
-  initBus() {
-    const self = this;
-    this.conduit
-      .initializeEventBus()
-      .then(() => {
-        self.conduit.bus?.subscribe('database_provider', (message: string) => {
-          if (message === 'request') {
-            self._activeAdapter.registeredSchemas.forEach((k) => {
-              this.conduit.bus!.publish('database_provider', JSON.stringify(k));
-            });
-            return;
-          }
-          try {
-            let receivedSchema = JSON.parse(message);
-            if (receivedSchema.name) {
-              let schema = new ConduitSchema(
-                receivedSchema.name,
-                receivedSchema.modelSchema,
-                receivedSchema.modelOptions,
-                receivedSchema.collectionName
-              );
-              self._activeAdapter
-                .createSchemaFromAdapter(schema)
-                .then(() => {})
-                .catch(() => {
-                  console.log('Failed to create/update schema');
-                });
-            }
-          } catch (err) {
-            console.error('Something was wrong with the message');
-          }
-        });
-        this.conduit.state
-          ?.getState()
-          .then((r: any) => {
-            if (!r || r.length === 0) return;
-            let state = JSON.parse(r);
-            Object.keys(state).forEach((schemaName: string) => {
-              const schema = new ConduitSchema(
-                state[schemaName]._name ?? state[schemaName].name,
-                state[schemaName]._fields ?? state[schemaName].modelSchema,
-                state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
-                state[schemaName]._collectionName ?? null
-              );
-              self._activeAdapter
-                .createSchemaFromAdapter(schema)
-                .then(() => {})
-                .catch(() => {
-                  console.log('Failed to create/update schema');
-                });
-            });
-          })
-          .catch((err: any) => {
-            console.log('Failed to recover state');
-            console.error(err);
-          });
-      })
-      .catch(() => {
-        console.log('Database provider running without HA');
-      });
+  get port() {
+    return this._port;
   }
 
   publishSchema(schema: any) {
@@ -138,42 +76,86 @@ export class DatabaseProvider {
       });
   }
 
-  ensureIsRunning() {
-    return this._activeAdapter.ensureConnected().then(() => {
-      let grpcServer = new GrpcServer(process.env.SERVICE_URL);
-      this._url = grpcServer.url;
-      grpcServer
-        .addService(
-          path.resolve(__dirname, './database-provider.proto'),
-          'databaseprovider.DatabaseProvider',
-          {
-            createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
-            getSchema: this.getSchema.bind(this),
-            getSchemas: this.getSchemas.bind(this),
-            findOne: this.findOne.bind(this),
-            findMany: this.findMany.bind(this),
-            create: this.create.bind(this),
-            createMany: this.createMany.bind(this),
-            findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
-            updateMany: this.updateMany.bind(this),
-            deleteOne: this.deleteOne.bind(this),
-            deleteMany: this.deleteMany.bind(this),
-            countDocuments: this.countDocuments.bind(this),
-          }
-        )
-        .then(() => {
-          return grpcServer.start();
-        })
-        .then(() => {
-          console.log('Grpc server is online');
-        })
-        .catch((err: Error) => {
-          console.log('Failed to initialize server');
-          console.error(err);
-          process.exit(-1);
+  async initialize() {
+    await this._activeAdapter.ensureConnected();
+    let grpcServer = new GrpcServer(process.env.SERVICE_URL);
+
+    this._port = (await grpcServer.createNewServer()).toString();
+    await grpcServer.addService(
+      path.resolve(__dirname, './database-provider.proto'),
+      'databaseprovider.DatabaseProvider',
+      {
+        createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
+        getSchema: this.getSchema.bind(this),
+        getSchemas: this.getSchemas.bind(this),
+        findOne: this.findOne.bind(this),
+        findMany: this.findMany.bind(this),
+        create: this.create.bind(this),
+        createMany: this.createMany.bind(this),
+        findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
+        updateMany: this.updateMany.bind(this),
+        deleteOne: this.deleteOne.bind(this),
+        deleteMany: this.deleteMany.bind(this),
+        countDocuments: this.countDocuments.bind(this),
+      }
+    );
+    await grpcServer.start();
+  }
+
+  async activate() {
+    const self = this;
+    await this.conduit.initializeEventBus();
+    self.conduit.bus?.subscribe('database_provider', (message: string) => {
+      if (message === 'request') {
+        self._activeAdapter.registeredSchemas.forEach((k) => {
+          this.conduit.bus!.publish('database_provider', JSON.stringify(k));
         });
-      return 'ok';
+        return;
+      }
+      try {
+        let receivedSchema = JSON.parse(message);
+        if (receivedSchema.name) {
+          let schema = new ConduitSchema(
+            receivedSchema.name,
+            receivedSchema.modelSchema,
+            receivedSchema.modelOptions,
+            receivedSchema.collectionName
+          );
+          self._activeAdapter
+            .createSchemaFromAdapter(schema)
+            .then(() => {})
+            .catch(() => {
+              console.log('Failed to create/update schema');
+            });
+        }
+      } catch (err) {
+        console.error('Something was wrong with the message');
+      }
     });
+    this.conduit.state
+      ?.getState()
+      .then((r: any) => {
+        if (!r || r.length === 0) return;
+        let state = JSON.parse(r);
+        Object.keys(state).forEach((schemaName: string) => {
+          const schema = new ConduitSchema(
+            state[schemaName]._name ?? state[schemaName].name,
+            state[schemaName]._fields ?? state[schemaName].modelSchema,
+            state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
+            state[schemaName]._collectionName ?? null
+          );
+          self._activeAdapter
+            .createSchemaFromAdapter(schema)
+            .then(() => {})
+            .catch(() => {
+              console.log('Failed to create/update schema');
+            });
+        });
+      })
+      .catch((err: any) => {
+        console.log('Failed to recover state');
+        console.error(err);
+      });
   }
 
   /**
@@ -189,13 +171,13 @@ export class DatabaseProvider {
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Names cannot include spaces and - characters',
       });
     }
     this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: SchemaAdapter) => {
+      .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
@@ -212,7 +194,7 @@ export class DatabaseProvider {
       })
       .catch((err) => {
         callback({
-          code: grpc.status.INTERNAL,
+          code: status.INTERNAL,
           message: err.message,
         });
       });
@@ -235,7 +217,7 @@ export class DatabaseProvider {
       });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -255,7 +237,7 @@ export class DatabaseProvider {
       });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -265,7 +247,7 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const doc = await schemaAdapter.model.findOne(
-        EJSON.parse(call.request.query),
+        call.request.query,
         call.request.select,
         call.request.populate,
         schemaAdapter.relations
@@ -273,7 +255,7 @@ export class DatabaseProvider {
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -290,7 +272,7 @@ export class DatabaseProvider {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
 
       const docs = await schemaAdapter.model.findMany(
-        EJSON.parse(call.request.query),
+        call.request.query,
         skip,
         limit,
         select,
@@ -301,7 +283,7 @@ export class DatabaseProvider {
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -310,7 +292,7 @@ export class DatabaseProvider {
   async create(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const doc = await schemaAdapter.model.create(EJSON.parse(call.request.query));
+      const doc = await schemaAdapter.model.create(call.request.query);
 
       const docString = JSON.stringify(doc);
 
@@ -322,7 +304,7 @@ export class DatabaseProvider {
       callback(null, { result: docString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -331,7 +313,7 @@ export class DatabaseProvider {
   async createMany(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const docs = await schemaAdapter.model.createMany(EJSON.parse(call.request.query));
+      const docs = await schemaAdapter.model.createMany(call.request.query);
 
       const docsString = JSON.stringify(docs);
 
@@ -343,7 +325,7 @@ export class DatabaseProvider {
       callback(null, { result: docsString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -354,7 +336,7 @@ export class DatabaseProvider {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
-        EJSON.parse(call.request.query),
+        call.request.query,
         call.request.updateProvidedOnly
       );
 
@@ -368,7 +350,7 @@ export class DatabaseProvider {
       callback(null, { result: resultString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -378,8 +360,8 @@ export class DatabaseProvider {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.updateMany(
-        EJSON.parse(call.request.filterQuery),
-        EJSON.parse(call.request.query),
+        call.request.filterQuery,
+        call.request.query,
         call.request.updateProvidedOnly
       );
 
@@ -393,7 +375,7 @@ export class DatabaseProvider {
       callback(null, { result: resultString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -402,7 +384,7 @@ export class DatabaseProvider {
   async deleteOne(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.deleteOne(EJSON.parse(call.request.query));
+      const result = await schemaAdapter.model.deleteOne(call.request.query);
 
       const resultString = JSON.stringify(result);
 
@@ -414,7 +396,7 @@ export class DatabaseProvider {
       callback(null, { result: resultString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -423,9 +405,7 @@ export class DatabaseProvider {
   async deleteMany(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.deleteMany(
-        EJSON.parse(call.request.query)
-      );
+      const result = await schemaAdapter.model.deleteMany(call.request.query);
 
       const resultString = JSON.stringify(result);
 
@@ -437,7 +417,7 @@ export class DatabaseProvider {
       callback(null, { result: resultString });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }
@@ -446,13 +426,11 @@ export class DatabaseProvider {
   async countDocuments(call: QueryRequest, callback: QueryResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.countDocuments(
-        EJSON.parse(call.request.query)
-      );
+      const result = await schemaAdapter.model.countDocuments(call.request.query);
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: err.message,
       });
     }

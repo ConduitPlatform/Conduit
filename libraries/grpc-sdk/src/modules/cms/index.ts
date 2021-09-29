@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { CMSClient } from '../../protoUtils/cms';
 
-export default class CMS extends ConduitModule<CMSClient> {
+export class CMS extends ConduitModule<CMSClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(CMSClient);

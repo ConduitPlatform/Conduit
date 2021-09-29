@@ -7,11 +7,23 @@ if (!process.env.CONDUIT_SERVER) {
 
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'authentication');
 let authentication = new AuthenticationModule(grpcSdk);
-let url = authentication.url;
-if (process.env.REGISTER_NAME === 'true') {
-  url = 'authentication:' + url.split(':')[1];
-}
-grpcSdk.config.registerModule('authentication', url).catch((err: any) => {
-  console.error(err);
-  process.exit(-1);
-});
+authentication
+  .initialize()
+  .then(() => {
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'authentication:' : '0.0.0.0:') +
+      authentication.port;
+    return grpcSdk.config.registerModule('authentication', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
+    console.error(err);
+    process.exit(-1);
+  })
+  .then(() => {
+    return authentication.activate();
+  })
+  .catch((err: Error) => {
+    console.log('Failed to active module');
+    console.error(err);
+  });

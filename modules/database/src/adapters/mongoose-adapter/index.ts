@@ -81,7 +81,10 @@ export class MongooseAdapter implements DatabaseAdapter {
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
         try {
-          schema = systemRequiredValidator(this.registeredSchemas.get(schema.name)!, schema);
+          schema = systemRequiredValidator(
+            this.registeredSchemas.get(schema.name)!,
+            schema
+          );
         } catch (err) {
           return new Promise((resolve, reject) => {
             reject(err);
@@ -98,6 +101,7 @@ export class MongooseAdapter implements DatabaseAdapter {
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,
+      schema,
       deepPopulate,
       this
     );
@@ -124,7 +128,7 @@ export class MongooseAdapter implements DatabaseAdapter {
     });
   }
 
-  getSchemaModel(schemaName: string): { model: MongooseSchema, relations: any } {
+  getSchemaModel(schemaName: string): { model: MongooseSchema; relations: any } {
     if (this.models && this.models![schemaName]) {
       return { model: this.models![schemaName], relations: null };
     }

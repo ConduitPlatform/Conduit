@@ -1,4 +1,4 @@
-import { ConduitModel, TYPE } from './Model';
+import { ConduitModel } from './Model';
 import { IncomingHttpHeaders } from 'http';
 
 export interface ConduitRouteParameters {
@@ -35,6 +35,7 @@ export enum ConduitRouteActions {
   GET = 'GET',
   POST = 'POST',
   UPDATE = 'PUT',
+  PATCH = 'PATCH',
   DELETE = 'DELETE',
 }
 

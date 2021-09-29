@@ -1,10 +1,10 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 
-export interface SchemaAdapter {
+export interface SchemaAdapter<T> {
   /**
    * The actual underlying model
    */
-  model: any;
+  model: T;
   /**
    * The original model used to generate this
    */
@@ -17,7 +17,7 @@ export interface SchemaAdapter {
    * @param populate
    */
   findOne(
-    query: any,
+    query: string,
     select?: string,
     populate?: string[],
     relations?: any
@@ -32,7 +32,7 @@ export interface SchemaAdapter {
    * @param sort
    */
   findMany(
-    query: any,
+    query: string,
     skip?: number,
     limit?: number,
     select?: string,
@@ -45,17 +45,25 @@ export interface SchemaAdapter {
    * Should create
    * @param query
    */
-  create(query: any): Promise<any>;
+  create(query: string): Promise<any>;
 
-  createMany(query: any): Promise<any>;
+  createMany(query: string): Promise<any>;
 
-  deleteOne(query: any): Promise<any>;
+  deleteOne(query: string): Promise<any>;
 
-  deleteMany(query: any): Promise<any>;
+  deleteMany(query: string): Promise<any>;
 
-  findByIdAndUpdate(id: any, document: any, updateProvidedOnly?: boolean): Promise<any>;
+  findByIdAndUpdate(
+    id: any,
+    document: string,
+    updateProvidedOnly?: boolean
+  ): Promise<any>;
 
-  updateMany(filterQuery: any, query: any, updateProvidedOnly?: boolean): Promise<any>;
+  updateMany(
+    filterQuery: string,
+    query: string,
+    updateProvidedOnly?: boolean
+  ): Promise<any>;
 
-  countDocuments(query: any): Promise<number>;
+  countDocuments(query: string): Promise<number>;
 }

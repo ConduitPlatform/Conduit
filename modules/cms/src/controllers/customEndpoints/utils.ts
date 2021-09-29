@@ -19,7 +19,7 @@ function getOperation(op: number) {
     case 3:
       return ConduitRouteActions.DELETE;
     case 4:
-      return ConduitRouteActions.UPDATE;
+      return ConduitRouteActions.PATCH;
     // won't ever be called by TS doesn't care about that
     default:
       return ConduitRouteActions.GET;
@@ -82,13 +82,6 @@ export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
     input.cacheControl = endpoint.authentication
       ? 'private, max-age=10'
       : 'public, max-age=10';
-  }
-  if (endpoint.operation === 4) {
-    inputs.push({
-      name: 'updateProvidedOnly',
-      type: TYPE.Boolean,
-      location: 1,
-    });
   }
   if (endpoint.paginated) {
     inputs.push({

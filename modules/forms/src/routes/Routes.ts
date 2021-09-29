@@ -1,5 +1,9 @@
-import grpc from 'grpc';
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import axios from 'axios';
 
@@ -16,11 +20,11 @@ export class FormRoutes {
       .databaseProvider!.findOne('Forms', { name: formName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (isNil(form)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Requested form not found',
       });
     }
@@ -64,7 +68,7 @@ export class FormRoutes {
         })
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       // we respond OK, but we don't send the email
       return callback(null, { result: 'OK' });
     }
@@ -77,7 +81,7 @@ export class FormRoutes {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     errorMessage = null;
 
     let text = '';
@@ -98,7 +102,7 @@ export class FormRoutes {
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: 'OK' });
   }

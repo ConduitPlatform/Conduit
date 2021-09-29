@@ -5,116 +5,92 @@ import { AdminHandlers } from './admin/AdminHandlers';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
-  GrpcServer,
+  ConduitServiceModule,
   GrpcRequest,
   GrpcResponse,
+  GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 
 type RegisterTemplateRequest = GrpcRequest<{
-  name: string,
-  subject: string,
-  body: string,
-  variables: string[]
+  name: string;
+  subject: string;
+  body: string;
+  variables: string[];
 }>;
 type RegisterTemplateResponse = GrpcResponse<{ template: string }>;
 
 type SendEmailRequest = GrpcRequest<{
-  templateName: string,
+  templateName: string;
   params: {
-    email: string,
-    variables: string,
-    sender: string,
-    cc: string[],
-    replyTo: string,
-    attachments: string[],
-  }
+    email: string;
+    variables: string;
+    sender: string;
+    cc: string[];
+    replyTo: string;
+    attachments: string[];
+  };
 }>;
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
-export default class EmailModule {
+export default class EmailModule implements ConduitServiceModule {
   private emailProvider: EmailProvider;
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
-  private _url: string;
-  private readonly grpcServer: GrpcServer;
+  private grpcServer: GrpcServer;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  private _port: string;
+
+  get port(): string {
+    return this._port;
+  }
+
+  async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(path.resolve(__dirname, './email.proto'), 'email.Email', {
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
+      path.resolve(__dirname, './email.proto'),
+      'email.Email',
+      {
         setConfig: this.setConfig.bind(this),
         registerTemplate: this.registerTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
-      })
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
-
+      }
+    );
+    this.grpcServer.start();
     this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk);
-
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .then(() => {
-        this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
-          if (message === 'config-update') {
-            this.enableModule()
-              .then(() => {
-                console.log('Update email configuration');
-              })
-              .catch(() => {
-                console.log('Failed to update email config');
-              });
-          }
-        });
-      })
-      .catch(() => {
-        console.log('Bus did not initialize');
-      })
-      .then(() => {
-        return this.grpcSdk.config.get('email');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(
-          EmailConfigSchema.getProperties(),
-          'email'
-        );
-      })
-      .then(() => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          EmailConfigSchema.getProperties(),
-          'email'
-        );
-      })
-      .catch(() => {
-        console.log('email config did not update');
-      })
-      .then((emailConfig: any) => {
-        if (emailConfig.active) {
-          return this.enableModule();
-        }
-      })
-      .catch(console.log);
   }
 
-  get url(): string {
-    return this._url;
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
+      if (message === 'config-update') {
+        this.enableModule()
+          .then(() => {
+            console.log('Update email configuration');
+          })
+          .catch(() => {
+            console.log('Failed to update email config');
+          });
+      }
+    });
+    try {
+      await this.grpcSdk.config.get('email');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email');
+    }
+    let config = await this.grpcSdk.config.addFieldstoConfig(
+      EmailConfigSchema.getProperties(),
+      'email'
+    );
+    if (config.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
@@ -125,7 +101,7 @@ export default class EmailModule {
       isNil(newConfig.transportSettings)
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
       });
     }
@@ -134,7 +110,7 @@ export default class EmailModule {
       EmailConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
       });
     }
@@ -145,16 +121,16 @@ export default class EmailModule {
     if (newConfig.active) {
       await this.enableModule(newConfig).catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       updateResult = await this.grpcSdk.config
         .updateConfig(newConfig, 'email')
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('email-provider', 'config-update');
     } else {
       return callback({
-        code: grpc.status.FAILED_PRECONDITION,
+        code: status.FAILED_PRECONDITION,
         message: 'Module must be activated to set config',
       });
     }
@@ -162,21 +138,10 @@ export default class EmailModule {
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
   }
 
-  private async enableModule(newConfig?: any) {
-    if (!this.isRunning) {
-      this.registerModels();
-      await this.initEmailProvider();
-      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
-      this.adminHandlers.setEmailService(this.emailService);
-      this.isRunning = true;
-      this.grpcSdk.bus?.publish('email-provider', 'enabled');
-    } else {
-      await this.initEmailProvider(newConfig);
-      this.emailService.updateProvider(this.emailProvider);
-    }
-  }
-
-  async registerTemplate(call: RegisterTemplateRequest, callback: RegisterTemplateResponse) {
+  async registerTemplate(
+    call: RegisterTemplateRequest,
+    callback: RegisterTemplateResponse
+  ) {
     const params = {
       name: call.request.name,
       subject: call.request.subject,
@@ -188,7 +153,7 @@ export default class EmailModule {
       .registerTemplate(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     return callback(null, { template: JSON.stringify(template) });
   }
 
@@ -211,8 +176,22 @@ export default class EmailModule {
       .sendEmail(template, params)
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     return callback(null, { sentMessageInfo });
+  }
+
+  private async enableModule(newConfig?: any) {
+    if (!this.isRunning) {
+      this.registerModels();
+      await this.initEmailProvider();
+      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
+      this.adminHandlers.setEmailService(this.emailService);
+      this.isRunning = true;
+      this.grpcSdk.bus?.publish('email-provider', 'enabled');
+    } else {
+      await this.initEmailProvider(newConfig);
+      this.emailService.updateProvider(this.emailProvider);
+    }
   }
 
   private registerModels() {
