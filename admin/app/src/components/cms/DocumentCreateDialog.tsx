@@ -49,7 +49,7 @@ const CreateDialog: FC<Props> = ({
   const [document, setDocument] = useState([]);
   const [isDisabled, setIsDisabled] = useState(true);
   const populateEditData = useCallback(
-    (documentsData) => {
+    (documentsData?: any) => {
       if (!editData) return;
       const keys = Object.keys(editData);
       // eslint-disable-next-line no-unused-expressions
@@ -65,7 +65,7 @@ const CreateDialog: FC<Props> = ({
 
   const deconstructFields = useCallback((fields) => {
     const documentKeys = Object.keys(fields);
-    let documentFields: any = [];
+    const documentFields: any = [];
     documentKeys.forEach((k) => {
       if (typeof fields[k] !== 'string') {
         if (
@@ -89,7 +89,7 @@ const CreateDialog: FC<Props> = ({
   }, []);
 
   const prepareField = (field: any, editData: any) => {
-    let newField = field;
+    const newField = field;
     if (newField.fields) {
       newField.fields.forEach((f: any, i: number) => {
         if (newField.fields[i].fields) {
@@ -115,7 +115,7 @@ const CreateDialog: FC<Props> = ({
     const documentFields = deconstructFields(fields);
     populateEditData(documentFields);
     if (editData) {
-      let newData = documentFields.map((field: any) => {
+      const newData = documentFields.map((field: any) => {
         return prepareField(field, editData);
       });
       setDocument(newData);

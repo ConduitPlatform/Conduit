@@ -132,7 +132,8 @@ const Authentication = () => {
         <CustomTabs tabs={tabs} selected={selected} handleChange={handleChange} />
         <Box
           role="tabpanel"
-          hidden={selected !== 0 || (configData && !configData.active)}
+          // hidden={selected !== 0 || (configData && !configData.active)}
+          hidden={selected !== 0}
           id={`tabpanel-0`}>
           <Paper variant="outlined" className={classes.root}>
             <Grid container>
@@ -170,7 +171,8 @@ const Authentication = () => {
         </Box>
         <Box
           role="tabpanel"
-          hidden={selected !== 1 || (configData && !configData.active)}
+          // hidden={selected !== 1 || (configData && !configData.active)}
+          hidden={selected !== 1}
           id={`tabpanel-1`}>
           {configData ? (
             <AuthAccordion configData={configData} handleData={handleConfigChange} />

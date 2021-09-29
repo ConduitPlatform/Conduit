@@ -30,7 +30,7 @@ type Action = {
 };
 
 interface Props {
-  dsData: SchemaUI[] | AuthUserUI[] | NotificationData[]; //todo add notification types
+  dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
 }

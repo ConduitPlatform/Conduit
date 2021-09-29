@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface IProps {
-  item: IEnumData;
+  item: any; //todo add IEnumData;
 }
 
 const EnumType: FC<IProps> = ({ item, ...rest }) => {
