@@ -1,9 +1,9 @@
-import { DatabaseAdapter } from '../../classes';
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
+import { DatabaseAdapter } from '../DatabaseAdapter';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;

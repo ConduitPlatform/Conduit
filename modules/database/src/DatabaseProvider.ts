@@ -24,7 +24,7 @@ import {
 import schema from './models/Schema.schema';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { DatabaseAdapter } from './classes';
+import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 
 const MODULE_NAME = 'database';
 

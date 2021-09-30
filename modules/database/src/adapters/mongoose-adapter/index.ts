@@ -3,7 +3,7 @@ import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
-import { DatabaseAdapter } from '../../classes';
+import { DatabaseAdapter } from '../DatabaseAdapter';
 
 let deepPopulate = require('mongoose-deep-populate');
 
