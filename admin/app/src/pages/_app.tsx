@@ -29,6 +29,8 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
     }
   }, []);
 
+  const InnerLayout = Component?.Layout || EmptyLayout;
+
   return (
     <>
       <Head>
@@ -42,13 +44,17 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <Layout>
-            <Component {...pageProps} />
+            <InnerLayout>
+              <Component {...pageProps} />
+            </InnerLayout>
           </Layout>
         </ThemeProvider>
       </Provider>
     </>
   );
 };
+
+const EmptyLayout = ({ children }) => <>{children}</>;
 
 ConduitApp.getInitialProps = async (appContext: AppContext) => {
   // calls page's `getInitialProps` and fills `appProps.pageProps`
