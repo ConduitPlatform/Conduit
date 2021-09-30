@@ -187,11 +187,15 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
   };
 
   const openExpanded = (type: SocialNameTypes) => {
-    if (!expanded.includes(type)) {
-      const newExpanded = [...expanded];
-      newExpanded.push(type);
+    const newExpanded = [...expanded];
+    if (newExpanded.includes(type)) {
+      const typeIndex = newExpanded.indexOf(type);
+      newExpanded.splice(typeIndex, 1);
       setExpanded(newExpanded);
+      return;
     }
+    newExpanded.push(type);
+    setExpanded(newExpanded);
   };
 
   const closeExpanded = (type: SocialNameTypes) => {
