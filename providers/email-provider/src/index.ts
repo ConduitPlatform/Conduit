@@ -73,10 +73,10 @@ export class EmailProvider {
     else if(transport === 'sendgrid'){
 
       this._transportName = 'sendgrid';
+      console.log(transportSettings);
       const sgSettings: SendGridConfig = {
-
-          apiKey: transportSettings.sendgrid.apiKey,
-
+            apiKey : transportSettings.apiKey,
+  
       };
 
       this._transport = createTransport(sgTransport(sgSettings));
