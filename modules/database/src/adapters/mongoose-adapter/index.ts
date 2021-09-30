@@ -72,7 +72,7 @@ export class MongooseAdapter implements DatabaseAdapter {
       });
   }
 
-  createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
+  async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
     const Schema = this.mongoose.Schema;
     if (!this.models) {
       this.models = {};
@@ -80,16 +80,10 @@ export class MongooseAdapter implements DatabaseAdapter {
 
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
-        try {
-          schema = systemRequiredValidator(
-            this.registeredSchemas.get(schema.name)!,
-            schema
-          );
-        } catch (err) {
-          return new Promise((resolve, reject) => {
-            reject(err);
-          });
-        }
+        schema = systemRequiredValidator(
+          this.registeredSchemas.get(schema.name)!,
+          schema
+        );
         // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
       }
       delete this.mongoose.connection.models[schema.name];
@@ -105,9 +99,51 @@ export class MongooseAdapter implements DatabaseAdapter {
       deepPopulate,
       this
     );
-    return new Promise((resolve, reject) => {
-      resolve(this.models![schema.name]);
-    });
+    await this.saveSchemaToDatabase(schema);
+    return this.models![schema.name];
+  }
+
+  async saveSchemaToDatabase(schema: ConduitSchema) {
+    if (schema.name === '_declaredSchema') return;
+
+    let model = await this.models!['_declaredSchema'].findOne(
+      JSON.stringify({ name: schema.name })
+    );
+    if (model) {
+      await this.models!['_declaredSchema'].findByIdAndUpdate(
+        model._id,
+        JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: JSON.stringify(schema.modelOptions),
+        })
+      );
+    } else {
+      await this.models!['_declaredSchema'].create(
+        JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: JSON.stringify(schema.modelOptions),
+        })
+      );
+    }
+  }
+
+  async recoverSchemasFromDatabase(): Promise<any> {
+    let models = await this.models!['_declaredSchema'].findMany('{}');
+    models = models
+      .map((model: any) => {
+        return new ConduitSchema(
+          model.name,
+          model.fields,
+          JSON.parse(model.modelOptions)
+        );
+      })
+      .map((model: ConduitSchema) => {
+        return this.createSchemaFromAdapter(model);
+      });
+
+    await Promise.all(models);
   }
 
   getSchema(schemaName: string): ConduitSchema {

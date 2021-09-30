@@ -21,6 +21,7 @@ import {
   UpdateManyRequest,
   UpdateRequest,
 } from './types';
+import schema from './models/Schema.schema';
 
 const MODULE_NAME = 'database';
 
@@ -105,6 +106,8 @@ export class DatabaseProvider implements ConduitServiceModule {
   async activate() {
     const self = this;
     await this.conduit.initializeEventBus();
+    await this._activeAdapter.createSchemaFromAdapter(schema);
+    await this._activeAdapter.recoverSchemasFromDatabase();
     self.conduit.bus?.subscribe('database_provider', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
@@ -167,7 +170,8 @@ export class DatabaseProvider implements ConduitServiceModule {
     let schema = new ConduitSchema(
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
-      JSON.parse(call.request.schema.modelOptions)
+      JSON.parse(call.request.schema.modelOptions),
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -182,11 +186,13 @@ export class DatabaseProvider implements ConduitServiceModule {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
+          collectionName: schemaAdapter.originalSchema.collectionName,
         };
         this.publishSchema({
           name: call.request.schema.name,
           modelSchema: JSON.parse(call.request.schema.modelSchema),
           modelOptions: JSON.parse(call.request.schema.modelOptions),
+          collectionName: call.request.schema.collectionName,
         });
         callback(null, {
           schema: originalSchema,
@@ -213,6 +219,7 @@ export class DatabaseProvider implements ConduitServiceModule {
           name: schemaAdapter.name,
           modelSchema: JSON.stringify(schemaAdapter.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.modelOptions),
+          collectionName: schemaAdapter.collectionName,
         },
       });
     } catch (err) {
@@ -232,6 +239,7 @@ export class DatabaseProvider implements ConduitServiceModule {
             name: schema.name,
             modelSchema: JSON.stringify(schema.modelSchema),
             modelOptions: JSON.stringify(schema.modelOptions),
+            collectionName: schema.collectionName,
           };
         }),
       });

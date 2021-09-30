@@ -4,7 +4,6 @@ import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
-
 export class SequelizeAdapter implements DatabaseAdapter {
   connected: boolean = false;
   connectionUri: string;
@@ -47,8 +46,51 @@ export class SequelizeAdapter implements DatabaseAdapter {
       this
     );
     await this.models[schema.name].sync();
-
+    await this.saveSchemaToDatabase(schema);
     return this.models![schema.name];
+  }
+
+  async saveSchemaToDatabase(schema: ConduitSchema) {
+    if (schema.name === '_declaredSchema') return;
+
+    let model = await this.models!['_declaredSchema'].findOne(
+      JSON.stringify({ name: schema.name })
+    );
+    if (model) {
+      await this.models!['_declaredSchema'].findByIdAndUpdate(
+        model._id,
+        JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: JSON.stringify(schema.modelOptions),
+        })
+      );
+    } else {
+      await this.models!['_declaredSchema'].create(
+        JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: JSON.stringify(schema.modelOptions),
+        })
+      );
+    }
+  }
+
+  async recoverSchemasFromDatabase(): Promise<any> {
+    let models = await this.models!['_declaredSchema'].findMany('{}');
+    models = models
+      .map((model: any) => {
+        return new ConduitSchema(
+          model.name,
+          model.fields,
+          JSON.parse(model.modelOptions)
+        );
+      })
+      .map((model: ConduitSchema) => {
+        return this.createSchemaFromAdapter(model);
+      });
+
+    await Promise.all(models);
   }
 
   getSchema(schemaName: string): ConduitSchema {

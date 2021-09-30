@@ -21,5 +21,7 @@ export interface DatabaseAdapter {
 
   getSchemaModel(schemaName: string): { model: SchemaAdapter<any>; relations: any };
 
+  recoverSchemasFromDatabase(): Promise<any>;
+
   ensureConnected(): Promise<any>;
 }

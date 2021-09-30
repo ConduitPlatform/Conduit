@@ -15,8 +15,11 @@ export class ConduitSchema {
     this.name = name;
     this.fields = fields;
     this.modelOptions = modelOptions ? modelOptions : {};
-    // todo should pluralize like mongoose
-    this.collectionName = collectionName ? collectionName : this.name;
+    if (collectionName && collectionName !== '') {
+      this.collectionName = collectionName;
+    } else {
+      this.collectionName = this.name;
+    }
   }
 
   get modelSchema(): ConduitModel {

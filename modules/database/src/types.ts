@@ -4,6 +4,7 @@ type Schema = {
   name: string;
   modelSchema: string;
   modelOptions: string;
+  collectionName: string;
 };
 
 export type CreateSchemaRequest = GrpcRequest<{
