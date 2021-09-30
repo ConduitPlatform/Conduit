@@ -72,7 +72,6 @@ const SearchFilter: React.FC<Props> = ({
             <MenuItem value="google">Google</MenuItem>
             <MenuItem value="facebook">Facebook</MenuItem>
             <MenuItem value="twitch">Twitch</MenuItem>
-            <MenuItem value="kakao">Kakao</MenuItem>
           </Select>
         </FormControl>
       </Grid>

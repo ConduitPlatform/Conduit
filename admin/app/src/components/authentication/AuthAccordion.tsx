@@ -5,7 +5,6 @@ import Box from '@material-ui/core/Box';
 import LocalAccordion from './LocalAccordion';
 import GoogleAccordion from './GoogleAccordion';
 import FacebookAccordion from './FacebookAccordion';
-import KakaoAccordion from './KakaoAccordion';
 import TwitchAccordion from './TwitchAccordion';
 import Button from '@material-ui/core/Button';
 import {
@@ -13,7 +12,6 @@ import {
   FacebookTypes,
   TwitchTypes,
   GoogleTypes,
-  KakaoTypes,
   SocialNameTypes,
   SocialDataTypes,
   SignInMethods,
@@ -79,12 +77,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
     clientId: '',
   });
 
-  const [kakao, setKakao] = useState<KakaoTypes>({
-    enabled: false,
-    clientId: '',
-    redirect_uri: '',
-  });
-
   const [twitch, setTwitch] = useState<TwitchTypes>({
     enabled: false,
     clientId: '',
@@ -134,15 +126,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           clientSecret: twitchData.clientSecret || '',
         });
       }
-      if (configData.kakao) {
-        const kakaoData = configData.kakao;
-
-        setKakao({
-          enabled: kakaoData.enabled,
-          clientId: kakaoData.clientId || '',
-          redirect_uri: kakaoData.redirect_uri || '',
-        });
-      }
     }
   }, [configData]);
 
@@ -152,14 +135,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
 
   const handleFacebookClientID = (event: { target: { value: string } }) => {
     setFacebook({ ...facebook, clientId: event.target.value });
-  };
-
-  const handleKakaoTalkClientId = (event: { target: { value: string } }) => {
-    setKakao({ ...kakao, clientId: event.target.value });
-  };
-
-  const handleKakaoTalkRedirectUri = (event: { target: { value: string } }) => {
-    setKakao({ ...kakao, redirect_uri: event.target.value });
   };
 
   const handleTwitchClientId = (event: { target: { value: string } }) => {
@@ -221,9 +196,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         break;
       case 'twitch':
         if (configData && configData.twitch) setTwitch(configData.twitch);
-        break;
-      case 'kakao':
-        if (configData && configData.kakao) setKakao(configData.kakao);
         break;
       default:
         return null;
@@ -302,21 +274,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
             {submitButtons('facebook', facebook)}
           </FacebookAccordion>
         );
-      case 'kakao':
-        if (!kakao) {
-          return;
-        }
-        return (
-          <KakaoAccordion
-            expanded={expanded}
-            kakao={kakao}
-            setKakao={setKakao}
-            openExpanded={openExpanded}
-            handleKakaoTalkClientId={handleKakaoTalkClientId}
-            handleKakaoTalkRedirectUri={handleKakaoTalkRedirectUri}>
-            {submitButtons('kakao', kakao)}
-          </KakaoAccordion>
-        );
       case 'twitch':
         if (!twitch) {
           return;
@@ -355,7 +312,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
       {AccordionGenerator('local')}
       {AccordionGenerator('google')}
       {AccordionGenerator('facebook')}
-      {AccordionGenerator('kakao')}
       {AccordionGenerator('twitch')}
     </Box>
   );
