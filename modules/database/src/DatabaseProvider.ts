@@ -51,30 +51,8 @@ export class DatabaseProvider implements ConduitServiceModule {
 
   publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
-    const self = this;
-    this.conduit.state
-      ?.getState()
-      .then((r: any) => {
-        let state = !r || r.length === 0 ? {} : JSON.parse(r);
-        self._activeAdapter.registeredSchemas.forEach((k: ConduitSchema) => {
-          state[k.name] = {
-            _name: k.name,
-            _fields: k.fields,
-            _modelOptions: k.modelOptions,
-            _collectionName: k.collectionName,
-          };
-        });
-
-        return this.conduit.state?.setState(JSON.stringify(state));
-      })
-      .then(() => {
-        this.conduit.bus!.publish('database_provider', sendingSchema);
-        console.log('Updated state');
-      })
-      .catch((err: any) => {
-        console.log('Failed to update state');
-        console.error(err);
-      });
+    this.conduit.bus!.publish('database_provider', sendingSchema);
+    console.log('Updated state');
   }
 
   async initialize() {
@@ -135,30 +113,6 @@ export class DatabaseProvider implements ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-    this.conduit.state
-      ?.getState()
-      .then((r: any) => {
-        if (!r || r.length === 0) return;
-        let state = JSON.parse(r);
-        Object.keys(state).forEach((schemaName: string) => {
-          const schema = new ConduitSchema(
-            state[schemaName]._name ?? state[schemaName].name,
-            state[schemaName]._fields ?? state[schemaName].modelSchema,
-            state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
-            state[schemaName]._collectionName ?? null
-          );
-          self._activeAdapter
-            .createSchemaFromAdapter(schema)
-            .then(() => {})
-            .catch(() => {
-              console.log('Failed to create/update schema');
-            });
-        });
-      })
-      .catch((err: any) => {
-        console.log('Failed to recover state');
-        console.error(err);
-      });
   }
 
   /**
