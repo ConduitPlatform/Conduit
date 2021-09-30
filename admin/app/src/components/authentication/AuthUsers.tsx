@@ -117,7 +117,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
       <ConfirmationDialog
         open={openBlockUI}
         handleClose={handleClose}
-        title={selectedUser.active ? 'User is Unblocked' : 'User has Blocked'}
+        title={selectedUser.active ? 'User is Unblocked' : 'User is Blocked'}
         description={
           selectedUser.active
             ? `Are you sure you want to block ${selectedUser.email}`
