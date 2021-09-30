@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import CustomDrawer from './Drawer';
-import CustomHeader from './Header';
 import { useRouter } from 'next/router';
 import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
@@ -85,18 +84,14 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     }
   }, [dispatch, token]);
 
-  const menuClick = () => {
-    setOpen(!open);
-  };
-
-  const logoClick = async () => {
-    await router.push('/');
-  };
-
   return (
     <div className={classes.root} {...rest}>
       {token ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+        router.pathname !== '/cms/build-types' ? (
+          <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+        ) : (
+          ''
+        )
       ) : (
         ''
       )}

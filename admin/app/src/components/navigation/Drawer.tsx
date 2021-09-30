@@ -87,7 +87,7 @@ interface IModule {
 
 interface Props {
   open: boolean;
-  setOpen: any;
+  setOpen: (value: boolean) => void;
   itemSelected?: number;
 }
 
@@ -141,21 +141,15 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
       }}
       open={drawerOpen()}
       {...rest}>
-      {!open ? (
-        <ListItem className={classes.listItem}>
-          <ListItemIcon style={{ margin: '4px' }} onClick={() => setOpen(!open)}>
+      <ListItem className={classes.listItem}>
+        <ListItemIcon style={{ margin: '4px' }} onClick={() => setOpen(!open)}>
+          {!open ? (
             <Menu className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
-          </ListItemIcon>
-        </ListItem>
-      ) : (
-        <ListItem className={classes.listItem}>
-          <ListItemIcon
-            style={{ margin: '4px', right: '10px' }}
-            onClick={() => setOpen(!open)}>
+          ) : (
             <ChevronLeft className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
-          </ListItemIcon>
-        </ListItem>
-      )}
+          )}
+        </ListItemIcon>
+      </ListItem>
 
       <div className={classes.toolbar} />
 
