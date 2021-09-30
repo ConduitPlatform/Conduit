@@ -1,21 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
 import { Box } from '@material-ui/core';
 import { useRouter } from 'next/router';
 
-const tabs = [
-  { title: 'Users', isDisabled: false },
-  { title: 'Sign-In Method', isDisabled: false },
-  { title: 'Service Accounts', isDisabled: false },
-  { title: 'Settings', isDisabled: false },
-];
-
-export default function authenticationLayout({ children }) {
+const AuthenticationLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
 
   const [value, setValue] = useState(0);
+
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);
     router.push(`${event.currentTarget.id}`, undefined, { shallow: false });
@@ -30,7 +25,9 @@ export default function authenticationLayout({ children }) {
         <Tab label="Service accounts" id="serviceAccounts" />
         <Tab label="Settings" id="settings" />
       </Tabs>
-      {children}
+      <Box marginTop={3}>{children}</Box>
     </Box>
   );
-}
+};
+
+export default AuthenticationLayout;
