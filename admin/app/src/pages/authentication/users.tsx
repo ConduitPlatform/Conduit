@@ -1,5 +1,5 @@
 import Typography from '@material-ui/core/Typography';
-import React, { useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import NewUserModal from '../../components/authentication/NewUserModal';
 import AuthUsers from '../../components/authentication/AuthUsers';
 import Paginator from '../../components/common/Paginator';
@@ -9,18 +9,12 @@ import { makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import useDebounce from '../../hooks/useDebounce';
 import {
-  SettingsStateTypes,
-  SocialDataTypes,
-  SocialNameTypes,
-} from '../../models/authentication/AuthModels';
-import {
   asyncAddNewUser,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
-  asyncUpdateAuthenticationConfig,
 } from '../../redux/slices/authenticationSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import authenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
+import AuthenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -35,17 +29,19 @@ const Users = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
+  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+  const { signInMethods: configData } = useAppSelector(
+    (state) => state.authenticationSlice.data
+  );
+
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<number>(0);
   const [filter, setFilter] = useState('none');
+
   const debouncedSearch: string = useDebounce(search, 500);
-  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { signInMethods: configData } = useAppSelector(
-    (state) => state.authenticationSlice.data
-  );
 
   const handleFilterChange = (
     event: React.ChangeEvent<{ name?: string; value: any }>
@@ -83,20 +79,6 @@ const Users = () => {
     }
   };
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
-    setSelected(newValue);
-  };
-
-  const handleConfigChange = (type: SocialNameTypes, newValue: SocialDataTypes) => {
-    const data = {
-      ...configData,
-      [type]: {
-        ...newValue,
-      },
-    };
-    dispatch(asyncUpdateAuthenticationConfig(data));
-  };
-
   const handleNewUserDispatch = (values: { password: string; email: string }) => {
     dispatch(asyncAddNewUser({ values, limit }));
     setSkip(0);
@@ -120,7 +102,6 @@ const Users = () => {
           <Grid item xs={6}>
             <Paginator
               handlePageChange={handlePageChange}
-              // skip={skip}
               limit={limit}
               handleLimitChange={handleLimitChange}
               page={page}
@@ -131,15 +112,13 @@ const Users = () => {
 
       {users ? <AuthUsers users={users} /> : <Typography>No users available</Typography>}
 
-      <NewUserModal
-        handleNewUserDispatch={handleNewUserDispatch}
-        // page={skip}
-        // limit={limit}
-      />
+      <NewUserModal handleNewUserDispatch={handleNewUserDispatch} />
     </div>
   );
 };
 
-Users.Layout = authenticationLayout;
+Users.getLayout = function getLayout(page: ReactElement) {
+  return <AuthenticationLayout>{page}</AuthenticationLayout>;
+};
 
 export default Users;

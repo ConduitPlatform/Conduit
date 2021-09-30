@@ -1,5 +1,5 @@
 import Typography from '@material-ui/core/Typography';
-import React, { useEffect, useState } from 'react';
+import React, { ReactElement, useEffect } from 'react';
 
 import { makeStyles } from '@material-ui/core';
 
@@ -9,7 +9,7 @@ import {
   asyncUpdateAuthenticationConfig,
 } from '../../redux/slices/authenticationSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import authenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
+import AuthenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
 import AuthAccordion from '../../components/authentication/AuthAccordion';
 
 const useStyles = makeStyles((theme) => ({
@@ -54,6 +54,8 @@ const SignIn = () => {
   );
 };
 
-SignIn.Layout = authenticationLayout;
+SignIn.getLayout = function getLayout(page: ReactElement) {
+  return <AuthenticationLayout>{page}</AuthenticationLayout>;
+};
 
 export default SignIn;

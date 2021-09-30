@@ -1,22 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { makeStyles } from '@material-ui/core';
+import React, { ReactElement, useEffect } from 'react';
 import { SettingsStateTypes } from '../../models/authentication/AuthModels';
 import {
   asyncGetAuthenticationConfig,
   asyncUpdateAuthenticationConfig,
 } from '../../redux/slices/authenticationSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import authenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
+import AuthenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
 import AuthSettings from '../../components/authentication/AuthSettings';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    '& > *': {
-      margin: theme.spacing(0.5),
-    },
-    marginBottom: '3px',
-  },
-}));
 
 const Settings = () => {
   const dispatch = useAppDispatch();
@@ -37,13 +27,11 @@ const Settings = () => {
     dispatch(asyncUpdateAuthenticationConfig(body));
   };
 
-  return (
-    <div>
-      <AuthSettings handleSave={handleSettingsSave} settingsData={configData} />;
-    </div>
-  );
+  return <AuthSettings handleSave={handleSettingsSave} settingsData={configData} />;
 };
 
-Settings.Layout = authenticationLayout;
+Settings.getLayout = function getLayout(page: ReactElement) {
+  return <AuthenticationLayout>{page}</AuthenticationLayout>;
+};
 
 export default Settings;

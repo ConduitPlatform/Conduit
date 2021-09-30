@@ -1,24 +1,13 @@
-import { makeStyles } from '@material-ui/core';
-import authenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
+import AuthenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
 import ServiceAccountsTabs from '../../components/authentication/ServiceAccountsTabs';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    '& > *': {
-      margin: theme.spacing(0.5),
-    },
-    marginBottom: '3px',
-  },
-}));
+import React, { ReactElement } from 'react';
 
 const ServiceAccounts = () => {
-  return (
-    <div>
-      <ServiceAccountsTabs />
-    </div>
-  );
+  return <ServiceAccountsTabs />;
 };
 
-ServiceAccounts.Layout = authenticationLayout;
+ServiceAccounts.getLayout = function getLayout(page: ReactElement) {
+  return <AuthenticationLayout>{page}</AuthenticationLayout>;
+};
 
 export default ServiceAccounts;
