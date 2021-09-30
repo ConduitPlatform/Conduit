@@ -84,17 +84,25 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     }
   }, [dispatch, token]);
 
+  const hideLayout = (): boolean => {
+    if (token) {
+      return true;
+    }
+    if (router.pathname !== '/cms/build-types') {
+      return true;
+    }
+
+    return false;
+  };
+
   return (
     <div className={classes.root} {...rest}>
-      {token ? (
-        router.pathname !== '/cms/build-types' ? (
-          <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-        ) : (
-          ''
-        )
+      {hideLayout() ? (
+        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
       ) : (
         ''
       )}
+
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}
