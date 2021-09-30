@@ -16,6 +16,10 @@ const schema = new ConduitSchema(
       systemRequired: true,
     },
     modelOptions: { type: TYPE.String, systemRequired: true },
+    ownerModule: {
+      type: TYPE.String,
+      required: true,
+    },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },

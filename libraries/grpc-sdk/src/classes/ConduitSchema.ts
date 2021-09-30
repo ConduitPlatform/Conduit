@@ -5,6 +5,7 @@ export class ConduitSchema {
   readonly fields: ConduitModel;
   readonly collectionName: string;
   readonly modelOptions: ConduitModelOptions;
+  private ownerModule?: string;
 
   constructor(
     name: string,
@@ -20,6 +21,14 @@ export class ConduitSchema {
     } else {
       this.collectionName = this.name;
     }
+  }
+
+  get owner(): string | undefined {
+    return this.ownerModule;
+  }
+
+  set owner(owner: string | undefined) {
+    this.ownerModule = owner;
   }
 
   get modelSchema(): ConduitModel {

@@ -1,6 +1,6 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
-import { DatabaseAdapter, SchemaAdapter } from './interfaces';
+import { SchemaAdapter } from './interfaces';
 import ConduitGrpcSdk, {
   ConduitSchema,
   ConduitServiceModule,
@@ -22,11 +22,14 @@ import {
   UpdateRequest,
 } from './types';
 import schema from './models/Schema.schema';
+import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
+import { DatabaseAdapter } from './classes';
 
 const MODULE_NAME = 'database';
 
 export class DatabaseProvider implements ConduitServiceModule {
-  private readonly _activeAdapter: DatabaseAdapter;
+  private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
 
   constructor(private readonly conduit: ConduitGrpcSdk) {
     const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
@@ -102,6 +105,7 @@ export class DatabaseProvider implements ConduitServiceModule {
             receivedSchema.modelOptions,
             receivedSchema.collectionName
           );
+          schema.owner = receivedSchema.owner;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
             .then(() => {})
@@ -133,8 +137,12 @@ export class DatabaseProvider implements ConduitServiceModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    this._activeAdapter
-      .createSchemaFromAdapter(schema)
+    this.conduit.config
+      .getModuleUrlByInstance((call as any).getPeer())
+      .then((res: { url: string; moduleName: string }) => {
+        schema.owner = res.moduleName;
+        return this._activeAdapter.createSchemaFromAdapter(schema);
+      })
       .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
@@ -147,12 +155,13 @@ export class DatabaseProvider implements ConduitServiceModule {
           modelSchema: JSON.parse(call.request.schema.modelSchema),
           modelOptions: JSON.parse(call.request.schema.modelOptions),
           collectionName: call.request.schema.collectionName,
+          owner: schemaAdapter.originalSchema.owner,
         });
         callback(null, {
           schema: originalSchema,
         });
       })
-      .catch((err) => {
+      .catch((err: any) => {
         callback({
           code: status.INTERNAL,
           message: err.message,
