@@ -47,7 +47,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/':
         setItemSelected(0);
         break;
-      case '/authentication':
+      case '/authentication/users':
         setItemSelected(1);
         break;
       case '/notification':

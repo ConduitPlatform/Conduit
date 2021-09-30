@@ -18,7 +18,7 @@ export default function authenticationLayout({ children }) {
   const [value, setValue] = useState(0);
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);
-    router.push(`${event.currentTarget.id}`, undefined, { shallow: true });
+    router.push(`${event.currentTarget.id}`, undefined, { shallow: false });
   };
 
   return (

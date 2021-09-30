@@ -174,7 +174,7 @@ const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
               />
             </ListItem>
           </Link>
-          <Link href="/authentication" prefetch={false}>
+          <Link href="/authentication/users" prefetch={false}>
             <ListItem
               button
               disabled={isModuleDisabled('authentication')}
