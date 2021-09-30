@@ -55,6 +55,16 @@ const useStyles = makeStyles((theme: Theme) =>
       color: theme.palette.primary.main,
       marginBottom: '10px',
     },
+    textIcon: {
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    },
+    welcomeTypography: {
+      display: 'flex',
+      justifyContent: 'center',
+      flex: 1,
+    },
   })
 );
 
@@ -66,116 +76,99 @@ const Home = () => {
         <title>Conduit - App</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
+      <div>
+        <Box
+          p={2}
+          display={'flex'}
+          alignItems={'center'}
+          flex={1}
+          style={{ marginBottom: '300px' }}>
+          <Typography variant={'h4'} className={classes.welcomeTypography}>
+            Welcome to C
+            <Slide timeout={1000} in direction={'down'}>
+              <Typography
+                variant={'h4'}
+                component={'span'}
+                role="img"
+                aria-label="okhand">
+                👌
+              </Typography>
+            </Slide>
+            nduit!
+          </Typography>
+        </Box>
 
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        alignSelf="center"
-        marginTop="300px">
-        <Grid container justify="center" alignItems="center" spacing={6}>
-          <Grid item xs={6} sm={6} md={3}>
-            <Paper className={classes.paper} variant="elevation">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                <SectetIcon className={classes.headerIcon} />
-                <Typography>set up an auth method</Typography>
-              </div>
-              <Divider className={classes.divider} />
-              <Typography variant="subtitle2">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
-                quam.
-                <IconButton className={classes.iconButton} size="small">
-                  <ArrowForward />
-                </IconButton>
-              </Typography>
-            </Paper>
+        <Container>
+          <Grid container spacing={6}>
+            <Grid item xs={6} sm={6} md={3}>
+              <Paper className={classes.paper} variant="elevation">
+                <div className={classes.textIcon}>
+                  <SectetIcon className={classes.headerIcon} />
+                  <Typography>set up an auth method</Typography>
+                </div>
+                <Divider className={classes.divider} />
+                <Typography variant="subtitle2">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
+                  commodo quam.
+                  <IconButton className={classes.iconButton} size="small">
+                    <ArrowForward />
+                  </IconButton>
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={6} md={3}>
+              <Paper className={classes.paper} variant="elevation">
+                <div className={classes.textIcon}>
+                  <SchemaIcon className={classes.headerIcon} />
+                  <Typography align="center">create a schema</Typography>
+                </div>
+                <Divider className={classes.divider} />
+                <Typography variant="subtitle2">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
+                  commodo quam.
+                  <IconButton className={classes.iconButton} size="small">
+                    <ArrowForward />
+                  </IconButton>
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={6} md={3}>
+              <Paper className={classes.paper} variant="elevation">
+                <div className={classes.textIcon}>
+                  <EmailIcon className={classes.headerIcon} />
+                  <Typography>set up email provider</Typography>
+                </div>
+                <Divider className={classes.divider} />
+                <Typography variant="subtitle2">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
+                  commodo quam.
+                  <IconButton className={classes.iconButton} size="small">
+                    <ArrowForward />
+                  </IconButton>
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={6} md={3}>
+              <Paper className={classes.paper} variant="elevation">
+                <div className={classes.textIcon}>
+                  <LockIcon className={classes.headerIcon} />
+                  <Typography>set up client secrets</Typography>
+                </div>
+                <Divider className={classes.divider} />
+                <Typography variant="subtitle2">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
+                  commodo quam.
+                  <IconButton className={classes.iconButton} size="small">
+                    <ArrowForward />
+                  </IconButton>
+                </Typography>
+              </Paper>
+            </Grid>
           </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <Paper className={classes.paper} variant="elevation">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                <SchemaIcon className={classes.headerIcon} />
-                <Typography align="center">create a schema</Typography>
-              </div>
-              <Divider className={classes.divider} />
-              <Typography variant="subtitle2">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
-                quam.
-                <IconButton className={classes.iconButton} size="small">
-                  <ArrowForward />
-                </IconButton>
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <Paper className={classes.paper} variant="elevation">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                <EmailIcon className={classes.headerIcon} />
-                <Typography>set up email provider</Typography>
-              </div>
-              <Divider className={classes.divider} />
-              <Typography variant="subtitle2">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
-                quam.
-                <IconButton className={classes.iconButton} size="small">
-                  <ArrowForward />
-                </IconButton>
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={6} sm={6} md={3}>
-            <Paper className={classes.paper} variant="elevation">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                <LockIcon className={classes.headerIcon} />
-                <Typography>set up client secrets</Typography>
-              </div>
-              <Divider className={classes.divider} />
-              <Typography variant="subtitle2">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel commodo
-                quam.
-                <IconButton className={classes.iconButton} size="small">
-                  <ArrowForward />
-                </IconButton>
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
+        </Container>
+      </div>
     </>
   );
 };
 
 export default Home;
-
-/* <Box p={2} display={'flex'} alignItems={'center'} flex={1}>
-<Typography
-  variant={'h1'}
-  style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
-  Welcome to C
-  <Slide timeout={2000} in direction={'up'}>
-    <Typography variant={'h1'} component={'span'} role="img" aria-label="okhand">
-      👌
-    </Typography>
-  </Slide>
-  nduit!
-</Typography>
-</Box> */
