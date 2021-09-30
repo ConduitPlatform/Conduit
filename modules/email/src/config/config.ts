@@ -84,7 +84,7 @@ export default {
         format: 'String',
         default: null,
         nullable: true,
-      }
+      },
     },
     sendgrid: {
       doc: 'The SendGrid config',

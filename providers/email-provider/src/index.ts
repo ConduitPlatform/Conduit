@@ -14,21 +14,21 @@ import { EmailBuilderClass } from './models/EmailBuilderClass';
 import { MandrillEmailOptions } from './interfaces/MandrillEmailOptions';
 import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
 import { SendgridMailBuilder } from './transports/sendgrid/sendgridMailBuilder';
+import { EmailProviderClass } from './models/EmailProviderClass';
+import { MailgunProvider } from './transports/mailgun/MailgunProvider';
+import { MandrillProvider } from './transports/mandrill/MandrilProvider';
 
 var mandrillTransport = require('nodemailer-mandrill-transport');
 var sgTransport = require('nodemailer-sendgrid');
 
 export class EmailProvider {
-  _transport?: Mail;
+  _transport?: EmailProviderClass;
   _mandrillTransport?: Mandrill;
   _transportName?: string;
 
   constructor(transport: string, transportSettings: any) {
-    if (transport === 'mailgun') {
-      this._transportName = 'mailgun';
-
+    if(transport === 'mailgun'){
       const { apiKey, domain, proxy, host } = transportSettings.mailgun;
-
       if (isNil(apiKey) || isNil(domain) || isNil(host)) {
         throw new Error('Mailgun transport settings are missing');
       }
@@ -40,46 +40,42 @@ export class EmailProvider {
         proxy,
         host,
       };
-      this._transport = createTransport(initializeMailgun(mailgunSettings));
-
-    } else if (transport === 'smtp') {
+      this._transport = new MailgunProvider(mailgunSettings);
+    }
+    else if (transport === 'smtp') {
       this._transportName = 'smtp';
 
       const { smtp } = transportSettings;
 
-      this._transport = createTransport({
-        ...transportSettings,
-        secure: false,
-        ...smtp,
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
+      // this._transport = new EmailProviderClass(createTransport({
+      //   ...transportSettings,
+      //   secure: false,
+      //   ...smtp,
+      //   tls: {
+      //     rejectUnauthorized: false,
+      //   },
+      // }));
+
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
-
       const  mandrillSettings: MandrillConfig = {
-
         auth: {
           apiKey: transportSettings.mandrill.apiKey
         }
-
+        
       };
-  
-      this._transport = createTransport(mandrillTransport(mandrillSettings));
-      this._mandrillTransport = new Mandrill(transportSettings.mandrill.apiKey);
-
+     
+      this._transport = new MandrillProvider(mandrillSettings);
     }
     else if(transport === 'sendgrid'){
 
       this._transportName = 'sendgrid';
-      console.log(transportSettings);
+
       const sgSettings: SendGridConfig = {
             apiKey : transportSettings.apiKey,
   
       };
-
-      this._transport = createTransport(sgTransport(sgSettings));
+      this._transport = new SendgridProvider(sgSettings);
     } 
     else {
       this._transportName = undefined;
@@ -126,33 +122,14 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    console.log('object: ',email.getMailObject());
-    console.log('arg',email);
-    console.log('transport',this._transport);
+    // console.log('object: ',email.getMailObject());
+    // console.log('arg',email);
+    // console.log('transport',this._transport);
     return (this._transport as Mail).sendMail(email.getMailObject());
   }
-
-  getMandrillTemplateInfo(templateName: string ){
-    this._mandrillTransport?.templates.info(templateName, res => {
-      console.log(res);
-    },
-    err => {
-      console.log(err);
-    });
-  }
-  
-  listMandrillTemplates(apiKey:any){
-
-    this._mandrillTransport?.templates.list(apiKey, res =>{
-      console.log(res);
-    },
-    err => {
-      console.log(err);
-    });
-  }
-  
 }
 import './test';  
+import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
 
 
 

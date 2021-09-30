@@ -1,3 +1,4 @@
+  import Mail from 'nodemailer/lib/mailer'
 export interface ISendEmailParams {
   email: string;
   body?: string;
@@ -6,5 +7,5 @@ export interface ISendEmailParams {
   sender: string;
   cc?: string[];
   replyTo?: string;
-  attachments?: string[];
+  attachments?: Mail.Attachment[];
 }

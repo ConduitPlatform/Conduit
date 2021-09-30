@@ -16,6 +16,8 @@
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.20",
+    "mailgun-js": "^0.22.0",
+    "mailgun.js": "^3.5.9",
     "mandrill-api": "^1.0.45",
     "nodemailer": "^6.4.16",
     "nodemailer-mailgun-transport": "^2.0.0",

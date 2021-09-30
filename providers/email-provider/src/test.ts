@@ -2,12 +2,12 @@ import { EmailProvider } from "./index";
 import { MandrillEmailOptions } from "./interfaces/MandrillEmailOptions";
 import { MailgunMailBuilder } from "./transports/mailgun/mailgunMailBuilder";
 import { MandrillBuilder } from "./transports/mandrill/mandrillBuilder";
-let provider = new EmailProvider('mailgun',{
-    mailgun:{
+import { MandrillProvider } from "./transports/mandrill/MandrilProvider";
+let provider = new EmailProvider('mandrill',{
+    mandrill:{
+
         apiKey: '***REMOVED***',
-        proxy: null,
-        host:'api.mailgun.net',
-        domain:'***REMOVED***'
+        
     }
     
 });
@@ -30,20 +30,22 @@ let provider = new EmailProvider('mailgun',{
 //         }
 //     }
 // };
-let mail = (provider.emailBuilder() as MailgunMailBuilder)
-            .setTemplate({
-                template: 'first_template',
-                'v:fname': 'fffffff'
-                })
-            .setReceiver("dimitrissoldatos2@gmail.com")
-            .setSubject('Hello ✔')           
-            .setSender("postmaster@***REMOVED***");
+// let mail = (provider.emailBuilder() as MailgunMailBuilder)
+//             .setTemplate({
+//                 template: 'first_template',
+//                 'v:fname': 'fffffff'
+//                 })
+//             .setReceiver("dimitrissoldatos2@gmail.com")
+//             .setSubject('Hello ✔')           
+//             .setSender("postmaster@***REMOVED***");
 
-          provider
-          .sendEmail(mail)
-          .then( (r) => {
-              console.log('done',r);
-          }) 
-          .catch( (err) => {
-              console.log('err',err);
-          });
+//           provider
+//           .sendEmail(mail)
+//           .then( (r) => {
+//               console.log('done',r);
+//           }) 
+//           .catch( (err) => {
+//               console.log('err',err);
+//           });
+
+//(provider._transport as MandrillProvider).listTemplates({key:'***REMOVED***'});
