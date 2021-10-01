@@ -133,8 +133,7 @@ const Authentication = () => {
         <Box
           role="tabpanel"
           // hidden={selected !== 0 || (configData && !configData.active)}
-          hidden={selected !== 0}
-          id={`tabpanel-0`}>
+          hidden={selected !== 0}>
           <Paper variant="outlined" className={classes.root}>
             <Grid container>
               <Grid item xs={6}>
@@ -148,7 +147,6 @@ const Authentication = () => {
               <Grid item xs={6}>
                 <Paginator
                   handlePageChange={handlePageChange}
-                  // skip={skip}
                   limit={limit}
                   handleLimitChange={handleLimitChange}
                   page={page}
