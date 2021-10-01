@@ -15,6 +15,9 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/client": "^7.4.7",
+    "@sendgrid/mail": "^7.4.7",
+    "await-to-js": "^3.0.0",
     "lodash": "^4.17.20",
     "mailgun-js": "^0.22.0",
     "mailgun.js": "^3.5.9",

@@ -1,11 +1,8 @@
-import { initialize as initializeMailgun } from './transports/mailgun/mailgun';
 import Mail from 'nodemailer/lib/mailer';
 import { MailgunMailBuilder } from './transports/mailgun/mailgunMailBuilder';
 import { NodemailerBuilder } from './transports/nodemailer/nodemailerBuilder';
-import { EmailBuilder } from './interfaces/EmailBuilder';
-import { createTransport, SentMessageInfo } from 'nodemailer';
+import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { EmailOptions } from './interfaces/EmailOptions';
 import { isNil, template, times } from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
 import { Mandrill } from 'mandrill-api';
@@ -17,6 +14,8 @@ import { SendgridMailBuilder } from './transports/sendgrid/sendgridMailBuilder';
 import { EmailProviderClass } from './models/EmailProviderClass';
 import { MailgunProvider } from './transports/mailgun/MailgunProvider';
 import { MandrillProvider } from './transports/mandrill/MandrilProvider';
+import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
+import { SmtpProvider } from './transports/smtp/SmtpProvider';
 
 var mandrillTransport = require('nodemailer-mandrill-transport');
 var sgTransport = require('nodemailer-sendgrid');
@@ -47,15 +46,16 @@ export class EmailProvider {
 
       const { smtp } = transportSettings;
 
-      // this._transport = new EmailProviderClass(createTransport({
-      //   ...transportSettings,
-      //   secure: false,
-      //   ...smtp,
-      //   tls: {
-      //     rejectUnauthorized: false,
-      //   },
-      // }));
+      this._transport = new SmtpProvider({
+        ...transportSettings,
+        secure: false,
+        ...smtp,
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
 
+      
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
       const  mandrillSettings: MandrillConfig = {
@@ -80,19 +80,17 @@ export class EmailProvider {
     else {
       this._transportName = undefined;
       this._transport = undefined;
-      this._mandrillTransport = undefined;
       throw new Error('You need to specify a correct transport');
     }
   }
 
-  sendEmailDirect(mailOptions: Mail.Options): Promise<SentMessageInfo> {
+  sendEmailDirect(mailOptions: Mail.Options): Promise<SentMessageInfo> | undefined {
 
-      const transport = this._transport as Mail;
+      const transport = this._transport;
       if (!transport) {
         throw new Error('Email  transport not initialized!');
       }
-
-      return transport.sendMail(mailOptions);
+      return transport.sendEmailDirect(mailOptions);
     
   }
 
@@ -118,18 +116,14 @@ export class EmailProvider {
     }
   }
 
-  sendEmail(email: EmailBuilderClass<Mail.Options> | EmailBuilderClass<MandrillEmailOptions>): Promise<SentMessageInfo> {
+  sendEmail(email: EmailBuilderClass<Mail.Options> | EmailBuilderClass<MandrillEmailOptions>): Promise<SentMessageInfo> | undefined  {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    // console.log('object: ',email.getMailObject());
-    // console.log('arg',email);
-    // console.log('transport',this._transport);
-    return (this._transport as Mail).sendMail(email.getMailObject());
+    return this._transport.sendEmail(email.getMailObject());
   }
 }
 import './test';  
-import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
 
 
 

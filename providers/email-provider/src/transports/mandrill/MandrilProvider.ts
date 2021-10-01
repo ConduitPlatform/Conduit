@@ -11,9 +11,7 @@ export class MandrillProvider extends EmailProviderClass{
         console.log(mandrillSettings);
         this._mandrillSdk = new Mandrill(mandrillSettings.auth.apiKey);
     }
-
     listTemplates(apiKey:any){
-        console.log(apiKey);
         this._mandrillSdk?.templates.list(apiKey, res =>{
           console.log(res);
         },
@@ -29,5 +27,9 @@ export class MandrillProvider extends EmailProviderClass{
         err => {
             console.log(err);
         });
+    }
+
+    createTemplate(domain: string, data: any) {
+        throw new Error("Method not implemented.");
     }
 }

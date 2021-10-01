@@ -1,15 +1,6 @@
-import { EmailProvider } from "./index";
-import { MandrillEmailOptions } from "./interfaces/MandrillEmailOptions";
-import { MailgunMailBuilder } from "./transports/mailgun/mailgunMailBuilder";
-import { MandrillBuilder } from "./transports/mandrill/mandrillBuilder";
-import { MandrillProvider } from "./transports/mandrill/MandrilProvider";
-let provider = new EmailProvider('mandrill',{
-    mandrill:{
-
-        apiKey: '***REMOVED***',
-        
-    }
-    
+import { EmailProvider } from "./index"
+let provider = new EmailProvider('sendgrid',{
+    apiKey: '***REMOVED***'
 });
 // let mailOptions: MandrillEmailOptions = {
 //     to: [{ 
@@ -30,22 +21,21 @@ let provider = new EmailProvider('mandrill',{
 //         }
 //     }
 // };
-// let mail = (provider.emailBuilder() as MailgunMailBuilder)
-//             .setTemplate({
-//                 template: 'first_template',
-//                 'v:fname': 'fffffff'
-//                 })
-//             .setReceiver("dimitrissoldatos2@gmail.com")
+// let mail = provider.emailBuilder()
+//             .setReceiver("dimitris.soldatos@quintessential.gr")
 //             .setSubject('Hello ✔')           
-//             .setSender("postmaster@***REMOVED***");
+//             .setSender("dimitris.soldatos@quintessential.gr")
+//             .setContent("AFSAasfasfasfaFAS");
 
 //           provider
 //           .sendEmail(mail)
-//           .then( (r) => {
-//               console.log('done',r);
+//           ?.then( (r) => {
+//               console.log('Email sent!');
 //           }) 
 //           .catch( (err) => {
 //               console.log('err',err);
 //           });
 
-//(provider._transport as MandrillProvider).listTemplates({key:'***REMOVED***'});
+provider._transport?.listTemplates('***REMOVED***')
+
+//sendgrid api key ***REMOVED***
