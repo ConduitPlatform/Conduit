@@ -150,6 +150,7 @@ const DataTable: React.FC<Props> = ({
                   actions={actions}
                   onActionClick={(action) => onMenuItemClick(action, row)}
                   isBlocked={!row.Active}
+                  editDisabled={selectedItems?.length > 1}
                 />
               </TableCell>
             </TableRow>
