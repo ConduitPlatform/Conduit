@@ -20,7 +20,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     padding: 0,
     minHeight: '100vh',
   },
-  toolbar: theme.mixins.toolbar,
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
@@ -101,7 +100,6 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         <></>
       )}
       <main className={classes.content}>
-        {!menuDisabled && <div className={classes.toolbar} />}
         {children}
       </main>
       <NotificationsSystem
