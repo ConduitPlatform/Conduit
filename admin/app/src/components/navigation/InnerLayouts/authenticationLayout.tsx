@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
@@ -8,8 +8,19 @@ import { useRouter } from 'next/router';
 
 const AuthenticationLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
-
   const [value, setValue] = useState(0);
+
+  const pathnames = [
+    '/authentication/users',
+    '/authentication/signIn',
+    '/authentication/serviceAccounts',
+    '/authentication/settings',
+  ];
+
+  useEffect(() => {
+    const index = pathnames.findIndex((pathname) => pathname === router.pathname);
+    setValue(index);
+  });
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);

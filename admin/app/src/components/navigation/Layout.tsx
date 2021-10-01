@@ -50,6 +50,15 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/authentication/users':
         setItemSelected(1);
         break;
+      case '/authentication/settings':
+        setItemSelected(1);
+        break;
+      case '/authentication/serviceAccounts':
+        setItemSelected(1);
+        break;
+      case '/authentication/signIn':
+        setItemSelected(1);
+        break;
       case '/notification':
         setItemSelected(2);
         break;
