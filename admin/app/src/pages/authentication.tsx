@@ -48,13 +48,9 @@ const Authentication = () => {
   const [filter, setFilter] = useState('none');
   const debouncedSearch: string = useDebounce(search, 500);
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { signInMethods: configData } = useAppSelector(
-    (state) => state.authenticationSlice.data
-  );
+  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
 
-  const handleFilterChange = (
-    event: React.ChangeEvent<{ name?: string; value: any }>
-  ) => {
+  const handleFilterChange = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
     setFilter(event.target.value);
   };
 
@@ -155,11 +151,7 @@ const Authentication = () => {
             </Grid>
           </Paper>
 
-          {users ? (
-            <AuthUsers users={users} />
-          ) : (
-            <Typography>No users available</Typography>
-          )}
+          {users ? <AuthUsers users={users} /> : <Typography>No users available</Typography>}
 
           <NewUserModal
             handleNewUserDispatch={handleNewUserDispatch}

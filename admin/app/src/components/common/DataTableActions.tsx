@@ -17,12 +17,7 @@ interface Props {
   editDisabled?: boolean;
 }
 
-const DataTableActions: React.FC<Props> = ({
-  actions,
-  onActionClick,
-  isBlocked,
-  editDisabled,
-}) => {
+const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, editDisabled }) => {
   const handleActions = (action: Action) => {
     switch (action.type) {
       case 'delete':
