@@ -73,7 +73,16 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/storage':
         setItemSelected(6);
         break;
-      case '/settings':
+      case '/settings/clientsdk':
+        setItemSelected(7);
+        break;
+      case '/settings/secrets':
+        setItemSelected(7);
+        break;
+      case '/settings/core':
+        setItemSelected(7);
+        break;
+      case '/settings/createuser':
         setItemSelected(7);
         break;
       default:
@@ -95,11 +104,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-      ) : (
-        <></>
-      )}
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}
