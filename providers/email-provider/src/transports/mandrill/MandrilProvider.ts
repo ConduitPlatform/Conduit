@@ -14,21 +14,11 @@ export class MandrillProvider extends EmailProviderClass{
     }
     
     listTemplates(){
-        this._mandrillSdk?.templates.list(this.apiKey, res =>{
-          console.log(res);
-        },
-        err => {
-          console.log(err);
-        });
+        return this._mandrillSdk?.templates.list(this.apiKey)
     }
 
     getTemplateInfo(templateName:string){
-        this._mandrillSdk?.templates.info(templateName, res => {
-            console.log(res);
-        },
-        err => {
-            console.log(err);
-        });
+        return this._mandrillSdk?.templates.info(templateName);
     }
 
     createTemplate(data: any) {
