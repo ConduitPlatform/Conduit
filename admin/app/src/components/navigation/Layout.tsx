@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import CustomDrawer from './Drawer';
-import CustomHeader from './Header';
 import { useRouter } from 'next/router';
 import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
@@ -47,7 +46,16 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/':
         setItemSelected(0);
         break;
-      case '/authentication':
+      case '/authentication/users':
+        setItemSelected(1);
+        break;
+      case '/authentication/settings':
+        setItemSelected(1);
+        break;
+      case '/authentication/serviceAccounts':
+        setItemSelected(1);
+        break;
+      case '/authentication/signIn':
         setItemSelected(1);
         break;
       case '/notification':
@@ -85,28 +93,13 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     }
   }, [dispatch, token]);
 
-  const menuClick = () => {
-    setOpen(!open);
-  };
-
-  const logoClick = async () => {
-    await router.push('/');
-  };
-
-  let appBar, drawer;
-  if (!menuDisabled) {
-    appBar = (
-      <CustomHeader onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />
-    );
-    drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
-  } else {
-    appBar = <CustomHeader showMenuButton={false} onMenuClick={() => menuClick()} />;
-  }
-
   return (
     <div className={classes.root} {...rest}>
-      {appBar}
-      {drawer}
+      {!menuDisabled ? (
+        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+      ) : (
+        <></>
+      )}
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}

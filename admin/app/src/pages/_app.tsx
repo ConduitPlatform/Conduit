@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { ReactElement, ReactNode, useEffect } from 'react';
 import { ThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import theme from '../utils/theme';
 import type { AppContext, AppProps } from 'next/app';
-import App from 'next/app';
 import { Provider } from 'react-redux';
 import Head from 'next/head';
 import { initializeStore, useStore } from '../redux/store';
-import { getCookie } from '../utils/cookie';
-import { setToken } from '../redux/slices/appAuthSlice';
 import { Layout } from '../components/navigation/Layout';
 import { setUpNotifications } from 'reapop';
+import { setToken } from '../redux/slices/appAuthSlice';
+import App from 'next/app';
+import { getCookie } from '../utils/cookie';
+import { NextPage } from 'next';
 
 setUpNotifications({
   defaultProps: {
@@ -19,7 +20,15 @@ setUpNotifications({
   },
 });
 
-const ConduitApp = ({ Component, pageProps }: AppProps) => {
+type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement) => ReactNode;
+};
+
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
+
+const ConduitApp = ({ Component, pageProps }: AppPropsWithLayout) => {
   const reduxStore = useStore(pageProps.initialReduxState);
 
   useEffect(() => {
@@ -29,6 +38,8 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
     }
   }, []);
 
+  const getLayout = Component.getLayout || ((page: any) => page);
+
   return (
     <>
       <Head>
@@ -37,13 +48,16 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,100&display=swap"
+          rel="stylesheet"
+        />
       </Head>
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
+          <Layout>{getLayout(<Component {...pageProps} />)}</Layout>
         </ThemeProvider>
       </Provider>
     </>

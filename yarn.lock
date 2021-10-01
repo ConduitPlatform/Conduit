@@ -4147,6 +4147,13 @@
     "@types/scheduler" "*"
     csstype "^3.0.2"
 
+"@types/reapop@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/reapop/-/reapop-3.0.0.tgz#6108f356bc98b2314f94fed8981e263953784dc5"
+  integrity sha512-4fCPIcvdjMs8Y0h3AFxU+YeqDFtykcvIsNzBABBJORtqLlNPTahfqOjGTt5OnXeuvS+tSsEZrkuLn9WIGFDFdA==
+  dependencies:
+    reapop "*"
+
 "@types/redis@^2.8.28":
   version "2.8.28"
   resolved "https://registry.yarnpkg.com/@types/redis/-/redis-2.8.28.tgz#5862b2b64aa7f7cbc76dafd7e6f06992b52c55e3"
@@ -18954,7 +18961,7 @@ readdirp@~3.5.0:
   dependencies:
     picomatch "^2.2.1"
 
-reapop@^4.0.2:
+reapop@*, reapop@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/reapop/-/reapop-4.0.2.tgz#006d9906d9d4c4b9e56562b91376d52c4c8dcc59"
   integrity sha512-V+yUyxexO8miP1Y0hQy+5GDw/iDJU+O3K5uSvPJNFP1bcAxFiIfJcahjUOfakISkyDeb/xks4uGIb5I3mdkDRA==
