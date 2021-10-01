@@ -163,6 +163,7 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
                       onChange={handleCheckBoxChange}
                       name="hasTwoFA"
                       color="secondary"
+                      disabled={!values.phoneNumber}
                     />
                   }
                   label="Has 2 factor authentication"
