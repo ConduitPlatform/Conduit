@@ -37,10 +37,10 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
   },
   statusEnabled: {
-    color: 'green',
+    color: theme.palette.secondary.main,
   },
   statusDisabled: {
-    color: 'red',
+    color: theme.palette.primary.main,
   },
 }));
 
