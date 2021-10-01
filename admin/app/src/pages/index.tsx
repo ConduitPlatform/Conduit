@@ -22,7 +22,7 @@ import { ArrowForward } from '@material-ui/icons';
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     paper: {
-      height: 160,
+      height: 125,
       width: 270,
       display: 'flex',
       padding: '20px',
@@ -108,8 +108,7 @@ const Home = () => {
                 </div>
                 <Divider className={classes.divider} />
                 <Typography variant="subtitle2">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
-                  commodo quam.
+                  Easily login with the method of your choice!
                   <IconButton className={classes.iconButton} size="small">
                     <ArrowForward />
                   </IconButton>
@@ -124,8 +123,7 @@ const Home = () => {
                 </div>
                 <Divider className={classes.divider} />
                 <Typography variant="subtitle2">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
-                  commodo quam.
+                  Create your schema with a user friendly UI!
                   <IconButton className={classes.iconButton} size="small">
                     <ArrowForward />
                   </IconButton>
@@ -140,8 +138,7 @@ const Home = () => {
                 </div>
                 <Divider className={classes.divider} />
                 <Typography variant="subtitle2">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
-                  commodo quam.
+                  Select your preferred provider and start mailing!
                   <IconButton className={classes.iconButton} size="small">
                     <ArrowForward />
                   </IconButton>
@@ -156,8 +153,7 @@ const Home = () => {
                 </div>
                 <Divider className={classes.divider} />
                 <Typography variant="subtitle2">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel
-                  commodo quam.
+                  Set up your client secret across multiple platforms!
                   <IconButton className={classes.iconButton} size="small">
                     <ArrowForward />
                   </IconButton>
