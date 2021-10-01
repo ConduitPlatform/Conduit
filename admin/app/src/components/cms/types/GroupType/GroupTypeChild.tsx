@@ -105,7 +105,7 @@ const GroupGroupType: FC<IProps> = ({
       </Grid>
       <Droppable droppableId={groupId} isCombineEnabled>
         {(provided, snapshot) => (
-          <Box
+          <div
             ref={provided.innerRef}
             className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
             {item.content && Array.isArray(item.content) && item.content.length > 0 ? (
@@ -117,7 +117,7 @@ const GroupGroupType: FC<IProps> = ({
                     index={index}
                     isDragDisabled>
                     {(provided) => (
-                      <Box
+                      <div
                         className={classes.item}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
@@ -158,7 +158,7 @@ const GroupGroupType: FC<IProps> = ({
                             </Box>
                           </Box>
                         </Box>
-                      </Box>
+                      </div>
                     )}
                   </Draggable>
                 );
@@ -167,7 +167,7 @@ const GroupGroupType: FC<IProps> = ({
               <Box>Place items</Box>
             )}
             {provided.placeholder}
-          </Box>
+          </div>
         )}
       </Droppable>
     </Box>

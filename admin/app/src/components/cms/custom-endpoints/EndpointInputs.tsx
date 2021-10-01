@@ -84,8 +84,6 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  console.log(selectedInputs);
-
   const handleInputIsOptional = (
     event: React.ChangeEvent<{ checked: any }>,
     index: number

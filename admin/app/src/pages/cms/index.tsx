@@ -51,7 +51,7 @@ const Types = () => {
   const [openDisable, setOpenDisable] = useState(false);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
-  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState({
+  const [selectedSchemaForAction, setSelectedSchemaForAction] = useState<any>({
     data: {},
     action: '',
   });
@@ -82,7 +82,7 @@ const Types = () => {
     dispatch(asyncGetSchemaDocuments(name));
   };
 
-  const handleChange = (event, newValue) => {
+  const handleChange = (event: any, newValue: any) => {
     setSelected(newValue);
   };
 
@@ -134,7 +134,7 @@ const Types = () => {
     { title: 'Delete', type: 'delete' },
   ];
 
-  const handleActions = (action, data) => {
+  const handleActions = (action: any, data: any) => {
     switch (action.type) {
       case 'edit':
         dispatch(setSelectedSchema(data._id));
@@ -160,13 +160,13 @@ const Types = () => {
     }
   };
 
-  const handleCreateCustomEndpoint = (data) => {
+  const handleCreateCustomEndpoint = (data: any) => {
     if (data) {
       dispatch(asyncCreateCustomEndpoints(data));
     }
   };
 
-  const handleEditCustomEndpoint = (_id: string, data) => {
+  const handleEditCustomEndpoint = (_id: string, data: any) => {
     dispatch(asyncUpdateCustomEndpoints({ _id, endpointData: data }));
   };
 

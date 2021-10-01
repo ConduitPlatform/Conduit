@@ -47,6 +47,22 @@ export function compareFunction(schemaA: any, schemaB: any): number {
   }
 }
 
+function removeRequiredFields(fields: any) {
+  for (let field in fields) {
+    if (fields[field].required === true) {
+      fields[field].required = false;
+    }
+    if (Array.isArray(fields[field].type)) {
+      if (typeof fields[field].type[0] === 'object') {
+        fields[field].type[0] = removeRequiredFields(fields[field].type[0]);
+      }
+    } else if (typeof fields[field].type === 'object') {
+      fields[field].type = removeRequiredFields(fields[field].type);
+    }
+  }
+  return fields;
+}
+
 export function getOps(schemaName: string, actualSchema: any) {
   let routesArray: any = [];
   routesArray.push(
@@ -160,6 +176,33 @@ export function getOps(schemaName: string, actualSchema: any) {
     constructRoute(
       new ConduitRoute(
         {
+          path: `/${schemaName}/many`,
+          action: ConduitRouteActions.PATCH,
+          bodyParams: {
+            docs: {
+              type: [
+                {
+                  ...removeRequiredFields(Object.assign({}, assignableFields)),
+                  _id: { type: 'String', unique: true },
+                },
+              ],
+              required: true,
+            },
+          },
+          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+        },
+        new ConduitRouteReturnDefinition(`patchMany${schemaName}`, {
+          docs: [actualSchema.fields],
+        }),
+        'patchManyDocuments'
+      )
+    )
+  );
+
+  routesArray.push(
+    constructRoute(
+      new ConduitRoute(
+        {
           path: `/${schemaName}/:id`,
           action: ConduitRouteActions.UPDATE,
           urlParams: {
@@ -173,6 +216,24 @@ export function getOps(schemaName: string, actualSchema: any) {
         },
         new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
         'editDocument'
+      )
+    )
+  );
+
+  routesArray.push(
+    constructRoute(
+      new ConduitRoute(
+        {
+          path: `/${schemaName}/:id`,
+          action: ConduitRouteActions.PATCH,
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          bodyParams: removeRequiredFields(Object.assign({}, assignableFields)),
+          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
+        },
+        new ConduitRouteReturnDefinition(`patch${schemaName}`, actualSchema.fields),
+        'patchDocument'
       )
     )
   );

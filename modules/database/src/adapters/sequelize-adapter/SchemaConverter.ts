@@ -1,7 +1,7 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { DataTypes } from 'sequelize';
 import * as _ from 'lodash';
-import { isBoolean, isNumber, isString } from 'lodash';
+import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -21,27 +21,50 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
 }
 
 function iterDeep(schema: any, resSchema: any) {
-  Object.keys(schema).forEach((key) => {
-    if (schema[key] !== null && typeof schema[key] === 'object') {
-      if (schema[key].hasOwnProperty('type')) {
-        resSchema[key].type = translateType(schema[key].type);
-        if (schema[key].hasOwnProperty('default')) {
-          resSchema[key].defaultValue = checkDefaultValue(
-            schema[key].type,
-            schema[key].default
-          );
-        }
-      } else {
-        resSchema[key].type = DataTypes.JSON;
+  for (const key of Object.keys(schema)) {
+    if (isArray(schema[key])) {
+      resSchema[key] = extractArrayType(schema[key]);
+    } else if (isObject(schema[key])) {
+      resSchema[key] = extractObjectType(schema[key]);
+      if (!schema[key].hasOwnProperty('type')) {
         iterDeep(schema[key], resSchema[key]);
       }
-      return;
+    } else {
+      resSchema[key] = extractType(schema[key]);
     }
-    resSchema[key] = translateType(schema[key]);
-  });
+  }
 }
 
-function translateType(type: string) {
+function extractArrayType(arrayField: any[]) {
+  let arrayElementType;
+  if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
+    if (arrayField[0].hasOwnProperty('type')) {
+      arrayElementType = extractType(arrayField[0].type);
+    } else {
+      arrayElementType = DataTypes.JSON;
+    }
+  } else {
+    arrayElementType = extractType(arrayField[0]);
+  }
+  return { type: DataTypes.ARRAY(arrayElementType) };
+}
+
+function extractObjectType(objectField: any) {
+  let res: { type: any, defaultValue?: any } = { type: null };
+
+  if (objectField.hasOwnProperty('type')) {
+    res.type = extractType(objectField.type);
+    if (objectField.hasOwnProperty('default')) {
+      res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
+    }
+  } else {
+    res.type = DataTypes.JSON;
+  }
+
+  return res;
+}
+
+function extractType(type: string) {
   switch (type) {
     case 'String':
       return DataTypes.STRING;
@@ -57,6 +80,8 @@ function translateType(type: string) {
     case 'ObjectId':
       return DataTypes.UUID;
   }
+
+  return DataTypes.JSON;
 }
 
 function checkDefaultValue(type: string, value: string) {

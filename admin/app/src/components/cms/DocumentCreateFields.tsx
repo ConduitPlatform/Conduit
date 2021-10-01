@@ -53,7 +53,7 @@ interface Props {
 const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) => {
   const classes = useStyles();
   const getCorrectType = (type: any, event: any) => {
-    let lowerCaseType = type.toString().toLowerCase();
+    const lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
       return Boolean(event.target.checked);
     }
@@ -68,10 +68,10 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
 
   const handleValueChange = (
     firstIndex: number,
-    secondIndex: number,
-    thirdIndex: number,
-    arrayIndex: number,
-    event: any
+    secondIndex?: number,
+    thirdIndex?: number,
+    arrayIndex?: number,
+    event?: any
   ) => {
     const documentCopy = document.slice();
     if (
@@ -80,11 +80,11 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
       thirdIndex === undefined
     ) {
       if (arrayIndex !== undefined) {
-        let type = documentCopy[firstIndex].type[0];
+        const type = documentCopy[firstIndex].type[0];
         documentCopy[firstIndex].value[arrayIndex] = getCorrectType(type, event);
         setDocument(documentCopy);
       } else {
-        let type = documentCopy[firstIndex].type;
+        const type = documentCopy[firstIndex].type;
         documentCopy[firstIndex].value = getCorrectType(type, event);
         setDocument(documentCopy);
       }
@@ -95,14 +95,14 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
       thirdIndex === undefined
     ) {
       if (arrayIndex !== undefined) {
-        let type = documentCopy[firstIndex].fields[secondIndex].type[0];
+        const type = documentCopy[firstIndex].fields[secondIndex].type[0];
         documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = getCorrectType(
           type,
           event
         );
         setDocument(documentCopy);
       } else {
-        let type = documentCopy[firstIndex].fields[secondIndex].type;
+        const type = documentCopy[firstIndex].fields[secondIndex].type;
         documentCopy[firstIndex].fields[secondIndex].value = getCorrectType(type, event);
         setDocument(documentCopy);
       }
@@ -113,7 +113,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
       thirdIndex !== undefined
     ) {
       if (arrayIndex !== undefined) {
-        let type =
+        const type =
           documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type[0];
 
         documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value[
@@ -122,7 +122,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
 
         setDocument(documentCopy);
       } else {
-        let type = documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type;
+        const type = documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type;
         documentCopy[firstIndex].fields[secondIndex].fields[
           thirdIndex
         ].value = getCorrectType(type, event);
@@ -159,7 +159,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         <AccordionDetails
           style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {docs?.value?.map((doc: any, arrayIndex: number) => {
-            let data = { value: doc, type: docs.type[0] };
+            const data = { value: doc, type: docs.type[0] };
             return (
               <Grid
                 key={arrayIndex}
@@ -198,7 +198,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   };
 
   const getCorrectInitialType = (type: 'boolean' | 'number' | 'date') => {
-    let lowerCaseType = type.toString().toLowerCase();
+    const lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
       return false;
     }

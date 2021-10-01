@@ -4,118 +4,75 @@ import SmsConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
+  ConduitServiceModule,
   GrpcServer,
-  GrpcRequest,
-  GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import * as grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
+import {
+  SendSmsRequest,
+  SendSmsResponse,
+  SendVerificationCodeRequest,
+  SendVerificationCodeResponse,
+  VerifyRequest,
+  VerifyResponse,
+} from './types';
 
-type SendSmsRequest = GrpcRequest<{
-  to: string,
-  message: string,
-}>;
-
-type SendSmsResponse = GrpcResponse<{
-  message: string,
-}>;
-
-type SendVerificationCodeRequest = GrpcRequest<{
-  to: string,
-}>;
-
-type SendVerificationCodeResponse = GrpcResponse<{
-  verificationSid: string,
-}>;
-
-type VerifyRequest = GrpcRequest<{
-  verificationSid: string,
-  code: string,
-}>;
-
-type VerifyResponse = GrpcResponse<{
-  verified: boolean,
-}>;
-
-export default class SmsModule {
+export default class SmsModule implements ConduitServiceModule {
   private _provider: ISmsProvider | undefined;
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
-  private _url: string;
-  private readonly grpcServer: GrpcServer;
+  private grpcServer: GrpcServer;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._url = this.grpcServer.url;
-    this.grpcServer
-      .addService(path.resolve(__dirname, './sms.proto'), 'sms.Sms', {
-        setConfig: this.setConfig.bind(this),
-        sendSms: this.sendSms.bind(this),
-        sendVerificationCode: this.sendVerificationCode.bind(this),
-        verify: this.verify.bind(this),
-      })
-      .then(() => {
-        return this.grpcServer.start();
-      })
-      .then(() => {
-        console.log('Grpc server is online');
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      });
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-    this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
+  private _port: string;
 
-    this.grpcSdk
-      .waitForExistence('database-provider')
-      .then(() => {
-        return this.grpcSdk.initializeEventBus();
-      })
-      .then(() => {
-        this.grpcSdk.bus?.subscribe('sms', (message: string) => {
-          if (message === 'config-update') {
-            this.enableModule()
-              .then(() => {
-                console.log('Updated sms configuration');
-              })
-              .catch(() => {
-                console.log('Failed to update email config');
-              });
-          }
-        });
-      })
-      .catch(() => {
-        console.log('Bus did not initialize!');
-      })
-      .then(() => {
-        return this.grpcSdk.config.get('sms');
-      })
-      .catch(() => {
-        return this.grpcSdk.config.updateConfig(SmsConfigSchema.getProperties(), 'sms');
-      })
-      .then(() => {
-        return this.grpcSdk.config.addFieldstoConfig(
-          SmsConfigSchema.getProperties(),
-          'sms'
-        );
-      })
-      .catch(() => {
-        console.log('sms config did not update');
-      })
-      .then((smsConfig: any) => {
-        if (smsConfig.active) {
-          return this.enableModule();
-        }
-      })
-      .catch(console.log);
+  get port(): string {
+    return this._port;
   }
 
-  get url(): string {
-    return this._url;
+  async initialize() {
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(path.resolve(__dirname, './sms.proto'), 'sms.Sms', {
+      setConfig: this.setConfig.bind(this),
+      sendSms: this.sendSms.bind(this),
+      sendVerificationCode: this.sendVerificationCode.bind(this),
+      verify: this.verify.bind(this),
+    });
+    this.grpcServer.start();
+    console.log('Grpc server is online');
+
+    this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
+  }
+
+  async activate() {
+    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.initializeEventBus();
+    this.grpcSdk.bus?.subscribe('sms', (message: string) => {
+      if (message === 'config-update') {
+        this.enableModule()
+          .then(() => {
+            console.log('Updated sms configuration');
+          })
+          .catch(() => {
+            console.log('Failed to update email config');
+          });
+      }
+    });
+    try {
+      await this.grpcSdk.config.get('sms');
+    } catch (e) {
+      await this.grpcSdk.config.updateConfig(SmsConfigSchema.getProperties(), 'sms');
+    }
+    let smsConfig = await this.grpcSdk.config.addFieldstoConfig(
+      SmsConfigSchema.getProperties(),
+      'sms'
+    );
+    if (smsConfig.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
@@ -126,7 +83,7 @@ export default class SmsModule {
       isNil(newConfig[newConfig.providerName])
     ) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
       });
     }
@@ -134,7 +91,7 @@ export default class SmsModule {
       SmsConfigSchema.load(newConfig).validate();
     } catch (e) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
       });
     }
@@ -144,20 +101,20 @@ export default class SmsModule {
       .updateConfig(newConfig, 'sms')
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const smsConfig = await this.grpcSdk.config.get('sms');
     if (smsConfig.active) {
       await this.enableModule().catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage))
-        return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+        return callback({ code: status.INTERNAL, message: errorMessage });
       this.grpcSdk.bus?.publish('sms', 'config-update');
     } else {
-      return callback({ code: grpc.status.INTERNAL, message: 'Module is not active' });
+      return callback({ code: status.INTERNAL, message: 'Module is not active' });
     }
     if (!isNil(errorMessage)) {
-      return callback({ code: grpc.status.INTERNAL, message: errorMessage });
+      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
@@ -169,7 +126,7 @@ export default class SmsModule {
     let errorMessage: string | null = null;
 
     if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'No sms provider' });
+      return callback({ code: status.INTERNAL, message: 'No sms provider' });
     }
 
     await this._provider
@@ -177,22 +134,25 @@ export default class SmsModule {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
     return callback(null, { message: 'SMS sent' });
   }
 
-  async sendVerificationCode(call: SendVerificationCodeRequest, callback: SendVerificationCodeResponse) {
+  async sendVerificationCode(
+    call: SendVerificationCodeRequest,
+    callback: SendVerificationCodeResponse
+  ) {
     const to = call.request.to;
 
     if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'No sms provider' });
+      return callback({ code: status.INTERNAL, message: 'No sms provider' });
     }
     if (isNil(to)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'No sms recipient',
       });
     }
@@ -204,7 +164,7 @@ export default class SmsModule {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -215,11 +175,11 @@ export default class SmsModule {
     const { verificationSid, code } = call.request;
 
     if (isNil(this._provider)) {
-      return callback({ code: grpc.status.INTERNAL, message: 'No sms provider' });
+      return callback({ code: status.INTERNAL, message: 'No sms provider' });
     }
     if (isNil(verificationSid) || isNil(code)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'No verification id or code provided',
       });
     }
@@ -231,7 +191,7 @@ export default class SmsModule {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 

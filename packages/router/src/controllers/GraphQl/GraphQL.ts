@@ -1,13 +1,9 @@
-import { Application, NextFunction, Request, Response, Router } from 'express';
+import { Application, NextFunction, Request, Response } from 'express';
 import {
-  ConduitCommons,
-  ConduitError,
-  ConduitMiddleware,
   ConduitModel,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteOptions,
-  ConduitRouteParameters,
 } from '@quintessential-sft/conduit-commons';
 import { extractTypes, findPopulation, ParseResult } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -16,30 +12,25 @@ import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
+import { ConduitRouter } from '../Router';
+import { errorHandler } from './utils/Request.utils';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer, ApolloError } = require('apollo-server-express');
 
-export class GraphQLController {
+export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
   types!: string;
   queries!: string;
   mutations!: string;
   resolvers: any;
-  private _internalRoute: any;
   private _apollo?: any;
   private _relationTypes: string[] = [];
-  private _middlewares?: { [field: string]: ConduitMiddleware };
-  private _registeredRoutes!: Map<string, ConduitRoute>;
   private _scheduledTimeout: any = null;
 
-  constructor(private readonly app: Application) {
-    this._registeredRoutes = new Map();
+  constructor(readonly app: Application) {
+    super(app);
     this.initialize();
-  }
-
-  handleRequest(req: Request, res: Response, next: NextFunction) {
-    this._internalRoute(req, res, next);
   }
 
   refreshGQLServer() {
@@ -188,74 +179,27 @@ export class GraphQLController {
     return args;
   }
 
-  registerMiddleware(middleware: ConduitMiddleware) {
-    if (!this._middlewares) {
-      this._middlewares = {};
-    }
-    this._middlewares[middleware.name] = middleware;
-  }
-
-  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
-    let primaryPromise = new Promise((resolve, reject) => {
-      resolve({});
-    });
-    const self = this;
-    if (this._middlewares && middlewares) {
-      middlewares.forEach((m) => {
-        if (!this._middlewares?.hasOwnProperty(m))
-          primaryPromise = Promise.reject('Middleware does not exist');
-        primaryPromise = primaryPromise.then((r) => {
-          return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
-            params
-          ).then((p: any) => {
-            if (p.result) {
-              Object.assign(r, JSON.parse(p.result));
-            }
-            return r;
-          });
-        });
-      });
-    }
-
-    return primaryPromise;
-  }
-
-  cleanupRoutes(routes: any[]) {
-    let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
-    routes.forEach((route: any) => {
-      let key = `${route.action}-${route.path}`;
-      if (this._registeredRoutes.has(key)) {
-        newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
-      }
-    });
-    this._registeredRoutes.clear();
-    this._registeredRoutes = newRegisteredRoutes;
-    this.refreshRoutes();
-  }
-
   registerConduitRoute(route: ConduitRoute) {
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
     if (registered) {
-      this.refreshRoutes();
+      this.refreshRouter();
     } else {
       this.addConduitRoute(route);
       this._scheduleTimeout();
     }
   }
 
-  private findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitCommons)
-      .getState()
-      .getKey('hash-' + hashKey);
-  }
-
-  // age is in seconds
-  private storeInCache(hashKey: string, data: any, age: number) {
-    ((this.app as any).conduit as ConduitCommons)
-      .getState()
-      .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
+  protected refreshRouter() {
+    this.initialize();
+    this._registeredRoutes.forEach((route) => {
+      // we should probably implement some kind of caching for this
+      // so it does not recalculate the types for the routes that have not changed
+      // but it needs to be done carefully
+      this.addConduitRoute(route);
+    });
+    this._scheduleTimeout();
   }
 
   private initialize() {
@@ -323,8 +267,8 @@ export class GraphQLController {
     this.queries = '';
     this.mutations = '';
     const self = this;
-    this._internalRoute = Router();
-    this._internalRoute.use('/', (req: Request, res: Response, next: NextFunction) => {
+
+    this._expressRouter.use('/', (req: Request, res: Response, next: NextFunction) => {
       if (self._apollo) {
         self._apollo(req, res, next);
       } else {
@@ -333,181 +277,120 @@ export class GraphQLController {
     });
   }
 
+  private constructQuery(actionName: string, route: ConduitRoute) {
+    if (!this.resolvers['Query']) {
+      this.resolvers['Query'] = {};
+    }
+    const self = this;
+    this.resolvers['Query'][actionName] = (
+      parent: any,
+      args: any,
+      context: any,
+      info: any
+    ) => {
+      let { caching, cacheAge, scope } = extractCachingGql(
+        route,
+        context.headers['Cache-Control']
+      );
+      if (caching) {
+        info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
+      }
+      args = self.shouldPopulate(args, info);
+      context.path = route.input.path;
+      let hashKey: string;
+      return self
+        .checkMiddlewares(context, route.input.middlewares)
+        .then((r: any) => {
+          Object.assign(context.context, r);
+          let params = Object.assign(args, args.params);
+          delete params.params;
+          if (caching) {
+            hashKey = createHashKey(context.path, context.context, params);
+          }
+          if (caching) {
+            return self
+              .findInCache(hashKey)
+              .then((r: any) => {
+                if (r) {
+                  return { fromCache: true, data: JSON.parse(r) };
+                } else {
+                  return route.executeRequest.bind(route)({ ...context, params });
+                }
+              })
+              .catch(() => {
+                return route.executeRequest.bind(route)({ ...context, params });
+              });
+          } else {
+            return route.executeRequest.bind(route)({ ...context, params });
+          }
+        })
+        .then((r: any) => {
+          let result;
+          if (r.fromCache) {
+            return r.data;
+          } else {
+            result = r.result ? r.result : r;
+          }
+
+          if (r.result && !(typeof route.returnTypeFields === 'string')) {
+            result = JSON.parse(result);
+          } else {
+            result = { result: result };
+          }
+          if (caching) {
+            this.storeInCache(hashKey, result, cacheAge!);
+          }
+
+          return result;
+        })
+        .catch(errorHandler);
+    };
+  }
+
+  private constructMutation(actionName: string, route: ConduitRoute) {
+    if (!this.resolvers['Mutation']) {
+      this.resolvers['Mutation'] = {};
+    }
+    const self = this;
+    this.resolvers['Mutation'][actionName] = (
+      parent: any,
+      args: any,
+      context: any,
+      info: any
+    ) => {
+      args = self.shouldPopulate(args, info);
+      context.path = route.input.path;
+      return self
+        .checkMiddlewares(context, route.input.middlewares)
+        .then((r: any) => {
+          Object.assign(context.context, r);
+          let params = Object.assign(args, args.params);
+          delete params.params;
+          return route.executeRequest.bind(route)({ ...context, params: args });
+        })
+        .then((r) => {
+          let result = r.result ? r.result : r;
+          if (r.result && !(typeof route.returnTypeFields === 'string')) {
+            result = JSON.parse(result);
+          } else {
+            result = { result: result };
+          }
+          return result;
+        })
+        .catch(errorHandler);
+    };
+  }
+
   private addConduitRoute(route: ConduitRoute) {
     this.generateType(route.returnTypeName, route.returnTypeFields);
     let actionName = this.generateAction(route.input, route.returnTypeName);
     this.generateSchema();
-    const self = this;
+
     if (route.input.action === ConduitRouteActions.GET) {
-      if (!this.resolvers['Query']) {
-        this.resolvers['Query'] = {};
-      }
-      this.resolvers['Query'][actionName] = (
-        parent: any,
-        args: any,
-        context: any,
-        info: any
-      ) => {
-        let { caching, cacheAge, scope } = extractCachingGql(
-          route,
-          context.headers['Cache-Control']
-        );
-        if (caching) {
-          info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
-        }
-        args = self.shouldPopulate(args, info);
-        context.path = route.input.path;
-        let hashKey: string;
-        return self
-          .checkMiddlewares(context, route.input.middlewares)
-          .then((r: any) => {
-            Object.assign(context.context, r);
-            let params = Object.assign(args, args.params);
-            delete params.params;
-            if (caching) {
-              hashKey = createHashKey(context.path, context.context, params);
-            }
-            if (caching) {
-              return self
-                .findInCache(hashKey)
-                .then((r: any) => {
-                  if (r) {
-                    return { fromCache: true, data: JSON.parse(r) };
-                  } else {
-                    return route.executeRequest.bind(route)({ ...context, params });
-                  }
-                })
-                .catch(() => {
-                  return route.executeRequest.bind(route)({ ...context, params });
-                });
-            } else {
-              return route.executeRequest.bind(route)({ ...context, params });
-            }
-          })
-          .then((r: any) => {
-            let result;
-            if (r.fromCache) {
-              return r.data;
-            } else {
-              result = r.result ? r.result : r;
-            }
-
-            if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              result = JSON.parse(result);
-            } else {
-              result = { result: result };
-            }
-            if (caching) {
-              this.storeInCache(hashKey, result, cacheAge!);
-            }
-
-            return result;
-          })
-          .catch((err: Error | ConduitError | any) => {
-            if (err.hasOwnProperty('status')) {
-              throw new ApolloError(err.message, (err as ConduitError).status, err);
-            } else if (err.hasOwnProperty('code')) {
-              let statusCode: number;
-              let name: string;
-              switch (err.code) {
-                case 3:
-                  name = 'INVALID_ARGUMENTS';
-                  statusCode = 400;
-                  throw new ApolloError(name, statusCode, err);
-                case 5:
-                  name = 'NOT_FOUND';
-                  statusCode = 404;
-                  throw new ApolloError(name, statusCode, err);
-                case 7:
-                  name = 'FORBIDDEN';
-                  statusCode = 403;
-                  throw new ApolloError(name, statusCode, err);
-                case 16:
-                  name = 'UNAUTHORIZED';
-                  statusCode = 401;
-                  throw new ApolloError(name, statusCode, err);
-                default:
-                  name = 'INTERNAL_SERVER_ERROR';
-                  throw new ApolloError(name, 500, err);
-              }
-            } else {
-              throw new ApolloError(err.message, 500, err);
-            }
-          });
-      };
+      this.constructQuery(actionName, route);
     } else {
-      if (!this.resolvers['Mutation']) {
-        this.resolvers['Mutation'] = {};
-      }
-      this.resolvers['Mutation'][actionName] = (
-        parent: any,
-        args: any,
-        context: any,
-        info: any
-      ) => {
-        args = self.shouldPopulate(args, info);
-        context.path = route.input.path;
-        return self
-          .checkMiddlewares(context, route.input.middlewares)
-          .then((r: any) => {
-            Object.assign(context.context, r);
-            let params = Object.assign(args, args.params);
-            delete params.params;
-            return route.executeRequest.bind(route)({ ...context, params: args });
-          })
-          .then((r) => {
-            let result = r.result ? r.result : r;
-            if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              result = JSON.parse(result);
-            } else {
-              result = { result: result };
-            }
-            return result;
-          })
-          .catch((err: Error | ConduitError | any) => {
-            if (err.hasOwnProperty('status')) {
-              throw new ApolloError(err.message, (err as ConduitError).status, err);
-            } else if (err.hasOwnProperty('code')) {
-              let statusCode: number;
-              let name: string;
-              switch (err.code) {
-                case 3:
-                  name = 'INVALID_ARGUMENTS';
-                  statusCode = 400;
-                  throw new ApolloError(name, statusCode, err);
-                case 5:
-                  name = 'NOT_FOUND';
-                  statusCode = 404;
-                  throw new ApolloError(name, statusCode, err);
-                case 7:
-                  name = 'FORBIDDEN';
-                  statusCode = 403;
-                  throw new ApolloError(name, statusCode, err);
-                case 16:
-                  name = 'UNAUTHORIZED';
-                  statusCode = 401;
-                  throw new ApolloError(name, statusCode, err);
-                default:
-                  name = 'INTERNAL_SERVER_ERROR';
-                  throw new ApolloError(name, 500, err);
-              }
-            } else {
-              throw new ApolloError(err.message, 500, err);
-            }
-          });
-      };
+      this.constructMutation(actionName, route);
     }
-  }
-
-  private refreshRoutes() {
-    this.initialize();
-    this._registeredRoutes.forEach((route) => {
-      // we should probably implement some kind of caching for this
-      // so it does not recalculate the types for the routes that have not changed
-      // but it needs to be done carefully
-      this.addConduitRoute(route);
-    });
-    this._scheduleTimeout();
   }
 
   private _scheduleTimeout() {

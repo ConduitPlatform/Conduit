@@ -16,12 +16,12 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   item: {
-    isArray: boolean;
+    isArray?: boolean;
     name: string;
     required: boolean;
     select: boolean;
     type: string;
-    unique: boolean;
+    unique?: boolean;
   };
 }
 

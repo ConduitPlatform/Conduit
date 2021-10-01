@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
-import grpc from 'grpc';
+import { status } from '@grpc/grpc-js';
 import { CustomEndpoint } from '../../models/customEndpoint';
 import { isNil } from 'lodash';
 
@@ -35,7 +35,7 @@ export class CustomEndpointHandler {
           JSON.parse(call.request.context)
         );
       } catch (e) {
-        return callback({ code: grpc.status.INTERNAL, message: e.message });
+        return callback({ code: status.INTERNAL, message: e.message });
       }
     }
 
@@ -62,7 +62,7 @@ export class CustomEndpointHandler {
               }
               stopExecution = true;
               return callback({
-                code: grpc.status.INTERNAL,
+                code: status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from input`,
               });
             }
@@ -75,7 +75,7 @@ export class CustomEndpointHandler {
             if (isNil(call.request.context)) {
               stopExecution = true;
               return callback({
-                code: grpc.status.INTERNAL,
+                code: status.INTERNAL,
                 message: `Field ${r.assignmentField.value} is missing from context`,
               });
             }
@@ -86,7 +86,7 @@ export class CustomEndpointHandler {
               } else {
                 stopExecution = true;
                 return callback({
-                  code: grpc.status.INTERNAL,
+                  code: status.INTERNAL,
                   message: `Field ${r.assignmentField.value} is missing from context`,
                 });
               }
@@ -195,7 +195,7 @@ export class CustomEndpointHandler {
         callback(null, { result: JSON.stringify({ result: r }) });
       })
       .catch((err: any) => {
-        callback({ code: grpc.status.INTERNAL, message: err.message });
+        callback({ code: status.INTERNAL, message: err.message });
       });
   }
 

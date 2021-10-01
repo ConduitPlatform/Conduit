@@ -6,8 +6,8 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import moment from 'moment';
 
 export namespace AuthUtils {
-  export function randomToken() {
-    return crypto.randomBytes(64).toString('base64');
+  export function randomToken(size = 64) {
+    return crypto.randomBytes(size).toString('base64');
   }
 
   export function signToken(data: { [key: string]: any }, options: ISignTokenOptions) {

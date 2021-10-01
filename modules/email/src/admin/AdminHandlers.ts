@@ -1,7 +1,12 @@
 import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
-import ConduitGrpcSdk, { GrpcServer, RouterRequest, RouterResponse } from '@quintessential-sft/conduit-grpc-sdk';
-import grpc from 'grpc';
+import ConduitGrpcSdk, {
+  GrpcServer,
+  RouterRequest,
+  RouterResponse,
+} from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
+
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
@@ -58,7 +63,7 @@ export class AdminHandlers {
     ]).catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -69,7 +74,7 @@ export class AdminHandlers {
     const { name, subject, body, variables } = JSON.parse(call.request.params);
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
@@ -85,7 +90,7 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
@@ -104,7 +109,7 @@ export class AdminHandlers {
     //     }
     // });
     // if (flag) return callback({
-    //     code: grpc.status.INVALID_ARGUMENT,
+    //     code: status.INVALID_ARGUMENT,
     //     message: "Invalid given parameters",
     // });
 
@@ -114,12 +119,12 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
     if (isNil(templateDocument)) {
       return callback({
-        code: grpc.status.NOT_FOUND,
+        code: status.NOT_FOUND,
         message: 'Template not found',
       });
     }
@@ -135,7 +140,7 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 
@@ -149,7 +154,7 @@ export class AdminHandlers {
 
     if (!templateName && (!body || !subject)) {
       return callback({
-        code: grpc.status.INVALID_ARGUMENT,
+        code: status.INVALID_ARGUMENT,
         message: `Template/body+subject not provided`,
       });
     }
@@ -177,7 +182,7 @@ export class AdminHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
-        code: grpc.status.INTERNAL,
+        code: status.INTERNAL,
         message: errorMessage,
       });
 

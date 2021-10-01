@@ -31,7 +31,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  drawerData: IDrawerData;
+  // drawerData: IDrawerData;
+  drawerData: any; //todo fix this
   readOnly: boolean;
   onSubmit: (data: any) => void;
   onClose: () => void;

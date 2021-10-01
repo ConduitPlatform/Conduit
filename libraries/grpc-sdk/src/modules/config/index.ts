@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConfigClient, RegisterModuleRequest } from '../../protoUtils/core';
 
-export default class Config extends ConduitModule<ConfigClient> {
+export class Config extends ConduitModule<ConfigClient> {
   private emitter = new EventEmitter();
   private coreLive = false;
 

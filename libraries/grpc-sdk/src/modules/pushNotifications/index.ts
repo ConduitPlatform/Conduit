@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { PushNotificationsClient } from '../../protoUtils/push-notifications';
 
-export default class PushNotifications extends ConduitModule<PushNotificationsClient> {
+export class PushNotifications extends ConduitModule<PushNotificationsClient> {
   constructor(url: string) {
     super(url);
     this.initializeClient(PushNotificationsClient);

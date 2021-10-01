@@ -3,31 +3,35 @@ import { SchemaAdapter } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { createWithPopulations } from './utils';
+import { EJSON } from 'bson';
 
-export class MongooseSchema implements SchemaAdapter {
+export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
   originalSchema: ConduitSchema;
 
   constructor(
     mongoose: Mongoose,
     schema: ConduitSchema,
+    originalSchema: any,
     deepPopulate: any,
     private readonly adapter: MongooseAdapter
   ) {
-    this.originalSchema = schema;
+    this.originalSchema = originalSchema;
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  async create(query: any): Promise<any> {
-    query.createdAt = new Date();
-    query.updatedAt = new Date();
-    await this.createWithPopulations(query);
-    return this.model.create(query).then((r) => r.toObject());
+  async create(query: string): Promise<any> {
+    let parsedQuery: any = EJSON.parse(query);
+    parsedQuery.createdAt = new Date();
+    parsedQuery.updatedAt = new Date();
+    await this.createWithPopulations(parsedQuery);
+    return this.model.create(parsedQuery).then((r) => r.toObject());
   }
 
-  async createMany(docs: any[]): Promise<any> {
+  async createMany(query: string): Promise<any> {
+    let docs: any = EJSON.parse(query);
     let date = new Date();
     for (let doc of docs) {
       doc.createdAt = date;
@@ -40,39 +44,44 @@ export class MongooseSchema implements SchemaAdapter {
 
   async findByIdAndUpdate(
     id: string,
-    query: any,
+    query: string,
     updateProvidedOnly: boolean = false
   ): Promise<any> {
-    query['updatedAt'] = new Date();
-    await this.createWithPopulations(query);
+    let parsedQuery: any = EJSON.parse(query);
+    parsedQuery['updatedAt'] = new Date();
+    await this.createWithPopulations(parsedQuery);
     if (updateProvidedOnly) {
-      query = {
-        $set: query,
+      parsedQuery = {
+        $set: parsedQuery,
       };
     }
-    return this.model.findByIdAndUpdate(id, query, { new: true }).lean().exec();
+    return this.model.findByIdAndUpdate(id, parsedQuery, { new: true }).lean().exec();
   }
 
   async updateMany(
-    filterQuery: any,
-    query: any,
+    filterQuery: string,
+    query: string,
     updateProvidedOnly: boolean = false
   ): Promise<any> {
-    await this.createWithPopulations(query);
+    let parsedFilter: any = EJSON.parse(filterQuery);
+    let parsedQuery: any = EJSON.parse(query);
+    await this.createWithPopulations(parsedQuery);
     if (updateProvidedOnly) {
-      query = {
-        $set: query,
+      parsedQuery = {
+        $set: parsedQuery,
       };
     }
-    return this.model.updateMany(this.parseQuery(filterQuery), query).exec();
+    return this.model.updateMany(this.parseQuery(parsedFilter), parsedQuery).exec();
   }
 
   deleteOne(query: any): Promise<any> {
-    return this.model.deleteOne(this.parseQuery(query)).exec();
+    let parsedQuery: any = EJSON.parse(query);
+    return this.model.deleteOne(this.parseQuery(parsedQuery)).exec();
   }
 
   deleteMany(query: any): Promise<any> {
-    return this.model.deleteMany(this.parseQuery(query)).exec();
+    let parsedQuery: any = EJSON.parse(query);
+    return this.model.deleteMany(this.parseQuery(parsedQuery)).exec();
   }
 
   calculatePopulates(queryObj: any, population: string[]) {
@@ -100,14 +109,15 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   findMany(
-    query: any,
+    query: string,
     skip?: number,
     limit?: number,
     select?: string,
     sort?: string,
     populate?: string[]
   ): Promise<any> {
-    let finalQuery = this.model.find(this.parseQuery(query), select);
+    let parsedQuery: any = EJSON.parse(query);
+    let finalQuery = this.model.find(this.parseQuery(parsedQuery), select);
     if (skip !== null) {
       finalQuery = finalQuery.skip(skip!);
     }
@@ -126,8 +136,9 @@ export class MongooseSchema implements SchemaAdapter {
     return finalQuery.lean().exec();
   }
 
-  findOne(query: any, select?: string, populate?: string[]): Promise<any> {
-    let finalQuery = this.model.findOne(this.parseQuery(query), select);
+  findOne(query: string, select?: string, populate?: string[]): Promise<any> {
+    let parsedQuery: any = EJSON.parse(query);
+    let finalQuery = this.model.findOne(this.parseQuery(parsedQuery), select);
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
@@ -135,7 +146,8 @@ export class MongooseSchema implements SchemaAdapter {
   }
 
   countDocuments(query: any) {
-    return this.model.find(this.parseQuery(query)).countDocuments().exec();
+    let parsedQuery: any = EJSON.parse(query);
+    return this.model.find(this.parseQuery(parsedQuery)).countDocuments().exec();
   }
 
   private async createWithPopulations(document: any): Promise<any> {

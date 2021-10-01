@@ -94,7 +94,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     setFormData({ ...data });
   }, [config]);
 
-  const handleSelect = (event) => {
+  const handleSelect = (event: { target: { value: any } }) => {
     setFormData({
       ...formData,
       providerName: event.target.value,
@@ -105,7 +105,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     setEditProvider(false);
   };
 
-  const handleCancelButton = (reset) => {
+  const handleCancelButton = (reset: any) => {
     reset();
     setEditProvider(true);
   };
@@ -145,7 +145,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
         <Grid item xs={12}>
           {formData.providerName && (
             <Formik
-              style={{ width: '100%' }}
+              // style={{ width: '100%' }}
               initialValues={formData}
               onSubmit={(values, { setSubmitting, resetForm }) => {
                 onFormSubmit(values);

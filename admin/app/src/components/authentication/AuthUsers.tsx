@@ -54,30 +54,30 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
 
   const toDelete = {
     title: 'Delete',
-    type: 'Delete',
+    type: 'delete',
   };
 
   const toEdit = {
     title: 'Edit',
-    type: 'Edit',
+    type: 'edit',
   };
 
   const toBlock = {
-    title: 'Block/Unblock UI',
-    type: 'Block/Unblock UI',
+    title: 'Block/Unblock',
+    type: 'block/unblock',
   };
 
-  const actions = [toDelete, toEdit, toBlock];
+  const actions = [toEdit, toDelete, toBlock];
 
   const handleAction = (action: { title: string; type: string }, data: AuthUserUI) => {
     const currentUser = users.find((user) => user._id === data._id) as AuthUser;
-    if (action.type === 'Edit') {
+    if (action.type === 'edit') {
       setOpenEditUser(true);
       setSelectedUser(currentUser);
-    } else if (action.type === 'Delete') {
+    } else if (action.type === 'delete') {
       setOpenDeleteUser(true);
       setSelectedUser(currentUser);
-    } else if (action.type === 'Block/Unblock UI') {
+    } else if (action.type === 'block/unblock') {
       setOpenBlockUI(true);
       setSelectedUser(currentUser);
     }
@@ -117,11 +117,11 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
       <ConfirmationDialog
         open={openBlockUI}
         handleClose={handleClose}
-        title={selectedUser.active ? 'User has Unblocked UI' : 'User has Blocked UI'}
+        title={selectedUser.active ? 'User is Unblocked' : 'User is Blocked'}
         description={
           selectedUser.active
-            ? `Are you sure you want to block the UI of ${selectedUser.email}`
-            : `Are you sure you want to Unblock the UI of ${selectedUser.email}`
+            ? `Are you sure you want to block ${selectedUser.email}`
+            : `Are you sure you want to Unblock ${selectedUser.email}`
         }
         buttonAction={handleBlockUI}
         buttonText={selectedUser.active ? 'Block' : 'Unblock'}
