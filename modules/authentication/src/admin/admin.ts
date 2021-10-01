@@ -29,6 +29,8 @@ export class AdminHandlers {
         createUser: this.createUser.bind(this),
         editUser: this.editUser.bind(this),
         deleteUser: this.deleteUser.bind(this),
+        deleteUsers: this.deleteUsers.bind(this),
+        blockUnblockUsers: this.blockUnblockUsers.bind(this),
         blockUser: this.blockUser.bind(this),
         unblockUser: this.unblockUser.bind(this),
         getServices: serviceAdmin.getServices.bind(serviceAdmin),
@@ -162,6 +164,45 @@ export class AdminHandlers {
     let res = await User.getInstance().deleteOne({ _id: id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return { message: 'user was deleted' };
+  }
+
+  async deleteUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+
+    if (isNil(ids) || ids.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be an array'
+      );
+    }
+
+    let users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
+    if (users.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+    }
+
+    let res = await User.getInstance().deleteMany({ _id: { $in: ids } });
+    this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
+    return { message: 'users were deleted' };
+  }
+
+  async blockUnblockUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids, block } = call.request.params;
+
+    if (isNil(ids) || ids.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required');
+    }
+    if (isNil(block)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Block is required');
+    }
+    let users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
+
+    if (users.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+    }
+    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block }, true);
+    this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
+    return { message: 'users were blocked' };
   }
 
   async blockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
