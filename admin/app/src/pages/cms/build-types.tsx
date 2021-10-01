@@ -45,7 +45,7 @@ const items = [
 const useStyles = makeStyles((theme) => ({
   root: {
     minHeight: '100vh',
-    backgroundColor: '#f5f6f9',
+    backgroundColor: '#262840',
   },
   cmsContainer: {
     minHeight: '100vh',
@@ -62,7 +62,7 @@ const useStyles = makeStyles((theme) => ({
   listContainer: {
     height: `calc(100vh - ${headerHeight}px)`,
     width: '25%',
-    backgroundColor: '#f9f9fb',
+    backgroundColor: '#262840',
     padding: theme.spacing(2),
     position: 'fixed',
     top: headerHeight,
@@ -73,7 +73,7 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
     height: '100%',
     border: '1px',
-    background: '#fff',
+    background: '#262840',
     borderRadius: 4,
   },
 }));

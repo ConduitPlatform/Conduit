@@ -19,7 +19,7 @@ const useStyles = makeStyles((theme) => ({
   list: {
     height: '100%',
     border: '1px',
-    background: '#fff',
+    background: '#303030',
     padding: theme.spacing(4, 10),
     minHeight: theme.spacing(65),
     borderRadius: '4px',
