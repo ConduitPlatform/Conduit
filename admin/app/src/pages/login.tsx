@@ -22,7 +22,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#F5F5F5',
+    background: theme.palette.background.paper,
   },
   avatar: {
     backgroundColor: theme.palette.secondary.main,
@@ -56,11 +56,7 @@ const Login: React.FC = () => {
     }
   }, [router, token]);
 
-  const handleLogin = (values: {
-    username: string;
-    password: string;
-    remember: boolean;
-  }) => {
+  const handleLogin = (values: { username: string; password: string; remember: boolean }) => {
     dispatch(asyncLogin(values));
   };
 
