@@ -74,14 +74,8 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         setItemSelected(6);
         break;
       case '/settings/clientsdk':
-        setItemSelected(7);
-        break;
       case '/settings/secrets':
-        setItemSelected(7);
-        break;
       case '/settings/core':
-        setItemSelected(7);
-        break;
       case '/settings/createuser':
         setItemSelected(7);
         break;
