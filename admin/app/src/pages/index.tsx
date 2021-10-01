@@ -3,7 +3,7 @@ import React from 'react';
 import Typography from '@material-ui/core/Typography';
 import Slide from '@material-ui/core/Slide';
 import Box from '@material-ui/core/Box';
-import theme from '../utils/theme';
+import theme from '../theme';
 
 const Home = () => {
   return (
