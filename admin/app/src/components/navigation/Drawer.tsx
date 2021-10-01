@@ -15,6 +15,8 @@ import {
   Toc,
   Cloud,
   Sms,
+  Menu,
+  ChevronLeft,
 } from '@material-ui/icons';
 import clsx from 'clsx';
 import Link from 'next/link';
@@ -22,6 +24,7 @@ import Router from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+import theme from '../../utils/theme';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -44,39 +47,26 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
   toolbar: theme.mixins.toolbar,
   listItem: {
-    color: theme.palette.primary.main,
+    color: theme.palette.secondary.main,
     borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: theme.palette.primary.main,
     paddingLeft: 4,
     paddingRight: 4,
     '&:hover': {
       borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
     },
     '&:focus': {
       borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
     },
     '&.Mui-selected': {
       color: theme.palette.common.white,
-      background: theme.palette.primary.main,
       borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
       '&:hover': {
-        background: theme.palette.primary.dark,
+        background: theme.palette.secondary.dark,
         borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: theme.palette.primary.dark,
       },
       '&:focus': {
-        background: theme.palette.primary.dark,
+        background: theme.palette.secondary.dark,
         borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: theme.palette.primary.dark,
       },
     },
   },
@@ -97,10 +87,11 @@ interface IModule {
 
 interface Props {
   open: boolean;
+  setOpen: (value: boolean) => void;
   itemSelected?: number;
 }
 
-const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
+const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
@@ -150,6 +141,16 @@ const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
       }}
       open={drawerOpen()}
       {...rest}>
+      <ListItem className={classes.listItem}>
+        <ListItemIcon style={{ margin: '4px' }} onClick={() => setOpen(!open)}>
+          {!open ? (
+            <Menu className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
+          ) : (
+            <ChevronLeft className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
+          )}
+        </ListItemIcon>
+      </ListItem>
+
       <div className={classes.toolbar} />
 
       <div className={classes.toolbar} />

@@ -48,6 +48,11 @@ const ConduitApp = ({ Component, pageProps }: AppPropsWithLayout) => {
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,100&display=swap"
+          rel="stylesheet"
+        />
       </Head>
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>

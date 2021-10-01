@@ -36,7 +36,7 @@ export const asyncLogin = createAsyncThunk(
       const password = values.password;
       const { data } = await loginRequest(username, password);
       thunkAPI.dispatch(
-        notify(`Successfully logged in ${username}!`, 'success', {
+        notify(`Welcome ${username}!`, 'success', {
           dismissAfter: 3000,
         })
       );

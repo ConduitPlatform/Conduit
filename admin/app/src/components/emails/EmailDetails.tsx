@@ -35,6 +35,7 @@ const useStyles = makeStyles((theme) => ({
   },
   chip: {
     margin: theme.spacing(1),
+    color: theme.palette.secondary.main,
   },
 }));
 
