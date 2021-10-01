@@ -46,7 +46,9 @@ let provider = new EmailProvider('sendgrid',{
 //         html_content:' <p> gia s psixoula m </p>'
 //     }
 // }
-// provider._transport?.createTemplate(data);
+// provider._transport?.getTemplateInfo('d-15e29f4f5dab4804bedf97ed4a7356f4').then( ([res,body] :any ) =>{
+//     console.log(body);
+// });
 
 
 //sendgrid api key ***REMOVED***

@@ -39,11 +39,17 @@ export class SendgridProvider extends EmailProviderClass{
         .catch((err:any) =>{
             console.log(err);
         });
-
+        
     }
     
-    getTemplateInfo(templateName: string) {
-        throw new Error("Method not implemented.");
+    getTemplateInfo(template_id: string) {
+
+        const request = {
+            method:'GET',
+            url: '/v3/templates/'+template_id,
+        }
+        return  this._sgClient.request(request);
+       
     }
     
     listTemplates() { //not working idk wh
@@ -54,12 +60,8 @@ export class SendgridProvider extends EmailProviderClass{
                 generations: 'legacy,dynamic',
             }
         }
-        this._sgClient.request(request).then((res:any) =>{
-            console.log(res);
-        }) 
-        .catch((err:any) =>{
-            console.log(err);
-        })
+        return this._sgClient.request(request)
+            
     }
     
 }
