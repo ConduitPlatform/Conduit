@@ -67,7 +67,10 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/emails':
         setItemSelected(4);
         break;
-      case '/cms':
+      case '/cms/schemas':
+      case '/cms/schemadata':
+      case '/cms/custom':
+      case '/cms/settings':
         setItemSelected(5);
         break;
       case '/storage':
@@ -95,11 +98,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-      ) : (
-        <></>
-      )}
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}
