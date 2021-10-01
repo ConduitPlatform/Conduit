@@ -67,7 +67,7 @@ const CustomQueryRow: FC<Props> = ({
   handleLikeValueChange,
   handleRemoveQuery,
 }) => {
-  let classes = useStyles();
+  const classes = useStyles();
 
   const [selectedType, setSelectedType] = useState('');
 
@@ -113,14 +113,14 @@ const CustomQueryRow: FC<Props> = ({
         );
       }
 
-      return getSubFields(field, indexQuery);
+      return getSubFields(field);
     });
   };
 
   //TODO more-fields-available
   const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
-    let keys = Object?.keys(field?.type);
-    let itemTop = (
+    const keys = Object?.keys(field?.type);
+    const itemTop = (
       <MenuItem
         className={classes.menuItem}
         dense
@@ -134,7 +134,7 @@ const CustomQueryRow: FC<Props> = ({
       </MenuItem>
     );
 
-    let restItems = keys?.map((item, i) => {
+    const restItems = keys?.map((item, i) => {
       if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
           <MenuItem
@@ -156,11 +156,11 @@ const CustomQueryRow: FC<Props> = ({
     return [itemTop, ...restItems];
   };
 
-  const getSubFields = (field: any, indexQuery: any) => {
+  const getSubFields = (field: any) => {
     if (field?.type) {
-      let keys = Object?.keys(field?.type);
+      const keys = Object?.keys(field?.type);
 
-      let itemTop = (
+      const itemTop = (
         <MenuItem
           className={classes.menuItem}
           style={{
@@ -171,7 +171,7 @@ const CustomQueryRow: FC<Props> = ({
         </MenuItem>
       );
 
-      let restItems = keys?.map((item, i) => {
+      const restItems = keys?.map((item, i) => {
         if (
           typeof field.type?.[item]?.type === 'string' ||
           field.type?.[item]?.type instanceof String ||
@@ -192,7 +192,7 @@ const CustomQueryRow: FC<Props> = ({
             </MenuItem>
           );
         } else {
-          return getSecondSubField(field.type?.[item], field.name, item, indexQuery);
+          return getSecondSubField(field.type?.[item], field.name, item);
         }
       });
 
@@ -207,8 +207,9 @@ const CustomQueryRow: FC<Props> = ({
     return 'ex. John snow';
   };
 
-  const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i) => {
+  const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i: number) => {
     let value = e.target.value;
+    console.log('value', value);
     if (selectedType === 'boolean') {
       value = value !== 'false';
     }
@@ -334,8 +335,8 @@ const CustomQueryRow: FC<Props> = ({
               fullWidth
               onChange={(event) => inputCustomChange(event, index)}>
               <option />
-              <option value={true}>true</option>
-              <option value={false}>false</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
             </Select>
           ) : (
             <TextField

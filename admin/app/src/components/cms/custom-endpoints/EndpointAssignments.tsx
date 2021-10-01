@@ -46,12 +46,6 @@ const EndpointAssignments: FC<Props> = ({
     }
   };
 
-  console.log('availableFields', availableFieldsOfSchema);
-
-  console.log(operationType);
-
-  console.log(selectedAssignments);
-
   const isArrayType = useCallback(
     (fieldName) => {
       const field: any = availableFieldsOfSchema.find((f: any) => f.name === fieldName);

@@ -52,7 +52,7 @@ const SimpleIcon: FC<ISimpleIconProps> = ({ type }) => {
 };
 
 interface IProps {
-  item: ISimpleData;
+  item: any; //todo add ISimpleData;
 }
 
 const SimpleType: FC<IProps> = ({ item, ...rest }) => {

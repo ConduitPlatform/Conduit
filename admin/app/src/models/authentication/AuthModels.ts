@@ -38,12 +38,6 @@ export interface FacebookTypes {
   clientId: string;
 }
 
-export interface KakaoTypes {
-  enabled: boolean;
-  clientId: string;
-  redirect_uri: string;
-}
-
 export interface TwitchTypes {
   enabled: boolean;
   clientId: string;
@@ -51,14 +45,9 @@ export interface TwitchTypes {
   clientSecret: string;
 }
 
-export type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch' | 'kakao';
+export type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch';
 
-export type SocialDataTypes =
-  | LocalTypes
-  | GoogleTypes
-  | FacebookTypes
-  | KakaoTypes
-  | TwitchTypes;
+export type SocialDataTypes = LocalTypes | GoogleTypes | FacebookTypes | TwitchTypes;
 
 export interface ServiceAccount {
   active: boolean;
@@ -91,6 +80,5 @@ export interface SignInMethods {
   facebook: FacebookTypes;
   google: GoogleTypes;
   local: LocalTypes;
-  kakao: KakaoTypes;
   twitch: TwitchTypes;
 }

@@ -40,7 +40,7 @@ const useStyles = makeStyles((theme: Theme) => ({
 
 const Login: React.FC = () => {
   const { token } = useAppSelector((state) => state.appAuthSlice.data);
-  const { loading } = useAppSelector((state) => state.appSlice.loading);
+  const { loading } = useAppSelector((state) => state.appSlice);
   const dispatch = useAppDispatch();
   const router = useRouter();
 

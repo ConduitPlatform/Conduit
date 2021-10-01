@@ -4147,6 +4147,13 @@
     "@types/scheduler" "*"
     csstype "^3.0.2"
 
+"@types/reapop@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/reapop/-/reapop-3.0.0.tgz#6108f356bc98b2314f94fed8981e263953784dc5"
+  integrity sha512-4fCPIcvdjMs8Y0h3AFxU+YeqDFtykcvIsNzBABBJORtqLlNPTahfqOjGTt5OnXeuvS+tSsEZrkuLn9WIGFDFdA==
+  dependencies:
+    reapop "*"
+
 "@types/redis@^2.8.28":
   version "2.8.28"
   resolved "https://registry.yarnpkg.com/@types/redis/-/redis-2.8.28.tgz#5862b2b64aa7f7cbc76dafd7e6f06992b52c55e3"
@@ -18722,6 +18729,16 @@ react-spring@^9.1.2:
     "@react-spring/web" "~9.1.2"
     "@react-spring/zdog" "~9.1.2"
 
+react-transition-group@4.4.2:
+  version "4.4.2"
+  resolved "https://registry.yarnpkg.com/react-transition-group/-/react-transition-group-4.4.2.tgz#8b59a56f09ced7b55cbd53c36768b922890d5470"
+  integrity sha512-/RNYfRAMlZwDSr6z4zNKV6xu53/e2BuaBbGhbyYIXTrmgu/bGHzmqOs7mJSJBHy9Ud+ApHx3QjrkKSp1pxvlFg==
+  dependencies:
+    "@babel/runtime" "^7.5.5"
+    dom-helpers "^5.0.1"
+    loose-envify "^1.4.0"
+    prop-types "^15.6.2"
+
 react-transition-group@^4.0.0, react-transition-group@^4.4.0:
   version "4.4.1"
   resolved "https://registry.yarnpkg.com/react-transition-group/-/react-transition-group-4.4.1.tgz#63868f9325a38ea5ee9535d828327f85773345c9"
@@ -18943,6 +18960,13 @@ readdirp@~3.5.0:
   integrity sha512-cMhu7c/8rdhkHXWsY+osBhfSy0JikwpHK/5+imo+LpeasTF8ouErHrlYkwT0++njiyuDvc7OFY5T3ukvZ8qmFQ==
   dependencies:
     picomatch "^2.2.1"
+
+reapop@*, reapop@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/reapop/-/reapop-4.0.2.tgz#006d9906d9d4c4b9e56562b91376d52c4c8dcc59"
+  integrity sha512-V+yUyxexO8miP1Y0hQy+5GDw/iDJU+O3K5uSvPJNFP1bcAxFiIfJcahjUOfakISkyDeb/xks4uGIb5I3mdkDRA==
+  dependencies:
+    react-transition-group "4.4.2"
 
 recast@^0.17.3:
   version "0.17.6"

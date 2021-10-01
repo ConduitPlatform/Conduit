@@ -14,12 +14,13 @@ import EnumType from './types/EnumType/EnumType';
 import ObjectIdType from './types/ObjectIdType/ObjectIdType';
 import RelationType from './types/RelationType/RelationType';
 import Button from '@material-ui/core/Button';
+import { BoxProps } from '@material-ui/core/Box/Box';
 
 const useStyles = makeStyles((theme) => ({
   list: {
     height: '100%',
     border: '1px',
-    background: '#fff',
+    background: '#303030',
     padding: theme.spacing(4, 10),
     minHeight: theme.spacing(65),
     borderRadius: '4px',
@@ -56,7 +57,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface Props {
+interface Props extends BoxProps {
   dataKey: any;
   data: any;
   handleDrawer: (item: any, index: number) => void;
@@ -127,12 +128,12 @@ const BuildTypesContent: FC<Props> = ({
     <Box {...rest}>
       <Droppable droppableId={dataKey}>
         {(provided, snapshot) => (
-          <Box className={classes.list} ref={provided.innerRef}>
+          <div className={classes.list} ref={provided.innerRef}>
             {data && Array.isArray(data[dataKey]) && data[dataKey].length > 0 ? (
               data[dataKey].map((item: any, index: number) => (
                 <Draggable key={item.name} draggableId={item.name} index={index}>
                   {(provided) => (
-                    <Box
+                    <div
                       className={classes.item}
                       ref={provided.innerRef}
                       {...provided.draggableProps}>
@@ -166,7 +167,7 @@ const BuildTypesContent: FC<Props> = ({
                           </Box>
                         </Box>
                       </Box>
-                    </Box>
+                    </div>
                   )}
                 </Draggable>
               ))
@@ -186,7 +187,7 @@ const BuildTypesContent: FC<Props> = ({
               </Box>
             )}
             {provided.placeholder}
-          </Box>
+          </div>
         )}
       </Droppable>
     </Box>

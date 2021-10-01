@@ -77,7 +77,7 @@ const SideList: FC<Props> = ({
       </Button>
       <Divider flexItem variant="middle" className={classes.divider} />
       <List className={classes.list}>
-        {endpoints.map((endpoint) => (
+        {endpoints.map((endpoint: any) => (
           <ListItem
             button
             key={`endpoint-${endpoint._id}`}

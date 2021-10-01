@@ -37,7 +37,6 @@ const AssignmentsSection: FC<Props> = ({ editMode }) => {
   };
 
   const handleAssignmentChanges = (assignments: Assignment[]) => {
-    console.log('assignment:', assignments);
     dispatch(setEndpointData({ assignments }));
   };
 

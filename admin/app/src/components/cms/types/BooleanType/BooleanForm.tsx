@@ -33,7 +33,27 @@ const useStyles = makeStyles((theme) => ({
 interface IProps {
   drawerData: IDrawerData;
   readOnly: boolean;
-  onSubmit: (booleanData: IBooleanData) => void;
+  onSubmit: (booleanData: {
+    //todo add IBooleanData
+    default: boolean;
+    select: boolean;
+    unique: boolean;
+    name: string;
+    placeholderFalse: string;
+    isArray: boolean;
+    placeholderTrue: string;
+    id: string;
+    type:
+      | 'Text'
+      | 'Number'
+      | 'Date'
+      | 'Boolean'
+      | 'Enum'
+      | 'ObjectId'
+      | 'Group'
+      | 'Relation';
+    required: boolean;
+  }) => void;
   onClose: MouseEventHandler;
   selectedItem: IBooleanData;
 }
@@ -58,6 +78,7 @@ const BooleanForm: FC<IProps> = ({
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
+    id: '',
   });
 
   const handleFieldName = (event: { target: { value: string } }) => {

@@ -91,7 +91,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TabPanel = ({ children }) => {
+const TabPanel: FC = ({ children }) => {
   const classes = useStyles();
   return <Box className={classes.cardContainer}>{children}</Box>;
 };

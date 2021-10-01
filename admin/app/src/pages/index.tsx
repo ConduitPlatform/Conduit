@@ -67,6 +67,7 @@ const useStyles = makeStyles((theme: Theme) =>
     },
   })
 );
+import theme from '../theme';
 
 const Home = () => {
   const classes = useStyles();

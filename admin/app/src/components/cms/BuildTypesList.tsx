@@ -34,15 +34,15 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  item:
-    | 'Text'
-    | 'Number'
-    | 'Date'
-    | 'Boolean'
-    | 'Enum'
-    | 'ObjectId'
-    | 'Group'
-    | 'Relation';
+  item: any; //todo fix this
+  // | 'Text'
+  // | 'Number'
+  // | 'Date'
+  // | 'Boolean'
+  // | 'Enum'
+  // | 'ObjectId'
+  // | 'Group'
+  // | 'Relation';
   index: number;
 }
 
@@ -105,7 +105,7 @@ const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   };
 
   return (
-    <Draggable draggableId={item} index={index} isDraggingOver={false} {...rest}>
+    <Draggable draggableId={item} index={index} {...rest}>
       {(provided, snapshot) => (
         <>
           <Card

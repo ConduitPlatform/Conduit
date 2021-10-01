@@ -123,7 +123,6 @@ const InputsSection: FC<Props> = ({ editMode }) => {
   };
 
   const handleInputsChanges = (inputs: Input) => {
-    console.log('inpits:', inputs);
     dispatch(setEndpointData({ inputs }));
   };
 

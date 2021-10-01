@@ -1,4 +1,5 @@
 import {
+  Box,
   Container,
   Grid,
   IconButton,
@@ -28,8 +29,14 @@ import CreateServiceAccount from './CreateServiceAccount';
 import { ServiceAccount } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles({
-  table: {
-    maxWidth: 650,
+  titleContainer: {
+    justifyContent: 'space-between',
+  },
+  button: {
+    width: 170,
+  },
+  serviceButtons: {
+    minWidth: 150,
   },
 });
 
@@ -104,7 +111,7 @@ const ServiceAccountsTabs = () => {
       handleClose();
       setTokenDialog(true);
       setCreatedService(response.data);
-      fetchServiceAccounts();
+      await fetchServiceAccounts();
     } catch (e) {
       console.log(e);
     }
@@ -124,17 +131,27 @@ const ServiceAccountsTabs = () => {
 
   return (
     <>
-      <Container>
+      <Container maxWidth="lg">
         <Grid container>
-          <Grid item xs={12}>
-            <Typography variant={'h6'}>All available Service Accounts</Typography>
-            <Typography variant={'subtitle1'}>
-              Create, delete, refresh your Service Accounts . . .
-            </Typography>
+          <Grid container item xs={10} className={classes.titleContainer}>
+            <Box>
+              <Typography variant={'h6'}>All available Service Accounts</Typography>
+              <Typography variant={'subtitle1'}>
+                Create, delete, refresh your Service Accounts
+              </Typography>
+            </Box>
+            <Button
+              variant={'contained'}
+              color={'primary'}
+              className={classes.button}
+              onClick={handleGenerateNew}>
+              Generate new Service Account
+            </Button>
           </Grid>
+          <Grid container item xs={2} />
           <Grid item xs={10}>
             <TableContainer>
-              <Table className={classes.table}>
+              <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
@@ -165,7 +182,7 @@ const ServiceAccountsTabs = () => {
                           {moment(service.createdAt).format('DD/MM/YYYY')}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={classes.serviceButtons}>
                         <IconButton onClick={() => handleDeleteClick(service._id)}>
                           <DeleteIcon />
                         </IconButton>
@@ -178,11 +195,6 @@ const ServiceAccountsTabs = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-          </Grid>
-          <Grid item xs={2}>
-            <Button variant={'contained'} color={'primary'} onClick={handleGenerateNew}>
-              Generate new Service Account
-            </Button>
           </Grid>
         </Grid>
       </Container>
