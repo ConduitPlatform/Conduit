@@ -24,7 +24,6 @@ import Router from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import theme from '../../utils/theme';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
