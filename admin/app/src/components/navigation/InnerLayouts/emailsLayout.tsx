@@ -24,7 +24,7 @@ const EmailsLayout: React.FC<unknown> = ({ children }) => {
 
   return (
     <Box p={4}>
-      <Typography variant={'h4'}>Authentication</Typography>
+      <Typography variant={'h4'}>Emails</Typography>
       <Tabs value={value} onChange={handleChange}>
         <Tab label="Templates" id="templates" />
         <Tab label="Send Email" id="send" />
