@@ -22,8 +22,9 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
   },
   titleContent: {
-    backgroundColor: theme.palette.grey[200],
+    backgroundColor: theme.palette.secondary.main,
     height: theme.spacing(6),
+    color: '#000',
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
@@ -40,10 +41,10 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
   },
   statusEnabled: {
-    color: 'green',
+    color: theme.palette.secondary.main,
   },
   statusDisabled: {
-    color: 'red',
+    color: theme.palette.primary.main,
   },
 }));
 
