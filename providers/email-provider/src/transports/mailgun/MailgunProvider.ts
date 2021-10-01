@@ -8,6 +8,8 @@ const formData = require('form-data');
 export  class MailgunProvider extends EmailProviderClass {
 
     protected _mailgunSdk: any;
+    private domain: string;
+    private apiKey: string;
     constructor(mailgunSettings: MailgunConfig){
         super(createTransport(initializeMailgun(mailgunSettings)));
         const mailgun = new Mailgun(formData);
@@ -15,9 +17,11 @@ export  class MailgunProvider extends EmailProviderClass {
             username: 'api', 
             key: mailgunSettings.auth.api_key
         });
+        this.domain = mailgunSettings.auth.domain;
+        this.apiKey = mailgunSettings.auth.api_key;
     }
 
-    listTemplates(apiKey: any){
+    listTemplates(){
         throw new Error('Not implemented');
     }
 
@@ -25,7 +29,7 @@ export  class MailgunProvider extends EmailProviderClass {
         throw new Error('Not implemented');
     }
 
-    async createTemplate(domain:string ,data: any){
+    createTemplate(data: any){
         throw new Error('Not implemented');
     }
 }

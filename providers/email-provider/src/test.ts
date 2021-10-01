@@ -1,4 +1,5 @@
 import { EmailProvider } from "./index"
+import { CreateSendgridTemplate } from "./interfaces/sendgrid/CreateSendgridTemplate";
 let provider = new EmailProvider('sendgrid',{
     apiKey: '***REMOVED***'
 });
@@ -36,6 +37,16 @@ let provider = new EmailProvider('sendgrid',{
 //               console.log('err',err);
 //           });
 
-provider._transport?.listTemplates('***REMOVED***')
+// const data: CreateSendgridTemplate =  {
+//     name: " my template",
+//     generation:'dynamic',
+//     version: {
+//         subject: 'xaxasxa',
+//         name: 'first version',
+//         html_content:' <p> gia s psixoula m </p>'
+//     }
+// }
+// provider._transport?.createTemplate(data);
+
 
 //sendgrid api key ***REMOVED***

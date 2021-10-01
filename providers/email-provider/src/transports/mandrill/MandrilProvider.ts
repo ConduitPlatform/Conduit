@@ -5,14 +5,16 @@ import { Mandrill } from 'mandrill-api';
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class MandrillProvider extends EmailProviderClass{
    private  _mandrillSdk?: Mandrill;
+   private apiKey: string;
 
     constructor(mandrillSettings: MandrillConfig){
         super(createTransport(mandrillTransport(mandrillSettings)));
-        console.log(mandrillSettings);
         this._mandrillSdk = new Mandrill(mandrillSettings.auth.apiKey);
+        this.apiKey = mandrillSettings.auth.apiKey;
     }
-    listTemplates(apiKey:any){
-        this._mandrillSdk?.templates.list(apiKey, res =>{
+    
+    listTemplates(){
+        this._mandrillSdk?.templates.list(this.apiKey, res =>{
           console.log(res);
         },
         err => {
@@ -29,7 +31,7 @@ export class MandrillProvider extends EmailProviderClass{
         });
     }
 
-    createTemplate(domain: string, data: any) {
+    createTemplate(data: any) {
         throw new Error("Method not implemented.");
     }
 }

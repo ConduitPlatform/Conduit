@@ -2,7 +2,7 @@ import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { SendGridConfig } from "./sendgrid.config";
 import { createTransport } from "nodemailer";
 import {Client} from '@sendgrid/client';
-import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
+import { CreateSendgridTemplate } from "../../interfaces/sendgrid/CreateSendgridTemplate";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -12,30 +12,47 @@ export class SendgridProvider extends EmailProviderClass{
         this._sgClient.setApiKey(sgSettings.apiKey);
     }
     
-    createTemplate(domain: string, data: CreateEmailTemplate) {
+    createTemplate(data: CreateSendgridTemplate) {
 
-        const request = {
+        const create_request = {
             method:'POST',
             url: '/v3/templates',
-            body: data
+            body: {
+                name: data.name,
+                generation: data.generation
+            }
         }
-        this._sgClient.request(request).then((res:any) =>{
-            console.log(res);
+        this._sgClient.request(create_request).then(([response,body]:any) =>{ //create the version
+     
+            const create_version = {
+                method:'POST',
+                url: '/v3/templates/' + body.id + '/versions',
+                body: data.version
+            }
+            this._sgClient.request(create_version).then((res:any) =>{
+                console.log('Version created!',res);
+            }) 
+            .catch((err:any) =>{
+                console.log(err);
+            });
         }) 
         .catch((err:any) =>{
             console.log(err);
         });
+
     }
     
     getTemplateInfo(templateName: string) {
         throw new Error("Method not implemented.");
     }
     
-    listTemplates(apiKey: any) {
+    listTemplates() { //not working idk wh
         const request = {
             method:'GET',
             url: '/v3/templates',
-            generations: 'dynamic'
+            qs:{
+                generations: 'legacy,dynamic',
+            }
         }
         this._sgClient.request(request).then((res:any) =>{
             console.log(res);

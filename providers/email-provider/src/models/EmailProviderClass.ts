@@ -8,13 +8,13 @@ export abstract class EmailProviderClass{
     }
     abstract listTemplates(apiKey:any):any;
     abstract getTemplateInfo(templateName:string):any;
-    abstract createTemplate(domain:string,data: any):any ;
+    abstract createTemplate(data: any):any;
 
     sendEmail(mailOptions: Mail.Options){
         return this._transport?.sendMail(mailOptions);
 
     }
-
+    
     sendEmailDirect(mailOptions: Mail.Options){
 
         const transport = this._transport;

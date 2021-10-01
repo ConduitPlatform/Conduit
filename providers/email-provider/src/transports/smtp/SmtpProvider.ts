@@ -7,7 +7,7 @@ export class SmtpProvider extends EmailProviderClass{
         super(createTransport(transportSettings));
     }
 
-    listTemplates(apiKey: any) {
+    listTemplates() {
         throw new Error("Method not implemented.");
     }
 
@@ -15,7 +15,7 @@ export class SmtpProvider extends EmailProviderClass{
         throw new Error("Method not implemented.");
     }
 
-    createTemplate(domain: string, data: any) {
+    createTemplate() {
         throw new Error("Method not implemented.");
     }
 }
