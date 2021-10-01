@@ -71,7 +71,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         setItemSelected(0);
     }
 
-    if (router.pathname === '/login') {
+    if (router.pathname === '/login' || router.pathname === '/cms/build-types') {
       setMenuDisabled(true);
       return;
     }
@@ -84,25 +84,13 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     }
   }, [dispatch, token]);
 
-  const hideLayout = (): boolean => {
-    if (token) {
-      return true;
-    }
-    if (router.pathname !== '/cms/build-types') {
-      return true;
-    }
-
-    return false;
-  };
-
   return (
     <div className={classes.root} {...rest}>
-      {hideLayout() ? (
+      {!menuDisabled ? (
         <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
       ) : (
-        ''
+        <></>
       )}
-
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}
