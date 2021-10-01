@@ -64,7 +64,13 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/sms':
         setItemSelected(3);
         break;
-      case '/emails':
+      case '/emails/templates':
+        setItemSelected(4);
+        break;
+      case '/emails/send':
+        setItemSelected(4);
+        break;
+      case '/emails/provider':
         setItemSelected(4);
         break;
       case '/cms':
@@ -95,11 +101,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-      ) : (
-        <></>
-      )}
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
       <main className={classes.content}>
         <div className={classes.toolbar} />
         {children}

@@ -119,9 +119,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
   };
 
   const isModuleDisabled = (moduleName: string) => {
-    const found = enabledModules.find(
-      (module: IModule) => module.moduleName === moduleName
-    );
+    const found = enabledModules.find((module: IModule) => module.moduleName === moduleName);
     return !found;
   };
 
@@ -159,19 +157,11 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
 
         <List component="nav">
           <Link href="/">
-            <ListItem
-              button
-              key={'Home'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 0}>
+            <ListItem button key={'Home'} className={classes.listItem} style={itemStyle} selected={itemSelected === 0}>
               <ListItemIcon className={classes.listItemIcon}>
                 <Home color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Home'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Home'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/authentication/users" prefetch={false}>
@@ -185,10 +175,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemIcon className={classes.listItemIcon}>
                 <People color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Authentication'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Authentication'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/notification">
@@ -202,10 +189,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemIcon className={classes.listItemIcon}>
                 <Notifications color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Notification'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Notification'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/sms">
@@ -222,7 +206,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href="/emails">
+          <Link href="/emails/provider">
             <ListItem
               disabled={isModuleDisabled('email')}
               button
@@ -233,10 +217,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemIcon className={classes.listItemIcon}>
                 <Email color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Emails'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Emails'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/cms">
@@ -264,10 +245,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemIcon className={classes.listItemIcon}>
                 <Cloud color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Storage'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
           <Link href="/settings">
@@ -280,27 +258,17 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemIcon className={classes.listItemIcon}>
                 <Settings color={'inherit'} />
               </ListItemIcon>
-              <ListItemText
-                primary={'Settings'}
-                classes={{ primary: classes.listItemText }}
-              />
+              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
         </List>
         <Divider />
         <List>
-          <ListItem
-            button
-            className={classes.listItem}
-            style={itemStyle}
-            onClick={handleLogout}>
+          <ListItem button className={classes.listItem} style={itemStyle} onClick={handleLogout}>
             <ListItemIcon className={classes.listItemIcon}>
               <ExitToApp color={'inherit'} />
             </ListItemIcon>
-            <ListItemText
-              primary={'Log out'}
-              classes={{ primary: classes.listItemText }}
-            />
+            <ListItemText primary={'Log out'} classes={{ primary: classes.listItemText }} />
           </ListItem>
         </List>
       </div>
