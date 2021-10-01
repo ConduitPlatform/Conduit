@@ -16,6 +16,11 @@
       "protoName": "editUser"
     },
     {
+      "path": "/users",
+      "method": "DELETE",
+      "protoName": "deleteUsers"
+    },
+    {
       "path": "/users/:id",
       "method": "DELETE",
       "protoName": "deleteUser"
