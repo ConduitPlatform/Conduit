@@ -1,6 +1,6 @@
 import React, { ReactElement, useEffect } from 'react';
 import { useAppDispatch } from '../../redux/store';
-import CmsLayout from '../../components/navigation/InnerLayouts/CmsLayout';
+import CmsLayout from '../../components/navigation/InnerLayouts/cmsLayout';
 import {
   asyncCreateCustomEndpoints,
   asyncDeleteCustomEndpoints,

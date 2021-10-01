@@ -1,7 +1,7 @@
 import React, { ReactElement, useEffect, useState } from 'react';
 
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import CmsLayout from '../../components/navigation/InnerLayouts/CmsLayout';
+import CmsLayout from '../../components/navigation/InnerLayouts/cmsLayout';
 import {
   asyncDeleteSelectedSchema,
   asyncGetCmsSchemas,
@@ -28,6 +28,11 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     justifyContent: 'center',
     marginTop: 15,
+  },
+  buttonAlignment: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
 }));
 
@@ -127,9 +132,15 @@ const Schemas = () => {
     data.schemas &&
     data.schemas.length > 0 && (
       <>
-        <Button variant="contained" color="primary" style={{ textTransform: 'capitalize' }} onClick={() => handleAdd()}>
-          Create new
-        </Button>
+        <div className={classes.buttonAlignment}>
+          <Button
+            variant="contained"
+            color="primary"
+            style={{ textTransform: 'capitalize', display: 'flex', alignSelf: 'flex-end' }}
+            onClick={() => handleAdd()}>
+            Create new
+          </Button>
+        </div>
         <SchemasTable
           activeSchemas={getActiveSchemas()}
           disabledSchemas={getDisabledSchemas()}

@@ -1,5 +1,5 @@
 import React, { ReactElement } from 'react';
-import CmsLayout from '../../components/navigation/InnerLayouts/CmsLayout';
+import CmsLayout from '../../components/navigation/InnerLayouts/cmsLayout';
 
 const Settings = () => {
   return <div>Under construction...</div>;
