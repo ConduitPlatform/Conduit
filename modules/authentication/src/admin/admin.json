@@ -16,9 +16,19 @@
       "protoName": "editUser"
     },
     {
+      "path": "/users",
+      "method": "DELETE",
+      "protoName": "deleteUsers"
+    },
+    {
       "path": "/users/:id",
       "method": "DELETE",
       "protoName": "deleteUser"
+    },
+    {
+      "path": "/users/toggle",
+      "method": "POST",
+      "protoName": "blockUnblockUsers"
     },
     {
       "path": "/users/:id/block",
