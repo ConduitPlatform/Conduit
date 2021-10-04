@@ -53,15 +53,15 @@ let provider = new EmailProvider('sendgrid',{
 //               console.log('err',err);
 //           });
 
-const data: CreateSendgridTemplate =  {
-    name: " my templatessssasfasfagsdfgdfgdgdfsssss",
-    generation:'dynamic',
-    version: {
-        subject: 'xaxaasdasxa',
-        name: 'first vesasrsion',
-        html_content:' <p> gia afasfas psixoula m </p>'
-    }
-}
+// const data: CreateSendgridTemplate =  {
+//     name: " my templatessssasfasfagsdfgdfgdgdfsssss",
+//     generation:'dynamic',
+//     version: {
+//         subject: 'xaxaasdasxa',
+//         name: 'first vesasrsion',
+//         html_content:' <p> gia afasfas psixoula m </p>'
+//     }
+// }
 
 // var mailgundata = {
 //     name : "psixoula",
@@ -69,12 +69,12 @@ const data: CreateSendgridTemplate =  {
 //     template: "<p>na to to template psixoula m</p>",
 //     engine: "handlebars"
 // };
-provider._transport?.createTemplate(data).then((body:any)  => {
-    console.log(body);
-})
-.catch(err => {
-    console.log(err);
-})
+// provider._transport?.createTemplate(data).then((body:any)  => {
+//     console.log(body);
+// })
+// .catch(err => {
+//     console.log(err);
+// })
 
 // provider._transport?.getTemplateInfo('ffff').then(res =>{
     //     console.log(res);

@@ -23,7 +23,6 @@ export class SendgridProvider extends EmailProviderClass{
             }
         }
         const template_res = (await  this._sgClient.request(create_request))[0];
-        console.log('to template_res',template_res);
         let info : Template = {
             name: template_res.body.id,
             id: template_res.body.name,
@@ -36,7 +35,6 @@ export class SendgridProvider extends EmailProviderClass{
             body: data.version
         }
         const version_res =  (await this._sgClient.request(create_version))[0];
-        console.log(version_res.body);
         info.versions.push({
            id:  version_res.body.id,
            subject: version_res.body.subject,
