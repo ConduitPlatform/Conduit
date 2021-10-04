@@ -75,7 +75,10 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/storage':
         setItemSelected(6);
         break;
-      case '/settings':
+      case '/settings/clientsdk':
+      case '/settings/secrets':
+      case '/settings/core':
+      case '/settings/createuser':
         setItemSelected(7);
         break;
       default:

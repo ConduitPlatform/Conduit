@@ -248,7 +248,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href="/settings">
+          <Link href="/settings/clientsdk">
             <ListItem
               button
               key={'Settings'}
