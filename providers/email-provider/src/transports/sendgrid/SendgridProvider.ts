@@ -3,6 +3,7 @@ import { SendGridConfig } from "./sendgrid.config";
 import { createTransport } from "nodemailer";
 import {Client} from '@sendgrid/client';
 import { CreateSendgridTemplate } from "../../interfaces/sendgrid/CreateSendgridTemplate";
+import { Template } from "../../interfaces/Template";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -42,14 +43,35 @@ export class SendgridProvider extends EmailProviderClass{
         
     }
     
-    getTemplateInfo(template_id: string) {
+    async getTemplateInfo(template_id: string):Promise<Template> {
 
         const request = {
             method:'GET',
             url: '/v3/templates/'+template_id,
         }
-        return  this._sgClient.request(request);
-       
+        
+        const response = (await this._sgClient.request(request))[0];
+        const versions = response.body.versions;
+        var retVersions:any = [];
+        versions.forEach((version:any) => {
+                retVersions.push({
+                    name: version.name,
+                    id: version.id,
+                    subject: version.subject,
+                    updatedAt: version.updated_at,
+                    active: version.active,
+                    htmlContent: version.html_content,
+                    plainContent: version.plain_content
+                });
+        });
+        let info: Template = {
+            name: response.body.name,
+            id: response.body.id,
+            createdAt: '',
+            versions: retVersions
+        }
+
+        return info;
     }
     
     listTemplates() { //not working idk wh

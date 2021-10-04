@@ -1,10 +1,9 @@
 import { createTransport } from "nodemailer";
+import { Template } from "../../interfaces/Template";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from "./mailgun.config";
 var mailgun = require('mailgun-js');
-
-const formData = require('form-data');
 export  class MailgunProvider extends EmailProviderClass {
     
     protected _mailgunSdk: any;
@@ -21,8 +20,15 @@ export  class MailgunProvider extends EmailProviderClass {
         return this._mailgunSdk.get(`/${this.domain}/templates`);
     }
 
-    getTemplateInfo(template_name:string):Promise<any>{
-        return this._mailgunSdk.get(`/${this.domain}/templates/${template_name}`);
+    async getTemplateInfo(template_name:string):Promise<Template>{
+        const response = await this._mailgunSdk.get(`/${this.domain}/templates/${template_name}`);
+        let info : Template = {
+            name: response.name,
+            id: response.id,
+            createdAt: response.createdAt,
+            versions : []
+        }
+        return info;
     }
 
     createTemplate(data: any){
