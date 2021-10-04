@@ -63,7 +63,9 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/sms':
         setItemSelected(3);
         break;
-      case '/emails':
+      case '/emails/templates':
+      case '/emails/send':
+      case '/emails/provider':
         setItemSelected(4);
         break;
       case '/cms/schemas':

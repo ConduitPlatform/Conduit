@@ -206,7 +206,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href="/emails">
+          <Link href="/emails/provider">
             <ListItem
               disabled={isModuleDisabled('email')}
               button
