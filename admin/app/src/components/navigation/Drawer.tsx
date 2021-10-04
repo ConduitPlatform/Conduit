@@ -178,7 +178,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemText primary={'Authentication'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href="/notification">
+          <Link href="/notification/send">
             <ListItem
               disabled={isModuleDisabled('notification')}
               button
@@ -194,7 +194,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
           </Link>
           <Link href="/sms">
             <ListItem
-              disabled={isModuleDisabled('sms')}
+              disabled={isModuleDisabled('sms/send')}
               button
               key={'sms'}
               className={classes.listItem}
@@ -234,7 +234,7 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
               <ListItemText primary={'CMS'} classes={{ primary: classes.listItemText }} />
             </ListItem>
           </Link>
-          <Link href="/storage">
+          <Link href="/storage/files">
             <ListItem
               button
               key={'Storage'}
