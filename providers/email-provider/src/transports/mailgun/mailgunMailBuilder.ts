@@ -1,5 +1,5 @@
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
-import { MailgunEmailOptions } from '../../interfaces/MailgunEmailOptions';
+import { MailgunEmailOptions } from '../../interfaces/mailgun/MailgunEmailOptions';
 
 export class MailgunMailBuilder extends EmailBuilderClass<MailgunEmailOptions>{
   

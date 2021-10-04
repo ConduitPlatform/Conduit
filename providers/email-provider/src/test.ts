@@ -1,8 +1,18 @@
 import { EmailProvider } from "./index"
 import { CreateSendgridTemplate } from "./interfaces/sendgrid/CreateSendgridTemplate";
-let provider = new EmailProvider('sendgrid',{
-    apiKey: '***REMOVED***'
-});
+// let provider = new EmailProvider('mailgun',{
+//     mailgun:{
+//         proxy:null,
+//         host: 'api.mailgun.net',
+//         domain:'***REMOVED***',
+//         apiKey: '***REMOVED***'
+//     }
+// });
+
+// let provider = new EmailProvider('sendgrid',{
+//     apiKey: '***REMOVED***'
+// });
+
 // let mailOptions: MandrillEmailOptions = {
 //     to: [{ 
 //         address: "dimitrissoldatos2@md.quintessential.gr",
@@ -49,6 +59,18 @@ let provider = new EmailProvider('sendgrid',{
 // provider._transport?.getTemplateInfo('d-15e29f4f5dab4804bedf97ed4a7356f4').then( ([res,body] :any ) =>{
 //     console.log(body);
 // });
+var mailgundata = {
+    name : "psixoula",
+    description: "psixoula description",
+    template: "<p>na to to template psixoula m</p>",
+    engine: "handlebars"
+};
 
-
+provider._transport?.createTemplate(mailgundata).then((body:any)  => {
+    
+    console.log(body);
+})
+.catch( (err:any) => {
+    console.log(err);
+});
 //sendgrid api key ***REMOVED***

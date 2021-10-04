@@ -2,34 +2,30 @@ import { createTransport } from "nodemailer";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from "./mailgun.config";
+var mailgun = require('mailgun-js');
 
-var Mailgun = require('mailgun.js');
 const formData = require('form-data');
 export  class MailgunProvider extends EmailProviderClass {
-
+    
     protected _mailgunSdk: any;
     private domain: string;
     private apiKey: string;
     constructor(mailgunSettings: MailgunConfig){
         super(createTransport(initializeMailgun(mailgunSettings)));
-        const mailgun = new Mailgun(formData);
-         this._mailgunSdk = mailgun.client({
-            username: 'api', 
-            key: mailgunSettings.auth.api_key
-        });
         this.domain = mailgunSettings.auth.domain;
         this.apiKey = mailgunSettings.auth.api_key;
+        this._mailgunSdk = mailgun({apiKey:this.apiKey, domain: this.domain});
     }
 
-    listTemplates(){
-        throw new Error('Not implemented');
+    listTemplates():Promise<any>{
+        return this._mailgunSdk.get(`/${this.domain}/templates`);
     }
 
-    getTemplateInfo(){
-        throw new Error('Not implemented');
+    getTemplateInfo(template_name:string):Promise<any>{
+        return this._mailgunSdk.get(`/${this.domain}/templates/${template_name}`);
     }
 
     createTemplate(data: any){
-        throw new Error('Not implemented');
+        return this._mailgunSdk.post(`/${this.domain}/templates`,data);
     }
 }

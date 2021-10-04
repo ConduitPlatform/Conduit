@@ -2,6 +2,7 @@ import { createTransport } from "nodemailer";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { MandrillConfig } from "./mandrill.config";
 import { Mandrill } from 'mandrill-api';
+import { Template } from "../../interfaces/Template";
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class MandrillProvider extends EmailProviderClass{
    private  _mandrillSdk?: Mandrill;
@@ -17,8 +18,15 @@ export class MandrillProvider extends EmailProviderClass{
         return this._mandrillSdk?.templates.list(this.apiKey)
     }
 
-    getTemplateInfo(templateName:string){
-        return this._mandrillSdk?.templates.info(templateName);
+    async getTemplateInfo(templateName:string):Promise<Template>{
+        const response = await  this._mandrillSdk?.templates.info(templateName);
+        console.log(response);
+        const ret:Template = {
+            name:
+
+
+        }
+        return ret;
     }
 
     createTemplate(data: any) {

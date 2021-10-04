@@ -1,18 +1,17 @@
-import { SentMessageInfo } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
+import { Template } from "../interfaces/Template";
 export abstract class EmailProviderClass{
     _transport?: Mail;
 
     constructor(transport: Mail){
         this._transport = transport;
     }
-    abstract listTemplates(apiKey:any):any;
-    abstract getTemplateInfo(templateName:string):any;
+    abstract listTemplates():any;
+    abstract getTemplateInfo(templateName:string):Promise<Template>;
     abstract createTemplate(data: any):any;
 
     sendEmail(mailOptions: Mail.Options){
         return this._transport?.sendMail(mailOptions);
-
     }
     
     sendEmailDirect(mailOptions: Mail.Options){
@@ -26,3 +25,5 @@ export abstract class EmailProviderClass{
     }
 
 }
+
+//onoma, content

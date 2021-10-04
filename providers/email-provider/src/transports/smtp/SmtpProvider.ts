@@ -11,7 +11,7 @@ export class SmtpProvider extends EmailProviderClass{
         throw new Error("Method not implemented.");
     }
 
-    getTemplateInfo(templateName: string) {
+    getTemplateInfo(template_name: string):Promise<any> {
         throw new Error("Method not implemented.");
     }
 
