@@ -24,7 +24,7 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
 
   return (
     <Box p={4}>
-      <Typography variant={'h4'}>Authentication</Typography>
+      <Typography variant={'h4'}>Notifications</Typography>
       <Tabs value={value} onChange={handleChange}>
         <Tab label="Notifications" id="view" />
         <Tab label="Send Notifications" id="send" />

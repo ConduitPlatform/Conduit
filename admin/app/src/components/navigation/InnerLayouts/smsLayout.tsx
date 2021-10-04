@@ -24,7 +24,7 @@ const SMSLayout: React.FC<unknown> = ({ children }) => {
 
   return (
     <Box p={4}>
-      <Typography variant={'h4'}>Authentication</Typography>
+      <Typography variant={'h4'}>SMS</Typography>
       <Tabs value={value} onChange={handleChange}>
         <Tab label="Send SMS" id="send" />
         <Tab label="Provider details'" id="provider-details" />
