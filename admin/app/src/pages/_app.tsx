@@ -71,6 +71,13 @@ ConduitApp.getInitialProps = async (appContext: AppContext) => {
 
   const cookie = getCookie('JWT', ctx.req);
 
+  setUpNotifications({
+    defaultProps: {
+      position: 'bottom-right',
+      dismissible: true,
+    },
+  });
+
   if (
     typeof window === 'undefined' &&
     appContext &&
