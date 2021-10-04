@@ -15,6 +15,7 @@ import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 import DataTableActions from './DataTableActions';
 import Checkbox from '@material-ui/core/Checkbox';
+import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 
 const useStyles = makeStyles({
   table: {
@@ -112,7 +113,9 @@ const DataTable: React.FC<Props> = ({
               <Checkbox
                 color="primary"
                 onChange={onMenuItemSelectAll}
-                checked={selectedItems?.length > 0}
+                checked={selectedItems?.length === dsData.length}
+                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
               />
             </TableCell>
             {headerCells.map((headCell) => (

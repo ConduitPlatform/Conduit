@@ -23,7 +23,7 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, 
       case 'delete':
         return <DeleteIcon color="primary" />;
       case 'edit':
-        return <EditIcon color={editDisabled ? 'grey' : 'primary'} />;
+        return <EditIcon color={editDisabled ? 'disabled' : 'primary'} />;
       case 'block/unblock':
         return <BlockIcon color={isBlocked ? 'error' : 'primary'} />;
       case 'disable':
