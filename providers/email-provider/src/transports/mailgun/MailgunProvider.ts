@@ -27,11 +27,18 @@ export  class MailgunProvider extends EmailProviderClass {
             id: response.id,
             createdAt: response.createdAt,
             versions : []
-        }
+        };
         return info;
     }
 
-    createTemplate(data: any){
-        return this._mailgunSdk.post(`/${this.domain}/templates`,data);
+   async createTemplate(data: any): Promise<Template>{
+        const resposne = await  this._mailgunSdk.post(`/${this.domain}/templates`,data);
+        let created : Template = {
+            name: resposne.name,
+            createdAt: resposne.createdAt,
+            id: "",
+            versions: []
+        };
+        return created;
     }
 }

@@ -1,17 +1,17 @@
 import { EmailProvider } from "./index"
 import { CreateSendgridTemplate } from "./interfaces/sendgrid/CreateSendgridTemplate";
-let provider = new EmailProvider('mailgun',{
-    mailgun:{
-        proxy:null,
-        host: 'api.mailgun.net',
-        domain:'***REMOVED***',
-        apiKey: '***REMOVED***'
-    }
-});
-
-// let provider = new EmailProvider('sendgrid',{
-//     apiKey: '***REMOVED***'
+// let provider = new EmailProvider('mailgun',{
+//     mailgun:{
+//         proxy:null,
+//         host: 'api.mailgun.net',
+//         domain:'***REMOVED***',
+//         apiKey: '***REMOVED***'
+//     }
 // });
+
+let provider = new EmailProvider('sendgrid',{
+    apiKey: '***REMOVED***'
+});
 
 // let provider = new EmailProvider('mandrill',{
 //     mandrill : { 
@@ -53,15 +53,15 @@ let provider = new EmailProvider('mailgun',{
 //               console.log('err',err);
 //           });
 
-// const data: CreateSendgridTemplate =  {
-//     name: " my template",
-//     generation:'dynamic',
-//     version: {
-//         subject: 'xaxasxa',
-//         name: 'first version',
-//         html_content:' <p> gia s psixoula m </p>'
-//     }
-// }
+const data: CreateSendgridTemplate =  {
+    name: " my templatessssasfasfagsdfgdfgdgdfsssss",
+    generation:'dynamic',
+    version: {
+        subject: 'xaxaasdasxa',
+        name: 'first vesasrsion',
+        html_content:' <p> gia afasfas psixoula m </p>'
+    }
+}
 
 // var mailgundata = {
 //     name : "psixoula",
@@ -69,15 +69,20 @@ let provider = new EmailProvider('mailgun',{
 //     template: "<p>na to to template psixoula m</p>",
 //     engine: "handlebars"
 // };
-
-// provider._transport?.createTemplate(mailgundata).then((body:any)  => {
-provider._transport?.getTemplateInfo('ffff').then(res =>{
-    console.log(res);
+provider._transport?.createTemplate(data).then((body:any)  => {
+    console.log(body);
 })
 .catch(err => {
     console.log(err);
-});
-//     console.log(body);
+})
+
+// provider._transport?.getTemplateInfo('ffff').then(res =>{
+    //     console.log(res);
+    // })
+    // .catch(err => {
+        //     console.log(err);
+        // });
+        //     console.log(body);
 // })
 // .catch( (err:any) => {
 //     console.log(err);

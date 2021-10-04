@@ -13,8 +13,7 @@ export class SendgridProvider extends EmailProviderClass{
         this._sgClient.setApiKey(sgSettings.apiKey);
     }
     
-    createTemplate(data: CreateSendgridTemplate) {
-
+    async createTemplate(data: CreateSendgridTemplate): Promise<Template> {
         const create_request = {
             method:'POST',
             url: '/v3/templates',
@@ -23,24 +22,32 @@ export class SendgridProvider extends EmailProviderClass{
                 generation: data.generation
             }
         }
-        this._sgClient.request(create_request).then(([response,body]:any) =>{ //create the version
-     
-            const create_version = {
-                method:'POST',
-                url: '/v3/templates/' + body.id + '/versions',
-                body: data.version
-            }
-            this._sgClient.request(create_version).then((res:any) =>{
-                console.log('Version created!',res);
-            }) 
-            .catch((err:any) =>{
-                console.log(err);
-            });
-        }) 
-        .catch((err:any) =>{
-            console.log(err);
-        });
+        const template_res = (await  this._sgClient.request(create_request))[0];
+        console.log('to template_res',template_res);
+        let info : Template = {
+            name: template_res.body.id,
+            id: template_res.body.name,
+            createdAt: template_res.body.updated_at,
+            versions: []
+        }
+        const create_version = {
+            method:'POST',
+            url: '/v3/templates/' + template_res.body.id + '/versions',
+            body: data.version
+        }
+        const version_res =  (await this._sgClient.request(create_version))[0];
+        console.log(version_res.body);
+        info.versions.push({
+           id:  version_res.body.id,
+           subject: version_res.body.subject,
+           htmlContent: version_res.body.html_content,
+           plainContent: version_res.body.plain_content,
+           name: version_res.body.name,
+           active: version_res.body.active,
+           updatedAt:''
+        })
         
+       return info;
     }
     
     async getTemplateInfo(template_id: string):Promise<Template> {

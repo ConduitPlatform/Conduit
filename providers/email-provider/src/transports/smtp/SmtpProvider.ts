@@ -1,4 +1,5 @@
 import { createTransport } from "nodemailer";
+import { Template } from "../../interfaces/Template";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 
 export class SmtpProvider extends EmailProviderClass{
@@ -11,11 +12,11 @@ export class SmtpProvider extends EmailProviderClass{
         throw new Error("Method not implemented.");
     }
 
-    getTemplateInfo(template_name: string):Promise<any> {
+    getTemplateInfo(template_name: string):Promise<Template> {
         throw new Error("Method not implemented.");
     }
 
-    createTemplate() {
+    createTemplate(): Promise<Template>{
         throw new Error("Method not implemented.");
     }
 }

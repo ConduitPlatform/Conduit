@@ -8,7 +8,7 @@ export abstract class EmailProviderClass{
     }
     abstract listTemplates():any;
     abstract getTemplateInfo(templateName:string):Promise<Template>;
-    abstract createTemplate(data: any):any;
+    abstract createTemplate(data: any):Promise<Template>;
 
     sendEmail(mailOptions: Mail.Options){
         return this._transport?.sendMail(mailOptions);
@@ -25,5 +25,3 @@ export abstract class EmailProviderClass{
     }
 
 }
-
-//onoma, content

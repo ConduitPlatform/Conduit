@@ -20,7 +20,6 @@ export class MandrillProvider extends EmailProviderClass{
     }
 
     async getTemplateInfo(template_name:string):Promise<Template>{
-
         const response = await new Promise<any>( (resolve) => this._mandrillSdk?.templates.info({key: this.apiKey,name: template_name},resolve));
         const info : Template = {
             id :response.slug,
@@ -39,9 +38,7 @@ export class MandrillProvider extends EmailProviderClass{
         return info;
     }
     
-    
-
-    createTemplate(data: any) {
+    createTemplate(data: any): Promise<Template> {
         throw new Error("Method not implemented.");
     }
 }
