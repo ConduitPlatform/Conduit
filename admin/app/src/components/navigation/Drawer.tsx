@@ -24,6 +24,7 @@ import Router from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+import Modules from '../modules/Modules';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -156,111 +157,120 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
         <Divider />
 
         <List component="nav">
-          <Link href="/">
-            <ListItem button key={'Home'} className={classes.listItem} style={itemStyle} selected={itemSelected === 0}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Home color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Home'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/authentication/users" prefetch={false}>
-            <ListItem
-              button
-              disabled={isModuleDisabled('authentication')}
-              key={'Authentication'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 1}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <People color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Authentication'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/notification">
-            <ListItem
-              disabled={isModuleDisabled('notification')}
-              button
-              key={'Notification'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 2}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Notifications color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Notification'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/sms">
-            <ListItem
-              disabled={isModuleDisabled('sms')}
-              button
-              key={'sms'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 3}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Sms color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/emails/provider">
-            <ListItem
-              disabled={isModuleDisabled('email')}
-              button
-              key={'Emails'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 4}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Email color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Emails'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/cms/schemas">
-            <ListItem
-              button
-              disabled={isModuleDisabled('cms')}
-              key={'CMS'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 5}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Toc color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'CMS'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/storage">
-            <ListItem
-              button
-              key={'Storage'}
-              disabled={isModuleDisabled('storage')}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 6}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Cloud color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/settings/clientsdk">
-            <ListItem
-              button
-              key={'Settings'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 7}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Settings color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
+          <Modules />
+          {/*<Link href="/">*/}
+          {/*  <ListItem*/}
+          {/*    button*/}
+          {/*    key={'Home'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 0}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Home color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'Home'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/authentication/users" prefetch={false}>*/}
+          {/*  <ListItem*/}
+          {/*    button*/}
+          {/*    disabled={isModuleDisabled('authentication')}*/}
+          {/*    key={'Authentication'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 1}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <People color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText*/}
+          {/*      primary={'Authentication'}*/}
+          {/*      classes={{ primary: classes.listItemText }}*/}
+          {/*    />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/notification">*/}
+          {/*  <ListItem*/}
+          {/*    disabled={isModuleDisabled('notification')}*/}
+          {/*    button*/}
+          {/*    key={'Notification'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 2}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Notifications color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'Notification'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/sms">*/}
+          {/*  <ListItem*/}
+          {/*    disabled={isModuleDisabled('sms')}*/}
+          {/*    button*/}
+          {/*    key={'sms'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 3}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Sms color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/emails/provider">*/}
+          {/*  <ListItem*/}
+          {/*    disabled={isModuleDisabled('email')}*/}
+          {/*    button*/}
+          {/*    key={'Emails'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 4}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Email color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'Emails'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/cms/schemas">*/}
+          {/*  <ListItem*/}
+          {/*    button*/}
+          {/*    disabled={isModuleDisabled('cms')}*/}
+          {/*    key={'CMS'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 5}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Toc color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'CMS'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/storage">*/}
+          {/*  <ListItem*/}
+          {/*    button*/}
+          {/*    key={'Storage'}*/}
+          {/*    disabled={isModuleDisabled('storage')}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 6}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Cloud color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'Storage'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
+          {/*<Link href="/settings/clientsdk">*/}
+          {/*  <ListItem*/}
+          {/*    button*/}
+          {/*    key={'Settings'}*/}
+          {/*    className={classes.listItem}*/}
+          {/*    style={itemStyle}*/}
+          {/*    selected={itemSelected === 7}>*/}
+          {/*    <ListItemIcon className={classes.listItemIcon}>*/}
+          {/*      <Settings color={'inherit'} />*/}
+          {/*    </ListItemIcon>*/}
+          {/*    <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />*/}
+          {/*  </ListItem>*/}
+          {/*</Link>*/}
         </List>
         <Divider />
         <List>

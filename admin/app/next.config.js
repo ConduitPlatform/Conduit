@@ -32,5 +32,25 @@ module.exports = (phase) => {
     MASTER_KEY: process.env.MASTER_KEY,
   };
 
-  return { env, publicRuntimeConfig };
+  const redirects = async () => {
+    return [
+      {
+        source: '/authentication',
+        destination: '/authentication/users',
+        permanent: true,
+      },
+      {
+        source: '/emails',
+        destination: '/emails/templates',
+        permanent: true,
+      },
+      {
+        source: '/cms',
+        destination: '/cms/schemas',
+        permanent: true,
+      },
+    ];
+  };
+
+  return { env, publicRuntimeConfig, redirects };
 };

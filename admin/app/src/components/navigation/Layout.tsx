@@ -41,46 +41,27 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   const [itemSelected, setItemSelected] = useState<number>(0);
 
   useEffect(() => {
-    switch (router.pathname) {
-      case '/':
-        setItemSelected(0);
-        break;
-      case '/authentication/users':
+    const splitUri = router.pathname.split('/')[1];
+    switch (splitUri) {
+      case 'authentication':
         setItemSelected(1);
         break;
-      case '/authentication/settings':
-        setItemSelected(1);
-        break;
-      case '/authentication/serviceAccounts':
-        setItemSelected(1);
-        break;
-      case '/authentication/signIn':
-        setItemSelected(1);
-        break;
-      case '/notification':
+      case 'notification':
         setItemSelected(2);
         break;
-      case '/sms':
+      case 'sms':
         setItemSelected(3);
         break;
-      case '/emails/templates':
-      case '/emails/send':
-      case '/emails/provider':
+      case 'emails':
         setItemSelected(4);
         break;
-      case '/cms/schemas':
-      case '/cms/schemadata':
-      case '/cms/custom':
-      case '/cms/settings':
+      case 'cms':
         setItemSelected(5);
         break;
-      case '/storage':
+      case 'storage':
         setItemSelected(6);
         break;
-      case '/settings/clientsdk':
-      case '/settings/secrets':
-      case '/settings/core':
-      case '/settings/createuser':
+      case 'settings':
         setItemSelected(7);
         break;
       default:
@@ -102,10 +83,12 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
-      <main className={classes.content}>
-        {children}
-      </main>
+      {!menuDisabled ? (
+        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+      ) : (
+        <></>
+      )}
+      <main className={classes.content}>{children}</main>
       <NotificationsSystem
         notifications={notifications}
         dismissNotification={(id) => dispatch(dismissNotification(id))}

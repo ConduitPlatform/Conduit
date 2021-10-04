@@ -11,10 +11,25 @@ import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
 import { notify } from 'reapop';
 
+const modules = [
+  'authentication',
+  'email',
+  'cms',
+  'storage',
+  'database-provider',
+  'payments',
+  'forms',
+  'chat',
+  'sms',
+  'push-notifications',
+  'not-available-module',
+];
+
 export type AppAuthState = {
   data: {
     token: any;
     enabledModules: IModule[];
+    disabledModules: string[];
   };
 };
 
@@ -24,6 +39,7 @@ const initialState: AppAuthState = {
   data: {
     token: null,
     enabledModules: [],
+    disabledModules: [],
   },
 };
 
@@ -53,15 +69,12 @@ export const asyncLogin = createAsyncThunk(
   }
 );
 
-export const asyncLogout = createAsyncThunk(
-  'appAuth/logout',
-  async (arg: void, thunkAPI) => {
-    thunkAPI.dispatch(clearAuthenticationPageStore());
-    thunkAPI.dispatch(clearEmailPageStore());
-    thunkAPI.dispatch(clearNotificationPageStore());
-    thunkAPI.dispatch(clearStoragePageStore());
-  }
-);
+export const asyncLogout = createAsyncThunk('appAuth/logout', async (arg: void, thunkAPI) => {
+  thunkAPI.dispatch(clearAuthenticationPageStore());
+  thunkAPI.dispatch(clearEmailPageStore());
+  thunkAPI.dispatch(clearNotificationPageStore());
+  thunkAPI.dispatch(clearStoragePageStore());
+});
 
 export const asyncGetAdminModules = createAsyncThunk(
   'appAuth/getModules',
@@ -72,9 +85,7 @@ export const asyncGetAdminModules = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -95,11 +106,20 @@ const appAuthSlice = createSlice({
     });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
       state.data.enabledModules = action.payload.modules;
+      const payloadModules = action.payload.modules.map((module: IModule) => module.moduleName);
+      const disabledModules: string[] = [];
+      modules.forEach((module) => {
+        if (!payloadModules.includes(module)) {
+          disabledModules.push(module);
+        }
+      });
+      state.data.disabledModules = disabledModules;
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
       state.data.token = null;
       state.data.enabledModules = [];
+      state.data.disabledModules = [];
     });
   },
 });
