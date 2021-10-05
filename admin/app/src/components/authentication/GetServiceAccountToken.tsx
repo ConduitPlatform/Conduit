@@ -29,9 +29,7 @@ const GetServiceAccountToken: React.FC<Props> = ({ token, open, handleClose }) =
     <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={open}>
       <DialogTitle id="customized-dialog-title">Service Account Created</DialogTitle>
       <DialogContent dividers>
-        <Typography gutterBottom>
-          Your new service account has been create successfully!
-        </Typography>
+        <Typography gutterBottom>Your new service account has been create successfully!</Typography>
         <Typography gutterBottom>
           Please copy and the generated token to use it for authorization purpose.
         </Typography>

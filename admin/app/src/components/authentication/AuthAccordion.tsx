@@ -302,11 +302,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
 
   return (
     <Box className={classes.root} {...rest}>
-      <Box
-        display={'flex'}
-        alignItems={'center'}
-        className={classes.titleContent}
-        boxShadow={2}>
+      <Box display={'flex'} alignItems={'center'} className={classes.titleContent} boxShadow={2}>
         <Typography variant={'subtitle2'} style={{ width: '50%', paddingLeft: 24 }}>
           Provider
         </Typography>

@@ -84,10 +84,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
         <AddIcon />
       </Fab>
 
-      <Dialog
-        onClose={() => setOpen(false)}
-        aria-labelledby="simple-dialog-title"
-        open={open}>
+      <Dialog onClose={() => setOpen(false)} aria-labelledby="simple-dialog-title" open={open}>
         <DialogTitle id="simple-dialog-title">
           Add a new user
           <IconButton onClick={() => setOpen(false)} className={classes.customizedButton}>

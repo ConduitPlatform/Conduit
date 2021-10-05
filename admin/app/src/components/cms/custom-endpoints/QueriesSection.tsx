@@ -24,9 +24,7 @@ const QueriesSection: FC<Props> = ({ editMode }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const { endpoint, schemaFields } = useAppSelector(
-    (state) => state.customEndpointsSlice.data
-  );
+  const { endpoint, schemaFields } = useAppSelector((state) => state.customEndpointsSlice.data);
 
   const handleQueryChanges = (queries: any) => {
     dispatch(setEndpointData({ queries }));

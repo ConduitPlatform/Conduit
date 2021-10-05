@@ -21,10 +21,7 @@ const SdksTab: React.FC = () => {
             color="primary"
             startIcon={<GetApp />}
             onClick={() => {
-              window.open(
-                'https://tenor.com/view/handgesturesmyt-ok-okay-gif-14118577',
-                '_blank'
-              );
+              window.open('https://tenor.com/view/handgesturesmyt-ok-okay-gif-14118577', '_blank');
             }}>
             GraphQL client
           </Button>

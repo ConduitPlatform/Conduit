@@ -30,12 +30,7 @@ interface Props {
   handleFilterChange: SelectInputProps['onChange'];
 }
 
-const SearchFilter: React.FC<Props> = ({
-  search,
-  setSearch,
-  filter,
-  handleFilterChange,
-}) => {
+const SearchFilter: React.FC<Props> = ({ search, setSearch, filter, handleFilterChange }) => {
   const classes = useStyles();
 
   return (

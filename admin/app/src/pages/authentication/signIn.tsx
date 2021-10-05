@@ -25,9 +25,7 @@ const SignIn = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const { signInMethods: configData } = useAppSelector(
-    (state) => state.authenticationSlice.data
-  );
+  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
 
   useEffect(() => {
     dispatch(asyncGetAuthenticationConfig());

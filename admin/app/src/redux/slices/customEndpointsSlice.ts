@@ -67,9 +67,5 @@ const customEndpointsSlice = createSlice({
 });
 
 export default customEndpointsSlice.reducer;
-export const {
-  setSelectedEndPoint,
-  setSchemaFields,
-  setEndpointData,
-  endpointCleanSlate,
-} = customEndpointsSlice.actions;
+export const { setSelectedEndPoint, setSchemaFields, setEndpointData, endpointCleanSlate } =
+  customEndpointsSlice.actions;

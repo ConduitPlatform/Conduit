@@ -43,15 +43,7 @@ interface IProps {
     isArray: boolean;
     placeholderTrue: string;
     id: string;
-    type:
-      | 'Text'
-      | 'Number'
-      | 'Date'
-      | 'Boolean'
-      | 'Enum'
-      | 'ObjectId'
-      | 'Group'
-      | 'Relation';
+    type: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Group' | 'Relation';
     required: boolean;
   }) => void;
   onClose: MouseEventHandler;
@@ -310,11 +302,7 @@ const BooleanForm: FC<IProps> = ({
         </Grid>
       </Box>
       <Box display={'flex'} width={'100%'}>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          style={{ marginRight: 16 }}>
+        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

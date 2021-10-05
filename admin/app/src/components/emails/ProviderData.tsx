@@ -65,8 +65,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           ?.apiKey as string,
         domain: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
           ?.domain as string,
-        host: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.host as string,
+        host: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']?.host as string,
       },
     };
     setSettingsState(data);
@@ -235,10 +234,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
             {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button
-              onClick={() => handleCancel()}
-              style={{ marginRight: 16 }}
-              color={'primary'}>
+            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
             <Button

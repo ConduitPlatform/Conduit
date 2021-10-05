@@ -21,12 +21,7 @@ interface Props {
   handleClose: (event: React.SyntheticEvent<any>, reason: SnackbarCloseReason) => void;
 }
 
-const AppState: React.FC<Props> = ({
-  successMessage,
-  errorMessage,
-  snackbarOpen,
-  handleClose,
-}) => {
+const AppState: React.FC<Props> = ({ successMessage, errorMessage, snackbarOpen, handleClose }) => {
   const classes = useStyles();
 
   return (
@@ -37,9 +32,7 @@ const AppState: React.FC<Props> = ({
         autoHideDuration={6000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert
-          variant={'filled'}
-          severity={successMessage !== undefined ? 'success' : 'error'}>
+        <Alert variant={'filled'} severity={successMessage !== undefined ? 'success' : 'error'}>
           {successMessage !== undefined
             ? successMessage
             : errorMessage

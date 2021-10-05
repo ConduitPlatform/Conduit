@@ -106,9 +106,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     return (
       <>
         <Grid item xs={12}>
-          <Typography variant={'h6'}>
-            Limit the authentication tries/requests of clients
-          </Typography>
+          <Typography variant={'h6'}>Limit the authentication tries/requests of clients</Typography>
         </Grid>
         <Grid item xs={12}>
           <TextField
@@ -276,10 +274,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
           </Grid>
           {edit && (
             <Grid item container xs={12} justify={'flex-end'}>
-              <Button
-                onClick={() => handleCancel()}
-                style={{ marginRight: 16 }}
-                color={'primary'}>
+              <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
                 Cancel
               </Button>
               <Button

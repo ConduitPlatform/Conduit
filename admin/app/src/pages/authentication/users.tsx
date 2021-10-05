@@ -30,9 +30,7 @@ const Users = () => {
   const dispatch = useAppDispatch();
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { signInMethods: configData } = useAppSelector(
-    (state) => state.authenticationSlice.data
-  );
+  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
 
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
@@ -43,9 +41,7 @@ const Users = () => {
 
   const debouncedSearch: string = useDebounce(search, 500);
 
-  const handleFilterChange = (
-    event: React.ChangeEvent<{ name?: string; value: any }>
-  ) => {
+  const handleFilterChange = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
     setFilter(event.target.value);
   };
 

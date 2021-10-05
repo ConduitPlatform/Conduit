@@ -6,19 +6,11 @@ import { useAppSelector } from '../../redux/store';
 interface Props {
   page: number;
   limit: number;
-  handlePageChange: (
-    event: React.MouseEvent<HTMLButtonElement> | null,
-    page: number
-  ) => void;
+  handlePageChange: (event: React.MouseEvent<HTMLButtonElement> | null, page: number) => void;
   handleLimitChange: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
 }
 
-const Paginator: React.FC<Props> = ({
-  handlePageChange,
-  page,
-  limit,
-  handleLimitChange,
-}) => {
+const Paginator: React.FC<Props> = ({ handlePageChange, page, limit, handleLimitChange }) => {
   const docs = useAppSelector((state) => state.authenticationSlice.data.authUsers.count);
 
   return (

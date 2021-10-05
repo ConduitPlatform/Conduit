@@ -2,12 +2,7 @@ import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 import { AuthUser } from '../models/authentication/AuthModels';
 
-export const getAuthUsersDataReq = (
-  skip: number,
-  limit: number,
-  search: string,
-  filter: string
-) =>
+export const getAuthUsersDataReq = (skip: number, limit: number, search: string, filter: string) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
       skip,

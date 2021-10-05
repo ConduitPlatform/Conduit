@@ -10,10 +10,7 @@ import {
 import { makeStyles } from '@material-ui/core/styles';
 import OperationsEnum from '../../../models/OperationsEnum';
 import { findFieldsWithTypes, getAvailableFieldsOfSchema } from '../../../utils/cms';
-import {
-  setEndpointData,
-  setSchemaFields,
-} from '../../../redux/slices/customEndpointsSlice';
+import { setEndpointData, setSchemaFields } from '../../../redux/slices/customEndpointsSlice';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
 import { Schema } from '../../../models/cms/CmsModels';
 import { Assignment } from '../../../models/customEndpoints/customEndpointsModels';
@@ -42,9 +39,7 @@ const OperationSection: FC<Props> = ({ schemas, editMode, availableSchemas }) =>
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const { endpoint, schemaFields } = useAppSelector(
-    (state) => state.customEndpointsSlice.data
-  );
+  const { endpoint, schemaFields } = useAppSelector((state) => state.customEndpointsSlice.data);
 
   const handleOperationChange = (event: React.ChangeEvent<{ value: any }>) => {
     const operation = Number(event.target.value);

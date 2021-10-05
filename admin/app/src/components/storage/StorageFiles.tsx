@@ -45,10 +45,7 @@ const StorageFiles: React.FC = () => {
           <Link color="inherit" href="/" onClick={handleClick}>
             quint.conduit.gr/store
           </Link>
-          <Link
-            color="inherit"
-            href="/getting-started/installation/"
-            onClick={handleClick}>
+          <Link color="inherit" href="/getting-started/installation/" onClick={handleClick}>
             Core
           </Link>
           <Typography color="textPrimary">Breadcrumb</Typography>

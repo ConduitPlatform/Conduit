@@ -31,16 +31,7 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 resetServerContext();
 
-const items = [
-  'Text',
-  'Number',
-  'Date',
-  'Boolean',
-  'Enum',
-  'ObjectId',
-  'Group',
-  'Relation',
-];
+const items = ['Text', 'Number', 'Date', 'Boolean', 'Enum', 'ObjectId', 'Group', 'Relation'];
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -273,9 +264,7 @@ const BuildTypes: React.FC = () => {
         return false;
       });
       if (!parentGroup) return;
-      const innerGroup = parentGroup.content.find(
-        (object2: any) => object2.name === groupId
-      );
+      const innerGroup = parentGroup.content.find((object2: any) => object2.name === groupId);
       if (!innerGroup) return;
       const content = innerGroup.content;
       hasDuplicate = content.some((item: any) => {
@@ -297,11 +286,7 @@ const BuildTypes: React.FC = () => {
     if (selectedProps.item) {
       if (selectedProps.type === 'standard') {
         setSchemaFields({
-          newTypeFields: updateItem(
-            schemaFields.newTypeFields,
-            typeData,
-            selectedProps.index
-          ),
+          newTypeFields: updateItem(schemaFields.newTypeFields, typeData, selectedProps.index),
         });
       }
 
@@ -346,11 +331,7 @@ const BuildTypes: React.FC = () => {
       });
     } else {
       setSchemaFields({
-        newTypeFields: cloneItem(
-          schemaFields.newTypeFields,
-          typeData,
-          drawerData.destination
-        ),
+        newTypeFields: cloneItem(schemaFields.newTypeFields, typeData, drawerData.destination),
       });
     }
 
@@ -407,8 +388,7 @@ const BuildTypes: React.FC = () => {
     setDrawerData({
       ...drawerData,
       open: true,
-      type: schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index]
-        .isEnum
+      type: schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].isEnum
         ? 'Enum'
         : schemaFields.newTypeFields[groupIndex].content[itemIndex].content[index].type,
       destination: {
@@ -418,11 +398,7 @@ const BuildTypes: React.FC = () => {
     });
   };
 
-  const handleGroupInGroupDelete = (
-    index: number,
-    groupIndex: number,
-    itemIndex: number
-  ) => {
+  const handleGroupInGroupDelete = (index: number, groupIndex: number, itemIndex: number) => {
     const deleted: any = Array.from(schemaFields.newTypeFields);
     deleted[groupIndex].content[itemIndex].content.splice(index, 1);
     setSchemaFields({

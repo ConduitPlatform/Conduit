@@ -32,12 +32,7 @@ interface Props {
   onLogoClick?: () => void;
 }
 
-const CustomHeader: React.FC<Props> = ({
-  onMenuClick,
-  showMenuButton,
-  onLogoClick,
-  ...rest
-}) => {
+const CustomHeader: React.FC<Props> = ({ onMenuClick, showMenuButton, onLogoClick, ...rest }) => {
   const classes = useStyles();
   const handleMenuClick = () => {
     if (onMenuClick === null || onMenuClick === undefined) {

@@ -1,27 +1,32 @@
 import { Typography } from '@material-ui/core';
-import React, { ReactElement, useEffect, useState } from 'react';
-import DataTable from '../../components/common/DataTable';
+import React, { ReactElement } from 'react';
 
 import NotificationLayout from '../../components/navigation/InnerLayouts/notificationLayout';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
+import {
+  // useAppDispatch,
+  useAppSelector,
+} from '../../redux/store';
 
 const View = () => {
-  const dispatch = useAppDispatch();
+  // const dispatch = useAppDispatch();
+  //
+  // const [selected, setSelected] = useState(0);
+  // const [moduleDisabled, setModuleDisabled] = useState(false);
+  const {
+    // config,
+    notifications,
+  } = useAppSelector((state) => state.notificationsSlice.data);
 
-  const [selected, setSelected] = useState(0);
-  const [moduleDisabled, setModuleDisabled] = useState(false);
-  const { config, notifications } = useAppSelector((state) => state.notificationsSlice.data);
-
-  useEffect(() => {
-    if (config) {
-      if (config.message !== '') {
-        setModuleDisabled(true);
-      } else {
-        setModuleDisabled(false);
-        setSelected(0);
-      }
-    }
-  }, [config]);
+  // useEffect(() => {
+  //   if (config) {
+  //     if (config.message !== '') {
+  //       setModuleDisabled(true);
+  //     } else {
+  //       setModuleDisabled(false);
+  //       setSelected(0);
+  //     }
+  //   }
+  // }, [config]);
   return notifications ? (
     <></>
   ) : (

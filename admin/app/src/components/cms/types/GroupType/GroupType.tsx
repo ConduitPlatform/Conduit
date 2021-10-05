@@ -75,10 +75,7 @@ const GroupType: FC<IProps> = ({
 }) => {
   const classes = useStyles();
 
-  const handleGroupContent = (
-    item: IGroupChildContentData | IGroupChildData,
-    index: number
-  ) => {
+  const handleGroupContent = (item: IGroupChildContentData | IGroupChildData, index: number) => {
     switch (item.type) {
       case 'Text':
         return item.isEnum ? (
@@ -87,11 +84,7 @@ const GroupType: FC<IProps> = ({
           <SimpleGroupType item={item} />
         );
       case 'Number':
-        return item.isEnum ? (
-          <EnumGroupType item={item} />
-        ) : (
-          <SimpleGroupType item={item} />
-        );
+        return item.isEnum ? <EnumGroupType item={item} /> : <SimpleGroupType item={item} />;
       case 'Date':
         return <SimpleGroupType item={item} />;
       case 'ObjectId':
@@ -139,48 +132,47 @@ const GroupType: FC<IProps> = ({
             ref={provided.innerRef}
             className={snapshot.isDraggingOver ? classes.rootDragging : classes.root}>
             {item.content && Array.isArray(item.content) && item.content.length > 0 ? (
-              item.content.map((
-                groupItem: any, //todo fix this
-                index: number
-              ) => (
-                <Draggable
-                  key={groupItem.name}
-                  draggableId={groupItem.name}
-                  index={index}
-                  isDragDisabled>
-                  {(provided) => (
-                    <div
-                      className={classes.item}
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}>
-                      <Box width={'99%'}>{handleGroupContent(groupItem, index)}</Box>
-                      <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
-                        <Box
-                          display={'flex'}
-                          width={'100%'}
-                          justifyContent={'space-between'}>
-                          <Box display={'flex'}>
-                            <Typography variant={'body2'} style={{ marginRight: 8 }}>
-                              {groupItem.name}
-                            </Typography>
-                          </Box>
-                          <Box display={'flex'}>
-                            <DeleteIcon
-                              className={classes.icon}
-                              onClick={() => handleDelete(index, groupIndex)}
-                            />
-                            <SettingsIcon
-                              className={classes.icon}
-                              onClick={() => handleDrawer(groupItem, index, groupIndex)}
-                            />
+              item.content.map(
+                (
+                  groupItem: any, //todo fix this
+                  index: number
+                ) => (
+                  <Draggable
+                    key={groupItem.name}
+                    draggableId={groupItem.name}
+                    index={index}
+                    isDragDisabled>
+                    {(provided) => (
+                      <div
+                        className={classes.item}
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}>
+                        <Box width={'99%'}>{handleGroupContent(groupItem, index)}</Box>
+                        <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
+                          <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
+                            <Box display={'flex'}>
+                              <Typography variant={'body2'} style={{ marginRight: 8 }}>
+                                {groupItem.name}
+                              </Typography>
+                            </Box>
+                            <Box display={'flex'}>
+                              <DeleteIcon
+                                className={classes.icon}
+                                onClick={() => handleDelete(index, groupIndex)}
+                              />
+                              <SettingsIcon
+                                className={classes.icon}
+                                onClick={() => handleDrawer(groupItem, index, groupIndex)}
+                              />
+                            </Box>
                           </Box>
                         </Box>
-                      </Box>
-                    </div>
-                  )}
-                </Draggable>
-              ))
+                      </div>
+                    )}
+                  </Draggable>
+                )
+              )
             ) : (
               <Box>Place items</Box>
             )}

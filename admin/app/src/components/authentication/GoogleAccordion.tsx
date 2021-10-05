@@ -47,9 +47,7 @@ interface Props {
   google: GoogleTypes;
   setGoogle: (values: GoogleTypes) => void;
   openExpanded: (value: SocialNameTypes) => void;
-  handleGoogleClientId: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
+  handleGoogleClientId: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
 }
 
 const GoogleAccordion: React.FC<Props> = ({
@@ -63,9 +61,7 @@ const GoogleAccordion: React.FC<Props> = ({
   const classes = useStyles();
 
   return (
-    <Accordion
-      expanded={expanded.includes('google')}
-      onChange={() => openExpanded('google')}>
+    <Accordion expanded={expanded.includes('google')} onChange={() => openExpanded('google')}>
       <AccordionSummary id={'google'}>
         <Box display={'flex'} alignItems={'center'} flex={1}>
           <Typography variant={'subtitle2'} className={classes.typography}>

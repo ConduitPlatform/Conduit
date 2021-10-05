@@ -9,7 +9,12 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
   const [value, setValue] = useState(0);
 
-  const pathnames = ['/settings/clientsdk', '/settings/secrets', '/settings/core', '/settings/createuser'];
+  const pathnames = [
+    '/settings/clientsdk',
+    '/settings/secrets',
+    '/settings/core',
+    '/settings/createuser',
+  ];
 
   useEffect(() => {
     const index = pathnames.findIndex((pathname) => pathname === router.pathname);

@@ -71,7 +71,6 @@ const useStyles = makeStyles((theme: Theme) =>
     },
   })
 );
-import theme from '../theme';
 
 const Home = () => {
   const classes = useStyles();
@@ -79,7 +78,6 @@ const Home = () => {
     <>
       <Head>
         <title>Conduit - App</title>
-        <link rel="icon" href="/favicon.ico" />
       </Head>
       <div>
         <Box
@@ -99,7 +97,12 @@ const Home = () => {
             </Button>
           </a>
         </Box>
-        <Box p={2} display={'flex'} alignItems={'center'} flex={1} style={{ marginBottom: '200px' }}>
+        <Box
+          p={2}
+          display={'flex'}
+          alignItems={'center'}
+          flex={1}
+          style={{ marginBottom: '200px' }}>
           <Typography variant={'h4'} className={classes.welcomeTypography}>
             Welcome to C
             <Slide timeout={1000} in direction={'down'}>

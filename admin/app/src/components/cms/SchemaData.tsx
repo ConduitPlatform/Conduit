@@ -197,9 +197,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
 
   const handleEditDocument = (schemaName: string, document: any) => {
     const _id = selectedDocument?._id;
-    dispatch(
-      asyncEditSchemaDocument({ schemaName, documentId: _id, documentData: document })
-    );
+    dispatch(asyncEditSchemaDocument({ schemaName, documentId: _id, documentData: document }));
     setCreateDocument(false);
   };
 
@@ -210,16 +208,12 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
         nodeId={nodes.id}
         label={
           <Typography variant={'subtitle2'}>
-            <Typography
-              component={'span'}
-              className={classes.bold}>{`${nodes.id}: `}</Typography>
+            <Typography component={'span'} className={classes.bold}>{`${nodes.id}: `}</Typography>
             {Array.isArray(nodes.data)
               ? nodes.data.length > 0
                 ? '[...]'
                 : '[ ]'
-              : typeof nodes.data !== 'string' &&
-                nodes.data &&
-                Object.keys(nodes.data).length > 0
+              : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
               ? '{...}'
               : `${nodes.data}`}
           </Typography>
@@ -228,9 +222,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
           ? nodes.data.map((node: any, index: number) =>
               renderTree({ id: index.toString(), data: node })
             )
-          : typeof nodes.data !== 'string' &&
-            nodes.data &&
-            Object.keys(nodes.data).length > 0
+          : typeof nodes.data !== 'string' && nodes.data && Object.keys(nodes.data).length > 0
           ? createDocumentArray(nodes.data).map((node) => renderTree(node))
           : null}
       </TreeItem>
@@ -266,10 +258,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
             <>
               {documents.map((doc: any, index: number) => {
                 return (
-                  <Card
-                    key={`card${index}`}
-                    className={classes.card}
-                    variant={'outlined'}>
+                  <Card key={`card${index}`} className={classes.card} variant={'outlined'}>
                     <CardHeader
                       title={doc._id}
                       action={
@@ -308,10 +297,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
                   onClick={onViewMorePress}>
                   View More documents
                 </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => addNewDocument()}>
+                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
                   Add Document
                 </Button>
               </Box>
@@ -320,10 +306,7 @@ const SchemaData: FC<Props> = ({ schemas, handleSchemaChange }) => {
             <>
               <Box className={classes.emptyDocuments}>
                 <p>No documents are availables.</p>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => addNewDocument()}>
+                <Button variant="contained" color="primary" onClick={() => addNewDocument()}>
                   Add Document
                 </Button>
               </Box>

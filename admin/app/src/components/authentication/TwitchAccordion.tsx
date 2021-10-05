@@ -47,15 +47,9 @@ interface Props {
   expanded: SocialNameTypes[];
   setTwitch: (values: TwitchTypes) => void;
   openExpanded: (value: SocialNameTypes) => void;
-  handleTwitchClientId: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
-  handleTwitchRedirectUri: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
-  handleTwitchClientSecret: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
+  handleTwitchClientId: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
+  handleTwitchRedirectUri: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
+  handleTwitchClientSecret: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
 }
 
 const TwitchAccordion: React.FC<Props> = ({
@@ -71,9 +65,7 @@ const TwitchAccordion: React.FC<Props> = ({
   const classes = useStyles();
 
   return (
-    <Accordion
-      expanded={expanded.includes('twitch')}
-      onChange={() => openExpanded('twitch')}>
+    <Accordion expanded={expanded.includes('twitch')} onChange={() => openExpanded('twitch')}>
       <AccordionSummary id={'twitch'}>
         <Box display={'flex'} alignItems={'center'} flex={1}>
           <Typography variant={'subtitle2'} className={classes.typography}>

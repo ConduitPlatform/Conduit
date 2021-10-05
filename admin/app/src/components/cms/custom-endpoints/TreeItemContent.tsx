@@ -26,11 +26,7 @@ const TreeItemContent: FC<Props> = ({
   };
 
   return (
-    <Box
-      width={'100%'}
-      display={'flex'}
-      alignItems={'center'}
-      justifyContent={'space-between'}>
+    <Box width={'100%'} display={'flex'} alignItems={'center'} justifyContent={'space-between'}>
       <Grid container justify={'space-between'}>
         <Grid container item xs={7} spacing={1}>
           <Grid container item alignItems={'center'}>

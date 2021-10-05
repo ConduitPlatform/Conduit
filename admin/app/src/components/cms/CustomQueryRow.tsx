@@ -104,10 +104,7 @@ const CustomQueryRow: FC<Props> = ({
     return availableFieldsOfSchema.map((field: any, index: number) => {
       if (typeof field.type === 'string' || Array.isArray(field.type)) {
         return (
-          <MenuItem
-            className={classes.menuItem}
-            key={`idxO-${index}-field`}
-            value={field.name}>
+          <MenuItem className={classes.menuItem} key={`idxO-${index}-field`} value={field.name}>
             {field.name}
           </MenuItem>
         );
@@ -263,9 +260,7 @@ const CustomQueryRow: FC<Props> = ({
             <option disabled={selectedType !== 'number'} value={ConditionsEnum.GREATER}>
               {'(>) greater than'}
             </option>
-            <option
-              disabled={selectedType !== 'number'}
-              value={ConditionsEnum.GREATER_EQ}>
+            <option disabled={selectedType !== 'number'} value={ConditionsEnum.GREATER_EQ}>
               {'(>=) greater that or equal to'}
             </option>
             <option disabled={selectedType !== 'number'} value={ConditionsEnum.LESS}>
@@ -294,8 +289,7 @@ const CustomQueryRow: FC<Props> = ({
             disabled={!editMode}
             native
             value={
-              query.comparisonField.type === 'Custom' ||
-              query.comparisonField.type === 'Context'
+              query.comparisonField.type === 'Custom' || query.comparisonField.type === 'Context'
                 ? query.comparisonField.type
                 : query.comparisonField.type + '-' + query.comparisonField.value
             }
@@ -324,8 +318,7 @@ const CustomQueryRow: FC<Props> = ({
           </Select>
         </FormControl>
       </Grid>
-      {query.comparisonField.type === 'Custom' ||
-      query.comparisonField.type === 'Context' ? (
+      {query.comparisonField.type === 'Custom' || query.comparisonField.type === 'Context' ? (
         <Grid item xs={2}>
           {selectedType === 'Boolean' ? (
             <Select
@@ -342,18 +335,14 @@ const CustomQueryRow: FC<Props> = ({
             <TextField
               type={selectedType?.toLowerCase()}
               label={
-                query.comparisonField.type === 'Custom'
-                  ? 'Custom value'
-                  : 'Select from context'
+                query.comparisonField.type === 'Custom' ? 'Custom value' : 'Select from context'
               }
               variant={'filled'}
               disabled={!editMode}
               size={'small'}
               fullWidth
               placeholder={
-                query.comparisonField.type === 'Custom'
-                  ? getCustomPlaceHolder()
-                  : 'ex. user._id'
+                query.comparisonField.type === 'Custom' ? getCustomPlaceHolder() : 'ex. user._id'
               }
               value={query.comparisonField.value}
               onChange={(event) => inputCustomChange(event, index)}

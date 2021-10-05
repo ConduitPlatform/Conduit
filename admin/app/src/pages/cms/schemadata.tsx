@@ -29,7 +29,9 @@ const SchemaDataPage = () => {
   return (
     data &&
     data.schemas &&
-    data.schemas.length > 0 && <SchemaData schemas={getActiveSchemas()} handleSchemaChange={handleSelectSchema} />
+    data.schemas.length > 0 && (
+      <SchemaData schemas={getActiveSchemas()} handleSchemaChange={handleSelectSchema} />
+    )
   );
 };
 

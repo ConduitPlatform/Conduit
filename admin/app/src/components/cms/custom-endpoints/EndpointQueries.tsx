@@ -63,10 +63,7 @@ const EndpointQueries: FC<Props> = ({
     return allQueries.find((q: any) => q._id === queryId);
   };
 
-  const handleQueryFieldChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    queryId: string
-  ) => {
+  const handleQueryFieldChange = (event: React.ChangeEvent<{ value: any }>, queryId: string) => {
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);
     const value = event.target.value;
@@ -93,10 +90,7 @@ const EndpointQueries: FC<Props> = ({
     }
   };
 
-  const handleCustomValueChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    queryId: string
-  ) => {
+  const handleCustomValueChange = (event: React.ChangeEvent<{ value: any }>, queryId: string) => {
     const value = event;
     const currentQueries = deepClone(selectedQueries);
     const foundQuery = findModifiedQuery(currentQueries, queryId);

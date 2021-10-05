@@ -53,9 +53,7 @@ interface Props {
     event: React.ChangeEvent<{ name?: string; value: any }>,
     child: React.ReactNode
   ) => void;
-  handleVerificationUriChange: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
+  handleVerificationUriChange: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
   handleForgotPasswordUriChange: (
     event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) => void;

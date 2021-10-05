@@ -74,11 +74,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     event?: any
   ) => {
     const documentCopy = document.slice();
-    if (
-      firstIndex !== undefined &&
-      secondIndex === undefined &&
-      thirdIndex === undefined
-    ) {
+    if (firstIndex !== undefined && secondIndex === undefined && thirdIndex === undefined) {
       if (arrayIndex !== undefined) {
         const type = documentCopy[firstIndex].type[0];
         documentCopy[firstIndex].value[arrayIndex] = getCorrectType(type, event);
@@ -89,11 +85,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         setDocument(documentCopy);
       }
     }
-    if (
-      firstIndex !== undefined &&
-      secondIndex !== undefined &&
-      thirdIndex === undefined
-    ) {
+    if (firstIndex !== undefined && secondIndex !== undefined && thirdIndex === undefined) {
       if (arrayIndex !== undefined) {
         const type = documentCopy[firstIndex].fields[secondIndex].type[0];
         documentCopy[firstIndex].fields[secondIndex].value[arrayIndex] = getCorrectType(
@@ -107,25 +99,20 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
         setDocument(documentCopy);
       }
     }
-    if (
-      firstIndex !== undefined &&
-      secondIndex !== undefined &&
-      thirdIndex !== undefined
-    ) {
+    if (firstIndex !== undefined && secondIndex !== undefined && thirdIndex !== undefined) {
       if (arrayIndex !== undefined) {
-        const type =
-          documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type[0];
+        const type = documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type[0];
 
-        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value[
-          arrayIndex
-        ] = getCorrectType(type, event);
+        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value[arrayIndex] =
+          getCorrectType(type, event);
 
         setDocument(documentCopy);
       } else {
         const type = documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].type;
-        documentCopy[firstIndex].fields[secondIndex].fields[
-          thirdIndex
-        ].value = getCorrectType(type, event);
+        documentCopy[firstIndex].fields[secondIndex].fields[thirdIndex].value = getCorrectType(
+          type,
+          event
+        );
         setDocument(documentCopy);
       }
     }
@@ -149,15 +136,12 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
   ) => {
     return (
       <Accordion className={classes.accordion}>
-        <AccordionSummary
-          className={classes.accordionSummary}
-          expandIcon={<ExpandMoreIcon />}>
+        <AccordionSummary className={classes.accordionSummary} expandIcon={<ExpandMoreIcon />}>
           <Button disableRipple fullWidth className={classes.button}>
             all Elements
           </Button>
         </AccordionSummary>
-        <AccordionDetails
-          style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <AccordionDetails style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {docs?.value?.map((doc: any, arrayIndex: number) => {
             const data = { value: doc, type: docs.type[0] };
             return (
@@ -181,13 +165,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
                   <Typography variant={'caption'}>=</Typography>
                 </Grid>
                 <Grid item container justify={'center'} xs={4}>
-                  {renderInputFields(
-                    data,
-                    firstIndex,
-                    secondIndex,
-                    thirdIndex,
-                    arrayIndex
-                  )}
+                  {renderInputFields(data, firstIndex, secondIndex, thirdIndex, arrayIndex)}
                 </Grid>
               </Grid>
             );
@@ -211,11 +189,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return '';
   };
 
-  const addElementOnArray = (
-    index: number,
-    secondIndex?: number,
-    thirdIndex?: number
-  ) => {
+  const addElementOnArray = (index: number, secondIndex?: number, thirdIndex?: number) => {
     const documentCopy = document.slice();
     let newItem;
     let iterableArray;
@@ -312,8 +286,7 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
               return renderObjectField(innerDoc, index, indexInner);
             }
 
-            const isArray =
-              Array.isArray(innerDoc.type) && typeof innerDoc.type[0] === 'string';
+            const isArray = Array.isArray(innerDoc.type) && typeof innerDoc.type[0] === 'string';
 
             return (
               <Grid

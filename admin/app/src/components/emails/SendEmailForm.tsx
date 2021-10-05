@@ -199,9 +199,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                 required={withTemplate}
                 disabled={!withTemplate}
                 style={{ minWidth: '65ch' }}>
-                <InputLabel id="demo-simple-select-outlined-label">
-                  Email Template
-                </InputLabel>
+                <InputLabel id="demo-simple-select-outlined-label">Email Template</InputLabel>
                 <Select
                   labelId="demo-simple-select-outlined-label"
                   id="demo-simple-select-outlined"

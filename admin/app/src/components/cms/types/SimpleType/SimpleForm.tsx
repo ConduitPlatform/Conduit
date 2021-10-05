@@ -231,11 +231,7 @@ const SimpleForm: FC<IProps> = ({
       </Box>
 
       <Box display={'flex'} width={'100%'}>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          style={{ marginRight: 16 }}>
+        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

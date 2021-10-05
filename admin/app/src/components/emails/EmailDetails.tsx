@@ -47,13 +47,7 @@ interface Props {
   setTemplateState: (values: EmailTemplateType) => void;
 }
 
-const EmailDetails: React.FC<Props> = ({
-  edit,
-  add,
-  templateState,
-  setAdd,
-  setTemplateState,
-}) => {
+const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTemplateState }) => {
   const classes = useStyles();
 
   const [variable, setVariable] = useState('');

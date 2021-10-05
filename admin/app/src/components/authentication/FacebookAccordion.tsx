@@ -47,9 +47,7 @@ interface Props {
   facebook: FacebookTypes;
   setFacebook: (values: FacebookTypes) => void;
   openExpanded: (value: SocialNameTypes) => void;
-  handleFacebookClientID: (
-    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => void;
+  handleFacebookClientID: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
 }
 
 const FacebookAccordion: React.FC<Props> = ({
@@ -63,9 +61,7 @@ const FacebookAccordion: React.FC<Props> = ({
   const classes = useStyles();
 
   return (
-    <Accordion
-      expanded={expanded.includes('facebook')}
-      onChange={() => openExpanded('facebook')}>
+    <Accordion expanded={expanded.includes('facebook')} onChange={() => openExpanded('facebook')}>
       <AccordionSummary id={'email'}>
         <Box display={'flex'} alignItems={'center'} flex={1}>
           <Typography variant={'subtitle2'} className={classes.typography}>

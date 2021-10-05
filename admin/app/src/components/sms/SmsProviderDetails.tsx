@@ -169,12 +169,7 @@ const SmsProviderDetails: React.FC = () => {
           <Grid item xs={12} style={{ marginTop: 32 }}>
             <Typography variant={'h6'}>Verify</Typography>
           </Grid>
-          <Grid
-            item
-            className={classes.fieldSpace}
-            container
-            alignItems={'center'}
-            xs={12}>
+          <Grid item className={classes.fieldSpace} container alignItems={'center'} xs={12}>
             <Typography variant={'body1'}>Verify:</Typography>
             <Switch
               size={'medium'}

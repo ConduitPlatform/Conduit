@@ -73,9 +73,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
 
   const { schemas, customEndpoints } = useAppSelector((state) => state.cmsSlice.data);
 
-  const { endpoint, selectedEndpoint } = useAppSelector(
-    (state) => state.customEndpointsSlice.data
-  );
+  const { endpoint, selectedEndpoint } = useAppSelector((state) => state.customEndpointsSlice.data);
 
   const initializeData = useCallback(() => {
     if (selectedEndpoint) {
@@ -170,9 +168,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
   };
 
   const handleSubmit = (edit = false) => {
-    const schema = schemas.find(
-      (schema: Schema) => schema._id === endpoint.selectedSchema
-    );
+    const schema = schemas.find((schema: Schema) => schema._id === endpoint.selectedSchema);
 
     const query = prepareQuery(endpoint.queries);
 
@@ -285,13 +281,9 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
     return (
       <>
         <InputsSection editMode={editMode} />
-        {endpoint.operation !== OperationsEnum.POST && (
-          <QueriesSection editMode={editMode} />
-        )}
+        {endpoint.operation !== OperationsEnum.POST && <QueriesSection editMode={editMode} />}
         {(endpoint.operation === OperationsEnum.PUT ||
-          endpoint.operation === OperationsEnum.POST) && (
-          <AssignmentsSection editMode={editMode} />
-        )}
+          endpoint.operation === OperationsEnum.POST) && <AssignmentsSection editMode={editMode} />}
       </>
     );
   };
@@ -329,11 +321,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
                 </IconButton>
               )}
             </Grid>
-            <OperationSection
-              schemas={schemas}
-              editMode={editMode}
-              availableSchemas={schemas}
-            />
+            <OperationSection schemas={schemas} editMode={editMode} availableSchemas={schemas} />
             {renderDetails()}
             {renderSaveSection()}
           </Grid>

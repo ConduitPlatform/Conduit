@@ -29,9 +29,7 @@ const getCookieFromServer = (key, req) => {
   if (!req.headers.cookie) {
     return undefined;
   }
-  const rawCookie = req.headers.cookie
-    .split(';')
-    .find((c) => c.trim().startsWith(`${key}=`));
+  const rawCookie = req.headers.cookie.split(';').find((c) => c.trim().startsWith(`${key}=`));
   if (!rawCookie) {
     return undefined;
   }
@@ -39,7 +37,5 @@ const getCookieFromServer = (key, req) => {
 };
 
 export const getCookie = (key, req) => {
-  return typeof window !== 'undefined'
-    ? getCookieFromBrowser(key)
-    : getCookieFromServer(key, req);
+  return typeof window !== 'undefined' ? getCookieFromBrowser(key) : getCookieFromServer(key, req);
 };

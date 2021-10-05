@@ -77,9 +77,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
       onClose={handleCloseClick}
       classes={{ paper: classes.paper }}>
       <Box maxWidth={600}>
-        <DialogTitle
-          id="new-custom-type"
-          style={{ textAlign: 'center', marginBottom: 16 }}>
+        <DialogTitle id="new-custom-type" style={{ textAlign: 'center', marginBottom: 16 }}>
           Create new Schema
         </DialogTitle>
         <DialogContent style={{ marginBottom: 16 }}>
