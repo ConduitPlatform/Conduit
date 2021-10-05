@@ -79,7 +79,7 @@ export class SendgridProvider extends EmailProviderClass{
         return info;
     }
     
-    listTemplates() { //not working idk wh
+    async listTemplates():Promise<Template[]>{ //not working idk wh
         const request = {
             method:'GET',
             url: '/v3/templates',
@@ -87,7 +87,10 @@ export class SendgridProvider extends EmailProviderClass{
                 generations: 'legacy,dynamic',
             }
         }
-        return this._sgClient.request(request)
+        const resp = (await this._sgClient.request(request))[0];
+        const retList = resp.body.templates.map(async (element:Template) =>  await this.getTemplateInfo(element.id));
+    
+        return Promise.all(retList);
             
     }
     
