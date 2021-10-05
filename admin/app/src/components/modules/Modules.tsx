@@ -39,6 +39,7 @@ const useStyles = makeStyles((theme: Theme) => ({
   listItemText: {
     fontWeight: 'bold',
     textTransform: 'capitalize',
+    fontSize: 12,
   },
   listItemIcon: {
     minWidth: 36,
