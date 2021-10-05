@@ -6,11 +6,11 @@ export interface Template{
     versions: {
         name:string;
         id:string;
-        subject:string;
-        htmlContent:string;
-        plainContent:string;
+        subject?:string;
+        htmlContent?:string;
+        plainContent?:string;
         active:boolean;
         updatedAt:string; // h Date type
+        comment?: string;
     }[];
-    
 }
