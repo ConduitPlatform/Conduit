@@ -1,0 +1,29 @@
+{
+  "functions": [
+    {
+      "path": "/stuff",
+      "method": "GET",
+      "protoName": "getStuff"
+    },
+    {
+      "path": "/stuff/:id",
+      "method": "PUT",
+      "protoName": "updateStuff"
+    },
+    {
+      "path": "/stuff/:id",
+      "method": "PATCH",
+      "protoName": "updatePartOfStuff"
+    },
+    {
+      "path": "/stuff/:id",
+      "method": "DELETE",
+      "protoName": "deleteStuff"
+    },
+    {
+      "path": "/stuff",
+      "method": "POST",
+      "protoName": "createStuff"
+    }
+  ]
+}
