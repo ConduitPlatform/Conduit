@@ -1,5 +1,10 @@
 export interface CreateEmailTemplate{
     
     name:string;
-    generation:string;
+    htmlContent?:string;
+    plainContent?:string;
+    subject?:string;
+    versionName?: string;
+    active?:boolean;
+    
 }

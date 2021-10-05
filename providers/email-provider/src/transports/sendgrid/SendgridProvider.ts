@@ -2,8 +2,8 @@ import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { SendGridConfig } from "./sendgrid.config";
 import { createTransport } from "nodemailer";
 import {Client} from '@sendgrid/client';
-import { CreateSendgridTemplate } from "../../interfaces/sendgrid/CreateSendgridTemplate";
 import { Template } from "../../interfaces/Template";
+import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -13,13 +13,13 @@ export class SendgridProvider extends EmailProviderClass{
         this._sgClient.setApiKey(sgSettings.apiKey);
     }
     
-    async createTemplate(data: CreateSendgridTemplate): Promise<Template> {
+    async createTemplate(data: CreateEmailTemplate): Promise<Template> {
         const create_request = {
             method:'POST',
             url: '/v3/templates',
             body: {
                 name: data.name,
-                generation: data.generation
+    
             }
         }
         const template_res = (await  this._sgClient.request(create_request))[0];
@@ -32,7 +32,12 @@ export class SendgridProvider extends EmailProviderClass{
         const create_version = {
             method:'POST',
             url: '/v3/templates/' + template_res.body.id + '/versions',
-            body: data.version
+            body: {
+                subject: data.subject,
+                name: data.versionName,
+                html_content: data.htmlContent,
+                plain_content: data.plainContent,
+            }
         }
         const version_res =  (await this._sgClient.request(create_version))[0];
         info.versions.push({
@@ -88,7 +93,7 @@ export class SendgridProvider extends EmailProviderClass{
             }
         }
         const resp = (await this._sgClient.request(request))[0];
-        const retList = resp.body.templates.map(async (element:Template) =>  await this.getTemplateInfo(element.id));
+        const retList = (resp.body.templates as any []).map(async (element:Template) =>  await this.getTemplateInfo(element.id));
     
         return Promise.all(retList);
             

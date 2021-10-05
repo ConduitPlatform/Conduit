@@ -1,4 +1,5 @@
 import { createTransport } from "nodemailer";
+import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { Template } from "../../interfaces/Template";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { initialize as initializeMailgun } from './mailgun';
@@ -35,7 +36,6 @@ export  class MailgunProvider extends EmailProviderClass {
                 id: response.template.version.id,
                 plainContent: response.template.version.template,
                 active:true,
-                comment: response.template.version.comment,
                 updatedAt: '',
 
             }],
@@ -43,19 +43,27 @@ export  class MailgunProvider extends EmailProviderClass {
         return info;
     }
 
-   async createTemplate(data: any): Promise<Template>{
-        const response = await  this._mailgunSdk.post(`/${this.domain}/templates`,data);
+   async createTemplate(data: CreateEmailTemplate): Promise<Template>{
+        const mailgun_input = {
+            name: data.name,
+            template:data.plainContent,
+            descrpiton: '',
+            active: true,
+            tag: data.versionName
+        };
+    
+        const response = await  this._mailgunSdk.post(`/${this.domain}/templates`,mailgun_input);
+
         let created : Template = {
             name: response.template.name,
             createdAt: response.template.createdAt,
             id: response.template.id,
             versions: [{
-                name: "initial",
+                name: response.template.version.tag,
                 id: response.template.version.id,
                 active:true,
                 updatedAt: response.template.version.createdAt,
-                plainContent: response.template.version.template,
-                comment: response.template.version.comment,
+                plainContent: response.template.version.template, // can be also htmlContent
             }]
         };
     

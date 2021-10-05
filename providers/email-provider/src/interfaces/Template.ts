@@ -11,6 +11,5 @@ export interface Template{
         plainContent?:string;
         active:boolean;
         updatedAt:string; // h Date type
-        comment?: string;
     }[];
 }

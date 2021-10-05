@@ -1,22 +1,23 @@
 import { EmailProvider } from "./index"
-// let provider = new EmailProvider('mailgun',{
-//     mailgun:{
-//         proxy:null,
-//         host: 'api.mailgun.net',
-//         domain:'***REMOVED***',
-//         apiKey: '***REMOVED***'
-//     }
-// });
+import { CreateEmailTemplate } from "./interfaces/CreateEmailTemplate";
+let provider = new EmailProvider('mailgun',{
+    mailgun:{
+        proxy:null,
+        host: 'api.mailgun.net',
+        domain:'***REMOVED***',
+        apiKey: '***REMOVED***'
+    }
+});
 
 // let provider = new EmailProvider('sendgrid',{
 //     apiKey: '***REMOVED***'
 // });
 
-let provider = new EmailProvider('mandrill',{
-    mandrill : { 
-        apiKey: '***REMOVED***'
-    }
-});
+// let provider = new EmailProvider('mandrill',{
+//     mandrill : { 
+//         apiKey: '***REMOVED***'
+//     }
+// });
 
 // let mailOptions: MandrillEmailOptions = {
 //     to: [{ 
@@ -62,26 +63,25 @@ let provider = new EmailProvider('mandrill',{
 //     }
 // }
 
-// var mailgundata = {
-//     name : "psixoula",
-//     description: "psixoula description",
-//     template: "<p>na to to template psixoula m</p>",
-//     engine: "handlebars"
-// };
-var mandrilData = {
-    subject: 'xd',
-    name:'third template',
-    code: '<p> xixi xd </p>',
-    text:'edw to text',
+var mailgundata: CreateEmailTemplate = {
+    name : "psixoula",
+    plainContent: "<p>na to to template psixoula m</p>",
+
+};
+// var mandrilData = {
+//     subject: 'xd',
+//     name:'third template',
+//     code: '<p> xixi xd </p>',
+//     text:'edw to text',
     
 
-}
-// provider._transport?.listTemplates().then((body:any)  => {
-//     console.log(body);
-// })
-// .catch(err => {
-//     console.log(err);
-// })
+// }
+provider._transport?.createTemplate(mailgundata).then((body:any)  => {
+    console.log(body);
+})
+.catch(err => {
+    console.log(err);
+})
 
 // provider._transport?.getTemplateInfo('ffff').then(res =>{
     //     console.log(res);
