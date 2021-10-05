@@ -101,6 +101,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
       <Paper className={classes.paper}>
         <Box className={classes.root}>
           <Tabs
+            style={{ height: '73vh' }}
             orientation="vertical"
             variant="scrollable"
             value={value}

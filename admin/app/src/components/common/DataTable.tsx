@@ -17,11 +17,14 @@ import DataTableActions from './DataTableActions';
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 
-const useStyles = makeStyles({
+const useStyles = makeStyles((theme) => ({
   table: {
     minWidth: 650,
   },
-});
+  header: {
+    backgroundColor: theme.palette.background.paper,
+  },
+}));
 
 type Action = {
   title: string;
@@ -105,11 +108,11 @@ const DataTable: React.FC<Props> = ({
   };
 
   return (
-    <TableContainer component={Paper} {...rest}>
-      <Table className={classes.table}>
+    <TableContainer style={{ height: '73vh' }} component={Paper} {...rest}>
+      <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
-            <TableCell align="left" padding="none">
+            <TableCell className={classes.header} align="left" padding="none">
               <Checkbox
                 color="primary"
                 onChange={onMenuItemSelectAll}
@@ -120,6 +123,7 @@ const DataTable: React.FC<Props> = ({
             </TableCell>
             {headerCells.map((headCell) => (
               <TableCell
+                className={classes.header}
                 key={headCell.id}
                 align={headCell.numeric ? 'right' : 'left'}
                 padding={headCell.disablePadding ? 'none' : 'default'}
@@ -132,7 +136,7 @@ const DataTable: React.FC<Props> = ({
                 </TableSortLabel>
               </TableCell>
             ))}
-            {actions && <TableCell />}
+            {actions && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
         <TableBody>
