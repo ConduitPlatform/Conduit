@@ -1,5 +1,4 @@
 import { EmailProvider } from "./index"
-import { CreateSendgridTemplate } from "./interfaces/sendgrid/CreateSendgridTemplate";
 // let provider = new EmailProvider('mailgun',{
 //     mailgun:{
 //         proxy:null,
