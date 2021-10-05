@@ -37,11 +37,7 @@ const initialState: IAuthenticationSlice = {
 
 export const asyncGetAuthUserData = createAsyncThunk(
   'authentication/getUserData',
-  async (
-    params: { skip: number; limit: number; search: string; filter: string },
-    thunkAPI
-  ) => {
-    thunkAPI.dispatch(setAppLoading(true));
+  async (params: { skip: number; limit: number; search: string; filter: string }, thunkAPI) => {
     try {
       const { data } = await getAuthUsersDataReq(
         params.skip,
@@ -52,9 +48,8 @@ export const asyncGetAuthUserData = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -62,10 +57,7 @@ export const asyncGetAuthUserData = createAsyncThunk(
 
 export const asyncAddNewUser = createAsyncThunk(
   'authentication/addUser',
-  async (
-    params: { values: { password: string; email: string }; limit: number },
-    thunkAPI
-  ) => {
+  async (params: { values: { password: string; email: string }; limit: number }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await createNewUsers(params.values);
@@ -80,9 +72,8 @@ export const asyncAddNewUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return { data, params };
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -102,9 +93,8 @@ export const asyncEditUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return values;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -119,9 +109,8 @@ export const asyncBlockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -136,9 +125,8 @@ export const asyncUnblockUserUI = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -158,9 +146,8 @@ export const asyncDeleteUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -175,9 +162,8 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -192,9 +178,8 @@ export const asyncUpdateAuthenticationConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -213,28 +198,23 @@ const authenticationSlice = createSlice({
       state.data.authUsers.users = action.payload.users;
       state.data.authUsers.count = action.payload.count;
     });
-    builder.addCase(asyncAddNewUser.fulfilled, (state, action) => {
+    builder.addCase(asyncAddNewUser.fulfilled, (state) => {
       state.data.authUsers.count++;
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
       const foundIndex = state.data.authUsers.users.findIndex(
         (user) => user._id === action.payload._id
       );
-      if (foundIndex !== -1)
-        state.data.authUsers.users.splice(foundIndex, 1, action.payload);
+      if (foundIndex !== -1) state.data.authUsers.users.splice(foundIndex, 1, action.payload);
     });
     builder.addCase(asyncBlockUserUI.fulfilled, (state, action) => {
-      const userToBlock = state.data.authUsers.users.find(
-        (user) => user._id === action.payload
-      );
+      const userToBlock = state.data.authUsers.users.find((user) => user._id === action.payload);
       if (userToBlock) {
         userToBlock.active = false;
       }
     });
     builder.addCase(asyncUnblockUserUI.fulfilled, (state, action) => {
-      const userToUnBlock = state.data.authUsers.users.find(
-        (user) => user._id === action.payload
-      );
+      const userToUnBlock = state.data.authUsers.users.find((user) => user._id === action.payload);
       if (userToUnBlock) {
         userToUnBlock.active = true;
       }

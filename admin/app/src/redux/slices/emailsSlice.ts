@@ -42,9 +42,8 @@ export const asyncGetEmailTemplates = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -71,9 +70,8 @@ export const asyncSaveEmailTemplateChanges = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return updateEmailData;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -83,7 +81,6 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
   'emails/createNewTemplate',
   async (newEmailData: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
-    console.log(newEmailData);
     try {
       const { data } = await postEmailTemplateRequest(newEmailData);
       thunkAPI.dispatch(
@@ -92,12 +89,10 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
         })
       );
       thunkAPI.dispatch(setAppDefaults());
-      thunkAPI.dispatch;
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -112,9 +107,8 @@ export const asyncGetEmailSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -129,35 +123,27 @@ export const asyncUpdateEmailSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
 );
 
-export const asyncSendEmail = createAsyncThunk(
-  'emails/send',
-  async (dataToSend: any, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const { data } = await sendEmailRequest(dataToSend);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
-      throw error;
-    }
+export const asyncSendEmail = createAsyncThunk('emails/send', async (dataToSend: any, thunkAPI) => {
+  thunkAPI.dispatch(setAppLoading(true));
+  try {
+    const { data } = await sendEmailRequest(dataToSend);
+    thunkAPI.dispatch(setAppDefaults());
+    return data;
+  } catch (error) {
+    thunkAPI.dispatch(setAppLoading(false));
+    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+    throw error;
   }
-);
+});
 
-const updateTemplateByID = (
-  updated: EmailTemplateType,
-  templates: EmailTemplateType[]
-) => {
+const updateTemplateByID = (updated: EmailTemplateType, templates: EmailTemplateType[]) => {
   return templates.map((t) => {
     if (t._id === updated._id) {
       return {

@@ -28,6 +28,7 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     updatedAt: '',
     _id: '',
   });
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const handleClose = () => {
     setOpenDeleteUser(false);
@@ -93,6 +94,26 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
     }
   };
 
+  const handleSelect = (id: string) => {
+    const newSelectedUsers = [...selectedUsers];
+    if (selectedUsers.includes(id)) {
+      const index = newSelectedUsers.findIndex((newId) => newId === id);
+      newSelectedUsers.splice(index, 1);
+    } else {
+      newSelectedUsers.push(id);
+    }
+    setSelectedUsers(newSelectedUsers);
+  };
+
+  const handleSelectAll = (data: any) => {
+    if (selectedUsers.length === users.length) {
+      setSelectedUsers([]);
+      return;
+    }
+    const newSelectedUsers = data.map((item: any) => item._id);
+    setSelectedUsers(newSelectedUsers);
+  };
+
   return (
     <>
       {users.length > 0 && (
@@ -100,6 +121,9 @@ const AuthUsers: React.FC<Props> = ({ users }) => {
           dsData={formatData(users)}
           actions={actions}
           handleAction={handleAction}
+          handleSelect={handleSelect}
+          handleSelectAll={handleSelectAll}
+          selectedItems={selectedUsers}
         />
       )}
 
