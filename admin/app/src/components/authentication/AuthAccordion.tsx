@@ -128,7 +128,9 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         });
       }
     }
-  }, []);
+
+
+  }, [configData]);
 
   const handleGoogleClientId = (event: { target: { value: string } }) => {
     setGoogle({ ...google, clientId: event.target.value });
