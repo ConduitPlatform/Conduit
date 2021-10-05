@@ -25,7 +25,6 @@ const appSlice = createSlice({
     setAppLoading: (state, action) => {
       state.loading = action.payload;
     },
-
     setAppDefaults: () => {
       return initialState;
     },

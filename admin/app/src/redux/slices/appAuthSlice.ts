@@ -43,6 +43,7 @@ export const asyncLogin = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(
         notify(`Could not login! error msg:${getErrorData(error)}`, 'error', {
           dismissAfter: 3000,
@@ -53,15 +54,12 @@ export const asyncLogin = createAsyncThunk(
   }
 );
 
-export const asyncLogout = createAsyncThunk(
-  'appAuth/logout',
-  async (arg: void, thunkAPI) => {
-    thunkAPI.dispatch(clearAuthenticationPageStore());
-    thunkAPI.dispatch(clearEmailPageStore());
-    thunkAPI.dispatch(clearNotificationPageStore());
-    thunkAPI.dispatch(clearStoragePageStore());
-  }
-);
+export const asyncLogout = createAsyncThunk('appAuth/logout', async (arg: void, thunkAPI) => {
+  thunkAPI.dispatch(clearAuthenticationPageStore());
+  thunkAPI.dispatch(clearEmailPageStore());
+  thunkAPI.dispatch(clearNotificationPageStore());
+  thunkAPI.dispatch(clearStoragePageStore());
+});
 
 export const asyncGetAdminModules = createAsyncThunk(
   'appAuth/getModules',
@@ -72,9 +70,8 @@ export const asyncGetAdminModules = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
