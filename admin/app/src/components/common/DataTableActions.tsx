@@ -14,15 +14,16 @@ interface Props {
   actions?: Action[];
   onActionClick: (action: Action) => void;
   isBlocked: boolean;
+  editDisabled?: boolean;
 }
 
-const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked }) => {
+const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, editDisabled }) => {
   const handleActions = (action: Action) => {
     switch (action.type) {
       case 'delete':
         return <DeleteIcon color="primary" />;
       case 'edit':
-        return <EditIcon color="primary" />;
+        return <EditIcon color={editDisabled ? 'disabled' : 'primary'} />;
       case 'block/unblock':
         return <BlockIcon color={isBlocked ? 'error' : 'primary'} />;
       case 'disable':
@@ -42,7 +43,8 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked }
             <Tooltip title={action.title} key={index}>
               <IconButton
                 key={`${action.title}${index}`}
-                onClick={() => onActionClick(action)}>
+                onClick={() => onActionClick(action)}
+                disabled={action.type === 'edit' && editDisabled}>
                 {handleActions(action)}
               </IconButton>
             </Tooltip>

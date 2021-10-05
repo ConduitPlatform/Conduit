@@ -38,7 +38,6 @@ const initialState: IAuthenticationSlice = {
 export const asyncGetAuthUserData = createAsyncThunk(
   'authentication/getUserData',
   async (params: { skip: number; limit: number; search: string; filter: string }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getAuthUsersDataReq(
         params.skip,
@@ -199,7 +198,7 @@ const authenticationSlice = createSlice({
       state.data.authUsers.users = action.payload.users;
       state.data.authUsers.count = action.payload.count;
     });
-    builder.addCase(asyncAddNewUser.fulfilled, (state, action) => {
+    builder.addCase(asyncAddNewUser.fulfilled, (state) => {
       state.data.authUsers.count++;
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
