@@ -14,6 +14,8 @@ import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 import DataTableActions from './DataTableActions';
+import Checkbox from '@material-ui/core/Checkbox';
+import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 
 const useStyles = makeStyles({
   table: {
@@ -30,9 +32,20 @@ interface Props {
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
+  selectedItems?: string[];
+  handleSelect?: (id: string) => void;
+  handleSelectAll?: (data: any) => void;
 }
 
-const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) => {
+const DataTable: React.FC<Props> = ({
+  dsData,
+  actions,
+  handleAction,
+  selectedItems = [],
+  handleSelect,
+  handleSelectAll,
+  ...rest
+}) => {
   const classes = useStyles();
 
   const [order, setOrder] = useState<'desc' | 'asc'>('asc');
@@ -79,12 +92,32 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
     }
   };
 
+  const onMenuItemSelect = (id: string) => {
+    if (handleSelect) {
+      handleSelect(id);
+    }
+  };
+
+  const onMenuItemSelectAll = () => {
+    if (handleSelectAll) {
+      handleSelectAll(dsData);
+    }
+  };
+
   return (
     <TableContainer component={Paper} {...rest}>
-      <Table className={classes.table} aria-label="simple table">
+      <Table className={classes.table}>
         <TableHead>
           <TableRow>
-            {/*	todo add checkbox cells in the future*/}
+            <TableCell align="left" padding="none">
+              <Checkbox
+                color="primary"
+                onChange={onMenuItemSelectAll}
+                checked={selectedItems?.length === dsData.length}
+                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+              />
+            </TableCell>
             {headerCells.map((headCell) => (
               <TableCell
                 key={headCell.id}
@@ -105,6 +138,13 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
         <TableBody>
           {orderBy(rows, orderById, order).map((row, i) => (
             <TableRow key={i}>
+              <TableCell align="left" padding="none">
+                <Checkbox
+                  color="primary"
+                  checked={selectedItems?.includes(row._id)}
+                  onChange={() => onMenuItemSelect(row._id)}
+                />
+              </TableCell>
               {Object.keys(row).map((item, j) => (
                 <TableCell key={`${i}-${j}`}>{getValue(row[item])}</TableCell>
               ))}
@@ -113,6 +153,7 @@ const DataTable: React.FC<Props> = ({ dsData, actions, handleAction, ...rest }) 
                   actions={actions}
                   onActionClick={(action) => onMenuItemClick(action, row)}
                   isBlocked={!row.Active}
+                  editDisabled={selectedItems?.length > 1}
                 />
               </TableCell>
             </TableRow>

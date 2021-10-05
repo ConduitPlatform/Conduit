@@ -67,6 +67,7 @@ export const asyncGetCmsSchemas = createAsyncThunk<
       documentsCount: data.documentsCount as number,
     };
   } catch (error) {
+    thunkAPI.dispatch(setAppLoading(false));
     thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
     throw error;
   }
@@ -78,7 +79,7 @@ export const asyncGetMoreCmsSchemas = createAsyncThunk<
 >('cms/getMoreSchemas', async (arg, thunkAPI: any) => {
   thunkAPI.dispatch(setAppLoading(true));
   try {
-    const SchemaLength = thunkAPI.getState().cmsSlice.data.schemas.length; //TODO fix this
+    const SchemaLength = thunkAPI.getState().cmsSlice.data.schemas.length;
     const { data } = await getCmsSchemasRequest(SchemaLength, 20);
     thunkAPI.dispatch(setAppDefaults());
     return {
@@ -86,6 +87,7 @@ export const asyncGetMoreCmsSchemas = createAsyncThunk<
       documentsCount: data.documentsCount as number,
     };
   } catch (error) {
+    thunkAPI.dispatch(setAppLoading(false));
     thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
     throw error;
   }
@@ -105,9 +107,8 @@ export const asyncCreateNewSchema = createAsyncThunk<Schema, any>(
       thunkAPI.dispatch(setAppDefaults());
       return data as Schema;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -122,9 +123,8 @@ export const asyncToggleSchema = createAsyncThunk<ToggleSchma, string>(
       thunkAPI.dispatch(setAppDefaults());
       return data as ToggleSchma;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -143,9 +143,8 @@ export const asyncEditSchema = createAsyncThunk<any, { _id: string; data: any }>
       );
       thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -165,9 +164,8 @@ export const asyncDeleteSelectedSchema = createAsyncThunk<string, { _id: string 
       thunkAPI.dispatch(setAppDefaults());
       return args._id;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -182,28 +180,28 @@ export const asyncGetSchemaDocuments = createAsyncThunk<any, string>(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
 );
 
-export const asyncGetMoreSchemaDocuments = createAsyncThunk<
-  any,
-  { name: string; skip: number }
->('cms/getMoreDocs', async (params, thunkAPI) => {
-  thunkAPI.dispatch(setAppLoading(true));
-  try {
-    const { data } = await getCmsDocumentsByNameRequest(params.name, params.skip, 20);
-    thunkAPI.dispatch(setAppDefaults());
-    return data;
-  } catch (error) {
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
-    throw error;
+export const asyncGetMoreSchemaDocuments = createAsyncThunk<any, { name: string; skip: number }>(
+  'cms/getMoreDocs',
+  async (params, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getCmsDocumentsByNameRequest(params.name, params.skip, 20);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      throw error;
+    }
   }
-});
+);
 
 const prepareDocumentField = (doc: any) => {
   const field = { [doc.name]: null };
@@ -234,6 +232,7 @@ export const asyncCreateSchemaDocument = createAsyncThunk<
     thunkAPI.dispatch(asyncGetSchemaDocuments(params.schemaName));
     return;
   } catch (error) {
+    thunkAPI.dispatch(setAppLoading(false));
     thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
     throw error;
   }
@@ -248,6 +247,7 @@ export const asyncDeleteSchemaDocument = createAsyncThunk<
     await deleteSchemaDocumentRequest(params.schemaName, params.documentId);
     thunkAPI.dispatch(asyncGetSchemaDocuments(params.schemaName));
   } catch (error) {
+    thunkAPI.dispatch(setAppLoading(false));
     thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
     throw error;
   }
@@ -255,10 +255,7 @@ export const asyncDeleteSchemaDocument = createAsyncThunk<
 
 export const asyncEditSchemaDocument = createAsyncThunk(
   'cms/editDoc',
-  async (
-    params: { schemaName: string; documentId: string; documentData: any },
-    thunkAPI
-  ) => {
+  async (params: { schemaName: string; documentId: string; documentData: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const body = {
@@ -276,9 +273,8 @@ export const asyncEditSchemaDocument = createAsyncThunk(
       thunkAPI.dispatch(asyncGetSchemaDocuments(params.schemaName));
       return params.schemaName;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -293,28 +289,28 @@ export const asyncGetCustomEndpoints = createAsyncThunk<EndpointTypes[], any>(
       thunkAPI.dispatch(setAppDefaults());
       return data.results as EndpointTypes[];
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
 );
 
-export const asyncUpdateCustomEndpoints = createAsyncThunk<
-  any,
-  { _id: string; endpointData: any }
->('cms/updateEndpoints', async (params, thunkAPI) => {
-  thunkAPI.dispatch(setAppLoading(true));
-  try {
-    const { data } = await editCustomEndpointsRequest(params._id, params.endpointData);
-    thunkAPI.dispatch(asyncGetCustomEndpoints(''));
-    return data;
-  } catch (error) {
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
-    throw error;
+export const asyncUpdateCustomEndpoints = createAsyncThunk<any, { _id: string; endpointData: any }>(
+  'cms/updateEndpoints',
+  async (params, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await editCustomEndpointsRequest(params._id, params.endpointData);
+      thunkAPI.dispatch(asyncGetCustomEndpoints(''));
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      throw error;
+    }
   }
-});
+);
 
 export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
   'cms/deleteEndpoints',
@@ -326,9 +322,8 @@ export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
 
       return data.results;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -353,9 +348,8 @@ export const asyncCreateCustomEndpoints = createAsyncThunk<any, any>(
       await createCustomEndpointsRequest(body);
       thunkAPI.dispatch(asyncGetCustomEndpoints(''));
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
@@ -370,9 +364,8 @@ export const asyncFetchSchemasFromOtherModules = createAsyncThunk<any, any>(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
       throw error;
     }
   }
