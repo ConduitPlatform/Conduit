@@ -11,10 +11,24 @@ import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
 import { notify } from 'reapop';
 
+const modules = [
+  'authentication',
+  'email',
+  'cms',
+  'storage',
+  'database-provider',
+  'payments',
+  'forms',
+  'chat',
+  'sms',
+  'push-notifications',
+];
+
 export type AppAuthState = {
   data: {
     token: any;
     enabledModules: IModule[];
+    disabledModules: IModule[];
   };
 };
 
@@ -24,6 +38,7 @@ const initialState: AppAuthState = {
   data: {
     token: null,
     enabledModules: [],
+    disabledModules: [],
   },
 };
 
@@ -92,11 +107,23 @@ const appAuthSlice = createSlice({
     });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
       state.data.enabledModules = action.payload.modules;
+      const payloadModules = action.payload.modules.map((module: IModule) => module.moduleName);
+      const disabledModules: IModule[] = [];
+      modules.forEach((module) => {
+        if (!payloadModules.includes(module)) {
+          disabledModules.push({
+            moduleName: module,
+            url: '',
+          });
+        }
+      });
+      state.data.disabledModules = disabledModules;
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
       state.data.token = null;
       state.data.enabledModules = [];
+      state.data.disabledModules = [];
     });
   },
 });

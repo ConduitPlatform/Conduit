@@ -23,8 +23,9 @@ const View = () => {
     }
   }, [config]);
   return notifications ? (
-    <DataTable dsData={notifications} />
+    <></>
   ) : (
+    // <DataTable dsData={notifications} />
     <Typography variant={'h6'}>No data available</Typography>
   );
 };

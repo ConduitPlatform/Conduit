@@ -38,57 +38,46 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   const { loading } = useAppSelector((state) => state.appSlice);
   const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
-  const [itemSelected, setItemSelected] = useState<number>(0);
+  const [itemSelected, setItemSelected] = useState<string>('');
 
   useEffect(() => {
-    switch (router.pathname) {
-      case '/':
-        setItemSelected(0);
+    const splitUri = router.pathname.split('/')[1];
+    switch (splitUri) {
+      case 'authentication':
+        setItemSelected('authentication');
         break;
-      case '/authentication/users':
-        setItemSelected(1);
+      case 'push-notifications':
+        setItemSelected('push-notifications');
         break;
-      case '/authentication/settings':
-        setItemSelected(1);
+      case 'sms':
+        setItemSelected('sms');
         break;
-      case '/authentication/serviceAccounts':
-        setItemSelected(1);
+      case 'emails':
+        setItemSelected('email');
         break;
-      case '/authentication/signIn':
-        setItemSelected(1);
+      case 'cms':
+        setItemSelected('cms');
         break;
-      case '/notification/view':
-      case '/notification/send':
-      case '/notification/settings':
-        setItemSelected(2);
+      case 'storage':
+        setItemSelected('storage');
         break;
-      case '/sms/send':
-      case '/sms/provider-settings':
-        setItemSelected(3);
+      case 'settings':
+        setItemSelected('settings');
         break;
-      case '/emails/templates':
-      case '/emails/send':
-      case '/emails/provider':
-        setItemSelected(4);
+      case 'chat':
+        setItemSelected('chat');
         break;
-      case '/cms/schemas':
-      case '/cms/schemadata':
-      case '/cms/custom':
-      case '/cms/settings':
-        setItemSelected(5);
+      case 'forms':
+        setItemSelected('forms');
         break;
-      case '/storage/files':
-      case '/storage/settings':
-        setItemSelected(6);
+      case 'payments':
+        setItemSelected('payments');
         break;
-      case '/settings/clientsdk':
-      case '/settings/secrets':
-      case '/settings/core':
-      case '/settings/createuser':
-        setItemSelected(7);
+      case 'database-provider':
+        setItemSelected('database-provider');
         break;
       default:
-        setItemSelected(0);
+        setItemSelected('');
     }
 
     if (router.pathname === '/login' || router.pathname === '/cms/build-types') {
@@ -106,7 +95,11 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
+      {!menuDisabled ? (
+        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
+      ) : (
+        <></>
+      )}
       <main className={classes.content}>{children}</main>
       <NotificationsSystem
         notifications={notifications}

@@ -1,9 +1,9 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement } from 'react';
 import NotificationLayout from '../../components/navigation/InnerLayouts/notificationLayout';
 import SendNotificationForm from '../../components/notifications/SendNotificationForm';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 import { asyncSendNewNotification } from '../../redux/slices/notificationsSlice';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
+import { useAppDispatch } from '../../redux/store';
 
 const Send = () => {
   const dispatch = useAppDispatch();
