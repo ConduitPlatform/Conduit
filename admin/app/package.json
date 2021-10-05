@@ -47,6 +47,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@babel/eslint-parser": "^7.15.7",
     "@types/js-cookie": "^2.2.7",
     "@types/material-ui": "^0.21.9",
     "@types/node": "^16.7.3",
@@ -58,8 +59,8 @@
     "@types/redux": "^3.6.0",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
-    "babel-eslint": "^10.1.0",
     "eslint": "^7.32.0",
+    "eslint-config-next": "11.1.2",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.26.1",

@@ -4,7 +4,14 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:prettier/recommended"
   ],
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "sourceType": "module",
+    "allowImportExportEverywhere": false,
+    "codeFrame": true
+  },
   "rules": {
+    "strict": 0,
     "no-console": "warn",
     "no-eval": "error",
     "import/first": "error",
@@ -20,3 +27,4 @@
     "@typescript-eslint/explicit-module-boundary-types": "off"
   }
 }
+
