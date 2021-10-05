@@ -9,15 +9,15 @@ import { CreateSendgridTemplate } from "./interfaces/sendgrid/CreateSendgridTemp
 //     }
 // });
 
-let provider = new EmailProvider('sendgrid',{
-    apiKey: '***REMOVED***'
-});
-
-// let provider = new EmailProvider('mandrill',{
-//     mandrill : { 
-//         apiKey: '***REMOVED***'
-//     }
+// let provider = new EmailProvider('sendgrid',{
+//     apiKey: '***REMOVED***'
 // });
+
+let provider = new EmailProvider('mandrill',{
+    mandrill : { 
+        apiKey: '***REMOVED***'
+    }
+});
 
 // let mailOptions: MandrillEmailOptions = {
 //     to: [{ 
@@ -69,7 +69,15 @@ let provider = new EmailProvider('sendgrid',{
 //     template: "<p>na to to template psixoula m</p>",
 //     engine: "handlebars"
 // };
-// provider._transport?.createTemplate(data).then((body:any)  => {
+var mandrilData = {
+    subject: 'xd',
+    name:'third template',
+    code: '<p> xixi xd </p>',
+    text:'edw to text',
+    
+
+}
+// provider._transport?.listTemplates().then((body:any)  => {
 //     console.log(body);
 // })
 // .catch(err => {

@@ -8,7 +8,7 @@ export class SmtpProvider extends EmailProviderClass{
         super(createTransport(transportSettings));
     }
 
-    listTemplates() {
+    listTemplates():Promise<Template[]> {
         throw new Error("Method not implemented.");
     }
 

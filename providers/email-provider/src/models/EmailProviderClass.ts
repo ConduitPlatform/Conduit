@@ -6,7 +6,7 @@ export abstract class EmailProviderClass{
     constructor(transport: Mail){
         this._transport = transport;
     }
-    abstract listTemplates():any;
+    abstract listTemplates():Promise<Template[]>;
     abstract getTemplateInfo(templateName:string):Promise<Template>;
     abstract createTemplate(data: any):Promise<Template>;
 

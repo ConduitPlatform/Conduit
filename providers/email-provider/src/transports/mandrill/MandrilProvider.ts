@@ -12,11 +12,13 @@ export class MandrillProvider extends EmailProviderClass{
         super(createTransport(mandrillTransport(mandrillSettings)));
         this._mandrillSdk = new Mandrill(mandrillSettings.auth.apiKey);
         this.apiKey = mandrillSettings.auth.apiKey;
-        console.log(this.apiKey);
+        
     }
     
-    listTemplates(){
-        return this._mandrillSdk?.templates.list(this.apiKey)
+    async listTemplates(): Promise<Template[]>{
+        const response = await new Promise<any>( (resolve) => this._mandrillSdk?.templates.list({key: this.apiKey},resolve));
+        const retList:Template[] = response.map(async (element: any) => await this.getTemplateInfo(element.slug));
+        return Promise.all(retList);
     }
 
     async getTemplateInfo(template_name:string):Promise<Template>{
@@ -31,14 +33,25 @@ export class MandrillProvider extends EmailProviderClass{
                 active: true,
                 updatedAt: response.updated_at,
                 htmlContent: response.code,
-                plainContent: '',
+                plainContent: response.text,
             }],
             createdAt: response.created_at
         }
         return info;
     }
     
-    createTemplate(data: any): Promise<Template> {
-        throw new Error("Method not implemented.");
+    async createTemplate(data: any): Promise<Template> {
+        const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.add({
+            key: this.apiKey,
+            subject: data.subject,
+            code: data.code,
+            text: data.text,
+            publish:true,
+            name: data.name,
+
+        },resolve));
+        const created = await this.getTemplateInfo(response.slug);
+
+        return  created;
     }
 }
