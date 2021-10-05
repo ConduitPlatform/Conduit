@@ -1,5 +1,5 @@
-import { EmailProvider } from "./index"
-import { CreateEmailTemplate } from "./interfaces/CreateEmailTemplate";
+import { EmailProvider } from "../src/index"
+import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
 // let provider = new EmailProvider('mailgun',{
 //     mailgun:{
 //         proxy:null,
