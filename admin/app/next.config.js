@@ -49,6 +49,21 @@ module.exports = (phase) => {
         destination: '/cms/schemas',
         permanent: true,
       },
+      {
+        source: '/storage',
+        destination: '/storage/files',
+        permanent: true,
+      },
+      {
+        source: '/settings',
+        destination: '/settings/clientsdk',
+        permanent: true,
+      },
+      {
+        source: '/push-notifications',
+        destination: '/push-notifications/view',
+        permanent: true,
+      },
     ];
   };
 

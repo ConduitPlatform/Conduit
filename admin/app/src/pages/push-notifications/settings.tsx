@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement } from 'react';
 import NotificationLayout from '../../components/navigation/InnerLayouts/notificationLayout';
 import NotificationSettings from '../../components/notifications/NotificationSettings';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';

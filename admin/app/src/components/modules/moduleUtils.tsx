@@ -51,6 +51,12 @@ export const handleModuleNavigation = (moduleName: string) => {
       return '/emails/templates';
     case 'cms':
       return '/cms/schemas';
+    case 'storage':
+      return '/storage/files';
+    case 'settings':
+      return '/settings/clientsdk';
+    case 'push-notifications':
+      return '/push-notifications/view';
     default:
       return `/${moduleName}`;
   }
