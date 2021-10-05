@@ -35,7 +35,6 @@ const StorageFiles: React.FC = () => {
 
   const handleClick = (event: any) => {
     event.preventDefault();
-    console.info('You clicked a breadcrumb.');
   };
 
   return (

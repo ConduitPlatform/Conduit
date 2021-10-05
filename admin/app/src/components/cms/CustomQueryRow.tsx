@@ -100,21 +100,6 @@ const CustomQueryRow: FC<Props> = ({
     selectedInputs,
   ]);
 
-  const prepareOptions = (schemaField: any, indexQuery: any) => {
-    return availableFieldsOfSchema.map((field: any, index: number) => {
-      if (typeof field.type === 'string' || Array.isArray(field.type)) {
-        return (
-          <MenuItem className={classes.menuItem} key={`idxO-${index}-field`} value={field.name}>
-            {field.name}
-          </MenuItem>
-        );
-      }
-
-      return getSubFields(field);
-    });
-  };
-
-  //TODO more-fields-available
   const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
     const keys = Object?.keys(field?.type);
     const itemTop = (
@@ -197,6 +182,20 @@ const CustomQueryRow: FC<Props> = ({
     }
   };
 
+  const prepareOptions = () => {
+    return availableFieldsOfSchema.map((field: any, index: number) => {
+      if (typeof field.type === 'string' || Array.isArray(field.type)) {
+        return (
+          <MenuItem className={classes.menuItem} key={`idxO-${index}-field`} value={field.name}>
+            {field.name}
+          </MenuItem>
+        );
+      }
+
+      return getSubFields(field);
+    });
+  };
+
   const getCustomPlaceHolder = () => {
     if (selectedType === 'number') {
       return 'ex. 15';
@@ -206,7 +205,6 @@ const CustomQueryRow: FC<Props> = ({
 
   const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i: number) => {
     let value = e.target.value;
-    console.log('value', value);
     if (selectedType === 'boolean') {
       value = value !== 'false';
     }
@@ -241,7 +239,7 @@ const CustomQueryRow: FC<Props> = ({
               getContentAnchorEl: null,
             }}>
             <option aria-label="None" value="" />
-            {prepareOptions(query.schemaField, index)}
+            {prepareOptions()}
           </Select>
         </FormControl>
       </Grid>

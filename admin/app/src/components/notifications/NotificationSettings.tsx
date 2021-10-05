@@ -1,4 +1,4 @@
-import React, { FC, SyntheticEvent, useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import {
   Container,
   FormControl,

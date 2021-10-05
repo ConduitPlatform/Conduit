@@ -85,7 +85,7 @@ const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
   return (
     <>
       {homeEnabled ? (
-        <Link href="/">
+        <Link href="/" passHref>
           <ListItem
             button
             className={classes.listItem}

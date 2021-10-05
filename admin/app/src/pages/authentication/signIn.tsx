@@ -1,8 +1,5 @@
 import Typography from '@material-ui/core/Typography';
 import React, { ReactElement, useEffect } from 'react';
-
-import { makeStyles } from '@material-ui/core';
-
 import { SocialDataTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
 import {
   asyncGetAuthenticationConfig,
@@ -12,17 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import AuthenticationLayout from '../../components/navigation/InnerLayouts/authenticationLayout';
 import AuthAccordion from '../../components/authentication/AuthAccordion';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    '& > *': {
-      margin: theme.spacing(0.5),
-    },
-    marginBottom: '3px',
-  },
-}));
-
 const SignIn = () => {
-  const classes = useStyles();
   const dispatch = useAppDispatch();
 
   const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);

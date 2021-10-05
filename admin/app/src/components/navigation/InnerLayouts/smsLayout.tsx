@@ -10,12 +10,11 @@ const SMSLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
   const [value, setValue] = useState(0);
 
-  const pathnames = ['/sms/send', '/sms/provider-settings'];
-
   useEffect(() => {
-    const index = pathnames.findIndex((pathname) => pathname === router.pathname);
+    const pathNames = ['/sms/send', '/sms/provider-settings'];
+    const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
-  });
+  }, [router.pathname]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);

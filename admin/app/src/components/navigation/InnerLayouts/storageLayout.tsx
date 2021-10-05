@@ -10,12 +10,11 @@ const StorageLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
   const [value, setValue] = useState(0);
 
-  const pathnames = ['/storage/files', '/storage/settings'];
-
   useEffect(() => {
-    const index = pathnames.findIndex((pathname) => pathname === router.pathname);
+    const pathNames = ['/storage/files', '/storage/settings'];
+    const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
-  });
+  }, [router.pathname]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);

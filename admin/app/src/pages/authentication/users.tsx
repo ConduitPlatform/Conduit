@@ -30,13 +30,11 @@ const Users = () => {
   const dispatch = useAppDispatch();
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
 
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
-  const [selected, setSelected] = useState<number>(0);
   const [filter, setFilter] = useState('none');
 
   const debouncedSearch: string = useDebounce(search, 500);
@@ -52,12 +50,6 @@ const Users = () => {
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [dispatch, filter, limit, skip, debouncedSearch]);
-
-  useEffect(() => {
-    if (configData && !configData.active) {
-      setSelected(2);
-    }
-  }, [configData]);
 
   const handleLimitChange = (e: any) => {
     setLimit(parseInt(e.target.value, 10));

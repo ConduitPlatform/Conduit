@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-
 import { makeStyles } from '@material-ui/core/styles';
-
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
@@ -73,10 +71,7 @@ const SendSms: React.FC = () => {
               variant="contained"
               color="primary"
               disabled={!number || !content}
-              startIcon={<Send />}
-              onClick={() => {
-                console.log('handle sms send');
-              }}>
+              startIcon={<Send />}>
               Send
             </Button>
           </Grid>

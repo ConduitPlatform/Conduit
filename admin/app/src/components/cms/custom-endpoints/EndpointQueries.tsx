@@ -10,7 +10,6 @@ import MinusSquare from '../../svgs/MinusSquare';
 import PlusSquare from '../../svgs/PlusSquare';
 import CloseSquare from '../../svgs/CloseSquare';
 import { deepClone } from '../../utils/deepClone';
-import { Any } from '@react-spring/types';
 
 const useStyles = makeStyles({
   root: {
@@ -233,7 +232,7 @@ const EndpointQueries: FC<Props> = ({
         defaultCollapseIcon={<MinusSquare />}
         defaultExpandIcon={<PlusSquare />}
         defaultEndIcon={<CloseSquare />}
-        onNodeSelect={(e: React.ChangeEvent<{}>) => e.preventDefault()}
+        onNodeSelect={(e: React.ChangeEvent<any>) => e.preventDefault()}
         onNodeToggle={(e) => e.preventDefault()}>
         {selectedQueries.map((q: any) => renderItem(q))}
       </TreeView>

@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-
 import { makeStyles } from '@material-ui/core/styles';
-
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
@@ -82,20 +80,19 @@ const SmsProviderDetails: React.FC = () => {
   }, [prepareValues, provider]);
 
   const onSaveClick = () => {
-    const data = {
-      active: true,
-      providerName: provider,
-      [provider]: {
-        verify: {
-          active: verify,
-          serviceSid: serviceID,
-        },
-        phoneNumber: number,
-        accountSID: accountSID,
-        authToken: authToken,
-      },
-    };
-    console.log('onSaveClick', data);
+    // const data = {
+    //   active: true,
+    //   providerName: provider,
+    //   [provider]: {
+    //     verify: {
+    //       active: verify,
+    //       serviceSid: serviceID,
+    //     },
+    //     phoneNumber: number,
+    //     accountSID: accountSID,
+    //     authToken: authToken,
+    //   },
+    // };
   };
 
   const onCancelClick = () => {

@@ -5,7 +5,6 @@ import Box from '@material-ui/core/Box';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import { makeStyles } from '@material-ui/core/styles';
-import { Schema } from '../../models/cms/CmsModels';
 import { SchemaUI } from './CmsModels';
 
 const useStyles = makeStyles((theme) => ({

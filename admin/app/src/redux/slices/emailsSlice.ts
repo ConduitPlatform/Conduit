@@ -159,8 +159,8 @@ const emailsSlice = createSlice({
   name: 'emails',
   initialState,
   reducers: {
-    clearEmailPageStore(state) {
-      state = initialState;
+    clearEmailPageStore: () => {
+      return initialState;
     },
   },
   extraReducers: (builder) => {

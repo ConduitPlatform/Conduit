@@ -63,8 +63,8 @@ const storageSlice = createSlice({
   name: 'storage',
   initialState,
   reducers: {
-    clearStoragePageStore(state) {
-      state = initialState;
+    clearStoragePageStore: () => {
+      return initialState;
     },
   },
   extraReducers: (builder) => {

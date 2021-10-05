@@ -89,8 +89,8 @@ const notificationsSlice = createSlice({
   name: 'notifications',
   initialState,
   reducers: {
-    clearNotificationPageStore(state) {
-      state = initialState;
+    clearNotificationPageStore: () => {
+      return initialState;
     },
   },
   extraReducers: (builder) => {

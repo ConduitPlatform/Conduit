@@ -88,7 +88,7 @@ const TabPanel: React.FC<Props> = ({
     if (template._id === 'newTemplate_id') {
       setEdit(true);
     }
-  }, [template]);
+  }, [setEdit, template]);
 
   const handleEditClick = () => {
     setEdit(!edit);

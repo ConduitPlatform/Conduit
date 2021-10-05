@@ -10,16 +10,15 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
   const router = useRouter();
   const [value, setValue] = useState(0);
 
-  const pathnames = [
-    '/push-notifications/view',
-    '/push-notifications/send',
-    '/push-notifications/settings',
-  ];
-
   useEffect(() => {
-    const index = pathnames.findIndex((pathname) => pathname === router.pathname);
+    const pathNames = [
+      '/push-notifications/view',
+      '/push-notifications/send',
+      '/push-notifications/settings',
+    ];
+    const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
-  }, [pathnames, router.pathname]);
+  }, [router.pathname]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setValue(newValue);

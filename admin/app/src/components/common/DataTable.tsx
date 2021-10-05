@@ -69,14 +69,14 @@ const DataTable: React.FC<Props> = ({
     };
   });
 
-  const createSortHandler = (property: string) => (event: any) => {
-    handleRequestSort(event, property);
-  };
-
   const handleRequestSort = (event: MouseEvent, property: string) => {
     const isAsc = orderById === property && order === 'desc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderById(property);
+  };
+
+  const createSortHandler = (property: string) => (event: any) => {
+    handleRequestSort(event, property);
   };
 
   const getValue = (value: any) => {

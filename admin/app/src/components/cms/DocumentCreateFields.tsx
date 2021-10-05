@@ -128,53 +128,6 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return type;
   };
 
-  const renderArrayContent = (
-    docs: any,
-    firstIndex: number,
-    secondIndex?: number,
-    thirdIndex?: number
-  ) => {
-    return (
-      <Accordion className={classes.accordion}>
-        <AccordionSummary className={classes.accordionSummary} expandIcon={<ExpandMoreIcon />}>
-          <Button disableRipple fullWidth className={classes.button}>
-            all Elements
-          </Button>
-        </AccordionSummary>
-        <AccordionDetails style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {docs?.value?.map((doc: any, arrayIndex: number) => {
-            const data = { value: doc, type: docs.type[0] };
-            return (
-              <Grid
-                key={arrayIndex}
-                container
-                spacing={2}
-                alignItems={'center'}
-                justify={'flex-start'}
-                className={classes.GridContainer}>
-                <Grid item xs={3}>
-                  <Typography variant={'body1'}>{arrayIndex}</Typography>
-                </Grid>
-                <Grid item xs={1}>
-                  <Typography variant={'body1'}>:</Typography>
-                </Grid>
-                <Grid item xs={3}>
-                  <Typography variant={'caption'}>{docs.type[0]}</Typography>
-                </Grid>
-                <Grid item xs={1}>
-                  <Typography variant={'caption'}>=</Typography>
-                </Grid>
-                <Grid item container justify={'center'} xs={4}>
-                  {renderInputFields(data, firstIndex, secondIndex, thirdIndex, arrayIndex)}
-                </Grid>
-              </Grid>
-            );
-          })}
-        </AccordionDetails>
-      </Accordion>
-    );
-  };
-
   const getCorrectInitialType = (type: 'boolean' | 'number' | 'date') => {
     const lowerCaseType = type.toString().toLowerCase();
     if (lowerCaseType === 'boolean') {
@@ -224,6 +177,159 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     setDocument(documentCopy);
   };
 
+  const renderInputFields = (
+    doc: any,
+    firstIndex: number,
+    secondIndex?: number,
+    thirdIndex?: number,
+    arrayIndex?: number
+  ) => {
+    if (doc?.type?.toString().toLowerCase() === 'boolean') {
+      return (
+        <Switch
+          disabled={disabled}
+          color={'primary'}
+          checked={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'string') {
+      return (
+        <TextField
+          disabled={disabled}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'relation') {
+      return (
+        <TextField
+          disabled={disabled}
+          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          disabled={disabled}
+          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'date') {
+      return (
+        <CustomDatepicker
+          value={doc.value}
+          setValue={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'number') {
+      return (
+        <TextField
+          disabled={disabled}
+          type={'number'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}>
+          <option aria-label="None" value="">
+            None
+          </option>
+        </TextField>
+      );
+    }
+    if (doc?.type?.toString().toLowerCase() === 'objectid') {
+      return (
+        <TextField
+          disabled={disabled}
+          type={'text'}
+          variant={'outlined'}
+          size={'small'}
+          value={doc.value}
+          onChange={(e) => {
+            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
+          }}
+        />
+      );
+    }
+  };
+
+  const renderArrayContent = (
+    docs: any,
+    firstIndex: number,
+    secondIndex?: number,
+    thirdIndex?: number
+  ) => {
+    return (
+      <Accordion className={classes.accordion}>
+        <AccordionSummary className={classes.accordionSummary} expandIcon={<ExpandMoreIcon />}>
+          <Button disableRipple fullWidth className={classes.button}>
+            all Elements
+          </Button>
+        </AccordionSummary>
+        <AccordionDetails style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {docs?.value?.map((doc: any, arrayIndex: number) => {
+            const data = { value: doc, type: docs.type[0] };
+            return (
+              <Grid
+                key={arrayIndex}
+                container
+                spacing={2}
+                alignItems={'center'}
+                justify={'flex-start'}
+                className={classes.GridContainer}>
+                <Grid item xs={3}>
+                  <Typography variant={'body1'}>{arrayIndex}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'body1'}>:</Typography>
+                </Grid>
+                <Grid item xs={3}>
+                  <Typography variant={'caption'}>{docs.type[0]}</Typography>
+                </Grid>
+                <Grid item xs={1}>
+                  <Typography variant={'caption'}>=</Typography>
+                </Grid>
+                <Grid item container justify={'center'} xs={4}>
+                  {renderInputFields(data, firstIndex, secondIndex, thirdIndex, arrayIndex)}
+                </Grid>
+              </Grid>
+            );
+          })}
+        </AccordionDetails>
+      </Accordion>
+    );
+  };
+
   const renderNormalField = (doc: any, index: number) => {
     const isArray = Array.isArray(doc.type) && typeof doc.type[0] === 'string';
     return (
@@ -264,7 +370,6 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     );
   };
 
-  //TODO function has less params than what we pass on it later on
   const renderObjectField = (doc: any, index: number, innerIndexParam?: number) => {
     return (
       <Grid
@@ -348,114 +453,6 @@ const DocumentCreateFields: FC<Props> = ({ disabled, document, setDocument }) =>
     return document.map((doc: any, index: number) => {
       return doc.type ? renderNormalField(doc, index) : renderObjectField(doc, index);
     });
-  };
-
-  //TODO more-fields-available
-  const renderInputFields = (
-    doc: any,
-    firstIndex: number,
-    secondIndex?: number,
-    thirdIndex?: number,
-    arrayIndex?: number
-  ) => {
-    if (doc?.type?.toString().toLowerCase() === 'boolean') {
-      return (
-        <Switch
-          disabled={disabled}
-          color={'primary'}
-          checked={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'string') {
-      return (
-        <TextField
-          disabled={disabled}
-          type={'text'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'relation') {
-      return (
-        <TextField
-          disabled={disabled}
-          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
-          type={'text'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'objectid') {
-      return (
-        <TextField
-          disabled={disabled}
-          placeholder={'ex. 5f9ff38b7d691d001ce4a908'}
-          type={'text'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'date') {
-      return (
-        <CustomDatepicker
-          disabled={disabled}
-          value={doc.value}
-          setValue={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'number') {
-      return (
-        <TextField
-          disabled={disabled}
-          type={'number'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}>
-          <option aria-label="None" value="">
-            None
-          </option>
-        </TextField>
-      );
-    }
-    if (doc?.type?.toString().toLowerCase() === 'objectid') {
-      return (
-        <TextField
-          disabled={disabled}
-          type={'text'}
-          variant={'outlined'}
-          size={'small'}
-          value={doc.value}
-          onChange={(e) => {
-            handleValueChange(firstIndex, secondIndex, thirdIndex, arrayIndex, e);
-          }}
-        />
-      );
-    }
   };
 
   return renderFields();

@@ -148,7 +148,7 @@ const CustomQueries: FC<Props> = ({ handleCreate, handleEdit, handleDelete }) =>
       );
       dispatch(setSchemaFields(fieldsWithTypes));
     }
-  }, [schemas, selectedEndpoint]);
+  }, [dispatch, schemas, selectedEndpoint]);
 
   useEffect(() => {
     initializeData();

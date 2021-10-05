@@ -189,8 +189,8 @@ const authenticationSlice = createSlice({
   name: 'authentication',
   initialState,
   reducers: {
-    clearAuthenticationPageStore(state) {
-      state = initialState;
+    clearAuthenticationPageStore: () => {
+      return initialState;
     },
   },
   extraReducers: (builder) => {
