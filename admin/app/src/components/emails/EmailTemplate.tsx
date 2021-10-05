@@ -51,6 +51,8 @@ interface Props {
 const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreate }) => {
   const classes = useStyles();
   const [value, setValue] = useState<number>(0);
+  const [edit, setEdit] = useState<boolean>(false);
+  const [add, setAdd] = useState<boolean>(false);
   const [templatesState, setTemplatesState] = useState<EmailTemplateType[]>([]);
 
   useEffect(() => {
@@ -90,6 +92,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
         <Button
           variant="contained"
           color="primary"
+          disabled={add || edit}
           startIcon={<AddCircleOutline />}
           onClick={() => newTemplate()}>
           New Template
@@ -115,7 +118,11 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
               index={index}
               template={t}
               handleSave={saveTemplateChanges}
-              handleCreate={createNewTemplate}>
+              handleCreate={createNewTemplate}
+              edit={edit}
+              setEdit={setEdit}
+              add={add}
+              setAdd={setAdd}>
               {t.name}
             </TabPanel>
           ))}

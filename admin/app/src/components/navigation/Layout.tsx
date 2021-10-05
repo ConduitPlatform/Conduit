@@ -57,10 +57,13 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/authentication/signIn':
         setItemSelected(1);
         break;
-      case '/notification':
+      case '/notification/view':
+      case '/notification/send':
+      case '/notification/settings':
         setItemSelected(2);
         break;
-      case '/sms':
+      case '/sms/send':
+      case '/sms/provider-settings':
         setItemSelected(3);
         break;
       case '/emails/templates':
@@ -74,7 +77,8 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/cms/settings':
         setItemSelected(5);
         break;
-      case '/storage':
+      case '/storage/files':
+      case '/storage/settings':
         setItemSelected(6);
         break;
       case '/settings/clientsdk':
@@ -103,9 +107,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   return (
     <div className={classes.root} {...rest}>
       {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
-      <main className={classes.content}>
-        {children}
-      </main>
+      <main className={classes.content}>{children}</main>
       <NotificationsSystem
         notifications={notifications}
         dismissNotification={(id) => dispatch(dismissNotification(id))}
