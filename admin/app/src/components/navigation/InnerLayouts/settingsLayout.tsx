@@ -4,12 +4,19 @@ import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
 import { Box } from '@material-ui/core';
 import { useRouter } from 'next/router';
+import sharedClasses from './sharedClasses';
 
 const CmsLayout: React.FC<unknown> = ({ children }) => {
+  const classes = sharedClasses();
   const router = useRouter();
   const [value, setValue] = useState(0);
 
-  const pathnames = ['/settings/clientsdk', '/settings/secrets', '/settings/core', '/settings/createuser'];
+  const pathnames = [
+    '/settings/clientsdk',
+    '/settings/secrets',
+    '/settings/core',
+    '/settings/createuser',
+  ];
 
   useEffect(() => {
     const index = pathnames.findIndex((pathname) => pathname === router.pathname);
@@ -23,14 +30,16 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
 
   return (
     <Box p={4}>
-      <Typography variant={'h4'}>Settings</Typography>
-      <Tabs value={value} onChange={handleChange}>
-        <Tab label="Client SDKs" id="clientsdk" />
-        <Tab label="Secrets" id="secrets" />
-        <Tab label="Core" id="core" />
-        <Tab label="Create New User" id="createuser" />
-      </Tabs>
-      <Box marginTop={3}>{children}</Box>
+      <Box className={classes.navBar}>
+        <Typography variant={'h4'}>Settings</Typography>
+        <Tabs value={value} onChange={handleChange}>
+          <Tab label="Client SDKs" id="clientsdk" />
+          <Tab label="Secrets" id="secrets" />
+          <Tab label="Core" id="core" />
+          <Tab label="Create New User" id="createuser" />
+        </Tabs>
+      </Box>
+      <Box className={classes.content}>{children}</Box>
     </Box>
   );
 };
