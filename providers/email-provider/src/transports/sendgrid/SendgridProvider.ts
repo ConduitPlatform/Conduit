@@ -19,7 +19,7 @@ export class SendgridProvider extends EmailProviderClass{
             url: '/v3/templates',
             body: {
                 name: data.name,
-    
+                
             }
         }
         const template_res = (await  this._sgClient.request(create_request))[0];

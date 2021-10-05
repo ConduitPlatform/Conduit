@@ -1,17 +1,17 @@
 import { EmailProvider } from "./index"
 import { CreateEmailTemplate } from "./interfaces/CreateEmailTemplate";
-let provider = new EmailProvider('mailgun',{
-    mailgun:{
-        proxy:null,
-        host: 'api.mailgun.net',
-        domain:'***REMOVED***',
-        apiKey: '***REMOVED***'
-    }
-});
-
-// let provider = new EmailProvider('sendgrid',{
-//     apiKey: '***REMOVED***'
+// let provider = new EmailProvider('mailgun',{
+//     mailgun:{
+//         proxy:null,
+//         host: 'api.mailgun.net',
+//         domain:'***REMOVED***',
+//         apiKey: '***REMOVED***'
+//     }
 // });
+
+let provider = new EmailProvider('sendgrid',{
+    apiKey: '***REMOVED***'
+});
 
 // let provider = new EmailProvider('mandrill',{
 //     mandrill : { 
@@ -65,7 +65,10 @@ let provider = new EmailProvider('mailgun',{
 
 var mailgundata: CreateEmailTemplate = {
     name : "psixoula",
-    plainContent: "<p>na to to template psixoula m</p>",
+    plainContent: "na to to template psixoula m",
+    subject: " afasfasfasfa",
+    htmlContent: " <p> hi you </p>",
+    versionName: " first version",
 
 };
 // var mandrilData = {
