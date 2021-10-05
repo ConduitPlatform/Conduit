@@ -20,7 +20,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     padding: 0,
     minHeight: '100vh',
   },
-  toolbar: theme.mixins.toolbar,
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
@@ -64,16 +63,24 @@ export const Layout: React.FC = ({ children, ...rest }) => {
       case '/sms':
         setItemSelected(3);
         break;
-      case '/emails':
+      case '/emails/templates':
+      case '/emails/send':
+      case '/emails/provider':
         setItemSelected(4);
         break;
-      case '/cms':
+      case '/cms/schemas':
+      case '/cms/schemadata':
+      case '/cms/custom':
+      case '/cms/settings':
         setItemSelected(5);
         break;
       case '/storage':
         setItemSelected(6);
         break;
-      case '/settings':
+      case '/settings/clientsdk':
+      case '/settings/secrets':
+      case '/settings/core':
+      case '/settings/createuser':
         setItemSelected(7);
         break;
       default:
@@ -95,13 +102,8 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-      ) : (
-        <></>
-      )}
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} /> : <></>}
       <main className={classes.content}>
-        <div className={classes.toolbar} />
         {children}
       </main>
       <NotificationsSystem

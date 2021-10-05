@@ -81,14 +81,7 @@ interface Props {
   handleSave: (name: string, readOnly: boolean) => void;
 }
 
-const Header: FC<Props> = ({
-  name,
-  authentication,
-  crudOperations,
-  readOnly,
-  handleSave,
-  ...rest
-}) => {
+const Header: FC<Props> = ({ name, authentication, crudOperations, readOnly, handleSave, ...rest }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -121,7 +114,7 @@ const Header: FC<Props> = ({
   return (
     <Box className={clsx(classes.header, classes.colorWhite)} {...rest}>
       <Box display={'flex'} alignItems={'center'}>
-        <Link href="/cms">
+        <Link href="/cms/schemas">
           {/* TODO call dispatch clear cms */}
           <a style={{ textDecoration: 'none' }} onClick={handleBackButtonClick}>
             <Box className={classes.backIconContainer}>
@@ -169,9 +162,7 @@ const Header: FC<Props> = ({
         />
       </Box>
       <Box display={'flex'} alignItems={'center'}>
-        <Button
-          className={clsx(classes.saveButton, classes.colorWhite)}
-          onClick={() => handleData()}>
+        <Button className={clsx(classes.saveButton, classes.colorWhite)} onClick={() => handleData()}>
           <SaveIcon className={classes.saveIcon} />
           <Typography>Save</Typography>
         </Button>

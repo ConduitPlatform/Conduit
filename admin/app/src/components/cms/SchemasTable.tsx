@@ -39,13 +39,7 @@ interface Props {
   handleActions: any;
 }
 
-const SchemasTable: FC<Props> = ({
-  activeSchemas,
-  disabledSchemas,
-  activeActions,
-  disabledActions,
-  handleActions,
-}) => {
+const SchemasTable: FC<Props> = ({ activeSchemas, disabledSchemas, activeActions, disabledActions, handleActions }) => {
   const classes = useStyles();
   const [active, setActive] = useState(true);
 
@@ -80,12 +74,7 @@ const SchemasTable: FC<Props> = ({
 
   return (
     <Container maxWidth={'lg'}>
-      <Box
-        width={'100%'}
-        display={'inline-flex'}
-        justifyContent={'center'}
-        alignItems={'center'}
-        margin={'10px'}>
+      <Box width={'100%'} display={'inline-flex'} justifyContent={'center'} alignItems={'center'} margin={'10px'}>
         <ToggleButtonGroup size="large" value={active} exclusive onChange={handleChange}>
           <ToggleButton key={1} value={true} className={classes.toggleButton}>
             Active Schemas
@@ -95,13 +84,7 @@ const SchemasTable: FC<Props> = ({
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
-      {visibleData() && (
-        <DataTable
-          dsData={visibleData()}
-          actions={getActions()}
-          handleAction={handleActions}
-        />
-      )}
+      {visibleData() && <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />}
     </Container>
   );
 };
