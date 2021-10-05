@@ -42,3 +42,16 @@ export const getModuleIcon = (moduleName: string) => {
       return <ViewModule color={'inherit'} />;
   }
 };
+
+export const handleModuleNavigation = (moduleName: string) => {
+  switch (moduleName) {
+    case 'authentication':
+      return '/authentication/users';
+    case 'email':
+      return '/emails/templates';
+    case 'cms':
+      return '/cms/schemas';
+    default:
+      return `/${moduleName}`;
+  }
+};

@@ -6,8 +6,10 @@ import ListItem from '@material-ui/core/ListItem';
 import { Home } from '@material-ui/icons';
 import Link from 'next/link';
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppSelector } from '../../redux/store';
-import { getModuleIcon } from './moduleUtils';
+import { getModuleIcon, handleModuleNavigation } from './moduleUtils';
+import { useRouter } from 'next/router';
+import { notify } from 'reapop';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme: Theme) => ({
   listItem: {
@@ -36,6 +38,7 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
   listItemText: {
     fontWeight: 'bold',
+    textTransform: 'capitalize',
   },
   listItemIcon: {
     minWidth: 36,
@@ -49,73 +52,72 @@ interface IModule {
   url: string;
 }
 
-interface Props {}
+interface Props {
+  modules: IModule[];
+  itemSelected?: string;
+  homeEnabled?: boolean;
+}
 
-const Modules: React.FC<Props> = () => {
+const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
   const classes = useStyles();
-  const { enabledModules, disabledModules } = useAppSelector((state) => state.appAuthSlice.data);
-
-  console.log('disabledModules', disabledModules);
+  const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const itemStyle = {
     height: '34px',
     borderRadius: '4px',
-    marginBottom: '12px',
+    margin: '8px 0',
   };
 
-  const handleModuleName = (moduleName: string) => {
-    return moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
-  };
-
-  const handleNavigation = (moduleName: string) => {
-    switch (moduleName) {
-      case 'authentication':
-        return '/authentication/users';
-      case 'email':
-        return '/emails/templates';
-      case 'cms':
-        return '/cms/schemas';
-      default:
-        return `/${moduleName}`;
+  const handleItemClick = (url: string, enabled: boolean) => {
+    if (enabled) {
+      router.replace(url);
+      return;
     }
+    dispatch(
+      notify('Module currently disabled.', 'info', {
+        dismissAfter: 3000,
+      })
+    );
   };
 
   return (
     <>
-      <Link href="/">
-        <ListItem
-          button
-          key={'Home'}
-          className={classes.listItem}
-          style={itemStyle}
-          // selected={itemSelected === 0}
-        >
-          <ListItemIcon className={classes.listItemIcon}>
-            <Home color={'inherit'} />
-          </ListItemIcon>
-          <ListItemText primary={'Home'} classes={{ primary: classes.listItemText }} />
-        </ListItem>
-      </Link>
-      {enabledModules &&
-        enabledModules.map((module, index) => {
-          const currentUrl = handleNavigation(module.moduleName);
+      {homeEnabled ? (
+        <Link href="/">
+          <ListItem
+            button
+            className={classes.listItem}
+            style={itemStyle}
+            selected={itemSelected === ''}>
+            <ListItemIcon className={classes.listItemIcon}>
+              <Home color={'inherit'} />
+            </ListItemIcon>
+            <ListItemText primary={'home'} classes={{ primary: classes.listItemText }} />
+          </ListItem>
+        </Link>
+      ) : (
+        <></>
+      )}
+      {modules &&
+        modules.map((module, index) => {
+          const currentUrl = handleModuleNavigation(module.moduleName);
           return (
-            <Link href={currentUrl} key={index} replace>
-              <ListItem
-                button
-                className={classes.listItem}
-                style={itemStyle}
-                // selected={itemSelected === 0}
-              >
-                <ListItemIcon className={classes.listItemIcon}>
-                  {getModuleIcon(module.moduleName)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={handleModuleName(module.moduleName)}
-                  classes={{ primary: classes.listItemText }}
-                />
-              </ListItem>
-            </Link>
+            <ListItem
+              button
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === module.moduleName}
+              key={index}
+              onClick={() => handleItemClick(currentUrl, !!module.url)}>
+              <ListItemIcon className={classes.listItemIcon}>
+                {getModuleIcon(module.moduleName)}
+              </ListItemIcon>
+              <ListItemText
+                primary={module.moduleName}
+                classes={{ primary: classes.listItemText }}
+              />
+            </ListItem>
           );
         })}
     </>

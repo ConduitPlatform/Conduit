@@ -38,34 +38,46 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   const { loading } = useAppSelector((state) => state.appSlice);
   const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
-  const [itemSelected, setItemSelected] = useState<number>(0);
+  const [itemSelected, setItemSelected] = useState<string>('');
 
   useEffect(() => {
     const splitUri = router.pathname.split('/')[1];
     switch (splitUri) {
       case 'authentication':
-        setItemSelected(1);
+        setItemSelected('authentication');
         break;
-      case 'notification':
-        setItemSelected(2);
+      case 'push-notifications':
+        setItemSelected('push-notifications');
         break;
       case 'sms':
-        setItemSelected(3);
+        setItemSelected('sms');
         break;
       case 'emails':
-        setItemSelected(4);
+        setItemSelected('email');
         break;
       case 'cms':
-        setItemSelected(5);
+        setItemSelected('cms');
         break;
       case 'storage':
-        setItemSelected(6);
+        setItemSelected('storage');
         break;
       case 'settings':
-        setItemSelected(7);
+        setItemSelected('settings');
+        break;
+      case 'chat':
+        setItemSelected('chat');
+        break;
+      case 'forms':
+        setItemSelected('forms');
+        break;
+      case 'payments':
+        setItemSelected('payments');
+        break;
+      case 'database-provider':
+        setItemSelected('database-provider');
         break;
       default:
-        setItemSelected(0);
+        setItemSelected('');
     }
 
     if (router.pathname === '/login' || router.pathname === '/cms/build-types') {

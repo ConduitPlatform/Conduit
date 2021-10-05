@@ -22,14 +22,13 @@ const modules = [
   'chat',
   'sms',
   'push-notifications',
-  'not-available-module',
 ];
 
 export type AppAuthState = {
   data: {
     token: any;
     enabledModules: IModule[];
-    disabledModules: string[];
+    disabledModules: IModule[];
   };
 };
 
@@ -107,10 +106,13 @@ const appAuthSlice = createSlice({
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
       state.data.enabledModules = action.payload.modules;
       const payloadModules = action.payload.modules.map((module: IModule) => module.moduleName);
-      const disabledModules: string[] = [];
+      const disabledModules: IModule[] = [];
       modules.forEach((module) => {
         if (!payloadModules.includes(module)) {
-          disabledModules.push(module);
+          disabledModules.push({
+            moduleName: module,
+            url: '',
+          });
         }
       });
       state.data.disabledModules = disabledModules;
