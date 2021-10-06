@@ -1,23 +1,26 @@
-import { initialize as initializeMailgun } from './transports/mailgun/mailgun';
 import Mail from 'nodemailer/lib/mailer';
 import { MailgunMailBuilder } from './transports/mailgun/mailgunMailBuilder';
 import { NodemailerBuilder } from './transports/nodemailer/nodemailerBuilder';
-import { EmailBuilder } from './interfaces/EmailBuilder';
-import { createTransport, SentMessageInfo } from 'nodemailer';
+import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { EmailOptions } from './interfaces/EmailOptions';
-import { isNil } from 'lodash';
-
+import { isNil} from 'lodash';
+import { MandrillConfig } from './transports/mandrill/mandrill.config';
+import { MandrillBuilder } from './transports/mandrill/mandrillBuilder';
+import { EmailBuilderClass } from './models/EmailBuilderClass';
+import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
+import { SendgridMailBuilder } from './transports/sendgrid/sendgridMailBuilder';
+import { EmailProviderClass } from './models/EmailProviderClass';
+import { MailgunProvider } from './transports/mailgun/MailgunProvider';
+import { MandrillProvider } from './transports/mandrill/MandrilProvider';
+import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
+import { SmtpProvider } from './transports/smtp/SmtpProvider';
 export class EmailProvider {
-  _transport?: Mail;
+  _transport?: EmailProviderClass;
   _transportName?: string;
 
   constructor(transport: string, transportSettings: any) {
-    if (transport === 'mailgun') {
-      this._transportName = 'mailgun';
-
+    if(transport === 'mailgun'){
       const { apiKey, domain, proxy, host } = transportSettings.mailgun;
-
       if (isNil(apiKey) || isNil(domain) || isNil(host)) {
         throw new Error('Mailgun transport settings are missing');
       }
@@ -29,14 +32,14 @@ export class EmailProvider {
         proxy,
         host,
       };
-
-      this._transport = createTransport(initializeMailgun(mailgunSettings));
-    } else if (transport === 'smtp') {
+      this._transport = new MailgunProvider(mailgunSettings);
+    }
+    else if (transport === 'smtp') {
       this._transportName = 'smtp';
 
       const { smtp } = transportSettings;
 
-      this._transport = createTransport({
+      this._transport = new SmtpProvider({
         ...transportSettings,
         secure: false,
         ...smtp,
@@ -44,35 +47,63 @@ export class EmailProvider {
           rejectUnauthorized: false,
         },
       });
-    } else {
+
+      
+    } else if (transport === 'mandrill') {
+      this._transportName = 'mandrill';
+      const  mandrillSettings: MandrillConfig = {
+        auth: {
+          apiKey: transportSettings.mandrill.apiKey
+        }
+        
+      };
+     
+      this._transport = new MandrillProvider(mandrillSettings);
+    }
+    else if(transport === 'sendgrid'){
+
+      this._transportName = 'sendgrid';
+
+      const sgSettings: SendGridConfig = {
+            apiKey : transportSettings.apiKey,
+  
+      };
+      this._transport = new SendgridProvider(sgSettings);
+    } 
+    else {
       this._transportName = undefined;
       this._transport = undefined;
       throw new Error('You need to specify a correct transport');
     }
   }
 
-  sendEmailDirect(mailOptions: EmailOptions): Promise<SentMessageInfo> {
-    if (!this._transport) {
-      throw new Error('Email  transport not initialized!');
-    }
-    return this._transport.sendMail(mailOptions);
+  sendEmailDirect(mailOptions: Mail.Options): Promise<SentMessageInfo> | undefined {
+
+      const transport = this._transport;
+      if (!transport) {
+        throw new Error('Email  transport not initialized!');
+      }
+      return transport.sendEmailDirect(mailOptions);
+    
   }
 
-  emailBuilder(): EmailBuilder {
+  emailBuilder(): EmailBuilderClass<Mail.Options> {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    if (this._transportName === 'mailgun') {
-      return new MailgunMailBuilder();
-    } else {
-      return new NodemailerBuilder();
-    }
+
+    return this._transport.getBuilder();
   }
 
-  sendEmail(email: EmailBuilder): Promise<SentMessageInfo> {
+  sendEmail(email: EmailBuilderClass<Mail.Options>): Promise<SentMessageInfo> | undefined  {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    return this._transport.sendMail(email.getMailObject());
+    
+    return this._transport.sendEmail(email.getMailObject());
   }
 }
+
+
+
+
