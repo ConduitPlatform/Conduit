@@ -19,18 +19,28 @@ export class AuthHandlers {
 
     const { username, password } = req.body;
     if (isNil(username) || isNil(password)) {
-      return res
-        .status(400)
-        .json({ error: 'Both username and password must be provided' });
+      return res.status(400).json({
+        name: 'INVALID_PARAMS',
+        status: 400,
+        message: 'Both username and password must be provided',
+      });
     }
 
     const admin = await database.findOne('Admin', { username });
     if (isNil(admin)) {
-      return res.status(403).json({ error: 'Invalid username/password' });
+      return res.status(401).json({
+        name: 'UNAUTHORIZED',
+        status: 401,
+        message: 'Invalid username/password',
+      });
     }
     const passwordsMatch = await comparePasswords(password, admin.password);
     if (!passwordsMatch) {
-      return res.status(403).json({ error: 'Invalid username/password' });
+      return res.status(401).json({
+        name: 'UNAUTHORIZED',
+        status: 401,
+        message: 'Invalid username/password',
+      });
     }
 
     let authConfig = await config.get('admin');
@@ -52,14 +62,20 @@ export class AuthHandlers {
 
     const { username, password } = req.body;
     if (isNil(username) || isNil(password)) {
-      return res
-        .status(400)
-        .json({ error: 'Both username and password must be provided' });
+      return res.status(400).json({
+        name: 'INVALID_PARAMS',
+        status: 400,
+        message: 'Both username and password must be provided',
+      });
     }
 
     const admin = await database.findOne('Admin', { username });
     if (!isNil(admin)) {
-      return res.status(403).json({ error: 'Already exists' });
+      return res.status(400).json({
+        name: 'INVALID_PARAMS',
+        status: 400,
+        message: 'Already exists',
+      });
     }
     const adminConfig = await this.conduit.getConfigManager().get('admin');
     const hashRounds = adminConfig.auth.hashRounds;
