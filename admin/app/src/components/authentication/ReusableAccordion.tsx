@@ -150,7 +150,7 @@ const ReusableAccordion: React.FC<Props> = ({
                                 [key]: !value,
                               })
                             }
-                            value={'sendVerificationEmail'}
+                            value={value}
                             color="primary"
                           />
                         }
