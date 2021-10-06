@@ -35,6 +35,10 @@ message FileResponse {
   string name = 3;
 }
 
+message GetFileDataResponse {
+  string data = 1;
+}
+
 
 message Empty {
 }
@@ -42,6 +46,7 @@ message Empty {
 service Storage {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GetFile(GetFileRequest) returns (FileResponse);
+  rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
 }

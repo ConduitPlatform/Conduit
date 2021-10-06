@@ -32,5 +32,40 @@ module.exports = (phase) => {
     MASTER_KEY: process.env.MASTER_KEY,
   };
 
-  return { env, publicRuntimeConfig };
+  const redirects = async () => {
+    return [
+      {
+        source: '/authentication',
+        destination: '/authentication/users',
+        permanent: true,
+      },
+      {
+        source: '/emails',
+        destination: '/emails/templates',
+        permanent: true,
+      },
+      {
+        source: '/cms',
+        destination: '/cms/schemas',
+        permanent: true,
+      },
+      {
+        source: '/storage',
+        destination: '/storage/files',
+        permanent: true,
+      },
+      {
+        source: '/settings',
+        destination: '/settings/clientsdk',
+        permanent: true,
+      },
+      {
+        source: '/push-notifications',
+        destination: '/push-notifications/view',
+        permanent: true,
+      },
+    ];
+  };
+
+  return { env, publicRuntimeConfig, redirects };
 };

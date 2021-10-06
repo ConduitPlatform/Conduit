@@ -31,6 +31,10 @@ export class RouterBuilder extends ConduitRouterBuilder {
     this._router.put(path, middleware);
   }
 
+  patch(path: string, options: ConduitRouteOptions, middleware: []): void {
+    this._router.patch(path, middleware);
+  }
+
   delete(path: string, options: ConduitRouteOptions, middleware: []): void {
     this._router.delete(path, middleware);
   }

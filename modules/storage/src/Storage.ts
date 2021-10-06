@@ -15,6 +15,7 @@ import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
+import { AdminRoutes } from './admin/admin';
 
 export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;
@@ -47,6 +48,7 @@ export class StorageModule implements ConduitServiceModule {
         getFile: this.getFileGrpc.bind(this),
         createFile: this.createFileGrpc.bind(this),
         updateFile: this.updateFileGrpc.bind(this),
+        getFileData: this.getFileData.bind(this),
       }
     );
     this.grpcServer.start();
@@ -55,6 +57,7 @@ export class StorageModule implements ConduitServiceModule {
     this.storageProvider = createStorageProvider('local', {} as any);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
   }
 
   async activate() {
@@ -132,6 +135,18 @@ export class StorageModule implements ConduitServiceModule {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.getFile(
+      wrapCallObjectForRouter(call),
+      wrapCallbackFunctionForRouter(callback)
+    );
+  }
+
+  async getFileData(call: any, callback: any) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    await this._fileHandlers.getFileData(
       wrapCallObjectForRouter(call),
       wrapCallbackFunctionForRouter(callback)
     );

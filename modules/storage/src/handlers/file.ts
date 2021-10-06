@@ -15,13 +15,13 @@ export class FileHandlers {
     private readonly grpcSdk: ConduitGrpcSdk,
     storageProvider: IStorageProvider
   ) {
+    this.storageProvider = storageProvider;
     this.initDb(grpcSdk, storageProvider);
   }
 
   async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
     await grpcSdk.waitForExistence('database-provider');
     this.database = grpcSdk.databaseProvider;
-    this.storageProvider = storageProvider;
   }
 
   updateProvider(storageProvider: IStorageProvider) {
@@ -120,6 +120,37 @@ export class FileHandlers {
         id: file._id,
         name: file.name,
         url: file.url,
+      }),
+    });
+  }
+
+  async getFileData(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+    if (!isString(id)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'The provided id is invalid',
+      });
+    }
+
+    let errorMessage = null;
+    const file = await this.database
+      .findOne('File', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    if (isNil(file))
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'File not found',
+      });
+
+    let data: Buffer = await this.storageProvider.folder(file.folder).get(file.name);
+    data.toString('base64');
+
+    return callback(null, {
+      result: JSON.stringify({
+        data: data.toString('base64'),
       }),
     });
   }
