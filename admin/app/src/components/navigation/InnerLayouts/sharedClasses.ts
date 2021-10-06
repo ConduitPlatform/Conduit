@@ -1,13 +1,12 @@
-import { createStyles, makeStyles, Theme } from '@material-ui/core';
+import { createStyles, makeStyles } from '@material-ui/core';
 
-export default makeStyles((theme: Theme) =>
+export default makeStyles(() =>
   createStyles({
     navBar: {
       position: 'fixed',
       top: 0,
       backgroundColor: '#262840',
       width: '100vw',
-
       padding: '9px',
       zIndex: 10,
     },
