@@ -7,7 +7,7 @@
 **/*.tsbuildinfo
 **/src/proto/*.proto
 **/protos/src/*.proto
-**/ProtoUtils/**
+**/protoUtils/**
 .vscode
 **/resourceRegistry.log
 

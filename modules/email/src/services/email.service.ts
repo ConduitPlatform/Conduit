@@ -70,7 +70,7 @@ export class EmailService {
     }
 
     if (params.attachments) {
-      builder.addAttachments(params.attachments);
+      builder.addAttachments(params.attachments as any);
     }
     return this.emailer.sendEmail(builder);
   }

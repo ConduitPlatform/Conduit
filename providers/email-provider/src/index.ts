@@ -22,7 +22,6 @@ var sgTransport = require('nodemailer-sendgrid');
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
-  _mandrillTransport?: Mandrill;
   _transportName?: string;
 
   constructor(transport: string, transportSettings: any) {

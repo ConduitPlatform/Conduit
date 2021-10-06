@@ -14,7 +14,6 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
-import Mail from 'nodemailer/lib/mailer';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;
@@ -166,7 +165,7 @@ export default class EmailModule implements ConduitServiceModule {
       sender: call.request.params.sender,
       cc: call.request.params.cc,
       replyTo: call.request.params.replyTo,
-      attachments: call.request.params.attachments as Mail.Attachment[],
+      attachments: call.request.params.attachments,
     };
     let emailConfig: any = await this.grpcSdk.config
       .get('email')
