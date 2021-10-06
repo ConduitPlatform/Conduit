@@ -5,8 +5,10 @@ import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
 import { Box } from '@material-ui/core';
 import { useRouter } from 'next/router';
+import sharedClasses from './sharedClasses';
 
 const NotificationLayout: React.FC<unknown> = ({ children }) => {
+  const classes = sharedClasses();
   const router = useRouter();
   const [value, setValue] = useState(0);
 
@@ -27,13 +29,15 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
 
   return (
     <Box p={4}>
-      <Typography variant={'h4'}>Notifications</Typography>
-      <Tabs value={value} onChange={handleChange}>
-        <Tab label="Notifications" id="view" />
-        <Tab label="Send Notifications" id="send" />
-        <Tab label="Settings" id="settings" />
-      </Tabs>
-      <Box marginTop={3}>{children}</Box>
+      <Box className={classes.navBar}>
+        <Typography variant={'h4'}>Notifications</Typography>
+        <Tabs value={value} onChange={handleChange}>
+          <Tab label="Notifications" id="view" />
+          <Tab label="Send Notifications" id="send" />
+          <Tab label="Settings" id="settings" />
+        </Tabs>
+      </Box>
+      <Box className={classes.content}>{children}</Box>
     </Box>
   );
 };
