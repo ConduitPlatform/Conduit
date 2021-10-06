@@ -10,6 +10,7 @@ import {
   deleteUser,
   getAuthenticationConfig,
   putAuthenticationConfig,
+  blockUnblockUsers,
 } from '../../http/AuthenticationRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -108,6 +109,22 @@ export const asyncBlockUserUI = createAsyncThunk(
       await blockUser(id);
       thunkAPI.dispatch(setAppDefaults());
       return id;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      throw error;
+    }
+  }
+);
+
+export const asyncblockUnblockUsers = createAsyncThunk(
+  'authentication/blockUnblockUsers',
+  async (body: { ids: string[]; block: boolean }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await blockUnblockUsers(body);
+      thunkAPI.dispatch(setAppDefaults());
+      return body.ids;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
@@ -231,6 +248,9 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncUpdateAuthenticationConfig.fulfilled, (state, action) => {
       state.data.signInMethods = action.payload;
+    });
+    builder.addCase(asyncblockUnblockUsers.fulfilled, (state, action) => {
+      console.log('action.payload', action.payload);
     });
   },
 });

@@ -27,6 +27,10 @@ export const deleteUser = (id: string) => {
   return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
 };
 
+export const deleteUsers = (users: string[]) => {
+  return axios.delete(`${CONDUIT_API}/admin/authentication/users`, { data: { users } });
+};
+
 export const searchUser = (identifier: string) => {
   return axios.get(`${CONDUIT_API}/admin/authentication/users`, {
     params: {
@@ -37,6 +41,10 @@ export const searchUser = (identifier: string) => {
 
 export const blockUser = (id: string) => {
   return axios.post(`${CONDUIT_API}/admin/authentication/users/${id}/block`);
+};
+
+export const blockUnblockUsers = (body: { ids: string[]; block: boolean }) => {
+  return axios.post(`${CONDUIT_API}/admin/authentication/users/toggle`, body);
 };
 
 export const unblockUser = (id: string) => {
