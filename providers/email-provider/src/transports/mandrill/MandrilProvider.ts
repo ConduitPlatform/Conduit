@@ -4,6 +4,7 @@ import { MandrillConfig } from "./mandrill.config";
 import { Mandrill } from 'mandrill-api';
 import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
+import { MandrillBuilder } from "./mandrillBuilder";
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class MandrillProvider extends EmailProviderClass{
    private  _mandrillSdk?: Mandrill;
@@ -54,5 +55,9 @@ export class MandrillProvider extends EmailProviderClass{
         const created = await this.getTemplateInfo(response.slug);
 
         return  created;
+    }
+
+    getBuilder(){
+        return new MandrillBuilder();
     }
 }

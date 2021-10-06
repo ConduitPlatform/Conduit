@@ -1,11 +1,15 @@
 import { createTransport } from "nodemailer";
+import { Options } from "nodemailer/lib/mailer";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { Template } from "../../interfaces/Template";
+import { EmailBuilderClass } from "../../models/EmailBuilderClass";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from "./mailgun.config";
+import { MailgunMailBuilder } from "./mailgunMailBuilder";
 var mailgun = require('mailgun-js');
 export  class MailgunProvider extends EmailProviderClass {
+ 
     
     protected _mailgunSdk: any;
     private domain: string;
@@ -68,5 +72,9 @@ export  class MailgunProvider extends EmailProviderClass {
         };
     
         return created;
+    }
+
+    getBuilder(): EmailBuilderClass<Options> {
+        return new MailgunMailBuilder();
     }
 }

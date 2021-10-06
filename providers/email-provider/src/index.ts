@@ -91,28 +91,15 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    if (this._transportName === 'mailgun') {
 
-      return new MailgunMailBuilder();
-
-    } 
-    if ( this._transportName === 'mandrill') {
-
-      return new MandrillBuilder();
-      
-    }
-    else if ( this._transportName === 'sendgrid'){
-      return new SendgridMailBuilder();
-    }
-    else{
-      return  new NodemailerBuilder();
-    }
+    return this._transport.getBuilder();
   }
 
   sendEmail(email: EmailBuilderClass<Mail.Options>): Promise<SentMessageInfo> | undefined  {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
+    
     return this._transport.sendEmail(email.getMailObject());
   }
 }

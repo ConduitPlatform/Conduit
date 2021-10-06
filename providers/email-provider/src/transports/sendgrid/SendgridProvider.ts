@@ -4,6 +4,7 @@ import { createTransport } from "nodemailer";
 import {Client} from '@sendgrid/client';
 import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
+import { SendgridMailBuilder } from "./sendgridMailBuilder";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -97,6 +98,10 @@ export class SendgridProvider extends EmailProviderClass{
     
         return Promise.all(retList);
             
+    }
+
+    getBuilder(){
+        return new SendgridMailBuilder();
     }
     
 }
