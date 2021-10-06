@@ -111,7 +111,7 @@ export class EmailProvider {
     }
   }
 
-  sendEmail(email: EmailBuilderClass<Mail.Options> | EmailBuilderClass<MandrillEmailOptions>): Promise<SentMessageInfo> | undefined  {
+  sendEmail(email: EmailBuilderClass<Mail.Options>): Promise<SentMessageInfo> | undefined  {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
