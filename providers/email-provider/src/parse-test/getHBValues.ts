@@ -1,5 +1,6 @@
 import  _  from 'lodash';
-function  getHBValues(text){
+
+export  function  getHBValues(text:any){
     const re = /{{[{]?(.*?)[}]?}}/g;
     const tags = [];
     let matches;
@@ -8,10 +9,10 @@ function  getHBValues(text){
             tags.push(matches[1]);
         }
     }
-    const root = {};
+    const root:any  = {};
     let context = root;
     const stack = [];
-    const setVar = (variable, val) => {
+    const setVar = (variable:any, val:any) => {
 
         // Dot Notation Breakdown
         if (variable.match(/\.*\./) && !variable.match(/\s/)) {
@@ -89,12 +90,3 @@ function  getHBValues(text){
 
     return root;
 };
-import * as fs from  'fs';
-import { get } from 'http';
-fs.readFile('./text.txt', 'utf8' , (err, data) => {
-    if (err) {
-        console.log(err);
-        // return err;
-    }
-    console.log(getHBValues(data));
-  })

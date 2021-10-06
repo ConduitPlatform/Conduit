@@ -4,6 +4,7 @@ import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { Template } from "../../interfaces/Template";
 import { EmailBuilderClass } from "../../models/EmailBuilderClass";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
+import { getHBValues } from "../../parse-test/getHBValues";
 import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from "./mailgun.config";
 import { MailgunMailBuilder } from "./mailgunMailBuilder";
@@ -41,6 +42,7 @@ export  class MailgunProvider extends EmailProviderClass {
                 plainContent: response.template.version.template,
                 active:true,
                 updatedAt: '',
+                variables: Object.keys(getHBValues(response.template.version.template))
 
             }],
         };
@@ -67,7 +69,8 @@ export  class MailgunProvider extends EmailProviderClass {
                 id: response.template.version.id,
                 active:true,
                 updatedAt: response.template.version.createdAt,
-                plainContent: response.template.version.template, // can be also htmlContent
+                plainContent: response.template.version.template, 
+                variables: Object.keys(getHBValues(mailgun_input.template))
             }]
         };
     

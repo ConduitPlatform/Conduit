@@ -1,17 +1,17 @@
-import { EmailProvider } from "../src/index"
-import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
-// let provider = new EmailProvider('mailgun',{
-//     mailgun:{
-//         proxy:null,
-//         host: 'api.mailgun.net',
-//         domain:'***REMOVED***',
-//         apiKey: '***REMOVED***'
-//     }
-// });
-
-let provider = new EmailProvider('sendgrid',{
-    apiKey: '***REMOVED***'
+import { EmailProvider } from "./index"
+import { CreateEmailTemplate } from "./interfaces/CreateEmailTemplate";
+let provider = new EmailProvider('mailgun',{
+    mailgun:{
+        proxy:null,
+        host: 'api.mailgun.net',
+        domain:'***REMOVED***',
+        apiKey: '***REMOVED***'
+    }
 });
+
+// let provider = new EmailProvider('sendgrid',{
+//     apiKey: '***REMOVED***'
+// });
 
 // let provider = new EmailProvider('mandrill',{
 //     mandrill : { 
@@ -64,11 +64,9 @@ let provider = new EmailProvider('sendgrid',{
 // }
 
 var mailgundata: CreateEmailTemplate = {
-    name : "psixoula",
-    plainContent: "na to to template psixoula m",
+    name : "psixoulammmmmmm",
     subject: " afasfasfasfa",
-    htmlContent: " <p> hi you </p>",
-    versionName: " first version",
+    plainContent: " <p> hi you {{test}} {{fff}} </p>",
 
 };
 // var mandrilData = {
@@ -79,7 +77,7 @@ var mailgundata: CreateEmailTemplate = {
     
 
 // }
-provider._transport?.createTemplate(mailgundata).then((body:any)  => {
+provider._transport?.getTemplateInfo('psixoulammmmmmm').then((body:any)  => {
     console.log(body);
 })
 .catch(err => {

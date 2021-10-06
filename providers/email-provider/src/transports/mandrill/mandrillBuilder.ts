@@ -1,5 +1,6 @@
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
-import { MandrillEmailOptions,Var } from '../../interfaces/MandrillEmailOptions';
+import { MandrillEmailOptions } from '../../interfaces/mandrill/MandrillEmailOptions';
+import {Var} from '../../interfaces/Var';
 
 export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
 
