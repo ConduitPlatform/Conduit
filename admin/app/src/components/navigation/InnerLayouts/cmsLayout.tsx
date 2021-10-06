@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
-import { Box } from '@material-ui/core';
+import { Box, Button } from '@material-ui/core';
 import { useRouter } from 'next/router';
 import sharedClasses from './sharedClasses';
+import { Toc } from '@material-ui/icons';
 
 const CmsLayout: React.FC<unknown> = ({ children }) => {
   const classes = sharedClasses();
@@ -25,7 +26,18 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
-        <Typography variant={'h4'}>Content Management</Typography>
+        <Typography variant={'h4'}>
+          Content Management
+          <a
+            href={`${process.env.CONDUIT_URL}/swagger/#/cmss`}
+            target="_blank"
+            rel="noreferrer"
+            className={classes.swaggerButton}>
+            <Button variant="outlined" endIcon={<Toc />}>
+              SWAGGER
+            </Button>
+          </a>
+        </Typography>
         <Tabs value={value} onChange={handleChange}>
           <Tab label="Schemas" id="schemas" />
           <Tab label="Data" id="schemadata" />
