@@ -17,7 +17,8 @@ export class EmailService {
     this.emailer = emailer;
   }
 
-  async registerTemplate(params: IRegisterTemplateParams) {
+  async  registerTemplate(params: IRegisterTemplateParams) {
+    
     const { name, body, subject, variables } = params;
 
     const existing = await this.database.findOne('EmailTemplate', { name });
@@ -69,9 +70,8 @@ export class EmailService {
     }
 
     if (params.attachments) {
-      builder.addAttachments(params.attachments);
+      builder.addAttachments(params.attachments as any);
     }
-
     return this.emailer.sendEmail(builder);
   }
 
