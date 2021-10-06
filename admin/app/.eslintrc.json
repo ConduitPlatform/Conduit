@@ -16,7 +16,7 @@
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-var-requires": [0],
     "no-use-before-define": "off",
-    "@typescript-eslint/no-use-before-define": ["error"],
+    "@typescript-eslint/no-use-before-define": ["warn"],
     "@typescript-eslint/explicit-module-boundary-types": "off"
   }
 }
