@@ -41,6 +41,7 @@ export interface FacebookTypes {
 export interface TwitchTypes {
   enabled: boolean;
   clientId: string;
+  accountLinking: boolean;
   redirect_uri: string;
   clientSecret: string;
 }

@@ -2,10 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import LocalAccordion from './LocalAccordion';
-import GoogleAccordion from './GoogleAccordion';
-import FacebookAccordion from './FacebookAccordion';
-import TwitchAccordion from './TwitchAccordion';
 import Button from '@material-ui/core/Button';
 import {
   LocalTypes,
@@ -16,6 +12,7 @@ import {
   SocialDataTypes,
   SignInMethods,
 } from '../../models/authentication/AuthModels';
+import ReusableAccordion from './ReusableAccordion';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -30,7 +27,7 @@ const useStyles = makeStyles((theme) => ({
   },
   expandedPanel: {
     '&.MuiAccordion-root.Mui-expanded': {
-      marginTop: 0,
+      marginTop: 10,
     },
   },
   details: {
@@ -56,7 +53,6 @@ interface Props {
 const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => {
   const classes = useStyles();
   const [expanded, setExpanded] = useState<SocialNameTypes[]>([]);
-
   const [local, setLocal] = useState<LocalTypes>({
     enabled: false,
     sendVerificationEmail: false,
@@ -80,6 +76,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
 
   const [twitch, setTwitch] = useState<TwitchTypes>({
     enabled: false,
+    accountLinking: false,
     clientId: '',
     redirect_uri: '',
     clientSecret: '',
@@ -122,6 +119,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
 
         setTwitch({
           enabled: twitchData.enabled,
+          accountLinking: twitchData.accountLinking,
           clientId: twitchData.clientId || '',
           redirect_uri: twitchData.redirect_uri || '',
           clientSecret: twitchData.clientSecret || '',
@@ -129,38 +127,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
       }
     }
   }, [configData]);
-
-  const handleGoogleClientId = (event: { target: { value: string } }) => {
-    setGoogle({ ...google, clientId: event.target.value });
-  };
-
-  const handleFacebookClientID = (event: { target: { value: string } }) => {
-    setFacebook({ ...facebook, clientId: event.target.value });
-  };
-
-  const handleTwitchClientId = (event: { target: { value: string } }) => {
-    setTwitch({ ...twitch, clientId: event.target.value });
-  };
-
-  const handleTwitchRedirectUri = (event: { target: { value: string } }) => {
-    setTwitch({ ...twitch, redirect_uri: event.target.value });
-  };
-
-  const handleTwitchClientSecret = (event: { target: { value: string } }) => {
-    setTwitch({ ...twitch, clientSecret: event.target.value });
-  };
-
-  const handleIdentifier = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
-    setLocal({ ...local, identifier: event.target.value });
-  };
-
-  const handleVerificationUriChange = (event: { target: { value: string } }) => {
-    setLocal({ ...local, verification_redirect_uri: event.target.value });
-  };
-
-  const handleForgotPasswordUriChange = (event: { target: { value: string } }) => {
-    setLocal({ ...local, forgot_password_redirect_uri: event.target.value });
-  };
 
   const openExpanded = (type: SocialNameTypes) => {
     const newExpanded = [...expanded];
@@ -208,6 +174,22 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
     closeExpanded(type);
   };
 
+  const handleTwitchInputs = (e: { target: { value: string; name: string } }) => {
+    setTwitch({ ...twitch, [e.target.name]: e.target.value });
+  };
+
+  const handleGoogleInputs = (e: { target: { value: string; name: string } }) => {
+    setGoogle({ ...google, [e.target.name]: e.target.value });
+  };
+
+  const handleFacebookInputs = (e: { target: { value: string; name: string } }) => {
+    setFacebook({ ...facebook, [e.target.name]: e.target.value });
+  };
+
+  const handleLocalInputs = (e: { target: { value: string; name: string } }) => {
+    setLocal({ ...local, [e.target.name]: e.target.value });
+  };
+
   const submitButtons = (typeProvider: SocialNameTypes, provider: SocialDataTypes) => {
     return (
       <>
@@ -238,16 +220,15 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           return;
         }
         return (
-          <LocalAccordion
-            local={local}
+          <ReusableAccordion
+            name={'local'}
+            handleInput={handleLocalInputs}
             expanded={expanded}
-            setLocal={setLocal}
-            openExpanded={openExpanded}
-            handleIdentifier={handleIdentifier}
-            handleVerificationUriChange={handleVerificationUriChange}
-            handleForgotPasswordUriChange={handleForgotPasswordUriChange}>
+            accProps={local}
+            setAccProps={setLocal}
+            openExpanded={openExpanded}>
             {submitButtons('local', local)}
-          </LocalAccordion>
+          </ReusableAccordion>
         );
 
       case 'google':
@@ -255,14 +236,15 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           return;
         }
         return (
-          <GoogleAccordion
-            google={google}
+          <ReusableAccordion
+            name={'google'}
+            handleInput={handleGoogleInputs}
             expanded={expanded}
-            setGoogle={setGoogle}
-            openExpanded={openExpanded}
-            handleGoogleClientId={handleGoogleClientId}>
+            accProps={google}
+            setAccProps={setGoogle}
+            openExpanded={openExpanded}>
             {submitButtons('google', google)}
-          </GoogleAccordion>
+          </ReusableAccordion>
         );
 
       case 'facebook':
@@ -270,30 +252,30 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           return;
         }
         return (
-          <FacebookAccordion
+          <ReusableAccordion
+            name={'facebook'}
+            handleInput={handleFacebookInputs}
             expanded={expanded}
-            facebook={facebook}
-            setFacebook={setFacebook}
-            openExpanded={openExpanded}
-            handleFacebookClientID={handleFacebookClientID}>
+            accProps={facebook}
+            setAccProps={setFacebook}
+            openExpanded={openExpanded}>
             {submitButtons('facebook', facebook)}
-          </FacebookAccordion>
+          </ReusableAccordion>
         );
       case 'twitch':
         if (!twitch) {
           return;
         }
         return (
-          <TwitchAccordion
+          <ReusableAccordion
+            name={'twitch'}
+            handleInput={handleTwitchInputs}
             expanded={expanded}
-            twitch={twitch}
-            setTwitch={setTwitch}
-            openExpanded={openExpanded}
-            handleTwitchClientId={handleTwitchClientId}
-            handleTwitchRedirectUri={handleTwitchRedirectUri}
-            handleTwitchClientSecret={handleTwitchClientSecret}>
+            accProps={twitch}
+            setAccProps={setTwitch}
+            openExpanded={openExpanded}>
             {submitButtons('twitch', twitch)}
-          </TwitchAccordion>
+          </ReusableAccordion>
         );
       default:
         return null;
