@@ -16,10 +16,6 @@ import { MailgunProvider } from './transports/mailgun/MailgunProvider';
 import { MandrillProvider } from './transports/mandrill/MandrilProvider';
 import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
 import { SmtpProvider } from './transports/smtp/SmtpProvider';
-
-var mandrillTransport = require('nodemailer-mandrill-transport');
-var sgTransport = require('nodemailer-sendgrid');
-
 export class EmailProvider {
   _transport?: EmailProviderClass;
   _transportName?: string;
@@ -93,7 +89,7 @@ export class EmailProvider {
     
   }
 
-  emailBuilder(): EmailBuilderClass<Mail.Options> | MandrillBuilder | SendgridMailBuilder {
+  emailBuilder(): EmailBuilderClass<Mail.Options> {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
