@@ -28,7 +28,7 @@ let templateOptions:TemplateOptions = {
     id: 'd-56b4d36d208e4b6283e4c02eacedf922',
     variables:[{
         name:'fname',
-        content:'safasfasfas'
+        content:'dimitris'
     }]
 }
 

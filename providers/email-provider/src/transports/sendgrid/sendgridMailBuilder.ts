@@ -1,4 +1,3 @@
-import Mail from "nodemailer/lib/mailer";
 import { SendgridMailOptions } from "../../interfaces/sendgrid/SendgridEmailOptions";
 import { TemplateOptions } from "../../interfaces/TemplateOptions";
 import { EmailBuilderClass } from "../../models/EmailBuilderClass";
