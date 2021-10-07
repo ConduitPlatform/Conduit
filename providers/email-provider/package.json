@@ -24,6 +24,7 @@
     "nodemailer-mailgun-transport": "^2.0.0",
     "nodemailer-mandrill-transport": "^1.2.0",
     "nodemailer-sendgrid": "^1.0.3",
+    "smtpapi": "^1.4.4",
     "snyk": "^1.321.0"
   },
   "directories": {

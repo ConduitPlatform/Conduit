@@ -1,5 +1,6 @@
 import Mail, { Address, Attachment, AttachmentLike } from 'nodemailer/lib/mailer';
 import { isNil } from 'lodash';
+import { TemplateOptions } from '../interfaces/TemplateOptions';
 import { Readable } from 'stream';
 import { checkIfHTML } from '../utils';
 
@@ -148,4 +149,6 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
   getAttachments(): Attachment[] | undefined {
     return this._mailOptions.attachments;
   }
+
+  abstract setTemplate(template:TemplateOptions):EmailBuilderClass<T>;
 }
