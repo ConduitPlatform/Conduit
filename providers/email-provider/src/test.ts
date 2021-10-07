@@ -37,7 +37,6 @@ let mail = provider.emailBuilder()
             .setSubject('Hello ✔✔✔✔✔')           
             .setSender("dimitris.soldatos@quintessential.gr")
             .setTemplate(templateOptions);
-            
           provider
           .sendEmail(mail)
           ?.then( (r) => {

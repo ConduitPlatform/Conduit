@@ -2,7 +2,7 @@ import Mail from "nodemailer/lib/mailer";
 import { SendgridMailOptions } from "../../interfaces/sendgrid/SendgridEmailOptions";
 import { TemplateOptions } from "../../interfaces/TemplateOptions";
 import { EmailBuilderClass } from "../../models/EmailBuilderClass";
-var smtpapi = require('smtpapi');
+
 
 export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions>{
     constructor(){
@@ -10,14 +10,14 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions>{
     }
 
     setTemplate(template: TemplateOptions): SendgridMailBuilder {
-    //     let header = new smtpapi();
-    //     header.addFilter('templates','enable',1);
-    //     header.addFilter('templates','template_id',template.id);  
-    //     template.variables.forEach( (element) =>{
-    //         header.addSubstitution(element.name,[element.content]);
-
-    //     })
-    //     this._mailOptions.headers = {'x-smtpapi': JSON.stringify(header)}
+        if(!this._mailOptions.hasOwnProperty('dynamicTemplateData')){
+            this._mailOptions.dynamicTemplateData = {} as any;
+        }
+        template.variables.forEach( element =>{
+            this._mailOptions.dynamicTemplateData[element.name] = element.content;
+        })
+        this._mailOptions.templateId =  template.id;
+        
         return this;
     }
 

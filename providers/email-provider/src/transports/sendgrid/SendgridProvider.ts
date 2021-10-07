@@ -6,7 +6,6 @@ import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { SendgridMailBuilder } from "./sendgridMailBuilder";
 import { getHBValues } from "../../parse-test/getHBValues";
-import Mail from "nodemailer/lib/mailer";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
