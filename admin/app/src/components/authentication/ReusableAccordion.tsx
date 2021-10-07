@@ -13,7 +13,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import { InputLabel, MenuItem, Select } from '@material-ui/core';
 import FormControl from '@material-ui/core/FormControl';
 import { SocialDataTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
-import { string } from 'prop-types';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -49,7 +48,6 @@ interface Props {
   name: string;
   expanded: SocialNameTypes[];
   setAccProps: any;
-  handleInput: (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void;
   openExpanded: (value: SocialNameTypes) => void;
   accProps: SocialDataTypes;
 }
@@ -59,7 +57,6 @@ const ReusableAccordion: React.FC<Props> = ({
   expanded,
   children,
   name,
-  handleInput,
   openExpanded,
   accProps,
 }) => {
@@ -205,7 +202,9 @@ const ReusableAccordion: React.FC<Props> = ({
                         name={key}
                         variant="outlined"
                         value={value}
-                        onChange={handleInput}
+                        onChange={(e) =>
+                          setAccProps({ ...accProps, [e.target.name]: e.target.value })
+                        }
                         placeholder={key}
                         disabled={!accProps.enabled}
                       />

@@ -174,22 +174,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
     closeExpanded(type);
   };
 
-  const handleTwitchInputs = (e: { target: { value: string; name: string } }) => {
-    setTwitch({ ...twitch, [e.target.name]: e.target.value });
-  };
-
-  const handleGoogleInputs = (e: { target: { value: string; name: string } }) => {
-    setGoogle({ ...google, [e.target.name]: e.target.value });
-  };
-
-  const handleFacebookInputs = (e: { target: { value: string; name: string } }) => {
-    setFacebook({ ...facebook, [e.target.name]: e.target.value });
-  };
-
-  const handleLocalInputs = (e: { target: { value: string; name: string } }) => {
-    setLocal({ ...local, [e.target.name]: e.target.value });
-  };
-
   const submitButtons = (typeProvider: SocialNameTypes, provider: SocialDataTypes) => {
     return (
       <>
@@ -222,7 +206,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'local'}
-            handleInput={handleLocalInputs}
             expanded={expanded}
             accProps={local}
             setAccProps={setLocal}
@@ -238,7 +221,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'google'}
-            handleInput={handleGoogleInputs}
             expanded={expanded}
             accProps={google}
             setAccProps={setGoogle}
@@ -254,7 +236,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'facebook'}
-            handleInput={handleFacebookInputs}
             expanded={expanded}
             accProps={facebook}
             setAccProps={setFacebook}
@@ -269,7 +250,6 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'twitch'}
-            handleInput={handleTwitchInputs}
             expanded={expanded}
             accProps={twitch}
             setAccProps={setTwitch}
