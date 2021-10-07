@@ -27,8 +27,8 @@ export const deleteUser = (id: string) => {
   return axios.delete(`${CONDUIT_API}/admin/authentication/users/${id}`);
 };
 
-export const deleteUsers = (users: string[]) => {
-  return axios.delete(`${CONDUIT_API}/admin/authentication/users`, { data: { users } });
+export const deleteUsers = (ids: string[]) => {
+  return axios.delete(`${CONDUIT_API}/admin/authentication/users`, { data: { ids: ids } });
 };
 
 export const searchUser = (identifier: string) => {

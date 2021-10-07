@@ -13,6 +13,7 @@ import {
   asyncBlockUnblockUsers,
   asyncBlockUserUI,
   asyncDeleteUser,
+  asyncDeleteUsers,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
   asyncUnblockUserUI,
@@ -78,7 +79,10 @@ const Users = () => {
     open: false,
     multiple: false,
   });
-  const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
+  const [openDeleteUser, setOpenDeleteUser] = useState<{ open: boolean; multiple: boolean }>({
+    open: false,
+    multiple: false,
+  });
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
@@ -146,7 +150,10 @@ const Users = () => {
       setOpenEditUser(true);
       setSelectedUser(currentUser);
     } else if (action.type === 'delete') {
-      setOpenDeleteUser(true);
+      setOpenDeleteUser({
+        open: true,
+        multiple: false,
+      });
       setSelectedUser(currentUser);
     } else if (action.type === 'block/unblock') {
       setOpenBlockUI({
@@ -196,17 +203,31 @@ const Users = () => {
   };
 
   const handleClose = () => {
-    setOpenDeleteUser(false);
-    setOpenEditUser(false);
+    setOpenDeleteUser({
+      open: false,
+      multiple: false,
+    });
     setOpenBlockUI({
       open: false,
       multiple: false,
     });
+    setOpenEditUser(false);
   };
 
   const deleteButtonAction = () => {
-    dispatch(asyncDeleteUser(selectedUser._id));
-    setOpenDeleteUser(false);
+    if (openDeleteUser.open) {
+      const params = {
+        ids: selectedUsers,
+        getUsers: getUsersCallback,
+      };
+      dispatch(asyncDeleteUsers(params));
+    } else {
+      dispatch(asyncDeleteUser(selectedUser._id));
+    }
+    setOpenDeleteUser({
+      open: false,
+      multiple: false,
+    });
   };
 
   return (
@@ -239,7 +260,12 @@ const Users = () => {
                 <Button
                   variant="text"
                   className={classes.groupActionButton}
-                  onClick={() => deleteButtonAction()}>
+                  onClick={() =>
+                    setOpenDeleteUser({
+                      open: true,
+                      multiple: true,
+                    })
+                  }>
                   <DeleteIcon color="primary" className={classes.groupActionButtonIcon} />
                   <Typography variant="subtitle2">Delete Selected Users</Typography>
                 </Button>
@@ -269,10 +295,10 @@ const Users = () => {
       )}
       <NewUserModal handleNewUserDispatch={handleNewUserDispatch} />
       <ConfirmationDialog
-        open={openDeleteUser}
+        open={openDeleteUser.open}
         handleClose={handleClose}
-        title={handleDeleteTitle(false, selectedUser)}
-        description={handleDeleteDescription(false, selectedUser)}
+        title={handleDeleteTitle(openDeleteUser.multiple, selectedUser)}
+        description={handleDeleteDescription(openDeleteUser.multiple, selectedUser)}
         buttonAction={deleteButtonAction}
         buttonText={'Delete'}
       />

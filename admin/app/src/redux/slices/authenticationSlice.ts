@@ -11,6 +11,7 @@ import {
   getAuthenticationConfig,
   putAuthenticationConfig,
   blockUnblockUsers,
+  deleteUsers,
 } from '../../http/AuthenticationRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -164,6 +165,27 @@ export const asyncDeleteUser = createAsyncThunk(
       );
       thunkAPI.dispatch(setAppDefaults());
       return id;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteUsers = createAsyncThunk(
+  'authentication/deleteUsers',
+  async (params: { ids: string[]; getUsers: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteUsers(params.ids);
+      params.getUsers();
+      thunkAPI.dispatch(
+        notify(`Successfully deleted users!`, 'warning', {
+          dismissAfter: 3000,
+        })
+      );
+      thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
