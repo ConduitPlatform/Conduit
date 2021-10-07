@@ -1,5 +1,5 @@
 import DataTable from '../common/DataTable';
-import React  from 'react';
+import React from 'react';
 import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 
 interface Props {

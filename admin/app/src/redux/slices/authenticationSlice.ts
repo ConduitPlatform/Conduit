@@ -46,6 +46,7 @@ export const asyncGetAuthUserData = createAsyncThunk(
         params.search,
         params.filter
       );
+      console.log('data', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -117,14 +118,15 @@ export const asyncBlockUserUI = createAsyncThunk(
   }
 );
 
-export const asyncblockUnblockUsers = createAsyncThunk(
+export const asyncBlockUnblockUsers = createAsyncThunk(
   'authentication/blockUnblockUsers',
-  async (body: { ids: string[]; block: boolean }, thunkAPI) => {
+  async (params: { body: { ids: string[]; block: boolean }; getUsers: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await blockUnblockUsers(body);
+      await blockUnblockUsers(params.body);
       thunkAPI.dispatch(setAppDefaults());
-      return body.ids;
+      params.getUsers();
+      return params.body.ids;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
@@ -248,9 +250,6 @@ const authenticationSlice = createSlice({
     });
     builder.addCase(asyncUpdateAuthenticationConfig.fulfilled, (state, action) => {
       state.data.signInMethods = action.payload;
-    });
-    builder.addCase(asyncblockUnblockUsers.fulfilled, (state, action) => {
-      console.log('action.payload', action.payload);
     });
   },
 });
