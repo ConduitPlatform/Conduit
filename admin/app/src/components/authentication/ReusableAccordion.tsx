@@ -134,7 +134,7 @@ const ReusableAccordion: React.FC<Props> = ({
                       justifyContent={'space-between'}
                       alignItems={'center'}>
                       <Typography variant={'overline'} style={{ width: '100%' }}>
-                        {key}
+                        {key.split(/(?=[A-Z])/).join(' ')}
                       </Typography>
                       <FormControlLabel
                         control={
@@ -198,7 +198,10 @@ const ReusableAccordion: React.FC<Props> = ({
                       <TextField
                         style={{ width: '100%', marginBottom: 8 }}
                         id={key}
-                        label={key}
+                        label={key
+                          .split(/(?=[A-Z&])/)
+                          .join(' ')
+                          .replaceAll('_', ' ')}
                         name={key}
                         variant="outlined"
                         value={value}
