@@ -95,7 +95,6 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    console.log(email.getMailObject());
     return this._transport.sendEmail(email.getMailObject());
   }
   

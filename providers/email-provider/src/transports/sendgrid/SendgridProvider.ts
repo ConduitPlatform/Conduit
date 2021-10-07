@@ -53,7 +53,6 @@ export class SendgridProvider extends EmailProviderClass{
            updatedAt:'',
            variables: Object.keys(getHBValues(version_res.body.html_content))
         })
-        console.log(info.versions[0].variables);
         
        return info;
     }
