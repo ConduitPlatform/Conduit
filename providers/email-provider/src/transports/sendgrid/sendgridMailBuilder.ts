@@ -9,7 +9,7 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions>{
         super();
     }
 
-    // setTemplate(template: TemplateOptions): SendgridMailBuilder {
+    setTemplate(template: TemplateOptions): SendgridMailBuilder {
     //     let header = new smtpapi();
     //     header.addFilter('templates','enable',1);
     //     header.addFilter('templates','template_id',template.id);  
@@ -18,8 +18,8 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions>{
 
     //     })
     //     this._mailOptions.headers = {'x-smtpapi': JSON.stringify(header)}
-    //     return this;
-    // }
+        return this;
+    }
 
 
 }
