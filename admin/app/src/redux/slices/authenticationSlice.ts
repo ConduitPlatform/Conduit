@@ -47,7 +47,6 @@ export const asyncGetAuthUserData = createAsyncThunk(
         params.search,
         params.filter
       );
-      console.log('data', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -127,7 +126,6 @@ export const asyncBlockUnblockUsers = createAsyncThunk(
       await blockUnblockUsers(params.body);
       thunkAPI.dispatch(setAppDefaults());
       params.getUsers();
-      return params.body.ids;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
@@ -154,17 +152,17 @@ export const asyncUnblockUserUI = createAsyncThunk(
 
 export const asyncDeleteUser = createAsyncThunk(
   'authentication/deleteUser',
-  async (id: string, thunkAPI) => {
+  async (params: { id: string; getUsers: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await deleteUser(id);
+      await deleteUser(params.id);
+      params.getUsers();
       thunkAPI.dispatch(
         notify(`Successfully deleted user!`, 'warning', {
           dismissAfter: 3000,
         })
       );
       thunkAPI.dispatch(setAppDefaults());
-      return id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
@@ -259,13 +257,6 @@ const authenticationSlice = createSlice({
       if (userToUnBlock) {
         userToUnBlock.active = true;
       }
-    });
-    builder.addCase(asyncDeleteUser.fulfilled, (state, action) => {
-      const foundIndex = state.data.authUsers.users.findIndex(
-        (user) => user._id === action.payload
-      );
-      if (foundIndex !== -1) state.data.authUsers.users.splice(foundIndex, 1);
-      state.data.authUsers.count--;
     });
     builder.addCase(asyncGetAuthenticationConfig.fulfilled, (state, action) => {
       state.data.signInMethods = action.payload;

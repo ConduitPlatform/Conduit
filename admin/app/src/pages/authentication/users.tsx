@@ -101,12 +101,12 @@ const Users = () => {
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   const handleLimitChange = (e: any) => {
-    setLimit(parseInt(e.target.value, 10));
+    setLimit(e.target.value);
     setSkip(0);
     setPage(0);
   };
 
-  const handlePageChange = (e: any, val: number) => {
+  const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
       setSkip(skip + limit);
@@ -135,12 +135,12 @@ const Users = () => {
     setSelectedUsers(newSelectedUsers);
   };
 
-  const handleSelectAll = (data: any) => {
+  const handleSelectAll = (data: AuthUserUI[]) => {
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
       return;
     }
-    const newSelectedUsers = data.map((item: any) => item._id);
+    const newSelectedUsers = data.map((item: AuthUserUI) => item._id);
     setSelectedUsers(newSelectedUsers);
   };
 
@@ -222,7 +222,11 @@ const Users = () => {
       };
       dispatch(asyncDeleteUsers(params));
     } else {
-      dispatch(asyncDeleteUser(selectedUser._id));
+      const params = {
+        id: selectedUser._id,
+        getUsers: getUsersCallback,
+      };
+      dispatch(asyncDeleteUser(params));
     }
     setOpenDeleteUser({
       open: false,
