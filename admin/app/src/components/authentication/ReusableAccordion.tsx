@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
@@ -10,7 +10,7 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Accordion from '@material-ui/core/Accordion';
 import { makeStyles } from '@material-ui/core/styles';
-import { InputLabel, MenuItem, Select } from '@material-ui/core';
+import { Button, InputLabel, MenuItem, Select } from '@material-ui/core';
 import FormControl from '@material-ui/core/FormControl';
 import { SocialDataTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
 
@@ -46,28 +46,37 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   name: string;
-  expanded: boolean;
   setAccProps: any;
-  openExpanded: (value: SocialNameTypes) => void;
+  handleData: any;
+  configData: any;
   accProps: SocialDataTypes;
 }
 
 const ReusableAccordion: React.FC<Props> = ({
   setAccProps,
-  expanded,
-  children,
   name,
-  openExpanded,
+  handleData,
+  configData,
   accProps,
 }) => {
   const classes = useStyles();
 
-  console.log('render');
+  const [expanded, setExpanded] = useState<boolean>(false);
+
+  const handleCancel = (type: SocialNameTypes) => {
+    if (configData && configData[name]) setAccProps(configData[name]);
+
+    setExpanded(false);
+  };
+
+  const handleSubmit = (type: SocialNameTypes, data: SocialDataTypes) => {
+    handleData(type, data);
+  };
 
   return (
     <Accordion
       expanded={expanded}
-      onChange={() => openExpanded(name)}
+      onChange={() => setExpanded(!expanded)}
       style={{ cursor: 'default' }}
       classes={{ root: classes.expandedPanel }}>
       <AccordionSummary id={'local'}>
@@ -219,7 +228,21 @@ const ReusableAccordion: React.FC<Props> = ({
               }
             })}
           </Box>
-          <Box alignSelf={'flex-end'}>{children}</Box>
+          <Box alignSelf={'flex-end'}>
+            <Button
+              onClick={() => handleCancel(name)}
+              style={{ marginRight: 16 }}
+              color={'primary'}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ alignSelf: 'flex-end' }}
+              onClick={() => handleSubmit(name, accProps)}>
+              Save
+            </Button>
+          </Box>
         </Box>
       </AccordionDetails>
     </Accordion>

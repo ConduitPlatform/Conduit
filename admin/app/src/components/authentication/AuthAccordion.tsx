@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
@@ -52,7 +52,6 @@ interface Props {
 
 const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => {
   const classes = useStyles();
-  const [expanded, setExpanded] = useState<SocialNameTypes[]>([]);
   const [local, setLocal] = useState<LocalTypes>({
     enabled: false,
     sendVerificationEmail: false,
@@ -128,139 +127,53 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
     }
   }, [configData]);
 
-  const openExpanded = (type: SocialNameTypes) => {
-    const newExpanded = [...expanded];
-    if (newExpanded.includes(type)) {
-      const typeIndex = newExpanded.indexOf(type);
-      newExpanded.splice(typeIndex, 1);
-      setExpanded(newExpanded);
-      return;
-    }
-    newExpanded.push(type);
-    setExpanded(newExpanded);
-  };
-
-  const closeExpanded = (type: SocialNameTypes) => {
-    if (type !== undefined && expanded && expanded.includes(type)) {
-      const newExpanded = [...expanded];
-      const arrayIndex = newExpanded.indexOf(type);
-      newExpanded.splice(arrayIndex, 1);
-      setExpanded(newExpanded);
-    }
-  };
-
-  const handleSubmit = (type: SocialNameTypes, data: SocialDataTypes) => {
-    handleData(type, data);
-    closeExpanded(type);
-  };
-
-  const handleCancel = (type: SocialNameTypes) => {
-    switch (type) {
-      case 'local':
-        if (configData && configData.local) setLocal(configData.local);
-        break;
-      case 'google':
-        if (configData && configData.google) setGoogle(configData.google);
-        break;
-      case 'facebook':
-        if (configData && configData.facebook) setFacebook(configData.facebook);
-        break;
-      case 'twitch':
-        if (configData && configData.twitch) setTwitch(configData.twitch);
-        break;
-      default:
-        return null;
-    }
-    closeExpanded(type);
-  };
-
-  const submitButtons = (typeProvider: SocialNameTypes, provider: SocialDataTypes) => {
+  const localmemo = useMemo(() => {
     return (
-      <>
-        <Button
-          onClick={() => handleCancel(typeProvider)}
-          style={{ marginRight: 16 }}
-          color={'primary'}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          style={{ alignSelf: 'flex-end' }}
-          onClick={() => handleSubmit(typeProvider, provider)}>
-          Save
-        </Button>
-      </>
+      <ReusableAccordion
+        name={'local'}
+        accProps={local}
+        setAccProps={setLocal}
+        configData={configData}
+        handleData={handleData}
+      />
     );
-  };
+  }, [local, configData, handleData]);
 
-  const AccordionGenerator = (providerData: SocialNameTypes) => {
-    if (!providerData) {
-      return;
-    }
-    switch (providerData) {
-      case 'local':
-        if (!local) {
-          return;
-        }
-        return (
-          <ReusableAccordion
-            name={'local'}
-            expanded={expanded.includes('local')}
-            accProps={local}
-            setAccProps={setLocal}
-            openExpanded={openExpanded}>
-            {submitButtons('local', local)}
-          </ReusableAccordion>
-        );
+  const googleMemo = useMemo(() => {
+    return (
+      <ReusableAccordion
+        name={'google'}
+        accProps={google}
+        setAccProps={setGoogle}
+        configData={configData}
+        handleData={handleData}
+      />
+    );
+  }, [google, configData, handleData]);
 
-      case 'google':
-        if (!google) {
-          return;
-        }
-        return (
-          <ReusableAccordion
-            name={'google'}
-            expanded={expanded.includes('google')}
-            accProps={google}
-            setAccProps={setGoogle}
-            openExpanded={openExpanded}>
-            {submitButtons('google', google)}
-          </ReusableAccordion>
-        );
+  const facebookMemo = useMemo(() => {
+    return (
+      <ReusableAccordion
+        name={'facebook'}
+        accProps={facebook}
+        setAccProps={setFacebook}
+        configData={configData}
+        handleData={handleData}
+      />
+    );
+  }, [facebook, configData, handleData]);
 
-      case 'facebook':
-        if (!facebook) {
-          return;
-        }
-        return (
-          <ReusableAccordion
-            name={'facebook'}
-            expanded={expanded.includes('facebook')}
-            accProps={facebook}
-            setAccProps={setFacebook}
-            openExpanded={openExpanded}>
-            {submitButtons('facebook', facebook)}
-          </ReusableAccordion>
-        );
-      case 'twitch':
-        if (!twitch) {
-          return;
-        }
-        return (
-          <ReusableAccordion
-            name={'twitch'}
-            expanded={expanded.includes('twitch')}
-            accProps={twitch}
-            setAccProps={setTwitch}
-            openExpanded={openExpanded}>
-            {submitButtons('twitch', twitch)}
-          </ReusableAccordion>
-        );
-      default:
-        return null;
-    }
-  };
+  const twitchMemo = useMemo(() => {
+    return (
+      <ReusableAccordion
+        name={'twitch'}
+        accProps={twitch}
+        setAccProps={setTwitch}
+        configData={configData}
+        handleData={handleData}
+      />
+    );
+  }, [twitch, configData, handleData]);
 
   return (
     <Box className={classes.root} {...rest}>
@@ -272,10 +185,10 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           Status
         </Typography>
       </Box>
-      {AccordionGenerator('local')}
-      {AccordionGenerator('google')}
-      {AccordionGenerator('facebook')}
-      {AccordionGenerator('twitch')}
+      {localmemo}
+      {googleMemo}
+      {facebookMemo}
+      {twitchMemo}
     </Box>
   );
 };
