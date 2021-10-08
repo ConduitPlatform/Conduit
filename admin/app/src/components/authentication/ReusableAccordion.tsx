@@ -1,4 +1,4 @@
-import React, { ChangeEvent } from 'react';
+import React from 'react';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
@@ -46,7 +46,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   name: string;
-  expanded: SocialNameTypes[];
+  expanded: boolean;
   setAccProps: any;
   openExpanded: (value: SocialNameTypes) => void;
   accProps: SocialDataTypes;
@@ -62,9 +62,11 @@ const ReusableAccordion: React.FC<Props> = ({
 }) => {
   const classes = useStyles();
 
+  console.log('render');
+
   return (
     <Accordion
-      expanded={expanded.includes(name)}
+      expanded={expanded}
       onChange={() => openExpanded(name)}
       style={{ cursor: 'default' }}
       classes={{ root: classes.expandedPanel }}>

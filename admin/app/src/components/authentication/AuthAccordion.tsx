@@ -206,7 +206,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'local'}
-            expanded={expanded}
+            expanded={expanded.includes('local')}
             accProps={local}
             setAccProps={setLocal}
             openExpanded={openExpanded}>
@@ -221,7 +221,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'google'}
-            expanded={expanded}
+            expanded={expanded.includes('google')}
             accProps={google}
             setAccProps={setGoogle}
             openExpanded={openExpanded}>
@@ -236,7 +236,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'facebook'}
-            expanded={expanded}
+            expanded={expanded.includes('facebook')}
             accProps={facebook}
             setAccProps={setFacebook}
             openExpanded={openExpanded}>
@@ -250,7 +250,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         return (
           <ReusableAccordion
             name={'twitch'}
-            expanded={expanded}
+            expanded={expanded.includes('twitch')}
             accProps={twitch}
             setAccProps={setTwitch}
             openExpanded={openExpanded}>
