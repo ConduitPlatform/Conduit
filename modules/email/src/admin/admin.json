@@ -19,6 +19,11 @@
       "path": "/send",
       "method": "POST",
       "protoName": "sendEmail"
+    },
+    {
+      "path": "/extemplates",
+      "method": "GET",
+      "protoName": "getExternalTemplates"
     }
   ]
 }

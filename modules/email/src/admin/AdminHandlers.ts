@@ -24,6 +24,7 @@ export class AdminHandlers {
         createTemplate: this.createTemplate.bind(this),
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
+        getExternalTemplates: this.getExternalTemplates.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -35,7 +36,22 @@ export class AdminHandlers {
     this.emailService = emailService;
   }
 
+  async getExternalTemplates(){
+    
+    const externalTemplates = await this.emailService.getExternalTemplates();
+    if( !isNil(externalTemplates)){
+      throw new Error(`External templates didnt found!`)
+    }
+    return new Promise((resolve,reject) => {
+      if( isNil(externalTemplates)){
+        reject(new Error('There is not external templates!'));
+      }
+      resolve(externalTemplates);
+    });
+  }
+
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
+    const resp = await this.emailService.getExternalTemplates();
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
