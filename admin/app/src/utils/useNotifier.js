@@ -10,8 +10,6 @@ const useNotifier = () => {
   const { notifications } = useAppSelector((state) => state.appSlice || []);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
-  // console.log('notifications', notifications);
-
   const storeDisplayed = (id) => {
     displayed = [...displayed, id];
   };
