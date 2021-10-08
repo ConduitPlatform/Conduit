@@ -22,6 +22,12 @@ import SectetIcon from '@material-ui/icons/VpnKey';
 import Description from '@material-ui/icons/Description';
 import { ArrowForward } from '@material-ui/icons';
 import Storage from '@material-ui/icons/Storage';
+import { useAppDispatch } from '../redux/store';
+import {
+  enqueueErrorNotification,
+  enqueueInfoNotification,
+  enqueueSuccessNotification,
+} from '../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -74,12 +80,29 @@ const useStyles = makeStyles((theme: Theme) =>
 
 const Home = () => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
+
+  const handleSnackbarError = () => {
+    dispatch(enqueueErrorNotification());
+  };
+
+  const handleSnackbarSuccess = () => {
+    dispatch(enqueueSuccessNotification());
+  };
+
+  const handleSnackbarInfo = () => {
+    dispatch(enqueueInfoNotification());
+  };
+
   return (
     <>
       <Head>
         <title>Conduit - App</title>
       </Head>
       <div>
+        <Button onClick={() => handleSnackbarError()}>Display Error Snackbar</Button>
+        <Button onClick={() => handleSnackbarSuccess()}>Display Success Snackbar</Button>
+        <Button onClick={() => handleSnackbarInfo()}>Display Info Snackbar</Button>
         <Box
           p={2}
           display={'flex'}

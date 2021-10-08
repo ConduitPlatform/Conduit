@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import NotificationsSystem, { atalhoTheme, dismissNotification } from 'reapop';
+import useNotifier from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -30,6 +31,7 @@ const useStyles = makeStyles((theme: Theme) => ({
 }));
 
 export const Layout: React.FC = ({ children, ...rest }) => {
+  useNotifier();
   const classes = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
