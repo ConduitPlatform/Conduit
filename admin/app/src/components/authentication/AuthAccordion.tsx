@@ -1,16 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
 import {
-  LocalTypes,
-  FacebookTypes,
-  TwitchTypes,
-  GoogleTypes,
   SocialNameTypes,
-  SocialDataTypes,
   SignInMethods,
+  SignInTypes,
 } from '../../models/authentication/AuthModels';
 import ReusableAccordion from './ReusableAccordion';
 
@@ -47,33 +42,34 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   configData: SignInMethods;
-  handleData: (type: SocialNameTypes, data: SocialDataTypes) => void;
+  handleData: (type: SocialNameTypes, data: SignInTypes) => void;
 }
 
 const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => {
   const classes = useStyles();
-  const [local, setLocal] = useState<LocalTypes>({
+  const [local, setLocal] = useState<SignInTypes>({
     enabled: false,
     sendVerificationEmail: false,
+    accountLinking: false,
     verificationRequired: false,
     identifier: '',
     verification_redirect_uri: '',
     forgot_password_redirect_uri: '',
   });
 
-  const [google, setGoogle] = useState<GoogleTypes>({
+  const [google, setGoogle] = useState<SignInTypes>({
     enabled: false,
     accountLinking: false,
     clientId: '',
   });
 
-  const [facebook, setFacebook] = useState<FacebookTypes>({
+  const [facebook, setFacebook] = useState<SignInTypes>({
     enabled: false,
     accountLinking: false,
     clientId: '',
   });
 
-  const [twitch, setTwitch] = useState<TwitchTypes>({
+  const [twitch, setTwitch] = useState<SignInTypes>({
     enabled: false,
     accountLinking: false,
     clientId: '',
@@ -89,6 +85,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
         setLocal({
           enabled: localData.enabled,
           sendVerificationEmail: localData.sendVerificationEmail,
+          accountLinking: localData.accountLinking,
           verificationRequired: localData.verificationRequired,
           identifier: localData.identifier || '',
           verification_redirect_uri: localData.verification_redirect_uri || '',

@@ -12,7 +12,11 @@ import Accordion from '@material-ui/core/Accordion';
 import { makeStyles } from '@material-ui/core/styles';
 import { Button, InputLabel, MenuItem, Select } from '@material-ui/core';
 import FormControl from '@material-ui/core/FormControl';
-import { SocialDataTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
+import {
+  SignInMethods,
+  SignInTypes,
+  SocialNameTypes,
+} from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,11 +49,11 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  name: string;
+  name: SocialNameTypes;
   setAccProps: any;
-  handleData: any;
+  handleData: (type: SocialNameTypes, data: SignInTypes) => void;
   configData: any;
-  accProps: SocialDataTypes;
+  accProps: SignInTypes;
 }
 
 const ReusableAccordion: React.FC<Props> = ({
@@ -63,13 +67,12 @@ const ReusableAccordion: React.FC<Props> = ({
 
   const [expanded, setExpanded] = useState<boolean>(false);
 
-  const handleCancel = (type: SocialNameTypes) => {
+  const handleCancel = () => {
     if (configData && configData[name]) setAccProps(configData[name]);
-
     setExpanded(false);
   };
 
-  const handleSubmit = (type: SocialNameTypes, data: SocialDataTypes) => {
+  const handleSubmit = (type: SocialNameTypes, data: SignInTypes) => {
     handleData(type, data);
   };
 
@@ -229,10 +232,7 @@ const ReusableAccordion: React.FC<Props> = ({
             })}
           </Box>
           <Box alignSelf={'flex-end'}>
-            <Button
-              onClick={() => handleCancel(name)}
-              style={{ marginRight: 16 }}
-              color={'primary'}>
+            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
             <Button

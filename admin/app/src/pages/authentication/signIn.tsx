@@ -1,6 +1,6 @@
 import Typography from '@material-ui/core/Typography';
 import React, { ReactElement, useEffect } from 'react';
-import { SocialDataTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
+import { SignInTypes, SocialNameTypes } from '../../models/authentication/AuthModels';
 import {
   asyncGetAuthenticationConfig,
   asyncUpdateAuthenticationConfig,
@@ -18,13 +18,14 @@ const SignIn = () => {
     dispatch(asyncGetAuthenticationConfig());
   }, [dispatch]);
 
-  const handleConfigChange = (type: SocialNameTypes, newValue: SocialDataTypes) => {
+  const handleConfigChange = (type: SocialNameTypes, newValue: SignInTypes) => {
     const data = {
       ...configData,
       [type]: {
         ...newValue,
       },
     };
+
     dispatch(asyncUpdateAuthenticationConfig(data));
   };
 
