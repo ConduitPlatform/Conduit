@@ -9,7 +9,6 @@ import cmsSlice from './slices/cmsSlice';
 import customEndpointsSlice from './slices/customEndpointsSlice';
 import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import { reducer as appNotif } from 'reapop';
 import appSlice from './slices/appSlice';
 
 let store: any;
@@ -17,7 +16,6 @@ let store: any;
 export const makeStore = (preloadedState: any) =>
   configureStore({
     reducer: {
-      notifications: appNotif(),
       appSlice,
       appAuthSlice,
       authenticationSlice,

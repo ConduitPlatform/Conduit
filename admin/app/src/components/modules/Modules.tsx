@@ -8,8 +8,8 @@ import Link from 'next/link';
 import { makeStyles } from '@material-ui/core/styles';
 import { getModuleIcon, handleModuleNavigation } from './moduleUtils';
 import { useRouter } from 'next/router';
-import { notify } from 'reapop';
 import { useAppDispatch } from '../../redux/store';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) => ({
   listItem: {
@@ -75,11 +75,7 @@ const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
       router.replace(url);
       return;
     }
-    dispatch(
-      notify('Module currently disabled.', 'info', {
-        dismissAfter: 3000,
-      })
-    );
+    dispatch(enqueueInfoNotification('Module currently disabled.'));
   };
 
   return (

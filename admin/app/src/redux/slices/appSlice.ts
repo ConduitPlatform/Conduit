@@ -1,21 +1,24 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+interface INotification {
+  key: number;
+  message: string;
+  dismissed?: boolean;
+  options: {
+    autoHideDuration: number;
+    key: number;
+    variant: string;
+  };
+}
+
 export type AppState = {
   loading: boolean;
-  error: {
-    message: string;
-    status: number | null;
-    statusText: string;
-  };
+  notifications: INotification[];
 };
 
 const initialState: AppState = {
   loading: false,
-  error: {
-    message: '',
-    status: null,
-    statusText: '',
-  },
+  notifications: [],
 };
 
 const appSlice = createSlice({
@@ -25,12 +28,52 @@ const appSlice = createSlice({
     setAppLoading: (state, action) => {
       state.loading = action.payload;
     },
-    setAppDefaults: () => {
-      return initialState;
+    setAppDefaults: (state) => {
+      state.loading = false;
+    },
+    clearAppNotifications: (state) => {
+      state.notifications = [];
+    },
+    enqueueSnackbar: (state, action) => {
+      const key = action.payload.options && action.payload.options.key;
+      const notification = {
+        ...action.payload,
+        key: key || new Date().getTime() + Math.random(),
+      };
+      state.notifications = [
+        ...state.notifications,
+        {
+          key: key,
+          ...notification,
+        },
+      ];
+    },
+    closeSnackbar: (state, action) => {
+      const notificationObj = {
+        key: action.payload,
+      };
+      const dismissedSnackbars = state.notifications.map((notification: { key: number }) =>
+        notification.key === notificationObj.key
+          ? { ...notification, dismissed: true }
+          : { ...notification }
+      );
+      state.notifications = dismissedSnackbars as INotification[];
+    },
+    removeSnackbar: (state, action) => {
+      state.notifications = state.notifications.filter(
+        (notification: { key: number }) => notification.key !== action.payload
+      );
     },
   },
 });
 
-export const { setAppLoading, setAppDefaults } = appSlice.actions;
+export const {
+  setAppLoading,
+  setAppDefaults,
+  enqueueSnackbar,
+  closeSnackbar,
+  removeSnackbar,
+  clearAppNotifications,
+} = appSlice.actions;
 
 export default appSlice.reducer;

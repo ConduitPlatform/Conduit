@@ -75,7 +75,7 @@ const Schemas = () => {
   };
 
   const handleDeleteSchema = () => {
-    dispatch(asyncDeleteSelectedSchema(selectedSchemaForAction.data._id));
+    dispatch(asyncDeleteSelectedSchema(selectedSchemaForAction.data));
     setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };

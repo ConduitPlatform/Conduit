@@ -1,6 +1,6 @@
 import { createStyles, makeStyles } from '@material-ui/core';
 
-export default makeStyles(() =>
+export default makeStyles((theme) =>
   createStyles({
     navBar: {
       position: 'fixed',
@@ -13,6 +13,10 @@ export default makeStyles(() =>
     content: {
       marginTop: '120px',
       padding: 3,
+    },
+    swaggerButton: {
+      textDecoration: 'none',
+      marginLeft: '40px',
     },
   })
 );
