@@ -100,6 +100,5 @@ export class EmailProvider {
   
 }
 
-import './test';
 
 
