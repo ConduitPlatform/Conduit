@@ -22,12 +22,7 @@ import {
 import { EndpointTypes, Schema, ToggleSchma } from '../../models/cms/CmsModels';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
-import {
-  enqueueErrorNotification,
-  enqueueInfoNotification,
-  enqueueSuccessNotification,
-} from '../../utils/useNotifier';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 
 export interface ICmsSlice {
   data: {
