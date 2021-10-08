@@ -153,7 +153,7 @@ export const asyncDeleteUser = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -166,11 +166,7 @@ export const asyncDeleteUsers = createAsyncThunk(
     try {
       await deleteUsers(params.ids);
       params.getUsers();
-      thunkAPI.dispatch(
-        notify(`Successfully deleted users!`, 'warning', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted users!`));
       thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
