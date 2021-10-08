@@ -1,17 +1,19 @@
 import Typography from '@material-ui/core/Typography';
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import NewUserModal from '../../components/authentication/NewUserModal';
 import AuthUsers from '../../components/authentication/AuthUsers';
 import Paginator from '../../components/common/Paginator';
 import SearchFilter from '../../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles } from '@material-ui/core';
+import { Button, makeStyles } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import useDebounce from '../../hooks/useDebounce';
 import {
   asyncAddNewUser,
+  asyncBlockUnblockUsers,
   asyncBlockUserUI,
   asyncDeleteUser,
+  asyncDeleteUsers,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
   asyncUnblockUserUI,
@@ -21,6 +23,15 @@ import AuthenticationLayout from '../../components/navigation/InnerLayouts/authe
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 import EditUserDialog from '../../components/authentication/EditUserDialog';
+import {
+  handleBlockButton,
+  handleBlockDescription,
+  handleBlockTitle,
+  handleDeleteDescription,
+  handleDeleteTitle,
+} from '../../components/utils/userDialog';
+import DeleteIcon from '@material-ui/icons/Delete';
+import BlockIcon from '@material-ui/icons/Block';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -28,6 +39,19 @@ const useStyles = makeStyles((theme) => ({
       margin: theme.spacing(0.5),
     },
     marginBottom: '3px',
+  },
+  groupActionButton: {
+    padding: 0,
+    height: 24,
+  },
+  groupActionContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-evenly',
+    alignItems: 'start',
+  },
+  groupActionButtonIcon: {
+    marginRight: 8,
   },
 }));
 
@@ -51,9 +75,14 @@ const Users = () => {
     updatedAt: '',
     _id: '',
   });
-  const [selectedUsersHaveUser, setSelectedUsersHaveUser] = useState<boolean>(false);
-  const [openBlockUI, setOpenBlockUI] = useState<boolean>(false);
-  const [openDeleteUser, setOpenDeleteUser] = useState<boolean>(false);
+  const [openBlockUI, setOpenBlockUI] = useState<{ open: boolean; multiple: boolean }>({
+    open: false,
+    multiple: false,
+  });
+  const [openDeleteUser, setOpenDeleteUser] = useState<{ open: boolean; multiple: boolean }>({
+    open: false,
+    multiple: false,
+  });
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
@@ -72,12 +101,12 @@ const Users = () => {
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   const handleLimitChange = (e: any) => {
-    setLimit(parseInt(e.target.value, 10));
+    setLimit(e.target.value);
     setSkip(0);
     setPage(0);
   };
 
-  const handlePageChange = (e: any, val: number) => {
+  const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
       setSkip(skip + limit);
@@ -106,12 +135,12 @@ const Users = () => {
     setSelectedUsers(newSelectedUsers);
   };
 
-  const handleSelectAll = (data: any) => {
+  const handleSelectAll = (data: AuthUserUI[]) => {
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
       return;
     }
-    const newSelectedUsers = data.map((item: any) => item._id);
+    const newSelectedUsers = data.map((item: AuthUserUI) => item._id);
     setSelectedUsers(newSelectedUsers);
   };
 
@@ -121,90 +150,95 @@ const Users = () => {
       setOpenEditUser(true);
       setSelectedUser(currentUser);
     } else if (action.type === 'delete') {
-      setOpenDeleteUser(true);
+      setOpenDeleteUser({
+        open: true,
+        multiple: false,
+      });
       setSelectedUser(currentUser);
     } else if (action.type === 'block/unblock') {
-      setOpenBlockUI(true);
+      setOpenBlockUI({
+        open: true,
+        multiple: false,
+      });
       setSelectedUser(currentUser);
     }
   };
 
-  const handleBlockTitle = () => {
-    if (selectedUsersHaveUser) {
-      return 'Toggle selected users';
-    }
-    return selectedUser.active ? 'User is Unblocked' : 'User is Blocked';
-  };
-
-  const handleBlockDescription = () => {
-    if (selectedUsersHaveUser) {
-      return 'Are you sure you want to block/unblock the selected users?';
-    }
-    return selectedUser.active
-      ? `Are you sure you want to block ${selectedUser.email}`
-      : `Are you sure you want to unblock ${selectedUser.email}`;
-  };
-
-  const handleBlockButton = () => {
-    if (selectedUsersHaveUser) {
-      return 'Toggle';
-    }
-    return selectedUser.active ? 'Block' : 'Unblock';
-  };
+  const getUsersCallback = useCallback(() => {
+    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
+  }, [debouncedSearch, dispatch, filter, limit, skip]);
 
   const handleBlock = () => {
-    if (selectedUsersHaveUser) {
-      // const body = {
-      //   ids: selectedUsers,
-      //   block: true,
-      // };
-      // const block = selectedUsers.some;
-      //
-      // return;
-      // dispatch(asyncblockUnblockUsers(body));
-      // return;
+    if (openBlockUI.multiple) {
+      const selectedUsersObj: boolean[] = [];
+      users.forEach((user) => {
+        if (selectedUsers.includes(user._id)) {
+          selectedUsersObj.push(user.active);
+        }
+      });
+      const isActive = selectedUsersObj.some((active) => active);
+      const params = {
+        body: {
+          ids: selectedUsers,
+          block: !isActive,
+        },
+        getUsers: getUsersCallback,
+      };
+      dispatch(asyncBlockUnblockUsers(params));
+      setOpenBlockUI({
+        open: false,
+        multiple: false,
+      });
+      return;
     }
     if (selectedUser.active) {
       dispatch(asyncBlockUserUI(selectedUser._id));
-      setOpenBlockUI(false);
     } else {
       dispatch(asyncUnblockUserUI(selectedUser._id));
-      setOpenBlockUI(false);
     }
+    setOpenBlockUI({
+      open: false,
+      multiple: false,
+    });
   };
 
   const handleClose = () => {
-    setOpenDeleteUser(false);
+    setOpenDeleteUser({
+      open: false,
+      multiple: false,
+    });
+    setOpenBlockUI({
+      open: false,
+      multiple: false,
+    });
     setOpenEditUser(false);
-    setOpenBlockUI(false);
   };
 
-  const deleteButtonAction = (id: string) => {
-    dispatch(asyncDeleteUser(id));
-    setOpenDeleteUser(false);
-  };
-
-  const handleDeleteTitle = () => {
-    if (selectedUsersHaveUser) {
-      return 'Delete selected users';
+  const deleteButtonAction = () => {
+    if (openDeleteUser.open) {
+      const params = {
+        ids: selectedUsers,
+        getUsers: getUsersCallback,
+      };
+      dispatch(asyncDeleteUsers(params));
+    } else {
+      const params = {
+        id: selectedUser._id,
+        getUsers: getUsersCallback,
+      };
+      dispatch(asyncDeleteUser(params));
     }
-    return `Delete user ${selectedUser.email}`;
-  };
-
-  const handleDeleteDescription = () => {
-    if (selectedUsersHaveUser) {
-      return 'Are you sure you want to delete the selected users?';
-    }
-    return `Are you sure you want to delete ${selectedUser.email}? 
-    \ Active: ${selectedUser.active}
-    \ Verified: ${selectedUser.isVerified}`;
+    setOpenDeleteUser({
+      open: false,
+      multiple: false,
+    });
   };
 
   return (
     <div>
       <Paper variant="outlined" className={classes.root}>
         <Grid container>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <SearchFilter
               setSearch={setSearch}
               search={search}
@@ -212,7 +246,37 @@ const Users = () => {
               handleFilterChange={handleFilterChange}
             />
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={3} className={classes.groupActionContainer}>
+            {selectedUsers.length > 1 && (
+              <>
+                <Button
+                  variant="text"
+                  className={classes.groupActionButton}
+                  onClick={() =>
+                    setOpenBlockUI({
+                      open: true,
+                      multiple: true,
+                    })
+                  }>
+                  <BlockIcon color="primary" className={classes.groupActionButtonIcon} />
+                  <Typography variant="subtitle2">Block/Unblock Selected Users</Typography>
+                </Button>
+                <Button
+                  variant="text"
+                  className={classes.groupActionButton}
+                  onClick={() =>
+                    setOpenDeleteUser({
+                      open: true,
+                      multiple: true,
+                    })
+                  }>
+                  <DeleteIcon color="primary" className={classes.groupActionButtonIcon} />
+                  <Typography variant="subtitle2">Delete Selected Users</Typography>
+                </Button>
+              </>
+            )}
+          </Grid>
+          <Grid item xs={5}>
             <Paginator
               handlePageChange={handlePageChange}
               limit={limit}
@@ -222,7 +286,6 @@ const Users = () => {
           </Grid>
         </Grid>
       </Paper>
-
       {users && users.length > 0 ? (
         <AuthUsers
           users={users}
@@ -234,23 +297,22 @@ const Users = () => {
       ) : (
         <Typography>No users available</Typography>
       )}
-
       <NewUserModal handleNewUserDispatch={handleNewUserDispatch} />
       <ConfirmationDialog
-        open={openDeleteUser}
+        open={openDeleteUser.open}
         handleClose={handleClose}
-        title={handleDeleteTitle()}
-        description={handleDeleteDescription()}
-        buttonAction={() => deleteButtonAction(selectedUser._id)}
+        title={handleDeleteTitle(openDeleteUser.multiple, selectedUser)}
+        description={handleDeleteDescription(openDeleteUser.multiple, selectedUser)}
+        buttonAction={deleteButtonAction}
         buttonText={'Delete'}
       />
       <ConfirmationDialog
-        open={openBlockUI}
+        open={openBlockUI.open}
         handleClose={handleClose}
-        title={handleBlockTitle()}
-        description={handleBlockDescription()}
+        title={handleBlockTitle(openBlockUI.multiple, selectedUser)}
+        description={handleBlockDescription(openBlockUI.multiple, selectedUser)}
         buttonAction={handleBlock}
-        buttonText={handleBlockButton()}
+        buttonText={handleBlockButton(openBlockUI.multiple, selectedUser)}
       />
       <EditUserDialog open={openEditUser} data={selectedUser} handleClose={handleClose} />
     </div>

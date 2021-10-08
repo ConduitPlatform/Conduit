@@ -11,6 +11,7 @@ import {
   getAuthenticationConfig,
   putAuthenticationConfig,
   blockUnblockUsers,
+  deleteUsers,
 } from '../../http/AuthenticationRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -109,14 +110,14 @@ export const asyncBlockUserUI = createAsyncThunk(
   }
 );
 
-export const asyncblockUnblockUsers = createAsyncThunk(
+export const asyncBlockUnblockUsers = createAsyncThunk(
   'authentication/blockUnblockUsers',
-  async (body: { ids: string[]; block: boolean }, thunkAPI) => {
+  async (params: { body: { ids: string[]; block: boolean }; getUsers: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await blockUnblockUsers(body);
+      await blockUnblockUsers(params.body);
       thunkAPI.dispatch(setAppDefaults());
-      return body.ids;
+      params.getUsers();
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -143,13 +144,34 @@ export const asyncUnblockUserUI = createAsyncThunk(
 
 export const asyncDeleteUser = createAsyncThunk(
   'authentication/deleteUser',
-  async (id: string, thunkAPI) => {
+  async (params: { id: string; getUsers: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await deleteUser(id);
+      await deleteUser(params.id);
+      params.getUsers();
       thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted user!`));
       thunkAPI.dispatch(setAppDefaults());
-      return id;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteUsers = createAsyncThunk(
+  'authentication/deleteUsers',
+  async (params: { ids: string[]; getUsers: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteUsers(params.ids);
+      params.getUsers();
+      thunkAPI.dispatch(
+        notify(`Successfully deleted users!`, 'warning', {
+          dismissAfter: 3000,
+        })
+      );
+      thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -224,21 +246,11 @@ const authenticationSlice = createSlice({
         userToUnBlock.active = true;
       }
     });
-    builder.addCase(asyncDeleteUser.fulfilled, (state, action) => {
-      const foundIndex = state.data.authUsers.users.findIndex(
-        (user) => user._id === action.payload
-      );
-      if (foundIndex !== -1) state.data.authUsers.users.splice(foundIndex, 1);
-      state.data.authUsers.count--;
-    });
     builder.addCase(asyncGetAuthenticationConfig.fulfilled, (state, action) => {
       state.data.signInMethods = action.payload;
     });
     builder.addCase(asyncUpdateAuthenticationConfig.fulfilled, (state, action) => {
       state.data.signInMethods = action.payload;
-    });
-    builder.addCase(asyncblockUnblockUsers.fulfilled, (state, action) => {
-      console.log('action.payload', action.payload);
     });
   },
 });
