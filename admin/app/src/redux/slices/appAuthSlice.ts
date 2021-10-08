@@ -9,7 +9,7 @@ import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
-import { notify } from 'reapop';
+import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
 
 const modules = [
   'authentication',
@@ -50,19 +50,13 @@ export const asyncLogin = createAsyncThunk(
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
-      thunkAPI.dispatch(
-        notify(`Welcome ${username}!`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueInfoNotification(`Welcome ${username}!`));
       thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(
-        notify(`Could not login! error msg:${getErrorData(error)}`, 'error', {
-          dismissAfter: 3000,
-        })
+        enqueueErrorNotification(`Could not login! error msg:${getErrorData(error)}`)
       );
       throw error;
     }
@@ -86,7 +80,7 @@ export const asyncGetAdminModules = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }

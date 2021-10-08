@@ -14,7 +14,7 @@ import {
 } from '../../http/AuthenticationRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 
 interface IAuthenticationSlice {
   data: {
@@ -50,7 +50,7 @@ export const asyncGetAuthUserData = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -65,16 +65,12 @@ export const asyncAddNewUser = createAsyncThunk(
       thunkAPI.dispatch(
         asyncGetAuthUserData({ skip: 0, limit: params.limit, search: '', filter: 'none' })
       );
-      thunkAPI.dispatch(
-        notify(`Successfully added ${params.values.email}!`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully added ${params.values.email}!`));
       thunkAPI.dispatch(setAppDefaults());
       return { data, params };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -86,16 +82,12 @@ export const asyncEditUser = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await editUser(values);
-      thunkAPI.dispatch(
-        notify(`Successfully edited user ${values.email}!`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully edited user ${values.email}!`));
       thunkAPI.dispatch(setAppDefaults());
       return values;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -111,7 +103,7 @@ export const asyncBlockUserUI = createAsyncThunk(
       return id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -127,7 +119,7 @@ export const asyncblockUnblockUsers = createAsyncThunk(
       return body.ids;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -143,7 +135,7 @@ export const asyncUnblockUserUI = createAsyncThunk(
       return id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -155,16 +147,12 @@ export const asyncDeleteUser = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteUser(id);
-      thunkAPI.dispatch(
-        notify(`Successfully deleted user!`, 'warning', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted user!`));
       thunkAPI.dispatch(setAppDefaults());
       return id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -180,7 +168,7 @@ export const asyncGetAuthenticationConfig = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -196,7 +184,7 @@ export const asyncUpdateAuthenticationConfig = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
