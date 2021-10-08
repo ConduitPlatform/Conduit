@@ -10,7 +10,7 @@ import {
 } from '../../http/NotificationsRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
+import { enqueueErrorNotification } from '../../utils/useNotifier';
 
 interface INotificationSlice {
   data: {
@@ -43,7 +43,7 @@ export const asyncSendNewNotification = createAsyncThunk(
       return;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -59,7 +59,7 @@ export const asyncGetNotificationConfig = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -79,7 +79,7 @@ export const asyncSaveNotificationConfig = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }

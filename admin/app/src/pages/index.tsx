@@ -74,6 +74,7 @@ const useStyles = makeStyles((theme: Theme) =>
 
 const Home = () => {
   const classes = useStyles();
+
   return (
     <>
       <Head>

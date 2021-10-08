@@ -5,11 +5,11 @@ import { clearNotificationPageStore } from './notificationsSlice';
 import { clearStoragePageStore } from './storageSlice';
 import { getAdminModulesRequest } from '../../http/SettingsRequests';
 import { loginRequest } from '../../http/AppAuthRequests';
-import { setAppDefaults, setAppLoading } from './appSlice';
+import { clearAppNotifications, setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
-import { notify } from 'reapop';
+import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
 
 const modules = [
   'authentication',
@@ -50,20 +50,14 @@ export const asyncLogin = createAsyncThunk(
       const username = values.username;
       const password = values.password;
       const { data } = await loginRequest(username, password);
-      thunkAPI.dispatch(
-        notify(`Welcome ${username}!`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueInfoNotification(`Welcome ${username}!`));
       thunkAPI.dispatch(setAppDefaults());
       return { data, cookie: values.remember };
     } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(
-        notify(`Could not login! error msg:${getErrorData(error)}`, 'error', {
-          dismissAfter: 3000,
-        })
+        enqueueErrorNotification(`Could not login! error msg:${getErrorData(error)}`)
       );
+      thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
   }
@@ -74,6 +68,7 @@ export const asyncLogout = createAsyncThunk('appAuth/logout', async (arg: void, 
   thunkAPI.dispatch(clearEmailPageStore());
   thunkAPI.dispatch(clearNotificationPageStore());
   thunkAPI.dispatch(clearStoragePageStore());
+  thunkAPI.dispatch(clearAppNotifications());
 });
 
 export const asyncGetAdminModules = createAsyncThunk(
@@ -86,7 +81,7 @@ export const asyncGetAdminModules = createAsyncThunk(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
