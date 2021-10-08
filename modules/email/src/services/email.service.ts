@@ -17,8 +17,13 @@ export class EmailService {
     this.emailer = emailer;
   }
   
+  getExternalTemplates() {
+    return this.emailer._transport?.listTemplates();
+  }
+
   async  registerTemplate(params: IRegisterTemplateParams) {
     
+    console.log('edw');
     const { name, body, subject, variables } = params;
     
     const existing = await this.database.findOne('EmailTemplate', { name });
@@ -32,11 +37,6 @@ export class EmailService {
     });
   }
 
-  getExternalTemplates() {
-    
-    return this.emailer._transport?.listTemplates();
-
-  }
   
   async sendEmail(template: string, params: ISendEmailParams) {
     const { email, body, subject, variables, sender } = params;

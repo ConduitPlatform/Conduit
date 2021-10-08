@@ -37,9 +37,9 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(){
-    
+
     const externalTemplates = await this.emailService.getExternalTemplates();
-    if( !isNil(externalTemplates)){
+    if( isNil(externalTemplates)){
       throw new Error(`External templates didnt found!`)
     }
     return new Promise((resolve,reject) => {
@@ -51,7 +51,7 @@ export class AdminHandlers {
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
-    const resp = await this.emailService.getExternalTemplates();
+    const externalTemplates = await this.getExternalTemplates();
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
