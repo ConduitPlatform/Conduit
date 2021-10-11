@@ -53,29 +53,42 @@ export class EmailService {
         throw new Error(`Template ${template} not found`);
       }
     }
-    
-    const bodyString = templateFound
-    ? this.replaceVars(templateFound.body, variables)
-    : body!;
-    const subjectString = templateFound
-    ? this.replaceVars(templateFound.subject, variables)
-    : subject!;
-    
-    builder.setSender(sender);
-    builder.setContent(bodyString);
-    builder.setReceiver(email);
-    builder.setSubject(subjectString);
-    
-    if (params.cc) {
-      builder.setCC(params.cc);
+
+    if(templateFound.externalManaged){
+      if(isNil(templateFound.sender)){
+        builder.setSender(sender);
+      }
+      builder.setReceiver(email);
+      builder.setTemplate({
+        id: templateFound.id,
+        variables: variables as any,
+      })
     }
-    
-    if (params.replyTo) {
-      builder.setReplyTo(params.replyTo);
-    }
-    
-    if (params.attachments) {
-      builder.addAttachments(params.attachments as any);
+    else{
+
+      const bodyString = templateFound
+      ? this.replaceVars(templateFound.body, variables)
+      : body!;
+      const subjectString = templateFound
+      ? this.replaceVars(templateFound.subject, variables)
+      : subject!;
+      
+      builder.setSender(sender);
+      builder.setContent(bodyString);
+      builder.setReceiver(email);
+      builder.setSubject(subjectString);
+      
+      if (params.cc) {
+        builder.setCC(params.cc);
+      }
+      
+      if (params.replyTo) {
+        builder.setReplyTo(params.replyTo);
+      }
+      
+      if (params.attachments) {
+        builder.addAttachments(params.attachments as any);
+      }
     }
     return this.emailer.sendEmail(builder);
   }
