@@ -51,7 +51,6 @@ export class AdminHandlers {
         subject: element.versions[0].subject,
         body: element.versions[0].plainContent,
         createdAt: element.createdAt,
-        externalManaged: true,
         variables: element.versions[0].variables
       })
     })
