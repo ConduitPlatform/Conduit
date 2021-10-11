@@ -278,46 +278,46 @@ const Users = () => {
       ) : (
         <Typography>No users available</Typography>
       )}
-      <Paper variant="outlined" className={classes.root} style={{ marginTop: '1px' }}>
-        <Grid container>
-          <Grid item xs={7} className={classes.groupActionContainer}>
-            <ButtonGroup size="small" variant="text" aria-label="outlined primary button group">
-              <IconButton
-                aria-label="delete"
-                disabled={selectedUsers.length <= 1}
-                color="primary"
-                onClick={() =>
-                  setOpenBlockUI({
-                    open: true,
-                    multiple: true,
-                  })
-                }>
-                <BlockIcon />
-              </IconButton>
-              <IconButton
-                aria-label="delete"
-                disabled={selectedUsers.length <= 1}
-                color="primary"
-                onClick={() =>
-                  setOpenDeleteUser({
-                    open: true,
-                    multiple: true,
-                  })
-                }>
-                <DeleteIcon />
-              </IconButton>
-            </ButtonGroup>
-          </Grid>
-          <Grid item xs={5}>
-            <Paginator
-              handlePageChange={handlePageChange}
-              limit={limit}
-              handleLimitChange={handleLimitChange}
-              page={page}
-            />
-          </Grid>
+
+      <Grid container style={{ marginTop: '-8px' }}>
+        <Grid item xs={7} className={classes.groupActionContainer}>
+          <ButtonGroup size="small" variant="text" aria-label="outlined primary button group">
+            <IconButton
+              aria-label="delete"
+              disabled={selectedUsers.length <= 1}
+              color="primary"
+              onClick={() =>
+                setOpenBlockUI({
+                  open: true,
+                  multiple: true,
+                })
+              }>
+              <BlockIcon />
+            </IconButton>
+            <IconButton
+              aria-label="delete"
+              disabled={selectedUsers.length <= 1}
+              color="primary"
+              onClick={() =>
+                setOpenDeleteUser({
+                  open: true,
+                  multiple: true,
+                })
+              }>
+              <DeleteIcon />
+            </IconButton>
+          </ButtonGroup>
         </Grid>
-      </Paper>
+        <Grid item xs={5}>
+          <Paginator
+            handlePageChange={handlePageChange}
+            limit={limit}
+            handleLimitChange={handleLimitChange}
+            page={page}
+          />
+        </Grid>
+      </Grid>
+
       <DrawerWrapper
         open={drawer}
         maxWidth={550}
