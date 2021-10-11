@@ -4,7 +4,6 @@ import EmailsLayout from '../../components/navigation/InnerLayouts/emailsLayout'
 import {
   asyncCreateNewEmailTemplate,
   asyncGetEmailTemplates,
-  asyncGetExternalEmailTemplates,
   asyncSaveEmailTemplateChanges,
 } from '../../redux/slices/emailsSlice';
 import EmailTemplate from '../../components/emails/EmailTemplate';
@@ -14,7 +13,6 @@ const Templates = () => {
 
   useEffect(() => {
     dispatch(asyncGetEmailTemplates());
-    dispatch(asyncGetExternalEmailTemplates());
   }, [dispatch]);
 
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);

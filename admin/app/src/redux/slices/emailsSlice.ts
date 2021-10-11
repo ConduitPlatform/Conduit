@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
   getEmailSettingsRequest,
   getEmailTemplateRequest,
-  getExternalEmailTemplateRequest,
   postEmailTemplateRequest,
   putEmailSettingsRequest,
   putEmailTemplateRequest,
@@ -40,21 +39,6 @@ export const asyncGetEmailTemplates = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getEmailTemplateRequest();
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
-      throw error;
-    }
-  }
-);
-export const asyncGetExternalEmailTemplates = createAsyncThunk(
-  'emails/getExternalTemplates',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const { data } = await getExternalEmailTemplateRequest();
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
