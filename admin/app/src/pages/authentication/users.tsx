@@ -59,7 +59,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginLeft: '-20px',
+    marginLeft: '-17px',
   },
   btnGroup: {
     marginRight: '30px',
@@ -294,7 +294,7 @@ const Users = () => {
             </ButtonGroup>
           )}
           <Button
-            color="secondary"
+            color="primary"
             variant="contained"
             endIcon={<AddCircle />}
             onClick={() => setDrawer(true)}>
