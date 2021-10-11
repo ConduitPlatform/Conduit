@@ -23,6 +23,10 @@ export const emailTemplateSchema = new ConduitSchema(
       type: [TYPE.String],
       systemRequired: true,
     },
+    sender:{
+      type: TYPE.String,
+      required: false,
+    },
     externalManaged: {
       type: TYPE.Boolean,
       default:false,
