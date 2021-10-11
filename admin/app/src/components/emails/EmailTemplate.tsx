@@ -62,7 +62,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
     setTemplatesState(templatesData);
   }, [templatesData]);
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
+  const handleChange = (event: React.ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 
