@@ -36,22 +36,40 @@ export class AdminHandlers {
     this.emailService = emailService;
   }
 
-  async getExternalTemplates(){
+  async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
+    const { skip, limit } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
 
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+
+    
     const externalTemplates = await this.emailService.getExternalTemplates();
     if( isNil(externalTemplates)){
       throw new Error(`External templates didnt found!`)
     }
-    return new Promise((resolve,reject) => {
-      if( isNil(externalTemplates)){
-        reject(new Error('There is not external templates!'));
-      }
-      resolve(externalTemplates);
-    });
+    let templateDocuments:any = [];
+    externalTemplates.forEach((element) => {
+      templateDocuments.push({
+        _id: element.id,
+        name: element.name,
+        subject: element.versions[0].subject,
+        body: element.versions[0].plainContent,
+        createdAt: element.createdAt,
+        externalManaged: true,
+        variables: element.versions[0].variables
+      })
+    })
+    const totalCount = templateDocuments.length;
+    return callback(null, { result: JSON.stringify({ templateDocuments,totalCount }) });
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
-    const externalTemplates = await this.getExternalTemplates();
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -102,6 +120,7 @@ export class AdminHandlers {
         subject,
         body,
         variables,
+        externalManaged: false,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))

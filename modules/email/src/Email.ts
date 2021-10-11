@@ -20,7 +20,6 @@ type RegisterTemplateRequest = GrpcRequest<{
   subject: string;
   body: string;
   variables: string[];
-  externalManaged: boolean;
 }>;
 type RegisterTemplateResponse = GrpcResponse<{ template: string }>;
 
@@ -148,7 +147,6 @@ export default class EmailModule implements ConduitServiceModule {
       subject: call.request.subject,
       body: call.request.body,
       variables: call.request.variables,
-      externalManaged: call.request.externalManaged,
     };
     let errorMessage: string | null = null;
     const template = await this.emailService

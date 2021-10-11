@@ -31,10 +31,9 @@ export  class MailgunProvider extends EmailProviderClass {
 
     async getTemplateInfo(template_name:string):Promise<Template>{
         const response = await this._mailgunSdk.get(`/${this.domain}/templates/${template_name}`,{active:"yes"});
-
         let info : Template = {
             name: response.template.name,
-            id: response.template.id,
+            id: response.template.name,
             createdAt: response.template.createdAt,
             versions : [{
                 name: response.template.version.tag,

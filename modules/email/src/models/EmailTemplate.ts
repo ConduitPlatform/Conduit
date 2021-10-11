@@ -23,9 +23,9 @@ export const emailTemplateSchema = new ConduitSchema(
       type: [TYPE.String],
       systemRequired: true,
     },
-    externalManaged:{
-      type : TYPE.Boolean,
-      required: true,
+    externalManaged: {
+      type: TYPE.Boolean,
+      default:false,
     },
     createdAt: TYPE.Date,
 
