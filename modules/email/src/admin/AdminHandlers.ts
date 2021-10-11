@@ -24,7 +24,8 @@ export class AdminHandlers {
         createTemplate: this.createTemplate.bind(this),
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
-        getExternalTemplates: this.getExternalTemplates.bind(this)
+        getExternalTemplates: this.getExternalTemplates.bind(this),
+        createExternalTemplate: this.createExternalTemplate.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -37,18 +38,7 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
 
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
-
-    
     const externalTemplates = await this.emailService.getExternalTemplates();
     if( isNil(externalTemplates)){
       throw new Error(`External templates didnt found!`)
@@ -104,6 +94,33 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
 
+  async createExternalTemplate(call: RouterRequest, callback: RouterResponse){
+    const { name, subject, body, variables } = JSON.parse(call.request.params);
+    if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Required fields are missing',
+      });
+    }
+
+    let errorMessage: string | null = null;
+    const newTemplate = await this.database
+      .create('EmailTemplate', {
+        name,
+        subject,
+        body,
+        variables,
+        externalManaged: true,
+      })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    return callback(null, { result: JSON.stringify({ template: newTemplate }) });
+  }
+
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
     const { name, subject, body, variables } = JSON.parse(call.request.params);
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
@@ -130,6 +147,7 @@ export class AdminHandlers {
       });
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
+
 
   async editTemplate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
