@@ -5,6 +5,7 @@ import {Client} from '@sendgrid/client';
 import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { SendgridMailBuilder } from "./sendgridMailBuilder";
+import { getHBValues } from "../../parse-test/getHBValues";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -20,6 +21,7 @@ export class SendgridProvider extends EmailProviderClass{
             url: '/v3/templates',
             body: {
                 name: data.name,
+                generation: 'dynamic'
                 
             }
         }
@@ -48,7 +50,8 @@ export class SendgridProvider extends EmailProviderClass{
            plainContent: version_res.body.plain_content,
            name: version_res.body.name,
            active: version_res.body.active,
-           updatedAt:''
+           updatedAt:'',
+           variables: Object.keys(getHBValues(version_res.body.html_content))
         })
         
        return info;
@@ -72,7 +75,8 @@ export class SendgridProvider extends EmailProviderClass{
                     updatedAt: version.updated_at,
                     active: version.active,
                     htmlContent: version.html_content,
-                    plainContent: version.plain_content
+                    plainContent: version.plain_content,
+                    variables: Object.keys(getHBValues(versions.html_content))
                 });
         });
         let info: Template = {
@@ -103,7 +107,7 @@ export class SendgridProvider extends EmailProviderClass{
     getBuilder(){
         return new SendgridMailBuilder();
     }
-    
+
 }
 
 

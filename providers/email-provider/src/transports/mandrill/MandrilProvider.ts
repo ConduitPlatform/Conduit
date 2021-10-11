@@ -5,6 +5,7 @@ import { Mandrill } from 'mandrill-api';
 import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { MandrillBuilder } from "./mandrillBuilder";
+import {getHBValues} from '../../parse-test/getHBValues';
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class MandrillProvider extends EmailProviderClass{
    private  _mandrillSdk?: Mandrill;
@@ -36,6 +37,7 @@ export class MandrillProvider extends EmailProviderClass{
                 updatedAt: response.updated_at,
                 htmlContent: response.code,
                 plainContent: response.text,
+                variables: Object.keys(getHBValues(response.code))
             }],
             createdAt: response.created_at
         }
@@ -43,17 +45,18 @@ export class MandrillProvider extends EmailProviderClass{
     }
     
     async createTemplate(data: CreateEmailTemplate): Promise<Template> {
+
         const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.add({
             key: this.apiKey,
             subject: data.subject,
             code: data.htmlContent,
             text: data.plainContent,
-            publish:true,           //maybe false.
+            publish:true,          
             name: data.name,
 
         },resolve));
         const created = await this.getTemplateInfo(response.slug);
-
+        created.versions[0].variables = Object.keys(getHBValues(data.htmlContent));
         return  created;
     }
 

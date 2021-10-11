@@ -1,14 +1,10 @@
 import Mail from 'nodemailer/lib/mailer';
-import { MailgunMailBuilder } from './transports/mailgun/mailgunMailBuilder';
-import { NodemailerBuilder } from './transports/nodemailer/nodemailerBuilder';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
 import { isNil} from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
-import { MandrillBuilder } from './transports/mandrill/mandrillBuilder';
 import { EmailBuilderClass } from './models/EmailBuilderClass';
 import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
-import { SendgridMailBuilder } from './transports/sendgrid/sendgridMailBuilder';
 import { EmailProviderClass } from './models/EmailProviderClass';
 import { MailgunProvider } from './transports/mailgun/MailgunProvider';
 import { MandrillProvider } from './transports/mandrill/MandrilProvider';
@@ -99,11 +95,10 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-    
     return this._transport.sendEmail(email.getMailObject());
   }
+  
 }
-
 
 
 
