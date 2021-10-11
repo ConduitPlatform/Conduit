@@ -27,7 +27,7 @@ const EmailsLayout: React.FC<unknown> = ({ children }) => {
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
-        <Typography variant={'h4'}>
+        <Typography className={classes.navContent} variant={'h4'}>
           Emails
           <a target="_blank" rel="noreferrer" className={classes.swaggerButton}>
             <Button variant="outlined" endIcon={<Email />}>
@@ -35,7 +35,7 @@ const EmailsLayout: React.FC<unknown> = ({ children }) => {
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} onChange={handleChange}>
+        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
           <Tab label="Templates" id="templates" />
           <Tab label="Send Email" id="send" />
           <Tab label="Provider details" id="provider" />
