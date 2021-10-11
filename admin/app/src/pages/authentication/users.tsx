@@ -5,7 +5,7 @@ import AuthUsers from '../../components/authentication/AuthUsers';
 import Paginator from '../../components/common/Paginator';
 import SearchFilter from '../../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
-import { Button, ButtonGroup, IconButton, makeStyles } from '@material-ui/core';
+import { Button, ButtonGroup, IconButton, makeStyles, Tooltip } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import useDebounce from '../../hooks/useDebounce';
 import {
@@ -60,6 +60,9 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginLeft: '-20px',
+  },
+  btnGroup: {
+    marginRight: '30px',
   },
 }));
 
@@ -246,27 +249,59 @@ const Users = () => {
 
   return (
     <div>
-      <Paper variant="outlined" className={classes.root}>
-        <Grid container>
-          <Grid item xs={10}>
-            <SearchFilter
-              setSearch={setSearch}
-              search={search}
-              filter={filter}
-              handleFilterChange={handleFilterChange}
-            />
-          </Grid>
-          <Grid item xs={2} className={classes.addUserBtn}>
-            <Button
-              color="secondary"
-              variant="contained"
-              endIcon={<AddCircle />}
-              onClick={() => setDrawer(true)}>
-              ADD USER
-            </Button>
-          </Grid>
+      <Grid container>
+        <Grid item xs={8}>
+          <SearchFilter
+            setSearch={setSearch}
+            search={search}
+            filter={filter}
+            handleFilterChange={handleFilterChange}
+          />
         </Grid>
-      </Paper>
+        <Grid item xs={4} className={classes.addUserBtn}>
+          {selectedUsers.length > 1 && (
+            <ButtonGroup
+              size="small"
+              variant="contained"
+              color="primary"
+              className={classes.btnGroup}>
+              <IconButton
+                aria-label="block"
+                color="primary"
+                onClick={() =>
+                  setOpenBlockUI({
+                    open: true,
+                    multiple: true,
+                  })
+                }>
+                <Tooltip title="Block multiple users">
+                  <BlockIcon />
+                </Tooltip>
+              </IconButton>
+              <IconButton
+                aria-label="delete"
+                color="primary"
+                onClick={() =>
+                  setOpenDeleteUser({
+                    open: true,
+                    multiple: true,
+                  })
+                }>
+                <Tooltip title="Delete multiple users">
+                  <DeleteIcon />
+                </Tooltip>
+              </IconButton>
+            </ButtonGroup>
+          )}
+          <Button
+            color="secondary"
+            variant="contained"
+            endIcon={<AddCircle />}
+            onClick={() => setDrawer(true)}>
+            ADD USER
+          </Button>
+        </Grid>
+      </Grid>
       {users && users.length > 0 ? (
         <AuthUsers
           users={users}
@@ -278,46 +313,19 @@ const Users = () => {
       ) : (
         <Typography>No users available</Typography>
       )}
-
-      <Grid container style={{ marginTop: '-8px' }}>
-        <Grid item xs={7} className={classes.groupActionContainer}>
-          <ButtonGroup size="small" variant="text" aria-label="outlined primary button group">
-            <IconButton
-              aria-label="delete"
-              disabled={selectedUsers.length <= 1}
-              color="primary"
-              onClick={() =>
-                setOpenBlockUI({
-                  open: true,
-                  multiple: true,
-                })
-              }>
-              <BlockIcon />
-            </IconButton>
-            <IconButton
-              aria-label="delete"
-              disabled={selectedUsers.length <= 1}
-              color="primary"
-              onClick={() =>
-                setOpenDeleteUser({
-                  open: true,
-                  multiple: true,
-                })
-              }>
-              <DeleteIcon />
-            </IconButton>
-          </ButtonGroup>
+      {users && users.length > 0 && (
+        <Grid container style={{ marginTop: '-8px' }}>
+          <Grid item xs={7}></Grid>
+          <Grid item xs={5}>
+            <Paginator
+              handlePageChange={handlePageChange}
+              limit={limit}
+              handleLimitChange={handleLimitChange}
+              page={page}
+            />
+          </Grid>
         </Grid>
-        <Grid item xs={5}>
-          <Paginator
-            handlePageChange={handlePageChange}
-            limit={limit}
-            handleLimitChange={handleLimitChange}
-            page={page}
-          />
-        </Grid>
-      </Grid>
-
+      )}
       <DrawerWrapper
         open={drawer}
         maxWidth={550}
