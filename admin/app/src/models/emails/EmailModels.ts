@@ -37,18 +37,17 @@ export interface EmailSettingsState {
 }
 
 export interface EmailData {
-  settings: EmailSettings;
-  templateDocuments: EmailTemplateType[];
+  body: string;
+  name: string;
+  subject: string;
   variables: string[];
 }
 
-export interface EmailState {
-  email: string;
+export interface SendEmailData {
+  templateName?: string;
+  variables?: { [key: string]: string };
+  subject?: string;
   sender: string;
-  subject: string;
+  email: string;
   body: string;
-  template: string;
-  variables: [];
-  variablesValues: { [key: string]: string };
-  templateName: string;
 }
