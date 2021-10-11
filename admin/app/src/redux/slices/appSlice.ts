@@ -34,7 +34,7 @@ const appSlice = createSlice({
     clearAppNotifications: (state) => {
       state.notifications = [];
     },
-    enqueueSnackbar: (state, action) => {
+    addSnackbar: (state, action) => {
       const key = action.payload.options && action.payload.options.key;
       const notification = {
         ...action.payload,
@@ -48,17 +48,6 @@ const appSlice = createSlice({
         },
       ];
     },
-    closeSnackbar: (state, action) => {
-      const notificationObj = {
-        key: action.payload,
-      };
-      const dismissedSnackbars = state.notifications.map((notification: { key: number }) =>
-        notification.key === notificationObj.key
-          ? { ...notification, dismissed: true }
-          : { ...notification }
-      );
-      state.notifications = dismissedSnackbars as INotification[];
-    },
     removeSnackbar: (state, action) => {
       state.notifications = state.notifications.filter(
         (notification: { key: number }) => notification.key !== action.payload
@@ -67,13 +56,7 @@ const appSlice = createSlice({
   },
 });
 
-export const {
-  setAppLoading,
-  setAppDefaults,
-  enqueueSnackbar,
-  closeSnackbar,
-  removeSnackbar,
-  clearAppNotifications,
-} = appSlice.actions;
+export const { setAppLoading, setAppDefaults, addSnackbar, removeSnackbar, clearAppNotifications } =
+  appSlice.actions;
 
 export default appSlice.reducer;

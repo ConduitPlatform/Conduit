@@ -1,11 +1,9 @@
 import React, { forwardRef, useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { SnackbarContent } from 'notistack';
+import { SnackbarContent, useSnackbar } from 'notistack';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
 import CardActions from '@material-ui/core/CardActions';
-import { useAppDispatch } from '../../redux/store';
-import { closeSnackbar } from '../../redux/slices/appSlice';
 import clsx from 'clsx';
 
 const useStyles = makeStyles((theme) => ({
@@ -54,7 +52,7 @@ interface IProps {
 
 const Snackbar = forwardRef<HTMLDivElement, IProps>((props, ref) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
+  const { closeSnackbar } = useSnackbar();
 
   const getVariantColor = (variant: Variant) => {
     switch (variant) {
@@ -70,8 +68,8 @@ const Snackbar = forwardRef<HTMLDivElement, IProps>((props, ref) => {
   };
 
   const handleDismiss = useCallback(() => {
-    dispatch(closeSnackbar(props.id));
-  }, [dispatch, props.id]);
+    closeSnackbar(props.id);
+  }, [closeSnackbar, props.id]);
 
   return (
     <SnackbarContent ref={ref} className={classes.root} onClick={() => handleDismiss()}>
