@@ -32,7 +32,7 @@ const AuthenticationLayout: React.FC<unknown> = ({ children }) => {
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
-        <Typography variant={'h4'}>
+        <Typography className={classes.navContent} variant={'h4'}>
           Authentication
           <a
             href={`${process.env.CONDUIT_URL}/swagger/#/authentication`}
@@ -44,7 +44,7 @@ const AuthenticationLayout: React.FC<unknown> = ({ children }) => {
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} onChange={handleChange}>
+        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
           <Tab label="Users" id="users" />
           <Tab label="Sign in methods" id="signIn" />
           <Tab label="Service accounts" id="serviceAccounts" />
