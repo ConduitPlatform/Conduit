@@ -11,7 +11,8 @@ import Switch from '@material-ui/core/Switch';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
-import { EmailSettings, EmailSettingsState } from '../../models/emails/EmailModels';
+import { EmailSettings } from '../../models/emails/EmailModels';
+import TransportSettings from './TransportSettings';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,7 +33,15 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     width: '100%',
   },
+  menuItem: {
+    textTransform: 'capitalize',
+  },
+  muiSelect: {
+    textTransform: 'capitalize',
+  },
 }));
+
+const transportProviders = ['mailgun', 'smtp', 'mandrill', 'sendgrid'];
 
 interface Props {
   settings: EmailSettings;
@@ -41,15 +50,11 @@ interface Props {
 
 const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsState] = useState<EmailSettingsState>({
-    transport: '',
+  const [settingsState, setSettingsState] = useState<EmailSettings>({
     active: false,
-    transportSettings: {
-      apiKey: '',
-      domain: '',
-      host: '',
-    },
     sendingDomain: '',
+    transport: '',
+    transportSettings: {},
   });
 
   useEffect(() => {
@@ -60,13 +65,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
       active: settings.active,
       transport: settings.transport,
       sendingDomain: settings.sendingDomain,
-      transportSettings: {
-        apiKey: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.apiKey as string,
-        domain: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.domain as string,
-        host: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']?.host as string,
-      },
+      transportSettings: settings.transportSettings,
     };
     setSettingsState(data);
   }, [settings]);
@@ -80,21 +79,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
   };
 
   const onSaveClick = () => {
-    const data = {
-      doc: settings.doc,
-      active: settingsState.active,
-      transport: settingsState.transport,
-      sendingDomain: settingsState.sendingDomain,
-      transportSettings: {
-        [settingsState.transport]: {
-          apiKey: settingsState.transportSettings.apiKey,
-          domain: settingsState.transportSettings.domain,
-          host: settingsState.transportSettings.host,
-        },
-      },
-    };
-
-    handleSave(data);
+    handleSave(settingsState);
   };
 
   const renderSettingsFields = () => {
@@ -114,14 +99,14 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
                 transport: event.target.value,
               });
             }}
+            className={classes.muiSelect}
             helperText="Select your transport provider"
             variant="outlined">
-            <MenuItem key={'mailgun'} value={'mailgun'}>
-              Mailgun
-            </MenuItem>
-            <MenuItem key={'smtp'} value={'smtp'}>
-              Smtp
-            </MenuItem>
+            {transportProviders.map((provider, index) => (
+              <MenuItem value={provider} key={index} className={classes.menuItem}>
+                {provider}
+              </MenuItem>
+            ))}
           </TextField>
         </Grid>
         <Grid item xs={12}>
@@ -138,68 +123,11 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           />
         </Grid>
         <Divider className={classes.divider} />
-        <Grid item xs={12}>
-          <Typography variant={'h6'}>Transport settings</Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="apiKey"
-            label="API key"
-            variant="outlined"
-            value={settingsState.transportSettings.apiKey}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  apiKey: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="domain"
-            label="Domain"
-            variant="outlined"
-            value={settingsState.transportSettings.domain}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  domain: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="host"
-            label="Host"
-            variant="outlined"
-            value={settingsState.transportSettings.host}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  host: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
+        <TransportSettings data={settingsState} />
       </>
     );
   };
 
-  // return <></>;
   return (
     <Container>
       <Paper className={classes.paper}>
@@ -231,7 +159,8 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           <Divider className={classes.divider} />
 
           <Grid container spacing={2} className={classes.innerGrid}>
-            {settingsState.active && renderSettingsFields()}
+            {/*/!*{settingsState.active && renderSettingsFields()}*!/ todo revert before commit*/}
+            {renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'}>
             <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>

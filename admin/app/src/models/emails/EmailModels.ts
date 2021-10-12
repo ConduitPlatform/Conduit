@@ -8,20 +8,39 @@ export interface EmailTemplateType {
   createdAt?: string;
 }
 
-export interface TransportSettings {
+export interface MailgunSettings {
   apiKey: string;
   domain: string;
   host: string;
 }
 
+export interface SmtpSettings {
+  port: string;
+  host: string;
+  auth: {
+    username: string;
+    password: string;
+    method: string;
+  };
+}
+
+export interface MandrillSettings {
+  apiKey: string;
+}
+
+export interface SendgridSettings {
+  apiUser: string;
+}
+
 export interface EmailSettings {
   active: boolean;
-  doc?: string;
   sendingDomain: string;
   transport: string;
   transportSettings: {
-    mailgun?: TransportSettings;
-    smtp?: TransportSettings;
+    mailgun?: MailgunSettings;
+    smtp?: SmtpSettings;
+    mandrill?: MandrillSettings;
+    sendgrid?: SendgridSettings;
   };
 }
 
@@ -30,9 +49,10 @@ export interface EmailSettingsState {
   sendingDomain: string;
   transport: string;
   transportSettings: {
-    apiKey: string;
-    domain: string;
-    host: string;
+    mailgun?: MailgunSettings;
+    smtp?: SmtpSettings;
+    mandrill?: MandrillSettings;
+    sendgrid?: SendgridSettings;
   };
 }
 
