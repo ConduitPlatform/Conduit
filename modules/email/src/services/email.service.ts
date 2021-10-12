@@ -59,33 +59,33 @@ export class EmailService {
       }
     }
 
+    if(!isNil(sender)){
+      builder.setSender(sender);
+    }
+    else if(!isNil(templateFound.sender) && isNil(sender) ){
+      builder.setSender(templateFound.sender);
+    }
+    else{
+      throw new Error(`Sender must be provided!`);
+    }
+
     if(templateFound.externalManaged){
-      if(isNil(templateFound.sender)){
-        builder.setSender(sender);
-      }
-      else{
-        builder.setSender(templateFound.sender)
-      }
-      builder.setReceiver(email);
       builder.setTemplate({
         id: templateFound.id,
         variables: variables as any,
       })
     }
     else{
-
       const bodyString = templateFound
       ? this.replaceVars(templateFound.body, variables)
       : body!;
-      const subjectString = templateFound
-      ? this.replaceVars(templateFound.subject, variables)
-      : subject!;
-      
-      builder.setSender(sender);
-      builder.setContent(bodyString);
-      builder.setReceiver(email);
-      builder.setSubject(subjectString);
     }
+    
+    const subjectString = templateFound
+    ? this.replaceVars(templateFound.subject, variables)
+    : subject!;
+    builder.setSubject(subjectString);
+    builder.setReceiver(email);
 
     if (params.cc) {
       builder.setCC(params.cc);
