@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-
+import to from 'await-to-js';
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
@@ -25,7 +25,6 @@ export class AdminHandlers {
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
-        createExternalTemplate: this.createExternalTemplate.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -92,51 +91,40 @@ export class AdminHandlers {
 
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
-
-  async createExternalTemplate(call: RouterRequest, callback: RouterResponse){
-    const { name, subject, body, variables } = JSON.parse(call.request.params);
-    if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-    }
-
-    let errorMessage: string | null = null;
-    const newTemplate = await this.database
-      .create('EmailTemplate', {
-        name,
-        subject,
-        body,
-        variables,
-        externalManaged: true,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    return callback(null, { result: JSON.stringify({ template: newTemplate }) });
-  }
-
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { name, subject, body, variables } = JSON.parse(call.request.params);
+    const { id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
+    let _id = name;
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
-
+    if( !isNil(externalManaged)){
+      if( isNil(id)){           //that means that we want to create an external managed template
+        const [err,template] = await to(this.emailService.createExternalTemplate({
+          name:name,
+          plainContent:body,
+          subject:subject,
+        }) as any);
+        _id = (template as any)?.name;
+        if(err){
+          return callback({
+            code: status.INTERNAL,
+            message: err.message,
+          });
+        }
+      }
+    }
     let errorMessage: string | null = null;
     const newTemplate = await this.database
       .create('EmailTemplate', {
-        name,
+        name:_id,
         subject,
         body,
         variables,
-        externalManaged: false,
+        externalManaged: externalManaged,
+        sender:sender,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))

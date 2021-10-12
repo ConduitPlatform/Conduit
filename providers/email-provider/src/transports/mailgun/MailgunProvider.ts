@@ -1,3 +1,4 @@
+import { to } from "await-to-js";
 import { createTransport } from "nodemailer";
 import { Options } from "nodemailer/lib/mailer";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
@@ -57,8 +58,10 @@ export  class MailgunProvider extends EmailProviderClass {
             tag: data.versionName
         };
     
-        const response = await  this._mailgunSdk.post(`/${this.domain}/templates`,mailgun_input);
-
+        const [err,response] = await  to(this._mailgunSdk.post(`/${this.domain}/templates`,mailgun_input)) as any;
+        if( err){
+            throw new Error(err.message);
+        }
         let created : Template = {
             name: response.template.name,
             createdAt: response.template.createdAt,

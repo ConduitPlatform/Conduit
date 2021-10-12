@@ -2,6 +2,7 @@ import { isNil } from 'lodash';
 import { EmailProvider } from '@quintessential-sft/email-provider';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
+import { CreateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/CreateEmailTemplate';
 
 export class EmailService {
   private database: any;
@@ -19,6 +20,10 @@ export class EmailService {
   
   getExternalTemplates() {
     return this.emailer._transport?.listTemplates();
+  }
+  
+  createExternalTemplate(data: CreateEmailTemplate){
+    return this.emailer._transport?.createTemplate(data);
   }
 
   async  registerTemplate(params: IRegisterTemplateParams) {

@@ -24,11 +24,6 @@
       "path": "/externalTemplates",
       "method": "GET",
       "protoName": "getExternalTemplates"
-    },
-    {
-      "path": "/externalTemplates",
-      "method": "POST",
-      "protoName": "createExternalTemplate"
     }
   ]
 }
