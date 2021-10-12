@@ -45,7 +45,7 @@ export class MandrillProvider extends EmailProviderClass{
     }
     
     async createTemplate(data: CreateEmailTemplate): Promise<Template> {
-        const template_variables = Object.keys(getHBValues(data.htmlContent));
+
         const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.add({
             key: this.apiKey,
             subject: data.subject,

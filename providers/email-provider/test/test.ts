@@ -1,8 +1,8 @@
-import { TemplateOptions } from './interfaces/TemplateOptions';
-import { EmailProvider } from "./index"
-import { CreateEmailTemplate } from "./interfaces/CreateEmailTemplate";
-import { MailgunEmailOptions} from './interfaces/mailgun/MailgunEmailOptions';
-import { MandrillEmailOptions } from './interfaces/mandrill/MandrillEmailOptions';
+import { TemplateOptions } from '../src/interfaces/TemplateOptions';
+import { EmailProvider } from "../src/index"
+import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
+import { MailgunEmailOptions} from '../src/interfaces/mailgun/MailgunEmailOptions';
+import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOptions';
 // let provider = new EmailProvider('mailgun',{
 //     mailgun:{
 //         proxy:null,

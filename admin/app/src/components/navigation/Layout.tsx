@@ -7,7 +7,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import NotificationsSystem, { atalhoTheme, dismissNotification } from 'reapop';
+import useNotifier from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -30,11 +30,11 @@ const useStyles = makeStyles((theme: Theme) => ({
 }));
 
 export const Layout: React.FC = ({ children, ...rest }) => {
+  useNotifier();
   const classes = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.appAuthSlice.data);
-  const notifications = useAppSelector((state) => state.notifications);
   const { loading } = useAppSelector((state) => state.appSlice);
   const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
@@ -101,11 +101,6 @@ export const Layout: React.FC = ({ children, ...rest }) => {
         <></>
       )}
       <main className={classes.content}>{children}</main>
-      <NotificationsSystem
-        notifications={notifications}
-        dismissNotification={(id) => dispatch(dismissNotification(id))}
-        theme={atalhoTheme}
-      />
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>

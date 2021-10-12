@@ -22,7 +22,7 @@ import {
 import { EndpointTypes, Schema, ToggleSchma } from '../../models/cms/CmsModels';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 
 export interface ICmsSlice {
   data: {
@@ -68,7 +68,7 @@ export const asyncGetCmsSchemas = createAsyncThunk<
     };
   } catch (error) {
     thunkAPI.dispatch(setAppLoading(false));
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+    thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
     throw error;
   }
 });
@@ -88,7 +88,7 @@ export const asyncGetMoreCmsSchemas = createAsyncThunk<
     };
   } catch (error) {
     thunkAPI.dispatch(setAppLoading(false));
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+    thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
     throw error;
   }
 });
@@ -99,16 +99,12 @@ export const asyncCreateNewSchema = createAsyncThunk<Schema, any>(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await postCmsSchemaRequest(dataForSchema);
-      thunkAPI.dispatch(
-        notify(`Successfully created ${dataForSchema.name}`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully created ${dataForSchema.name}`));
       thunkAPI.dispatch(setAppDefaults());
       return data as Schema;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -124,7 +120,7 @@ export const asyncToggleSchema = createAsyncThunk<ToggleSchma, string>(
       return data as ToggleSchma;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -137,14 +133,12 @@ export const asyncEditSchema = createAsyncThunk<any, { _id: string; data: any }>
     try {
       await putCmsSchemaRequest(params._id, params.data);
       thunkAPI.dispatch(
-        notify(`Successfully edited schema [id]:${params._id}`, 'success', {
-          dismissAfter: 3000,
-        })
+        enqueueSuccessNotification(`Successfully edited schema [id]:${params._id}`)
       );
       thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -156,16 +150,12 @@ export const asyncDeleteSelectedSchema = createAsyncThunk<string, { _id: string 
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteCmsSchemaRequest(args._id);
-      thunkAPI.dispatch(
-        notify(`Successfully deleted schema with id: ${args}`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted schema with id: ${args}`));
       thunkAPI.dispatch(setAppDefaults());
       return args._id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -181,7 +171,7 @@ export const asyncGetSchemaDocuments = createAsyncThunk<any, string>(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -197,7 +187,7 @@ export const asyncGetMoreSchemaDocuments = createAsyncThunk<any, { name: string;
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -233,7 +223,7 @@ export const asyncCreateSchemaDocument = createAsyncThunk<
     return;
   } catch (error) {
     thunkAPI.dispatch(setAppLoading(false));
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+    thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
     throw error;
   }
 });
@@ -248,7 +238,7 @@ export const asyncDeleteSchemaDocument = createAsyncThunk<
     thunkAPI.dispatch(asyncGetSchemaDocuments(params.schemaName));
   } catch (error) {
     thunkAPI.dispatch(setAppLoading(false));
-    thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+    thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
     throw error;
   }
 });
@@ -274,7 +264,7 @@ export const asyncEditSchemaDocument = createAsyncThunk(
       return params.schemaName;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -290,7 +280,7 @@ export const asyncGetCustomEndpoints = createAsyncThunk<EndpointTypes[], any>(
       return data.results as EndpointTypes[];
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -306,7 +296,7 @@ export const asyncUpdateCustomEndpoints = createAsyncThunk<any, { _id: string; e
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -323,7 +313,7 @@ export const asyncDeleteCustomEndpoints = createAsyncThunk<any, string>(
       return data.results;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -349,7 +339,7 @@ export const asyncCreateCustomEndpoints = createAsyncThunk<any, any>(
       thunkAPI.dispatch(asyncGetCustomEndpoints(''));
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -365,7 +355,7 @@ export const asyncFetchSchemasFromOtherModules = createAsyncThunk<any, any>(
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 }));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
