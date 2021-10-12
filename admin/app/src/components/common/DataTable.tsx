@@ -25,7 +25,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
   },
   tableContainer: {
-    height: '70vh',
+    maxHeight: '70vh',
   },
 }));
 
