@@ -10,8 +10,11 @@ RUN yarn install --production --pure-lockfile --non-interactive --cache-folder .
 
 WORKDIR /app/packages/core
 
+# gRPC port
 EXPOSE 55152
-
+# HTTP port
 EXPOSE 3000
+# Socket port
+EXPOSE 3001
 
 CMD ["yarn", "start"]

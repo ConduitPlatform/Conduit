@@ -31,7 +31,7 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
-        <Typography variant={'h4'}>
+        <Typography className={classes.navContent} variant={'h4'}>
           Settings
           <a target="_blank" rel="noreferrer" className={classes.swaggerButton}>
             <Button variant="outlined" endIcon={<Settings />}>
@@ -39,7 +39,7 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} onChange={handleChange}>
+        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
           <Tab label="Client SDKs" id="clientsdk" />
           <Tab label="Secrets" id="secrets" />
           <Tab label="Core" id="core" />

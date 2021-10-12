@@ -31,7 +31,7 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
-        <Typography variant={'h4'}>
+        <Typography className={classes.navContent} variant={'h4'}>
           Notifications
           <a
             href={`${process.env.CONDUIT_URL}/swagger/#/push-notifications`}
@@ -43,7 +43,7 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} onChange={handleChange}>
+        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
           <Tab label="Notifications" id="view" />
           <Tab label="Send Notifications" id="send" />
           <Tab label="Settings" id="settings" />

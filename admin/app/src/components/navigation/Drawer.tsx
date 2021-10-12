@@ -5,13 +5,14 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-import { ExitToApp, Menu, ChevronLeft } from '@material-ui/icons';
+import { ExitToApp, Menu, ChevronLeft, Settings } from '@material-ui/icons';
 import clsx from 'clsx';
 import Router from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Modules from '../modules/Modules';
+import Link from 'next/link';
 
 const drawerWidth = 200;
 const drawerWidthClosed = 52;
@@ -126,14 +127,23 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
           )}
         </ListItemIcon>
       </ListItem>
-
       <div className={classes.toolbar} />
-
       <div className={classes.toolbar} />
-
       <div style={divStyle}>
         <List component="nav">
           <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
+          <Link href="/settings/clientsdk" passHref>
+            <ListItem
+              button
+              className={classes.listItem}
+              style={itemStyle}
+              selected={itemSelected === 'settings'}>
+              <ListItemIcon className={classes.listItemIcon}>
+                <Settings color={'inherit'} />
+              </ListItemIcon>
+              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
+            </ListItem>
+          </Link>
           <Divider />
           {disabledModules.length > 0 ? (
             <>

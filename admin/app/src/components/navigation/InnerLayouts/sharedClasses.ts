@@ -7,7 +7,7 @@ export default makeStyles((theme) =>
       top: 0,
       backgroundColor: '#262840',
       width: '100vw',
-      padding: '9px',
+      padding: '16px',
       zIndex: 10,
     },
     content: {
@@ -17,6 +17,9 @@ export default makeStyles((theme) =>
     swaggerButton: {
       textDecoration: 'none',
       marginLeft: '40px',
+    },
+    navContent: {
+      marginTop: '10px',
     },
   })
 );
