@@ -1,11 +1,11 @@
 import Typography from '@material-ui/core/Typography';
 import React, { ReactElement, useCallback, useEffect, useState } from 'react';
-import NewUserModal from '../../components/authentication/NewUserModal';
+import NewUserModal from '../../components/authentication/AddUserDrawerContent';
 import AuthUsers from '../../components/authentication/AuthUsers';
 import Paginator from '../../components/common/Paginator';
 import SearchFilter from '../../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
-import { Button, makeStyles } from '@material-ui/core';
+import { Button, ButtonGroup, IconButton, makeStyles, Tooltip } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import useDebounce from '../../hooks/useDebounce';
 import {
@@ -32,11 +32,13 @@ import {
 } from '../../components/utils/userDialog';
 import DeleteIcon from '@material-ui/icons/Delete';
 import BlockIcon from '@material-ui/icons/Block';
+import { AddCircle } from '@material-ui/icons';
+import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     '& > *': {
-      margin: theme.spacing(0.5),
+      margin: theme.spacing(0),
     },
     marginBottom: '3px',
   },
@@ -52,6 +54,15 @@ const useStyles = makeStyles((theme) => ({
   },
   groupActionButtonIcon: {
     marginRight: 8,
+  },
+  addUserBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginLeft: '-17px',
+  },
+  btnGroup: {
+    marginRight: '30px',
   },
 }));
 
@@ -85,6 +96,7 @@ const Users = () => {
   });
   const [openEditUser, setOpenEditUser] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [drawer, setDrawer] = useState<boolean>(false);
 
   const debouncedSearch: string = useDebounce(search, 500);
 
@@ -122,6 +134,7 @@ const Users = () => {
     setPage(0);
     setSearch('');
     setFilter('none');
+    setDrawer(false);
   };
 
   const handleSelect = (id: string) => {
@@ -236,56 +249,59 @@ const Users = () => {
 
   return (
     <div>
-      <Paper variant="outlined" className={classes.root}>
-        <Grid container>
-          <Grid item xs={4}>
-            <SearchFilter
-              setSearch={setSearch}
-              search={search}
-              filter={filter}
-              handleFilterChange={handleFilterChange}
-            />
-          </Grid>
-          <Grid item xs={3} className={classes.groupActionContainer}>
-            {selectedUsers.length > 1 && (
-              <>
-                <Button
-                  variant="text"
-                  className={classes.groupActionButton}
-                  onClick={() =>
-                    setOpenBlockUI({
-                      open: true,
-                      multiple: true,
-                    })
-                  }>
-                  <BlockIcon color="primary" className={classes.groupActionButtonIcon} />
-                  <Typography variant="subtitle2">Block/Unblock Selected Users</Typography>
-                </Button>
-                <Button
-                  variant="text"
-                  className={classes.groupActionButton}
-                  onClick={() =>
-                    setOpenDeleteUser({
-                      open: true,
-                      multiple: true,
-                    })
-                  }>
-                  <DeleteIcon color="primary" className={classes.groupActionButtonIcon} />
-                  <Typography variant="subtitle2">Delete Selected Users</Typography>
-                </Button>
-              </>
-            )}
-          </Grid>
-          <Grid item xs={5}>
-            <Paginator
-              handlePageChange={handlePageChange}
-              limit={limit}
-              handleLimitChange={handleLimitChange}
-              page={page}
-            />
-          </Grid>
+      <Grid container>
+        <Grid item xs={8}>
+          <SearchFilter
+            setSearch={setSearch}
+            search={search}
+            filter={filter}
+            handleFilterChange={handleFilterChange}
+          />
         </Grid>
-      </Paper>
+        <Grid item xs={4} className={classes.addUserBtn}>
+          {selectedUsers.length > 1 && (
+            <ButtonGroup
+              size="small"
+              variant="contained"
+              color="primary"
+              className={classes.btnGroup}>
+              <IconButton
+                aria-label="block"
+                color="primary"
+                onClick={() =>
+                  setOpenBlockUI({
+                    open: true,
+                    multiple: true,
+                  })
+                }>
+                <Tooltip title="Block multiple users">
+                  <BlockIcon />
+                </Tooltip>
+              </IconButton>
+              <IconButton
+                aria-label="delete"
+                color="primary"
+                onClick={() =>
+                  setOpenDeleteUser({
+                    open: true,
+                    multiple: true,
+                  })
+                }>
+                <Tooltip title="Delete multiple users">
+                  <DeleteIcon />
+                </Tooltip>
+              </IconButton>
+            </ButtonGroup>
+          )}
+          <Button
+            color="primary"
+            variant="contained"
+            endIcon={<AddCircle />}
+            onClick={() => setDrawer(true)}>
+            ADD USER
+          </Button>
+        </Grid>
+      </Grid>
       {users && users.length > 0 ? (
         <AuthUsers
           users={users}
@@ -297,7 +313,27 @@ const Users = () => {
       ) : (
         <Typography>No users available</Typography>
       )}
-      <NewUserModal handleNewUserDispatch={handleNewUserDispatch} />
+      {users && users.length > 0 && (
+        <Grid container style={{ marginTop: '-8px' }}>
+          <Grid item xs={7}></Grid>
+          <Grid item xs={5}>
+            <Paginator
+              handlePageChange={handlePageChange}
+              limit={limit}
+              handleLimitChange={handleLimitChange}
+              page={page}
+            />
+          </Grid>
+        </Grid>
+      )}
+      <DrawerWrapper
+        open={drawer}
+        maxWidth={550}
+        closeDrawer={() => {
+          setDrawer(false);
+        }}>
+        <NewUserModal handleNewUserDispatch={handleNewUserDispatch} />
+      </DrawerWrapper>
       <ConfirmationDialog
         open={openDeleteUser.open}
         handleClose={handleClose}
