@@ -31,6 +31,10 @@ export const emailTemplateSchema = new ConduitSchema(
       type: TYPE.Boolean,
       default:false,
     },
+    externalId:{
+      type:TYPE.String,
+      required: false,
+    },
     createdAt: TYPE.Date,
 
     updatedAt: TYPE.Date,

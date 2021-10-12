@@ -92,22 +92,22 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
-    let _id = name;
+    const {id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
+    let externalId = undefined;
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
-    if( !isNil(externalManaged)){
+    if(externalManaged){
       if( isNil(id)){           //that means that we want to create an external managed template
         const [err,template] = await to(this.emailService.createExternalTemplate({
           name:name,
           plainContent:body,
           subject:subject,
         }) as any);
-        _id = (template as any)?.name;
+        externalId = (template as any)?.id;
         if(err){
           return callback({
             code: status.INTERNAL,
@@ -119,12 +119,13 @@ export class AdminHandlers {
     let errorMessage: string | null = null;
     const newTemplate = await this.database
       .create('EmailTemplate', {
-        name:_id,
+        name,
         subject,
         body,
         variables,
-        externalManaged: externalManaged,
-        sender:sender,
+        externalManaged,
+        sender,
+        externalId,
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))

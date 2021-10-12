@@ -65,7 +65,7 @@ export  class MailgunProvider extends EmailProviderClass {
         let created : Template = {
             name: response.template.name,
             createdAt: response.template.createdAt,
-            id: response.template.id,
+            id: response.template.name,
             versions: [{
                 name: response.template.version.tag,
                 id: response.template.version.id,
