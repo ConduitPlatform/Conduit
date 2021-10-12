@@ -128,11 +128,13 @@ export class AdminHandlers {
         externalId,
       })
       .catch((e: any) => (errorMessage = e.message));
+
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
       });
+      
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
 
