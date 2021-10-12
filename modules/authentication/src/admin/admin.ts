@@ -48,8 +48,8 @@ export class AdminHandlers {
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, isActive, provider, identifier } = call.request.params;
     let sortObj: any = null;
-    if (params.sort && params.sort.length > 0) {
-      sortObj = constructSortObj(params.sort);
+    if (call.request.params.sort && call.request.params.sort.length > 0) {
+      sortObj = constructSortObj(call.request.params.sort);
     }
     let skipNumber = 0,
       limitNumber = 25;
