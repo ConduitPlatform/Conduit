@@ -11,6 +11,7 @@ import { ServiceAdmin } from './service';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
+import { constructSortObj } from '../utils';
 
 let paths = require('./admin.json').functions;
 
@@ -46,6 +47,10 @@ export class AdminHandlers {
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, isActive, provider, identifier } = call.request.params;
+    let sortObj: any = null;
+    if (params.sort && params.sort.length > 0) {
+      sortObj = constructSortObj(params.sort);
+    }
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -75,7 +80,8 @@ export class AdminHandlers {
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
+      sortObj
     );
     const count: number = await User.getInstance().countDocuments(query);
 
