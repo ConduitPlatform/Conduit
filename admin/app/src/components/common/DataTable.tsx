@@ -24,6 +24,9 @@ const useStyles = makeStyles((theme) => ({
   header: {
     backgroundColor: theme.palette.background.paper,
   },
+  tableContainer: {
+    height: '70vh',
+  },
 }));
 
 type Action = {
@@ -108,7 +111,7 @@ const DataTable: React.FC<Props> = ({
   };
 
   return (
-    <TableContainer style={{ height: '73vh' }} component={Paper} {...rest}>
+    <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
       <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
