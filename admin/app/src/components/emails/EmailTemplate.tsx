@@ -86,6 +86,17 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
     setValue(templatesState.length);
   };
 
+  const handleCancel = (id: string) => {
+    setEdit(false);
+    setAdd(false);
+    if (id !== 'newTemplate_id') return;
+    const newTemplates = [...templatesState];
+    const templateIndex = templatesState.findIndex((template) => template._id === id);
+    newTemplates.splice(templateIndex, 1);
+    setTemplatesState(newTemplates);
+    setValue(0);
+  };
+
   return (
     <Container>
       <Grid container item xs={12} justify={'flex-end'}>
@@ -120,6 +131,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
               template={t}
               handleSave={saveTemplateChanges}
               handleCreate={createNewTemplate}
+              handleCancel={handleCancel}
               edit={edit}
               setEdit={setEdit}
               add={add}

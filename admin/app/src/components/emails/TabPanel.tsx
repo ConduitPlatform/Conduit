@@ -46,6 +46,7 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   handleCreate: (templateState: EmailTemplateType) => void;
   handleSave: (templateState: EmailTemplateType) => void;
+  handleCancel: (id: string) => void;
   template: EmailTemplateType;
   value: number;
   index: number;
@@ -58,6 +59,7 @@ interface Props {
 const TabPanel: React.FC<Props> = ({
   handleCreate,
   handleSave,
+  handleCancel,
   template,
   value,
   index,
@@ -104,8 +106,9 @@ const TabPanel: React.FC<Props> = ({
   };
 
   const handleCancelClick = () => {
-    setEdit(false);
-    setAdd(false);
+    if (handleCancel) {
+      handleCancel(template._id);
+    }
     setTemplateState({
       _id: template._id,
       name: template.name,
