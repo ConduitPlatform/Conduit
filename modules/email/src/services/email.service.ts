@@ -79,6 +79,7 @@ export class EmailService {
       const bodyString = templateFound
       ? this.replaceVars(templateFound.body, variables)
       : body!;
+      builder.setContent(bodyString);
     }
     
     const subjectString = templateFound
