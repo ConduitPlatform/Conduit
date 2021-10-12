@@ -8,6 +8,12 @@ export interface EmailTemplateType {
   createdAt?: string;
 }
 
+export type whatever =
+  | keyof MailgunSettings
+  | keyof SmtpSettings
+  | keyof MandrillSettings
+  | keyof SendgridSettings;
+
 export interface MailgunSettings {
   apiKey: string;
   domain: string;
@@ -32,27 +38,17 @@ export interface SendgridSettings {
   apiUser: string;
 }
 
+export type TransportProviders = 'mailgun' | 'smtp' | 'mandrill' | 'sendgrid';
+
 export interface EmailSettings {
   active: boolean;
   sendingDomain: string;
-  transport: string;
+  transport: TransportProviders;
   transportSettings: {
-    mailgun?: MailgunSettings;
-    smtp?: SmtpSettings;
-    mandrill?: MandrillSettings;
-    sendgrid?: SendgridSettings;
-  };
-}
-
-export interface EmailSettingsState {
-  active: boolean;
-  sendingDomain: string;
-  transport: string;
-  transportSettings: {
-    mailgun?: MailgunSettings;
-    smtp?: SmtpSettings;
-    mandrill?: MandrillSettings;
-    sendgrid?: SendgridSettings;
+    mailgun: MailgunSettings;
+    smtp: SmtpSettings;
+    mandrill: MandrillSettings;
+    sendgrid: SendgridSettings;
   };
 }
 

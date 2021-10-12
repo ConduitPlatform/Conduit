@@ -11,7 +11,7 @@ import Switch from '@material-ui/core/Switch';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
-import { EmailSettings } from '../../models/emails/EmailModels';
+import { EmailSettings, TransportProviders } from '../../models/emails/EmailModels';
 import TransportSettings from './TransportSettings';
 
 const useStyles = makeStyles((theme) => ({
@@ -53,7 +53,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
   const [settingsState, setSettingsState] = useState<EmailSettings>({
     active: false,
     sendingDomain: '',
-    transport: '',
+    transport: 'smtp',
     transportSettings: {},
   });
 
@@ -96,7 +96,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
             onChange={(event) => {
               setSettingsState({
                 ...settingsState,
-                transport: event.target.value,
+                transport: event.target.value as TransportProviders,
               });
             }}
             className={classes.muiSelect}
