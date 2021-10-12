@@ -29,7 +29,7 @@ const CmsLayout: React.FC<unknown> = ({ children }) => {
         <Typography className={classes.navContent} variant={'h4'}>
           Content Management
           <a
-            href={`${process.env.CONDUIT_URL}/swagger/#/cmss`}
+            href={`${process.env.CONDUIT_URL}/swagger/#/cms`}
             target="_blank"
             rel="noreferrer"
             className={classes.swaggerButton}>
