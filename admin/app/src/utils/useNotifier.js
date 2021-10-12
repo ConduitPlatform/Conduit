@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSnackbar } from 'notistack';
 import { useAppDispatch, useAppSelector } from '../redux/store';
 import { addSnackbar, removeSnackbar } from '../redux/slices/appSlice';
+import { v4 as uuidv4 } from 'uuid';
 
 const useNotifier = () => {
   const dispatch = useAppDispatch();
@@ -23,7 +24,7 @@ export const enqueueErrorNotification = (message) => {
   return addSnackbar({
     message: JSON.stringify(options),
     options: {
-      key: new Date().getTime() + Math.random(),
+      key: uuidv4(),
       variant: 'error',
       autoHideDuration: 3000,
     },
@@ -35,7 +36,7 @@ export const enqueueInfoNotification = (message) => {
   return addSnackbar({
     message: JSON.stringify(options),
     options: {
-      key: new Date().getTime() + Math.random(),
+      key: uuidv4(),
       variant: 'info',
       autoHideDuration: 3000,
     },
@@ -47,7 +48,7 @@ export const enqueueSuccessNotification = (message) => {
   return addSnackbar({
     message: JSON.stringify(options),
     options: {
-      key: new Date().getTime() + Math.random(),
+      key: uuidv4(),
       variant: 'success',
       autoHideDuration: 3000,
     },
