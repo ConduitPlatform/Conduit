@@ -63,6 +63,9 @@ export class EmailService {
       if(isNil(templateFound.sender)){
         builder.setSender(sender);
       }
+      else{
+        builder.setSender(templateFound.sender);
+      }
       builder.setReceiver(email);
       builder.setTemplate({
         id: templateFound.id,
@@ -83,18 +86,19 @@ export class EmailService {
       builder.setReceiver(email);
       builder.setSubject(subjectString);
       
-      if (params.cc) {
-        builder.setCC(params.cc);
-      }
-      
-      if (params.replyTo) {
-        builder.setReplyTo(params.replyTo);
-      }
-      
-      if (params.attachments) {
-        builder.addAttachments(params.attachments as any);
-      }
     }
+    if (params.cc) {
+      builder.setCC(params.cc);
+    }
+    
+    if (params.replyTo) {
+      builder.setReplyTo(params.replyTo);
+    }
+    
+    if (params.attachments) {
+      builder.addAttachments(params.attachments as any);
+    }
+    
     return this.emailer.sendEmail(builder);
   }
   

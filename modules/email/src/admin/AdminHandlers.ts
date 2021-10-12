@@ -107,13 +107,14 @@ export class AdminHandlers {
           plainContent:body,
           subject,
         }) as any);
-        externalId = (template as any)?.id;
+        
         if(err){
           return callback({
             code: status.INTERNAL,
             message: err.message,
           });
         }
+        externalId = (template as any)?.id;
       }
     }
     let errorMessage: string | null = null;
