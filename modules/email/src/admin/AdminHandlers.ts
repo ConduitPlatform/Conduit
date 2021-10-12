@@ -25,6 +25,7 @@ export class AdminHandlers {
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
+        syncExternalTemplates: this.syncExternalTemplates.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -34,6 +35,35 @@ export class AdminHandlers {
 
   setEmailService(emailService: EmailService) {
     this.emailService = emailService;
+  }
+
+  async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
+    let errorMessage: string | null = null;
+    let synchronizedTemplates:any[] = [];
+    const externalTemplates = await this.emailService.getExternalTemplates();
+    if( isNil(externalTemplates)){
+      throw new Error(`External templates didnt found!`)
+    }
+    externalTemplates.forEach( async element => {
+      const synchronized = {
+        name: element.name,
+        subject: element.versions[0].subject,
+        externalId: element.id,
+        variables: element.versions[0].variables,
+        body: element.versions[0].plainContent,
+      }
+      const updatedTemplate = await this.database
+      .findOneAndUpdate('EmailTemplate', {externalId: element.id},synchronized)
+      .catch((e: any) => (errorMessage = e.message));
+      
+      if (!isNil(errorMessage))
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+        synchronizedTemplates.push(updatedTemplate);
+    })
+    return callback(null, { result: JSON.stringify({ synchronizedTemplates }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
@@ -107,7 +137,7 @@ export class AdminHandlers {
           plainContent:body,
           subject,
         }) as any);
-        
+
         if(err){
           return callback({
             code: status.INTERNAL,
