@@ -103,9 +103,9 @@ export class AdminHandlers {
     if(externalManaged){
       if( isNil(id)){           //that means that we want to create an external managed template
         const [err,template] = await to(this.emailService.createExternalTemplate({
-          name:name,
+          name,
           plainContent:body,
-          subject:subject,
+          subject,
         }) as any);
         externalId = (template as any)?.id;
         if(err){
