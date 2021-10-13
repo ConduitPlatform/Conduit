@@ -62,7 +62,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
     setTemplatesState(templatesData);
   }, [templatesData]);
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
+  const handleChange = (event: React.ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 
@@ -84,6 +84,17 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
     };
     setTemplatesState([...templatesState, newTemplate]);
     setValue(templatesState.length);
+  };
+
+  const handleCancel = (id: string) => {
+    setEdit(false);
+    setAdd(false);
+    if (id !== 'newTemplate_id') return;
+    const newTemplates = [...templatesState];
+    const templateIndex = templatesState.findIndex((template) => template._id === id);
+    newTemplates.splice(templateIndex, 1);
+    setTemplatesState(newTemplates);
+    setValue(0);
   };
 
   return (
@@ -120,6 +131,7 @@ const EmailTemplate: React.FC<Props> = ({ templatesData, handleSave, handleCreat
               template={t}
               handleSave={saveTemplateChanges}
               handleCreate={createNewTemplate}
+              handleCancel={handleCancel}
               edit={edit}
               setEdit={setEdit}
               add={add}

@@ -7,6 +7,7 @@ import {
   asyncSaveEmailTemplateChanges,
 } from '../../redux/slices/emailsSlice';
 import EmailTemplate from '../../components/emails/EmailTemplate';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const Templates = () => {
   const dispatch = useAppDispatch();
@@ -17,7 +18,7 @@ const Templates = () => {
 
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
 
-  const saveTemplateChanges = (data: any) => {
+  const saveTemplateChanges = (data: EmailTemplateType) => {
     const _id = data._id;
     const updatedData = {
       name: data.name,
@@ -29,7 +30,7 @@ const Templates = () => {
     dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
   };
 
-  const createNewTemplate = (data: any) => {
+  const createNewTemplate = (data: EmailTemplateType) => {
     const newData = {
       name: data.name,
       subject: data.subject,

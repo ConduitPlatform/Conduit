@@ -7,7 +7,12 @@ import {
   putEmailTemplateRequest,
   sendEmailRequest,
 } from '../../http/EmailRequests';
-import { EmailTemplateType, EmailSettings } from '../../models/emails/EmailModels';
+import {
+  EmailTemplateType,
+  EmailSettings,
+  EmailData,
+  SendEmailData,
+} from '../../models/emails/EmailModels';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
@@ -51,13 +56,12 @@ export const asyncGetEmailTemplates = createAsyncThunk(
 
 export const asyncSaveEmailTemplateChanges = createAsyncThunk(
   'emails/saveTemplateChanges',
-  async (dataForThunk: { _id: string; data: any }, thunkAPI) => {
+  async (dataForThunk: { _id: string; data: EmailData }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data: updateEmailData } = await putEmailTemplateRequest(
-        dataForThunk._id,
-        dataForThunk.data
-      );
+      const {
+        data: { updatedTemplate: updateEmailData },
+      } = await putEmailTemplateRequest(dataForThunk._id, dataForThunk.data);
       thunkAPI.dispatch(
         enqueueSuccessNotification(
           `Successfully saved changes for the template ${dataForThunk.data.name}!`
@@ -75,7 +79,7 @@ export const asyncSaveEmailTemplateChanges = createAsyncThunk(
 
 export const asyncCreateNewEmailTemplate = createAsyncThunk(
   'emails/createNewTemplate',
-  async (newEmailData: any, thunkAPI) => {
+  async (newEmailData: EmailData, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await postEmailTemplateRequest(newEmailData);
@@ -124,18 +128,21 @@ export const asyncUpdateEmailSettings = createAsyncThunk(
   }
 );
 
-export const asyncSendEmail = createAsyncThunk('emails/send', async (dataToSend: any, thunkAPI) => {
-  thunkAPI.dispatch(setAppLoading(true));
-  try {
-    const { data } = await sendEmailRequest(dataToSend);
-    thunkAPI.dispatch(setAppDefaults());
-    return data;
-  } catch (error) {
-    thunkAPI.dispatch(setAppLoading(false));
-    thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-    throw error;
+export const asyncSendEmail = createAsyncThunk(
+  'emails/send',
+  async (dataToSend: SendEmailData, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await sendEmailRequest(dataToSend);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
   }
-});
+);
 
 const updateTemplateByID = (updated: EmailTemplateType, templates: EmailTemplateType[]) => {
   return templates.map((t) => {

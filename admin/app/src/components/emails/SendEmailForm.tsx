@@ -29,16 +29,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-// interface IEmailState {
-//   email: string;
-//   sender: string;
-//   subject: string;
-//   body: string;
-//   template: string;
-//   variables: [];
-//   variablesValues: { [key: string]: string };
-//   templateName: string;
-// }
+interface IEmailState {
+  _id: string;
+  email: string;
+  sender: string;
+  subject: string;
+  body: string;
+  variables: string[];
+  variablesValues: { [key: string]: string };
+  templateName: string;
+}
 
 interface Props {
   templates: EmailTemplateType[];
@@ -49,12 +49,12 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
-  const [emailState, setEmailState] = useState({
+  const [emailState, setEmailState] = useState<IEmailState>({
+    _id: '',
     email: '',
     sender: '',
     subject: '',
     body: '',
-    template: '',
     variables: [],
     variablesValues: {},
     templateName: '',
@@ -62,7 +62,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
   const sendEmail = () => {
     let email;
-    if (emailState.template) {
+    if (emailState.templateName) {
       email = {
         templateName: emailState.templateName,
         variables: emailState.variablesValues,
@@ -83,20 +83,23 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
   const clearEmail = () => {
     setEmailState({
+      _id: '',
       email: '',
       sender: '',
       subject: '',
       body: '',
-      template: '',
       variables: [],
       variablesValues: {},
       templateName: '',
     });
   };
 
-  const handleChangeTemplate = (event: any) => {
-    const selectedTemplate = event.target.value;
+  const handleChangeTemplate = (event: { target: { value: unknown } }) => {
+    const selectedTemplate = templates.find(
+      (template) => template._id === (event.target.value as string)
+    );
 
+    if (!selectedTemplate) return;
     let variableValues = {};
     selectedTemplate.variables.forEach((variable: string) => {
       variableValues = { ...variableValues, [variable]: '' };
@@ -104,17 +107,17 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
     setEmailState({
       ...emailState,
+      _id: selectedTemplate._id,
       variables: selectedTemplate.variables,
       templateName: selectedTemplate.name,
       subject: selectedTemplate.subject,
       variablesValues: variableValues,
-      template: selectedTemplate,
       body: selectedTemplate.body,
     });
   };
 
-  const handleVariableChange = (event: any, variable: string) => {
-    const newValue = event.target.value;
+  const handleVariableChange = (event: { target: { value: unknown } }, variable: string) => {
+    const newValue = event.target.value as string;
     const variableValues = { ...emailState.variablesValues, [variable]: newValue };
     setEmailState({ ...emailState, variablesValues: variableValues });
   };
@@ -203,16 +206,15 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                 <Select
                   labelId="demo-simple-select-outlined-label"
                   id="demo-simple-select-outlined"
-                  value={emailState.template}
+                  value={emailState._id}
+                  renderValue={() => emailState.templateName}
                   onChange={handleChangeTemplate}
                   label="Email Template">
                   <MenuItem value="none">
                     <em>None</em>
                   </MenuItem>
                   {templates?.map((template) => (
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
-                    <MenuItem key={template._id} value={template}>
+                    <MenuItem key={template._id} value={template._id}>
                       {template.name}
                     </MenuItem>
                   ))}
