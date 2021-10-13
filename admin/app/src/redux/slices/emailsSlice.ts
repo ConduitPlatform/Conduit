@@ -39,6 +39,7 @@ export const asyncGetEmailTemplates = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getEmailTemplateRequest();
+
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -58,13 +59,14 @@ export const asyncSaveEmailTemplateChanges = createAsyncThunk(
         dataForThunk._id,
         dataForThunk.data
       );
+
       thunkAPI.dispatch(
         enqueueSuccessNotification(
           `Successfully saved changes for the template ${dataForThunk.data.name}!`
         )
       );
       thunkAPI.dispatch(setAppDefaults());
-      return updateEmailData;
+      return updateEmailData.updatedTemplate;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));

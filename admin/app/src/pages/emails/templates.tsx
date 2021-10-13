@@ -16,6 +16,7 @@ import {
   TextField,
   IconButton,
   makeStyles,
+  InputAdornment,
 } from '@material-ui/core';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
@@ -23,6 +24,7 @@ import TabPanel from '../../components/emails/TabPanel';
 import { CallMissedOutgoing } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import { SyncAlt } from '@material-ui/icons';
+import SearchIcon from '@material-ui/icons/Search';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -54,6 +56,8 @@ const Templates = () => {
 
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
 
+  console.log(templateDocuments);
+
   const newTemplate = () => {
     setViewTemplate('');
     setCreate(true);
@@ -78,8 +82,8 @@ const Templates = () => {
       setSelectedTemplate([]);
       return;
     }
-    const newSelectedUsers = data.map((item: any) => item._id);
-    setSelectedTemplate(newSelectedUsers);
+    const newSelectedTemplates = data.map((item: any) => item._id);
+    setSelectedTemplate(newSelectedTemplates);
   };
 
   const handleCloseDrawer = () => {
@@ -97,8 +101,8 @@ const Templates = () => {
       body: data.body,
       variables: data.variables,
     };
-
     dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
+    setViewTemplate(updatedData);
   };
 
   const createNewTemplate = (data: any) => {
@@ -109,6 +113,7 @@ const Templates = () => {
       variables: data.variables,
     };
     dispatch(asyncCreateNewEmailTemplate(newData));
+    setViewTemplate(newData);
   };
 
   const formatData = (data: EmailTemplateType[]) => {
@@ -126,7 +131,7 @@ const Templates = () => {
   //Actions section
 
   const handleAction = (action: { title: string; type: string }, data: any) => {
-    const currentTemplate = templateDocuments.find((user) => user._id === data._id);
+    const currentTemplate = templateDocuments.find((template) => template._id === data._id);
     if (action.type === 'view') {
       setViewTemplate(currentTemplate);
       setEdit(false);
@@ -172,9 +177,18 @@ const Templates = () => {
           <TextField
             size="small"
             variant="outlined"
+            id="input-with-icon-textfield"
+            name="Search"
             value={search}
-            label="Find template"
             onChange={(e) => setSearch(e.target.value)}
+            label="Find template"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
           />
         </Grid>
         <Grid item spacing={2}>

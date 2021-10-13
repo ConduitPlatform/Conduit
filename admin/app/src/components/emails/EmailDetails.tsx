@@ -40,66 +40,62 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   edit: boolean;
-  add: boolean;
   templateState: EmailTemplateType;
-  setAdd: (value: boolean) => void;
   setTemplateState: (values: EmailTemplateType) => void;
 }
 
-const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTemplateState }) => {
+const EmailDetails: React.FC<Props> = ({ edit, templateState, setTemplateState }) => {
   const classes = useStyles();
 
   return (
     <Box>
-      <Paper elevation={5} className={classes.paper}>
-        <Grid container className={classes.grid}>
-          <Grid item xs={12}>
-            {edit ? (
-              <TextField
-                label={'Subject'}
-                variant="outlined"
-                className={classes.textField}
-                value={templateState.subject}
-                onChange={(event) => {
-                  setTemplateState({ ...templateState, subject: event.target.value });
-                }}
-              />
-            ) : (
-              <>
-                <Typography variant="body1">Subject</Typography>
-                <Typography variant="subtitle2">{templateState.subject}</Typography>
-              </>
-            )}
-          </Grid>
+      <Grid container className={classes.grid}>
+        <Grid item xs={12}>
+          {edit ? (
+            <TextField
+              label={'Subject'}
+              variant="outlined"
+              className={classes.textField}
+              value={templateState.subject}
+              onChange={(event) => {
+                setTemplateState({ ...templateState, subject: event.target.value });
+              }}
+            />
+          ) : (
+            <>
+              <Typography variant="body1">Subject</Typography>
+              <Typography variant="subtitle2">{templateState.subject}</Typography>
+            </>
+          )}
         </Grid>
-        {edit ? (
-          <TextField
-            className={classes.multiline}
-            id="filled-textarea"
-            label="Body"
-            multiline
-            rows={8}
-            variant="outlined"
-            value={templateState.body}
-            onChange={(event) => {
-              setTemplateState({
-                ...templateState,
-                body: event.target.value,
-              });
-            }}
-            InputProps={{
-              readOnly: !edit,
-            }}
-          />
-        ) : (
-          <>
-            <Typography variant="body1">Body</Typography>
-            <Typography variant="subtitle2" style={{ whiteSpace: 'pre-line' }}>
-              {templateState.body}
-            </Typography>
-          </>
-        )}
-      </Paper>
+      </Grid>
+      {edit ? (
+        <TextField
+          className={classes.multiline}
+          id="filled-textarea"
+          label="Body"
+          multiline
+          rows={8}
+          variant="outlined"
+          value={templateState.body}
+          onChange={(event) => {
+            setTemplateState({
+              ...templateState,
+              body: event.target.value,
+            });
+          }}
+          InputProps={{
+            readOnly: !edit,
+          }}
+        />
+      ) : (
+        <>
+          <Typography variant="body1">Body</Typography>
+          <Typography variant="subtitle2" style={{ whiteSpace: 'pre-line' }}>
+            {templateState.body}
+          </Typography>
+        </>
+      )}
     </Box>
   );
 };

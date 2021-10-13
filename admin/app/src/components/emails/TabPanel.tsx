@@ -2,7 +2,7 @@ import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
-import IconButton from '@material-ui/core/IconButton';
+
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
@@ -56,22 +56,16 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionalSender: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-  },
 }));
 
 interface Props {
   handleCreate: (templateState: EmailTemplateType) => void;
   handleSave: (templateState: EmailTemplateType) => void;
   template: EmailTemplateType;
-  edit: any;
-  setEdit: any;
-  create: any;
-  setCreate: any;
+  edit: boolean;
+  setEdit: (value: boolean) => void;
+  create: boolean;
+  setCreate: (value: boolean) => void;
 }
 
 const TabPanel: React.FC<Props> = ({
@@ -86,7 +80,7 @@ const TabPanel: React.FC<Props> = ({
   const classes = useStyles();
 
   const [templateState, setTemplateState] = useState<EmailTemplateType>({
-    _id: '',
+    _id: 'newTemplate_id',
     name: '',
     subject: '',
     body: '',
@@ -94,16 +88,18 @@ const TabPanel: React.FC<Props> = ({
   });
 
   useEffect(() => {
-    setTemplateState({
-      _id: template._id,
-      name: template.name,
-      subject: template.subject,
-      body: template.body,
-      variables: template.variables,
-    });
-  }, [template, edit]);
+    if (!create)
+      setTemplateState({
+        _id: template._id,
+        name: template.name,
+        subject: template.subject,
+        body: template.body,
+        variables: template.variables,
+      });
+  }, [template, edit, create]);
 
   const handleSaveClick = () => {
+    setCreate(false);
     if (create) {
       handleCreate(templateState);
     } else {
@@ -130,11 +126,12 @@ const TabPanel: React.FC<Props> = ({
     <Container className={classes.marginTop}>
       <Box>
         <Paper elevation={0} className={classes.paper}>
-          <Grid container justify="space-around">
+          <Grid container spacing={2} justify="space-around">
             {edit ? (
               <>
-                <Grid item xs={6}>
+                <Grid item xs={12}>
                   <TextField
+                    className={classes.textField}
                     label={'Template name'}
                     variant={'outlined'}
                     value={templateState.name}
@@ -146,8 +143,9 @@ const TabPanel: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={6} className={classes.optionalSender}>
+                <Grid item xs={12} className={classes.optionalSender}>
                   <TextField
+                    className={classes.textField}
                     label={'*Optional sender input'}
                     variant={'outlined'}
                     value={templateState.name}
@@ -162,11 +160,11 @@ const TabPanel: React.FC<Props> = ({
               </>
             ) : (
               <>
-                <Grid item xs={6}>
+                <Grid item xs={12}>
                   <Typography variant="subtitle2">Template name:</Typography>
                   <Typography variant="h6">{templateState.name}</Typography>
                 </Grid>
-                <Grid item xs={6} className={classes.optionalSender}>
+                <Grid item xs={12}>
                   <Typography variant="subtitle2">Sender Input:</Typography>
                   <Typography variant="h6">{templateState.name}</Typography>
                 </Grid>
@@ -183,7 +181,11 @@ const TabPanel: React.FC<Props> = ({
 
         <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
           {!edit ? (
-            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setEdit(true)}>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<EditIcon />}
+              onClick={() => setEdit(true)}>
               Edit
             </Button>
           ) : (
