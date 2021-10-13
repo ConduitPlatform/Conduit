@@ -40,6 +40,7 @@ export class AdminHandlers {
   async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
     let errorMessage: string | null = null;
     const externalTemplates:any = await this.emailService.getExternalTemplates();
+    
     let updated = [];
     let totalCount = 0;
     for ( let element of externalTemplates){
@@ -47,6 +48,11 @@ export class AdminHandlers {
       const templateDocument = await this.database
       .findOne('EmailTemplate', { externalId: element.id })
       .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage))
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
 
       if(!isNil(templateDocument)){ // if templateDocument exists
         const synchronized = {
@@ -60,7 +66,11 @@ export class AdminHandlers {
         const updatedTemplate = await this.database
         .findByIdAndUpdate('EmailTemplate', templateDocument._id,synchronized)
         .catch((e: any) => (errorMessage = e.message));
-
+        if (!isNil(errorMessage))
+          return callback({
+            code: status.INTERNAL,
+            message: errorMessage,
+          });
         updated.push(updatedTemplate);
       }
     }
