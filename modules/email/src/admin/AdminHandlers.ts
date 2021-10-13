@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isNil, template } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk, {
   GrpcServer,
@@ -39,35 +39,36 @@ export class AdminHandlers {
 
   async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
     let errorMessage: string | null = null;
-    let synchronizedTemplates:any[] = [];
-    const externalTemplates = await this.emailService.getExternalTemplates();
-    if( isNil(externalTemplates)){
-      throw new Error(`External templates didnt found!`)
-    }
-    externalTemplates.forEach( async element => {
-      const synchronized = {
-        name: element.name,
-        subject: element.versions[0].subject,
-        externalId: element.id,
-        variables: element.versions[0].variables,
-        body: element.versions[0].plainContent,
-      }
-      const updatedTemplate = await this.database
-      .findOneAndUpdate('EmailTemplate', {externalId: element.id},synchronized)
+    const externalTemplates:any = await this.emailService.getExternalTemplates();
+    let updated = [];
+    let totalCount = 0;
+    for ( let element of externalTemplates){
+
+      const templateDocument = await this.database
+      .findOne('EmailTemplate', { externalId: element.id })
       .catch((e: any) => (errorMessage = e.message));
-      
-      if (!isNil(errorMessage))
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-        synchronizedTemplates.push(updatedTemplate);
-    })
-    return callback(null, { result: JSON.stringify({ synchronizedTemplates }) });
+
+      if(!isNil(templateDocument)){ // if templateDocument exists
+        const synchronized = {
+          name: element.name,
+          subject: element.versions[0].subject,
+          externalId: element.id,
+          variables: element.versions[0].variables,
+          body: element.versions[0].plainContent,
+        }
+
+        const updatedTemplate = await this.database
+        .findByIdAndUpdate('EmailTemplate', templateDocument._id,synchronized)
+        .catch((e: any) => (errorMessage = e.message));
+
+        updated.push(updatedTemplate);
+      }
+    }
+    totalCount = updated.length;
+    return callback(null, { result: JSON.stringify({ updated,totalCount }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
-
     const externalTemplates = await this.emailService.getExternalTemplates();
     if( isNil(externalTemplates)){
       throw new Error(`External templates didnt found!`)
@@ -131,7 +132,7 @@ export class AdminHandlers {
       });
     }
     if(externalManaged){
-      if( isNil(id)){           //that means that we want to create an external managed template
+      if(isNil(id)){           //that means that we want to create an external managed template
         const [err,template] = await to(this.emailService.createExternalTemplate({
           name,
           plainContent:body,
