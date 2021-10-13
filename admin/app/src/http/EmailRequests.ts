@@ -16,6 +16,7 @@ interface ISendEmailData {
   body: string;
 }
 
+
 export const getEmailTemplateRequest = () => axios.get(`${CONDUIT_API}/admin/email/templates`);
 
 export const postEmailTemplateRequest = (data: IEmailTemplateData) =>

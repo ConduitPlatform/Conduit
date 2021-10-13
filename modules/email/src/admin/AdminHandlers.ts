@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-
+import to from 'await-to-js';
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
@@ -24,6 +24,7 @@ export class AdminHandlers {
         createTemplate: this.createTemplate.bind(this),
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
+        getExternalTemplates: this.getExternalTemplates.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -33,6 +34,27 @@ export class AdminHandlers {
 
   setEmailService(emailService: EmailService) {
     this.emailService = emailService;
+  }
+
+  async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
+
+    const externalTemplates = await this.emailService.getExternalTemplates();
+    if( isNil(externalTemplates)){
+      throw new Error(`External templates didnt found!`)
+    }
+    let templateDocuments:any = [];
+    externalTemplates.forEach((element) => {
+      templateDocuments.push({
+        _id: element.id,
+        name: element.name,
+        subject: element.versions[0].subject,
+        body: element.versions[0].plainContent,
+        createdAt: element.createdAt,
+        variables: element.versions[0].variables
+      })
+    })
+    const totalCount = templateDocuments.length;
+    return callback(null, { result: JSON.stringify({ templateDocuments,totalCount }) });
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
@@ -69,16 +91,31 @@ export class AdminHandlers {
 
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
-
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { name, subject, body, variables } = JSON.parse(call.request.params);
+    const {id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
+    let externalId = undefined;
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
-
+    if(externalManaged){
+      if( isNil(id)){           //that means that we want to create an external managed template
+        const [err,template] = await to(this.emailService.createExternalTemplate({
+          name,
+          plainContent:body,
+          subject,
+        }) as any);
+        if(err){
+          return callback({
+            code: status.INTERNAL,
+            message: err.message,
+          });
+        }
+        externalId = (template as any)?.id;
+      }
+    }
     let errorMessage: string | null = null;
     const newTemplate = await this.database
       .create('EmailTemplate', {
@@ -86,15 +123,21 @@ export class AdminHandlers {
         subject,
         body,
         variables,
+        externalManaged,
+        sender,
+        externalId,
       })
       .catch((e: any) => (errorMessage = e.message));
+
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
       });
+      
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
+
 
   async editTemplate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
