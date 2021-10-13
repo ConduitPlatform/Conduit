@@ -99,12 +99,12 @@ const TabPanel: React.FC<Props> = ({
   }, [template, edit, create]);
 
   const handleSaveClick = () => {
-    setCreate(false);
     if (create) {
       handleCreate(templateState);
     } else {
       handleSave(templateState);
     }
+    setCreate(false);
     setEdit(!edit);
   };
 
