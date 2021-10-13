@@ -123,7 +123,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const {id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
+    const {id,sender,externalManaged,name, subject, body, variables} = JSON.parse(call.request.params);
     let externalId = undefined;
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
