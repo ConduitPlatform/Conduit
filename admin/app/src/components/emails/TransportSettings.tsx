@@ -4,7 +4,7 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import { Box } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import { EmailSettings, whatever } from '../../models/emails/EmailModels';
+import { EmailSettings, TransportProviders, whatever } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
   input: {
@@ -14,11 +14,18 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   data: EmailSettings;
-  onChange: any;
+  onChange: (value: string, key: string, provider: TransportProviders) => void;
 }
 
 const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
   const classes = useStyles();
+
+  const handleChange = (value: string, key: string, provider: TransportProviders) => {
+    if (onChange) {
+      onChange(value, key, provider);
+    }
+  };
+
   const handleFields = () => {
     if (!data.transport) {
       return <>N/A</>;
@@ -37,47 +44,11 @@ const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
                 variant="outlined"
                 className={classes.input}
                 value={settings[key] ? settings[key] : ''}
-                // onChange={(event) => {
-                //   setSettingsState({
-                //     ...settingsState,
-                //     transportSettings: {
-                //       ...settingsState.transportSettings,
-                //       apiKey: event.target.value,
-                //     },
-                //   });
-                // }}
+                onChange={(event) => handleChange(event.target.value, key, data.transport)}
               />
             </Box>
           );
         })}
-        {/*{data.transport === 'smtp' && (*/}
-        {/*  <>*/}
-        {/*    <Typography className={classes.input}>Authentication</Typography>*/}
-        {/*    {transportProviderExtraFields['smtp'].auth.map((item, index) => {*/}
-        {/*      return (*/}
-        {/*        <Box key={index}>*/}
-        {/*          <TextField*/}
-        {/*            required*/}
-        {/*            id={item.value}*/}
-        {/*            label={item.label}*/}
-        {/*            variant="outlined"*/}
-        {/*            className={classes.input}*/}
-        {/*            // value={settingsState.transportSettings.apiKey}*/}
-        {/*            // onChange={(event) => {*/}
-        {/*            //   setSettingsState({*/}
-        {/*            //     ...settingsState,*/}
-        {/*            //     transportSettings: {*/}
-        {/*            //       ...settingsState.transportSettings,*/}
-        {/*            //       apiKey: event.target.value,*/}
-        {/*            //     },*/}
-        {/*            //   });*/}
-        {/*            // }}*/}
-        {/*          />*/}
-        {/*        </Box>*/}
-        {/*      );*/}
-        {/*    })}*/}
-        {/*  </>*/}
-        {/*)}*/}
       </Grid>
     );
   };

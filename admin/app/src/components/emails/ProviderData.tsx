@@ -82,6 +82,20 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
     handleSave(settingsState);
   };
 
+  const onChange = (value: string, key: string, provider: TransportProviders) => {
+    const newSettings = {
+      ...settingsState.transportSettings,
+      [provider]: {
+        ...settingsState.transportSettings[provider],
+        [key]: value,
+      },
+    };
+    setSettingsState({
+      ...settingsState,
+      transportSettings: newSettings,
+    });
+  };
+
   const renderSettingsFields = () => {
     return (
       <>
@@ -123,7 +137,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           />
         </Grid>
         <Divider className={classes.divider} />
-        <TransportSettings data={settingsState} />
+        <TransportSettings data={settingsState} onChange={onChange} />
       </>
     );
   };
@@ -159,8 +173,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           <Divider className={classes.divider} />
 
           <Grid container spacing={2} className={classes.innerGrid}>
-            {/*/!*{settingsState.active && renderSettingsFields()}*!/ todo revert before commit*/}
-            {renderSettingsFields()}
+            {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'}>
             <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>

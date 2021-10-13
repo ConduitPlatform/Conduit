@@ -45,10 +45,10 @@ export interface EmailSettings {
   sendingDomain: string;
   transport: TransportProviders;
   transportSettings: {
-    mailgun: MailgunSettings;
-    smtp: SmtpSettings;
-    mandrill: MandrillSettings;
-    sendgrid: SendgridSettings;
+    mailgun?: MailgunSettings;
+    smtp?: SmtpSettings;
+    mandrill?: MandrillSettings;
+    sendgrid?: SendgridSettings;
   };
 }
 
