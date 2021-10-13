@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import EmailsLayout from '../../components/navigation/InnerLayouts/emailsLayout';
 import {
@@ -6,16 +6,66 @@ import {
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
 } from '../../redux/slices/emailsSlice';
-import EmailTemplate from '../../components/emails/EmailTemplate';
+import DataTable from '../../components/common/DataTable';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
+import {
+  Box,
+  Button,
+  Grid,
+  Typography,
+  TextField,
+  IconButton,
+  makeStyles,
+} from '@material-ui/core';
+import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
+import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
+import TabPanel from '../../components/emails/TabPanel';
+import { CallMissedOutgoing } from '@material-ui/icons';
+import useDebounce from '../../hooks/useDebounce';
+import { SyncAlt } from '@material-ui/icons';
+
+const useStyles = makeStyles((theme) => ({
+  btnAlignment: {
+    marginLeft: theme.spacing(1),
+  },
+  btnAlignment2: {
+    marginRight: theme.spacing(1),
+  },
+  actions: {
+    marginBottom: theme.spacing(1),
+  },
+}));
 
 const Templates = () => {
+  const classes = useStyles();
   const dispatch = useAppDispatch();
+  const [search, setSearch] = useState<string>('');
+  const [drawer, setDrawer] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>();
+  const [create, setCreate] = useState<boolean>(false);
+  const [edit, setEdit] = useState<boolean>(false);
+
+  const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
     dispatch(asyncGetEmailTemplates());
   }, [dispatch]);
 
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
+
+  const newTemplate = () => {
+    setSelectedTemplate('');
+    setCreate(true);
+    setEdit(true);
+    setDrawer(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setEdit(false);
+    setCreate(false);
+    setDrawer(false);
+    setSelectedTemplate('');
+  };
 
   const saveTemplateChanges = (data: any) => {
     const _id = data._id;
@@ -39,12 +89,123 @@ const Templates = () => {
     dispatch(asyncCreateNewEmailTemplate(newData));
   };
 
+  const formatData = (data: EmailTemplateType[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        Name: u.name,
+        External: '--',
+        Synced: '--',
+        'Updated At': u.updatedAt,
+      };
+    });
+  };
+
+  //Actions section
+
+  const handleAction = (action: { title: string; type: string }, data: any) => {
+    const currentTemplate = templateDocuments.find((user) => user._id === data._id);
+    if (action.type === 'view') {
+      setSelectedTemplate(currentTemplate);
+      setEdit(false);
+      setDrawer(true);
+    }
+    if (action.type === 'delete') {
+      console.log('delete');
+    }
+    if (action.type === 'sync') {
+      console.log('sync');
+    }
+    if (action.type === 'upload') {
+      console.log('upload');
+    }
+  };
+
+  const toDelete = {
+    title: 'Delete',
+    type: 'delete',
+  };
+
+  const toUpload = {
+    title: 'Upload',
+    type: 'upload',
+  };
+
+  const toSync = {
+    title: 'Sync',
+    type: 'sync',
+  };
+
+  const toView = {
+    title: 'View',
+    type: 'view',
+  };
+
+  const actions = [toDelete, toUpload, toSync, toView];
+
   return (
-    <EmailTemplate
-      templatesData={templateDocuments}
-      handleSave={saveTemplateChanges}
-      handleCreate={createNewTemplate}
-    />
+    <div>
+      <Grid container item xs={12} justify="space-between" className={classes.actions}>
+        <Grid item>
+          <TextField
+            size="small"
+            variant="outlined"
+            value={search}
+            label="Find template"
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </Grid>
+        <Grid item spacing={2}>
+          <IconButton color="primary" className={classes.btnAlignment}>
+            <SyncAlt />
+          </IconButton>
+          <Button
+            className={classes.btnAlignment2}
+            variant="contained"
+            color="secondary"
+            startIcon={<CallMissedOutgoing />}>
+            Import Template
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddCircleOutline />}
+            onClick={() => newTemplate()}>
+            New Template
+          </Button>
+        </Grid>
+      </Grid>
+      {templateDocuments.length > 0 && (
+        <DataTable
+          dsData={formatData(templateDocuments)}
+          actions={actions}
+          handleAction={handleAction}
+        />
+      )}
+      <DrawerWrapper
+        open={drawer}
+        closeDrawer={() => handleCloseDrawer()}
+        width={700}
+        handleAction={handleAction}>
+        <Box>
+          <Typography
+            variant="h6"
+            color="primary"
+            style={{ marginTop: '30px', textAlign: 'center' }}>
+            {!create ? 'Edit your template' : 'Create an email template'}{' '}
+          </Typography>
+          <TabPanel
+            handleCreate={createNewTemplate}
+            handleSave={saveTemplateChanges}
+            template={selectedTemplate}
+            edit={edit}
+            setEdit={setEdit}
+            create={create}
+            setCreate={setCreate}
+          />
+        </Box>
+      </DrawerWrapper>
+    </div>
   );
 };
 

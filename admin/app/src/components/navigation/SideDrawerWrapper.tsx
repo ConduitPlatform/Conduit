@@ -34,7 +34,7 @@ interface PropsDrawer {
 const DrawerWrapper: FC<PropsDrawer> = ({
   width = 'auto',
   minWidth = 400,
-  maxWidth = 600,
+  maxWidth = 900,
   open,
   closeDrawer,
   children,

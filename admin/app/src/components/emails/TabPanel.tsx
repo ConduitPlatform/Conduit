@@ -11,12 +11,19 @@ import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import EmailDetails from './EmailDetails';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import Image from 'next/dist/client/image';
+import EmailImage from '../../assets/email.svg';
+import { Button } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1,
     backgroundColor: theme.palette.background.paper,
     display: 'flex',
+    flexGrow: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    justifyItems: 'center',
+    justifySelf: 'center',
   },
   tabs: {
     borderRight: `1px solid ${theme.palette.divider}`,
@@ -41,30 +48,34 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     marginTop: theme.spacing(2),
   },
+  marginTop: {
+    marginTop: '60px',
+  },
+  centeredImg: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 }));
 
 interface Props {
   handleCreate: (templateState: EmailTemplateType) => void;
   handleSave: (templateState: EmailTemplateType) => void;
   template: EmailTemplateType;
-  value: number;
-  index: number;
-  edit: boolean;
-  setEdit: (edit: boolean) => void;
-  add: boolean;
-  setAdd: (add: boolean) => void;
+  edit: any;
+  setEdit: any;
+  create: any;
+  setCreate: any;
 }
 
 const TabPanel: React.FC<Props> = ({
   handleCreate,
   handleSave,
   template,
-  value,
-  index,
   edit,
   setEdit,
-  add,
-  setAdd,
+  create,
+  setCreate,
 }) => {
   const classes = useStyles();
 
@@ -84,18 +95,10 @@ const TabPanel: React.FC<Props> = ({
       body: template.body,
       variables: template.variables,
     });
-
-    if (template._id === 'newTemplate_id') {
-      setEdit(true);
-    }
-  }, [setEdit, template]);
-
-  const handleEditClick = () => {
-    setEdit(!edit);
-  };
+  }, [template, edit]);
 
   const handleSaveClick = () => {
-    if (templateState._id === 'newTemplate_id') {
+    if (create) {
       handleCreate(templateState);
     } else {
       handleSave(templateState);
@@ -104,8 +107,10 @@ const TabPanel: React.FC<Props> = ({
   };
 
   const handleCancelClick = () => {
-    setEdit(false);
-    setAdd(false);
+    if (create) {
+      setTemplateState({ _id: '', name: '', subject: '', body: '', variables: [] });
+      return;
+    }
     setTemplateState({
       _id: template._id,
       name: template.name,
@@ -115,56 +120,86 @@ const TabPanel: React.FC<Props> = ({
     });
   };
 
-  if (value !== index) {
-    return null;
-  }
-
   return (
-    <Container>
+    <Container className={classes.marginTop}>
       <Box>
-        <Grid container>
-          <Grid item xs={10}>
-            {edit ? (
-              <TextField
-                label={'Template name'}
-                variant={'outlined'}
-                value={templateState.name}
-                onChange={(event) => {
-                  setTemplateState({
-                    ...templateState,
-                    name: event.target.value,
-                  });
-                }}
-              />
-            ) : (
-              <Typography variant="h6">{templateState.name}</Typography>
-            )}
-          </Grid>
-          <Grid container item xs={2} justify={'flex-end'}>
-            {!edit ? (
-              <IconButton aria-label="edit" onClick={handleEditClick}>
-                <EditIcon />
-              </IconButton>
-            ) : (
-              <>
-                <IconButton aria-label="cancel" onClick={handleCancelClick}>
-                  <Cancel />
-                </IconButton>
-                <IconButton aria-label="save" onClick={handleSaveClick}>
-                  <Save />
-                </IconButton>
-              </>
-            )}
-          </Grid>
+        <Grid container justify="space-around">
+          {edit ? (
+            <>
+              <Grid item xs={6}>
+                <TextField
+                  label={'Template name'}
+                  variant={'outlined'}
+                  value={templateState.name}
+                  onChange={(event) => {
+                    setTemplateState({
+                      ...templateState,
+                      name: event.target.value,
+                    });
+                  }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label={'*Optional sender input'}
+                  variant={'outlined'}
+                  value={templateState.name}
+                  onChange={(event) => {
+                    setTemplateState({
+                      ...templateState,
+                      name: event.target.value,
+                    });
+                  }}
+                />
+              </Grid>
+            </>
+          ) : (
+            <>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Template name:</Typography>
+                <Typography variant="h6">{templateState.name}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="subtitle2">Sender Input:</Typography>
+                <Typography variant="h6">{templateState.name}</Typography>
+              </Grid>
+            </>
+          )}
         </Grid>
         <Divider className={classes.divider} />
         <EmailDetails
           edit={edit}
-          add={add}
-          setAdd={setAdd}
           templateState={templateState}
           setTemplateState={setTemplateState}
         />
+
+        <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
+          {!edit ? (
+            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setEdit(true)}>
+              Edit
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Cancel />}
+                onClick={handleCancelClick}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Save />}
+                onClick={handleSaveClick}>
+                Save
+              </Button>
+            </>
+          )}
+        </Grid>
+        <div className={classes.centeredImg}>
+          <Image src={EmailImage} width="200px" alt="mail" />
+        </div>
       </Box>
     </Container>
   );
