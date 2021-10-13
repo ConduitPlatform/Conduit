@@ -13,7 +13,7 @@ import EmailDetails from './EmailDetails';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
-import { Button } from '@material-ui/core';
+import { Button, Paper } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -55,6 +55,12 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  optionalSender: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
 }));
 
@@ -123,49 +129,51 @@ const TabPanel: React.FC<Props> = ({
   return (
     <Container className={classes.marginTop}>
       <Box>
-        <Grid container justify="space-around">
-          {edit ? (
-            <>
-              <Grid item xs={6}>
-                <TextField
-                  label={'Template name'}
-                  variant={'outlined'}
-                  value={templateState.name}
-                  onChange={(event) => {
-                    setTemplateState({
-                      ...templateState,
-                      name: event.target.value,
-                    });
-                  }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label={'*Optional sender input'}
-                  variant={'outlined'}
-                  value={templateState.name}
-                  onChange={(event) => {
-                    setTemplateState({
-                      ...templateState,
-                      name: event.target.value,
-                    });
-                  }}
-                />
-              </Grid>
-            </>
-          ) : (
-            <>
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">Template name:</Typography>
-                <Typography variant="h6">{templateState.name}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle2">Sender Input:</Typography>
-                <Typography variant="h6">{templateState.name}</Typography>
-              </Grid>
-            </>
-          )}
-        </Grid>
+        <Paper elevation={0} className={classes.paper}>
+          <Grid container justify="space-around">
+            {edit ? (
+              <>
+                <Grid item xs={6}>
+                  <TextField
+                    label={'Template name'}
+                    variant={'outlined'}
+                    value={templateState.name}
+                    onChange={(event) => {
+                      setTemplateState({
+                        ...templateState,
+                        name: event.target.value,
+                      });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6} className={classes.optionalSender}>
+                  <TextField
+                    label={'*Optional sender input'}
+                    variant={'outlined'}
+                    value={templateState.name}
+                    onChange={(event) => {
+                      setTemplateState({
+                        ...templateState,
+                        name: event.target.value,
+                      });
+                    }}
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2">Template name:</Typography>
+                  <Typography variant="h6">{templateState.name}</Typography>
+                </Grid>
+                <Grid item xs={6} className={classes.optionalSender}>
+                  <Typography variant="subtitle2">Sender Input:</Typography>
+                  <Typography variant="h6">{templateState.name}</Typography>
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </Paper>
         <Divider className={classes.divider} />
         <EmailDetails
           edit={edit}
@@ -197,9 +205,11 @@ const TabPanel: React.FC<Props> = ({
             </>
           )}
         </Grid>
-        <div className={classes.centeredImg}>
-          <Image src={EmailImage} width="200px" alt="mail" />
-        </div>
+        {!edit && (
+          <div className={classes.centeredImg}>
+            <Image src={EmailImage} width="200px" alt="mail" />
+          </div>
+        )}
       </Box>
     </Container>
   );

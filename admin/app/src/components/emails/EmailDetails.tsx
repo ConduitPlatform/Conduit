@@ -30,7 +30,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     color: theme.palette.text.secondary,
     marginTop: theme.spacing(2),
-    border: `0.5px solid ${theme.palette.secondary.main}`,
+    backgroundColor: theme.palette.background.default,
   },
   chip: {
     margin: theme.spacing(1),
@@ -51,7 +51,7 @@ const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTe
 
   return (
     <Box>
-      <Paper elevation={12} className={classes.paper}>
+      <Paper elevation={5} className={classes.paper}>
         <Grid container className={classes.grid}>
           <Grid item xs={12}>
             {edit ? (

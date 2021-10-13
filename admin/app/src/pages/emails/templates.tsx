@@ -41,7 +41,8 @@ const Templates = () => {
   const dispatch = useAppDispatch();
   const [search, setSearch] = useState<string>('');
   const [drawer, setDrawer] = useState<boolean>(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>();
+  const [selectedTemplate, setSelectedTemplate] = useState<any>([]);
+  const [viewTemplate, setViewTemplate] = useState<any>('');
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
 
@@ -54,17 +55,38 @@ const Templates = () => {
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
-    setSelectedTemplate('');
+    setViewTemplate('');
     setCreate(true);
     setEdit(true);
     setDrawer(true);
+  };
+
+  const handleSelect = (id: string) => {
+    const newSelectedTemplates = [...selectedTemplate];
+
+    if (selectedTemplate.includes(id)) {
+      const index = newSelectedTemplates.findIndex((newId) => newId === id);
+      newSelectedTemplates.splice(index, 1);
+    } else {
+      newSelectedTemplates.push(id);
+    }
+    setSelectedTemplate(newSelectedTemplates);
+  };
+
+  const handleSelectAll = (data: any) => {
+    if (selectedTemplate.length === templateDocuments.length) {
+      setSelectedTemplate([]);
+      return;
+    }
+    const newSelectedUsers = data.map((item: any) => item._id);
+    setSelectedTemplate(newSelectedUsers);
   };
 
   const handleCloseDrawer = () => {
     setEdit(false);
     setCreate(false);
     setDrawer(false);
-    setSelectedTemplate('');
+    setViewTemplate('');
   };
 
   const saveTemplateChanges = (data: any) => {
@@ -106,7 +128,7 @@ const Templates = () => {
   const handleAction = (action: { title: string; type: string }, data: any) => {
     const currentTemplate = templateDocuments.find((user) => user._id === data._id);
     if (action.type === 'view') {
-      setSelectedTemplate(currentTemplate);
+      setViewTemplate(currentTemplate);
       setEdit(false);
       setDrawer(true);
     }
@@ -180,6 +202,9 @@ const Templates = () => {
           dsData={formatData(templateDocuments)}
           actions={actions}
           handleAction={handleAction}
+          handleSelect={handleSelect}
+          handleSelectAll={handleSelectAll}
+          selectedItems={selectedTemplate}
         />
       )}
       <DrawerWrapper
@@ -197,7 +222,7 @@ const Templates = () => {
           <TabPanel
             handleCreate={createNewTemplate}
             handleSave={saveTemplateChanges}
-            template={selectedTemplate}
+            template={viewTemplate}
             edit={edit}
             setEdit={setEdit}
             create={create}
