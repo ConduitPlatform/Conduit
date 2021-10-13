@@ -8,6 +8,7 @@ import Typography from '@material-ui/core/Typography';
 import { Add } from '@material-ui/icons';
 import React, { useState } from 'react';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import TemplateEditor from './TemplateEditor';
 
 const useStyles = makeStyles((theme) => ({
   tabs: {
@@ -105,25 +106,34 @@ const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTe
         </Grid>
       </Grid>
       {edit ? (
-        <TextField
-          className={classes.multiline}
-          id="filled-textarea"
-          label="Body"
-          multiline
-          rows={8}
-          variant="outlined"
+        <TemplateEditor
           value={templateState.body}
-          onChange={(event) => {
+          setValue={(value) => {
             setTemplateState({
               ...templateState,
-              body: event.target.value,
+              body: value,
             });
-          }}
-          InputProps={{
-            readOnly: !edit,
           }}
         />
       ) : (
+        // <TextField
+        //   className={classes.multiline}
+        //   id="filled-textarea"
+        //   label="Body"
+        //   multiline
+        //   rows={8}
+        //   variant="outlined"
+        //   value={templateState.body}
+        //   onChange={(event) => {
+        //     setTemplateState({
+        //       ...templateState,
+        //       body: event.target.value,
+        //     });
+        //   }}
+        //   InputProps={{
+        //     readOnly: !edit,
+        //   }}
+        // />
         <>
           <Typography variant="body1">Body</Typography>
           <Typography variant="subtitle2" style={{ whiteSpace: 'pre-line' }}>
