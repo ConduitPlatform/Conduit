@@ -54,20 +54,58 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
     active: false,
     sendingDomain: '',
     transport: 'smtp',
-    transportSettings: {},
+    transportSettings: {
+      mailgun: {
+        apiKey: '',
+        domain: '',
+        host: '',
+      },
+      smtp: {
+        port: '',
+        host: '',
+        auth: {
+          username: '',
+          password: '',
+          method: '',
+        },
+      },
+      mandrill: {
+        apiKey: '',
+      },
+      sendgrid: {
+        apiUser: '',
+      },
+    },
   });
 
   useEffect(() => {
     if (!settings) {
       return;
     }
-    const data = {
+    const settingsObj = {
       active: settings.active,
-      transport: settings.transport,
       sendingDomain: settings.sendingDomain,
-      transportSettings: settings.transportSettings,
+      transport: settings.transport,
+      transportSettings: {
+        mailgun: {},
+        smtp: {},
+        mandrill: {},
+        sendgrid: {},
+      },
     };
-    setSettingsState(data);
+    const getSettingsState = (prevState: EmailSettings) => {
+      transportProviders.forEach((provider) => {
+        if (settings.transportSettings[provider]) {
+          settingsObj.transportSettings[provider] = settings.transportSettings[provider];
+        } else {
+          settingsObj.transportSettings[provider] = prevState.transportSettings[provider];
+        }
+      });
+      return settingsObj;
+    };
+    setSettingsState((prevState) => {
+      return getSettingsState(prevState);
+    });
   }, [settings]);
 
   const handleCancel = () => {
@@ -82,7 +120,33 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
     handleSave(settingsState);
   };
 
-  const onChange = (value: string, key: string, provider: TransportProviders) => {
+  const onChange = (
+    value: string,
+    key: string,
+    provider: TransportProviders,
+    authItem?: string
+  ) => {
+    if (authItem) {
+      const authPath = settingsState.transportSettings[provider];
+      if (!authPath) {
+        return;
+      }
+      const newSettings = {
+        ...settingsState.transportSettings,
+        [provider]: {
+          ...authPath,
+          auth: {
+            ...authPath['auth'],
+            [authItem]: value,
+          },
+        },
+      };
+      setSettingsState({
+        ...settingsState,
+        transportSettings: newSettings,
+      });
+      return;
+    }
     const newSettings = {
       ...settingsState.transportSettings,
       [provider]: {

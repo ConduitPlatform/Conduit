@@ -14,15 +14,20 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   data: EmailSettings;
-  onChange: (value: string, key: string, provider: TransportProviders) => void;
+  onChange: (value: string, key: string, provider: TransportProviders, authItem?: string) => void;
 }
 
 const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
   const classes = useStyles();
 
-  const handleChange = (value: string, key: string, provider: TransportProviders) => {
+  const handleChange = (
+    value: string,
+    key: string,
+    provider: TransportProviders,
+    authItem?: string
+  ) => {
     if (onChange) {
-      onChange(value, key, provider);
+      onChange(value, key, provider, authItem);
     }
   };
 
@@ -35,6 +40,26 @@ const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
     return (
       <Grid item container xs={12} direction="column">
         {settingKeys.map((key, index: number) => {
+          if (data.transport === 'smtp' && key === 'auth') {
+            return Object.keys(settings['auth']).map((authItem: any, index: number) => {
+              const settingsKey = settings['auth'];
+              return (
+                <Box key={`${authItem}${index}`}>
+                  <TextField
+                    required
+                    id={authItem}
+                    label={authItem}
+                    variant="outlined"
+                    className={classes.input}
+                    value={settingsKey[authItem]}
+                    onChange={(event) =>
+                      handleChange(event.target.value, key, data.transport, authItem)
+                    }
+                  />
+                </Box>
+              );
+            });
+          }
           return (
             <Box key={index}>
               <TextField
