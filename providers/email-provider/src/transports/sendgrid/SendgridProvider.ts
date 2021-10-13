@@ -6,6 +6,7 @@ import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { SendgridMailBuilder } from "./sendgridMailBuilder";
 import { getHBValues } from "../../parse-test/getHBValues";
+import { UpdateEmailTemplate } from "../../interfaces/UpdateEmailTemplate";
 var sgTransport = require('nodemailer-sendgrid');
 export class SendgridProvider extends EmailProviderClass{
     private _sgClient: any;
@@ -102,6 +103,10 @@ export class SendgridProvider extends EmailProviderClass{
     
         return Promise.all(retList);
             
+    }
+
+    async updateTemplate(data: UpdateEmailTemplate){
+        return 5 as any;
     }
 
     getBuilder(){

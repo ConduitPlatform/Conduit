@@ -3,6 +3,7 @@ import { createTransport } from "nodemailer";
 import { Options } from "nodemailer/lib/mailer";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { Template } from "../../interfaces/Template";
+import { UpdateEmailTemplate } from "../../interfaces/UpdateEmailTemplate";
 import { EmailBuilderClass } from "../../models/EmailBuilderClass";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { getHBValues } from "../../parse-test/getHBValues";
@@ -77,6 +78,21 @@ export  class MailgunProvider extends EmailProviderClass {
         };
     
         return created;
+    }
+
+    async updateTemplate(data: UpdateEmailTemplate): Promise<Template>{
+        const [err,templates] = await  to(this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`,{
+            template: data.plainContent,
+            active: data.active,
+        }));
+        
+        if(err){
+            console.log('eee');
+            throw new Error(err.message);
+        }
+
+        const updated = await this.getTemplateInfo(data.id);
+        return updated;
     }
 
     getBuilder(): EmailBuilderClass<Options> {
