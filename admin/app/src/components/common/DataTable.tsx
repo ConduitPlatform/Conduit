@@ -24,6 +24,16 @@ const useStyles = makeStyles((theme) => ({
   header: {
     backgroundColor: theme.palette.background.paper,
   },
+  tableContainer: {
+    maxHeight: '70vh',
+  },
+  ellipsisStyle: {
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+    overflow: 'hidden',
+    width: '350px',
+    maxWidth: '350px',
+  },
 }));
 
 type Action = {
@@ -108,7 +118,7 @@ const DataTable: React.FC<Props> = ({
   };
 
   return (
-    <TableContainer style={{ height: '73vh' }} component={Paper} {...rest}>
+    <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
       <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
@@ -150,7 +160,9 @@ const DataTable: React.FC<Props> = ({
                 />
               </TableCell>
               {Object.keys(row).map((item, j) => (
-                <TableCell key={`${i}-${j}`}>{getValue(row[item])}</TableCell>
+                <TableCell className={classes.ellipsisStyle} key={`${i}-${j}`}>
+                  {getValue(row[item])}
+                </TableCell>
               ))}
               <TableCell key={`action-${i}`} align={'right'}>
                 <DataTableActions

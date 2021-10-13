@@ -42,27 +42,20 @@ const useStyles = makeStyles((theme) => ({
     },
     marginBottom: '3px',
   },
-  groupActionButton: {
-    padding: 0,
-    height: 24,
-  },
   groupActionContainer: {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-evenly',
     alignItems: 'start',
   },
-  groupActionButtonIcon: {
-    marginRight: 8,
-  },
   addUserBtn: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginLeft: '-17px',
+    marginLeft: theme.spacing(-2),
   },
   btnGroup: {
-    marginRight: '30px',
+    marginRight: theme.spacing(3),
   },
 }));
 

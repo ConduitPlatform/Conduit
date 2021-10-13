@@ -17,7 +17,7 @@ const Paginator: React.FC<Props> = ({ handlePageChange, page, limit, handleLimit
     <Grid container justify="flex-end">
       <TablePagination
         color="primary"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[10, 25, 50]}
         component="div"
         count={docs}
         page={page}
