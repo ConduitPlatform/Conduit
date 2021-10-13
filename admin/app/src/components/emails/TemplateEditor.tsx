@@ -23,9 +23,9 @@ interface Props {
 
 const TemplateEditor: FC<Props> = ({ value, setValue }) => {
   const classes = useStyles();
-  const onValueChange = (value: string) => {
+  const onValueChange = (editorValue: string) => {
     if (setValue) {
-      setValue(value);
+      setValue(editorValue);
     }
   };
 
@@ -33,8 +33,8 @@ const TemplateEditor: FC<Props> = ({ value, setValue }) => {
     <Editor
       className={classes.editor}
       value={value}
-      onValueChange={(value) => onValueChange(value)}
-      highlight={(jsSample) => highlight(jsSample, languages['handlebars'], 'handlebars')}
+      onValueChange={(editorValue) => onValueChange(editorValue)}
+      highlight={(editorValue) => highlight(editorValue, languages['handlebars'], 'handlebars')}
       padding={10}
     />
   );

@@ -116,24 +116,6 @@ const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTe
           }}
         />
       ) : (
-        // <TextField
-        //   className={classes.multiline}
-        //   id="filled-textarea"
-        //   label="Body"
-        //   multiline
-        //   rows={8}
-        //   variant="outlined"
-        //   value={templateState.body}
-        //   onChange={(event) => {
-        //     setTemplateState({
-        //       ...templateState,
-        //       body: event.target.value,
-        //     });
-        //   }}
-        //   InputProps={{
-        //     readOnly: !edit,
-        //   }}
-        // />
         <>
           <Typography variant="body1">Body</Typography>
           <Typography variant="subtitle2" style={{ whiteSpace: 'pre-line' }}>
