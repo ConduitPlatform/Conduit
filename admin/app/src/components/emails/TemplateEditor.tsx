@@ -3,15 +3,10 @@ import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core';
 import { highlight, languages } from 'prismjs';
 
+import 'prismjs/components/prism-handlebars';
+import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-markup';
-// import 'prismjs/themes/prism.css';
-// import 'prismjs/themes/prism-coy.css';
 import 'prismjs/themes/prism-dark.css';
-// import 'prismjs/themes/prism-funky.css';
-// import 'prismjs/themes/prism-okaidia.css';
-// import 'prismjs/themes/prism-solarizedlight.css';
-// import 'prismjs/themes/prism-tomorrow.css';
 
 const useStyles = makeStyles(() => ({
   editor: {
@@ -34,14 +29,12 @@ const TemplateEditor: FC<Props> = ({ value, setValue }) => {
     }
   };
 
-  console.log('value', value);
-
   return (
     <Editor
       className={classes.editor}
       value={value}
       onValueChange={(value) => onValueChange(value)}
-      highlight={(jsSample) => highlight(jsSample, languages['markup'], 'markup')}
+      highlight={(jsSample) => highlight(jsSample, languages['handlebars'], 'handlebars')}
       padding={10}
     />
   );
