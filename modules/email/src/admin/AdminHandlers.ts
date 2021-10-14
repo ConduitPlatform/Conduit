@@ -187,7 +187,7 @@ export class AdminHandlers {
         templateDocument[key] = params[key];
       }
     });
-    console.log(getHBValues(params.body));
+
     templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(Object.keys(getHBValues(params.subject)));
 
     const updatedTemplate = await this.database
