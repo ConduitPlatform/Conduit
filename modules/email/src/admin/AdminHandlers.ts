@@ -36,13 +36,12 @@ export class AdminHandlers {
     this.emailService = emailService;
   }
 
-  async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
-
+  async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
     const externalTemplates = await this.emailService.getExternalTemplates();
-    if( isNil(externalTemplates)){
-      throw new Error(`External templates didnt found!`)
+    if (isNil(externalTemplates)) {
+      throw new Error(`External templates didnt found!`);
     }
-    let templateDocuments:any = [];
+    let templateDocuments: any = [];
     externalTemplates.forEach((element) => {
       templateDocuments.push({
         _id: element.id,
@@ -50,11 +49,11 @@ export class AdminHandlers {
         subject: element.versions[0].subject,
         body: element.versions[0].body,
         createdAt: element.createdAt,
-        variables: element.versions[0].variables
-      })
-    })
+        variables: element.versions[0].variables,
+      });
+    });
     const totalCount = templateDocuments.length;
-    return callback(null, { result: JSON.stringify({ templateDocuments,totalCount }) });
+    return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
@@ -92,7 +91,9 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const {id,sender,externalManaged,name, subject, body, variables } = JSON.parse(call.request.params);
+    const { id, sender, externalManaged, name, subject, body, variables } = JSON.parse(
+      call.request.params
+    );
     let externalId = undefined;
     if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
       return callback({
@@ -100,14 +101,17 @@ export class AdminHandlers {
         message: 'Required fields are missing',
       });
     }
-    if(externalManaged){
-      if( isNil(id)){           //that means that we want to create an external managed template
-        const [err,template] = await to(this.emailService.createExternalTemplate({
-          name,
-          body:body,
-          subject,
-        }) as any);
-        if(err){
+    if (externalManaged) {
+      if (isNil(id)) {
+        //that means that we want to create an external managed template
+        const [err, template] = await to(
+          this.emailService.createExternalTemplate({
+            name,
+            body: body,
+            subject,
+          }) as any
+        );
+        if (err) {
           return callback({
             code: status.INTERNAL,
             message: err.message,
@@ -134,10 +138,9 @@ export class AdminHandlers {
         code: status.INTERNAL,
         message: errorMessage,
       });
-      
+
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
-
 
   async editTemplate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
@@ -166,7 +169,7 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    
+
     if (isNil(templateDocument)) {
       return callback({
         code: status.NOT_FOUND,
@@ -188,29 +191,35 @@ export class AdminHandlers {
         code: status.INTERNAL,
         message: errorMessage,
       });
-    
-    callback(null, { result: JSON.stringify({ updatedTemplate }) });
 
-    const template = await this.emailService.getExternalTemplate(updatedTemplate.externalId);
-    let versionId = undefined;
-    if(!isNil(template?.versions[0].id)){
-      versionId = template?.versions[0].id;
+    if (templateDocument.externalManaged) {
+      const template = await this.emailService.getExternalTemplate(
+        updatedTemplate.externalId
+      );
+      let versionId = undefined;
+      if (!isNil(template?.versions[0].id)) {
+        versionId = template?.versions[0].id;
+      }
+
+      const data = {
+        id: updatedTemplate.externalId,
+        subject: updatedTemplate.subject,
+        body: updatedTemplate.body,
+        versionId: versionId,
+      };
+
+      await this.emailService.updateTemplate(data)?.catch((e: any) => {
+        errorMessage = e.message;
+      });
+
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+      }
     }
-
-    const data = {
-      id: updatedTemplate.externalId,
-      subject: updatedTemplate.subject,
-      body: updatedTemplate.body,
-      versionId: versionId
-    }
-
-    await this.emailService.updateTemplate(data)
-    ?.catch( (e:any) => { errorMessage = e.message});
-
-    if(!isNil(errorMessage)){
-      console.log(errorMessage);
-    }
-    
+    return callback(null, { result: JSON.stringify({ updatedTemplate }) });
   }
 
   async sendEmail(call: RouterRequest, callback: RouterResponse) {
@@ -224,7 +233,6 @@ export class AdminHandlers {
         message: `Template/body+subject not provided`,
       });
     }
-    
 
     let errorMessage: string | null = null;
     if (!sender) {
