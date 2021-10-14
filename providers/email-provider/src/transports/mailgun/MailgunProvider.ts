@@ -3,6 +3,7 @@ import { createTransport } from "nodemailer";
 import { Options } from "nodemailer/lib/mailer";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { Template } from "../../interfaces/Template";
+import { UpdateEmailTemplate } from "../../interfaces/UpdateEmailTemplate";
 import { EmailBuilderClass } from "../../models/EmailBuilderClass";
 import { EmailProviderClass } from "../../models/EmailProviderClass";
 import { getHBValues } from "../../parse-test/getHBValues";
@@ -39,7 +40,7 @@ export  class MailgunProvider extends EmailProviderClass {
             versions : [{
                 name: response.template.version.tag,
                 id: response.template.version.id,
-                plainContent: response.template.version.template,
+                body: response.template.version.template,
                 active:true,
                 updatedAt: '',
                 variables: Object.keys(getHBValues(response.template.version.template))
@@ -52,7 +53,7 @@ export  class MailgunProvider extends EmailProviderClass {
    async createTemplate(data: CreateEmailTemplate): Promise<Template>{
         const mailgun_input = {
             name: data.name,
-            template:data.plainContent,
+            template:data.body,
             descrpiton: '',
             active: true,
             tag: data.versionName
@@ -71,12 +72,25 @@ export  class MailgunProvider extends EmailProviderClass {
                 id: response.template.version.id,
                 active:true,
                 updatedAt: response.template.version.createdAt,
-                plainContent: response.template.version.template, 
+                body: response.template.version.template, 
                 variables: Object.keys(getHBValues(mailgun_input.template))
             }]
         };
     
         return created;
+    }
+
+    async updateTemplate(data: UpdateEmailTemplate): Promise<Template>{
+        const [err,template]:any = await  to(this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`,{
+            template: data.body,
+            active: data.active,
+        }));
+
+        if(err){
+            throw new Error(err.message);
+        }
+
+        return this.getTemplateInfo(template.template.name);
     }
 
     getBuilder(): EmailBuilderClass<Options> {

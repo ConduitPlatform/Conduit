@@ -7,8 +7,7 @@ export interface Template{
         name:string;
         id:string;
         subject?:string;
-        htmlContent?:string;
-        plainContent?:string;
+        body:string;
         active:boolean;
         updatedAt:string; // h Date type
         variables?: string[];
