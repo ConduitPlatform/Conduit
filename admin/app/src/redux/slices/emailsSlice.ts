@@ -35,10 +35,10 @@ const initialState: IEmailSlice = {
 
 export const asyncGetEmailTemplates = createAsyncThunk(
   'emails/getTemplates',
-  async (arg, thunkAPI) => {
+  async (params: { skip: number; limit: number }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await getEmailTemplateRequest();
+      const { data } = await getEmailTemplateRequest(params.skip, params.limit);
 
       thunkAPI.dispatch(setAppDefaults());
       return data;

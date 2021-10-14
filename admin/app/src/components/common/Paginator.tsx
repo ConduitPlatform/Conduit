@@ -8,18 +8,23 @@ interface Props {
   limit: number;
   handlePageChange: (event: React.MouseEvent<HTMLButtonElement> | null, page: number) => void;
   handleLimitChange: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
+  count: number;
 }
 
-const Paginator: React.FC<Props> = ({ handlePageChange, page, limit, handleLimitChange }) => {
-  const docs = useAppSelector((state) => state.authenticationSlice.data.authUsers.count);
-
+const Paginator: React.FC<Props> = ({
+  handlePageChange,
+  page,
+  limit,
+  handleLimitChange,
+  count,
+}) => {
   return (
     <Grid container justify="flex-end">
       <TablePagination
         color="primary"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[10, 25, 50]}
         component="div"
-        count={docs}
+        count={count}
         page={page}
         onChangePage={handlePageChange}
         rowsPerPage={limit}

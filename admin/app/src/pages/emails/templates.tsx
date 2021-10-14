@@ -25,6 +25,7 @@ import { CallMissedOutgoing } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import { SyncAlt } from '@material-ui/icons';
 import SearchIcon from '@material-ui/icons/Search';
+import Paginator from '../../components/common/Paginator';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -33,14 +34,15 @@ const useStyles = makeStyles((theme) => ({
   btnAlignment2: {
     marginRight: theme.spacing(1),
   },
-  actions: {
-    marginBottom: theme.spacing(1),
-  },
+  actions: {},
 }));
 
 const Templates = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const [skip, setSkip] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(10);
+  const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>([]);
@@ -51,12 +53,10 @@ const Templates = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetEmailTemplates());
-  }, [dispatch]);
+    dispatch(asyncGetEmailTemplates({ skip, limit }));
+  }, [dispatch, limit, skip]);
 
-  const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
-
-  console.log(templateDocuments);
+  const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
     setViewTemplate('');
@@ -126,6 +126,22 @@ const Templates = () => {
         'Updated At': u.updatedAt,
       };
     });
+  };
+
+  const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
+
+  const handleLimitChange = (e: any) => {
+    setLimit(e.target.value);
+    setSkip(0);
+    setPage(0);
   };
 
   //Actions section
@@ -220,6 +236,20 @@ const Templates = () => {
           handleSelectAll={handleSelectAll}
           selectedItems={selectedTemplate}
         />
+      )}
+      {templateDocuments.length > 0 && (
+        <Grid container style={{ marginTop: '-8px' }}>
+          <Grid item xs={7}></Grid>
+          <Grid item xs={5}>
+            <Paginator
+              handlePageChange={handlePageChange}
+              limit={limit}
+              handleLimitChange={handleLimitChange}
+              page={page}
+              count={totalCount}
+            />
+          </Grid>
+        </Grid>
       )}
       <DrawerWrapper
         open={drawer}

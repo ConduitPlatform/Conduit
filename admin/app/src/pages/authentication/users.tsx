@@ -70,7 +70,7 @@ const Users = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+  const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
@@ -322,6 +322,7 @@ const Users = () => {
               limit={limit}
               handleLimitChange={handleLimitChange}
               page={page}
+              count={count}
             />
           </Grid>
         </Grid>
