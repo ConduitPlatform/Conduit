@@ -1,5 +1,5 @@
 import React from 'react';
-import { Drawer, Theme, Typography } from '@material-ui/core';
+import { Paper, Theme, Typography } from '@material-ui/core';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
@@ -16,7 +16,9 @@ import clsx from 'clsx';
 
 const useStyles = makeStyles((theme: Theme) => ({
   drawer: {
-    width: 200,
+    width: 224,
+    display: 'flex',
+    flexDirection: 'column',
   },
   title: {
     color: theme.palette.secondary.main,
@@ -24,14 +26,14 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
   listContainer: {
     padding: theme.spacing(1),
-    height: '100%',
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
   },
   toolbar: theme.mixins.toolbar,
   listItem: {
-    height: theme.spacing(5),
+    minHeight: theme.spacing(4),
     borderRadius: theme.spacing(0.5),
     marginBottom: theme.spacing(2),
     color: theme.palette.secondary.main,
@@ -88,12 +90,13 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
   };
 
   return (
-    <Drawer variant="permanent" className={classes.drawer} open={true} {...rest}>
+    <Paper className={classes.drawer} elevation={2} {...rest}>
       <ListItem className={classes.title}>
         <Typography variant="h5">Conduit</Typography>
       </ListItem>
       <div className={classes.listContainer}>
         <List component="nav">
+          <Divider />
           <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
           <Link href={`/settings/clientsdk`} passHref>
             <ListItem button className={classes.listItem} selected={itemSelected === 'settings'}>
@@ -123,7 +126,7 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
           <ListItemText primary={'Log out'} classes={{ primary: classes.listItemText }} />
         </ListItem>
       </div>
-    </Drawer>
+    </Paper>
   );
 };
 

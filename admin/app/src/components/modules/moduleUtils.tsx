@@ -57,6 +57,8 @@ export const handleModuleNavigation = (moduleName: string) => {
       return '/settings/clientsdk';
     case 'push-notifications':
       return '/push-notifications/view';
+    case 'sms':
+      return '/sms/send';
     default:
       return `/${moduleName}`;
   }

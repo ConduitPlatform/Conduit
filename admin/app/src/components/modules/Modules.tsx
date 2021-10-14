@@ -13,6 +13,9 @@ import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) => ({
   listItem: {
+    minHeight: theme.spacing(4),
+    borderRadius: theme.spacing(0.5),
+    margin: theme.spacing(1, 0),
     color: theme.palette.secondary.main,
     borderWidth: 1,
     paddingLeft: theme.spacing(0.5),
@@ -64,12 +67,6 @@ const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const itemStyle = {
-    height: '34px',
-    borderRadius: '4px',
-    margin: '8px 0',
-  };
-
   const handleItemClick = (url: string, enabled: boolean) => {
     if (enabled) {
       router.replace(url);
@@ -82,11 +79,7 @@ const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
     <>
       {homeEnabled ? (
         <Link href="/" passHref>
-          <ListItem
-            button
-            className={classes.listItem}
-            style={itemStyle}
-            selected={itemSelected === ''}>
+          <ListItem button className={classes.listItem} selected={itemSelected === ''}>
             <ListItemIcon className={classes.listItemIcon}>
               <Home color={'inherit'} />
             </ListItemIcon>
@@ -103,7 +96,6 @@ const Modules: React.FC<Props> = ({ modules, homeEnabled, itemSelected }) => {
             <ListItem
               button
               className={classes.listItem}
-              style={itemStyle}
               selected={itemSelected === module.moduleName}
               key={index}
               onClick={() => handleItemClick(currentUrl, !!module.url)}>
