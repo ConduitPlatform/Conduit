@@ -26,7 +26,7 @@ const useStyles = makeStyles((theme: Theme) =>
 
 interface PropsDrawer {
   open: boolean;
-  width?: string;
+  width?: string | number;
   maxWidth?: string | number;
   minWidth?: string | number;
   closeDrawer: (close: boolean) => void;

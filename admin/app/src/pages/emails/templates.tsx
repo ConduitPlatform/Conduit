@@ -7,7 +7,7 @@ import {
   asyncSaveEmailTemplateChanges,
 } from '../../redux/slices/emailsSlice';
 import DataTable from '../../components/common/DataTable';
-import { EmailTemplateType } from '../../models/emails/EmailModels';
+import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
 import {
   Box,
   Button,
@@ -22,10 +22,10 @@ import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import TabPanel from '../../components/emails/TabPanel';
 import { CallMissedOutgoing } from '@material-ui/icons';
-import useDebounce from '../../hooks/useDebounce';
 import { SyncAlt } from '@material-ui/icons';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
+// import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -45,12 +45,26 @@ const Templates = () => {
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
   const [drawer, setDrawer] = useState<boolean>(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>([]);
-  const [viewTemplate, setViewTemplate] = useState<any>('');
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>({
+    _id: '',
+    name: '',
+    subject: '',
+    body: '',
+    variables: [],
+  });
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
 
-  const debouncedSearch: string = useDebounce(search, 500);
+  const originalTemplateState = {
+    _id: '',
+    name: '',
+    subject: '',
+    body: '',
+    variables: [],
+  };
+
+  // const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
     dispatch(asyncGetEmailTemplates({ skip, limit }));
@@ -59,41 +73,41 @@ const Templates = () => {
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
-    setViewTemplate('');
+    setViewTemplate(originalTemplateState);
     setCreate(true);
     setEdit(true);
     setDrawer(true);
   };
 
   const handleSelect = (id: string) => {
-    const newSelectedTemplates = [...selectedTemplate];
+    const newSelectedTemplates = [...selectedTemplates];
 
-    if (selectedTemplate.includes(id)) {
+    if (selectedTemplates.includes(id)) {
       const index = newSelectedTemplates.findIndex((newId) => newId === id);
       newSelectedTemplates.splice(index, 1);
     } else {
       newSelectedTemplates.push(id);
     }
-    setSelectedTemplate(newSelectedTemplates);
+    setSelectedTemplates(newSelectedTemplates);
   };
 
-  const handleSelectAll = (data: any) => {
-    if (selectedTemplate.length === templateDocuments.length) {
-      setSelectedTemplate([]);
+  const handleSelectAll = (data: EmailUI[]) => {
+    if (selectedTemplates.length === templateDocuments.length) {
+      setSelectedTemplates([]);
       return;
     }
-    const newSelectedTemplates = data.map((item: any) => item._id);
-    setSelectedTemplate(newSelectedTemplates);
+    const newSelectedTemplates = data.map((item: EmailUI) => item._id);
+    setSelectedTemplates(newSelectedTemplates);
   };
 
   const handleCloseDrawer = () => {
     setEdit(false);
     setCreate(false);
     setDrawer(false);
-    setViewTemplate('');
+    setViewTemplate(originalTemplateState);
   };
 
-  const saveTemplateChanges = (data: any) => {
+  const saveTemplateChanges = (data: EmailTemplateType) => {
     const _id = data._id;
     const updatedData = {
       name: data.name,
@@ -101,11 +115,13 @@ const Templates = () => {
       body: data.body,
       variables: data.variables,
     };
-    dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
+    if (_id !== undefined) {
+      dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
+    }
     setViewTemplate(updatedData);
   };
 
-  const createNewTemplate = (data: any) => {
+  const createNewTemplate = (data: EmailTemplateType) => {
     const newData = {
       name: data.name,
       subject: data.subject,
@@ -146,21 +162,23 @@ const Templates = () => {
 
   //Actions section
 
-  const handleAction = (action: { title: string; type: string }, data: any) => {
-    const currentTemplate = templateDocuments.find((template) => template._id === data._id);
-    if (action.type === 'view') {
-      setViewTemplate(currentTemplate);
-      setEdit(false);
-      setDrawer(true);
-    }
-    if (action.type === 'delete') {
-      console.log('delete');
-    }
-    if (action.type === 'sync') {
-      console.log('sync');
-    }
-    if (action.type === 'upload') {
-      console.log('upload');
+  const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
+    const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
+    if (currentTemplate !== undefined) {
+      if (action.type === 'view') {
+        setViewTemplate(currentTemplate);
+        setEdit(false);
+        setDrawer(true);
+      }
+      if (action.type === 'delete') {
+        console.log('delete');
+      }
+      if (action.type === 'sync') {
+        console.log('sync');
+      }
+      if (action.type === 'upload') {
+        console.log('upload');
+      }
     }
   };
 
@@ -234,7 +252,7 @@ const Templates = () => {
           handleAction={handleAction}
           handleSelect={handleSelect}
           handleSelectAll={handleSelectAll}
-          selectedItems={selectedTemplate}
+          selectedItems={selectedTemplates}
         />
       )}
       {templateDocuments.length > 0 && (
@@ -251,11 +269,7 @@ const Templates = () => {
           </Grid>
         </Grid>
       )}
-      <DrawerWrapper
-        open={drawer}
-        closeDrawer={() => handleCloseDrawer()}
-        width={700}
-        handleAction={handleAction}>
+      <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
         <Box>
           <Typography
             variant="h6"

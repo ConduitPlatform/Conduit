@@ -3,7 +3,7 @@ export interface EmailTemplateType {
   name: string;
   subject: string;
   variables: string[];
-  _id: string;
+  _id?: string;
   updatedAt?: string;
   createdAt?: string;
 }
@@ -51,4 +51,12 @@ export interface EmailState {
   variables: [];
   variablesValues: { [key: string]: string };
   templateName: string;
+}
+
+export interface EmailUI {
+  _id: string;
+  Name: string;
+  External: string;
+  Synced: string;
+  'Updated At': string;
 }

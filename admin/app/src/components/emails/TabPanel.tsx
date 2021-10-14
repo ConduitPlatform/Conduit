@@ -143,7 +143,7 @@ const TabPanel: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.optionalSender}>
+                <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
                     label={'*Optional sender input'}

@@ -1,10 +1,9 @@
-import { Paper } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { useState } from 'react';
+import React from 'react';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const useStyles = makeStyles((theme) => ({
