@@ -81,17 +81,16 @@ export  class MailgunProvider extends EmailProviderClass {
     }
 
     async updateTemplate(data: UpdateEmailTemplate): Promise<Template>{
-        const [err,templates] = await  to(this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`,{
+        const [err,template]:any = await  to(this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`,{
             template: data.plainContent,
             active: data.active,
         }));
-        
+
         if(err){
             throw new Error(err.message);
         }
 
-        const updated = await this.getTemplateInfo(data.id);
-        return updated;
+        return this.getTemplateInfo(template.template.name);;
     }
 
     getBuilder(): EmailBuilderClass<Options> {
