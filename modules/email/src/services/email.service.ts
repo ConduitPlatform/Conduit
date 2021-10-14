@@ -3,6 +3,7 @@ import { EmailProvider } from '@quintessential-sft/email-provider';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import { CreateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/CreateEmailTemplate';
+import { UpdateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/UpdateEmailTemplate';
 
 export class EmailService {
   private database: any;
@@ -22,8 +23,17 @@ export class EmailService {
     return this.emailer._transport?.listTemplates();
   }
 
+  getExternalTemplate(id: string) {
+    return this.emailer._transport?.getTemplateInfo(id);
+
+  }
+
   createExternalTemplate(data: CreateEmailTemplate){
     return this.emailer._transport?.createTemplate(data);
+  }
+
+  updateTemplate(data: UpdateEmailTemplate) {
+    return this.emailer._transport?.updateTemplate(data);
   }
 
   async  registerTemplate(params: IRegisterTemplateParams) {

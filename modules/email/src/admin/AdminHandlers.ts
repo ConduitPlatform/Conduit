@@ -188,8 +188,29 @@ export class AdminHandlers {
         code: status.INTERNAL,
         message: errorMessage,
       });
+    
+    callback(null, { result: JSON.stringify({ updatedTemplate }) });
 
-    return callback(null, { result: JSON.stringify({ updatedTemplate }) });
+    const template = await this.emailService.getExternalTemplate(updatedTemplate.externalId);
+    let versionId = undefined;
+    if(!isNil(template?.versions[0].id)){
+      versionId = template?.versions[0].id;
+    }
+
+    const data = {
+      id: updatedTemplate.externalId,
+      subject: updatedTemplate.subject,
+      body: updatedTemplate.body,
+      versionId: versionId
+    }
+
+    await this.emailService.updateTemplate(data)
+    ?.catch( (e:any) => { errorMessage = e.message});
+
+    if(!isNil(errorMessage)){
+      console.log(errorMessage);
+    }
+    
   }
 
   async sendEmail(call: RouterRequest, callback: RouterResponse) {
@@ -203,6 +224,7 @@ export class AdminHandlers {
         message: `Template/body+subject not provided`,
       });
     }
+    
 
     let errorMessage: string | null = null;
     if (!sender) {
