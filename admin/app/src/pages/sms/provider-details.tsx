@@ -7,7 +7,7 @@ const Send = () => {
 };
 
 Send.getLayout = function getLayout(page: ReactElement) {
-  return <SMSLayout>{page}</SMSLayout>;
+  return <SMSLayout> {page} </SMSLayout>;
 };
 
 export default Send;
