@@ -41,7 +41,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const transportProviders = ['mailgun', 'smtp', 'mandrill', 'sendgrid'];
+const transportProviders: ('mailgun' | 'smtp' | 'mandrill' | 'sendgrid')[] = [
+  'mailgun',
+  'smtp',
+  'mandrill',
+  'sendgrid',
+];
 
 interface Props {
   settings: EmailSettings;
@@ -87,10 +92,26 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
       sendingDomain: settings.sendingDomain,
       transport: settings.transport,
       transportSettings: {
-        mailgun: {},
-        smtp: {},
-        mandrill: {},
-        sendgrid: {},
+        mailgun: {
+          apiKey: '',
+          domain: '',
+          host: '',
+        },
+        smtp: {
+          port: '',
+          host: '',
+          auth: {
+            username: '',
+            password: '',
+            method: '',
+          },
+        },
+        mandrill: {
+          apiKey: '',
+        },
+        sendgrid: {
+          apiUser: '',
+        },
       },
     };
     const getSettingsState = (prevState: EmailSettings) => {
