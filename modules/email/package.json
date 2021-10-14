@@ -30,6 +30,7 @@
     "@quintessential-sft/email-provider": "^1.0.0",
     "await-to-js": "^3.0.0",
     "convict": "^6.0.0",
+    "handlebars": "^4.7.7",
     "lodash": "^4.17.15"
   },
   "devDependencies": {

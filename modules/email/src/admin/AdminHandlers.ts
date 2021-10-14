@@ -99,7 +99,8 @@ export class AdminHandlers {
     const body_vars = getHBValues(body);
     const subject_vars = getHBValues(subject);
 
-    const variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    variables =  variables.filter((value:any,index:any) => variables.indexOf(value) === index);
     if (isNil(name) || isNil(subject) || isNil(body)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -189,7 +190,7 @@ export class AdminHandlers {
     });
 
     templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(Object.keys(getHBValues(params.subject)));
-
+    templateDocument['variables'] =  templateDocument['variables'].filter((value:any,index:any) => templateDocument['variables'].indexOf(value) === index);
     const updatedTemplate = await this.database
       .findByIdAndUpdate('EmailTemplate', id, templateDocument)
       .catch((e: any) => (errorMessage = e.message));

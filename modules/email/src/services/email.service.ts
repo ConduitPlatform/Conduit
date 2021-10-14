@@ -4,7 +4,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import { CreateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/CreateEmailTemplate';
 import { UpdateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/UpdateEmailTemplate';
-
+import handlebars from 'handlebars';
 export class EmailService {
   private database: any;
   
@@ -86,14 +86,16 @@ export class EmailService {
       })
     }
     else{
+      let handled_body = handlebars.compile(templateFound.body);
       const bodyString = templateFound
-      ? this.replaceVars(templateFound.body, variables)
+      ? handled_body(variables)
       : body!;
       builder.setContent(bodyString);
     }
-    
+    let handled_subject = handlebars.compile(templateFound.subject);
+
     const subjectString = templateFound
-    ? this.replaceVars(templateFound.subject, variables)
+    ? handled_subject(variables)
     : subject!;
     builder.setSubject(subjectString);
     builder.setReceiver(email);
@@ -112,18 +114,4 @@ export class EmailService {
     return this.emailer.sendEmail(builder);
   }
   
-  private replaceVars(body: string, variables: { [key: string]: any }) {
-    let str = body;
-    Object.keys(variables).forEach((key) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      let value = variables[key];
-      if (Array.isArray(value)) {
-        value = value.toString();
-      } else if (typeof value === 'object') {
-        value = JSON.stringify(value);
-      }
-      str = str.replace(regex, value);
-    });
-    return str;
-  }
 }
