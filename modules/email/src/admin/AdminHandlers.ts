@@ -48,7 +48,7 @@ export class AdminHandlers {
         _id: element.id,
         name: element.name,
         subject: element.versions[0].subject,
-        body: element.versions[0].plainContent,
+        body: element.versions[0].body,
         createdAt: element.createdAt,
         variables: element.versions[0].variables
       })
@@ -104,7 +104,7 @@ export class AdminHandlers {
       if( isNil(id)){           //that means that we want to create an external managed template
         const [err,template] = await to(this.emailService.createExternalTemplate({
           name,
-          plainContent:body,
+          body:body,
           subject,
         }) as any);
         if(err){
