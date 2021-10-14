@@ -58,7 +58,6 @@ export const asyncGetExternalTemplates = createAsyncThunk(
   async (params, thunkAPI) => {
     try {
       const { data } = await getExternalTemplatesRequest();
-      console.log(data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
