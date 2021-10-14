@@ -36,7 +36,7 @@ const items = ['Text', 'Number', 'Date', 'Boolean', 'Enum', 'ObjectId', 'Group',
 const useStyles = makeStyles((theme) => ({
   root: {
     minHeight: '100vh',
-    backgroundColor: '#262840',
+    backgroundColor: theme.palette.background.default,
   },
   cmsContainer: {
     minHeight: '100vh',

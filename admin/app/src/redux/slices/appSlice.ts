@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { v4 as uuidv4 } from 'uuid';
 
 interface INotification {
   key: number;
@@ -38,7 +39,7 @@ const appSlice = createSlice({
       const key = action.payload.options && action.payload.options.key;
       const notification = {
         ...action.payload,
-        key: key || new Date().getTime() + Math.random(),
+        key: key || uuidv4(),
       };
       state.notifications = [
         ...state.notifications,

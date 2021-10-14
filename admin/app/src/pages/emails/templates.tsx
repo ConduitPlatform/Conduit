@@ -37,6 +37,7 @@ const useStyles = makeStyles((theme) => ({
   },
   actions: {},
 }));
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 const Templates = () => {
   const classes = useStyles();

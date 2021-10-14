@@ -10,49 +10,71 @@ export interface EmailTemplateType {
   createdAt?: string;
 }
 
-export interface TransportSettings {
+export type whatever =
+  | keyof MailgunSettings
+  | keyof SmtpSettings
+  | keyof MandrillSettings
+  | keyof SendgridSettings;
+
+export interface MailgunSettings {
   apiKey: string;
   domain: string;
   host: string;
 }
 
-export interface EmailSettings {
-  active: boolean;
-  doc?: string;
-  sendingDomain: string;
-  transport: string;
-  transportSettings: {
-    mailgun?: TransportSettings;
-    smtp?: TransportSettings;
+export interface SmtpSettings {
+  port: string;
+  host: string;
+  auth: {
+    username: string;
+    password: string;
+    method: string;
   };
 }
 
-export interface EmailSettingsState {
+export interface MandrillSettings {
+  apiKey: string;
+}
+
+export interface SendgridSettings {
+  apiUser: string;
+}
+
+export enum TransportProviders {
+  mailgun = 'mailgun',
+  smtp = 'smtp',
+  mandrill = 'mandrill',
+  sendgrid = 'sendgrid',
+}
+
+export interface ITransportSettings {
+  mailgun: MailgunSettings;
+  smtp: SmtpSettings;
+  mandrill: MandrillSettings;
+  sendgrid: SendgridSettings;
+}
+
+export interface EmailSettings {
   active: boolean;
   sendingDomain: string;
-  transport: string;
-  transportSettings: {
-    apiKey: string;
-    domain: string;
-    host: string;
-  };
+  transport: TransportProviders;
+  transportSettings: ITransportSettings;
 }
 
 export interface EmailData {
-  settings: EmailSettings;
-  templateDocuments: EmailTemplateType[];
+  body: string;
+  name: string;
+  subject: string;
   variables: string[];
 }
 
-export interface EmailState {
-  email: string;
+export interface SendEmailData {
+  templateName?: string;
+  variables?: { [key: string]: string };
+  subject?: string;
   sender: string;
-  subject: string;
+  email: string;
   body: string;
-  template: string;
-  variables: [];
-  variablesValues: { [key: string]: string };
-  templateName: string;
 }
 
 export interface EmailUI {

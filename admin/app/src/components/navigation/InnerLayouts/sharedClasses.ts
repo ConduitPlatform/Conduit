@@ -7,16 +7,15 @@ export default makeStyles((theme) =>
       top: 0,
       backgroundColor: '#262840',
       width: '100vw',
-      padding: '16px',
+      padding: theme.spacing(0.5),
       zIndex: 10,
     },
     content: {
-      marginTop: '120px',
-      padding: 3,
+      marginTop: '110px',
     },
     swaggerButton: {
       textDecoration: 'none',
-      marginLeft: '40px',
+      marginLeft: theme.spacing(8),
     },
     navContent: {
       marginTop: '10px',

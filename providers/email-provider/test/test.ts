@@ -3,6 +3,7 @@ import { EmailProvider } from "../src/index"
 import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
 import { MailgunEmailOptions} from '../src/interfaces/mailgun/MailgunEmailOptions';
 import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOptions';
+import { UpdateEmailTemplate } from '../src/interfaces/UpdateEmailTemplate';
 // let provider = new EmailProvider('mailgun',{
 //     mailgun:{
 //         proxy:null,
@@ -12,15 +13,15 @@ import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOp
 //     }
 // });
 
-let provider = new EmailProvider('sendgrid',{
-    apiKey: '***REMOVED***'
-});
-
-// let provider = new EmailProvider('mandrill',{
-//     mandrill : { 
-//         apiKey: '***REMOVED***'
-//     }
+// let provider = new EmailProvider('sendgrid',{
+//     apiKey: '***REMOVED***'
 // });
+
+let provider = new EmailProvider('mandrill',{
+    mandrill : { 
+        apiKey: '***REMOVED***'
+    }
+});
 
 
 
@@ -32,19 +33,19 @@ let templateOptions:TemplateOptions = {
     }]
 }
 
-let mail = provider.emailBuilder()
-            .setReceiver("dimitris.soldatos@quintessential.gr")
-            .setSubject('Hello ✔✔✔✔✔')           
-            .setSender("dimitris.soldatos@quintessential.gr")
-            .setTemplate(templateOptions);
-          provider
-          .sendEmail(mail)
-          ?.then( (r) => {
-              console.log('Email sent!');
-          }) 
-          .catch( (err) => {
-              console.log('err',err);
-          });
+// let mail = provider.emailBuilder()
+//             .setReceiver("dimitris.soldatos@quintessential.gr")
+//             .setSubject('Hello ✔✔✔✔✔')           
+//             .setSender("dimitris.soldatos@quintessential.gr")
+//             .setTemplate(templateOptions);
+//           provider
+//           .sendEmail(mail)
+//           ?.then( (r) => {
+//               console.log('Email sent!');
+//           }) 
+//           .catch( (err) => {
+//               console.log('err',err);
+//           });
 
 // const data: CreateSendgridTemplate =  {
 //     name: " my templatessssasfasfagsdfgdfgdgdfsssss",
@@ -56,12 +57,12 @@ let mail = provider.emailBuilder()
 //     }
 // }
 
-// var mailgundata: CreateEmailTemplate = {
-//     name : "psixoulammmmmmm",
-//     subject: " afasfasfasfa",
-//     plainContent: " <p> hi you {{test}} {{fff}} </p>",
+var mailgundata: UpdateEmailTemplate = {
+    id : "psixoulammmmmmm",
+    subject: " xd",
+    body: " nothing to add </p>",
 
-// };
+};
 // var mandrilData = {
 //     subject: 'xd',
 //     name:'third template',
@@ -70,12 +71,12 @@ let mail = provider.emailBuilder()
     
 
 // }
-// provider._transport?.sendEmail().then((body:any)  => {
-//     console.log(body);
-// })
-// .catch(err => {
-//     console.log(err);
-// })
+provider._transport?.updateTemplate(mailgundata).then((body:any)  => {
+    console.log(body);
+})
+.catch(err => {
+    console.log(err);
+})
 
 // provider._transport?.getTemplateInfo('ffff').then(res =>{
     //     console.log(res);

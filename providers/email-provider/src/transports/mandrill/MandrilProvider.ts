@@ -6,6 +6,7 @@ import { Template } from "../../interfaces/Template";
 import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
 import { MandrillBuilder } from "./mandrillBuilder";
 import {getHBValues} from '../../parse-test/getHBValues';
+import { UpdateEmailTemplate } from "../../interfaces/UpdateEmailTemplate";
 var mandrillTransport = require('nodemailer-mandrill-transport');
 export class MandrillProvider extends EmailProviderClass{
    private  _mandrillSdk?: Mandrill;
@@ -35,8 +36,7 @@ export class MandrillProvider extends EmailProviderClass{
                 subject: response.subject,
                 active: true,
                 updatedAt: response.updated_at,
-                htmlContent: response.code,
-                plainContent: response.text,
+                body: response.code,
                 variables: Object.keys(getHBValues(response.code))
             }],
             createdAt: response.created_at
@@ -49,15 +49,29 @@ export class MandrillProvider extends EmailProviderClass{
         const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.add({
             key: this.apiKey,
             subject: data.subject,
-            code: data.htmlContent,
-            text: data.plainContent,
+            code: data.body,
             publish:true,          
             name: data.name,
 
         },resolve));
         const created = await this.getTemplateInfo(response.slug);
-        created.versions[0].variables = Object.keys(getHBValues(data.htmlContent));
+        created.versions[0].variables = Object.keys(getHBValues(data.body));
         return  created;
+    }
+
+    async updateTemplate(data: UpdateEmailTemplate){
+      
+        const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.update({
+            key: this.apiKey,
+            name: data.id,
+            code: data.body,
+            subject: data.subject
+         
+        },resolve));
+
+
+        return  this.getTemplateInfo(response.slug);
+
     }
 
     getBuilder(){

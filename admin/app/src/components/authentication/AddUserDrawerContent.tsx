@@ -6,7 +6,7 @@ import SaveIcon from '@material-ui/icons/Save';
 import LockOpenIcon from '@material-ui/icons/LockOpen';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import AccountCircle from '@material-ui/icons/AccountCircle';
-import addUser from '../../components/svgs/addUser.svg';
+import addUser from '../../assets/svgs/addUser.svg';
 import Grid from '@material-ui/core/Grid';
 import Image from 'next/image';
 

@@ -5,6 +5,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import TemplateEditor from './TemplateEditor';
 
 const useStyles = makeStyles((theme) => ({
   tabs: {
@@ -69,22 +70,13 @@ const EmailDetails: React.FC<Props> = ({ edit, templateState, setTemplateState }
         </Grid>
       </Grid>
       {edit ? (
-        <TextField
-          className={classes.multiline}
-          id="filled-textarea"
-          label="Body"
-          multiline
-          rows={8}
-          variant="outlined"
+        <TemplateEditor
           value={templateState.body}
-          onChange={(event) => {
+          setValue={(value) => {
             setTemplateState({
               ...templateState,
-              body: event.target.value,
+              body: value,
             });
-          }}
-          InputProps={{
-            readOnly: !edit,
           }}
         />
       ) : (
