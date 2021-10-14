@@ -65,6 +65,7 @@ export class SendgridProvider extends EmailProviderClass{
         
         const response = (await this._sgClient.request(request))[0];
         const versions = response.body.versions;
+        console.log(versions);
         var retVersions:any = [];
         versions.forEach((version:any) => {
 
@@ -75,7 +76,7 @@ export class SendgridProvider extends EmailProviderClass{
                     updatedAt: version.updated_at,
                     active: version.active,
                     body: version.html_content,
-                    variables: Object.keys(getHBValues(versions.html_content))
+                    variables: Object.keys(getHBValues(version.html_content))
                 });
         });
         let info: Template = {
@@ -113,7 +114,7 @@ export class SendgridProvider extends EmailProviderClass{
                 name: data.name,
             }
         }
-        this._sgClient.request(request);
+        await this._sgClient.request(request);
         return this.getTemplateInfo(data.id);
     }
 
