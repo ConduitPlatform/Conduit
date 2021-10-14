@@ -22,9 +22,10 @@ import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import TabPanel from '../../components/emails/TabPanel';
 import { CallMissedOutgoing } from '@material-ui/icons';
-import { SyncAlt } from '@material-ui/icons';
+import Sync from '@material-ui/icons/Sync';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
+import ExternalTemplates from '../../components/emails/ExternalTemplates';
 // import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
@@ -40,21 +41,6 @@ const useStyles = makeStyles((theme) => ({
 const Templates = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
-  const [skip, setSkip] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(10);
-  const [page, setPage] = useState<number>(0);
-  const [search, setSearch] = useState<string>('');
-  const [drawer, setDrawer] = useState<boolean>(false);
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>({
-    _id: '',
-    name: '',
-    subject: '',
-    body: '',
-    variables: [],
-  });
-  const [create, setCreate] = useState<boolean>(false);
-  const [edit, setEdit] = useState<boolean>(false);
 
   const originalTemplateState = {
     _id: '',
@@ -62,7 +48,19 @@ const Templates = () => {
     subject: '',
     body: '',
     variables: [],
+    sender: '',
+    externalManaged: false,
   };
+  const [skip, setSkip] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(10);
+  const [page, setPage] = useState<number>(0);
+  const [search, setSearch] = useState<string>('');
+  const [drawer, setDrawer] = useState<boolean>(false);
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>(originalTemplateState);
+  const [importTemplate, setImportTemplate] = useState<boolean>(false);
+  const [create, setCreate] = useState<boolean>(false);
+  const [edit, setEdit] = useState<boolean>(false);
 
   // const debouncedSearch: string = useDebounce(search, 500);
 
@@ -76,6 +74,11 @@ const Templates = () => {
     setViewTemplate(originalTemplateState);
     setCreate(true);
     setEdit(true);
+    setDrawer(true);
+  };
+
+  const handleImportTemplate = () => {
+    setImportTemplate(true);
     setDrawer(true);
   };
 
@@ -104,6 +107,7 @@ const Templates = () => {
     setEdit(false);
     setCreate(false);
     setDrawer(false);
+    setImportTemplate(false);
     setViewTemplate(originalTemplateState);
   };
 
@@ -112,8 +116,10 @@ const Templates = () => {
     const updatedData = {
       name: data.name,
       subject: data.subject,
+      sender: data.sender !== '' ? data.sender : undefined,
       body: data.body,
       variables: data.variables,
+      externalManaged: data.externalManaged,
     };
     if (_id !== undefined) {
       dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
@@ -125,7 +131,9 @@ const Templates = () => {
     const newData = {
       name: data.name,
       subject: data.subject,
+      sender: data.sender,
       body: data.body,
+      externalManaged: data.externalManaged,
       variables: data.variables,
     };
     dispatch(asyncCreateNewEmailTemplate(newData));
@@ -137,8 +145,7 @@ const Templates = () => {
       return {
         _id: u._id,
         Name: u.name,
-        External: '--',
-        Synced: '--',
+        External: u.externalManaged,
         'Updated At': u.updatedAt,
       };
     });
@@ -202,7 +209,7 @@ const Templates = () => {
     type: 'view',
   };
 
-  const actions = [toDelete, toUpload, toSync, toView];
+  const actions = [toDelete, toUpload, toView];
 
   return (
     <div>
@@ -227,12 +234,13 @@ const Templates = () => {
         </Grid>
         <Grid item>
           <IconButton color="primary" className={classes.btnAlignment}>
-            <SyncAlt />
+            <Sync color="primary" />
           </IconButton>
           <Button
             className={classes.btnAlignment2}
             variant="contained"
             color="secondary"
+            onClick={() => handleImportTemplate()}
             startIcon={<CallMissedOutgoing />}>
             Import Template
           </Button>
@@ -270,23 +278,35 @@ const Templates = () => {
         </Grid>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
-        <Box>
-          <Typography
-            variant="h6"
-            color="primary"
-            style={{ marginTop: '30px', textAlign: 'center' }}>
-            {!create ? 'Edit your template' : 'Create an email template'}{' '}
-          </Typography>
-          <TabPanel
-            handleCreate={createNewTemplate}
-            handleSave={saveTemplateChanges}
-            template={viewTemplate}
-            edit={edit}
-            setEdit={setEdit}
-            create={create}
-            setCreate={setCreate}
-          />
-        </Box>
+        {!importTemplate ? (
+          <Box>
+            <Typography
+              variant="h6"
+              color="primary"
+              style={{ marginTop: '30px', textAlign: 'center' }}>
+              {!create ? 'Edit your template' : 'Create an email template'}{' '}
+            </Typography>
+            <TabPanel
+              handleCreate={createNewTemplate}
+              handleSave={saveTemplateChanges}
+              template={viewTemplate}
+              edit={edit}
+              setEdit={setEdit}
+              create={create}
+              setCreate={setCreate}
+            />
+          </Box>
+        ) : (
+          <Box>
+            <Typography
+              variant="h6"
+              color="primary"
+              style={{ marginTop: '30px', textAlign: 'center' }}>
+              Import an external template
+            </Typography>
+            <ExternalTemplates handleSave={createNewTemplate} />
+          </Box>
+        )}
       </DrawerWrapper>
     </div>
   );

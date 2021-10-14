@@ -3,6 +3,8 @@ export interface EmailTemplateType {
   name: string;
   subject: string;
   variables: string[];
+  sender?: string;
+  externalManaged: boolean;
   _id?: string;
   updatedAt?: string;
   createdAt?: string;

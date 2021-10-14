@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
   getEmailSettingsRequest,
   getEmailTemplateRequest,
+  getExternalTemplatesRequest,
   postEmailTemplateRequest,
   putEmailSettingsRequest,
   putEmailTemplateRequest,
@@ -17,6 +18,7 @@ interface IEmailSlice {
     templateDocuments: EmailTemplateType[];
     totalCount: number;
     settings: EmailSettings;
+    externalTemplates: any;
   };
 }
 
@@ -30,6 +32,7 @@ const initialState: IEmailSlice = {
       transport: '',
       transportSettings: {},
     },
+    externalTemplates: [''],
   },
 };
 
@@ -40,6 +43,22 @@ export const asyncGetEmailTemplates = createAsyncThunk(
     try {
       const { data } = await getEmailTemplateRequest(params.skip, params.limit);
 
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetExternalTemplates = createAsyncThunk(
+  'emails/getExternalTemplates',
+  async (params, thunkAPI) => {
+    try {
+      const { data } = await getExternalTemplatesRequest();
+      console.log(data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -163,6 +182,10 @@ const emailsSlice = createSlice({
     builder.addCase(asyncGetEmailTemplates.fulfilled, (state, action) => {
       state.data.templateDocuments = action.payload.templateDocuments;
       state.data.totalCount = action.payload.totalCount;
+    });
+
+    builder.addCase(asyncGetExternalTemplates.fulfilled, (state, action) => {
+      state.data.externalTemplates = action.payload;
     });
     builder.addCase(asyncSaveEmailTemplateChanges.fulfilled, (state, action) => {
       state.data.templateDocuments = updateTemplateByID(

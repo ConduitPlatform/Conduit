@@ -16,6 +16,9 @@ interface ISendEmailData {
   body: string;
 }
 
+export const getExternalTemplatesRequest = () =>
+  axios.get(`${CONDUIT_API}/admin/email/externalTemplates`);
+
 export const getEmailTemplateRequest = (skip: number, limit: number) =>
   axios.get(`${CONDUIT_API}/admin/email/templates`, { params: { skip, limit } });
 

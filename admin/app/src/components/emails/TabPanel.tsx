@@ -2,7 +2,6 @@ import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
-
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
@@ -83,6 +82,8 @@ const TabPanel: React.FC<Props> = ({
     _id: 'newTemplate_id',
     name: '',
     subject: '',
+    sender: '',
+    externalManaged: false,
     body: '',
     variables: [],
   });
@@ -92,6 +93,8 @@ const TabPanel: React.FC<Props> = ({
       setTemplateState({
         _id: template._id,
         name: template.name,
+        sender: template.sender,
+        externalManaged: template.externalManaged,
         subject: template.subject,
         body: template.body,
         variables: template.variables,
@@ -110,7 +113,15 @@ const TabPanel: React.FC<Props> = ({
 
   const handleCancelClick = () => {
     if (create) {
-      setTemplateState({ _id: '', name: '', subject: '', body: '', variables: [] });
+      setTemplateState({
+        _id: '',
+        name: '',
+        subject: '',
+        body: '',
+        variables: [],
+        sender: '',
+        externalManaged: false,
+      });
       return;
     }
     setTemplateState({
@@ -118,6 +129,8 @@ const TabPanel: React.FC<Props> = ({
       name: template.name,
       subject: template.subject,
       body: template.body,
+      sender: template.sender,
+      externalManaged: template.externalManaged,
       variables: template.variables,
     });
   };
@@ -146,8 +159,15 @@ const TabPanel: React.FC<Props> = ({
                 <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
-                    label={'*Optional sender input'}
+                    label={'*Sender'}
                     variant={'outlined'}
+                    value={templateState.sender}
+                    onChange={(event) => {
+                      setTemplateState({
+                        ...templateState,
+                        sender: event.target.value,
+                      });
+                    }}
                   />
                 </Grid>
               </>
@@ -158,8 +178,8 @@ const TabPanel: React.FC<Props> = ({
                   <Typography variant="h6">{templateState.name}</Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Sender Input:</Typography>
-                  <Typography variant="h6">{templateState.name}</Typography>
+                  <Typography variant="subtitle2">Sender:</Typography>
+                  <Typography variant="h6">{templateState.sender}</Typography>
                 </Grid>
               </>
             )}
