@@ -87,7 +87,6 @@ export  class MailgunProvider extends EmailProviderClass {
         }));
         
         if(err){
-            console.log('eee');
             throw new Error(err.message);
         }
 
