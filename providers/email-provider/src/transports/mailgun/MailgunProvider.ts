@@ -40,7 +40,7 @@ export  class MailgunProvider extends EmailProviderClass {
             versions : [{
                 name: response.template.version.tag,
                 id: response.template.version.id,
-                plainContent: response.template.version.template,
+                body: response.template.version.template,
                 active:true,
                 updatedAt: '',
                 variables: Object.keys(getHBValues(response.template.version.template))
@@ -53,7 +53,7 @@ export  class MailgunProvider extends EmailProviderClass {
    async createTemplate(data: CreateEmailTemplate): Promise<Template>{
         const mailgun_input = {
             name: data.name,
-            template:data.plainContent,
+            template:data.body,
             descrpiton: '',
             active: true,
             tag: data.versionName
@@ -72,7 +72,7 @@ export  class MailgunProvider extends EmailProviderClass {
                 id: response.template.version.id,
                 active:true,
                 updatedAt: response.template.version.createdAt,
-                plainContent: response.template.version.template, 
+                body: response.template.version.template, 
                 variables: Object.keys(getHBValues(mailgun_input.template))
             }]
         };
@@ -82,7 +82,7 @@ export  class MailgunProvider extends EmailProviderClass {
 
     async updateTemplate(data: UpdateEmailTemplate): Promise<Template>{
         const [err,template]:any = await  to(this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`,{
-            template: data.plainContent,
+            template: data.body,
             active: data.active,
         }));
 

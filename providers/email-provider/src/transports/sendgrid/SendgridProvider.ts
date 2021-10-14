@@ -39,16 +39,14 @@ export class SendgridProvider extends EmailProviderClass{
             body: {
                 subject: data.subject,
                 name: data.versionName,
-                html_content: data.htmlContent,
-                plain_content: data.plainContent,
+                html_content: data.body,
             }
         }
         const version_res =  (await this._sgClient.request(create_version))[0];
         info.versions.push({
            id:  version_res.body.id,
            subject: version_res.body.subject,
-           htmlContent: version_res.body.html_content,
-           plainContent: version_res.body.plain_content,
+           body: version_res.body.html_content,
            name: version_res.body.name,
            active: version_res.body.active,
            updatedAt:'',
@@ -76,8 +74,7 @@ export class SendgridProvider extends EmailProviderClass{
                     subject: version.subject,
                     updatedAt: version.updated_at,
                     active: version.active,
-                    htmlContent: version.html_content,
-                    plainContent: version.plain_content,
+                    body: version.html_content,
                     variables: Object.keys(getHBValues(versions.html_content))
                 });
         });
@@ -111,8 +108,7 @@ export class SendgridProvider extends EmailProviderClass{
             method:'PATCH',
             url: '/v3/templates/'+data.id+'/versions/' +data.versionId,
             body:{
-                plain_content: data.plainContent,
-                html_content: data.htmlContent,
+                html_content: data.body,
                 subject: data.subject,
                 name: data.name,
             }
