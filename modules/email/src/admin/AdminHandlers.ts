@@ -182,11 +182,13 @@ export class AdminHandlers {
       });
     }
 
-    ['name', 'subject', 'body', 'variables'].forEach((key) => {
+    ['name', 'subject', 'body'].forEach((key) => {
       if (params[key]) {
         templateDocument[key] = params[key];
       }
     });
+    console.log(getHBValues(params.body));
+    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(Object.keys(getHBValues(params.subject)));
 
     const updatedTemplate = await this.database
       .findByIdAndUpdate('EmailTemplate', id, templateDocument)
