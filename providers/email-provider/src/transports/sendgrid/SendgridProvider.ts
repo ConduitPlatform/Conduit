@@ -69,6 +69,7 @@ export class SendgridProvider extends EmailProviderClass{
         const versions = response.body.versions;
         var retVersions:any = [];
         versions.forEach((version:any) => {
+
                 retVersions.push({
                     name: version.name,
                     id: version.id,
@@ -106,7 +107,18 @@ export class SendgridProvider extends EmailProviderClass{
     }
 
     async updateTemplate(data: UpdateEmailTemplate){
-        return 5 as any;
+        const request = {
+            method:'PATCH',
+            url: '/v3/templates/'+data.id+'/versions/' +data.versionId,
+            body:{
+                plain_content: data.plainContent,
+                html_content: data.htmlContent,
+                subject: data.subject,
+                name: data.name,
+            }
+        }
+        const resp = (await this._sgClient.request(request))[0];
+        return this.getTemplateInfo(data.id);
     }
 
     getBuilder(){
