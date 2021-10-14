@@ -61,21 +61,12 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
     subject: '',
     body: '',
     variables: [],
-    sender: '',
     externalManaged: false,
   };
 
   const { externalTemplates } = useAppSelector((state) => state.emailsSlice.data);
   const [select, setSelect] = useState<number>(-1);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplateType>(emptyTemplate);
-
-  //Placeholder till we get actual values, logic mostly in place
-
-  const placeholders = [
-    { name: 'template 1', _id: 1 },
-    { name: 'template 2', _id: 2 },
-    { name: 'template 3', _id: 3 },
-  ];
 
   useEffect(() => {
     dispatch(asyncGetExternalTemplates());
@@ -86,21 +77,20 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
       name: selectedTemplate.name,
       subject: selectedTemplate.subject,
       body: selectedTemplate.body,
-      variables: [''],
+      variables: selectedTemplate.variables,
       _id: selectedTemplate._id,
       externalManaged: true,
-      sender: selectedTemplate.sender,
     };
+    handleSave(data);
   };
 
   const handleTemplateChange = (e: any) => {
     setSelect(e.target.value);
-    //we grab either the _id or the name of the template to find the actual values
-    // const foundTemplate = externalTemplates.find(
-    //   (template: any) => template.name === e.target.value
-    // );
-    // if (e.target.value !== '') setSelectedTemplate(foundTemplate);
-    // else setSelectedTemplate(emptyTemplate);
+    const foundTemplate = externalTemplates.find(
+      (template: EmailTemplateType) => template.name === e.target.value
+    );
+    if (e.target.value !== '' && foundTemplate !== undefined) setSelectedTemplate(foundTemplate);
+    else setSelectedTemplate(emptyTemplate);
   };
 
   return (
@@ -119,7 +109,7 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
             <MenuItem value={-1}>
               <em>None</em>
             </MenuItem>
-            {placeholders.map((template, index: number) => (
+            {externalTemplates?.map((template, index: number) => (
               <MenuItem key={index} value={template._id}>
                 {template.name}
               </MenuItem>

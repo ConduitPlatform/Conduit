@@ -18,7 +18,7 @@ interface IEmailSlice {
     templateDocuments: EmailTemplateType[];
     totalCount: number;
     settings: EmailSettings;
-    externalTemplates: any;
+    externalTemplates: EmailTemplateType[];
   };
 }
 
@@ -32,7 +32,7 @@ const initialState: IEmailSlice = {
       transport: '',
       transportSettings: {},
     },
-    externalTemplates: [''],
+    externalTemplates: [],
   },
 };
 
