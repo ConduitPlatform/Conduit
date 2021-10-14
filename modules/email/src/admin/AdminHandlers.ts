@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
 let paths = require('./admin.json').functions;
 
@@ -91,11 +92,16 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { _id, sender, externalManaged, name, subject, body, variables } = JSON.parse(
+    const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
     );
     let externalId = undefined;
-    if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
+    const body_vars = getHBValues(body);
+    const subject_vars = getHBValues(subject);
+
+    let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    variables =  variables.filter((value:any,index:any) => variables.indexOf(value) === index);
+    if (isNil(name) || isNil(subject) || isNil(body)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
@@ -179,12 +185,14 @@ export class AdminHandlers {
       });
     }
 
-    ['name', 'subject', 'body', 'variables'].forEach((key) => {
+    ['name', 'subject', 'body'].forEach((key) => {
       if (params[key]) {
         templateDocument[key] = params[key];
       }
     });
 
+    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(Object.keys(getHBValues(params.subject)));
+    templateDocument['variables'] =  templateDocument['variables'].filter((value:any,index:any) => templateDocument['variables'].indexOf(value) === index);
     const updatedTemplate = await this.database
       .findByIdAndUpdate('EmailTemplate', id, templateDocument)
       .catch((e: any) => (errorMessage = e.message));
