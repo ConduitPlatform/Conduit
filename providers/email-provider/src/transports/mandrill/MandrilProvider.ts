@@ -62,12 +62,12 @@ export class MandrillProvider extends EmailProviderClass{
     }
 
     async updateTemplate(data: UpdateEmailTemplate){
-
+      
         const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.update({
             key: this.apiKey,
             name: data.id,
-            code: data.plainContent,
             text: data.plainContent,
+            subject: data.subject
          
         },resolve));
         const updated = await this.getTemplateInfo(response.slug);
