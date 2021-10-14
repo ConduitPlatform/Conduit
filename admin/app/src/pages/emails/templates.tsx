@@ -191,7 +191,7 @@ const Templates = () => {
             }}
           />
         </Grid>
-        <Grid item spacing={2}>
+        <Grid item>
           <IconButton color="primary" className={classes.btnAlignment}>
             <SyncAlt />
           </IconButton>
