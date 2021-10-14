@@ -2,6 +2,7 @@ import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 import { EmailData, EmailSettings, SendEmailData } from '../models/emails/EmailModels';
 
+
 export const getEmailTemplateRequest = () => axios.get(`${CONDUIT_API}/admin/email/templates`);
 
 export const postEmailTemplateRequest = (data: EmailData) =>
