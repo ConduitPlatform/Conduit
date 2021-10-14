@@ -71,7 +71,7 @@ export class MandrillProvider extends EmailProviderClass{
          
         },resolve));
         const updated = await this.getTemplateInfo(response.slug);
-        updated.versions[0].variables = Object.keys(getHBValues(data.plainContent));
+
         return  updated;
 
     }
