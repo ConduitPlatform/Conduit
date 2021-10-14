@@ -37,6 +37,7 @@ const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
     }
     const settings: any = data.transportSettings[data.transport];
     const settingKeys = settings ? (Object.keys(settings) as whatever[]) : [];
+
     return (
       <Grid item container xs={12} direction="column">
         {settingKeys.map((key, index: number) => {
@@ -60,6 +61,7 @@ const TransportSettings: React.FC<Props> = ({ data, onChange }) => {
               );
             });
           }
+
           return (
             <Box key={index}>
               <TextField

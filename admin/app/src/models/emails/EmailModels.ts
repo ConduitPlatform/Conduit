@@ -38,18 +38,25 @@ export interface SendgridSettings {
   apiUser: string;
 }
 
-export type TransportProviders = 'mailgun' | 'smtp' | 'mandrill' | 'sendgrid';
+export enum TransportProviders {
+  mailgun = 'mailgun',
+  smtp = 'smtp',
+  mandrill = 'mandrill',
+  sendgrid = 'sendgrid',
+}
+
+export interface ITransportSettings {
+  mailgun: MailgunSettings;
+  smtp: SmtpSettings;
+  mandrill: MandrillSettings;
+  sendgrid: SendgridSettings;
+}
 
 export interface EmailSettings {
   active: boolean;
   sendingDomain: string;
   transport: TransportProviders;
-  transportSettings: {
-    mailgun?: MailgunSettings;
-    smtp?: SmtpSettings;
-    mandrill?: MandrillSettings;
-    sendgrid?: SendgridSettings;
-  };
+  transportSettings: ITransportSettings;
 }
 
 export interface EmailData {

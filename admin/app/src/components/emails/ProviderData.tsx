@@ -1,5 +1,5 @@
 import { Container } from '@material-ui/core';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
@@ -11,8 +11,17 @@ import Switch from '@material-ui/core/Switch';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
-import { EmailSettings, TransportProviders } from '../../models/emails/EmailModels';
+import {
+  EmailSettings,
+  ITransportSettings,
+  MailgunSettings,
+  MandrillSettings,
+  SendgridSettings,
+  SmtpSettings,
+  TransportProviders,
+} from '../../models/emails/EmailModels';
 import TransportSettings from './TransportSettings';
+import { useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -49,16 +58,18 @@ const transportProviders: ('mailgun' | 'smtp' | 'mandrill' | 'sendgrid')[] = [
 ];
 
 interface Props {
-  settings: EmailSettings;
   handleSave: (data: EmailSettings) => void;
 }
 
-const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
+const ProviderData: React.FC<Props> = ({ handleSave }) => {
   const classes = useStyles();
+
+  const { settings } = useAppSelector((state) => state.emailsSlice.data);
+
   const [settingsState, setSettingsState] = useState<EmailSettings>({
     active: false,
     sendingDomain: '',
-    transport: 'smtp',
+    transport: TransportProviders.smtp,
     transportSettings: {
       mailgun: {
         apiKey: '',
@@ -83,51 +94,37 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
     },
   });
 
+  const initializeSettings = useCallback(() => {
+    let settingsObj: EmailSettings = { ...settingsState };
+    const initial: EmailSettings = { ...settings };
+
+    settingsObj = { ...settingsObj, ...initial };
+
+    transportProviders.forEach((provider) => {
+      const providerSettings: MailgunSettings | SmtpSettings | MandrillSettings | SendgridSettings =
+        {
+          ...settingsObj.transportSettings[provider],
+          ...initial.transportSettings[provider],
+        };
+
+      settingsObj.transportSettings = {
+        ...settingsObj.transportSettings,
+        [provider]: {
+          ...providerSettings,
+        },
+      };
+    });
+
+    return settingsObj;
+  }, [settings]);
+
   useEffect(() => {
     if (!settings) {
       return;
     }
-    const settingsObj = {
-      active: settings.active,
-      sendingDomain: settings.sendingDomain,
-      transport: settings.transport,
-      transportSettings: {
-        mailgun: {
-          apiKey: '',
-          domain: '',
-          host: '',
-        },
-        smtp: {
-          port: '',
-          host: '',
-          auth: {
-            username: '',
-            password: '',
-            method: '',
-          },
-        },
-        mandrill: {
-          apiKey: '',
-        },
-        sendgrid: {
-          apiUser: '',
-        },
-      },
-    };
-    const getSettingsState = (prevState: EmailSettings) => {
-      transportProviders.forEach((provider) => {
-        if (settings.transportSettings[provider]) {
-          settingsObj.transportSettings[provider] = settings.transportSettings[provider];
-        } else {
-          settingsObj.transportSettings[provider] = prevState.transportSettings[provider];
-        }
-      });
-      return settingsObj;
-    };
-    setSettingsState((prevState) => {
-      return getSettingsState(prevState);
-    });
-  }, [settings]);
+    const newSettings = initializeSettings();
+    setSettingsState(newSettings);
+  }, [initializeSettings, settings]);
 
   const handleCancel = () => {
     setSettingsState({
@@ -148,16 +145,16 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
     authItem?: string
   ) => {
     if (authItem) {
-      const authPath = settingsState.transportSettings[provider];
-      if (!authPath) {
+      const smtpProvider: SmtpSettings = settingsState.transportSettings[provider] as SmtpSettings;
+      if (!smtpProvider) {
         return;
       }
-      const newSettings = {
+      const newSettings: ITransportSettings = {
         ...settingsState.transportSettings,
-        [provider]: {
-          ...authPath,
+        smtp: {
+          ...smtpProvider,
           auth: {
-            ...authPath['auth'],
+            ...smtpProvider.auth,
             [authItem]: value,
           },
         },
@@ -168,6 +165,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
       });
       return;
     }
+
     const newSettings = {
       ...settingsState.transportSettings,
       [provider]: {
@@ -175,6 +173,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
         [key]: value,
       },
     };
+
     setSettingsState({
       ...settingsState,
       transportSettings: newSettings,
