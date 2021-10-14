@@ -148,13 +148,6 @@ const TabPanel: React.FC<Props> = ({
                     className={classes.textField}
                     label={'*Optional sender input'}
                     variant={'outlined'}
-                    value={templateState.name}
-                    onChange={(event) => {
-                      setTemplateState({
-                        ...templateState,
-                        name: event.target.value,
-                      });
-                    }}
                   />
                 </Grid>
               </>
