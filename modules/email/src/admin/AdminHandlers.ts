@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
 let paths = require('./admin.json').functions;
 
@@ -91,11 +92,15 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { id, sender, externalManaged, name, subject, body, variables } = JSON.parse(
+    const { id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
     );
     let externalId = undefined;
-    if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
+    const body_vars = getHBValues(body);
+    const subject_vars = getHBValues(subject);
+
+    const variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    if (isNil(name) || isNil(subject) || isNil(body)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
