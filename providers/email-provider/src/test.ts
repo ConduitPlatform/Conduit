@@ -60,7 +60,7 @@ let templateOptions:TemplateOptions = {
 var mailgundata: UpdateEmailTemplate = {
     id : "psixoulammmmmmm",
     subject: " xd",
-    plainContent: " nothing to add </p>",
+    body: " nothing to add </p>",
 
 };
 // var mandrilData = {
