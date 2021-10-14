@@ -117,7 +117,7 @@ export class SendgridProvider extends EmailProviderClass{
                 name: data.name,
             }
         }
-        const resp = (await this._sgClient.request(request))[0];
+        this._sgClient.request(request);
         return this.getTemplateInfo(data.id);
     }
 

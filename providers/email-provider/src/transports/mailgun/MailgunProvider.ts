@@ -90,7 +90,7 @@ export  class MailgunProvider extends EmailProviderClass {
             throw new Error(err.message);
         }
 
-        return this.getTemplateInfo(template.template.name);;
+        return this.getTemplateInfo(template.template.name);
     }
 
     getBuilder(): EmailBuilderClass<Options> {

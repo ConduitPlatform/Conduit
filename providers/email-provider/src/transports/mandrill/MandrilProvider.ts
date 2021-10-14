@@ -70,9 +70,9 @@ export class MandrillProvider extends EmailProviderClass{
             subject: data.subject
          
         },resolve));
-        const updated = await this.getTemplateInfo(response.slug);
 
-        return  updated;
+
+        return  this.getTemplateInfo(response.slug);
 
     }
 
