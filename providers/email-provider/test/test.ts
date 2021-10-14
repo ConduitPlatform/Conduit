@@ -3,7 +3,7 @@ import { EmailProvider } from "../src/index"
 import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
 import { MailgunEmailOptions} from '../src/interfaces/mailgun/MailgunEmailOptions';
 import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOptions';
-import { UpdateEmailTemplate } from './interfaces/UpdateEmailTemplate';
+import { UpdateEmailTemplate } from '../src/interfaces/UpdateEmailTemplate';
 // let provider = new EmailProvider('mailgun',{
 //     mailgun:{
 //         proxy:null,
@@ -60,7 +60,7 @@ let templateOptions:TemplateOptions = {
 var mailgundata: UpdateEmailTemplate = {
     id : "psixoulammmmmmm",
     subject: " xd",
-    plainContent: " nothing to add </p>",
+    body: " nothing to add </p>",
 
 };
 // var mandrilData = {

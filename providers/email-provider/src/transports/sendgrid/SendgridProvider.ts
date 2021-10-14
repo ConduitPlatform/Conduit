@@ -65,7 +65,6 @@ export class SendgridProvider extends EmailProviderClass{
         
         const response = (await this._sgClient.request(request))[0];
         const versions = response.body.versions;
-        console.log(versions);
         var retVersions:any = [];
         versions.forEach((version:any) => {
 
