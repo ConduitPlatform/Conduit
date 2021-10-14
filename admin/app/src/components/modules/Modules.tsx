@@ -14,25 +14,25 @@ import { enqueueInfoNotification } from '../../utils/useNotifier';
 const useStyles = makeStyles((theme: Theme) => ({
   listItem: {
     color: theme.palette.secondary.main,
-    borderWidth: '1px',
-    paddingLeft: 4,
-    paddingRight: 4,
+    borderWidth: 1,
+    paddingLeft: theme.spacing(0.5),
+    paddingRight: theme.spacing(0.5),
     '&:hover': {
-      borderWidth: '1px',
+      borderWidth: 1,
     },
     '&:focus': {
-      borderWidth: '1px',
+      borderWidth: 1,
     },
     '&.Mui-selected': {
       color: theme.palette.common.white,
-      borderWidth: '1px',
+      borderWidth: 1,
       '&:hover': {
         background: theme.palette.secondary.dark,
-        borderWidth: '1px',
+        borderWidth: 1,
       },
       '&:focus': {
         background: theme.palette.secondary.dark,
-        borderWidth: '1px',
+        borderWidth: 1,
       },
     },
   },
@@ -42,7 +42,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     fontSize: 12,
   },
   listItemIcon: {
-    minWidth: 36,
+    minWidth: theme.spacing(4),
     marginRight: theme.spacing(1),
     color: 'inherit',
   },

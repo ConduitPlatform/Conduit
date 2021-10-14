@@ -36,7 +36,6 @@ export const Layout: React.FC = ({ children, ...rest }) => {
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.appAuthSlice.data);
   const { loading } = useAppSelector((state) => state.appSlice);
-  const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
   const [itemSelected, setItemSelected] = useState<string>('');
 
@@ -95,11 +94,7 @@ export const Layout: React.FC = ({ children, ...rest }) => {
 
   return (
     <div className={classes.root} {...rest}>
-      {!menuDisabled ? (
-        <CustomDrawer itemSelected={itemSelected} setOpen={setOpen} open={open} />
-      ) : (
-        <></>
-      )}
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} /> : <></>}
       <main className={classes.content}>{children}</main>
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
