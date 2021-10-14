@@ -15,6 +15,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import InputLabel from '@material-ui/core/InputLabel';
 import Select from '@material-ui/core/Select';
 import FormControl from '@material-ui/core/FormControl';
+import { isString } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -94,10 +95,9 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     });
   };
 
-  const handleChangeTemplate = (event: { target: { value: unknown } }) => {
-    const selectedTemplate = templates.find(
-      (template) => template._id === (event.target.value as string)
-    );
+  const handleChangeTemplate = (event: React.ChangeEvent<{ value: unknown }>) => {
+    if (!isString(event.target.value)) return;
+    const selectedTemplate = templates.find((template) => template._id === event.target.value);
 
     if (!selectedTemplate) return;
     let variableValues = {};
@@ -116,8 +116,9 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     });
   };
 
-  const handleVariableChange = (event: { target: { value: unknown } }, variable: string) => {
-    const newValue = event.target.value as string;
+  const handleVariableChange = (event: React.ChangeEvent<{ value: unknown }>, variable: string) => {
+    if (!isString(event.target.value)) return;
+    const newValue = event.target.value;
     const variableValues = { ...emailState.variablesValues, [variable]: newValue };
     setEmailState({ ...emailState, variablesValues: variableValues });
   };
@@ -250,7 +251,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                     required
                     fullWidth
                     value={emailState.variablesValues[variable]}
-                    onChange={(e) => handleVariableChange(e, variable)}
+                    onChange={(event) => handleVariableChange(event, variable)}
                   />
                 </Grid>
               ))}

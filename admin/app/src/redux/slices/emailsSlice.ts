@@ -32,7 +32,7 @@ const initialState: IEmailSlice = {
     settings: {
       active: false,
       sendingDomain: '',
-      transport: '',
+      transport: 'smtp',
       transportSettings: {},
     },
   },
