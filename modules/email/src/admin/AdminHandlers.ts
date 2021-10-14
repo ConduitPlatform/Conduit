@@ -92,7 +92,7 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { id, sender, externalManaged, name, subject, body } = JSON.parse(
+    const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
     );
     let externalId = undefined;
@@ -108,7 +108,7 @@ export class AdminHandlers {
       });
     }
     if (externalManaged) {
-      if (isNil(id)) {
+      if (isNil(_id)) {
         //that means that we want to create an external managed template
         const [err, template] = await to(
           this.emailService.createExternalTemplate({
@@ -124,6 +124,8 @@ export class AdminHandlers {
           });
         }
         externalId = (template as any)?.id;
+      } else {
+        externalId = _id;
       }
     }
     let errorMessage: string | null = null;
