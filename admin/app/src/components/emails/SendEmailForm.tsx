@@ -16,6 +16,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import Select from '@material-ui/core/Select';
 import FormControl from '@material-ui/core/FormControl';
 import { isString } from 'lodash';
+import { IEmailState } from '../../models/emails/IEmailState';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -29,17 +30,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(4),
   },
 }));
-
-interface IEmailState {
-  _id: string;
-  email: string;
-  sender: string;
-  subject: string;
-  body: string;
-  variables: string[];
-  variablesValues: { [key: string]: string };
-  templateName: string;
-}
 
 interface Props {
   templates: EmailTemplateType[];

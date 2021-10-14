@@ -13,6 +13,7 @@ import {
   EmailSettings,
   EmailData,
   SendEmailData,
+  TransportProviders,
 } from '../../models/emails/EmailModels';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -34,8 +35,29 @@ const initialState: IEmailSlice = {
     settings: {
       active: false,
       sendingDomain: '',
-      transport: 'smtp',
-      transportSettings: {},
+      transport: TransportProviders['smtp'],
+      transportSettings: {
+        mailgun: {
+          apiKey: '',
+          domain: '',
+          host: '',
+        },
+        smtp: {
+          port: '',
+          host: '',
+          auth: {
+            username: '',
+            password: '',
+            method: '',
+          },
+        },
+        mandrill: {
+          apiKey: '',
+        },
+        sendgrid: {
+          apiUser: '',
+        },
+      },
     },
     externalTemplates: [],
   },
