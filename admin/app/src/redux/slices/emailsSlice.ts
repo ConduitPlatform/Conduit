@@ -109,7 +109,7 @@ export const asyncSaveEmailTemplateChanges = createAsyncThunk(
         )
       );
       thunkAPI.dispatch(setAppDefaults());
-      return updateEmailData.updatedTemplate;
+      return updateEmailData;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
