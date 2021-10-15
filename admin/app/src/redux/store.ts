@@ -10,6 +10,7 @@ import customEndpointsSlice from './slices/customEndpointsSlice';
 import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import appSlice from './slices/appSlice';
+import formsSlice from './slices/formsSlice';
 
 let store: any;
 
@@ -19,6 +20,7 @@ export const makeStore = (preloadedState: any) =>
       appSlice,
       appAuthSlice,
       authenticationSlice,
+      formsSlice,
       cmsSlice,
       customEndpointsSlice,
       notificationsSlice,
