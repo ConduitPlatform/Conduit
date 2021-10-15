@@ -3,10 +3,11 @@ import { AddCircleOutline } from '@material-ui/icons';
 import React, { ReactElement, useEffect, useState } from 'react';
 import DataTable from '../../components/common/DataTable';
 import Paginator from '../../components/common/Paginator';
+import ViewEditForm from '../../components/forms/ViewEditForm';
 import FormsLayout from '../../components/navigation/InnerLayouts/formsLayout';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import { FormsModel } from '../../models/forms/FormsModels';
-import { asyncGetForms } from '../../redux/slices/formsSlice';
+import { asyncCreateForm, asyncEditForm, asyncGetForms } from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
@@ -25,12 +26,23 @@ const useStyles = makeStyles((theme) => ({
 const Create = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+
+  const emptyFormState = {
+    _id: '',
+    name: '',
+    fields: {},
+    forwardTo: '',
+    emailField: '',
+    enabled: false,
+  };
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [drawer, setDrawer] = useState<boolean>(false);
-  const [formToView, setFormToView] = useState<any>('');
+  const [formToView, setFormToView] = useState<FormsModel>(emptyFormState);
   const [selectedForms, setSelectedForms] = useState<any>();
+  const [create, setCreate] = useState<boolean>(false);
+  const [edit, setEdit] = useState<boolean>(false);
 
   const { forms, count } = useAppSelector((state) => state.formsSlice.data);
 
@@ -40,10 +52,42 @@ const Create = () => {
 
   const newForm = () => {
     setDrawer(true);
+    setCreate(true);
+    setEdit(true);
   };
 
   const handleCloseDrawer = () => {
     setDrawer(false);
+    setCreate(false);
+    setEdit(false);
+  };
+
+  const saveFormChanges = (data: FormsModel) => {
+    const _id = data._id;
+    const updatedData = {
+      _id: data._id,
+      name: data.name,
+      fields: data.fields,
+      forwardTo: data.forwardTo,
+      emailField: data.emailField,
+      enabled: data.enabled,
+    };
+    if (_id !== undefined) {
+      dispatch(asyncEditForm({ _id, data: updatedData }));
+    }
+    setFormToView(updatedData);
+  };
+
+  const createNewForm = (data: FormsModel) => {
+    const newData = {
+      name: data.name,
+      fields: data.fields,
+      forwardTo: data.forwardTo,
+      emailField: data.emailField,
+      enabled: data.enabled,
+    };
+    dispatch(asyncCreateForm(newData));
+    setFormToView(newData);
   };
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
@@ -99,6 +143,8 @@ const Create = () => {
     if (currentForm !== undefined) {
       if (action.type === 'view') {
         setDrawer(true);
+        setEdit(false);
+        setFormToView(currentForm);
       }
       if (action.type === 'delete') {
         console.log('delete');
@@ -120,7 +166,7 @@ const Create = () => {
 
   return (
     <div>
-      <Grid container xs={12} justify="flex-end" className={classes.actions}>
+      <Grid container justify="flex-end">
         <Grid item>
           <Button
             variant="contained"
@@ -159,7 +205,18 @@ const Create = () => {
         <Typography className={classes.noAvailable}>No available forms </Typography>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
-        <h1>HI</h1>
+        <Typography variant="h6" color="primary" style={{ marginTop: '30px', textAlign: 'center' }}>
+          {create ? 'Create a new form' : 'Edit form'}
+        </Typography>
+        <ViewEditForm
+          handleCreate={createNewForm}
+          handleSave={saveFormChanges}
+          form={formToView}
+          edit={edit}
+          create={create}
+          setEdit={setEdit}
+          setCreate={setCreate}
+        />
       </DrawerWrapper>
     </div>
   );

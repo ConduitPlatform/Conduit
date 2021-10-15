@@ -93,7 +93,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                       useAttachments: !settingsState.useAttachments,
                     });
                   }}
-                  value={'accountLinking'}
+                  value={'useAttachments'}
                   color="primary"
                 />
               }

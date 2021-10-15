@@ -4,9 +4,9 @@ import { CONDUIT_API } from './requestsConfig';
 
 export const getForms = () => axios.get(`${CONDUIT_API}/admin/forms/get`);
 
-export const createForm = (data: FormsModel) => axios.post(`${CONDUIT_API}/admin/forms/post`, data);
+export const createForm = (data: FormsModel) => axios.post(`${CONDUIT_API}/admin/forms/new`, data);
 
-export const getFormReplies = (id: string) => axios.get(`${CONDUIT_API}/admin/forms/repiies/${id}`);
+export const getFormReplies = (id: string) => axios.get(`${CONDUIT_API}/admin/forms/replies/${id}`);
 
 export const updateForm = (id: string, data: FormsModel) =>
   axios.put(`${CONDUIT_API}/admin/forms/update/${id}`, data);

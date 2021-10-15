@@ -7,25 +7,26 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import FormsSettings from '../../components/forms/FormsSettings';
 import FormsLayout from '../../components/navigation/InnerLayouts/formsLayout';
 import { FormSettingsConfig } from '../../models/forms/FormsModels';
+import { asyncEditFormsConfig, asyncGetFormsConfig } from '../../redux/slices/formsSlice';
 
 const Settings = () => {
   const dispatch = useAppDispatch();
 
-  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
+  const { config: formsConfig } = useAppSelector((state) => state.formsSlice.data);
 
   useEffect(() => {
-    dispatch(asyncGetAuthenticationConfig());
+    dispatch(asyncGetFormsConfig());
   }, [dispatch]);
 
   const handleSettingsSave = (data: FormSettingsConfig) => {
-    const body = {
-      ...configData,
+    const config = {
+      ...formsConfig,
       ...data,
     };
-    dispatch(asyncUpdateAuthenticationConfig(body));
+    dispatch(asyncEditFormsConfig(config));
   };
 
-  return <FormsSettings handleSave={handleSettingsSave} settingsData={configData} />;
+  return <FormsSettings handleSave={handleSettingsSave} settingsData={formsConfig} />;
 };
 
 Settings.getLayout = function getLayout(page: ReactElement) {

@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
+import { enqueueErrorNotification } from '../../utils/useNotifier';
 import {
   createForm,
   getFormReplies,
@@ -45,10 +45,10 @@ export const asyncGetForms = createAsyncThunk('forms/get', async (args, thunkAPI
 
 export const asyncCreateForm = createAsyncThunk(
   'forms/create',
-  async (args: { formData: FormsModel }, thunkAPI) => {
+  async (formData: FormsModel, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createForm(args.formData);
+      const { data } = await createForm(formData);
       thunkAPI.dispatch(setAppDefaults());
 
       return data;
@@ -82,10 +82,10 @@ export const asyncGetFormReplies = createAsyncThunk(
 
 export const asyncEditForm = createAsyncThunk(
   'forms/edit',
-  async (args: { id: string; data: FormsModel }, thunkAPI) => {
+  async (args: { _id: string; data: FormsModel }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await updateForm(args.id, args.data);
+      const { data } = await updateForm(args._id, args.data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -96,7 +96,7 @@ export const asyncEditForm = createAsyncThunk(
   }
 );
 
-export const asyncGetFormConfig = createAsyncThunk('formsConfig/get', async (args, thunkAPI) => {
+export const asyncGetFormsConfig = createAsyncThunk('formsConfig/get', async (args, thunkAPI) => {
   thunkAPI.dispatch(setAppLoading(true));
   try {
     const { data } = await getFormsConfig();
@@ -111,12 +111,12 @@ export const asyncGetFormConfig = createAsyncThunk('formsConfig/get', async (arg
   }
 });
 
-export const asyncEditFormConfig = createAsyncThunk(
+export const asyncEditFormsConfig = createAsyncThunk(
   'formsConfig/edit',
-  async (args: { config: FormSettingsConfig }, thunkAPI) => {
+  async (config: FormSettingsConfig, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await updateFormsConfig(args.config);
+      const { data } = await updateFormsConfig(config);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -145,10 +145,10 @@ const formsSlice = createSlice({
     builder.addCase(asyncGetFormReplies.fulfilled, (state, action) => {
       state.data.replies = action.payload;
     });
-    builder.addCase(asyncGetFormConfig.fulfilled, (state, action) => {
+    builder.addCase(asyncGetFormsConfig.fulfilled, (state, action) => {
       state.data.config = action.payload;
     });
-    builder.addCase(asyncEditFormConfig.fulfilled, (state, action) => {
+    builder.addCase(asyncEditFormsConfig.fulfilled, (state, action) => {
       state.data.config = action.payload;
     });
   },

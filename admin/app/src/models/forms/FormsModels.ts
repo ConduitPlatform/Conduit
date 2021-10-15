@@ -1,7 +1,7 @@
 export interface FormsModel {
-  _id: string;
+  _id?: string;
   name: string;
-  fields: object;
+  fields: { [key: string]: string };
   forwardTo: string;
   emailField: string;
   enabled: boolean;
@@ -10,7 +10,7 @@ export interface FormsModel {
 export interface FormReplies {
   _id: string;
   form: FormsModel;
-  data: object;
+  data: string;
   possibleSpam: boolean;
 }
 
