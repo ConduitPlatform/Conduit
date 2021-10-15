@@ -40,7 +40,7 @@ const Create = () => {
   const [page, setPage] = useState<number>(0);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [formToView, setFormToView] = useState<FormsModel>(emptyFormState);
-  const [selectedForms, setSelectedForms] = useState<any>();
+  const [selectedForms, setSelectedForms] = useState<any>([]);
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
 
@@ -60,6 +60,7 @@ const Create = () => {
     setDrawer(false);
     setCreate(false);
     setEdit(false);
+    setFormToView(emptyFormState);
   };
 
   const saveFormChanges = (data: FormsModel) => {
@@ -169,6 +170,7 @@ const Create = () => {
       <Grid container justify="flex-end">
         <Grid item>
           <Button
+            style={{ marginBottom: '5px' }}
             variant="contained"
             color="primary"
             startIcon={<AddCircleOutline />}

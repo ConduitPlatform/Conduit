@@ -51,11 +51,30 @@ export const asyncCreateForm = createAsyncThunk(
       const { data } = await createForm(formData);
       thunkAPI.dispatch(setAppDefaults());
 
+      console.log(data);
+
       return data;
     } catch (error) {
       thunkAPI.dispatch(
         enqueueErrorNotification(`Could not create a new form:${getErrorData(error)}`)
       );
+      thunkAPI.dispatch(setAppLoading(false));
+      throw error;
+    }
+  }
+);
+
+export const asyncEditForm = createAsyncThunk(
+  'forms/edit',
+  async (args: { _id: string; data: FormsModel }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await updateForm(args._id, args.data);
+
+      thunkAPI.dispatch(setAppDefaults());
+      return { id: args.id, data: args.data };
+    } catch (error) {
+      thunkAPI.dispatch(enqueueErrorNotification(`Could not update form:${getErrorData(error)}`));
       thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
@@ -74,22 +93,6 @@ export const asyncGetFormReplies = createAsyncThunk(
       thunkAPI.dispatch(
         enqueueErrorNotification(`Could not get form replies:${getErrorData(error)}`)
       );
-      thunkAPI.dispatch(setAppLoading(false));
-      throw error;
-    }
-  }
-);
-
-export const asyncEditForm = createAsyncThunk(
-  'forms/edit',
-  async (args: { _id: string; data: FormsModel }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const { data } = await updateForm(args._id, args.data);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      thunkAPI.dispatch(enqueueErrorNotification(`Could not update form:${getErrorData(error)}`));
       thunkAPI.dispatch(setAppLoading(false));
       throw error;
     }
@@ -129,6 +132,18 @@ export const asyncEditFormsConfig = createAsyncThunk(
   }
 );
 
+const updateFormById = (updated: FormsModel, forms: FormsModel[]) => {
+  return forms.map((f) => {
+    if (f._id === updated._id) {
+      return {
+        ...updated,
+      };
+    } else {
+      return f;
+    }
+  });
+};
+
 const formsSlice = createSlice({
   name: 'forms',
   initialState,
@@ -139,8 +154,10 @@ const formsSlice = createSlice({
       state.data.count = action.payload.count;
     });
     builder.addCase(asyncCreateForm.fulfilled, (state, action) => {
-      state.data.forms = action.payload.forms;
-      state.data.count = action.payload.count;
+      state.data.forms.push(action.payload.form);
+    });
+    builder.addCase(asyncEditForm.fulfilled, (state, action) => {
+      state.data.forms = updateFormById(action.payload.data, state.data.forms);
     });
     builder.addCase(asyncGetFormReplies.fulfilled, (state, action) => {
       state.data.replies = action.payload;

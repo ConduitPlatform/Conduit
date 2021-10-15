@@ -15,7 +15,6 @@ import {
   FormControl,
   FormControlLabel,
   IconButton,
-  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -68,14 +67,17 @@ const useStyles = makeStyles((theme) => ({
   },
   fields: {
     marginTop: theme.spacing(0.5),
+    display: 'flex',
     marginBottom: theme.spacing(0.5),
     alignItems: 'center',
+    width: '80%',
+    justifyContent: 'center',
   },
 }));
 
 interface Props {
-  handleCreate: (templateState: FormsModel) => void;
-  handleSave: (templateState: FormsModel) => void;
+  handleCreate: (formsState: FormsModel) => void;
+  handleSave: (formsState: FormsModel) => void;
   form: FormsModel;
   edit: boolean;
   setEdit: (value: boolean) => void;
@@ -104,8 +106,6 @@ const ViewEditForm: React.FC<Props> = ({
   });
 
   const [inputFields, setInputFields] = useState([{ id: uuidV4(), key: '', type: '' }]);
-
-  console.log(formState);
 
   const handleAddField = () => {
     setInputFields([...inputFields, { id: uuidV4(), key: '', type: '' }]);
@@ -153,7 +153,6 @@ const ViewEditForm: React.FC<Props> = ({
     });
 
     if (create) {
-      delete formState._id;
       handleCreate({ ...formState, fields: fields });
     } else {
       handleSave({ ...formState, fields: fields });
@@ -228,8 +227,8 @@ const ViewEditForm: React.FC<Props> = ({
                 </Grid>
                 {inputFields.map((x, index: number) => {
                   return (
-                    <Grid key={index} className={classes.fields} container spacing={3}>
-                      <Grid item xs={5}>
+                    <Grid key={index} container spacing={2}>
+                      <Grid item xs={5} className={classes.fields}>
                         <TextField
                           name="key"
                           label="Key"
@@ -238,7 +237,7 @@ const ViewEditForm: React.FC<Props> = ({
                           onChange={handleFieldsChange(x.id)}
                         />
                       </Grid>
-                      <Grid item xs={5}>
+                      <Grid item xs={5} className={classes.fields}>
                         <FormControl style={{ minWidth: 200 }}>
                           <Select
                             variant="outlined"
@@ -252,7 +251,7 @@ const ViewEditForm: React.FC<Props> = ({
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid item xs={2}>
+                      <Grid item xs={2} className={classes.fields}>
                         <IconButton
                           color="primary"
                           size="small"
@@ -328,12 +327,8 @@ const ViewEditForm: React.FC<Props> = ({
                   <Typography variant="h6">{formState.name}</Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Template name:</Typography>
-                  <Typography variant="h6">{formState._id}</Typography>
-                </Grid>
-                <Grid item xs={12}>
                   <Typography variant="subtitle2">Fields:</Typography>
-                  <Typography variant="h6">Fields</Typography>
+                  <Typography variant="h6">Fields...</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Forward To:</Typography>
