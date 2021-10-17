@@ -71,8 +71,11 @@ export default class AdminModule extends IConduitAdmin {
     this.conduit
       .getState()
       .getKey('admin')
-      .then((r) => {
-        if (!r || r.length === 0) return;
+      .then((r: any) => {
+        if (!r || r.length === 0) {
+          self.refreshRouter();
+          return;
+        }
         let state = JSON.parse(r);
         if (state.routes) {
           state.routes.forEach((r: any) => {
@@ -85,8 +88,8 @@ export default class AdminModule extends IConduitAdmin {
 
             self._grpcRoutes[r.url] = r.routes;
           });
-          self.refreshRouter();
         }
+        self.refreshRouter();
       })
       .catch((err) => {
         console.log('Failed to recover state');
