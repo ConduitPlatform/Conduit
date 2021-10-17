@@ -56,30 +56,6 @@ export default class AdminModule extends IConduitAdmin {
     await this.handleDatabase().catch(console.log);
     this.adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
     const self = this;
-    this.conduit
-      .getRouter()
-      .registerDirectRouter(
-        '/admin/login',
-        (req: Request, res: Response, next: NextFunction) =>
-          self.adminHandlers.loginAdmin(req, res, next).catch(next)
-      );
-    this.conduit
-      .getRouter()
-      .registerDirectRouter(
-        '/admin/modules',
-        (req: Request, res: Response, next: NextFunction) => {
-          let response: any[] = [];
-          // this is used here as such, because the config manager is simply the config package
-          // todo update the config manager interface so that we don't need these castings
-          ((this.conduit.getConfigManager() as any).registeredModules as Map<
-            string,
-            string
-          >).forEach((val: any, key: any) => {
-            response.push(val);
-          });
-          res.json(response);
-        }
-      );
 
     // todo fix the middlewares
     //@ts-ignore
@@ -482,6 +458,45 @@ export default class AdminModule extends IConduitAdmin {
     const self = this;
     this.router = Router();
     this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
+    this.router.post('/login', (req: Request, res: Response, next: NextFunction) =>
+      self.adminHandlers.loginAdmin(req, res, next).catch(next)
+    );
+    this.router.get('/modules', (req: Request, res: Response, next: NextFunction) => {
+      let response: any[] = [];
+      // this is used here as such, because the config manager is simply the config package
+      // todo update the config manager interface so that we don't need these castings
+      ((this.conduit.getConfigManager() as any).registeredModules as Map<
+        string,
+        string
+      >).forEach((val: any, key: any) => {
+        response.push(val);
+      });
+      res.json(response);
+    });
+    // this.conduit
+    //   .getRouter()
+    //   .registerDirectRouter(
+    //     '/admin/login',
+    //     (req: Request, res: Response, next: NextFunction) =>
+    //       self.adminHandlers.loginAdmin(req, res, next).catch(next)
+    //   );
+    // this.conduit
+    //   .getRouter()
+    //   .registerDirectRouter(
+    //     '/admin/modules',
+    //     (req: Request, res: Response, next: NextFunction) => {
+    //       let response: any[] = [];
+    //       // this is used here as such, because the config manager is simply the config package
+    //       // todo update the config manager interface so that we don't need these castings
+    //       ((this.conduit.getConfigManager() as any).registeredModules as Map<
+    //         string,
+    //         string
+    //         >).forEach((val: any, key: any) => {
+    //         response.push(val);
+    //       });
+    //       res.json(response);
+    //     }
+    //   );
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
     this.router.post('/create', (req: Request, res: Response, next: NextFunction) =>
       self.adminHandlers.createAdmin(req, res, next).catch(next)
