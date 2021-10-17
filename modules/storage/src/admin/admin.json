@@ -6,6 +6,16 @@
       "protoName": "createFile"
     },
     {
+      "path": "/folder",
+      "method": "POST",
+      "protoName": "createFolder"
+    },
+    {
+      "path": "/folder",
+      "method": "GET",
+      "protoName": "getFolders"
+    },
+    {
       "path": "/file/:id",
       "method": "PUT",
       "protoName": "updateFile"

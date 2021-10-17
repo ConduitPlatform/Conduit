@@ -28,6 +28,46 @@ export class FileHandlers {
     this.storageProvider = storageProvider;
   }
 
+  async createFolder(call: RouterRequest, callback: RouterResponse) {
+    const { name, isPublic } = JSON.parse(call.request.params);
+
+    if (isNil(name)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Name is required',
+      });
+    }
+    let folder = await this.database.findOne('Folder', { name });
+    if (isNil(folder)) {
+      folder = await this.database.create('Folder', { name, isPublic });
+      let exists = await this.storageProvider.folderExists(name);
+      if (!exists) {
+        await this.storageProvider.createFolder(name);
+      }
+    } else {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Folder already exists',
+      });
+    }
+    return callback(null, { result: JSON.stringify(folder) });
+  }
+
+  async getFolders(call: RouterRequest, callback: RouterResponse) {
+    const { skip, limit } = JSON.parse(call.request.params);
+    if (isNil(skip) || isNil(limit)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Skip and limit are required',
+      });
+    }
+
+    let folders = await this.database.findMany('Folder', {}, undefined, skip, limit);
+    let folderCount = await this.database.countDocuments('Folder', {});
+
+    return callback(null, { result: JSON.stringify({ folders, folderCount }) });
+  }
+
   async createFile(call: RouterRequest, callback: RouterResponse) {
     const { name, data, folder, mimeType, isPublic } = JSON.parse(call.request.params);
 
