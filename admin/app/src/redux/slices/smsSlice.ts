@@ -3,22 +3,11 @@ import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
 import { sendSmsRequest } from '../../http/SmsRequests';
+import { ISmsConfig } from '../../models/sms/SmsModels';
 
 interface ISmsSlice {
   data: {
-    config: {
-      active: boolean;
-      providerName: string;
-      twilio: {
-        phoneNumber: string;
-        accountSID: string;
-        authToken: string;
-        verify: {
-          active: boolean;
-          serviceSid: string;
-        };
-      };
-    };
+    config: ISmsConfig;
   };
 }
 
