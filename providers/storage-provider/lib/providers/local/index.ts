@@ -1,6 +1,6 @@
 import { IStorageProvider } from '../../interfaces/IStorageProvider';
 import { StorageConfig } from '../../interfaces/StorageConfig';
-import { existsSync, writeFile, readFile, mkdir, unlink, rename, access } from 'fs';
+import { access, existsSync, mkdir, readFile, rename, unlink, writeFile } from 'fs';
 import { resolve } from 'path';
 
 export class LocalStorage implements IStorageProvider {
@@ -45,11 +45,6 @@ export class LocalStorage implements IStorageProvider {
         else res(true);
       });
     });
-  }
-
-  folder(name: string): IStorageProvider {
-    this._storagePath = resolve(this._rootStoragePath, name);
-    return this;
   }
 
   folderExists(name: string): Promise<boolean | Error> {
@@ -134,6 +129,30 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getSignedUrl(fileName: string): Promise<any> {
+    throw new Error('Method not implemented!| Error');
+  }
+
+  container(name: string): IStorageProvider {
+    throw new Error('Method not implemented!| Error');
+  }
+
+  containerExists(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented!| Error');
+  }
+
+  createContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented!| Error');
+  }
+
+  moveToContainer(filename: string, newContainer: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented!| Error');
+  }
+
+  moveToContainerAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
     throw new Error('Method not implemented!| Error');
   }
 }

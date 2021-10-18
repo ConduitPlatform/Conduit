@@ -1,7 +1,7 @@
 export default {
   active: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   provider: {
     type: String,
@@ -10,6 +10,14 @@ export default {
   storagePath: {
     type: String,
     default: '/var/tmp',
+  },
+  defaultContainer: {
+    type: String,
+    default: 'conduit',
+  },
+  allowContainerCreation: {
+    type: Boolean,
+    default: true,
   },
   google: {
     serviceAccountKeyPath: {

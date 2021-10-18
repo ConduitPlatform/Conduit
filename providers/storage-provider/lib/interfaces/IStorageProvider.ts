@@ -9,14 +9,22 @@ export interface IStorageProvider {
    */
   createFolder(name: string): Promise<boolean | Error>;
 
-  /**
-   * Used to switch the current folder.
-   * Ex. storage.folder('photos').file('test')
-   * @param name For the folder
-   */
-  folder(name: string): IStorageProvider;
-
   folderExists(name: string): Promise<boolean | Error>;
+
+  /**
+   * Used to create a new container
+   * @param name For the container
+   */
+  createContainer(name: string): Promise<boolean | Error>;
+
+  /**
+   * Used to switch the current container.
+   * Ex. storage.container('photos').file('test')
+   * @param name For the container
+   */
+  container(name: string): IStorageProvider;
+
+  containerExists(name: string): Promise<boolean | Error>;
 
   delete(fileName: string): Promise<boolean | Error>;
 
@@ -36,5 +44,13 @@ export interface IStorageProvider {
     currentFilename: string,
     newFilename: string,
     newFolder: string
+  ): Promise<boolean | Error>;
+
+  moveToContainer(filename: string, newContainer: string): Promise<boolean | Error>;
+
+  moveToContainerAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newContainer: string
   ): Promise<boolean | Error>;
 }
