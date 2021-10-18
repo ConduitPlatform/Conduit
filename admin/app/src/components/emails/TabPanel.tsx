@@ -13,6 +13,8 @@ import { EmailTemplateType } from '../../models/emails/EmailModels';
 import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
 import { Button, Paper } from '@material-ui/core';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -77,6 +79,7 @@ const TabPanel: React.FC<Props> = ({
   setCreate,
 }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const [templateState, setTemplateState] = useState<EmailTemplateType>({
     _id: 'newTemplate_id',
@@ -135,6 +138,21 @@ const TabPanel: React.FC<Props> = ({
     });
   };
 
+  const handleDisabled = () => {
+    return templateState.name && templateState.subject && templateState.body;
+  };
+
+  const handleSenderChange = (value: string) => {
+    if (value.includes('@')) {
+      dispatch(enqueueInfoNotification('The mail server is already set on the config'));
+      return;
+    }
+    setTemplateState({
+      ...templateState,
+      sender: value,
+    });
+  };
+
   return (
     <Container className={classes.marginTop}>
       <Box>
@@ -159,15 +177,10 @@ const TabPanel: React.FC<Props> = ({
                 <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
-                    label={'*Sender'}
+                    label={'Sender(optional)'}
                     variant={'outlined'}
                     value={templateState.sender}
-                    onChange={(event) => {
-                      setTemplateState({
-                        ...templateState,
-                        sender: event.target.value,
-                      });
-                    }}
+                    onChange={(event) => handleSenderChange(event.target.value)}
                   />
                 </Grid>
               </>
@@ -214,7 +227,8 @@ const TabPanel: React.FC<Props> = ({
                 variant="contained"
                 color="primary"
                 startIcon={<Save />}
-                onClick={handleSaveClick}>
+                onClick={handleSaveClick}
+                disabled={!handleDisabled()}>
                 Save
               </Button>
             </>

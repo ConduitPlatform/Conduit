@@ -97,32 +97,30 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
     <Box className={classes.root}>
       <Grid container justify="center">
         <FormControl variant="outlined" className={classes.formControl}>
-          <InputLabel id="demo-simple-select-outlined-label">
-            {select === -1 ? 'Select template' : 'Selected template'}
-          </InputLabel>
-          <Select
-            labelId="demo-simple-select-outlined-label"
-            id="demo-simple-select-outlined"
-            label="Select your template"
-            value={select}
-            onChange={handleTemplateChange}>
+          <InputLabel>{select === -1 ? 'Select template' : 'Selected template'}</InputLabel>
+          <Select label="Select your template" value={select} onChange={handleTemplateChange}>
             <MenuItem value={-1}>
               <em>None</em>
             </MenuItem>
-            {externalTemplates?.map((template, index: number) => (
-              <MenuItem key={index} value={template._id}>
-                {template.name}
-              </MenuItem>
-            ))}
+            {externalTemplates.length > 0 &&
+              externalTemplates.map((template, index: number) => (
+                <MenuItem key={index} value={template._id}>
+                  {template.name}
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
       </Grid>
       <Divider className={classes.divider} />
-      <Typography className={classes.header}>
-        {selectedTemplate.name === ''
-          ? 'Select a template to proceed with the import'
-          : 'Preview your imported template'}
-      </Typography>
+      {externalTemplates.length > 0 ? (
+        <Typography className={classes.header}>
+          {selectedTemplate.name === ''
+            ? 'Select a template to proceed with the import'
+            : 'Preview your imported template'}
+        </Typography>
+      ) : (
+        <Typography className={classes.header}>No external templates at the moment</Typography>
+      )}
       {selectedTemplate.name !== '' && (
         <Grid container spacing={2} justify="space-around" className={classes.templateInfo}>
           <Grid item xs={12}>
