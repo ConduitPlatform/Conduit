@@ -1,15 +1,17 @@
 import { RedisManager } from './RedisManager';
 import { Redis } from 'ioredis';
+import crypto from 'crypto';
 
 export class EventBus {
   private _clientSubscriber: Redis;
   private _clientPublisher: Redis;
   private _subscribedChannels: { [listener: string]: ((message: string) => void)[] };
-
+  private _signature: string;
   constructor(redisManager: RedisManager) {
     this._subscribedChannels = {};
     this._clientSubscriber = redisManager.getClient({ keyPrefix: '_bus' });
     this._clientPublisher = redisManager.getClient({ keyPrefix: '_bus' });
+    this._signature = crypto.randomBytes(20).toString('hex');
     this._clientSubscriber.on('ready', () => {
       console.log('The Bus is in the station...hehe');
     });
@@ -25,13 +27,16 @@ export class EventBus {
     const self = this;
     this._clientSubscriber.on('message', (channel: string, message: string) => {
       if (channel !== channelName) return;
-      self._subscribedChannels[channelName].forEach((fn) => {
-        fn(message);
-      });
+      if (message.indexOf(self._signature) === -1) {
+        self._subscribedChannels[channelName].forEach((fn) => {
+          fn(message.slice(message.indexOf('CND_Signature:')));
+        });
+      }
     });
   }
 
-  publish(channelName: string, message: any) {
+  publish(channelName: string, message: string) {
+    message = message + `CND_Signature:${this._signature}`;
     this._clientPublisher.publish(channelName, message);
   }
 }
