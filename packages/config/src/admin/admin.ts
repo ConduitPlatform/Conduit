@@ -12,7 +12,6 @@ export class AdminHandlers {
   ) {
     this.database = grpcSdk.databaseProvider;
   }
-
   async getModules(req: Request, res: Response) {
     const registeredModules = (req as any).conduit.registeredModules;
     if (registeredModules.size !== 0) {
@@ -70,6 +69,15 @@ export class AdminHandlers {
           });
         finalConfig = dbConfig.moduleConfigs.email;
         break;
+      case 'forms':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.forms;
+        break;
       case 'storage':
         if (!registeredModules.has(module))
           return res.status(400).json({
@@ -78,6 +86,33 @@ export class AdminHandlers {
             message: 'Module not available',
           });
         finalConfig = dbConfig.moduleConfigs.storage;
+        break;
+      case 'payments':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.payments;
+        break;
+      case 'chat':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.chat;
+        break;
+      case 'sms':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.sms;
         break;
       case 'push-notifications':
         if (!registeredModules.has(module))
@@ -144,6 +179,39 @@ export class AdminHandlers {
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
+      case 'payments':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.payments))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = await this.grpcSdk.payments
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
+      case 'forms':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.forms))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = await this.grpcSdk.forms
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
+      case 'chat':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.chat))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = await this.grpcSdk.chat
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
       case 'email':
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.emailProvider))
           return res.status(400).json({
@@ -174,6 +242,17 @@ export class AdminHandlers {
             message: 'Module not available',
           });
         updatedConfig = this.grpcSdk.storage
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
+      case 'sms':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.sms))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = this.grpcSdk.sms
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
