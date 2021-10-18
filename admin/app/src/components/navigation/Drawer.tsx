@@ -1,18 +1,15 @@
 import React from 'react';
 import { Paper, Theme, Typography } from '@material-ui/core';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
 import { ExitToApp, Settings } from '@material-ui/icons';
-import Router from 'next/router';
+import Router, { useRouter } from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Modules from '../modules/Modules';
-import Link from 'next/link';
-import clsx from 'clsx';
+import CustomListItem from './CustomListItem';
 
 const useStyles = makeStyles((theme: Theme) => ({
   drawer: {
@@ -31,43 +28,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     flexDirection: 'column',
     justifyContent: 'space-between',
   },
-  toolbar: theme.mixins.toolbar,
-  listItem: {
-    minHeight: theme.spacing(4),
-    borderRadius: theme.spacing(0.5),
-    marginBottom: theme.spacing(2),
-    color: theme.palette.secondary.main,
-    borderWidth: 1,
-    paddingLeft: theme.spacing(0.5),
-    paddingRight: theme.spacing(0.5),
-    '&:hover': {
-      borderWidth: 1,
-    },
-    '&:focus': {
-      borderWidth: 1,
-    },
-    '&.Mui-selected': {
-      color: theme.palette.common.white,
-      borderWidth: 1,
-      '&:hover': {
-        background: theme.palette.secondary.dark,
-        borderWidth: 1,
-      },
-      '&:focus': {
-        background: theme.palette.secondary.dark,
-        borderWidth: 1,
-      },
-    },
-  },
-  listItemText: {
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  listItemIcon: {
-    minWidth: theme.spacing(4),
-    marginRight: theme.spacing(1),
-    color: 'inherit',
-  },
   logoutContainer: {
     margin: 0,
     paddingLeft: theme.spacing(1),
@@ -81,6 +41,7 @@ interface Props {
 const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   const { enabledModules, disabledModules } = useAppSelector((state) => state.appAuthSlice.data);
 
@@ -98,14 +59,12 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
         <List component="nav">
           <Divider />
           <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
-          <Link href={`/settings/clientsdk`} passHref>
-            <ListItem button className={classes.listItem} selected={itemSelected === 'settings'}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Settings color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
+          <CustomListItem
+            selected={itemSelected === 'settings'}
+            icon={<Settings color={'inherit'} />}
+            title="Settings"
+            onClick={() => router.replace('/settings/clientsdk')}
+          />
           <Divider />
           {disabledModules.length > 0 ? (
             <>
@@ -116,15 +75,12 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
             <></>
           )}
         </List>
-        <ListItem
-          button
-          className={clsx(classes.listItem, classes.logoutContainer)}
-          onClick={handleLogout}>
-          <ListItemIcon className={classes.listItemIcon}>
-            <ExitToApp color={'inherit'} />
-          </ListItemIcon>
-          <ListItemText primary={'Log out'} classes={{ primary: classes.listItemText }} />
-        </ListItem>
+        <CustomListItem
+          icon={<ExitToApp color={'inherit'} />}
+          title="Log out"
+          onClick={() => handleLogout()}
+          className={classes.logoutContainer}
+        />
       </div>
     </Paper>
   );
