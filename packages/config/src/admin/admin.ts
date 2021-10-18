@@ -79,6 +79,15 @@ export class AdminHandlers {
           });
         finalConfig = dbConfig.moduleConfigs.storage;
         break;
+      case 'sms':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.sms;
+        break;
       case 'push-notifications':
         if (!registeredModules.has(module))
           return res.status(400).json({
@@ -174,6 +183,17 @@ export class AdminHandlers {
             message: 'Module not available',
           });
         updatedConfig = this.grpcSdk.storage
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
+      case 'sms':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.sms))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = this.grpcSdk.sms
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
