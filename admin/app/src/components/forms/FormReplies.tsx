@@ -36,11 +36,6 @@ const useStyles = makeStyles((theme) => ({
   marginTop: {
     marginTop: '60px',
   },
-  centeredImg: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   fields: {
     marginTop: theme.spacing(0.5),
     display: 'flex',
@@ -122,7 +117,7 @@ const FormReplies: React.FC<Props> = ({ repliesForm }) => {
               id="panel1a-header">
               <Grid container justify="space-around">
                 <Grid item xs={9}>
-                  <Typography className={classes.heading}>Reply {index + 1}</Typography>
+                  <Typography>Reply {index + 1}</Typography>
                 </Grid>
                 <Grid item xs={3}>
                   {reply.possibleSpam && (
