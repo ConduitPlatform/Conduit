@@ -6,7 +6,7 @@ interface Props {
   page: number;
   limit: number;
   handlePageChange: (event: React.MouseEvent<HTMLButtonElement> | null, page: number) => void;
-  handleLimitChange: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
+  handleLimitChange: (value: number) => void;
   count: number;
 }
 
@@ -27,7 +27,7 @@ const Paginator: React.FC<Props> = ({
         page={page}
         onChangePage={handlePageChange}
         rowsPerPage={limit}
-        onChangeRowsPerPage={handleLimitChange}
+        onChangeRowsPerPage={(event) => handleLimitChange(parseInt(event.target.value))}
       />
     </Grid>
   );

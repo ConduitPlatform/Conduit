@@ -13,7 +13,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import { Visibility, VisibilityOff } from '@material-ui/icons';
 import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
-import { SettingsStateTypes } from '../../models/authentication/AuthModels';
+import { SettingsStateTypes, SignInMethods } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   handleSave: (data: SettingsStateTypes) => void;
-  settingsData: any;
+  settingsData: SignInMethods | null;
 }
 
 const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
@@ -65,6 +65,9 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   }, [settingsData]);
 
   const handleCancel = () => {
+    if (!settingsData) {
+      return;
+    }
     setEdit(false);
     setSettingsState({
       active: settingsData.active,

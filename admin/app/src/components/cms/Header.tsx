@@ -106,8 +106,8 @@ const Header: FC<Props> = ({
     }
   }, [authentication, crudOperations, name]);
 
-  const handleDataName = (event: React.ChangeEvent<{ value: any }>) => {
-    setSchemaName(event.target.value);
+  const handleDataName = (value: string) => {
+    setSchemaName(value);
   };
 
   const handleData = () => {
@@ -136,7 +136,7 @@ const Header: FC<Props> = ({
           className={clsx(classes.input, classes.colorWhite)}
           id="data-name"
           placeholder={'Schema name'}
-          onChange={handleDataName}
+          onChange={(event) => handleDataName(event.target.value)}
           disableUnderline
           value={schemaName}
           readOnly={readOnly}
