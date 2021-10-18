@@ -15,7 +15,7 @@ export default new ConduitSchema(
     },
     container: {
       type: TYPE.String,
-      required:true,
+      required: true,
       systemRequired: true,
     },
     isPublic: {
