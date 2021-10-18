@@ -19,7 +19,7 @@ const useNotifier = () => {
 
 export default useNotifier;
 
-export const enqueueErrorNotification = (message) => {
+export const enqueueErrorNotification = (message: string) => {
   const options = { variant: 'error', message: message ? message : 'Something went wrong' };
   return addSnackbar({
     message: JSON.stringify(options),
@@ -31,7 +31,7 @@ export const enqueueErrorNotification = (message) => {
   });
 };
 
-export const enqueueInfoNotification = (message) => {
+export const enqueueInfoNotification = (message: string) => {
   const options = { variant: 'info', message: message ? message : 'Info' };
   return addSnackbar({
     message: JSON.stringify(options),
@@ -43,7 +43,7 @@ export const enqueueInfoNotification = (message) => {
   });
 };
 
-export const enqueueSuccessNotification = (message) => {
+export const enqueueSuccessNotification = (message: string) => {
   const options = { variant: 'success', message: message ? message : 'Success' };
   return addSnackbar({
     message: JSON.stringify(options),

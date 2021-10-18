@@ -1,9 +1,9 @@
-export default function slugify(string) {
+export default function slugify(value: string) {
   const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/-,:;';
   const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------';
   const p = new RegExp(a.split('').join('|'), 'g');
 
-  return string
+  return value
     .toString()
     .toLowerCase()
     .replace(/\s+/g, '_') // Replace spaces with -

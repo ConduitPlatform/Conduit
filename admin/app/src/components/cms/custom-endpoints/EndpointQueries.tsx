@@ -9,7 +9,7 @@ import { TreeView } from '@material-ui/lab';
 import MinusSquare from '../../../assets/svgs/MinusSquare';
 import PlusSquare from '../../../assets/svgs/PlusSquare';
 import CloseSquare from '../../../assets/svgs/CloseSquare';
-import { deepClone } from '../../utils/deepClone';
+import { deepClone } from '../../../utils/deepClone';
 
 const useStyles = makeStyles({
   root: {

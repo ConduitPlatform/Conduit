@@ -29,7 +29,7 @@ import {
   handleBlockTitle,
   handleDeleteDescription,
   handleDeleteTitle,
-} from '../../components/utils/userDialog';
+} from '../../utils/userDialog';
 import DeleteIcon from '@material-ui/icons/Delete';
 import BlockIcon from '@material-ui/icons/Block';
 import { AddCircle } from '@material-ui/icons';
