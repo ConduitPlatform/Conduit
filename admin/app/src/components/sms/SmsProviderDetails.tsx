@@ -1,5 +1,5 @@
 import { Container } from '@material-ui/core';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
@@ -12,7 +12,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
 import { useAppSelector } from '../../redux/store';
-import { ISmsConfig, ISmsProviders } from '../../models/sms/SmsModels';
+import { ChildConfigKey, ConfigKey, ISmsConfig, ISmsProviders } from '../../models/sms/SmsModels';
 import SmsProviderDetailsFields from './SmsProviderDetailsFields';
 
 const useStyles = makeStyles((theme) => ({
@@ -44,17 +44,13 @@ const useStyles = makeStyles((theme) => ({
 
 const providers: 'twilio'[] = ['twilio'];
 
-interface Props {
-  // handleSave: (data: EmailSettings) => void;
-}
-
-const SmsProviderDetails: React.FC<Props> = () => {
+const SmsProviderDetails: React.FC = () => {
   const classes = useStyles();
 
   const { config } = useAppSelector((state) => state.smsSlice.data);
 
   const [configState, setConfigState] = useState<ISmsConfig>({
-    active: true, //change this to false
+    active: false,
     providerName: ISmsProviders.twilio,
     twilio: {
       phoneNumber: '',
@@ -67,37 +63,12 @@ const SmsProviderDetails: React.FC<Props> = () => {
     },
   });
 
-  // const initializeSettings = useCallback(() => {
-  //   let settingsObj: EmailSettings = { ...configState };
-  //   const initial: EmailSettings = { ...settings };
-  //
-  //   settingsObj = { ...settingsObj, ...initial };
-  //
-  //   transportProviders.forEach((provider) => {
-  //     const providerSettings: MailgunSettings | SmtpSettings | MandrillSettings | SendgridSettings =
-  //       {
-  //         ...settingsObj.transportSettings[provider],
-  //         ...initial.transportSettings[provider],
-  //       };
-  //
-  //     settingsObj.transportSettings = {
-  //       ...settingsObj.transportSettings,
-  //       [provider]: {
-  //         ...providerSettings,
-  //       },
-  //     };
-  //   });
-  //
-  //   return settingsObj;
-  // }, [settings]);
-
-  // useEffect(() => {
-  //   if (!settings) {
-  //     return;
-  //   }
-  //   const newSettings = initializeSettings();
-  //   setConfigState(newSettings);
-  // }, [initializeSettings, settings]);
+  useEffect(() => {
+    if (!config) {
+      return;
+    }
+    setConfigState(config);
+  }, [config]);
 
   const handleCancel = () => {
     setConfigState({
@@ -111,47 +82,31 @@ const SmsProviderDetails: React.FC<Props> = () => {
     // handleSave(configState);
   };
 
-  const onChange = () =>
-    // value: string,
-    // key: string,
-    // provider: TransportProviders,
-    // authItem?: string
-    {
-      // if (authItem) {
-      //   const smtpProvider: SmtpSettings = configState.transportSettings[provider] as SmtpSettings;
-      //   if (!smtpProvider) {
-      //     return;
-      //   }
-      //   const newSettings: ITransportSettings = {
-      //     ...configState.transportSettings,
-      //     smtp: {
-      //       ...smtpProvider,
-      //       auth: {
-      //         ...smtpProvider.auth,
-      //         [authItem]: value,
-      //       },
-      //     },
-      //   };
-      //   setConfigState({
-      //     ...configState,
-      //     transportSettings: newSettings,
-      //   });
-      //   return;
-      // }
-      //
-      // const newSettings = {
-      //   ...configState.transportSettings,
-      //   [provider]: {
-      //     ...configState.transportSettings[provider],
-      //     [key]: value,
-      //   },
-      // };
-      //
-      // setConfigState({
-      //   ...configState,
-      //   transportSettings: newSettings,
-      // });
+  const onChange = (value: string | boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
+    const innerConfigState = configState[configState.providerName];
+    if (childKey) {
+      const newConfig = {
+        ...configState,
+        [configState.providerName]: {
+          ...innerConfigState,
+          verify: {
+            ...innerConfigState.verify,
+            [childKey]: value,
+          },
+        },
+      };
+      setConfigState(newConfig);
+      return;
+    }
+    const newConfig = {
+      ...configState,
+      [configState.providerName]: {
+        ...innerConfigState,
+        [key]: value,
+      },
     };
+    setConfigState(newConfig);
+  };
 
   const renderSettingsFields = () => {
     return (
@@ -183,7 +138,7 @@ const SmsProviderDetails: React.FC<Props> = () => {
         <Divider className={classes.divider} />
         <SmsProviderDetailsFields
           data={configState[configState.providerName]}
-          // onChange={onChange}
+          onChange={onChange}
         />
       </>
     );

@@ -3,7 +3,7 @@ import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
 import { sendSmsRequest } from '../../http/SmsRequests';
-import { ISmsConfig } from '../../models/sms/SmsModels';
+import { ISmsConfig, ISmsProviders } from '../../models/sms/SmsModels';
 
 interface ISmsSlice {
   data: {
@@ -14,8 +14,8 @@ interface ISmsSlice {
 const initialState: ISmsSlice = {
   data: {
     config: {
-      active: false,
-      providerName: '',
+      active: true,
+      providerName: ISmsProviders.twilio,
       twilio: {
         phoneNumber: '',
         accountSID: '',

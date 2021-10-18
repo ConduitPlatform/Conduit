@@ -1,4 +1,5 @@
 export type ConfigKey = keyof TwilioConfig;
+export type ChildConfigKey = keyof TwilioConfig['verify'];
 
 export interface TwilioConfig {
   phoneNumber: string;

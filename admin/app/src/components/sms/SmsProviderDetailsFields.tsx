@@ -3,8 +3,9 @@ import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { ConfigKey, TwilioConfig } from '../../models/sms/SmsModels';
-import { isString } from 'lodash';
+import { ChildConfigKey, ConfigKey, TwilioConfig } from '../../models/sms/SmsModels';
+import { isString, isBoolean } from 'lodash';
+import Switch from '@material-ui/core/Switch';
 
 const useStyles = makeStyles((theme) => ({
   fieldSpace: {
@@ -12,22 +13,38 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+//data.verify needs to be dynamic in the future
+
 interface Props {
   data: TwilioConfig;
+  onChange: (value: string | boolean, key: ConfigKey, childKey?: ChildConfigKey) => void;
 }
 
-const SmsProviderDetailsFields: React.FC<Props> = ({ data }) => {
+const SmsProviderDetailsFields: React.FC<Props> = ({ data, onChange }) => {
   const classes = useStyles();
 
-  const handleTextField = (key: string, childKey?: string) => {
+  const handleInput = (isBoolean: boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
+    if (isBoolean) {
+      return (
+        <>
+          <Typography variant={'body1'}>{childKey}:</Typography>
+          <Switch
+            size="medium"
+            color="primary"
+            checked={childKey ? !!data.verify[childKey] : !!data[key]}
+            onChange={(event) => onChange(event.target.checked, key, childKey)}
+          />
+        </>
+      );
+    }
     return (
       <TextField
-        // value={accountSID}
-        // onChange={(e) => setAccountSID(e.target.value)}
+        value={childKey ? data.verify[childKey] : data[key]}
+        onChange={(event) => onChange(event.target.value, key, childKey)}
         className={classes.fieldSpace}
         required
-        // id="sid"
-        label={key}
+        id={`${key}${childKey}`}
+        label={childKey ? childKey : key}
         variant="outlined"
       />
     );
@@ -38,18 +55,18 @@ const SmsProviderDetailsFields: React.FC<Props> = ({ data }) => {
     if (keys && Array.isArray(keys) && keys.length > 0) {
       return keys.map((key, index) => {
         if (!isString(data[key])) {
-          const childKeys = Object.keys(data[key]);
+          const childKeys = Object.keys(data[key]) as ChildConfigKey[];
           return childKeys.map((childKey, index) => {
             return (
-              <Grid item xs={12} key={`${childKey}${index}`}>
-                {handleTextField(key, childKey)}
+              <Grid container alignItems="center" item xs={12} key={`${childKey}${index}`}>
+                {handleInput(isBoolean(data.verify[childKey]), key, childKey)}
               </Grid>
             );
           });
         }
         return (
           <Grid item xs={12} key={`${key}${index}`}>
-            {handleTextField(key)}
+            {handleInput(isBoolean(data[key]), key)}
           </Grid>
         );
       });
