@@ -1,4 +1,4 @@
-import { AuthUser } from '../../models/authentication/AuthModels';
+import { AuthUser } from '../models/authentication/AuthModels';
 
 export const handleBlockTitle = (multiple: boolean, user: AuthUser) => {
   if (multiple) {

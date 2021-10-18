@@ -64,6 +64,11 @@ module.exports = (phase) => {
         destination: '/push-notifications/view',
         permanent: true,
       },
+      {
+        source: '/sms',
+        destination: '/sms/send',
+        permanent: true,
+      },
     ];
   };
 

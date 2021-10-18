@@ -124,7 +124,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
     }
   }, [configData]);
 
-  const localmemo = useMemo(() => {
+  const localMemo = useMemo(() => {
     return (
       <ReusableAccordion
         name={'local'}
@@ -182,7 +182,7 @@ const AuthAccordion: React.FC<Props> = ({ configData, handleData, ...rest }) => 
           Status
         </Typography>
       </Box>
-      {localmemo}
+      {localMemo}
       {googleMemo}
       {facebookMemo}
       {twitchMemo}

@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
+
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
@@ -38,12 +39,23 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
-    const externalTemplates = await this.emailService.getExternalTemplates();
+    const [err, externalTemplates] = await to(
+      this.emailService.getExternalTemplates() as any
+    );
+    if (!isNil(err)) {
+      return callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
+    }
     if (isNil(externalTemplates)) {
-      throw new Error(`External templates didnt found!`);
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'Templates not found',
+      });
     }
     let templateDocuments: any = [];
-    externalTemplates.forEach((element) => {
+    (externalTemplates as any).forEach((element: any) => {
       templateDocuments.push({
         _id: element.id,
         name: element.name,
@@ -91,6 +103,7 @@ export class AdminHandlers {
 
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
+
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
     const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
@@ -100,7 +113,9 @@ export class AdminHandlers {
     const subject_vars = getHBValues(subject);
 
     let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
-    variables =  variables.filter((value:any,index:any) => variables.indexOf(value) === index);
+    variables = variables.filter(
+      (value: any, index: any) => variables.indexOf(value) === index
+    );
     if (isNil(name) || isNil(subject) || isNil(body)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -191,8 +206,12 @@ export class AdminHandlers {
       }
     });
 
-    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(Object.keys(getHBValues(params.subject)));
-    templateDocument['variables'] =  templateDocument['variables'].filter((value:any,index:any) => templateDocument['variables'].indexOf(value) === index);
+    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(
+      Object.keys(getHBValues(params.subject))
+    );
+    templateDocument['variables'] = templateDocument['variables'].filter(
+      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
+    );
     const updatedTemplate = await this.database
       .findByIdAndUpdate('EmailTemplate', id, templateDocument)
       .catch((e: any) => (errorMessage = e.message));

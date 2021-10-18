@@ -1,102 +1,49 @@
 import React from 'react';
-import { Drawer, Theme } from '@material-ui/core';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
+import { Paper, Theme, Typography } from '@material-ui/core';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-import { ExitToApp, Menu, ChevronLeft, Settings } from '@material-ui/icons';
-import clsx from 'clsx';
-import Router from 'next/router';
+import { ExitToApp, Settings } from '@material-ui/icons';
+import Router, { useRouter } from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Modules from '../modules/Modules';
-import Link from 'next/link';
-
-const drawerWidth = 200;
-const drawerWidthClosed = 52;
+import CustomListItem from './CustomListItem';
 
 const useStyles = makeStyles((theme: Theme) => ({
-  drawerOpen: {
-    width: drawerWidth,
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+  drawer: {
+    width: 224,
+    display: 'flex',
+    flexDirection: 'column',
   },
-  drawerClose: {
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    overflowX: 'hidden',
-    width: drawerWidthClosed,
-  },
-  toolbar: theme.mixins.toolbar,
-  listItem: {
+  title: {
     color: theme.palette.secondary.main,
-    borderWidth: '1px',
-    paddingLeft: 4,
-    paddingRight: 4,
-    '&:hover': {
-      borderWidth: '1px',
-    },
-    '&:focus': {
-      borderWidth: '1px',
-    },
-    '&.Mui-selected': {
-      color: theme.palette.common.white,
-      borderWidth: '1px',
-      '&:hover': {
-        background: theme.palette.secondary.dark,
-        borderWidth: '1px',
-      },
-      '&:focus': {
-        background: theme.palette.secondary.dark,
-        borderWidth: '1px',
-      },
-    },
+    paddingTop: theme.spacing(2),
   },
-  listItemText: {
-    fontWeight: 'bold',
-    fontSize: 12,
+  listContainer: {
+    padding: theme.spacing(1),
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
-  listItemIcon: {
-    minWidth: 36,
-    marginRight: theme.spacing(1),
-    color: 'inherit',
+  logoutContainer: {
+    margin: 0,
+    paddingLeft: theme.spacing(1),
   },
 }));
 
 interface Props {
-  open: boolean;
-  setOpen: (value: boolean) => void;
   itemSelected?: string;
 }
 
-const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest }) => {
+const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   const { enabledModules, disabledModules } = useAppSelector((state) => state.appAuthSlice.data);
-
-  const drawerOpen = () => {
-    if (open === null || open === undefined) {
-      return false;
-    }
-    return open;
-  };
-
-  const divStyle = {
-    padding: '8px',
-  };
-
-  const itemStyle = {
-    height: '34px',
-    borderRadius: '4px',
-    marginBottom: '12px',
-  };
 
   const handleLogout = async () => {
     dispatch(asyncLogout());
@@ -104,46 +51,20 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
   };
 
   return (
-    <Drawer
-      variant="permanent"
-      className={clsx({
-        [classes.drawerOpen]: drawerOpen(),
-        [classes.drawerClose]: !drawerOpen(),
-      })}
-      classes={{
-        paper: clsx({
-          [classes.drawerOpen]: drawerOpen(),
-          [classes.drawerClose]: !drawerOpen(),
-        }),
-      }}
-      open={drawerOpen()}
-      {...rest}>
-      <ListItem className={classes.listItem}>
-        <ListItemIcon style={{ margin: '4px' }} onClick={() => setOpen(!open)}>
-          {!open ? (
-            <Menu className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
-          ) : (
-            <ChevronLeft className={classes.listItemIcon} style={{ color: '#07D9C4' }} />
-          )}
-        </ListItemIcon>
+    <Paper className={classes.drawer} elevation={2} {...rest}>
+      <ListItem className={classes.title}>
+        <Typography variant="h5">Conduit</Typography>
       </ListItem>
-      <div className={classes.toolbar} />
-      <div className={classes.toolbar} />
-      <div style={divStyle}>
+      <div className={classes.listContainer}>
         <List component="nav">
+          <Divider />
           <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
-          <Link href="/settings/clientsdk" passHref>
-            <ListItem
-              button
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 'settings'}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Settings color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'Settings'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
+          <CustomListItem
+            selected={itemSelected === 'settings'}
+            icon={<Settings color={'inherit'} />}
+            title="Settings"
+            onClick={() => router.replace('/settings/clientsdk')}
+          />
           <Divider />
           {disabledModules.length > 0 ? (
             <>
@@ -154,14 +75,14 @@ const CustomDrawer: React.FC<Props> = ({ open, setOpen, itemSelected, ...rest })
             <></>
           )}
         </List>
-        <ListItem button className={classes.listItem} style={itemStyle} onClick={handleLogout}>
-          <ListItemIcon className={classes.listItemIcon}>
-            <ExitToApp color={'inherit'} />
-          </ListItemIcon>
-          <ListItemText primary={'Log out'} classes={{ primary: classes.listItemText }} />
-        </ListItem>
+        <CustomListItem
+          icon={<ExitToApp color={'inherit'} />}
+          title="Log out"
+          onClick={() => handleLogout()}
+          className={classes.logoutContainer}
+        />
       </div>
-    </Drawer>
+    </Paper>
   );
 };
 

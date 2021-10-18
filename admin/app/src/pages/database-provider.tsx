@@ -14,7 +14,7 @@ const useStyles = makeStyles(() => ({
 const DatabaseProvider: React.FC = () => {
   const classes = useStyles();
 
-  return <Box className={classes.root}>Coming soon</Box>;
+  return <Box className={classes.root}>Coming not so soon</Box>;
 };
 
 export default DatabaseProvider;

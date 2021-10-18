@@ -161,8 +161,8 @@ const Templates = () => {
     }
   };
 
-  const handleLimitChange = (e: any) => {
-    setLimit(e.target.value);
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
     setSkip(0);
     setPage(0);
   };
@@ -178,13 +178,13 @@ const Templates = () => {
         setDrawer(true);
       }
       if (action.type === 'delete') {
-        console.log('delete');
+        //handle delete
       }
       if (action.type === 'sync') {
-        console.log('sync');
+        //handle sync
       }
       if (action.type === 'upload') {
-        console.log('upload');
+        //handle upload
       }
     }
   };
@@ -197,11 +197,6 @@ const Templates = () => {
   const toUpload = {
     title: 'Upload',
     type: 'upload',
-  };
-
-  const toSync = {
-    title: 'Sync',
-    type: 'sync',
   };
 
   const toView = {
@@ -218,7 +213,6 @@ const Templates = () => {
           <TextField
             size="small"
             variant="outlined"
-            id="input-with-icon-textfield"
             name="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -265,7 +259,7 @@ const Templates = () => {
       )}
       {templateDocuments.length > 0 && (
         <Grid container style={{ marginTop: '-8px' }}>
-          <Grid item xs={7}></Grid>
+          <Grid item xs={7} />
           <Grid item xs={5}>
             <Paginator
               handlePageChange={handlePageChange}
@@ -280,11 +274,8 @@ const Templates = () => {
       <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
         {!importTemplate ? (
           <Box>
-            <Typography
-              variant="h6"
-              color="primary"
-              style={{ marginTop: '30px', textAlign: 'center' }}>
-              {!create ? 'Edit your template' : 'Create an email template'}{' '}
+            <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
+              {!create ? 'Edit your template' : 'Create an email template'}
             </Typography>
             <TabPanel
               handleCreate={createNewTemplate}

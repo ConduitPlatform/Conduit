@@ -6,7 +6,7 @@ interface Props {
   users: AuthUser[];
   handleAction: (action: { title: string; type: string }, data: AuthUserUI) => void;
   handleSelect: (id: string) => void;
-  handleSelectAll: (data: any) => void;
+  handleSelectAll: (data: AuthUserUI[]) => void;
   selectedUsers: string[];
 }
 

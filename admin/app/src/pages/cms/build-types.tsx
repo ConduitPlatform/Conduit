@@ -19,7 +19,6 @@ import {
   updateItem,
 } from '../../utils/type-functions';
 import { useRouter } from 'next/router';
-import { privateRoute } from '../../components/utils/privateRoute';
 import {
   asyncCreateNewSchema,
   asyncEditSchema,
@@ -486,4 +485,4 @@ const BuildTypes: React.FC = () => {
   );
 };
 
-export default privateRoute(BuildTypes);
+export default BuildTypes;

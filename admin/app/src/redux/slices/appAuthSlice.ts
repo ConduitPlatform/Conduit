@@ -10,33 +10,19 @@ import { getErrorData } from '../../utils/error-handler';
 import { clearEmailPageStore } from './emailsSlice';
 import { clearAuthenticationPageStore } from './authenticationSlice';
 import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
-
-const modules = [
-  'authentication',
-  'email',
-  'cms',
-  'storage',
-  'database-provider',
-  'payments',
-  'forms',
-  'chat',
-  'sms',
-  'push-notifications',
-];
+import { getDisabledModules, getSortedModules } from '../../utils/modules';
 
 export type AppAuthState = {
   data: {
-    token: any;
+    token: string;
     enabledModules: IModule[];
     disabledModules: IModule[];
   };
 };
 
-//TODO we should probably add types for JWT
-
 const initialState: AppAuthState = {
   data: {
-    token: null,
+    token: '',
     enabledModules: [],
     disabledModules: [],
   },
@@ -101,22 +87,14 @@ const appAuthSlice = createSlice({
       state.data.token = action.payload.data.token;
     });
     builder.addCase(asyncGetAdminModules.fulfilled, (state, action) => {
-      state.data.enabledModules = action.payload.modules;
-      const payloadModules = action.payload.modules.map((module: IModule) => module.moduleName);
-      const disabledModules: IModule[] = [];
-      modules.forEach((module) => {
-        if (!payloadModules.includes(module)) {
-          disabledModules.push({
-            moduleName: module,
-            url: '',
-          });
-        }
-      });
-      state.data.disabledModules = disabledModules;
+      const sortedModules = getSortedModules(action.payload.modules);
+      state.data.enabledModules = sortedModules;
+      const payloadModules = sortedModules.map((module: IModule) => module.moduleName);
+      state.data.disabledModules = getDisabledModules(payloadModules);
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
-      state.data.token = null;
+      state.data.token = '';
       state.data.enabledModules = [];
       state.data.disabledModules = [];
     });

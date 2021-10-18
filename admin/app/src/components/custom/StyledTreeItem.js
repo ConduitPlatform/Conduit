@@ -1,7 +1,7 @@
 import { fade, withStyles } from '@material-ui/core/styles';
 import TreeItem from '@material-ui/lab/TreeItem';
 import React from 'react';
-import TransitionComponent from '../utils/TransitionComponent';
+import TransitionComponent from '../../utils/TransitionComponent';
 
 const StyledTreeItem = withStyles((theme) => ({
   root: {

@@ -26,7 +26,6 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 300,
     width: '100%',
     border: '1px dotted black',
-    backgroundColor: theme.palette.grey['100'],
   },
   rootDragging: {
     minHeight: 300,

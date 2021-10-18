@@ -84,11 +84,21 @@ export class ConduitDefaultRouter implements IConduitRouter {
       .then((r: any) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
-        state.routes.push({
-          protofile,
-          routes,
-          url,
+        let index;
+        (state.routes as any[]).forEach((val, i) => {
+          if (val.url === url) {
+            index = i;
+          }
         });
+        if (index) {
+          state.routes[index] = { protofile, routes, url };
+        } else {
+          state.routes.push({
+            protofile,
+            routes,
+            url,
+          });
+        }
         return sdk.getState().setKey('router', JSON.stringify(state));
       })
       .then(() => {
