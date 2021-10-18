@@ -7,6 +7,7 @@ import settingsSlice from './slices/settingsSlice';
 import emailsSlice from './slices/emailsSlice';
 import cmsSlice from './slices/cmsSlice';
 import customEndpointsSlice from './slices/customEndpointsSlice';
+import smsSlice from './slices/smsSlice';
 import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import appSlice from './slices/appSlice';
@@ -27,6 +28,7 @@ export const makeStore = (preloadedState: any) =>
       storageSlice,
       settingsSlice,
       emailsSlice,
+      smsSlice,
     },
     preloadedState,
   });
