@@ -85,6 +85,12 @@ interface Props {
   setCreate: (value: boolean) => void;
 }
 
+interface PropsForInputFields {
+  id: string;
+  key: string;
+  type: string;
+}
+
 const ViewEditForm: React.FC<Props> = ({
   handleCreate,
   handleSave,
@@ -111,7 +117,7 @@ const ViewEditForm: React.FC<Props> = ({
     setInputFields([...inputFields, { id: uuidV4(), key: '', type: '' }]);
   };
 
-  const handleFieldsChange = (id: string) => (evt) => {
+  const handleFieldsChange = (id: string) => (evt: React.ChangeEvent<any>) => {
     const { value } = evt.target;
     setInputFields((list) =>
       list.map((el) =>
@@ -139,7 +145,7 @@ const ViewEditForm: React.FC<Props> = ({
         emailField: form.emailField,
         enabled: form.enabled,
       });
-    const fieldsToDisplay: [] = [];
+    const fieldsToDisplay: PropsForInputFields[] = [];
     Object.entries(form.fields).forEach(([key, value]) => {
       fieldsToDisplay.push({ id: uuidV4(), key: key, type: value });
     });
@@ -147,7 +153,7 @@ const ViewEditForm: React.FC<Props> = ({
   }, [form, edit, create]);
 
   const handleSaveClick = () => {
-    const fields = {};
+    const fields: { [key: string]: string } = {};
     inputFields.forEach((item) => {
       if (item.key !== '' && item.type !== '') fields[item.key] = item.type;
     });
@@ -182,7 +188,7 @@ const ViewEditForm: React.FC<Props> = ({
       emailField: form.emailField,
       enabled: form.enabled,
     });
-    const fieldsToDisplay: [] = [];
+    const fieldsToDisplay: PropsForInputFields[] = [];
     Object.entries(form.fields).forEach(([key, value]) => {
       fieldsToDisplay.push({ id: uuidV4(), key: key, type: value });
     });
