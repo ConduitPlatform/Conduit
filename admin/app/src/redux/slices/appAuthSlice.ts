@@ -26,17 +26,15 @@ const modules = [
 
 export type AppAuthState = {
   data: {
-    token: any;
+    token: string;
     enabledModules: IModule[];
     disabledModules: IModule[];
   };
 };
 
-//TODO we should probably add types for JWT
-
 const initialState: AppAuthState = {
   data: {
-    token: null,
+    token: '',
     enabledModules: [],
     disabledModules: [],
   },
@@ -116,7 +114,7 @@ const appAuthSlice = createSlice({
     });
     builder.addCase(asyncLogout.fulfilled, (state) => {
       removeCookie('JWT');
-      state.data.token = null;
+      state.data.token = '';
       state.data.enabledModules = [];
       state.data.disabledModules = [];
     });
