@@ -18,3 +18,10 @@ export interface FormSettingsConfig {
   active: boolean;
   useAttachments: boolean;
 }
+
+export interface FormsUI {
+  _id: string;
+  Name: string;
+  Email: string;
+  Enabled: string;
+}

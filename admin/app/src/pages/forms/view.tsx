@@ -7,7 +7,7 @@ import FormReplies from '../../components/forms/FormReplies';
 import ViewEditForm from '../../components/forms/ViewEditForm';
 import FormsLayout from '../../components/navigation/InnerLayouts/formsLayout';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
-import { FormsModel } from '../../models/forms/FormsModels';
+import { FormsModel, FormsUI } from '../../models/forms/FormsModels';
 import { asyncCreateForm, asyncEditForm, asyncGetForms } from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 
@@ -41,7 +41,7 @@ const Create = () => {
   const [page, setPage] = useState<number>(0);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [formToView, setFormToView] = useState<FormsModel>(emptyFormState);
-  const [selectedForms, setSelectedForms] = useState<any>([]);
+  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
   const [repliesForm, setRepliesForm] = useState<FormsModel>(emptyFormState);
@@ -117,12 +117,12 @@ const Create = () => {
     setSelectedForms(newSelectedForms);
   };
 
-  const handleSelectAll = (data: any) => {
+  const handleSelectAll = (data: FormsUI[]) => {
     if (selectedForms.length === forms.length) {
       setSelectedForms([]);
       return;
     }
-    const newSelectedForms = data.map((item: any) => item._id);
+    const newSelectedForms = data.map((item: FormsUI) => item._id);
     setSelectedForms(newSelectedForms);
   };
 
