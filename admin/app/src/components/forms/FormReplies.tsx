@@ -8,7 +8,9 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { FormsModel } from '../../models/forms/FormsModels';
 import { asyncGetFormReplies } from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { Avatar, Chip, Container, Grid, TextField } from '@material-ui/core';
+import { Chip, Container, Grid, TextField } from '@material-ui/core';
+import Image from 'next/dist/client/image';
+import formReplies from '../../assets/svgs/FormReplies.svg';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -20,28 +22,16 @@ const useStyles = makeStyles((theme) => ({
     justifyItems: 'center',
     justifySelf: 'center',
   },
-  tabs: {
-    borderRight: `1px solid ${theme.palette.divider}`,
-    minWidth: '300px',
-  },
-  divider: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
   grid: {
     marginBottom: theme.spacing(3),
   },
-  multiline: {
-    width: '100%',
-    marginBottom: theme.spacing(3),
+  centeredImg: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textField: {
     width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(2),
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(2),
   },
   marginTop: {
     marginTop: '60px',
@@ -80,48 +70,49 @@ const FormReplies: React.FC<Props> = ({ repliesForm }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  //   useEffect(() => {
-  //     if (repliesForm._id !== undefined) dispatch(asyncGetFormReplies({ id: repliesForm._id }));
-  //   });
+  useEffect(() => {
+    if (repliesForm._id !== undefined) dispatch(asyncGetFormReplies({ id: repliesForm._id }));
+  });
 
-  //   const { replies } = useAppSelector((state) => state.formsSlice.data);
+  const { replies } = useAppSelector((state) => state.formsSlice.data);
 
-  const replies = [
-    {
-      _id: '1232342332352',
-      form: {},
-      data: { name: 'Nick', surname: 'Lamprou', age: 23 },
-      possibleSpam: false,
-    },
-    {
-      _id: '12323432233235',
-      form: {},
-      data: {
-        name: 'Nick',
-        surname: 'Charalampous',
-        age: 46,
-        image: 'image.jpg',
-        file: 'drivingLicense',
-      },
-      possibleSpam: true,
-    },
-    {
-      _id: '12323412233235',
-      form: {},
-      data: { name: 'Kostas', surname: 'Feggoulis', age: 26 },
-      possibleSpam: false,
-    },
-    {
-      _id: '12323423353235',
-      form: {},
-      data: { name: 'George', surname: 'Nikolaou', age: 42 },
-      possibleSpam: false,
-    },
-  ];
+  //Placeholder replies
+  // const replies = [
+  //   {
+  //     _id: '1232342332352',
+  //     form: {},
+  //     data: { name: 'Nick', surname: 'Lamprou', age: 23 },
+  //     possibleSpam: false,
+  //   },
+  //   {
+  //     _id: '12323432233235',
+  //     form: {},
+  //     data: {
+  //       name: 'Nick',
+  //       surname: 'Charalampous',
+  //       age: 46,
+  //       image: 'image.jpg',
+  //       file: 'drivingLicense',
+  //     },
+  //     possibleSpam: true,
+  //   },
+  //   {
+  //     _id: '12323412233235',
+  //     form: {},
+  //     data: { name: 'Kostas', surname: 'Feggoulis', age: 26 },
+  //     possibleSpam: false,
+  //   },
+  //   {
+  //     _id: '12323423353235',
+  //     form: {},
+  //     data: { name: 'George', surname: 'Nikolaou', age: 42 },
+  //     possibleSpam: false,
+  //   },
+  // ];
 
   return (
     <Container className={classes.marginTop}>
-      {replies.length &&
+      {replies.length ? (
         replies.map((reply, index: number) => (
           <Accordion key={reply._id}>
             <AccordionSummary
@@ -163,7 +154,17 @@ const FormReplies: React.FC<Props> = ({ repliesForm }) => {
               </div>
             </AccordionDetails>
           </Accordion>
-        ))}
+        ))
+      ) : (
+        <>
+          <Typography style={{ textAlign: 'center' }}>
+            No replies available for the current form
+          </Typography>
+          <div className={classes.centeredImg}>
+            <Image src={formReplies} alt="form replies" width="200px" />
+          </div>
+        </>
+      )}
     </Container>
   );
 };
