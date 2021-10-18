@@ -3,6 +3,7 @@ import { AddCircleOutline } from '@material-ui/icons';
 import React, { ReactElement, useEffect, useState } from 'react';
 import DataTable from '../../components/common/DataTable';
 import Paginator from '../../components/common/Paginator';
+import FormReplies from '../../components/forms/FormReplies';
 import ViewEditForm from '../../components/forms/ViewEditForm';
 import FormsLayout from '../../components/navigation/InnerLayouts/formsLayout';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
@@ -43,12 +44,13 @@ const Create = () => {
   const [selectedForms, setSelectedForms] = useState<any>([]);
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
+  const [repliesForm, setRepliesForm] = useState<FormsModel>(emptyFormState);
 
   const { forms, count } = useAppSelector((state) => state.formsSlice.data);
 
   useEffect(() => {
-    dispatch(asyncGetForms());
-  }, [dispatch]);
+    dispatch(asyncGetForms({ skip, limit }));
+  }, [dispatch, skip, limit]);
 
   const newForm = () => {
     setDrawer(true);
@@ -60,6 +62,7 @@ const Create = () => {
     setDrawer(false);
     setCreate(false);
     setEdit(false);
+    setRepliesForm(emptyFormState);
     setFormToView(emptyFormState);
   };
 
@@ -80,6 +83,7 @@ const Create = () => {
   };
 
   const createNewForm = (data: FormsModel) => {
+    setDrawer(false);
     const newData = {
       name: data.name,
       fields: data.fields,
@@ -147,6 +151,10 @@ const Create = () => {
         setEdit(false);
         setFormToView(currentForm);
       }
+      if (action.type === 'replies') {
+        setRepliesForm(currentForm);
+        setDrawer(true);
+      }
       if (action.type === 'delete') {
         console.log('delete');
       }
@@ -158,12 +166,17 @@ const Create = () => {
     type: 'delete',
   };
 
+  const toReplies = {
+    title: 'Form replies',
+    type: 'replies',
+  };
+
   const toView = {
     title: 'View',
     type: 'view',
   };
 
-  const actions = [toDelete, toView];
+  const actions = [toDelete, toReplies, toView];
 
   return (
     <div>
@@ -207,18 +220,35 @@ const Create = () => {
         <Typography className={classes.noAvailable}>No available forms </Typography>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
-        <Typography variant="h6" color="primary" style={{ marginTop: '30px', textAlign: 'center' }}>
-          {create ? 'Create a new form' : 'Edit form'}
-        </Typography>
-        <ViewEditForm
-          handleCreate={createNewForm}
-          handleSave={saveFormChanges}
-          form={formToView}
-          edit={edit}
-          create={create}
-          setEdit={setEdit}
-          setCreate={setCreate}
-        />
+        {repliesForm.name === '' ? (
+          <>
+            <Typography
+              variant="h6"
+              color="primary"
+              style={{ marginTop: '30px', textAlign: 'center' }}>
+              {create ? 'Create a new form' : 'Edit form'}
+            </Typography>
+            <ViewEditForm
+              handleCreate={createNewForm}
+              handleSave={saveFormChanges}
+              form={formToView}
+              edit={edit}
+              create={create}
+              setEdit={setEdit}
+              setCreate={setCreate}
+            />
+          </>
+        ) : (
+          <>
+            <Typography
+              variant="h6"
+              color="primary"
+              style={{ marginTop: '30px', textAlign: 'center' }}>
+              Viewing form replies from {repliesForm.name}
+            </Typography>
+            <FormReplies repliesForm={repliesForm} />
+          </>
+        )}
       </DrawerWrapper>
     </div>
   );

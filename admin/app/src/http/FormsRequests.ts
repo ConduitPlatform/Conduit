@@ -2,9 +2,10 @@ import axios from 'axios';
 import { FormSettingsConfig, FormsModel } from '../models/forms/FormsModels';
 import { CONDUIT_API } from './requestsConfig';
 
-export const getForms = () => axios.get(`${CONDUIT_API}/admin/forms/get`);
+export const getForms = (skip: number, limit: number) =>
+  axios.get(`${CONDUIT_API}/admin/forms/get`, { params: { skip, limit } });
 
-export const createForm = (data: FormsModel) => axios.post(`${CONDUIT_API}/admin/forms/new`, data);
+export const createForm = (data: any) => axios.post(`${CONDUIT_API}/admin/forms/new`, data);
 
 export const getFormReplies = (id: string) => axios.get(`${CONDUIT_API}/admin/forms/replies/${id}`);
 

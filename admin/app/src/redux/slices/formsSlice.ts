@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { enqueueErrorNotification } from '../../utils/useNotifier';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import {
   createForm,
   getFormReplies,
@@ -11,6 +11,7 @@ import {
   updateFormsConfig,
 } from '../../http/FormsRequests';
 import { FormReplies, FormSettingsConfig, FormsModel } from '../../models/forms/FormsModels';
+import { number } from 'prop-types';
 
 export type FormsState = {
   data: {
@@ -30,30 +31,35 @@ const initialState: FormsState = {
   },
 };
 
-export const asyncGetForms = createAsyncThunk('forms/get', async (args, thunkAPI) => {
-  thunkAPI.dispatch(setAppLoading(true));
-  try {
-    const { data } = await getForms();
-    thunkAPI.dispatch(setAppDefaults());
-    return data;
-  } catch (error) {
-    thunkAPI.dispatch(enqueueErrorNotification(`Could not get forms data:${getErrorData(error)}`));
-    thunkAPI.dispatch(setAppLoading(false));
-    throw error;
+export const asyncGetForms = createAsyncThunk(
+  'forms/get',
+  async (args: { skip: number; limit: number }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getForms(args.skip, args.limit);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(
+        enqueueErrorNotification(`Could not get forms data:${getErrorData(error)}`)
+      );
+      thunkAPI.dispatch(setAppLoading(false));
+      throw error;
+    }
   }
-});
+);
 
 export const asyncCreateForm = createAsyncThunk(
   'forms/create',
   async (formData: FormsModel, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createForm(formData);
+      await createForm(formData);
       thunkAPI.dispatch(setAppDefaults());
-
-      console.log(data);
-
-      return data;
+      thunkAPI.dispatch(asyncGetForms({ skip: 0, limit: 10 }));
+      thunkAPI.dispatch(
+        enqueueSuccessNotification(`Successfully created the form ${formData.name}!`)
+      );
     } catch (error) {
       thunkAPI.dispatch(
         enqueueErrorNotification(`Could not create a new form:${getErrorData(error)}`)
@@ -72,7 +78,10 @@ export const asyncEditForm = createAsyncThunk(
       await updateForm(args._id, args.data);
 
       thunkAPI.dispatch(setAppDefaults());
-      return { id: args.id, data: args.data };
+      thunkAPI.dispatch(
+        enqueueSuccessNotification(`Successfully edited the form ${args.data.name}!`)
+      );
+      return { id: args._id, data: args.data };
     } catch (error) {
       thunkAPI.dispatch(enqueueErrorNotification(`Could not update form:${getErrorData(error)}`));
       thunkAPI.dispatch(setAppLoading(false));
@@ -153,9 +162,7 @@ const formsSlice = createSlice({
       state.data.forms = action.payload.forms;
       state.data.count = action.payload.count;
     });
-    builder.addCase(asyncCreateForm.fulfilled, (state, action) => {
-      state.data.forms.push(action.payload.form);
-    });
+
     builder.addCase(asyncEditForm.fulfilled, (state, action) => {
       state.data.forms = updateFormById(action.payload.data, state.data.forms);
     });
