@@ -81,6 +81,7 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
       _id: selectedTemplate._id,
       externalManaged: true,
     };
+
     handleSave(data);
   };
 
@@ -127,7 +128,7 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
         <Grid container spacing={2} justify="space-around" className={classes.templateInfo}>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Template name:</Typography>
-            <Typography variant="body2">{selectedTemplate.name}Testing template</Typography>
+            <Typography variant="body2">{selectedTemplate.name}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Sender Input:</Typography>
