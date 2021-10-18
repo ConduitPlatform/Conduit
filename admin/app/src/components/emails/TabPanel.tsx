@@ -135,6 +135,10 @@ const TabPanel: React.FC<Props> = ({
     });
   };
 
+  const handleDisabled = () => {
+    return templateState.name && templateState.subject && templateState.body;
+  };
+
   return (
     <Container className={classes.marginTop}>
       <Box>
@@ -159,7 +163,7 @@ const TabPanel: React.FC<Props> = ({
                 <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
-                    label={'*Sender'}
+                    label={'Sender(optional)'}
                     variant={'outlined'}
                     value={templateState.sender}
                     onChange={(event) => {
@@ -214,7 +218,8 @@ const TabPanel: React.FC<Props> = ({
                 variant="contained"
                 color="primary"
                 startIcon={<Save />}
-                onClick={handleSaveClick}>
+                onClick={handleSaveClick}
+                disabled={!handleDisabled()}>
                 Save
               </Button>
             </>
