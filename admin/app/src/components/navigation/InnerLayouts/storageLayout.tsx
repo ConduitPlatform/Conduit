@@ -1,5 +1,4 @@
-import React, { ChangeEvent, useEffect, useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
