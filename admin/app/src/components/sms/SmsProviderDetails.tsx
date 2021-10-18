@@ -78,10 +78,6 @@ const SmsProviderDetails: React.FC = () => {
     });
   };
 
-  const onSaveClick = () => {
-    // handleSave(configState);
-  };
-
   const onChange = (value: string | boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
     const innerConfigState = configState[configState.providerName];
     if (childKey) {
@@ -98,14 +94,14 @@ const SmsProviderDetails: React.FC = () => {
       setConfigState(newConfig);
       return;
     }
-    const newConfig = {
+    const configNew = {
       ...configState,
       [configState.providerName]: {
         ...innerConfigState,
         [key]: value,
       },
     };
-    setConfigState(newConfig);
+    setConfigState(configNew);
   };
 
   const renderSettingsFields = () => {
@@ -184,8 +180,7 @@ const SmsProviderDetails: React.FC = () => {
             <Button
               variant="contained"
               color="primary"
-              style={{ alignSelf: 'flex-end' }}
-              onClick={() => onSaveClick()}>
+              style={{ alignSelf: 'flex-end' }}>
               Save
             </Button>
           </Grid>

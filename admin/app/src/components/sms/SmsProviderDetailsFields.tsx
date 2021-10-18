@@ -23,8 +23,8 @@ interface Props {
 const SmsProviderDetailsFields: React.FC<Props> = ({ data, onChange }) => {
   const classes = useStyles();
 
-  const handleInput = (isBoolean: boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
-    if (isBoolean) {
+  const handleInput = (isSwitch: boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
+    if (isSwitch) {
       return (
         <>
           <Typography variant={'body1'}>{childKey}:</Typography>
@@ -56,9 +56,9 @@ const SmsProviderDetailsFields: React.FC<Props> = ({ data, onChange }) => {
       return keys.map((key, index) => {
         if (!isString(data[key])) {
           const childKeys = Object.keys(data[key]) as ChildConfigKey[];
-          return childKeys.map((childKey, index) => {
+          return childKeys.map((childKey, idx) => {
             return (
-              <Grid container alignItems="center" item xs={12} key={`${childKey}${index}`}>
+              <Grid container alignItems="center" item xs={12} key={`${childKey}${idx}`}>
                 {handleInput(isBoolean(data.verify[childKey]), key, childKey)}
               </Grid>
             );
