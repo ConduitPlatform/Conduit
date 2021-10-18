@@ -36,15 +36,6 @@ const config = {
     accountSID: '***REMOVED***',
     authToken: '***REMOVED***',
   },
-  twilio2: {
-    verify: {
-      active: false,
-      serviceSid: 'prodsprods',
-    },
-    phoneNumber: '***REMOVED***',
-    accountSID: 'prodsprodsprods',
-    authToken: 'prodsprodsprodsprods',
-  },
 };
 
 const SmsProviderDetails: React.FC = () => {
@@ -123,7 +114,6 @@ const SmsProviderDetails: React.FC = () => {
               helperText="Select your provider"
               variant="outlined">
               <MenuItem value={'twilio'}>Twilio</MenuItem>
-              <MenuItem value={'twilio2'}>Twilio2</MenuItem>
             </TextField>
           </Grid>
           <Grid item style={{ marginTop: 32 }} xs={12}>

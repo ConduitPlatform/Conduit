@@ -14,7 +14,7 @@ const SMSLayout: React.FC<unknown> = ({ children }) => {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
-    const pathNames = ['/sms/send', '/sms/provider-settings'];
+    const pathNames = ['/sms/send', '/sms/provider-details'];
     const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
   }, [router.pathname]);
@@ -37,7 +37,7 @@ const SMSLayout: React.FC<unknown> = ({ children }) => {
         </Typography>
         <Tabs value={value} className={classes.navContent} onChange={handleChange}>
           <Tab label="Send SMS" id="send" />
-          <Tab label="Provider details'" id="provider-details" />
+          <Tab label="Provider details" id="provider-details" />
         </Tabs>
       </Box>
       <Box className={classes.content}>{children}</Box>
