@@ -12,7 +12,6 @@ export class AdminHandlers {
   ) {
     this.database = grpcSdk.databaseProvider;
   }
-
   async getModules(req: Request, res: Response) {
     const registeredModules = (req as any).conduit.registeredModules;
     if (registeredModules.size !== 0) {
@@ -69,6 +68,15 @@ export class AdminHandlers {
             message: 'Module not available',
           });
         finalConfig = dbConfig.moduleConfigs.email;
+        break;
+      case 'forms':
+        if (!registeredModules.has(module))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        finalConfig = dbConfig.moduleConfigs.forms;
         break;
       case 'storage':
         if (!registeredModules.has(module))
@@ -179,6 +187,17 @@ export class AdminHandlers {
             message: 'Module not available',
           });
         updatedConfig = await this.grpcSdk.payments
+          .setConfig(newConfig)
+          .catch((e: Error) => (errorMessage = e.message));
+        break;
+      case 'forms':
+        if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.forms))
+          return res.status(400).json({
+            name: 'INVALID_PARAMS',
+            status: 400,
+            message: 'Module not available',
+          });
+        updatedConfig = await this.grpcSdk.forms
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;

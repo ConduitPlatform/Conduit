@@ -10,6 +10,7 @@ import {
   Router,
   SMS,
   Storage,
+  Forms
 } from './modules';
 import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
@@ -33,6 +34,8 @@ export default class ConduitGrpcSdk {
     sms: SMS,
     payments: Payments,
     chat: Chat,
+    forms: Forms,
+
   };
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
@@ -97,6 +100,15 @@ export default class ConduitGrpcSdk {
       return this._modules['storage'];
     } else {
       console.warn('Storage module not up yet!');
+      return null;
+    }
+  }
+
+  get forms(): Forms | null {
+    if (this._modules['forms']) {
+      return this._modules['forms'];
+    } else {
+      console.warn('Forms module not up yet!');
       return null;
     }
   }
