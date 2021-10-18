@@ -14,7 +14,7 @@ const SMSLayout: React.FC<unknown> = ({ children }) => {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
-    const pathNames = ['/sms/send', '/sms/provider-settings'];
+    const pathNames = ['/sms/send', '/sms/provider-details'];
     const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
   }, [router.pathname]);
