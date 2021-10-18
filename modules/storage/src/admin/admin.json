@@ -21,6 +21,11 @@
       "protoName": "updateFile"
     },
     {
+      "path": "/file",
+      "method": "GET",
+      "protoName": "getFiles"
+    },
+    {
       "path": "/file/:id",
       "method": "GET",
       "protoName": "getFile"

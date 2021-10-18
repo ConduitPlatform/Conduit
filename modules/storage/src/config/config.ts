@@ -16,10 +16,6 @@ export default {
       type: String,
       default: '',
     },
-    bucketName: {
-      type: String,
-      default: '',
-    },
   },
   azure: {
     connectionString: { type: String, default: '' },

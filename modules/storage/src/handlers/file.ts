@@ -68,6 +68,28 @@ export class FileHandlers {
     return callback(null, { result: JSON.stringify({ folders, folderCount }) });
   }
 
+  async getFiles(call: RouterRequest, callback: RouterResponse) {
+    const { skip, limit, folder } = JSON.parse(call.request.params);
+    if (isNil(skip) || isNil(limit)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Skip and limit are required',
+      });
+    }
+
+    if (isNil(folder)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'folder is required',
+      });
+    }
+
+    let files = await this.database.findMany('File', { folder }, undefined, skip, limit);
+    let filesCount = await this.database.countDocuments('File', { folder });
+
+    return callback(null, { result: JSON.stringify({ files, filesCount }) });
+  }
+
   async createFile(call: RouterRequest, callback: RouterResponse) {
     const { name, data, folder, mimeType, isPublic } = JSON.parse(call.request.params);
 

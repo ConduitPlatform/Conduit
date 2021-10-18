@@ -18,6 +18,7 @@ export class AdminRoutes {
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
         createFolder: this.fileHandlers.createFolder.bind(this.fileHandlers),
         getFolders: this.fileHandlers.getFolders.bind(this.fileHandlers),
+        getFiles: this.fileHandlers.getFiles.bind(this.fileHandlers),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module');
