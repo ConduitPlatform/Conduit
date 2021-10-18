@@ -212,7 +212,7 @@ const emailsSlice = createSlice({
     });
 
     builder.addCase(asyncGetExternalTemplates.fulfilled, (state, action) => {
-      state.data.externalTemplates = action.payload;
+      state.data.externalTemplates = action.payload.templateDocuments;
     });
     builder.addCase(asyncSaveEmailTemplateChanges.fulfilled, (state, action) => {
       state.data.templateDocuments = updateTemplateByID(
