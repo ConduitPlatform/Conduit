@@ -177,10 +177,7 @@ const SmsProviderDetails: React.FC = () => {
             <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ alignSelf: 'flex-end' }}>
+            <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }}>
               Save
             </Button>
           </Grid>
