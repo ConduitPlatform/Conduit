@@ -8,7 +8,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import slugify from '../../../../utils/slugify';
 import { IBooleanData, IDrawerData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
@@ -42,7 +41,6 @@ interface IProps {
     placeholderFalse: string;
     isArray: boolean;
     placeholderTrue: string;
-    id: string;
     type: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Group' | 'Relation';
     required: boolean;
   }) => void;
@@ -70,15 +68,15 @@ const BooleanForm: FC<IProps> = ({
     select: selectedItem ? selectedItem.select : true,
     required: selectedItem ? selectedItem.required : false,
     isArray: selectedItem ? selectedItem.isArray : false,
-    id: '',
+    // id: '',
   });
 
   const handleFieldName = (event: { target: { value: string } }) => {
-    const slug = slugify(event.target.value);
+    // const slug = slugify(event.target.value);
     setBooleanData({
       ...booleanData,
       name: event.target.value.split(' ').join(''),
-      id: slug,
+      // id: slug,
     });
   };
 
