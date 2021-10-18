@@ -3,7 +3,7 @@ import React, { FC, Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
-import { deepClone } from '../../utils/deepClone';
+import { deepClone } from '../../../utils/deepClone';
 import { Assignment, Input } from '../../../models/customEndpoints/customEndpointsModels';
 
 interface Props {
