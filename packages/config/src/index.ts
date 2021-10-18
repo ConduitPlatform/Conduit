@@ -90,22 +90,24 @@ export default class ConfigManager implements IConfigManager {
             });
         }
       })
+      // DO NOT INITIALIZE THE BUS BEFORE RECOVERY
+      .then(() => {
+        this.sdk.getBus().subscribe('config', (message: string) => {
+          let messageParsed = JSON.parse(message);
+          if (messageParsed.type === 'module-registered') {
+            self._registerModule(
+              messageParsed.name,
+              messageParsed.url,
+              messageParsed.instance
+            );
+          } else if (messageParsed.type === 'module-health') {
+            self.updateModuleHealth(messageParsed.name, messageParsed.instance);
+          }
+        });
+      })
       .catch((err) => {
         console.log('Failed to recover state');
       });
-
-    this.sdk.getBus().subscribe('config', (message: string) => {
-      let messageParsed = JSON.parse(message);
-      if (messageParsed.type === 'module-register') {
-        self._registerModule(
-          messageParsed.name,
-          messageParsed.url,
-          messageParsed.instance
-        );
-      } else if (messageParsed.type === 'module-health') {
-        self.updateModuleHealth(messageParsed.name, messageParsed.instance);
-      }
-    });
   }
 
   setState(state: any) {
