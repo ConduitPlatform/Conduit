@@ -65,6 +65,11 @@ module.exports = (phase) => {
         permanent: true,
       },
       {
+        source: '/forms',
+        destination: '/forms/view',
+        permanent: true,
+      },
+      {
         source: '/sms',
         destination: '/sms/send',
         permanent: true,
