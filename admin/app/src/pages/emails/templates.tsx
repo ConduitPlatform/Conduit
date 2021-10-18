@@ -161,8 +161,8 @@ const Templates = () => {
     }
   };
 
-  const handleLimitChange = (e: any) => {
-    setLimit(e.target.value);
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
     setSkip(0);
     setPage(0);
   };

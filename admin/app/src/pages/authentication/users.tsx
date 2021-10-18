@@ -6,7 +6,6 @@ import Paginator from '../../components/common/Paginator';
 import SearchFilter from '../../components/authentication/SearchFilter';
 import Grid from '@material-ui/core/Grid';
 import { Button, ButtonGroup, IconButton, makeStyles, Tooltip } from '@material-ui/core';
-import Paper from '@material-ui/core/Paper';
 import useDebounce from '../../hooks/useDebounce';
 import {
   asyncAddNewUser,
@@ -34,6 +33,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import BlockIcon from '@material-ui/icons/Block';
 import { AddCircle } from '@material-ui/icons';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
+import { isString } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -69,7 +69,7 @@ const Users = () => {
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
-  const [filter, setFilter] = useState('none');
+  const [filter, setFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<AuthUser>({
     active: false,
     createdAt: '',
@@ -93,8 +93,10 @@ const Users = () => {
 
   const debouncedSearch: string = useDebounce(search, 500);
 
-  const handleFilterChange = (event: React.ChangeEvent<{ name?: string; value: any }>) => {
-    setFilter(event.target.value);
+  const handleFilterChange = (value: unknown) => {
+    if (isString(value)) {
+      setFilter(value);
+    }
   };
 
   useEffect(() => {
@@ -105,8 +107,8 @@ const Users = () => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
-  const handleLimitChange = (e: any) => {
-    setLimit(e.target.value);
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
     setSkip(0);
     setPage(0);
   };
@@ -123,10 +125,6 @@ const Users = () => {
 
   const handleNewUserDispatch = (values: { password: string; email: string }) => {
     dispatch(asyncAddNewUser({ values, limit }));
-    setSkip(0);
-    setPage(0);
-    setSearch('');
-    setFilter('none');
     setDrawer(false);
   };
 
@@ -308,7 +306,7 @@ const Users = () => {
       )}
       {users && users.length > 0 && (
         <Grid container style={{ marginTop: '-8px' }}>
-          <Grid item xs={7}></Grid>
+          <Grid item xs={7} />
           <Grid item xs={5}>
             <Paginator
               handlePageChange={handlePageChange}

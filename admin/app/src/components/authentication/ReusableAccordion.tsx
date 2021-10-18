@@ -52,7 +52,7 @@ interface Props {
   name: SocialNameTypes;
   setAccProps: any;
   handleData: (type: SocialNameTypes, data: SignInTypes) => void;
-  configData: any;
+  configData: SignInMethods;
   accProps: SignInTypes;
 }
 
