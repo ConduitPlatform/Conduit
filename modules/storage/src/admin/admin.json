@@ -11,6 +11,16 @@
       "protoName": "createFolder"
     },
     {
+      "path": "/containers",
+      "method": "POST",
+      "protoName": "createContainer"
+    },
+    {
+      "path": "/containers",
+      "method": "GET",
+      "protoName": "getContainers"
+    },
+    {
       "path": "/folder",
       "method": "GET",
       "protoName": "getFolders"

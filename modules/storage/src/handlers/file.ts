@@ -43,7 +43,9 @@ export class FileHandlers {
     if (isNil(usedContainer)) {
       usedContainer = config.defaultContainer;
     } else {
-      let container = await this.database.findOne('Container', { name: usedContainer });
+      let container = await this.database.findOne('_StorageContainer', {
+        name: usedContainer,
+      });
       if (!container) {
         if (!config.allowContainerCreation) {
           return callback({
@@ -55,7 +57,7 @@ export class FileHandlers {
         if (!exists) {
           await this.storageProvider.createContainer(usedContainer);
         }
-        await this.database.create('Container', { usedContainer, isPublic });
+        await this.database.create('_StorageContainer', { usedContainer, isPublic });
       }
     }
 
@@ -72,7 +74,7 @@ export class FileHandlers {
       if (!isNil(folder)) {
         exists = await this.storageProvider.folderExists(folder);
         if (!exists) {
-          await this.database.create('Folder', {
+          await this.database.create('_StorageFolder', {
             name: folder,
             container: usedContainer,
             isPublic,
@@ -272,7 +274,7 @@ export class FileHandlers {
       if (isNil(found)) {
         return callback({ code: status.NOT_FOUND, message: 'File not found' });
       }
-
+      let config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
         .container(found.container)
         .get(found.name);
@@ -293,9 +295,21 @@ export class FileHandlers {
       found.mimeType = mimeType ?? found.mimeType;
 
       if (newContainer !== found.container) {
-        let exists = await this.storageProvider.containerExists(newContainer);
-        if (!exists) {
-          await this.storageProvider.createContainer(newContainer);
+        let container = await this.database.findOne('_StorageContainer', {
+          name: newContainer,
+        });
+        if (!container) {
+          if (!config.allowContainerCreation) {
+            return callback({
+              code: status.PERMISSION_DENIED,
+              message: 'Container creation is not allowed!',
+            });
+          }
+          let exists = await this.storageProvider.containerExists(newContainer);
+          if (!exists) {
+            await this.storageProvider.createContainer(newContainer);
+          }
+          await this.database.create('_StorageContainer', { newContainer });
         }
       }
 
@@ -304,6 +318,10 @@ export class FileHandlers {
           .container(newContainer)
           .folderExists(newFolder);
         if (!exists) {
+          await this.database.create('_StorageFolder', {
+            name: newFolder,
+            container: newContainer,
+          });
           await this.storageProvider.container(newContainer).createFolder(newFolder);
         }
       }
