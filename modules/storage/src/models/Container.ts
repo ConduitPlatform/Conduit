@@ -7,6 +7,7 @@ export default new ConduitSchema(
     name: {
       type: TYPE.String,
       required: true,
+      unique: true,
       systemRequired: true,
     },
     isPublic: {

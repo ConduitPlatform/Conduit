@@ -2,7 +2,6 @@ import {
   createStorageProvider,
   IStorageProvider,
 } from '@quintessential-sft/storage-provider';
-import File from './models/File';
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
@@ -17,6 +16,10 @@ import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
 import { AdminRoutes } from './admin/admin';
 import { ConfigController } from '@conduit/authentication/dist/config/Config.controller';
+import { migrateFoldersToContainers } from './migrations/container.migrations';
+import Container from './models/Container';
+import File from './models/File';
+import Folder from './models/Folder';
 
 export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;
@@ -184,7 +187,8 @@ export class StorageModule implements ConduitServiceModule {
     const { provider, storagePath, google, azure } = storageConfig;
 
     if (!this.isRunning) {
-      this.registerModels();
+      await this.registerModels();
+      await migrateFoldersToContainers(this.grpcSdk);
       this.isRunning = true;
     }
     this.storageProvider = createStorageProvider(provider, {
@@ -195,9 +199,12 @@ export class StorageModule implements ConduitServiceModule {
     this._fileHandlers.updateProvider(this.storageProvider);
   }
 
-  private registerModels(): any {
-    return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(File);
+  private async registerModels() {
+    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(Container);
+    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(File);
+    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(Folder);
   }
+
   private async updateConfig(config?: any) {
     if (config) {
       ConfigController.getInstance().config = config;
