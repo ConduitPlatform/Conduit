@@ -20,7 +20,6 @@ const useNotifier = () => {
 export default useNotifier;
 
 export const enqueueErrorNotification = (message: string, optionalKey?: string) => {
-  console.log(optionalKey);
   const options = { variant: 'error', message: message ? message : 'Something went wrong' };
   return addSnackbar({
     message: JSON.stringify(options),
