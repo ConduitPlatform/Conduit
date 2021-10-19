@@ -22,7 +22,7 @@ import {
 } from '../../models/emails/EmailModels';
 import TransportSettings from './TransportSettings';
 import { useAppSelector } from '../../redux/store';
-import { isNil } from 'lodash';
+import { isNil, isEmpty } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -136,15 +136,19 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
   };
 
   const onSaveClick = () => {
-    const transportSettings = settings.transportSettings;
+    const transportSettings = settingsState.transportSettings;
     const keys: TransportProviders[] = Object.keys(transportSettings) as TransportProviders[];
-    let newTransportSettings = {};
+    let newTransportSettings: any = {};
     keys.forEach((k) => {
-      if (!isNil(transportSettings[k])) {
+      if (!isNil(transportSettings[k]) && !isEmpty(transportSettings[k])) {
         newTransportSettings = { ...newTransportSettings, [k]: transportSettings[k] };
       }
     });
-    handleSave(settingsState);
+    const newSettings: EmailSettings = {
+      ...settingsState,
+      transportSettings: newTransportSettings,
+    };
+    handleSave(newSettings);
   };
 
   const onChange = (
