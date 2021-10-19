@@ -39,8 +39,24 @@ export class FileHandlers {
     let config = ConfigController.getInstance().config;
 
     let usedContainer = container;
+    // the container is sent from the client
     if (isNil(usedContainer)) {
       usedContainer = config.defaultContainer;
+    } else {
+      let container = await this.database.findOne('Container', { name: usedContainer });
+      if (!container) {
+        if (!config.allowContainerCreation) {
+          return callback({
+            code: status.PERMISSION_DENIED,
+            message: 'Container creation is not allowed!',
+          });
+        }
+        let exists = await this.storageProvider.containerExists(usedContainer);
+        if (!exists) {
+          await this.storageProvider.createContainer(usedContainer);
+        }
+        await this.database.create('Container', { usedContainer, isPublic });
+      }
     }
 
     if (!isString(data)) {
@@ -52,13 +68,7 @@ export class FileHandlers {
 
     try {
       const buffer = Buffer.from(data, 'base64');
-
-      let exists = await this.storageProvider.containerExists(usedContainer);
-      if (!exists) {
-        await this.database.create('Container', { usedContainer, isPublic });
-        await this.storageProvider.createContainer(usedContainer);
-      }
-
+      let exists;
       if (!isNil(folder)) {
         exists = await this.storageProvider.folderExists(folder);
         if (!exists) {
