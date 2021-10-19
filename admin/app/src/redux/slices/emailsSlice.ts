@@ -140,7 +140,7 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
 );
 
 export const asyncDeleteTemplate = createAsyncThunk(
-  'authentication/deleteUser',
+  'emails/deleteTemplate',
   async (params: { id: any; getTemplates: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
@@ -157,7 +157,7 @@ export const asyncDeleteTemplate = createAsyncThunk(
 );
 
 export const asyncDeleteTemplates = createAsyncThunk(
-  'authentication/deleteUsers',
+  'emails/deleteMultipleTemplates',
   async (params: { ids: string[]; getTemplates: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
