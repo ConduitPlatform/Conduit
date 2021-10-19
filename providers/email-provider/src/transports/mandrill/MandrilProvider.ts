@@ -80,7 +80,7 @@ export class MandrillProvider extends EmailProviderClass{
       },resolve));
 
       return {
-        message: 'Template ' + id + ' deleted',
+        message: 'Template ' + response.slug + ' deleted!',
         id: id,
       }
     }
