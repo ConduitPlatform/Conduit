@@ -142,6 +142,8 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
     keys.forEach((k) => {
       if (!isNil(transportSettings[k]) && !isEmpty(transportSettings[k])) {
         newTransportSettings = { ...newTransportSettings, [k]: transportSettings[k] };
+      } else {
+        newTransportSettings = { ...newTransportSettings, [k]: null };
       }
     });
     const newSettings: EmailSettings = {
