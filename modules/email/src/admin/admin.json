@@ -24,6 +24,11 @@
       "path": "/externalTemplates",
       "method": "GET",
       "protoName": "getExternalTemplates"
+    },
+    {
+      "path": "/syncExternalTemplates",
+      "method": "PUT",
+      "protoName": "syncExternalTemplates"
     }
   ]
 }

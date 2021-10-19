@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isNil, template } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk, {
   GrpcServer,
@@ -27,6 +27,7 @@ export class AdminHandlers {
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
+        syncExternalTemplates: this.syncExternalTemplates.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -36,6 +37,47 @@ export class AdminHandlers {
 
   setEmailService(emailService: EmailService) {
     this.emailService = emailService;
+  }
+
+  async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
+    let errorMessage: string | null = null;
+    const externalTemplates:any = await this.emailService.getExternalTemplates();
+
+    let updated = [];
+    let totalCount = 0;
+    for ( let element of externalTemplates){
+
+      const templateDocument = await this.database
+      .findOne('EmailTemplate', { externalId: element.id })
+      .catch((e: any) => (errorMessage = e.message));
+      if (!isNil(errorMessage))
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+
+      if(!isNil(templateDocument)){ // if templateDocument exists
+        const synchronized = {
+          name: element.name,
+          subject: element.versions[0].subject,
+          externalId: element.id,
+          variables: element.versions[0].variables,
+          body: element.versions[0].plainContent,
+        }
+
+        const updatedTemplate = await this.database
+        .findByIdAndUpdate('EmailTemplate', templateDocument._id,synchronized)
+        .catch((e: any) => (errorMessage = e.message));
+        if (!isNil(errorMessage))
+          return callback({
+            code: status.INTERNAL,
+            message: errorMessage,
+          });
+        updated.push(updatedTemplate);
+      }
+    }
+    totalCount = updated.length;
+    return callback(null, { result: JSON.stringify({ updated,totalCount }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
