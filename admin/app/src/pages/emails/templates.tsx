@@ -1,8 +1,10 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import EmailsLayout from '../../components/navigation/InnerLayouts/emailsLayout';
 import {
   asyncCreateNewEmailTemplate,
+  asyncDeleteTemplate,
+  asyncDeleteTemplates,
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
 } from '../../redux/slices/emailsSlice';
@@ -17,6 +19,7 @@ import {
   IconButton,
   makeStyles,
   InputAdornment,
+  Tooltip,
 } from '@material-ui/core';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
@@ -26,6 +29,10 @@ import Sync from '@material-ui/icons/Sync';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import ExternalTemplates from '../../components/emails/ExternalTemplates';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import { handleDeleteDescription, handleDeleteTitle } from '../../utils/emailsDialog';
+import { DeleteTwoTone } from '@material-ui/icons';
+
 // import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
@@ -55,8 +62,17 @@ const Templates = () => {
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
+  const [openDeleteTemplates, setOpenDeleteTemplates] = useState<{
+    open: boolean;
+    multiple: boolean;
+  }>({
+    open: false,
+    multiple: false,
+  });
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<EmailTemplateType>(originalTemplateState);
   const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>(originalTemplateState);
   const [importTemplate, setImportTemplate] = useState<boolean>(false);
   const [create, setCreate] = useState<boolean>(false);
@@ -109,7 +125,16 @@ const Templates = () => {
     setDrawer(false);
     setImportTemplate(false);
     setViewTemplate(originalTemplateState);
+    setSelectedTemplate(originalTemplateState);
+    setOpenDeleteTemplates({
+      open: false,
+      multiple: false,
+    });
   };
+
+  const getTemplatesCallback = useCallback(() => {
+    dispatch(asyncGetEmailTemplates({ skip, limit }));
+  }, [dispatch, limit, skip]);
 
   const saveTemplateChanges = (data: EmailTemplateType) => {
     const _id = data._id;
@@ -178,7 +203,12 @@ const Templates = () => {
         setDrawer(true);
       }
       if (action.type === 'delete') {
-        //handle delete
+        setSelectedTemplate(currentTemplate);
+        console.log(currentTemplate._id);
+        setOpenDeleteTemplates({
+          open: true,
+          multiple: false,
+        });
       }
       if (action.type === 'sync') {
         //handle sync
@@ -187,6 +217,26 @@ const Templates = () => {
         //handle upload
       }
     }
+  };
+
+  const deleteButtonAction = () => {
+    if (openDeleteTemplates.open && openDeleteTemplates.multiple) {
+      const params = {
+        ids: selectedTemplates,
+        getTemplates: getTemplatesCallback,
+      };
+      dispatch(asyncDeleteTemplates(params));
+    } else {
+      const params = {
+        id: selectedTemplate._id,
+        getTemplates: getTemplatesCallback,
+      };
+      dispatch(asyncDeleteTemplate(params));
+    }
+    setOpenDeleteTemplates({
+      open: false,
+      multiple: false,
+    });
   };
 
   const toDelete = {
@@ -227,9 +277,25 @@ const Templates = () => {
           />
         </Grid>
         <Grid item>
+          {selectedTemplates.length > 1 && (
+            <IconButton
+              aria-label="delete"
+              color="primary"
+              onClick={() =>
+                setOpenDeleteTemplates({
+                  open: true,
+                  multiple: true,
+                })
+              }>
+              <Tooltip title="Delete multiple templates">
+                <DeleteTwoTone />
+              </Tooltip>
+            </IconButton>
+          )}
           <IconButton color="primary" className={classes.btnAlignment}>
             <Sync color="primary" />
           </IconButton>
+
           <Button
             className={classes.btnAlignment2}
             variant="contained"
@@ -299,6 +365,14 @@ const Templates = () => {
           </Box>
         )}
       </DrawerWrapper>
+      <ConfirmationDialog
+        open={openDeleteTemplates.open}
+        handleClose={handleCloseDrawer}
+        title={handleDeleteTitle(openDeleteTemplates.multiple, selectedTemplate)}
+        description={handleDeleteDescription(openDeleteTemplates.multiple, selectedTemplate)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      />
     </div>
   );
 };

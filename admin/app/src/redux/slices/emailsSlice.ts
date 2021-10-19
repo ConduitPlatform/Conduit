@@ -1,5 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
+  deleteEmailTemplateRequest,
+  deleteMultipleEmailTemplateRequest,
   getEmailSettingsRequest,
   getEmailTemplateRequest,
   getExternalTemplatesRequest,
@@ -137,6 +139,39 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
   }
 );
 
+export const asyncDeleteTemplate = createAsyncThunk(
+  'authentication/deleteUser',
+  async (params: { id: any; getTemplates: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteEmailTemplateRequest(params.id);
+      params.getTemplates();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted template!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteTemplates = createAsyncThunk(
+  'authentication/deleteUsers',
+  async (params: { ids: string[]; getTemplates: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteMultipleEmailTemplateRequest(params.ids);
+      params.getTemplates();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted templates!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
 export const asyncGetEmailSettings = createAsyncThunk(
   'emails/getEmailSettings',
   async (arg, thunkAPI) => {
