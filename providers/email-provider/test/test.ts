@@ -1,5 +1,5 @@
 import { TemplateOptions } from '../src/interfaces/TemplateOptions';
-import { EmailProvider } from "../src/index"
+import { EmailProvider } from "../src"
 import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
 import { MailgunEmailOptions} from '../src/interfaces/mailgun/MailgunEmailOptions';
 import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOptions';
@@ -12,27 +12,29 @@ import { UpdateEmailTemplate } from '../src/interfaces/UpdateEmailTemplate';
 //         apiKey: '***REMOVED***'
 //     }
 // });
-
-// let provider = new EmailProvider('sendgrid',{
-//     apiKey: '***REMOVED***'
-// });
-
-let provider = new EmailProvider('mandrill',{
-    mandrill : { 
-        apiKey: '***REMOVED***'
-    }
+//
+let provider = new EmailProvider('sendgrid',{
+    apiKey: '***REMOVED***'
 });
 
+// let provider = new EmailProvider('mandrill',{
+//     mandrill : {
+//         apiKey: '***REMOVED***'
+//     }
+// });
 
 
-let templateOptions:TemplateOptions = {
-    id: 'd-56b4d36d208e4b6283e4c02eacedf922',
-    variables:[{
-        name:'fname',
-        content:'dimitris'
-    }]
-}
 
+// let templateOptions:TemplateOptions = {
+//     id: 'd-56b4d36d208e4b6283e4c02eacedf922',
+//     variables:[{
+//         name:'fname',
+//         content:'dimitris'
+//     }]
+// }
+provider._transport?.deleteTemplate('d-35964af99ddf43c7b07c10cc9af89c56').then(res => {
+    console.log(res);
+})
 // let mail = provider.emailBuilder()
 //             .setReceiver("dimitris.soldatos@quintessential.gr")
 //             .setSubject('Hello ✔✔✔✔✔')           
@@ -57,26 +59,26 @@ let templateOptions:TemplateOptions = {
 //     }
 // }
 
-var mailgundata: UpdateEmailTemplate = {
-    id : "psixoulammmmmmm",
-    subject: " xd",
-    body: " nothing to add </p>",
-
-};
-// var mandrilData = {
-//     subject: 'xd',
-//     name:'third template',
-//     code: '<p> xixi xd </p>',
-//     text:'edw to text',
-    
-
-// }
-provider._transport?.updateTemplate(mailgundata).then((body:any)  => {
-    console.log(body);
-})
-.catch(err => {
-    console.log(err);
-})
+// var mailgundata: UpdateEmailTemplate = {
+//     id : "psixoulammmmmmm",
+//     subject: " xd",
+//     body: " nothing to add </p>",
+//
+// };
+// // var mandrilData = {
+// //     subject: 'xd',
+// //     name:'third template',
+// //     code: '<p> xixi xd </p>',
+// //     text:'edw to text',
+//
+//
+// // }
+// provider._transport?.updateTemplate(mailgundata).then((body:any)  => {
+//     console.log(body);
+// })
+// .catch(err => {
+//     console.log(err);
+// })
 
 // provider._transport?.getTemplateInfo('ffff').then(res =>{
     //     console.log(res);
