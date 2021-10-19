@@ -204,7 +204,6 @@ const Templates = () => {
       }
       if (action.type === 'delete') {
         setSelectedTemplate(currentTemplate);
-        console.log(currentTemplate._id);
         setOpenDeleteTemplates({
           open: true,
           multiple: false,
