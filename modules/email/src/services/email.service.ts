@@ -7,18 +7,18 @@ import { UpdateEmailTemplate } from '@quintessential-sft/email-provider/dist/int
 import handlebars from 'handlebars';
 export class EmailService {
   private database: any;
-  
+
   constructor(private emailer: EmailProvider, private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     this.grpcSdk.waitForExistence('database-provider').then((r) => {
       self.database = self.grpcSdk.databaseProvider;
     });
   }
-  
+
   updateProvider(emailer: EmailProvider) {
     this.emailer = emailer;
   }
-  
+
   getExternalTemplates() {
     return this.emailer._transport?.listTemplates();
   }
@@ -41,12 +41,12 @@ export class EmailService {
   }
 
   async  registerTemplate(params: IRegisterTemplateParams) {
-    
+
     const { name, body, subject, variables } = params;
-    
+
     const existing = await this.database.findOne('EmailTemplate', { name });
     if (!isNil(existing)) return existing;
-    
+
     return this.database.create('EmailTemplate', {
       name,
       subject,
@@ -55,16 +55,16 @@ export class EmailService {
     });
   }
 
-  
+
   async sendEmail(template: string, params: ISendEmailParams) {
     const { email, body, subject, variables, sender } = params;
-    
+
     const builder = this.emailer.emailBuilder();
-    
+
     if (!template && (!body || !subject)) {
       throw new Error(`Template/body+subject not provided`);
     }
-    
+
     let templateFound;
     if (template) {
       templateFound = await this.database.findOne('EmailTemplate', { name: template });
@@ -98,24 +98,26 @@ export class EmailService {
     }
     let handled_subject = handlebars.compile(templateFound.subject);
 
-    const subjectString = templateFound
+      const subjectString = templateFound
     ? handled_subject(variables)
-    : subject!;
-    builder.setSubject(subjectString);
-    builder.setReceiver(email);
+      : subject!;
 
-    if (params.cc) {
-      builder.setCC(params.cc);
-    }
-    
-    if (params.replyTo) {
-      builder.setReplyTo(params.replyTo);
-    }
-    
-    if (params.attachments) {
-      builder.addAttachments(params.attachments as any);
-    }
+      builder.setSender(sender);
+      builder.setReceiver(email);
+      builder.setSubject(subjectString);
+
+      if (params.cc) {
+        builder.setCC(params.cc);
+      }
+
+      if (params.replyTo) {
+        builder.setReplyTo(params.replyTo);
+      }
+
+      if (params.attachments) {
+        builder.addAttachments(params.attachments as any);
+      }
     return this.emailer.sendEmail(builder);
   }
-  
+
 }
