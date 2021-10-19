@@ -167,7 +167,8 @@ const ViewEditForm: React.FC<Props> = ({
   }, [form, edit, create]);
 
   const handleSaveClick = () => {
-    if (!/^\S+@\S+\.\S+$/.test(formState.emailField)) {
+    const regex = /^\S+@\S+\.\S+$/;
+    if (!regex.test(formState.emailField)) {
       dispatch(
         enqueueErrorNotification('The email address you provided is not valid', 'emailError')
       );
