@@ -16,6 +16,11 @@
       "protoName": "editTemplate"
     },
     {
+      "path": "/templates/:id",
+      "method": "DELETE",
+      "protoName": "deleteTemplate"
+    },
+    {
       "path": "/send",
       "method": "POST",
       "protoName": "sendEmail"
@@ -24,11 +29,6 @@
       "path": "/externalTemplates",
       "method": "GET",
       "protoName": "getExternalTemplates"
-    },
-    {
-      "path": "/templates/:id",
-      "method": "DELETE",
-      "protoName": "deleteTemplate"
     }
   ]
 }

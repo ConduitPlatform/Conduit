@@ -266,7 +266,6 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-
     const deletedDocument = await this.database
       .deleteOne('EmailTemplate',{_id:id})
       .catch((e:any) => (errorMessage = e.message));
@@ -277,11 +276,18 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-
+    let deleted;
     if(templateDocument.externalManaged){
-      this.emailService.deleteExternalTemplate(templateDocument.externalId);
+      deleted = await this.emailService.deleteExternalTemplate(templateDocument.externalId)
+        ?.catch((e:any) => (errorMessage= e.message));
     }
-  
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    return callback(null, { result: JSON.stringify({ deleted }) });
   }
   
   async sendEmail(call: RouterRequest, callback: RouterResponse) {
