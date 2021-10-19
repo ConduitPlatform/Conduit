@@ -10,7 +10,7 @@ import { asyncGetFormReplies } from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { Chip, Container, Grid, TextField } from '@material-ui/core';
 import Image from 'next/dist/client/image';
-import formReplies from '../../assets/svgs/FormReplies.svg';
+import formReplies from '../../assets/svgs/formReplies.svg';
 
 const useStyles = makeStyles((theme) => ({
   root: {
