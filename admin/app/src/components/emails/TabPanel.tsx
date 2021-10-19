@@ -147,9 +147,22 @@ const TabPanel: React.FC<Props> = ({
       dispatch(enqueueInfoNotification('The mail server is already set on the config'));
       return;
     }
+
     setTemplateState({
       ...templateState,
       sender: value,
+    });
+  };
+
+  const handleTemplateNameChange = (value: string) => {
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The template name can only contain alpharithmetics and _'));
+    }
+
+    setTemplateState({
+      ...templateState,
+      name: value.replace(/[^a-z0-9_]/gi, ''),
     });
   };
 
@@ -167,10 +180,7 @@ const TabPanel: React.FC<Props> = ({
                     variant={'outlined'}
                     value={templateState.name}
                     onChange={(event) => {
-                      setTemplateState({
-                        ...templateState,
-                        name: event.target.value,
-                      });
+                      handleTemplateNameChange(event.target.value);
                     }}
                   />
                 </Grid>

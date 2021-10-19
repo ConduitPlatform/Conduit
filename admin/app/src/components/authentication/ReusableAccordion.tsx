@@ -220,7 +220,10 @@ const ReusableAccordion: React.FC<Props> = ({
                         variant="outlined"
                         value={value}
                         onChange={(e) =>
-                          setAccProps({ ...accProps, [e.target.name]: e.target.value })
+                          setAccProps({
+                            ...accProps,
+                            [e.target.name]: e.target.value.replace(/\s/g, ''),
+                          })
                         }
                         placeholder={key}
                         disabled={!accProps.enabled}

@@ -52,7 +52,7 @@ const CreateNewUserTab: React.FC = () => {
               <form onSubmit={handleSubmit} className={classes.form}>
                 <TextField
                   onChange={handleChange}
-                  value={values.username}
+                  value={values.username.trim()}
                   variant="outlined"
                   margin="normal"
                   required

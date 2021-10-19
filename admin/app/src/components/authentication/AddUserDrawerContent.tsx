@@ -12,6 +12,8 @@ import Image from 'next/image';
 
 import Container from '@material-ui/core/Container';
 import { Typography } from '@material-ui/core';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -43,6 +45,7 @@ interface Props {
 
 const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
   const [values, setValues] = useState<{ email: string; password: string }>({
     email: '',
     password: '',
@@ -64,7 +67,11 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const handleInputChange = (e: { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
 
-    setValues({ ...values, [name]: value });
+    if (value.includes(' ')) {
+      dispatch(enqueueInfoNotification(`The ${name} cannot contain spaces`));
+    }
+
+    setValues({ ...values, [name]: value.replace(/\s/g, '') });
   };
   return (
     <div className={classes.root} style={{ marginTop: '150px' }}>
