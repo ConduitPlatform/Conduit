@@ -6,7 +6,6 @@ export interface StorageConfig {
   storagePath: string;
   google: {
     serviceAccountKeyPath: string;
-    bucketName: string;
   };
   azure: {
     connectionString: string;

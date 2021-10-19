@@ -1,11 +1,11 @@
 import { isNil, isString } from 'lodash';
 import { IStorageProvider } from '@quintessential-sft/storage-provider';
-import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { ConfigController } from '../admin/Config.controller';
 
 export class FileHandlers {
   private database: any;
@@ -19,6 +19,10 @@ export class FileHandlers {
     this.initDb(grpcSdk, storageProvider);
   }
 
+  get storage() {
+    return this.storageProvider;
+  }
+
   async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
     await grpcSdk.waitForExistence('database-provider');
     this.database = grpcSdk.databaseProvider;
@@ -29,7 +33,33 @@ export class FileHandlers {
   }
 
   async createFile(call: RouterRequest, callback: RouterResponse) {
-    const { name, data, folder, mimeType, isPublic } = JSON.parse(call.request.params);
+    const { name, data, folder, container, mimeType, isPublic } = JSON.parse(
+      call.request.params
+    );
+    let config = ConfigController.getInstance().config;
+
+    let usedContainer = container;
+    // the container is sent from the client
+    if (isNil(usedContainer)) {
+      usedContainer = config.defaultContainer;
+    } else {
+      let container = await this.database.findOne('_StorageContainer', {
+        name: usedContainer,
+      });
+      if (!container) {
+        if (!config.allowContainerCreation) {
+          return callback({
+            code: status.PERMISSION_DENIED,
+            message: 'Container creation is not allowed!',
+          });
+        }
+        let exists = await this.storageProvider.containerExists(usedContainer);
+        if (!exists) {
+          await this.storageProvider.createContainer(usedContainer);
+        }
+        await this.database.create('_StorageContainer', { usedContainer, isPublic });
+      }
+    }
 
     if (!isString(data)) {
       return callback({
@@ -38,60 +68,52 @@ export class FileHandlers {
       });
     }
 
-    if (!isString(folder)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'No folder provided',
-      });
-    }
-
-    const buffer = Buffer.from(data, 'base64');
-
-    let errorMessage = null;
-
-    await this.storageProvider
-      .folderExists(folder)
-      .then((exists) => {
+    try {
+      const buffer = Buffer.from(data, 'base64');
+      let exists;
+      if (!isNil(folder)) {
+        exists = await this.storageProvider.folderExists(folder);
         if (!exists) {
-          return this.storageProvider.createFolder(folder);
+          await this.database.create('_StorageFolder', {
+            name: folder,
+            container: usedContainer,
+            isPublic,
+          });
+          await this.storageProvider.container(usedContainer).createFolder(folder);
         }
-      })
-      .then(() => {
-        return this.storageProvider.folder(folder).store(name, buffer);
-      })
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
 
-    let publicUrl = null;
-    if (isPublic) {
-      publicUrl = await this.storageProvider
-        .folder(folder)
-        .getPublicUrl(name)
-        .catch((e) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+        await this.storageProvider.container(usedContainer).store(folder + name, buffer);
+      } else {
+        await this.storageProvider.container(usedContainer).store(name, buffer);
+      }
 
-    const newFile = await this.database
-      .create('File', {
+      let publicUrl = null;
+      if (isPublic) {
+        publicUrl = await this.storageProvider.container(folder).getPublicUrl(name);
+      }
+
+      const newFile = await this.database.create('File', {
         name,
         mimeType,
         folder,
+        container: usedContainer,
         isPublic,
         url: publicUrl,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      });
 
-    return callback(null, {
-      result: JSON.stringify({
-        id: newFile._id,
-        name: newFile.name,
-        url: newFile.url,
-      }),
-    });
+      return callback(null, {
+        result: JSON.stringify({
+          id: newFile._id,
+          name: newFile.name,
+          url: newFile.url,
+        }),
+      });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong',
+      });
+    }
   }
 
   async getFile(call: RouterRequest, callback: RouterResponse) {
@@ -103,25 +125,26 @@ export class FileHandlers {
       });
     }
 
-    let errorMessage = null;
-    const file = await this.database
-      .findOne('File', { _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    if (isNil(file))
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'File not found',
+    try {
+      const file = await this.database.findOne('File', { _id: id });
+      if (isNil(file))
+        return callback({
+          code: status.NOT_FOUND,
+          message: 'File not found',
+        });
+      return callback(null, {
+        result: JSON.stringify({
+          id: file._id,
+          name: file.name,
+          url: file.url,
+        }),
       });
-
-    return callback(null, {
-      result: JSON.stringify({
-        id: file._id,
-        name: file.name,
-        url: file.url,
-      }),
-    });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
   }
 
   async getFileData(call: RouterRequest, callback: RouterResponse) {
@@ -133,26 +156,35 @@ export class FileHandlers {
       });
     }
 
-    let errorMessage = null;
-    const file = await this.database
-      .findOne('File', { _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    if (isNil(file))
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'File not found',
+    try {
+      const file = await this.database.findOne('File', { _id: id });
+      if (isNil(file))
+        return callback({
+          code: status.NOT_FOUND,
+          message: 'File not found',
+        });
+
+      let data: Buffer;
+      if (file.folder) {
+        data = await this.storageProvider
+          .container(file.container)
+          .get(file.folder + file.name);
+      } else {
+        data = await this.storageProvider.container(file.container).get(file.name);
+      }
+      data.toString('base64');
+
+      return callback(null, {
+        result: JSON.stringify({
+          data: data.toString('base64'),
+        }),
       });
-
-    let data: Buffer = await this.storageProvider.folder(file.folder).get(file.name);
-    data.toString('base64');
-
-    return callback(null, {
-      result: JSON.stringify({
-        data: data.toString('base64'),
-      }),
-    });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
   }
 
   async getFileUrl(call: RouterRequest, callback: RouterResponse) {
@@ -164,22 +196,33 @@ export class FileHandlers {
       });
     }
 
-    let errorMessage = null;
-    const found = await this.database
-      .findOne('File', { _id: id })
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    try {
+      const found = await this.database.findOne('File', { _id: id });
+      if (isNil(found)) {
+        return callback({ code: status.NOT_FOUND, message: 'File not found' });
+      }
+      if (found.isPublic) {
+        return callback(null, { redirect: found.url });
+      }
+      if (found.folder) {
+        return callback(null, {
+          redirect: await this.storageProvider
+            .container(found.container)
+            .getSignedUrl(found.folder + found.name),
+        });
+      } else {
+        return callback(null, {
+          redirect: await this.storageProvider
+            .container(found.container)
+            .getSignedUrl(found.name),
+        });
+      }
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
     }
-    if (isNil(found)) {
-      return callback({ code: status.NOT_FOUND, message: 'File not found' });
-    }
-    if (found.isPublic) {
-      return callback(null, { redirect: found.url });
-    }
-    return callback(null, {
-      redirect: await this.storageProvider.folder(found.folder).getSignedUrl(found.name),
-    });
   }
 
   async deleteFile(call: RouterRequest, callback: RouterResponse) {
@@ -191,28 +234,34 @@ export class FileHandlers {
       });
     }
 
-    let errorMessage = null;
-    this.database
-      .findOne('File', { _id: id })
-      .then((found: any) => {
-        if (isNil(found)) {
-          throw new Error('File not found');
-        }
-        return this.storageProvider.folder(found.folder).delete(found.name);
-      })
-      .then((success: boolean) => {
-        if (!success) {
-          throw new Error('Error deleting the file');
-        }
-        return this.database.deleteOne('File', { _id: id });
-      })
-      .catch((e: any) => (errorMessage = e.message));
+    try {
+      let found = await this.database.findOne('File', { _id: id });
 
-    return callback(null, { result: JSON.stringify({ success: true }) });
+      if (isNil(found)) {
+        return callback({ code: status.NOT_FOUND, message: 'File not found' });
+      }
+      let success = await this.storageProvider.container(found.folder).delete(found.name);
+      if (!success) {
+        return callback({
+          code: status.INTERNAL,
+          message: 'File could not be deleted',
+        });
+      }
+      await this.database.deleteOne('File', { _id: id });
+
+      return callback(null, { result: JSON.stringify({ success: true }) });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
   }
 
   async updateFile(call: RouterRequest, callback: RouterResponse) {
-    const { id, data, name, folder, mimeType } = JSON.parse(call.request.params);
+    const { id, data, name, container, folder, mimeType } = JSON.parse(
+      call.request.params
+    );
     if (!isString(id)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -220,115 +269,91 @@ export class FileHandlers {
       });
     }
 
-    let errorMessage = null;
-    const found = await this.database
-      .findOne('File', { _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    if (isNil(found)) {
-      return callback({ code: status.NOT_FOUND, message: 'File not found' });
-    }
+    try {
+      const found = await this.database.findOne('File', { _id: id });
+      if (isNil(found)) {
+        return callback({ code: status.NOT_FOUND, message: 'File not found' });
+      }
+      let config = ConfigController.getInstance().config;
+      let fileData = await this.storageProvider
+        .container(found.container)
+        .get(found.name);
 
-    // Create temporary file to make the changes so the original is not corrupted if anything fails
-    const tempFileName = uuid();
-    const oldData = await this.storageProvider
-      .folder(found.folder)
-      .get(found.name)
-      .catch((error) => {
-        errorMessage = 'Error reading file';
-      });
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      if (!isNil(data)) {
+        fileData = Buffer.from(data, 'base64');
+      }
 
-    const exists = await this.storageProvider
-      .folder('temp')
-      .exists('')
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      const newName = name ?? found.name;
+      const newFolder = folder ?? found.folder;
+      const newContainer = container ?? found.container;
 
-    if (!exists) {
-      await this.storageProvider
-        .folder('temp')
-        .createFolder('')
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      const shouldRemove =
+        newName !== found.name ||
+        newContainer !== found.container ||
+        newFolder !== found.folder;
 
-    await this.storageProvider
-      .folder('temp')
-      .store(tempFileName, oldData)
-      .catch((error) => {
-        console.log(error);
-        errorMessage = 'I/O Error';
-      });
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      found.mimeType = mimeType ?? found.mimeType;
 
-    let failed = false;
-
-    if (!isNil(data)) {
-      const buffer = Buffer.from(data, 'base64');
-      await this.storageProvider
-        .folder('temp')
-        .store(tempFileName, buffer)
-        .catch((error) => {
-          failed = true;
+      if (newContainer !== found.container) {
+        let container = await this.database.findOne('_StorageContainer', {
+          name: newContainer,
         });
-    }
+        if (!container) {
+          if (!config.allowContainerCreation) {
+            return callback({
+              code: status.PERMISSION_DENIED,
+              message: 'Container creation is not allowed!',
+            });
+          }
+          let exists = await this.storageProvider.containerExists(newContainer);
+          if (!exists) {
+            await this.storageProvider.createContainer(newContainer);
+          }
+          await this.database.create('_StorageContainer', { newContainer });
+        }
+      }
 
-    const newName = name ?? found.name;
-    const newFolder = folder ?? found.folder;
+      if (newFolder !== found.folder) {
+        let exists = await this.storageProvider
+          .container(newContainer)
+          .folderExists(newFolder);
+        if (!exists) {
+          await this.database.create('_StorageFolder', {
+            name: newFolder,
+            container: newContainer,
+          });
+          await this.storageProvider.container(newContainer).createFolder(newFolder);
+        }
+      }
 
-    const shouldRemove = newName !== found.name;
-
-    found.mimeType = mimeType ?? found.mimeType;
-
-    // Commit the changes to the actual file if everything is successful
-    if (failed) {
       await this.storageProvider
-        .folder('temp')
-        .delete(tempFileName)
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      return callback({ code: status.INTERNAL, message: '' });
-    }
-    await this.storageProvider
-      .folder('temp')
-      .moveToFolderAndRename(tempFileName, newName, newFolder)
-      .catch((error) => {
-        errorMessage = 'I/O Error';
+        .container(newContainer)
+        .store((newFolder ?? '') + name, fileData);
+
+      if (shouldRemove) {
+        await this.storageProvider
+          .container(found.container)
+          .delete((found.folder ?? '') + found.name);
+      }
+
+      found.name = newName;
+      found.folder = newFolder;
+      found.container = newContainer;
+
+      const updatedFile = await this.database.findByIdAndUpdate('File', found);
+
+      return callback(null, {
+        result: JSON.stringify({
+          id: updatedFile._id,
+          name: updatedFile.name,
+          url: updatedFile.url,
+        }),
       });
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (shouldRemove) {
-      await this.storageProvider
-        .folder(found.folder)
-        .delete(found.name)
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: status.INTERNAL, message: errorMessage });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
     }
-
-    found.name = newName;
-    found.folder = newFolder;
-
-    const updatedFile = await this.database
-      .findByIdAndUpdate('File', found)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, {
-      result: JSON.stringify({
-        id: updatedFile._id,
-        name: updatedFile.name,
-        url: updatedFile.url,
-      }),
-    });
   }
 }
