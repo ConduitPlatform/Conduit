@@ -15,11 +15,11 @@ import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
 import { AdminRoutes } from './admin/admin';
-import { ConfigController } from '@conduit/authentication/dist/config/Config.controller';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import Container from './models/Container';
 import File from './models/File';
 import Folder from './models/Folder';
+import { ConfigController } from './config/Config.controller';
 
 export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;

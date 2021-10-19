@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { ConfigController } from '../admin/Config.controller';
+import { ConfigController } from '../config/Config.controller';
 
 export class FileHandlers {
   private database: any;
