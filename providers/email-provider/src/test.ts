@@ -4,35 +4,37 @@ import { CreateEmailTemplate } from "../src/interfaces/CreateEmailTemplate";
 import { MailgunEmailOptions} from '../src/interfaces/mailgun/MailgunEmailOptions';
 import { MandrillEmailOptions } from '../src/interfaces/mandrill/MandrillEmailOptions';
 import { UpdateEmailTemplate } from '../src/interfaces/UpdateEmailTemplate';
-// let provider = new EmailProvider('mailgun',{
-//     mailgun:{
-//         proxy:null,
-//         host: 'api.mailgun.net',
-//         domain:'***REMOVED***',
-//         apiKey: '***REMOVED***'
-//     }
-// });
+let provider = new EmailProvider('mailgun',{
+    mailgun:{
+        proxy:null,
+        host: 'api.mailgun.net',
+        domain:'***REMOVED***',
+        apiKey: '***REMOVED***'
+    }
+});
 
 // let provider = new EmailProvider('sendgrid',{
 //     apiKey: '***REMOVED***'
 // });
 
-let provider = new EmailProvider('mandrill',{
-    mandrill : { 
-        apiKey: '***REMOVED***'
-    }
-});
+// let provider = new EmailProvider('mandrill',{
+//     mandrill : {
+//         apiKey: '***REMOVED***'
+//     }
+// });
 
 
 
-let templateOptions:TemplateOptions = {
-    id: 'd-56b4d36d208e4b6283e4c02eacedf922',
-    variables:[{
-        name:'fname',
-        content:'dimitris'
-    }]
-}
-
+// let templateOptions:TemplateOptions = {
+//     id: 'd-56b4d36d208e4b6283e4c02eacedf922',
+//     variables:[{
+//         name:'fname',
+//         content:'dimitris'
+//     }]
+// }
+provider._transport.deleteTemplate('fola').then(res => {
+    console.log(res);
+})
 // let mail = provider.emailBuilder()
 //             .setReceiver("dimitris.soldatos@quintessential.gr")
 //             .setSubject('Hello ✔✔✔✔✔')           

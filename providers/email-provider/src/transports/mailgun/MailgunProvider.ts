@@ -117,7 +117,7 @@ export class MailgunProvider extends EmailProviderClass {
     }
     return {
       id: id,
-      message: 'Template ' + resp.name + ' deleted!'
+      message: 'Template ' + id + ' deleted!'
     }
   }
 

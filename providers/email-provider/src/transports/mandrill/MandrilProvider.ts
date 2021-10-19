@@ -69,13 +69,20 @@ export class MandrillProvider extends EmailProviderClass{
          
         },resolve));
 
-
         return  this.getTemplateInfo(response.slug);
 
     }
 
     async deleteTemplate(id:string){
-        return 5 as any;
+      const response = await new Promise<any> ( (resolve) => this._mandrillSdk?.templates.delete({
+        key: this.apiKey,
+        name: id,
+      },resolve));
+
+      return {
+        message: 'Template ' + id + ' deleted',
+        id: id,
+      }
     }
     
     getBuilder(){
