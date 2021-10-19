@@ -1,13 +1,11 @@
 import Box from '@material-ui/core/Box';
-import Chip from '@material-ui/core/Chip';
-import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { Add } from '@material-ui/icons';
-import React, { useState } from 'react';
+import React from 'react';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import TemplateEditor from './TemplateEditor';
 
 const useStyles = makeStyles((theme) => ({
   tabs: {
@@ -32,6 +30,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     color: theme.palette.text.secondary,
     marginTop: theme.spacing(2),
+    backgroundColor: theme.palette.background.default,
   },
   chip: {
     margin: theme.spacing(1),
@@ -41,46 +40,12 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   edit: boolean;
-  add: boolean;
   templateState: EmailTemplateType;
-  setAdd: (value: boolean) => void;
   setTemplateState: (values: EmailTemplateType) => void;
 }
 
-const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTemplateState }) => {
+const EmailDetails: React.FC<Props> = ({ edit, templateState, setTemplateState }) => {
   const classes = useStyles();
-
-  const [variable, setVariable] = useState('');
-
-  const handleChipClick = () => {
-    setAdd(!add);
-  };
-
-  const handleKeys = (event: { keyCode: number }) => {
-    if (event.keyCode === 13) {
-      const newVariables = [...templateState.variables, variable];
-      setAdd(false);
-      setTemplateState({
-        ...templateState,
-        variables: newVariables,
-      });
-      setVariable('');
-    }
-    if (event.keyCode === 27) {
-      setVariable('');
-      setAdd(false);
-    }
-  };
-
-  const handleVariableDelete = (index: number) => {
-    const oldVars = [...templateState.variables];
-    oldVars.splice(index, 1);
-
-    setTemplateState({
-      ...templateState,
-      variables: oldVars,
-    });
-  };
 
   return (
     <Box>
@@ -105,22 +70,13 @@ const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTe
         </Grid>
       </Grid>
       {edit ? (
-        <TextField
-          className={classes.multiline}
-          id="filled-textarea"
-          label="Body"
-          multiline
-          rows={8}
-          variant="outlined"
+        <TemplateEditor
           value={templateState.body}
-          onChange={(event) => {
+          setValue={(value) => {
             setTemplateState({
               ...templateState,
-              body: event.target.value,
+              body: value,
             });
-          }}
-          InputProps={{
-            readOnly: !edit,
           }}
         />
       ) : (
@@ -131,58 +87,6 @@ const EmailDetails: React.FC<Props> = ({ edit, add, templateState, setAdd, setTe
           </Typography>
         </>
       )}
-
-      <Divider className={classes.divider} />
-
-      <Grid container className={classes.grid}>
-        <Grid item xs={12}>
-          <Box
-            width={'100%'}
-            display={'inline-flex'}
-            justifyContent={'space-between'}
-            alignItems={'center'}>
-            <Typography variant={'overline'}>Declared variables</Typography>
-          </Box>
-          <Box>
-            {templateState.variables.map((v: string, index: number) =>
-              edit ? (
-                <Chip
-                  className={classes.chip}
-                  key={index}
-                  label={v}
-                  onDelete={() => {
-                    handleVariableDelete(index);
-                  }}
-                />
-              ) : (
-                <Chip className={classes.chip} key={`chip-${index}`} label={v} />
-              )
-            )}
-            {edit && !add && (
-              <Chip
-                label="Add"
-                clickable
-                onClick={handleChipClick}
-                icon={<Add />}
-                variant="outlined"
-              />
-            )}
-            {add && add && (
-              <TextField
-                helperText={'Enter: to save | Esc: to cancel'}
-                size={'small'}
-                variant={'outlined'}
-                label={'New variable'}
-                onKeyDown={handleKeys}
-                value={variable}
-                onChange={(event) => {
-                  setVariable(event.target.value);
-                }}
-              />
-            )}
-          </Box>
-        </Grid>
-      </Grid>
     </Box>
   );
 };

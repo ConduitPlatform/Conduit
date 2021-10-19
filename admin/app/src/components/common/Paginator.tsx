@@ -1,29 +1,33 @@
 import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import TablePagination from '@material-ui/core/TablePagination';
-import { useAppSelector } from '../../redux/store';
 
 interface Props {
   page: number;
   limit: number;
   handlePageChange: (event: React.MouseEvent<HTMLButtonElement> | null, page: number) => void;
-  handleLimitChange: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
+  handleLimitChange: (value: number) => void;
+  count: number;
 }
 
-const Paginator: React.FC<Props> = ({ handlePageChange, page, limit, handleLimitChange }) => {
-  const docs = useAppSelector((state) => state.authenticationSlice.data.authUsers.count);
-
+const Paginator: React.FC<Props> = ({
+  handlePageChange,
+  page,
+  limit,
+  handleLimitChange,
+  count,
+}) => {
   return (
     <Grid container justify="flex-end">
       <TablePagination
         color="primary"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[10, 25, 50]}
         component="div"
-        count={docs}
+        count={count}
         page={page}
         onChangePage={handlePageChange}
         rowsPerPage={limit}
-        onChangeRowsPerPage={handleLimitChange}
+        onChangeRowsPerPage={(event) => handleLimitChange(parseInt(event.target.value))}
       />
     </Grid>
   );

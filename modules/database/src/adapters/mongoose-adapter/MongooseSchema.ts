@@ -3,7 +3,7 @@ import { SchemaAdapter } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { createWithPopulations } from './utils';
-import { EJSON } from 'bson';
+const EJSON = require('mongodb-extended-json');
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;

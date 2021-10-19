@@ -29,7 +29,7 @@ const theme = createMuiTheme({
       default: '#262840',
     },
     action: {
-      disabledBackground: disabled,
+      disabledBackground: 'transparent',
       disabled: disabled,
     },
   },

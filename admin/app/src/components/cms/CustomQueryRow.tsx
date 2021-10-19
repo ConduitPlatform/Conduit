@@ -24,10 +24,10 @@ const useStyles = makeStyles((theme) => ({
       paddingLeft: 12,
     },
     '&.Mui-selected': {
-      backgroundColor: '#3399ff !important',
+      backgroundColor: theme.palette.primary.main,
       color: 'white',
       '&:hover': {
-        backgroundColor: '#3399ff !important',
+        backgroundColor: theme.palette.primary.main,
         color: 'white',
       },
     },

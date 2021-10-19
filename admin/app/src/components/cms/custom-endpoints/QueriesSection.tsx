@@ -6,7 +6,7 @@ import { recursiveNodeIteration } from '../../../utils/cms';
 import { v4 as uuidv4 } from 'uuid';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import { makeStyles } from '@material-ui/core/styles';
-import { deepClone } from '../../utils/deepClone';
+import { deepClone } from '../../../utils/deepClone';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
 
 const useStyles = makeStyles((theme) => ({

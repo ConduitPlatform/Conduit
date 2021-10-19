@@ -6,9 +6,8 @@ import DialogActions from '@material-ui/core/DialogActions';
 import Button from '@material-ui/core/Button';
 import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import slugify from '../../utils/slugify';
 import Link from 'next/link';
 
 const useStyles = makeStyles((theme) => ({
@@ -46,26 +45,18 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
   const classes = useStyles();
 
   const [typeName, setTypeName] = useState('');
-  const [typeId, setTypeId] = useState('');
 
-  useEffect(() => {
-    const slug = slugify(typeName);
-    setTypeId(slug);
-  }, [typeName]);
-
-  const handleTypeName = (event: React.ChangeEvent<{ value: any }>) => {
-    setTypeName(event.target.value.split(' ').join(''));
+  const handleTypeName = (value: string) => {
+    setTypeName(value.split(' ').join(''));
   };
 
   const handleAddType = () => {
     setTypeName('');
-    setTypeId('');
     handleClose();
   };
 
   const handleCloseClick = () => {
     setTypeName('');
-    setTypeId('');
     handleClose();
   };
 
@@ -87,7 +78,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
             label="Enter your type name"
             variant="standard"
             value={typeName}
-            onChange={handleTypeName}
+            onChange={(event) => handleTypeName(event.target.value)}
           />
         </DialogContent>
         <DialogActions style={{ justifyContent: 'center' }}>
@@ -100,7 +91,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
                 color="primary"
                 variant="contained"
                 style={{ textTransform: 'none' }}
-                disabled={typeName === '' && typeId === ''}>
+                disabled={typeName === ''}>
                 Create new Schema
               </Button>
             </a>

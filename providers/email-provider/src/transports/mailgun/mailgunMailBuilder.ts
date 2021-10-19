@@ -13,7 +13,7 @@ export class MailgunMailBuilder extends EmailBuilderClass<MailgunEmailOptions>{
     if( !this._mailOptions.hasOwnProperty('name')){
         this._mailOptions.template = '' as any;
     }
-    this._mailOptions.template = template.id,
+    this._mailOptions.template = template.id;
     template.variables.forEach( element => {
       this._mailOptions['v:'+element.name] = element.content;
     })

@@ -6,7 +6,9 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
+
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
@@ -40,7 +42,7 @@ export class AdminHandlers {
   async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
     let errorMessage: string | null = null;
     const externalTemplates:any = await this.emailService.getExternalTemplates();
-    
+
     let updated = [];
     let totalCount = 0;
     for ( let element of externalTemplates){
@@ -78,24 +80,35 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ updated,totalCount }) });
   }
 
-  async getExternalTemplates(call: RouterRequest, callback: RouterResponse){
-    const externalTemplates = await this.emailService.getExternalTemplates();
-    if( isNil(externalTemplates)){
-      throw new Error(`External templates didnt found!`)
+  async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
+    const [err, externalTemplates] = await to(
+      this.emailService.getExternalTemplates() as any
+    );
+    if (!isNil(err)) {
+      return callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
     }
-    let templateDocuments:any = [];
-    externalTemplates.forEach((element) => {
+    if (isNil(externalTemplates)) {
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'Templates not found',
+      });
+    }
+    let templateDocuments: any = [];
+    (externalTemplates as any).forEach((element: any) => {
       templateDocuments.push({
         _id: element.id,
         name: element.name,
         subject: element.versions[0].subject,
-        body: element.versions[0].plainContent,
+        body: element.versions[0].body,
         createdAt: element.createdAt,
-        variables: element.versions[0].variables
-      })
-    })
+        variables: element.versions[0].variables,
+      });
+    });
     const totalCount = templateDocuments.length;
-    return callback(null, { result: JSON.stringify({ templateDocuments,totalCount }) });
+    return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
@@ -132,30 +145,44 @@ export class AdminHandlers {
 
     return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
   }
+
   async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const {id,sender,externalManaged,name, subject, body, variables} = JSON.parse(call.request.params);
+    const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
+      call.request.params
+    );
     let externalId = undefined;
-    if (isNil(name) || isNil(subject) || isNil(body) || isNil(variables)) {
+    const body_vars = getHBValues(body);
+    const subject_vars = getHBValues(subject);
+
+    let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    variables = variables.filter(
+      (value: any, index: any) => variables.indexOf(value) === index
+    );
+    if (isNil(name) || isNil(subject) || isNil(body)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
-    if(externalManaged){
-      if(isNil(id)){           //that means that we want to create an external managed template
-        const [err,template] = await to(this.emailService.createExternalTemplate({
-          name,
-          plainContent:body,
-          subject,
-        }) as any);
-
-        if(err){
+    if (externalManaged) {
+      if (isNil(_id)) {
+        //that means that we want to create an external managed template
+        const [err, template] = await to(
+          this.emailService.createExternalTemplate({
+            name,
+            body: body,
+            subject,
+          }) as any
+        );
+        if (err) {
           return callback({
             code: status.INTERNAL,
             message: err.message,
           });
         }
         externalId = (template as any)?.id;
+      } else {
+        externalId = _id;
       }
     }
     let errorMessage: string | null = null;
@@ -170,14 +197,15 @@ export class AdminHandlers {
         externalId,
       })
       .catch((e: any) => (errorMessage = e.message));
+
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
       });
+
     return callback(null, { result: JSON.stringify({ template: newTemplate }) });
   }
-
 
   async editTemplate(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
@@ -206,7 +234,7 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    
+
     if (isNil(templateDocument)) {
       return callback({
         code: status.NOT_FOUND,
@@ -214,12 +242,18 @@ export class AdminHandlers {
       });
     }
 
-    ['name', 'subject', 'body', 'variables'].forEach((key) => {
+    ['name', 'subject', 'body'].forEach((key) => {
       if (params[key]) {
         templateDocument[key] = params[key];
       }
     });
 
+    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(
+      Object.keys(getHBValues(params.subject))
+    );
+    templateDocument['variables'] = templateDocument['variables'].filter(
+      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
+    );
     const updatedTemplate = await this.database
       .findByIdAndUpdate('EmailTemplate', id, templateDocument)
       .catch((e: any) => (errorMessage = e.message));
@@ -229,6 +263,33 @@ export class AdminHandlers {
         message: errorMessage,
       });
 
+    if (templateDocument.externalManaged) {
+      const template = await this.emailService.getExternalTemplate(
+        updatedTemplate.externalId
+      );
+      let versionId = undefined;
+      if (!isNil(template?.versions[0].id)) {
+        versionId = template?.versions[0].id;
+      }
+
+      const data = {
+        id: updatedTemplate.externalId,
+        subject: updatedTemplate.subject,
+        body: updatedTemplate.body,
+        versionId: versionId,
+      };
+
+      await this.emailService.updateTemplate(data)?.catch((e: any) => {
+        errorMessage = e.message;
+      });
+
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+      }
+    }
     return callback(null, { result: JSON.stringify({ updatedTemplate }) });
   }
 

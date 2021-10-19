@@ -1,12 +1,11 @@
 import React, { FC, useState } from 'react';
 import DataTable from '../common/DataTable';
 import Container from '@material-ui/core/Container';
-import Box from '@material-ui/core/Box';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import { makeStyles } from '@material-ui/core/styles';
 import { SchemaUI } from './CmsModels';
-import { Button } from '@material-ui/core';
+import { Box, Button, Grid } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   toggleButton: {
@@ -28,6 +27,17 @@ const useStyles = makeStyles((theme) => ({
       },
     },
     textTransform: 'none',
+  },
+  toggle: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing(1),
+  },
+  create: {
+    display: 'flex',
+    alignContent: 'end',
+    justifyContent: 'flex-end',
   },
 }));
 
@@ -82,31 +92,32 @@ const SchemasTable: FC<Props> = ({
 
   return (
     <Container maxWidth={'lg'}>
-      <div style={{ textTransform: 'capitalize', display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="contained"
-          color="primary"
-          style={{ textTransform: 'capitalize', display: 'flex', alignSelf: 'flex-end' }}
-          onClick={handleAdd}>
-          Create new
-        </Button>
-      </div>
-      <Box
-        width={'100%'}
-        display={'inline-flex'}
-        justifyContent={'center'}
-        alignItems={'center'}
-        margin={'10px'}>
-        <ToggleButtonGroup size="large" value={active} exclusive onChange={handleChange}>
-          <ToggleButton key={1} value={true} className={classes.toggleButton}>
-            Active Schemas
-          </ToggleButton>
-          <ToggleButton key={2} value={false} className={classes.toggleButtonDisabled}>
-            Disabled Schemas
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
+      <Grid container>
+        <Grid item xs={4}></Grid>
+        <Grid item xs={4}>
+          <Box className={classes.toggle}>
+            <ToggleButtonGroup value={active} exclusive onChange={handleChange}>
+              <ToggleButton key={1} value={true} className={classes.toggleButton}>
+                Active Schemas
+              </ToggleButton>
+              <ToggleButton key={2} value={false} className={classes.toggleButtonDisabled}>
+                Disabled Schemas
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </Grid>
+        <Grid item xs={4}>
+          <Box className={classes.create}>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ textTransform: 'capitalize' }}
+              onClick={handleAdd}>
+              Create new
+            </Button>
+          </Box>
+        </Grid>
+      </Grid>
       {visibleData() && (
         <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />
       )}

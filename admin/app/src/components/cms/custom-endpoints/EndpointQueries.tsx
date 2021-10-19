@@ -6,10 +6,10 @@ import { Grid } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import Box from '@material-ui/core/Box';
 import { TreeView } from '@material-ui/lab';
-import MinusSquare from '../../svgs/MinusSquare';
-import PlusSquare from '../../svgs/PlusSquare';
-import CloseSquare from '../../svgs/CloseSquare';
-import { deepClone } from '../../utils/deepClone';
+import MinusSquare from '../../../assets/svgs/MinusSquare';
+import PlusSquare from '../../../assets/svgs/PlusSquare';
+import CloseSquare from '../../../assets/svgs/CloseSquare';
+import { deepClone } from '../../../utils/deepClone';
 
 const useStyles = makeStyles({
   root: {

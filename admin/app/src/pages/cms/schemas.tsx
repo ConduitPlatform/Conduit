@@ -27,13 +27,7 @@ const useStyles = makeStyles((theme) => ({
   moreButton: {
     display: 'flex',
     justifyContent: 'center',
-    marginTop: 15,
-  },
-  buttonAlignment: {
-    display: 'flex',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    marginTop: '-25px',
+    marginTop: theme.spacing(1),
   },
 }));
 
@@ -75,7 +69,7 @@ const Schemas = () => {
   };
 
   const handleDeleteSchema = () => {
-    dispatch(asyncDeleteSelectedSchema(selectedSchemaForAction.data._id));
+    dispatch(asyncDeleteSelectedSchema(selectedSchemaForAction.data));
     setSelectedSchemaForAction({ data: {}, action: '' });
     setOpenDisable(false);
   };

@@ -4,6 +4,10 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import BlockIcon from '@material-ui/icons/Block';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import View from '@material-ui/icons/ViewDay';
+import Upload from '@material-ui/icons/CloudUpload';
+import Sync from '@material-ui/icons/Sync';
+import ReplyAll from '@material-ui/icons/ReplyAll';
 
 interface Action {
   title: string;
@@ -30,6 +34,14 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, 
         return <BlockIcon color="primary" />;
       case 'enable':
         return <CheckCircleIcon color="primary" />;
+      case 'view':
+        return <View color="primary" />;
+      case 'upload':
+        return <Upload color="primary" />;
+      case 'sync':
+        return <Sync color="primary" />;
+      case 'replies':
+        return <ReplyAll color="primary" />;
       default:
         return <></>;
     }

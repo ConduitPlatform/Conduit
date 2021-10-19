@@ -71,6 +71,8 @@
     /* Disallow inconsistently-cased references to the same file. */
   },
   "include": ["./src/**/*.ts"],
+  // use this for the tests I guess. If we leave it uncommented it breaks lerna builds
+//  "include": ["./src/**/*.ts", "test/test.ts"],
   "exclude": ["./src/**/*.spec.ts"],
   "compileOnSave": false
 }
