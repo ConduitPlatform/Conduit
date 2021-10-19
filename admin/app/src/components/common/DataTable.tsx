@@ -8,7 +8,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
-import { isNumber, orderBy } from 'lodash';
+import { isNumber } from 'lodash';
 import moment from 'moment';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
@@ -61,16 +61,6 @@ const DataTable: React.FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const [order, setOrder] = useState<'desc' | 'asc'>('asc');
-  const [orderById, setOrderById] = useState<string>('_id');
-
-  useEffect(() => {
-    if (dsData) {
-      const initOrder = Object.keys(dsData[0])[0];
-      setOrderById(initOrder);
-    }
-  }, [dsData]);
-
   /** table header and rows */
   const rows = dsData;
   const headerCells = Object.keys(dsData[0]).map((header, index) => {
@@ -81,16 +71,6 @@ const DataTable: React.FC<Props> = ({
       label: header,
     };
   });
-
-  const handleRequestSort = (event: MouseEvent, property: string) => {
-    const isAsc = orderById === property && order === 'desc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderById(property);
-  };
-
-  const createSortHandler = (property: string) => (event: any) => {
-    handleRequestSort(event, property);
-  };
 
   const getValue = (value: any) => {
     if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
@@ -136,12 +116,8 @@ const DataTable: React.FC<Props> = ({
                 className={classes.header}
                 key={headCell.id}
                 align={headCell.numeric ? 'right' : 'left'}
-                padding={headCell.disablePadding ? 'none' : 'default'}
-                sortDirection={orderById === headCell.id ? order : false}>
-                <TableSortLabel
-                  active={orderById === headCell.id}
-                  direction={orderById === headCell.id ? order : 'asc'}
-                  onClick={createSortHandler(headCell.id)}>
+                padding={headCell.disablePadding ? 'none' : 'default'}>
+                <TableSortLabel active={false} direction={'asc'}>
                   {headCell.label}
                 </TableSortLabel>
               </TableCell>
@@ -150,7 +126,7 @@ const DataTable: React.FC<Props> = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {orderBy(rows, orderById, order).map((row, i) => (
+          {rows.map((row: any, i: number) => (
             <TableRow key={i}>
               <TableCell align="left" padding="none">
                 <Checkbox
