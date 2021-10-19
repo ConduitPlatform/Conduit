@@ -74,6 +74,10 @@ export class MandrillProvider extends EmailProviderClass{
 
     }
 
+    async deleteTemplate(id:string){
+        return 5 as any;
+    }
+    
     getBuilder(){
         return new MandrillBuilder();
     }

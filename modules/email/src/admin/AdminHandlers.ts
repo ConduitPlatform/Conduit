@@ -27,6 +27,7 @@ export class AdminHandlers {
         editTemplate: this.editTemplate.bind(this),
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
+        deleteTemplate: this.deleteTemplate.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -251,6 +252,38 @@ export class AdminHandlers {
     return callback(null, { result: JSON.stringify({ updatedTemplate }) });
   }
 
+  async deleteTemplate(call: RouterRequest, callback: RouterResponse){
+    const params = JSON.parse(call.request.params);
+    const id = params.id;
+
+    let errorMessage: string | null = null;
+    const templateDocument = await this.database
+      .findOne('EmailTemplate', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+
+    const deletedDocument = await this.database
+      .deleteOne('EmailTemplate',{_id:id})
+      .catch((e:any) => (errorMessage = e.message));
+
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+
+    if(templateDocument.externalManaged){
+      this.emailService.deleteExternalTemplate(templateDocument.externalId);
+    }
+  
+  }
+  
   async sendEmail(call: RouterRequest, callback: RouterResponse) {
     let { templateName, body, subject, email, variables, sender } = JSON.parse(
       call.request.params
