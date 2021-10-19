@@ -266,7 +266,7 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    const deletedDocument = await this.database
+    await this.database
       .deleteOne('EmailTemplate',{_id:id})
       .catch((e:any) => (errorMessage = e.message));
 
