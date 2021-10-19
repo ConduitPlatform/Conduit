@@ -1,6 +1,7 @@
-import { Box, Button, Grid, makeStyles, Typography } from '@material-ui/core';
-import { AddCircleOutline } from '@material-ui/icons';
-import React, { ReactElement, useEffect, useState } from 'react';
+import { Box, Button, Grid, IconButton, makeStyles, Tooltip, Typography } from '@material-ui/core';
+import { AddCircleOutline, DeleteTwoTone } from '@material-ui/icons';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import DataTable from '../../components/common/DataTable';
 import Paginator from '../../components/common/Paginator';
 import FormReplies from '../../components/forms/FormReplies';
@@ -8,8 +9,15 @@ import ViewEditForm from '../../components/forms/ViewEditForm';
 import FormsLayout from '../../components/navigation/InnerLayouts/formsLayout';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import { FormsModel, FormsUI } from '../../models/forms/FormsModels';
-import { asyncCreateForm, asyncEditForm, asyncGetForms } from '../../redux/slices/formsSlice';
+import {
+  asyncCreateForm,
+  asyncDeleteForm,
+  asyncDeleteMultipleForms,
+  asyncEditForm,
+  asyncGetForms,
+} from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+import { handleDeleteDescription, handleDeleteTitle } from '../../utils/formsDialog';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -37,6 +45,14 @@ const Create = () => {
     enabled: false,
   };
   const [skip, setSkip] = useState<number>(0);
+  const [openDeleteForms, setOpenDeleteForms] = useState<{
+    open: boolean;
+    multiple: boolean;
+  }>({
+    open: false,
+    multiple: false,
+  });
+  const [selectedForm, setSelectedForm] = useState<FormsModel>(emptyFormState);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [drawer, setDrawer] = useState<boolean>(false);
@@ -52,6 +68,10 @@ const Create = () => {
     dispatch(asyncGetForms({ skip, limit }));
   }, [dispatch, skip, limit]);
 
+  const getFormsCallback = useCallback(() => {
+    dispatch(asyncGetForms({ skip, limit }));
+  }, [dispatch, limit, skip]);
+
   const newForm = () => {
     setDrawer(true);
     setCreate(true);
@@ -64,6 +84,11 @@ const Create = () => {
     setEdit(false);
     setRepliesForm(emptyFormState);
     setFormToView(emptyFormState);
+    setSelectedForm(emptyFormState);
+    setOpenDeleteForms({
+      open: false,
+      multiple: false,
+    });
   };
 
   const saveFormChanges = (data: FormsModel) => {
@@ -156,9 +181,33 @@ const Create = () => {
         setDrawer(true);
       }
       if (action.type === 'delete') {
-        console.log('delete');
+        setSelectedForm(currentForm);
+        setOpenDeleteForms({
+          open: true,
+          multiple: false,
+        });
       }
     }
+  };
+
+  const deleteButtonAction = () => {
+    if (openDeleteForms.open && openDeleteForms.multiple) {
+      const params = {
+        ids: selectedForms,
+        getForms: getFormsCallback,
+      };
+      dispatch(asyncDeleteMultipleForms(params));
+    } else {
+      const params = {
+        id: selectedForm._id,
+        getForms: getFormsCallback,
+      };
+      dispatch(asyncDeleteForm(params));
+    }
+    setOpenDeleteForms({
+      open: false,
+      multiple: false,
+    });
   };
 
   const toDelete = {
@@ -182,6 +231,22 @@ const Create = () => {
     <div>
       <Grid container justify="flex-end">
         <Grid item>
+          {selectedForms.length > 1 && (
+            <IconButton
+              aria-label="delete"
+              color="primary"
+              onClick={() =>
+                setOpenDeleteForms({
+                  open: true,
+                  multiple: true,
+                })
+              }>
+              <Tooltip title="Delete multiple forms">
+                <DeleteTwoTone />
+              </Tooltip>
+            </IconButton>
+          )}
+
           <Button
             style={{ marginBottom: '5px' }}
             variant="contained"
@@ -250,6 +315,14 @@ const Create = () => {
           </>
         )}
       </DrawerWrapper>
+      <ConfirmationDialog
+        open={openDeleteForms.open}
+        handleClose={handleCloseDrawer}
+        title={handleDeleteTitle(openDeleteForms.multiple, selectedForm)}
+        description={handleDeleteDescription(openDeleteForms.multiple, selectedForm)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      />
     </div>
   );
 };

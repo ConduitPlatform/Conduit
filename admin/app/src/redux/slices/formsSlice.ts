@@ -4,6 +4,8 @@ import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import {
   createForm,
+  deleteFormRequest,
+  deleteMultipleFormsRequest,
   getFormReplies,
   getForms,
   getFormsConfig,
@@ -11,7 +13,6 @@ import {
   updateFormsConfig,
 } from '../../http/FormsRequests';
 import { FormReplies, FormSettingsConfig, FormsModel } from '../../models/forms/FormsModels';
-import { number } from 'prop-types';
 
 export type FormsState = {
   data: {
@@ -85,6 +86,40 @@ export const asyncEditForm = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(enqueueErrorNotification(`Could not update form:${getErrorData(error)}`));
       thunkAPI.dispatch(setAppLoading(false));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteForm = createAsyncThunk(
+  'forms/delete',
+  async (params: { id: any; getForms: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteFormRequest(params.id);
+      params.getForms();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted form!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteMultipleForms = createAsyncThunk(
+  'forms/deleteMultiple',
+  async (params: { ids: string[]; getForms: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteMultipleFormsRequest(params.ids);
+      params.getForms();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted forms!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
