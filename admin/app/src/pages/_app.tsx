@@ -49,6 +49,7 @@ const ConduitApp = ({ Component, pageProps }: AppPropsWithLayout) => {
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>
           <SnackbarProvider
+            preventDuplicate={true}
             anchorOrigin={{
               vertical: 'bottom',
               horizontal: 'right',

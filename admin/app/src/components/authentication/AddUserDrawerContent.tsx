@@ -68,7 +68,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
     const { name, value } = e.target;
 
     if (value.includes(' ')) {
-      dispatch(enqueueInfoNotification(`The ${name} cannot contain spaces`));
+      dispatch(enqueueInfoNotification(`The ${name} cannot contain spaces`, `${name}`));
     }
 
     setValues({ ...values, [name]: value.replace(/\s/g, '') });

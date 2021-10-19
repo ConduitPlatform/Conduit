@@ -144,7 +144,9 @@ const TabPanel: React.FC<Props> = ({
 
   const handleSenderChange = (value: string) => {
     if (value.includes('@')) {
-      dispatch(enqueueInfoNotification('The mail server is already set on the config'));
+      dispatch(
+        enqueueInfoNotification('The mail server is already set on the config', 'templateSender')
+      );
       return;
     }
 
@@ -157,7 +159,12 @@ const TabPanel: React.FC<Props> = ({
   const handleTemplateNameChange = (value: string) => {
     const regex = /[^a-z0-9_]/gi;
     if (regex.test(value)) {
-      dispatch(enqueueInfoNotification('The template name can only contain alpharithmetics and _'));
+      dispatch(
+        enqueueInfoNotification(
+          'The template name can only contain alpharithmetics and _',
+          'duplicate'
+        )
+      );
     }
 
     setTemplateState({

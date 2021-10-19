@@ -125,7 +125,12 @@ const ViewEditForm: React.FC<Props> = ({
 
     const regex = /[^a-z0-9_]/gi;
     if (regex.test(value)) {
-      dispatch(enqueueInfoNotification('The form name can only contain alpharithmetics and _'));
+      dispatch(
+        enqueueInfoNotification(
+          'The form name can only contain alpharithmetics and _',
+          'infoDuplicate'
+        )
+      );
     }
 
     setInputFields((list) =>
@@ -163,7 +168,14 @@ const ViewEditForm: React.FC<Props> = ({
 
   const handleSaveClick = () => {
     if (!/^\S+@\S+\.\S+$/.test(formState.emailField)) {
-      dispatch(enqueueErrorNotification('The email address you provided is not valid'));
+      dispatch(
+        enqueueErrorNotification('The email address you provided is not valid', 'emailError')
+      );
+      return;
+    }
+
+    if (Object.keys(formState.fields).length === 0) {
+      dispatch(enqueueErrorNotification('Form fields are empty', 'emailError'));
       return;
     }
     const fields: { [key: string]: string } = {};
