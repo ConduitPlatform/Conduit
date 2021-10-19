@@ -24,7 +24,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { FormsModel } from '../../models/forms/FormsModels';
 import Delete from '@material-ui/icons/Delete';
 import { useAppDispatch } from '../../redux/store';
-import { enqueueInfoNotification } from '../../utils/useNotifier';
+import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -162,6 +162,10 @@ const ViewEditForm: React.FC<Props> = ({
   }, [form, edit, create]);
 
   const handleSaveClick = () => {
+    if (!/^\S+@\S+\.\S+$/.test(formState.emailField)) {
+      dispatch(enqueueErrorNotification('The email address you provided is not valid'));
+      return;
+    }
     const fields: { [key: string]: string } = {};
     inputFields.forEach((item) => {
       if (item.key !== '' && item.type !== '') fields[item.key] = item.type;
