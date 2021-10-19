@@ -16,6 +16,7 @@ import * as path from 'path';
 import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
 import { AdminRoutes } from './admin/admin';
+import { ConfigController } from '@conduit/authentication/dist/config/Config.controller';
 
 export class StorageModule implements ConduitServiceModule {
   private storageProvider: IStorageProvider;
@@ -178,7 +179,8 @@ export class StorageModule implements ConduitServiceModule {
   }
 
   private async enableModule(): Promise<any> {
-    const storageConfig = await this.grpcSdk.config.get('storage');
+    await this.updateConfig();
+    const storageConfig = ConfigController.getInstance().config;
     const { provider, storagePath, google, azure } = storageConfig;
 
     if (!this.isRunning) {
@@ -195,5 +197,15 @@ export class StorageModule implements ConduitServiceModule {
 
   private registerModels(): any {
     return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(File);
+  }
+  private async updateConfig(config?: any) {
+    if (config) {
+      ConfigController.getInstance().config = config;
+      return Promise.resolve();
+    } else {
+      return this.grpcSdk.config.get('storage').then((config: any) => {
+        ConfigController.getInstance().config = config;
+      });
+    }
   }
 }
