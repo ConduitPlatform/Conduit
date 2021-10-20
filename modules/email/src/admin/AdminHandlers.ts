@@ -10,6 +10,7 @@ import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private database: any;
@@ -205,10 +206,17 @@ export class AdminHandlers {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
+    let query:any = {};
+    let identifier;
+
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`};
+    }
 
     const templateDocumentsPromise = this.database.findMany(
       'EmailTemplate',
-      {},
+      query,
       null,
       skipNumber,
       limitNumber
