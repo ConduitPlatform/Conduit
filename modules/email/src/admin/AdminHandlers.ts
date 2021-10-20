@@ -29,7 +29,8 @@ export class AdminHandlers {
         getExternalTemplates: this.getExternalTemplates.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
         syncExternalTemplates: this.syncExternalTemplates.bind(this),
-        deleteManyTemplates: this.deleteManyTemplates.bind(this)
+        deleteManyTemplates: this.deleteManyTemplates.bind(this),
+        uploadTemplate: this.uploadTemplate.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -39,6 +40,30 @@ export class AdminHandlers {
 
   setEmailService(emailService: EmailService) {
     this.emailService = emailService;
+  }
+
+  async uploadTemplate(call: RouterRequest, callback: RouterResponse){
+    const { template } = JSON.parse(
+      call.request.params
+    );
+    const {name,body} = template;
+    if( isNil(name) || isNil(body)) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Body/name is missing!',
+      });
+    }
+    let errorMessage;
+    const created = await (this.emailService.createExternalTemplate(template) as any)
+    .catch((e: any) => (errorMessage = e.message));
+      if(!isNil(errorMessage)){
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+      }
+
+    return callback(null, { result: JSON.stringify({ created }) });
   }
 
   async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
@@ -170,7 +195,7 @@ export class AdminHandlers {
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
