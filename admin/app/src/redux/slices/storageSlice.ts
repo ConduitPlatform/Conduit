@@ -22,6 +22,8 @@ const initialState: IStorageSlice = {
       active: false,
       provider: '',
       storagePath: '',
+      allowContainerCreation: true,
+      defaultContainer: '',
       azure: {
         connectionString: '',
       },
