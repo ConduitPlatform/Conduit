@@ -108,7 +108,7 @@ export class AdminHandlers {
     if( foundDocuments !== totalCount){
         return callback({
           code: status.INTERNAL,
-          message: 'some ids didnt found',
+          message: 'some ids were not found',
         })
     }
 
