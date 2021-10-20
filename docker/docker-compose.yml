@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  core:
+    image: quintessential.azurecr.io/conduit:latest
+    ports:
+      - "55152:55152"
+      - "3000:3000"
+      - "3001:3001"
+    links:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  database-provider:
+    image: quintessential.azurecr.io/conduit-database:latest
+    ports:
+      - "55153:55153"
+    links:
+      - core
+    environment:
+      - databaseURL=REPLACE_ME_WITH_CREDENTIALS
+      - SERVICE_URL=0.0.0.0:55153
+      - REGISTER_NAME=true
+      - CONDUIT_SERVER=core:55152
+  redis:
+    image: redis

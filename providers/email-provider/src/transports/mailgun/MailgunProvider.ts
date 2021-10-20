@@ -11,6 +11,7 @@ import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from './mailgun.config';
 import { MailgunMailBuilder } from './mailgunMailBuilder';
 import mailgun, { Mailgun } from 'mailgun-js';
+import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
 
 export class MailgunProvider extends EmailProviderClass {
   protected _mailgunSdk: Mailgun;
@@ -106,6 +107,18 @@ export class MailgunProvider extends EmailProviderClass {
     }
 
     return this.getTemplateInfo(template.template.name);
+  }
+
+  async deleteTemplate(id:string): Promise<DeleteEmailTemplate>{
+
+    const [err,resp] = await to (this._mailgunSdk.delete(`/${this.domain}/templates/${id}`));
+    if(err){
+      throw new Error(err.message);
+    }
+    return {
+      id: id,
+      message: resp.message
+    }
   }
 
   getBuilder(): EmailBuilderClass<Options> {

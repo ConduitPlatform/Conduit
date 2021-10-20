@@ -39,6 +39,10 @@ export class SocketController extends ConduitRouter {
     this.httpServer = createServer(app);
     this.options = {
       path: '/realtime',
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+      },
     };
     this.io = new IOServer(this.httpServer, this.options);
     this.pubClient = new RedisClient({

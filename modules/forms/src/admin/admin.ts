@@ -27,6 +27,7 @@ export class AdminHandlers {
         getRepliesByFormId: this.getRepliesByFormId.bind(this),
         createForm: this.createForm.bind(this),
         editFormById: this.editFormById.bind(this),
+        deleteForms: this.deleteForms.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -34,6 +35,28 @@ export class AdminHandlers {
       });
   }
 
+  async deleteForms(call: RouterRequest, callback: RouterResponse){
+    const { ids } = JSON.parse(call.request.params);
+    if(  ids.length === 0 || isNil(ids)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'There is not array of ids',
+      });
+    }
+    let errorMessage;
+    const forms = await this.database
+      .deleteMany('Forms', { _id: { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    const totalCount = forms.deletedCount;
+    return callback(null, { result: JSON.stringify({ forms,totalCount }) });
+  }
   async getForms(call: RouterRequest, callback: RouterResponse) {
     const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,

@@ -23,6 +23,8 @@ import {
 import { v4 as uuidV4 } from 'uuid';
 import { FormsModel } from '../../models/forms/FormsModels';
 import Delete from '@material-ui/icons/Delete';
+import { useAppDispatch } from '../../redux/store';
+import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -101,6 +103,7 @@ const ViewEditForm: React.FC<Props> = ({
   setCreate,
 }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const [formState, setFormState] = useState<FormsModel>({
     _id: '',
@@ -119,12 +122,23 @@ const ViewEditForm: React.FC<Props> = ({
 
   const handleFieldsChange = (id: string) => (evt: React.ChangeEvent<any>) => {
     const { value } = evt.target;
+
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(
+        enqueueInfoNotification(
+          'The form name can only contain alpharithmetics and _',
+          'infoDuplicate'
+        )
+      );
+    }
+
     setInputFields((list) =>
       list.map((el) =>
         el.id === id
           ? {
               ...el,
-              [evt.target.name]: value,
+              [evt.target.name]: value.replace(/[^a-z0-9_]/gi, ''),
             }
           : el
       )
@@ -153,6 +167,14 @@ const ViewEditForm: React.FC<Props> = ({
   }, [form, edit, create]);
 
   const handleSaveClick = () => {
+    const regex = /^\S+@\S+\.\S+$/;
+    if (!regex.test(formState.emailField)) {
+      dispatch(
+        enqueueErrorNotification('The email address you provided is not valid', 'emailError')
+      );
+      return;
+    }
+
     const fields: { [key: string]: string } = {};
     inputFields.forEach((item) => {
       if (item.key !== '' && item.type !== '') fields[item.key] = item.type;

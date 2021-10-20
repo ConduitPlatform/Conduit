@@ -116,7 +116,18 @@ export class SendgridProvider extends EmailProviderClass{
         await this._sgClient.request(request);
         return this.getTemplateInfo(data.id);
     }
+    async deleteTemplate(id:string){
 
+        const request = {
+            method:'DELETE',
+            url: '/v3/templates/'+id,
+        }
+        await this._sgClient.request(request);
+        return {
+            message: 'Template ' +id+ ' deleted',
+            id: id,
+        }
+    }
     getBuilder(){
         return new SendgridMailBuilder();
     }

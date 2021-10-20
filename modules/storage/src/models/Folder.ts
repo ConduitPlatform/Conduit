@@ -1,16 +1,12 @@
 import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 export default new ConduitSchema(
-  'File',
+  '_StorageFolder',
   {
     _id: TYPE.ObjectId,
     name: {
       type: TYPE.String,
       required: true,
-      systemRequired: true,
-    },
-    folder: {
-      type: TYPE.String,
       systemRequired: true,
     },
     container: {
@@ -23,7 +19,6 @@ export default new ConduitSchema(
       default: false,
     },
     url: TYPE.String,
-    mimeType: { type: TYPE.String, systemRequired: true },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },

@@ -19,26 +19,28 @@ const useNotifier = () => {
 
 export default useNotifier;
 
-export const enqueueErrorNotification = (message: string) => {
+export const enqueueErrorNotification = (message: string, optionalKey?: string) => {
   const options = { variant: 'error', message: message ? message : 'Something went wrong' };
   return addSnackbar({
     message: JSON.stringify(options),
     options: {
-      key: uuidv4(),
+      key: optionalKey ? optionalKey : uuidv4(),
       variant: 'error',
       autoHideDuration: 3000,
+      preventDuplicate: true,
     },
   });
 };
 
-export const enqueueInfoNotification = (message: string) => {
+export const enqueueInfoNotification = (message: string, optionalKey?: string) => {
   const options = { variant: 'info', message: message ? message : 'Info' };
   return addSnackbar({
     message: JSON.stringify(options),
     options: {
-      key: uuidv4(),
+      key: optionalKey ? optionalKey : uuidv4(),
       variant: 'info',
       autoHideDuration: 3000,
+      preventDuplicate: true,
     },
   });
 };
