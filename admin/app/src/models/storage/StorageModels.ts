@@ -12,3 +12,12 @@ export interface IStorageConfig {
     bucketName: string;
   };
 }
+
+export interface IStorageFile {
+  id: string;
+  data: string;
+  name: string;
+  container: string;
+  folder: string;
+  mimeType: any;
+}

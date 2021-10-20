@@ -79,12 +79,11 @@ export const asyncAddStorageFile = createAsyncThunk(
       const fileData = {
         name: 'example',
         data: base64example,
-        // folder: 'conduit',
-        // container: 'conduit',
+        folder: 'test-folder',
+        container: 'conduit',
         // mimeType: any,
         // isPublic: any,
       };
-
       const { data } = await createStorageFile(fileData);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());

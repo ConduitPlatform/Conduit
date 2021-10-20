@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
-import { IStorageConfig } from '../models/storage/StorageModels';
+import { IStorageConfig, IStorageFile } from '../models/storage/StorageModels';
 
 export const getStorageSettings = () => axios.get(`${CONDUIT_API}/admin/config/storage`);
 
@@ -12,40 +12,53 @@ export const putStorageSettings = (storageData: IStorageConfig) =>
 export const createStorageFile = (fileData: any) =>
   axios.post(`${CONDUIT_API}/admin/storage/file`, { ...fileData });
 
-//name,
-//container,
-//isPublic
-export const createStorageFolder = (folderData: any) =>
-  axios.post(`${CONDUIT_API}/admin/storage/folder`, { ...folderData });
+export const createStorageFolder = (folderData: {
+  name: string;
+  container: string;
+  isPublic: boolean;
+}) => axios.post(`${CONDUIT_API}/admin/storage/folder`, { ...folderData });
 
-//name,
-//isPublic
-export const createStorageContainer = (containerData: any) =>
-  axios.post(`${CONDUIT_API}/admin/storage/containers`, { ...containerData });
+export const createStorageContainer = (body: { name: string; isPublic: boolean }) =>
+  axios.post(`${CONDUIT_API}/admin/storage/containers`, { ...body });
 
-//skip,
-//limit
-export const getStorageContainers = () => axios.get(`${CONDUIT_API}/admin/storage/containers`);
+export const getStorageContainers = (params: { skip: number; limit: number }) =>
+  axios.get(`${CONDUIT_API}/admin/storage/containers`, {
+    params: {
+      ...params,
+    },
+  });
 
-//skip,
-//limit,
-//container,
-//parent
-export const getStorageFolders = () => axios.get(`${CONDUIT_API}/admin/storage/folder`);
+export const getStorageFolders = (folderData: {
+  skip: number;
+  limit: number;
+  container: string;
+  parent: string;
+}) =>
+  axios.get(`${CONDUIT_API}/admin/storage/folder`, {
+    params: {
+      ...folderData,
+    },
+  });
 
-// id, data, name, container, folder, mimeType
-export const updateStorageFile = (id: any, fileData: any) =>
-  axios.put(`${CONDUIT_API}/admin/storage/file/${id}`, { ...fileData });
+export const updateStorageFile = (fileData: IStorageFile) =>
+  axios.put(`${CONDUIT_API}/admin/storage/file/${fileData.id}`, { ...fileData });
 
-// skip, limit, folder, container
-export const getStorageFiles = () => axios.get(`${CONDUIT_API}/admin/storage/file`);
+export const getStorageFiles = (fileData: {
+  skip: number;
+  limit: number;
+  folder: string;
+  container: string;
+}) =>
+  axios.get(`${CONDUIT_API}/admin/storage/file`, {
+    params: {
+      ...fileData,
+    },
+  });
 
-// id
-export const getStorageFile = (id: any) => axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
+export const getStorageFile = (id: string) => axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
 
-// id
-export const getStorageFileUrl = (id: any) =>
+export const getStorageFileUrl = (id: string) =>
   axios.get(`${CONDUIT_API}/admin/storage/getFileUrl/${id}`);
 
-// id
-export const deleteStorageFile = (id: any) => axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
+export const deleteStorageFile = (id: string) =>
+  axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
