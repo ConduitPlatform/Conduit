@@ -21,6 +21,11 @@ export const deleteEmailTemplateRequest = (id: string) => {
 export const deleteMultipleEmailTemplateRequest = (ids: string[]) => {
   return axios.delete(`${CONDUIT_API}/admin/email/templates`, { data: { ids: ids } });
 };
+
+export const syncExternalTemplates = () => {
+  axios.put(`${CONDUIT_API}/admin/email/syncExternalTemplates`);
+};
+
 export const getEmailSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/email`);
 
 export const putEmailSettingsRequest = (data: EmailSettings) =>

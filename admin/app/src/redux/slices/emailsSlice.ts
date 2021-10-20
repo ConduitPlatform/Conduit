@@ -9,6 +9,7 @@ import {
   putEmailSettingsRequest,
   putEmailTemplateRequest,
   sendEmailRequest,
+  syncExternalTemplates,
 } from '../../http/EmailRequests';
 import {
   EmailTemplateType,
@@ -131,6 +132,22 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
       );
       thunkAPI.dispatch(setAppDefaults());
       return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncSyncTemplates = createAsyncThunk(
+  'emails/deleteTemplate',
+  async (params, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await syncExternalTemplates();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully synced templates!`));
+      thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));

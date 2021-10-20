@@ -7,6 +7,7 @@ import {
   asyncDeleteTemplates,
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
+  asyncSyncTemplates,
 } from '../../redux/slices/emailsSlice';
 import DataTable from '../../components/common/DataTable';
 import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
@@ -36,10 +37,10 @@ import { DeleteTwoTone } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
-    marginLeft: theme.spacing(1),
+    marginLeft: theme.spacing(1.5),
   },
   btnAlignment2: {
-    marginRight: theme.spacing(1),
+    marginRight: theme.spacing(1.5),
   },
   actions: {},
 }));
@@ -190,8 +191,6 @@ const Templates = () => {
     setPage(0);
   };
 
-  //Actions section
-
   const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
     const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
     if (currentTemplate !== undefined) {
@@ -206,9 +205,6 @@ const Templates = () => {
           open: true,
           multiple: false,
         });
-      }
-      if (action.type === 'sync') {
-        //handle sync
       }
       if (action.type === 'upload') {
         //handle upload
@@ -303,10 +299,14 @@ const Templates = () => {
               </Tooltip>
             </IconButton>
           )}
-          <IconButton color="primary" className={classes.btnAlignment}>
-            <Sync color="primary" />
+          <IconButton
+            color="primary"
+            className={classes.btnAlignment}
+            onClick={() => dispatch(asyncSyncTemplates())}>
+            <Tooltip title="Sync external templates">
+              <Sync color="primary" />
+            </Tooltip>
           </IconButton>
-
           <Button
             className={classes.btnAlignment2}
             variant="contained"
@@ -325,28 +325,28 @@ const Templates = () => {
         </Grid>
       </Grid>
       {templateDocuments.length > 0 && (
-        <DataTable
-          dsData={formatData(templateDocuments)}
-          actions={actions}
-          handleAction={handleAction}
-          handleSelect={handleSelect}
-          handleSelectAll={handleSelectAll}
-          selectedItems={selectedTemplates}
-        />
-      )}
-      {templateDocuments.length > 0 && (
-        <Grid container style={{ marginTop: '-8px' }}>
-          <Grid item xs={7} />
-          <Grid item xs={5}>
-            <Paginator
-              handlePageChange={handlePageChange}
-              limit={limit}
-              handleLimitChange={handleLimitChange}
-              page={page}
-              count={totalCount}
-            />
+        <>
+          <DataTable
+            dsData={formatData(templateDocuments)}
+            actions={actions}
+            handleAction={handleAction}
+            handleSelect={handleSelect}
+            handleSelectAll={handleSelectAll}
+            selectedItems={selectedTemplates}
+          />
+          <Grid container style={{ marginTop: '-8px' }}>
+            <Grid item xs={7} />
+            <Grid item xs={5}>
+              <Paginator
+                handlePageChange={handlePageChange}
+                limit={limit}
+                handleLimitChange={handleLimitChange}
+                page={page}
+                count={totalCount}
+              />
+            </Grid>
           </Grid>
-        </Grid>
+        </>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
         {!importTemplate ? (
