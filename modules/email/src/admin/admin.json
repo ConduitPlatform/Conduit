@@ -36,9 +36,9 @@
       "protoName": "getExternalTemplates"
     },
     {
-      "path": "/syncExternalTemplates",
-      "method": "PUT",
-      "protoName": "syncExternalTemplates"
+      "path": "/templates/upload",
+      "method": "POST",
+      "protoName": "uploadTemplate"
     }
   ]
 }
