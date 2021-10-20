@@ -31,4 +31,8 @@ export class SmtpProvider extends EmailProviderClass{
      updateTemplate(data: UpdateEmailTemplate){
         return 5 as any;
     }
+
+    async deleteTemplate(id:string){
+        return 5 as any;
+    }
 }

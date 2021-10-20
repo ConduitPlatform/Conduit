@@ -18,14 +18,32 @@ export class AzureStorage implements IStorageProvider {
   }
 
   /**
-   * Used to create a new bucket
-   * @param name For the bucket
+   * Used to create a new folder
+   * @param name For the folder
    */
   async createFolder(name: string): Promise<boolean | Error> {
-    // Creates the new bucket
-    await this._storage.getContainerClient(name).create();
-    this._activeContainer = name;
+    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    await containerClient.createIfNotExists();
+
+    let exists = await containerClient.getBlockBlobClient(name + '/keep.txt').exists();
+
+    if (exists) {
+      return true;
+    }
+    await containerClient
+      .getBlockBlobClient(name + '/.keep.txt')
+      .uploadData(Buffer.from('DO NOT DELETE'));
     return true;
+  }
+
+  async folderExists(name: string): Promise<boolean | Error> {
+    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    let exists = await containerClient.exists();
+    if (!exists) return false;
+
+    exists = await containerClient.getBlockBlobClient(name + '/keep.txt').exists();
+
+    return exists;
   }
 
   /**
@@ -33,14 +51,9 @@ export class AzureStorage implements IStorageProvider {
    * Ex. storage.bucket('photos').file('test')
    * @param name For the bucket
    */
-  folder(name: string): IStorageProvider {
+  container(name: string): IStorageProvider {
     this._activeContainer = name;
     return this;
-  }
-
-  async folderExists(name: string): Promise<boolean | Error> {
-    let exists = await this._storage.getContainerClient(name).exists();
-    return exists;
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
@@ -52,10 +65,10 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async exists(fileName: string): Promise<boolean | Error> {
-    let folderExists = await this._storage
+    let containerExists = await this._storage
       .getContainerClient(this._activeContainer)
       .exists();
-    if (!folderExists) return false;
+    if (!containerExists) return false;
     await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
@@ -146,6 +159,31 @@ export class AzureStorage implements IStorageProvider {
     // let newBucketFile = this._storage.getContainerClient(newFolder).file(newFilename)
     // await this._storage.getContainerClient(this._activeContainer).file(currentFilename).move(newBucketFile);
     // return true;
+    throw new Error('Not Implemented yet!');
+  }
+
+  async containerExists(name: string): Promise<boolean | Error> {
+    return await this._storage.getContainerClient(name).exists();
+  }
+
+  async createContainer(name: string): Promise<boolean | Error> {
+    await this._storage.getContainerClient(name).createIfNotExists();
+    this._activeContainer = name;
+    return true;
+  }
+
+  async moveToContainer(
+    filename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
+    throw new Error('Not Implemented yet!');
+  }
+
+  async moveToContainerAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
     throw new Error('Not Implemented yet!');
   }
 }

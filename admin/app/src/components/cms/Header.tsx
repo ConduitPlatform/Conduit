@@ -12,6 +12,7 @@ import { useDispatch } from 'react-redux';
 import { clearSelectedSchema } from '../../redux/slices/cmsSlice';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 export const headerHeight = 64;
 
@@ -107,7 +108,12 @@ const Header: FC<Props> = ({
   }, [authentication, crudOperations, name]);
 
   const handleDataName = (value: string) => {
-    setSchemaName(value);
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The schema name can only contain alpharithmetics and _'));
+    }
+
+    setSchemaName(value.replace(/[^a-z0-9_]/gi, ''));
   };
 
   const handleData = () => {

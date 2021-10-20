@@ -9,6 +9,8 @@ import Dialog from '@material-ui/core/Dialog';
 import React, { FC, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Link from 'next/link';
+import { useAppDispatch } from '../../redux/store';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -43,11 +45,16 @@ interface Props {
 
 const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
   const classes = useStyles();
-
+  const dispatch = useAppDispatch();
   const [typeName, setTypeName] = useState('');
 
   const handleTypeName = (value: string) => {
-    setTypeName(value.split(' ').join(''));
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The schema name can only contain alpharithmetics and _'));
+    }
+
+    setTypeName(value.replace(/[^a-z0-9_]/gi, ''));
   };
 
   const handleAddType = () => {

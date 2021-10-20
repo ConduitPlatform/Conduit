@@ -36,6 +36,10 @@ export class EmailService {
     return this.emailer._transport?.updateTemplate(data);
   }
 
+  deleteExternalTemplate(id:string){
+    return this.emailer._transport?.deleteTemplate(id);
+  }
+
   async  registerTemplate(params: IRegisterTemplateParams) {
 
     const { name, body, subject, variables } = params;
