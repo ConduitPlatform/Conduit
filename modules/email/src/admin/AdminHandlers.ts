@@ -1,7 +1,6 @@
-import { isNil, template } from 'lodash';
+import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk, {
-  GrpcError,
   GrpcServer,
   RouterRequest,
   RouterResponse,
