@@ -116,7 +116,7 @@ export class AdminRoutes {
       container,
     };
     if (!isNil(parent)) {
-      query.name = { $regex: `${parent}.*`, $options: 'i' };
+      query.name = { $regex: `${parent}\/\w+`, $options: 'i' };
     }
 
     let folders = await this.grpcSdk.databaseProvider!.findMany(
