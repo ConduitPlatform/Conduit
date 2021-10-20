@@ -87,37 +87,45 @@ export class AdminHandlers {
       call.request.params
     );
     if (isNil(ids) || ids.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be an array'
-      );
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids is required and must be an array',
+      });
     }
     let errorMessage;
-    for( let id of ids){
+    let totalCount = ids.length;
+    const templateDocuments = await this.database
+      .findMany('EmailTemplate',{ _id: { $in: ids } })
+      .catch((e:any) => (errorMessage = e.message));
 
-      const templateDocument = await this.database
-        .findOne('EmailTemplate',{ _id:id })
-        .catch((e:any) => (errorMessage = e.message));
-
-      if(!isNil(errorMessage)){
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-      }
-      if(!isNil(templateDocument) && templateDocument.externalManaged){
-        const deleted = await this.emailService.deleteExternalTemplate(templateDocument.externalId)
-          ?.catch((e:any) => (errorMessage= e.message));
-      }
-      if(!isNil(errorMessage)){
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-      }
+    if(!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
     }
 
-    let totalCount = ids.length;
+    const foundDocuments = templateDocuments.length;
+    if( foundDocuments !== totalCount){
+        return callback({
+          code: status.INTERNAL,
+          message: 'some ids didnt found',
+        })
+    }
+
+    for( let template of templateDocuments){
+      if( template.externalManaged){
+        const deleted = await this.emailService.deleteExternalTemplate(template.externalId)
+          ?.catch((e:any) => (errorMessage= e.message));
+
+        if(!isNil(errorMessage)){
+          return callback({
+            code: status.INTERNAL,
+            message: errorMessage,
+          });
+        }
+      }
+    }
     const deletedDocuments = await this.database
       .deleteMany('EmailTemplate',{ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
@@ -128,7 +136,7 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    return callback(null, { result: JSON.stringify({ deletedDocuments, totalCount }) });
+    return callback(null, { result: JSON.stringify({ deletedDocuments }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
