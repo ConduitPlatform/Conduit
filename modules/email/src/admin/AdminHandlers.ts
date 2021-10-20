@@ -115,7 +115,7 @@ export class AdminHandlers {
 
     for( let template of templateDocuments){
       if( template.externalManaged){
-        const deleted = await this.emailService.deleteExternalTemplate(template.externalId)
+        await this.emailService.deleteExternalTemplate(template.externalId)
           ?.catch((e:any) => (errorMessage= e.message));
 
         if(!isNil(errorMessage)){
