@@ -23,8 +23,7 @@ import useDebounce from '../../hooks/useDebounce';
 import { FormsModel, FormsUI } from '../../models/forms/FormsModels';
 import {
   asyncCreateForm,
-  asyncDeleteForm,
-  asyncDeleteMultipleForms,
+  asyncDeleteForms,
   asyncEditForm,
   asyncGetForms,
 } from '../../redux/slices/formsSlice';
@@ -78,12 +77,12 @@ const Create = () => {
   const { forms, count } = useAppSelector((state) => state.formsSlice.data);
 
   useEffect(() => {
-    dispatch(asyncGetForms({ skip, limit }));
-  }, [dispatch, skip, limit]);
+    dispatch(asyncGetForms({ skip, limit, search: debouncedSearch }));
+  }, [dispatch, skip, limit, debouncedSearch]);
 
   const getFormsCallback = useCallback(() => {
-    dispatch(asyncGetForms({ skip, limit }));
-  }, [dispatch, limit, skip]);
+    dispatch(asyncGetForms({ skip, limit, search: debouncedSearch }));
+  }, [dispatch, limit, skip, debouncedSearch]);
 
   const newForm = () => {
     setDrawer(true);
@@ -209,13 +208,13 @@ const Create = () => {
         ids: selectedForms,
         getForms: getFormsCallback,
       };
-      dispatch(asyncDeleteMultipleForms(params));
+      dispatch(asyncDeleteForms(params));
     } else {
       const params = {
-        id: selectedForm._id,
+        ids: [`${selectedForm._id}`],
         getForms: getFormsCallback,
       };
-      dispatch(asyncDeleteForm(params));
+      dispatch(asyncDeleteForms(params));
     }
     setOpenDeleteForms({
       open: false,
