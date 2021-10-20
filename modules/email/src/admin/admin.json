@@ -21,6 +21,11 @@
       "protoName": "deleteTemplate"
     },
     {
+      "path": "/templates",
+      "method": "DELETE",
+      "protoName": "deleteManyTemplates"
+    },
+    {
       "path": "/send",
       "method": "POST",
       "protoName": "sendEmail"

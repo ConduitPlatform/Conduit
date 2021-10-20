@@ -1,4 +1,4 @@
-import { isNil, template } from 'lodash';
+import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk, {
   GrpcServer,
@@ -28,7 +28,8 @@ export class AdminHandlers {
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
-        syncExternalTemplates: this.syncExternalTemplates.bind(this)
+        syncExternalTemplates: this.syncExternalTemplates.bind(this),
+        deleteManyTemplates: this.deleteManyTemplates.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -79,6 +80,62 @@ export class AdminHandlers {
     }
     totalCount = updated.length;
     return callback(null, { result: JSON.stringify({ updated,totalCount }) });
+  }
+  async deleteManyTemplates(call: RouterRequest, callback: RouterResponse){
+    const { ids } = JSON.parse(
+      call.request.params
+    );
+    if (isNil(ids) || ids.length === 0) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids is required and must be an array',
+      });
+    }
+    let errorMessage;
+    let totalCount = ids.length;
+    const templateDocuments = await this.database
+      .findMany('EmailTemplate',{ _id: { $in: ids } })
+      .catch((e:any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+
+    const foundDocuments = templateDocuments.length;
+    if( foundDocuments !== totalCount){
+        return callback({
+          code: status.INTERNAL,
+          message: 'some ids were not found',
+        })
+    }
+
+    for( let template of templateDocuments){
+      if( template.externalManaged){
+        await this.emailService.deleteExternalTemplate(template.externalId)
+          ?.catch((e:any) => (errorMessage= e.message));
+
+        if(!isNil(errorMessage)){
+          return callback({
+            code: status.INTERNAL,
+            message: errorMessage,
+          });
+        }
+      }
+    }
+    const deletedDocuments = await this.database
+      .deleteMany('EmailTemplate',{ _id: { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    return callback(null, { result: JSON.stringify({ deletedDocuments }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
