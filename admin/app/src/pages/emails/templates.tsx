@@ -30,7 +30,6 @@ import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import ExternalTemplates from '../../components/emails/ExternalTemplates';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
-import { handleDeleteDescription, handleDeleteTitle } from '../../utils/emailsDialog';
 import { DeleteTwoTone } from '@material-ui/icons';
 
 // import useDebounce from '../../hooks/useDebounce';
@@ -73,7 +72,6 @@ const Templates = () => {
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] =
     useState<EmailTemplateType>(originalTemplateState);
-  const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>(originalTemplateState);
   const [importTemplate, setImportTemplate] = useState<boolean>(false);
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
@@ -87,7 +85,7 @@ const Templates = () => {
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
-    setViewTemplate(originalTemplateState);
+    setSelectedTemplate(originalTemplateState);
     setCreate(true);
     setEdit(true);
     setDrawer(true);
@@ -96,6 +94,48 @@ const Templates = () => {
   const handleImportTemplate = () => {
     setImportTemplate(true);
     setDrawer(true);
+  };
+
+  const saveTemplateChanges = (data: EmailTemplateType) => {
+    const _id = data._id;
+    const updatedData = {
+      name: data.name,
+      subject: data.subject,
+      sender: data.sender !== '' ? data.sender : undefined,
+      body: data.body,
+      variables: data.variables,
+      externalManaged: data.externalManaged,
+    };
+    if (_id !== undefined) {
+      dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
+    }
+    setSelectedTemplate(updatedData);
+  };
+
+  const createNewTemplate = (data: EmailTemplateType) => {
+    const newData = {
+      name: data.name,
+      subject: data.subject,
+      sender: data.sender,
+      body: data.body,
+      externalManaged: data.externalManaged,
+      variables: data.variables,
+    };
+    dispatch(asyncCreateNewEmailTemplate(newData));
+    setSelectedTemplate(newData);
+  };
+
+  const handleClose = () => {
+    setEdit(false);
+    setCreate(false);
+    setDrawer(false);
+    setImportTemplate(false);
+    setSelectedTemplate(originalTemplateState);
+    setSelectedTemplate(originalTemplateState);
+    setOpenDeleteTemplates({
+      open: false,
+      multiple: false,
+    });
   };
 
   const handleSelect = (id: string) => {
@@ -119,51 +159,9 @@ const Templates = () => {
     setSelectedTemplates(newSelectedTemplates);
   };
 
-  const handleCloseDrawer = () => {
-    setEdit(false);
-    setCreate(false);
-    setDrawer(false);
-    setImportTemplate(false);
-    setViewTemplate(originalTemplateState);
-    setSelectedTemplate(originalTemplateState);
-    setOpenDeleteTemplates({
-      open: false,
-      multiple: false,
-    });
-  };
-
   const getTemplatesCallback = useCallback(() => {
     dispatch(asyncGetEmailTemplates({ skip, limit }));
   }, [dispatch, limit, skip]);
-
-  const saveTemplateChanges = (data: EmailTemplateType) => {
-    const _id = data._id;
-    const updatedData = {
-      name: data.name,
-      subject: data.subject,
-      sender: data.sender !== '' ? data.sender : undefined,
-      body: data.body,
-      variables: data.variables,
-      externalManaged: data.externalManaged,
-    };
-    if (_id !== undefined) {
-      dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
-    }
-    setViewTemplate(updatedData);
-  };
-
-  const createNewTemplate = (data: EmailTemplateType) => {
-    const newData = {
-      name: data.name,
-      subject: data.subject,
-      sender: data.sender,
-      body: data.body,
-      externalManaged: data.externalManaged,
-      variables: data.variables,
-    };
-    dispatch(asyncCreateNewEmailTemplate(newData));
-    setViewTemplate(newData);
-  };
 
   const formatData = (data: EmailTemplateType[]) => {
     return data.map((u) => {
@@ -198,7 +196,7 @@ const Templates = () => {
     const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
     if (currentTemplate !== undefined) {
       if (action.type === 'view') {
-        setViewTemplate(currentTemplate);
+        setSelectedTemplate(currentTemplate);
         setEdit(false);
         setDrawer(true);
       }
@@ -216,6 +214,20 @@ const Templates = () => {
         //handle upload
       }
     }
+  };
+
+  const handleDeleteTitle = (multiple: boolean, template: EmailTemplateType) => {
+    if (multiple) {
+      return 'Delete selected templates';
+    }
+    return `Delete template ${template.name}`;
+  };
+
+  const handleDeleteDescription = (multiple: boolean, template: EmailTemplateType) => {
+    if (multiple) {
+      return 'Are you sure you want to delete the selected templates?';
+    }
+    return `Are you sure you want to delete ${template.name}? `;
   };
 
   const deleteButtonAction = () => {
@@ -276,7 +288,7 @@ const Templates = () => {
           />
         </Grid>
         <Grid item>
-          {selectedTemplates.length > 1 && (
+          {selectedTemplates.length > 0 && (
             <IconButton
               aria-label="delete"
               color="primary"
@@ -336,7 +348,7 @@ const Templates = () => {
           </Grid>
         </Grid>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
         {!importTemplate ? (
           <Box>
             <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
@@ -345,7 +357,7 @@ const Templates = () => {
             <TabPanel
               handleCreate={createNewTemplate}
               handleSave={saveTemplateChanges}
-              template={viewTemplate}
+              template={selectedTemplate}
               edit={edit}
               setEdit={setEdit}
               create={create}
@@ -366,7 +378,7 @@ const Templates = () => {
       </DrawerWrapper>
       <ConfirmationDialog
         open={openDeleteTemplates.open}
-        handleClose={handleCloseDrawer}
+        handleClose={handleClose}
         title={handleDeleteTitle(openDeleteTemplates.multiple, selectedTemplate)}
         description={handleDeleteDescription(openDeleteTemplates.multiple, selectedTemplate)}
         buttonAction={deleteButtonAction}
