@@ -7,6 +7,7 @@ import {
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
   asyncSyncTemplates,
+  asyncUploadTemplate,
 } from '../../redux/slices/emailsSlice';
 import DataTable from '../../components/common/DataTable';
 import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
@@ -206,7 +207,12 @@ const Templates = () => {
         });
       }
       if (action.type === 'upload') {
-        //handle upload
+        const templateToUpload = {
+          name: currentTemplate.name,
+          body: currentTemplate.body,
+          subject: currentTemplate.subject,
+        };
+        dispatch(asyncUploadTemplate(templateToUpload));
       }
     }
   };

@@ -9,6 +9,7 @@ import {
   putEmailTemplateRequest,
   sendEmailRequest,
   syncExternalTemplates,
+  uploadTemplateRequest,
 } from '../../http/EmailRequests';
 import {
   EmailTemplateType,
@@ -68,11 +69,8 @@ const initialState: IEmailSlice = {
 export const asyncGetEmailTemplates = createAsyncThunk(
   'emails/getTemplates',
   async (params: { skip: number; limit: number }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getEmailTemplateRequest(params.skip, params.limit);
-
-      thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -87,6 +85,21 @@ export const asyncGetExternalTemplates = createAsyncThunk(
   async (params, thunkAPI) => {
     try {
       const { data } = await getExternalTemplatesRequest();
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncUploadTemplate = createAsyncThunk(
+  'emails/uploadTemplate',
+  async (params: { name: string; body: string; subject: string }, thunkAPI) => {
+    try {
+      const { data } = await uploadTemplateRequest(params);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
