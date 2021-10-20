@@ -1,9 +1,14 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { IStorageConfig } from '../../models/storage/StorageModels';
-import { getStorageSettings, putStorageSettings } from '../../http/StorageRequests';
+import {
+  createStorageFile,
+  getStorageSettings,
+  putStorageSettings,
+} from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
+import { base64example } from '../../assets/svgs/ExampleBase64';
 
 interface IStorageSlice {
   data: {
@@ -35,8 +40,10 @@ export const asyncGetStorageConfig = createAsyncThunk(
     try {
       const { data } = await getStorageSettings();
       thunkAPI.dispatch(setAppDefaults());
+      console.log('config-data', data);
       return data;
     } catch (error) {
+      console.log('config-error');
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -51,8 +58,38 @@ export const asyncSaveStorageConfig = createAsyncThunk(
     try {
       const { data } = await putStorageSettings(dataForConfig);
       thunkAPI.dispatch(setAppDefaults());
+      console.log('saveConfig data', data);
       return data;
     } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      console.log('saveConfig error', error);
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncAddStorageFile = createAsyncThunk(
+  'storage/addStorageFile',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const fileData = {
+        name: 'example',
+        data: base64example,
+        // folder: 'conduit',
+        // container: 'conduit',
+        // mimeType: any,
+        // isPublic: any,
+      };
+
+      const { data } = await createStorageFile(fileData);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }

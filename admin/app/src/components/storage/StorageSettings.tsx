@@ -35,20 +35,19 @@ interface Props {
   handleSave: (data: IStorageConfig) => void;
 }
 
+const initialSettingsState = {
+  active: false,
+  allowContainerCreation: true,
+  defaultContainer: 'conduit',
+  provider: 'azure',
+  storagePath: '/var/tmp',
+  google: { bucketName: '', serviceAccountKeyPath: '' },
+  azure: { connectionString: '' },
+};
+
 const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsState] = useState({
-    active: true,
-    provider: 'local',
-    storagePath: '/var/tmp',
-    google: {
-      serviceAccountKeyPath: '~/google_storage_service_account.json',
-      bucketName: 'conduit',
-    },
-    azure: {
-      connectionString: '',
-    },
-  });
+  const [settingsState, setSettingsState] = useState<IStorageConfig>(initialSettingsState);
 
   useEffect(() => {
     if (!config) {
@@ -67,33 +66,30 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
 
   const handleCancel = () => {
     if (config) {
-      setSettingsState({
-        ...settingsState,
-        active: config.active,
-        provider: config.provider,
-        storagePath: config.storagePath,
-        google: {
-          serviceAccountKeyPath: config.google.serviceAccountKeyPath,
-          bucketName: config.google.bucketName,
-        },
-      });
+      setSettingsState(config);
     } else {
-      setSettingsState({
-        active: true,
-        provider: 'local',
-        storagePath: '/var/tmp',
-        google: {
-          serviceAccountKeyPath: '~/google_storage_service_account.json',
-          bucketName: 'conduit',
-        },
-        azure: {
-          connectionString: '',
-        },
-      });
+      setSettingsState(initialSettingsState);
     }
   };
+
   const save = () => {
-    handleSave(settingsState);
+    handleSave({
+      active: true,
+      allowContainerCreation: true,
+      azure: {
+        connectionString:
+          'DefaultEndpointsProtocol=https;AccountName=quintdevstorage;' +
+          'AccountKey=wY/zoWSIeWP3dypqeWPGv/GiNJjyGhq8b6M454pU6eRC5I56Co5D2L00paT' +
+          'GNjcqX8P4Np3S+SqmHK4gB2FB9A==;EndpointSuffix=core.windows.net',
+      },
+      defaultContainer: 'conduit',
+      google: {
+        serviceAccountKeyPath: '',
+        bucketName: '',
+      },
+      provider: 'azure',
+      storagePath: '/var/tmp',
+    });
   };
 
   const renderSettingsFields = () => {
@@ -108,14 +104,13 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
             <Select
               required
               labelId="provider-outlined-label"
-              value={settingsState.provider}
+              value={'azure'}
               onChange={handleSelect}
               label="Provider">
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
-              <MenuItem value={'local'}> Local </MenuItem>
-              <MenuItem value={'azure'}> Azure </MenuItem>
+              <MenuItem value={'azure'}>Azure</MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -195,19 +190,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
             alignItems={'center'}>
             <Typography variant={'h6'}>Activate Storage Module</Typography>
             <FormControlLabel
-              control={
-                <Switch
-                  checked={settingsState.active}
-                  onChange={() =>
-                    setSettingsState({
-                      ...settingsState,
-                      active: !settingsState.active,
-                    })
-                  }
-                  value={'accountLinking'}
-                  color="primary"
-                />
-              }
+              control={<Switch checked={true} value={'accountLinking'} color="primary" />}
               label={''}
             />
           </Box>

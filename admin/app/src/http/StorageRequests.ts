@@ -9,12 +9,6 @@ export const putStorageSettings = (storageData: IStorageConfig) =>
     ...storageData,
   });
 
-//name: any,
-//data: any,
-//folder: any,
-//container: any,
-//mimeType: any,
-//isPublic: any
 export const createStorageFile = (fileData: any) =>
   axios.post(`${CONDUIT_API}/admin/storage/file`, { ...fileData });
 

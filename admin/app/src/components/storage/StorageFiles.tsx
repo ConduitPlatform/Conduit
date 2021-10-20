@@ -1,4 +1,4 @@
-import { Container } from '@material-ui/core';
+import { Button, Container } from '@material-ui/core';
 import React from 'react';
 import Paper from '@material-ui/core/Paper';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
@@ -10,6 +10,8 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import TableCell from '@material-ui/core/TableCell';
 import TableBody from '@material-ui/core/TableBody';
+import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,6 +34,7 @@ const useStyles = makeStyles((theme) => ({
 
 const StorageFiles: React.FC = () => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const handleClick = (event: any) => {
     event.preventDefault();
@@ -49,6 +52,9 @@ const StorageFiles: React.FC = () => {
           </Link>
           <Typography color="textPrimary">Breadcrumb</Typography>
         </Breadcrumbs>
+        <Button variant="contained" color="primary" onClick={() => dispatch(asyncAddStorageFile())}>
+          Add File
+        </Button>
 
         <Table className={classes.table} aria-label="simple table">
           <TableHead>
