@@ -14,11 +14,7 @@ export const postEmailTemplateRequest = (data: EmailData) =>
 export const putEmailTemplateRequest = (templateId: string, data: EmailData) =>
   axios.put(`${CONDUIT_API}/admin/email/templates/${templateId}`, { ...data });
 
-export const deleteEmailTemplateRequest = (id: string) => {
-  return axios.delete(`${CONDUIT_API}/admin/email/templates/${id}`);
-};
-
-export const deleteMultipleEmailTemplateRequest = (ids: string[]) => {
+export const deleteEmailTemplateRequest = (ids: string[]) => {
   return axios.delete(`${CONDUIT_API}/admin/email/templates`, { data: { ids: ids } });
 };
 

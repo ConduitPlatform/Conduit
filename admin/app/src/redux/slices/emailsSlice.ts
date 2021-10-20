@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
   deleteEmailTemplateRequest,
-  deleteMultipleEmailTemplateRequest,
   getEmailSettingsRequest,
   getEmailTemplateRequest,
   getExternalTemplatesRequest,
@@ -156,29 +155,12 @@ export const asyncSyncTemplates = createAsyncThunk(
   }
 );
 
-export const asyncDeleteTemplate = createAsyncThunk(
-  'emails/deleteTemplate',
-  async (params: { id: any; getTemplates: any }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      await deleteEmailTemplateRequest(params.id);
-      params.getTemplates();
-      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted template!`));
-      thunkAPI.dispatch(setAppDefaults());
-    } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 export const asyncDeleteTemplates = createAsyncThunk(
   'emails/deleteMultipleTemplates',
   async (params: { ids: string[]; getTemplates: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await deleteMultipleEmailTemplateRequest(params.ids);
+      await deleteEmailTemplateRequest(params.ids);
       params.getTemplates();
       thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted templates!`));
       thunkAPI.dispatch(setAppDefaults());

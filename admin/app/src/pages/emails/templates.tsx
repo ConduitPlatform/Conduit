@@ -3,7 +3,6 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import EmailsLayout from '../../components/navigation/InnerLayouts/emailsLayout';
 import {
   asyncCreateNewEmailTemplate,
-  asyncDeleteTemplate,
   asyncDeleteTemplates,
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
@@ -235,15 +234,16 @@ const Templates = () => {
       dispatch(asyncDeleteTemplates(params));
     } else {
       const params = {
-        id: selectedTemplate._id,
+        ids: [`${selectedTemplate._id}`],
         getTemplates: getTemplatesCallback,
       };
-      dispatch(asyncDeleteTemplate(params));
+      dispatch(asyncDeleteTemplates(params));
     }
     setOpenDeleteTemplates({
       open: false,
       multiple: false,
     });
+    setSelectedTemplates([]);
   };
 
   const toDelete = {
