@@ -64,7 +64,7 @@ export class AdminHandlers {
           subject: element.versions[0].subject,
           externalId: element.id,
           variables: element.versions[0].variables,
-          body: element.versions[0].plainContent,
+          body: element.versions[0].body,
         }
 
         const updatedTemplate = await this.database
