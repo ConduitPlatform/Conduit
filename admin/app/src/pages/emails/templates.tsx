@@ -32,6 +32,7 @@ import Paginator from '../../components/common/Paginator';
 import ExternalTemplates from '../../components/emails/ExternalTemplates';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { DeleteTwoTone } from '@material-ui/icons';
+import useDebounce from '../../hooks/useDebounce';
 
 // import useDebounce from '../../hooks/useDebounce';
 
@@ -77,11 +78,11 @@ const Templates = () => {
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
 
-  // const debouncedSearch: string = useDebounce(search, 500);
+  const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetEmailTemplates({ skip, limit }));
-  }, [dispatch, limit, skip]);
+    dispatch(asyncGetEmailTemplates({ skip, limit, search: debouncedSearch }));
+  }, [dispatch, limit, skip, debouncedSearch]);
 
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
@@ -161,8 +162,8 @@ const Templates = () => {
   };
 
   const getTemplatesCallback = useCallback(() => {
-    dispatch(asyncGetEmailTemplates({ skip, limit }));
-  }, [dispatch, limit, skip]);
+    dispatch(asyncGetEmailTemplates({ skip, limit, search }));
+  }, [dispatch, limit, skip, search]);
 
   const formatData = (data: EmailTemplateType[]) => {
     return data.map((u) => {
