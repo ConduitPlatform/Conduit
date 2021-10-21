@@ -26,30 +26,24 @@ const Dropzone: FC = () => {
 
   const [currentImage, setCurrentImage] = useState<string>();
 
-  const handleSetImage = (image: any) => {
-    setCurrentImage(image.preview);
+  const handleSetImage = (image: File) => {
     const reader = new FileReader();
     reader.readAsDataURL(image);
-    reader.onload = function () {
+    reader.onload = () => {
       if (typeof reader.result === 'string') {
         const base64Image = reader.result.split(',')[1];
         setCurrentImage(base64Image);
       }
     };
-    reader.onerror = function (error) {
-      console.log('Error: ', error);
+    reader.onerror = (error) => {
+      throw error;
     };
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: 'image/*',
     onDrop: (acceptedFiles) => {
-      const imageArray = acceptedFiles.map((file) =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file),
-        })
-      );
-      handleSetImage(imageArray[0]);
+      handleSetImage(acceptedFiles[0]);
     },
   });
 
