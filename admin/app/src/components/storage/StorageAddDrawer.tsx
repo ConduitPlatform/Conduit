@@ -11,6 +11,12 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'column',
     padding: theme.spacing(6),
   },
+  title: {
+    marginBottom: theme.spacing(1),
+  },
+  buttonContainer: {
+    marginTop: theme.spacing(2),
+  },
   saveButton: {
     marginRight: theme.spacing(1),
   },
@@ -33,11 +39,13 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer }) => {
   };
 
   return (
-    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={256}>
+    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={512}>
       <Box className={classes.root}>
-        <Typography variant="h6">Add File</Typography>
+        <Typography variant="h6" className={classes.title}>
+          Add File
+        </Typography>
         <Dropzone />
-        <Box>
+        <Box className={classes.buttonContainer}>
           <Button
             variant="contained"
             color="primary"

@@ -191,7 +191,7 @@ const StorageFiles = () => {
         </Grid>
       )}
       <StorageCreateDrawer open={drawerCreateOpen} closeDrawer={handleCloseDrawer} />
-      <StorageAddDrawer open={drawerAddOpen} closeDrawer={handleCloseDrawer} />
+      <StorageAddDrawer open={true} closeDrawer={handleCloseDrawer} />
     </div>
   );
 };
