@@ -243,7 +243,9 @@ export class FileHandlers {
       if (isNil(found)) {
         return callback({ code: status.NOT_FOUND, message: 'File not found' });
       }
-      let success = await this.storageProvider.container(found.folder).delete(found.name);
+      let success = await this.storageProvider
+        .container(found.container)
+        .delete((found.folder ?? '') + found.name);
       if (!success) {
         return callback({
           code: status.INTERNAL,
@@ -280,7 +282,7 @@ export class FileHandlers {
       let config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
         .container(found.container)
-        .get(found.name);
+        .get((found.folder ?? '') + found.name);
 
       if (!isNil(data)) {
         fileData = Buffer.from(data, 'base64');
@@ -343,7 +345,7 @@ export class FileHandlers {
       found.folder = newFolder;
       found.container = newContainer;
 
-      const updatedFile = await this.database.findByIdAndUpdate('File', found);
+      const updatedFile = await this.database.findByIdAndUpdate('File', found._id, found);
 
       return callback(null, {
         result: JSON.stringify({
