@@ -161,7 +161,7 @@ const StorageFiles = () => {
             color="secondary"
             startIcon={<AddCircleOutline />}
             onClick={() => handleAddFile()}>
-            {/*onClick={() => dispatch(asyncGetStorageContainers())}>*/}
+            {/*onClick={() => dispatch(asyncGetStorageFiles())}>*/}
             Add
           </Button>
         </Grid>

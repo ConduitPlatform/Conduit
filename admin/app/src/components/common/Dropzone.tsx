@@ -18,21 +18,47 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     backgroundColor: 'grey',
     textAlign: 'center',
+    position: 'relative',
+  },
+  fileName: {
+    height: 'fit-content',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    margin: 'auto',
+    zIndex: 0,
+  },
+  image: {
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    margin: 'auto',
+    zIndex: 1,
   },
 }));
 
-const Dropzone: FC = () => {
+interface Props {
+  file: string;
+  setFile: (value: string) => void;
+}
+
+const Dropzone: FC<Props> = ({ file, setFile }) => {
   const classes = useStyles();
+  const [fileName, setFileName] = useState('');
 
-  const [currentImage, setCurrentImage] = useState<string>();
-
-  const handleSetImage = (image: File) => {
+  const handleSetFile = (readerFile: File) => {
+    setFileName(readerFile.name);
     const reader = new FileReader();
-    reader.readAsDataURL(image);
+    reader.readAsDataURL(readerFile);
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        const base64Image = reader.result.split(',')[1];
-        setCurrentImage(base64Image);
+        const base64 = reader.result.split(',')[1];
+        setFile(base64);
       }
     };
     reader.onerror = (error) => {
@@ -41,9 +67,8 @@ const Dropzone: FC = () => {
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: 'image/*',
     onDrop: (acceptedFiles) => {
-      handleSetImage(acceptedFiles[0]);
+      handleSetFile(acceptedFiles[0]);
     },
   });
 
@@ -54,15 +79,18 @@ const Dropzone: FC = () => {
     <Box className={classes.root} {...rootProps}>
       <input {...inputProps} />
       <Box className={classes.dropContainer}>
-        {currentImage ? (
-          <img src={'data:image/jpeg;base64,' + currentImage} alt={''} style={{ height: '100%' }} />
+        {file ? (
+          <>
+            <Box className={classes.fileName}>{fileName}</Box>
+            <img src={'data:image/jpeg;base64,' + file} alt={''} className={classes.image} />
+          </>
         ) : (
           <>
             {isDragActive ? (
               <Typography variant="body1">Drop the files here ...</Typography>
             ) : (
               <Typography variant="body1">
-                Drag n drop some files here, or click to select files
+                {"Drag 'n' drop some files here, or click to select files"}
               </Typography>
             )}
           </>

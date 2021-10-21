@@ -198,7 +198,7 @@ export const asyncDeleteStorageFile = createAsyncThunk(
   async (arg, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const fileId = '61714e908afe4116b6882ea9';
+      const fileId = '617158368afe4116b6882eb0';
       const { data } = await deleteStorageFile(fileId);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
