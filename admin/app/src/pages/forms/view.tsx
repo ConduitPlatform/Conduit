@@ -281,7 +281,7 @@ const Create = () => {
           </Button>
         </Grid>
       </Grid>
-      {count > 0 ? (
+      {forms.length ? (
         <Box>
           <DataTable
             dsData={formatData(forms)}
