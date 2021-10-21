@@ -3,7 +3,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 export async function migrateFoldersToContainers(grpcSdk: ConduitGrpcSdk) {
   await grpcSdk.waitForExistence('database-provider');
   const documents: any = await grpcSdk.databaseProvider!.findMany('File', {
-    $or: [{ container: { $exists: false } }, { container: undefined }],
+    container: { $exists: false },
   });
   for (const document of documents) {
     document.container = document.folder;
