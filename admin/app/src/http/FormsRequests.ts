@@ -2,7 +2,7 @@ import axios from 'axios';
 import { FormSettingsConfig, FormsModel } from '../models/forms/FormsModels';
 import { CONDUIT_API } from './requestsConfig';
 
-export const getForms = (skip: number, limit: number, search: string) =>
+export const getForms = (skip: number, limit: number, search?: string) =>
   axios.get(`${CONDUIT_API}/admin/forms/get`, {
     params: { skip, limit, search: search !== '' ? search : undefined },
   });
