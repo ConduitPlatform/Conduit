@@ -1,5 +1,5 @@
 import React, { FC, useState } from 'react';
-import { Box, MenuItem, Switch, TextField } from '@material-ui/core';
+import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
@@ -31,6 +31,10 @@ const useStyles = makeStyles((theme) => ({
   switch: {
     display: 'flex',
     alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  saveButton: {
+    marginRight: theme.spacing(1),
   },
 }));
 
@@ -61,7 +65,7 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
 
   const [selected, setSelected] = useState<Selected>(Selected.folder);
 
-  const [inputData, setInputData] = useState<InputData>({
+  const initialInputData = {
     container: {
       name: '',
       isPublic: false,
@@ -71,10 +75,20 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
       container: '',
       isPublic: false,
     },
-  });
+  };
+  const [inputData, setInputData] = useState<InputData>(initialInputData);
+
+  const handleCancel = () => {
+    setInputData(initialInputData);
+    closeDrawer();
+  };
+
+  const handleSave = () => {
+    console.log('handleSave');
+  };
 
   return (
-    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={250}>
+    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={256}>
       <Box className={classes.root}>
         <Box className={classes.createContainer}>
           <Typography variant="h6" className={classes.createTitle}>
@@ -143,6 +157,18 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
               });
             }}
           />
+        </Box>
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.saveButton}
+            onClick={() => handleSave()}>
+            Save
+          </Button>
+          <Button variant="outlined" onClick={() => handleCancel()}>
+            Cancel
+          </Button>
         </Box>
       </Box>
     </DrawerWrapper>
