@@ -55,13 +55,7 @@ const Create = () => {
     enabled: false,
   };
   const [skip, setSkip] = useState<number>(0);
-  const [openDeleteForms, setOpenDeleteForms] = useState<{
-    open: boolean;
-    multiple: boolean;
-  }>({
-    open: false,
-    multiple: false,
-  });
+  const [openDeleteForms, setOpenDeleteForms] = useState<boolean>(false);
   const [selectedForm, setSelectedForm] = useState<FormsModel>(emptyFormState);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
@@ -97,10 +91,7 @@ const Create = () => {
     setRepliesForm(emptyFormState);
 
     setSelectedForm(emptyFormState);
-    setOpenDeleteForms({
-      open: false,
-      multiple: false,
-    });
+    setOpenDeleteForms(false);
   };
 
   const saveFormChanges = (data: FormsModel) => {
@@ -163,8 +154,8 @@ const Create = () => {
     setSelectedForms(newSelectedForms);
   };
 
-  const handleLimitChange = (e: any) => {
-    setLimit(e.target.value);
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
     setSkip(0);
     setPage(0);
   };
@@ -194,16 +185,13 @@ const Create = () => {
       }
       if (action.type === 'delete') {
         setSelectedForm(currentForm);
-        setOpenDeleteForms({
-          open: true,
-          multiple: false,
-        });
+        setOpenDeleteForms(true);
       }
     }
   };
 
   const deleteButtonAction = () => {
-    if (openDeleteForms.open && openDeleteForms.multiple) {
+    if (openDeleteForms && selectedForm.name === '') {
       const params = {
         ids: selectedForms,
         getForms: getFormsCallback,
@@ -216,10 +204,9 @@ const Create = () => {
       };
       dispatch(asyncDeleteForms(params));
     }
-    setOpenDeleteForms({
-      open: false,
-      multiple: false,
-    });
+    setOpenDeleteForms(false);
+    setSelectedForm(emptyFormState);
+    setSelectedForms([]);
   };
 
   const toDelete = {
@@ -239,15 +226,15 @@ const Create = () => {
 
   const actions = [toDelete, toReplies, toView];
 
-  const handleDeleteTitle = (multiple: boolean, form: FormsModel) => {
-    if (multiple) {
+  const handleDeleteTitle = (form: FormsModel) => {
+    if (selectedForm.name === '') {
       return 'Delete selected forms';
     }
     return `Delete form ${form.name}`;
   };
 
-  const handleDeleteDescription = (multiple: boolean, form: FormsModel) => {
-    if (multiple) {
+  const handleDeleteDescription = (form: FormsModel) => {
+    if (selectedForm.name === '') {
       return 'Are you sure you want to delete the selected forms?';
     }
     return `Are you sure you want to delete ${form.name}? `;
@@ -278,12 +265,7 @@ const Create = () => {
             <IconButton
               aria-label="delete"
               color="primary"
-              onClick={() =>
-                setOpenDeleteForms({
-                  open: true,
-                  multiple: true,
-                })
-              }>
+              onClick={() => setOpenDeleteForms(true)}>
               <Tooltip title="Delete multiple forms">
                 <DeleteTwoTone />
               </Tooltip>
@@ -358,10 +340,10 @@ const Create = () => {
         )}
       </DrawerWrapper>
       <ConfirmationDialog
-        open={openDeleteForms.open}
+        open={openDeleteForms}
         handleClose={handleCloseDrawer}
-        title={handleDeleteTitle(openDeleteForms.multiple, selectedForm)}
-        description={handleDeleteDescription(openDeleteForms.multiple, selectedForm)}
+        title={handleDeleteTitle(selectedForm)}
+        description={handleDeleteDescription(selectedForm)}
         buttonAction={deleteButtonAction}
         buttonText={'Delete'}
       />
