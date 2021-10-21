@@ -57,7 +57,10 @@ export class FileHandlers {
         if (!exists) {
           await this.storageProvider.createContainer(usedContainer);
         }
-        await this.database.create('_StorageContainer', { usedContainer, isPublic });
+        await this.database.create('_StorageContainer', {
+          name: usedContainer,
+          isPublic,
+        });
       }
     }
 
@@ -309,7 +312,7 @@ export class FileHandlers {
           if (!exists) {
             await this.storageProvider.createContainer(newContainer);
           }
-          await this.database.create('_StorageContainer', { newContainer });
+          await this.database.create('_StorageContainer', { name: newContainer });
         }
       }
 
