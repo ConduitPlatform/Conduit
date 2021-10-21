@@ -63,6 +63,10 @@ const Templates = () => {
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
+  const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
+    asc: false,
+    index: null,
+  });
   const [openDeleteTemplates, setOpenDeleteTemplates] = useState<boolean>(false);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
@@ -166,6 +170,13 @@ const Templates = () => {
       };
     });
   };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'name' },
+    { title: 'Externa;', sort: 'externalManaged' },
+    { title: 'Updated At', sort: 'updatedAt' },
+  ];
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
@@ -315,6 +326,9 @@ const Templates = () => {
       {templateDocuments.length > 0 && (
         <>
           <DataTable
+            sort={sort}
+            setSort={setSort}
+            headers={headers}
             dsData={formatData(templateDocuments)}
             actions={actions}
             handleAction={handleAction}
