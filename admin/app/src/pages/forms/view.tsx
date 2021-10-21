@@ -274,7 +274,7 @@ const Create = () => {
           />
         </Grid>
         <Grid item>
-          {selectedForms.length > 1 && (
+          {selectedForms.length > 0 && (
             <IconButton
               aria-label="delete"
               color="primary"
