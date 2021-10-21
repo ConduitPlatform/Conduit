@@ -9,7 +9,7 @@ const SendEmail = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(asyncGetEmailTemplates({ skip: 0, limit: 100 }));
+    dispatch(asyncGetEmailTemplates({ skip: 0, limit: 100, search: '' }));
   }, [dispatch]);
 
   const { templateDocuments } = useAppSelector((state) => state.emailsSlice.data);
