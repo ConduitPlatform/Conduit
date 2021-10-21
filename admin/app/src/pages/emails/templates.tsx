@@ -63,13 +63,7 @@ const Templates = () => {
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
-  const [openDeleteTemplates, setOpenDeleteTemplates] = useState<{
-    open: boolean;
-    multiple: boolean;
-  }>({
-    open: false,
-    multiple: false,
-  });
+  const [openDeleteTemplates, setOpenDeleteTemplates] = useState<boolean>(false);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] =
@@ -134,10 +128,7 @@ const Templates = () => {
     setImportTemplate(false);
     setSelectedTemplate(originalTemplateState);
     setSelectedTemplate(originalTemplateState);
-    setOpenDeleteTemplates({
-      open: false,
-      multiple: false,
-    });
+    setOpenDeleteTemplates(false);
   };
 
   const handleSelect = (id: string) => {
@@ -202,10 +193,7 @@ const Templates = () => {
       }
       if (action.type === 'delete') {
         setSelectedTemplate(currentTemplate);
-        setOpenDeleteTemplates({
-          open: true,
-          multiple: false,
-        });
+        setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
         const templateToUpload = {
@@ -218,22 +206,22 @@ const Templates = () => {
     }
   };
 
-  const handleDeleteTitle = (multiple: boolean, template: EmailTemplateType) => {
-    if (multiple) {
+  const handleDeleteTitle = (template: EmailTemplateType) => {
+    if (selectedTemplate.name === '') {
       return 'Delete selected templates';
     }
     return `Delete template ${template.name}`;
   };
 
-  const handleDeleteDescription = (multiple: boolean, template: EmailTemplateType) => {
-    if (multiple) {
+  const handleDeleteDescription = (template: EmailTemplateType) => {
+    if (selectedTemplate.name === '') {
       return 'Are you sure you want to delete the selected templates?';
     }
     return `Are you sure you want to delete ${template.name}? `;
   };
 
   const deleteButtonAction = () => {
-    if (openDeleteTemplates.open && openDeleteTemplates.multiple) {
+    if (openDeleteTemplates && selectedTemplate.name == '') {
       const params = {
         ids: selectedTemplates,
         getTemplates: getTemplatesCallback,
@@ -246,10 +234,8 @@ const Templates = () => {
       };
       dispatch(asyncDeleteTemplates(params));
     }
-    setOpenDeleteTemplates({
-      open: false,
-      multiple: false,
-    });
+    setOpenDeleteTemplates(false);
+    setSelectedTemplate(originalTemplateState);
     setSelectedTemplates([]);
   };
 
@@ -295,12 +281,7 @@ const Templates = () => {
             <IconButton
               aria-label="delete"
               color="primary"
-              onClick={() =>
-                setOpenDeleteTemplates({
-                  open: true,
-                  multiple: true,
-                })
-              }>
+              onClick={() => setOpenDeleteTemplates(true)}>
               <Tooltip title="Delete multiple templates">
                 <DeleteTwoTone />
               </Tooltip>
@@ -384,10 +365,10 @@ const Templates = () => {
         )}
       </DrawerWrapper>
       <ConfirmationDialog
-        open={openDeleteTemplates.open}
+        open={openDeleteTemplates}
         handleClose={handleClose}
-        title={handleDeleteTitle(openDeleteTemplates.multiple, selectedTemplate)}
-        description={handleDeleteDescription(openDeleteTemplates.multiple, selectedTemplate)}
+        title={handleDeleteTitle(selectedTemplate)}
+        description={handleDeleteDescription(selectedTemplate)}
         buttonAction={deleteButtonAction}
         buttonText={'Delete'}
       />
