@@ -5,8 +5,10 @@ import { EmailData, EmailSettings, SendEmailData } from '../models/emails/EmailM
 export const getExternalTemplatesRequest = () =>
   axios.get(`${CONDUIT_API}/admin/email/externalTemplates`);
 
-export const getEmailTemplateRequest = (skip: number, limit: number, search: string) =>
-  axios.get(`${CONDUIT_API}/admin/email/templates`, { params: { skip, limit, search } });
+export const getEmailTemplateRequest = (skip: number, limit: number, search?: string) =>
+  axios.get(`${CONDUIT_API}/admin/email/templates`, {
+    params: { skip, limit, search: search !== '' ? search : undefined },
+  });
 
 export const postEmailTemplateRequest = (data: EmailData) =>
   axios.post(`${CONDUIT_API}/admin/email/templates`, { ...data });
