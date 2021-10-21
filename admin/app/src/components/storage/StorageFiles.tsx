@@ -9,8 +9,18 @@ import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import DataTable from '../common/DataTable';
 import Paginator from '../common/Paginator';
 import StorageCreateDrawer from './StorageCreateDrawer';
+import StorageAddDrawer from './StorageAddDrawer';
+import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
 
-const useStyles = makeStyles((theme) => ({}));
+const useStyles = makeStyles((theme) => ({
+  topContainer: {
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing(1),
+  },
+  createButton: {
+    marginRight: theme.spacing(1),
+  },
+}));
 
 const StorageFiles = () => {
   const classes = useStyles();
@@ -20,9 +30,9 @@ const StorageFiles = () => {
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
-  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
+  const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [create, setCreate] = useState<boolean>(false);
 
   useEffect(() => {
     dispatch(asyncGetEmailTemplates({ skip, limit }));
@@ -31,8 +41,11 @@ const StorageFiles = () => {
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const handleCreate = () => {
-    setDrawerOpen(true);
-    setCreate(true);
+    setDrawerCreateOpen(true);
+  };
+
+  const handleAddFile = () => {
+    setDrawerAddOpen(true);
   };
 
   const handleSelect = (id: string) => {
@@ -57,8 +70,8 @@ const StorageFiles = () => {
   };
 
   const handleCloseDrawer = () => {
-    setCreate(false);
-    setDrawerOpen(false);
+    setDrawerAddOpen(false);
+    setDrawerCreateOpen(false);
   };
 
   const formatData = (data: EmailTemplateType[]) => {
@@ -106,7 +119,7 @@ const StorageFiles = () => {
 
   return (
     <div>
-      <Grid container item xs={12} justify="space-between">
+      <Grid container item xs={12} className={classes.topContainer}>
         <Grid item>
           <TextField
             size="small"
@@ -128,9 +141,18 @@ const StorageFiles = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.createButton}
             startIcon={<AddCircleOutline />}
             onClick={() => handleCreate()}>
             Create
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddCircleOutline />}
+            onClick={() => handleAddFile()}>
+            {/*onClick={() => dispatch(asyncAddStorageFile())}>*/}
+            Add
           </Button>
         </Grid>
       </Grid>
@@ -158,7 +180,8 @@ const StorageFiles = () => {
           </Grid>
         </Grid>
       )}
-      <StorageCreateDrawer open={drawerOpen} closeDrawer={handleCloseDrawer} />
+      <StorageCreateDrawer open={drawerCreateOpen} closeDrawer={handleCloseDrawer} />
+      <StorageAddDrawer open={drawerAddOpen} closeDrawer={handleCloseDrawer} />
     </div>
   );
 };
