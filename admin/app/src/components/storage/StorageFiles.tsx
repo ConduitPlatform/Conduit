@@ -10,7 +10,17 @@ import DataTable from '../common/DataTable';
 import Paginator from '../common/Paginator';
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
-import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
+import {
+  asyncAddStorageContainer,
+  asyncAddStorageFile,
+  asyncAddStorageFolder,
+  asyncDeleteStorageFile,
+  asyncGetStorageContainers,
+  asyncGetStorageFile,
+  asyncGetStorageFiles,
+  asyncGetStorageFolders,
+  asyncUpdateStorageFile,
+} from '../../redux/slices/storageSlice';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -151,7 +161,7 @@ const StorageFiles = () => {
             color="secondary"
             startIcon={<AddCircleOutline />}
             onClick={() => handleAddFile()}>
-            {/*onClick={() => dispatch(asyncAddStorageFile())}>*/}
+            {/*onClick={() => dispatch(asyncGetStorageContainers())}>*/}
             Add
           </Button>
         </Grid>

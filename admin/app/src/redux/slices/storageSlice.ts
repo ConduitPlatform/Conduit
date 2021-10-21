@@ -1,9 +1,17 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { IStorageConfig } from '../../models/storage/StorageModels';
 import {
+  createStorageContainer,
   createStorageFile,
+  createStorageFolder,
+  deleteStorageFile,
+  getStorageContainers,
+  getStorageFile,
+  getStorageFiles,
+  getStorageFolders,
   getStorageSettings,
   putStorageSettings,
+  updateStorageFile,
 } from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -85,6 +93,184 @@ export const asyncAddStorageFile = createAsyncThunk(
         // isPublic: any,
       };
       const { data } = await createStorageFile(fileData);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncAddStorageFolder = createAsyncThunk(
+  'storage/addStorageFolder',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const folderData = {
+        name: 'test-folder',
+        container: 'conduit',
+        isPublic: false,
+      };
+      const { data } = await createStorageFolder(folderData);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncAddStorageContainer = createAsyncThunk(
+  'storage/addStorageContainer',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const containerData = {
+        name: 'test-container-2',
+        isPublic: false,
+      };
+      const { data } = await createStorageContainer(containerData);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageFiles = createAsyncThunk(
+  'storage/getStorageFiles',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const params = {
+        skip: 0,
+        limit: 10,
+        // folder: 'conduit';
+        container: 'conduit',
+      };
+      const { data } = await getStorageFiles(params);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageFile = createAsyncThunk(
+  'storage/getStorageFile',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const fileId = '61714e908afe4116b6882ea9';
+      const { data } = await getStorageFile(fileId);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteStorageFile = createAsyncThunk(
+  'storage/deleteStorageFile',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const fileId = '61714e908afe4116b6882ea9';
+      const { data } = await deleteStorageFile(fileId);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncUpdateStorageFile = createAsyncThunk(
+  'storage/updateStorageFile',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const fileData = {
+        id: '617158368afe4116b6882eb0',
+        name: 'new-example-file',
+        folder: 'test-folder',
+        container: 'conduit',
+        data: base64example,
+      };
+      const { data } = await updateStorageFile(fileData);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageFolders = createAsyncThunk(
+  'storage/getStorageFolders',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const params = {
+        skip: 0,
+        limit: 10,
+        container: 'conduit',
+        // parent:
+      };
+      const { data } = await getStorageFolders(params);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageContainers = createAsyncThunk(
+  'storage/getStorageContainers',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const params = {
+        skip: 0,
+        limit: 10,
+      };
+      const { data } = await getStorageContainers(params);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
