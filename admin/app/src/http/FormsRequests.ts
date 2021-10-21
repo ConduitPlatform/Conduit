@@ -2,10 +2,16 @@ import axios from 'axios';
 import { FormSettingsConfig, FormsModel } from '../models/forms/FormsModels';
 import { CONDUIT_API } from './requestsConfig';
 
-export const getForms = (skip: number, limit: number) =>
-  axios.get(`${CONDUIT_API}/admin/forms/get`, { params: { skip, limit } });
+export const getForms = (skip: number, limit: number, search: string) =>
+  axios.get(`${CONDUIT_API}/admin/forms/get`, {
+    params: { skip, limit, search: search !== '' ? search : undefined },
+  });
 
 export const createForm = (data: any) => axios.post(`${CONDUIT_API}/admin/forms/new`, data);
+
+export const deleteFormsRequest = (ids: string[]) => {
+  return axios.delete(`${CONDUIT_API}/admin/forms/delete`, { data: { ids: ids } });
+};
 
 export const getFormReplies = (id: string) => axios.get(`${CONDUIT_API}/admin/forms/replies/${id}`);
 
