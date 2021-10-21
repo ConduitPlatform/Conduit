@@ -72,7 +72,7 @@ export class AdminHandlers {
     let identifier;
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`};
+      query['name'] =  { $regex: `.*${identifier}.*`, $options: 'i'};
     }
 
     const formsPromise = this.database.findMany(
