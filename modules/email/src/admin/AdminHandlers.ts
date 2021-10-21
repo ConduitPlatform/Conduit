@@ -211,7 +211,7 @@ export class AdminHandlers {
 
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`};
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
 
     const templateDocumentsPromise = this.database.findMany(
