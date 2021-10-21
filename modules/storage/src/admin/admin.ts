@@ -83,25 +83,32 @@ export class AdminRoutes {
         message: 'Name is required',
       });
     }
-    let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-      name,
-    });
-    if (isNil(container)) {
-      container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
+    try {
+      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
         name,
-        isPublic,
       });
-      let exists = await this.fileHandlers.storage.containerExists(container);
-      if (!exists) {
-        await this.fileHandlers.storage.createContainer(container);
+      if (isNil(container)) {
+        let exists = await this.fileHandlers.storage.containerExists(name);
+        if (!exists) {
+          await this.fileHandlers.storage.createContainer(name);
+        }
+        container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
+          name,
+          isPublic,
+        });
+      } else {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Container already exists',
+        });
       }
-    } else {
+      return callback(null, { result: JSON.stringify(container) });
+    } catch (e) {
       return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Container already exists',
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong',
       });
     }
-    return callback(null, { result: JSON.stringify(container) });
   }
 
   async getFolders(call: RouterRequest, callback: RouterResponse) {

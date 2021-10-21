@@ -75,7 +75,7 @@ export class FileHandlers {
       const buffer = Buffer.from(data, 'base64');
       let exists;
       if (!isNil(folder)) {
-        exists = await this.storageProvider.folderExists(folder);
+        exists = await this.storageProvider.container(usedContainer).folderExists(folder);
         if (!exists) {
           await this.database.create('_StorageFolder', {
             name: folder,
