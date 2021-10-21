@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
+  deleteEmailTemplateRequest,
   getEmailSettingsRequest,
   getEmailTemplateRequest,
   getExternalTemplatesRequest,
@@ -7,6 +8,8 @@ import {
   putEmailSettingsRequest,
   putEmailTemplateRequest,
   sendEmailRequest,
+  syncExternalTemplates,
+  uploadTemplateRequest,
 } from '../../http/EmailRequests';
 import {
   EmailTemplateType,
@@ -65,12 +68,9 @@ const initialState: IEmailSlice = {
 
 export const asyncGetEmailTemplates = createAsyncThunk(
   'emails/getTemplates',
-  async (params: { skip: number; limit: number }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
+  async (params: { skip: number; limit: number; search: string }, thunkAPI) => {
     try {
-      const { data } = await getEmailTemplateRequest(params.skip, params.limit);
-
-      thunkAPI.dispatch(setAppDefaults());
+      const { data } = await getEmailTemplateRequest(params.skip, params.limit, params.search);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -85,6 +85,21 @@ export const asyncGetExternalTemplates = createAsyncThunk(
   async (params, thunkAPI) => {
     try {
       const { data } = await getExternalTemplatesRequest();
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncUploadTemplate = createAsyncThunk(
+  'emails/uploadTemplate',
+  async (params: { name: string; body: string; subject: string }, thunkAPI) => {
+    try {
+      const { data } = await uploadTemplateRequest(params);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -137,6 +152,38 @@ export const asyncCreateNewEmailTemplate = createAsyncThunk(
   }
 );
 
+export const asyncSyncTemplates = createAsyncThunk(
+  'emails/deleteTemplate',
+  async (params, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await syncExternalTemplates();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully synced templates!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteTemplates = createAsyncThunk(
+  'emails/deleteMultipleTemplates',
+  async (params: { ids: string[]; getTemplates: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteEmailTemplateRequest(params.ids);
+      params.getTemplates();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted templates!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
 export const asyncGetEmailSettings = createAsyncThunk(
   'emails/getEmailSettings',
   async (arg, thunkAPI) => {

@@ -1,10 +1,13 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import EmailsLayout from '../../components/navigation/InnerLayouts/emailsLayout';
 import {
   asyncCreateNewEmailTemplate,
+  asyncDeleteTemplates,
   asyncGetEmailTemplates,
   asyncSaveEmailTemplateChanges,
+  asyncSyncTemplates,
+  asyncUploadTemplate,
 } from '../../redux/slices/emailsSlice';
 import DataTable from '../../components/common/DataTable';
 import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
@@ -17,6 +20,7 @@ import {
   IconButton,
   makeStyles,
   InputAdornment,
+  Tooltip,
 } from '@material-ui/core';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
@@ -26,14 +30,18 @@ import Sync from '@material-ui/icons/Sync';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import ExternalTemplates from '../../components/emails/ExternalTemplates';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import { DeleteTwoTone } from '@material-ui/icons';
+import useDebounce from '../../hooks/useDebounce';
+
 // import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
-    marginLeft: theme.spacing(1),
+    marginLeft: theme.spacing(1.5),
   },
   btnAlignment2: {
-    marginRight: theme.spacing(1),
+    marginRight: theme.spacing(1.5),
   },
   actions: {},
 }));
@@ -55,23 +63,25 @@ const Templates = () => {
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [search, setSearch] = useState<string>('');
+  const [openDeleteTemplates, setOpenDeleteTemplates] = useState<boolean>(false);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [viewTemplate, setViewTemplate] = useState<EmailTemplateType>(originalTemplateState);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<EmailTemplateType>(originalTemplateState);
   const [importTemplate, setImportTemplate] = useState<boolean>(false);
   const [create, setCreate] = useState<boolean>(false);
   const [edit, setEdit] = useState<boolean>(false);
 
-  // const debouncedSearch: string = useDebounce(search, 500);
+  const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetEmailTemplates({ skip, limit }));
-  }, [dispatch, limit, skip]);
+    dispatch(asyncGetEmailTemplates({ skip, limit, search: debouncedSearch }));
+  }, [dispatch, limit, skip, debouncedSearch]);
 
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
-    setViewTemplate(originalTemplateState);
+    setSelectedTemplate(originalTemplateState);
     setCreate(true);
     setEdit(true);
     setDrawer(true);
@@ -80,6 +90,45 @@ const Templates = () => {
   const handleImportTemplate = () => {
     setImportTemplate(true);
     setDrawer(true);
+  };
+
+  const saveTemplateChanges = (data: EmailTemplateType) => {
+    const _id = data._id;
+    const updatedData = {
+      name: data.name,
+      subject: data.subject,
+      sender: data.sender !== '' ? data.sender : undefined,
+      body: data.body,
+      variables: data.variables,
+      externalManaged: data.externalManaged,
+    };
+    if (_id !== undefined) {
+      dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
+    }
+    setSelectedTemplate(updatedData);
+  };
+
+  const createNewTemplate = (data: EmailTemplateType) => {
+    const newData = {
+      name: data.name,
+      subject: data.subject,
+      sender: data.sender,
+      body: data.body,
+      externalManaged: data.externalManaged,
+      variables: data.variables,
+    };
+    dispatch(asyncCreateNewEmailTemplate(newData));
+    setSelectedTemplate(newData);
+  };
+
+  const handleClose = () => {
+    setEdit(false);
+    setCreate(false);
+    setDrawer(false);
+    setImportTemplate(false);
+    setSelectedTemplate(originalTemplateState);
+    setSelectedTemplate(originalTemplateState);
+    setOpenDeleteTemplates(false);
   };
 
   const handleSelect = (id: string) => {
@@ -103,42 +152,9 @@ const Templates = () => {
     setSelectedTemplates(newSelectedTemplates);
   };
 
-  const handleCloseDrawer = () => {
-    setEdit(false);
-    setCreate(false);
-    setDrawer(false);
-    setImportTemplate(false);
-    setViewTemplate(originalTemplateState);
-  };
-
-  const saveTemplateChanges = (data: EmailTemplateType) => {
-    const _id = data._id;
-    const updatedData = {
-      name: data.name,
-      subject: data.subject,
-      sender: data.sender !== '' ? data.sender : undefined,
-      body: data.body,
-      variables: data.variables,
-      externalManaged: data.externalManaged,
-    };
-    if (_id !== undefined) {
-      dispatch(asyncSaveEmailTemplateChanges({ _id, data: updatedData }));
-    }
-    setViewTemplate(updatedData);
-  };
-
-  const createNewTemplate = (data: EmailTemplateType) => {
-    const newData = {
-      name: data.name,
-      subject: data.subject,
-      sender: data.sender,
-      body: data.body,
-      externalManaged: data.externalManaged,
-      variables: data.variables,
-    };
-    dispatch(asyncCreateNewEmailTemplate(newData));
-    setViewTemplate(newData);
-  };
+  const getTemplatesCallback = useCallback(() => {
+    dispatch(asyncGetEmailTemplates({ skip, limit, search }));
+  }, [dispatch, limit, skip, search]);
 
   const formatData = (data: EmailTemplateType[]) => {
     return data.map((u) => {
@@ -167,26 +183,60 @@ const Templates = () => {
     setPage(0);
   };
 
-  //Actions section
-
   const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
     const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
     if (currentTemplate !== undefined) {
       if (action.type === 'view') {
-        setViewTemplate(currentTemplate);
+        setSelectedTemplate(currentTemplate);
         setEdit(false);
         setDrawer(true);
       }
       if (action.type === 'delete') {
-        //handle delete
-      }
-      if (action.type === 'sync') {
-        //handle sync
+        setSelectedTemplate(currentTemplate);
+        setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
-        //handle upload
+        const templateToUpload = {
+          name: currentTemplate.name,
+          body: currentTemplate.body,
+          subject: currentTemplate.subject,
+        };
+        dispatch(asyncUploadTemplate(templateToUpload));
       }
     }
+  };
+
+  const handleDeleteTitle = (template: EmailTemplateType) => {
+    if (selectedTemplate.name === '') {
+      return 'Delete selected templates';
+    }
+    return `Delete template ${template.name}`;
+  };
+
+  const handleDeleteDescription = (template: EmailTemplateType) => {
+    if (selectedTemplate.name === '') {
+      return 'Are you sure you want to delete the selected templates?';
+    }
+    return `Are you sure you want to delete ${template.name}? `;
+  };
+
+  const deleteButtonAction = () => {
+    if (openDeleteTemplates && selectedTemplate.name == '') {
+      const params = {
+        ids: selectedTemplates,
+        getTemplates: getTemplatesCallback,
+      };
+      dispatch(asyncDeleteTemplates(params));
+    } else {
+      const params = {
+        ids: [`${selectedTemplate._id}`],
+        getTemplates: getTemplatesCallback,
+      };
+      dispatch(asyncDeleteTemplates(params));
+    }
+    setOpenDeleteTemplates(false);
+    setSelectedTemplate(originalTemplateState);
+    setSelectedTemplates([]);
   };
 
   const toDelete = {
@@ -227,8 +277,23 @@ const Templates = () => {
           />
         </Grid>
         <Grid item>
-          <IconButton color="primary" className={classes.btnAlignment}>
-            <Sync color="primary" />
+          {selectedTemplates.length > 0 && (
+            <IconButton
+              aria-label="delete"
+              color="primary"
+              onClick={() => setOpenDeleteTemplates(true)}>
+              <Tooltip title="Delete multiple templates">
+                <DeleteTwoTone />
+              </Tooltip>
+            </IconButton>
+          )}
+          <IconButton
+            color="primary"
+            className={classes.btnAlignment}
+            onClick={() => dispatch(asyncSyncTemplates())}>
+            <Tooltip title="Sync external templates">
+              <Sync color="primary" />
+            </Tooltip>
           </IconButton>
           <Button
             className={classes.btnAlignment2}
@@ -248,30 +313,30 @@ const Templates = () => {
         </Grid>
       </Grid>
       {templateDocuments.length > 0 && (
-        <DataTable
-          dsData={formatData(templateDocuments)}
-          actions={actions}
-          handleAction={handleAction}
-          handleSelect={handleSelect}
-          handleSelectAll={handleSelectAll}
-          selectedItems={selectedTemplates}
-        />
-      )}
-      {templateDocuments.length > 0 && (
-        <Grid container style={{ marginTop: '-8px' }}>
-          <Grid item xs={7} />
-          <Grid item xs={5}>
-            <Paginator
-              handlePageChange={handlePageChange}
-              limit={limit}
-              handleLimitChange={handleLimitChange}
-              page={page}
-              count={totalCount}
-            />
+        <>
+          <DataTable
+            dsData={formatData(templateDocuments)}
+            actions={actions}
+            handleAction={handleAction}
+            handleSelect={handleSelect}
+            handleSelectAll={handleSelectAll}
+            selectedItems={selectedTemplates}
+          />
+          <Grid container style={{ marginTop: '-8px' }}>
+            <Grid item xs={7} />
+            <Grid item xs={5}>
+              <Paginator
+                handlePageChange={handlePageChange}
+                limit={limit}
+                handleLimitChange={handleLimitChange}
+                page={page}
+                count={totalCount}
+              />
+            </Grid>
           </Grid>
-        </Grid>
+        </>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
         {!importTemplate ? (
           <Box>
             <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
@@ -280,7 +345,7 @@ const Templates = () => {
             <TabPanel
               handleCreate={createNewTemplate}
               handleSave={saveTemplateChanges}
-              template={viewTemplate}
+              template={selectedTemplate}
               edit={edit}
               setEdit={setEdit}
               create={create}
@@ -299,6 +364,14 @@ const Templates = () => {
           </Box>
         )}
       </DrawerWrapper>
+      <ConfirmationDialog
+        open={openDeleteTemplates}
+        handleClose={handleClose}
+        title={handleDeleteTitle(selectedTemplate)}
+        description={handleDeleteDescription(selectedTemplate)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      />
     </div>
   );
 };
