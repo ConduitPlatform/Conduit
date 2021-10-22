@@ -177,20 +177,13 @@ export const asyncAddStorageFile = createAsyncThunk(
 
 export const asyncAddStorageFolder = createAsyncThunk(
   'storage/addStorageFolder',
-  async (arg, thunkAPI) => {
+  async (folderData: { name: string; container: string; isPublic: boolean }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const folderData = {
-        name: 'test-folder',
-        container: 'conduit',
-        isPublic: false,
-      };
       const { data } = await createStorageFolder(folderData);
-      console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -200,13 +193,9 @@ export const asyncAddStorageFolder = createAsyncThunk(
 
 export const asyncAddStorageContainer = createAsyncThunk(
   'storage/addStorageContainer',
-  async (arg, thunkAPI) => {
+  async (containerData: { name: string; isPublic: boolean }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const containerData = {
-        name: 'test-container-2',
-        isPublic: false,
-      };
       const { data } = await createStorageContainer(containerData);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());

@@ -3,6 +3,9 @@ import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
+import { IContainer } from '../../models/storage/StorageModels';
+import { useAppDispatch } from '../../redux/store';
+import { asyncAddStorageContainer, asyncAddStorageFolder } from '../../redux/slices/storageSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -40,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 
 enum Selected {
   folder = 'folder',
-  container = 'folder',
+  container = 'container',
 }
 
 interface InputData {
@@ -58,12 +61,14 @@ interface InputData {
 interface Props {
   open: boolean;
   closeDrawer: () => void;
+  containers: IContainer[];
 }
 
-const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
+const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
-  const [selected, setSelected] = useState<Selected>(Selected.folder);
+  const [selected, setSelected] = useState<Selected>(Selected.container);
 
   const initialInputData = {
     container: {
@@ -84,7 +89,11 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
   };
 
   const handleSave = () => {
-    console.log('handleSave');
+    if (selected === Selected.container) {
+      dispatch(asyncAddStorageContainer(inputData.container));
+      return;
+    }
+    dispatch(asyncAddStorageFolder(inputData.folder));
   };
 
   return (
@@ -106,8 +115,8 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
             classes={{
               root: classes.selectRoot,
             }}>
-            <MenuItem value="folder">Folder</MenuItem>
             <MenuItem value="container">Container</MenuItem>
+            <MenuItem value="folder">Folder</MenuItem>
           </TextField>
         </Box>
         <TextField
@@ -125,22 +134,28 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer }) => {
             });
           }}
         />
-        {selected === Selected.container && (
+        {selected === Selected.folder && (
           <TextField
-            variant="outlined"
+            select
             label="Container"
             className={classes.input}
-            value={inputData[selected].container}
+            value={inputData.folder.container}
             onChange={(event) => {
               setInputData({
                 ...inputData,
-                [selected]: {
-                  ...inputData[selected],
+                folder: {
+                  ...inputData.folder,
                   container: event.target.value,
                 },
               });
             }}
-          />
+            variant="outlined">
+            {containers.map((container, index) => (
+              <MenuItem value={container.name} key={index}>
+                {container.name}
+              </MenuItem>
+            ))}
+          </TextField>
         )}
         <Box className={classes.switch}>
           <Typography variant="subtitle1">Is Public</Typography>

@@ -77,7 +77,11 @@ const StorageFiles = () => {
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
       />
-      <StorageCreateDrawer open={drawerCreateOpen} closeDrawer={handleCloseDrawer} />
+      <StorageCreateDrawer
+        open={drawerCreateOpen}
+        closeDrawer={handleCloseDrawer}
+        containers={containers}
+      />
       <StorageAddDrawer
         open={drawerAddOpen}
         closeDrawer={handleCloseDrawer}
