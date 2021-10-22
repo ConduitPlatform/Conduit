@@ -67,10 +67,8 @@ const StorageFiles = () => {
   const formatData = () => {
     return containers.map((container) => {
       return {
-        _id: container._id,
         Name: container.name,
         isPublic: container.isPublic,
-        'Updated At': container.updatedAt,
       };
     });
   };

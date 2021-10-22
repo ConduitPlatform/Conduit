@@ -75,7 +75,7 @@ const DataTable: React.FC<Props> = ({
   });
 
   const getValue = (value: any) => {
-    if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
+    if (moment(value, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true).isValid()) {
       return moment(value).format('DD/MM/YYYY');
     }
     return value?.toString();
