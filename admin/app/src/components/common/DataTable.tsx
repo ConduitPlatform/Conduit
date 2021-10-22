@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -43,6 +43,7 @@ type Action = {
 
 interface Props {
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
+  selectable?: boolean;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
   selectedItems?: string[];
@@ -54,6 +55,7 @@ const DataTable: React.FC<Props> = ({
   dsData,
   actions,
   handleAction,
+  selectable = true,
   selectedItems = [],
   handleSelect,
   handleSelectAll,
@@ -102,15 +104,17 @@ const DataTable: React.FC<Props> = ({
       <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
-            <TableCell className={classes.header} align="left" padding="none">
-              <Checkbox
-                color="primary"
-                onChange={onMenuItemSelectAll}
-                checked={selectedItems?.length === dsData.length}
-                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-              />
-            </TableCell>
+            {selectable && (
+              <TableCell className={classes.header} align="left" padding="none">
+                <Checkbox
+                  color="primary"
+                  onChange={onMenuItemSelectAll}
+                  checked={selectedItems?.length === dsData.length}
+                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+                />
+              </TableCell>
+            )}
             {headerCells.map((headCell) => (
               <TableCell
                 className={classes.header}
@@ -128,13 +132,15 @@ const DataTable: React.FC<Props> = ({
         <TableBody>
           {rows.map((row: any, i: number) => (
             <TableRow key={i}>
-              <TableCell align="left" padding="none">
-                <Checkbox
-                  color="primary"
-                  checked={selectedItems?.includes(row._id)}
-                  onChange={() => onMenuItemSelect(row._id)}
-                />
-              </TableCell>
+              {selectable && (
+                <TableCell align="left" padding="none">
+                  <Checkbox
+                    color="primary"
+                    checked={selectedItems?.includes(row._id)}
+                    onChange={() => onMenuItemSelect(row._id)}
+                  />
+                </TableCell>
+              )}
               {Object.keys(row).map((item, j) => (
                 <TableCell className={classes.ellipsisStyle} key={`${i}-${j}`}>
                   {getValue(row[item])}

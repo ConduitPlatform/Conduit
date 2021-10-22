@@ -21,3 +21,12 @@ export interface IStorageFile {
   folder?: string;
   mimeType?: any;
 }
+
+export interface IContainer {
+  createdAt: string;
+  isPublic: boolean;
+  name: string;
+  updatedAt: string;
+  __v: number;
+  _id: string;
+}

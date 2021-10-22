@@ -39,16 +39,17 @@ const StorageFiles = () => {
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
-  const [search, setSearch] = useState<string>('');
   const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
 
   useEffect(() => {
-    dispatch(asyncGetEmailTemplates({ skip, limit }));
+    dispatch(asyncGetStorageContainers({ skip, limit }));
   }, [dispatch, limit, skip]);
 
-  const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
+  const {
+    containers: { containers, containersCount },
+  } = useAppSelector((state) => state.storageSlice.data);
+  console.log('containers', containers);
 
   const handleCreate = () => {
     setDrawerCreateOpen(true);
@@ -58,39 +59,18 @@ const StorageFiles = () => {
     setDrawerAddOpen(true);
   };
 
-  const handleSelect = (id: string) => {
-    const newSelectedTemplates = [...selectedTemplates];
-
-    if (selectedTemplates.includes(id)) {
-      const index = newSelectedTemplates.findIndex((newId) => newId === id);
-      newSelectedTemplates.splice(index, 1);
-    } else {
-      newSelectedTemplates.push(id);
-    }
-    setSelectedTemplates(newSelectedTemplates);
-  };
-
-  const handleSelectAll = (data: EmailUI[]) => {
-    if (selectedTemplates.length === templateDocuments.length) {
-      setSelectedTemplates([]);
-      return;
-    }
-    const newSelectedTemplates = data.map((item: EmailUI) => item._id);
-    setSelectedTemplates(newSelectedTemplates);
-  };
-
   const handleCloseDrawer = () => {
     setDrawerAddOpen(false);
     setDrawerCreateOpen(false);
   };
 
-  const formatData = (data: EmailTemplateType[]) => {
-    return data.map((u) => {
+  const formatData = () => {
+    return containers.map((container) => {
       return {
-        _id: u._id,
-        Name: u.name,
-        External: u.externalManaged,
-        'Updated At': u.updatedAt,
+        _id: container._id,
+        Name: container.name,
+        isPublic: container.isPublic,
+        'Updated At': container.updatedAt,
       };
     });
   };
@@ -112,12 +92,12 @@ const StorageFiles = () => {
   };
 
   const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
-    const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
-    if (currentTemplate !== undefined) {
-      if (action.type === 'delete') {
-        //handle delete
-      }
-    }
+    // const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
+    // if (currentTemplate !== undefined) {
+    //   if (action.type === 'delete') {
+    //     //handle delete
+    //   }
+    // }
   };
 
   const deleteAction = {
@@ -130,23 +110,7 @@ const StorageFiles = () => {
   return (
     <div>
       <Grid container item xs={12} className={classes.topContainer}>
-        <Grid item>
-          <TextField
-            size="small"
-            variant="outlined"
-            name="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            label="Find template"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
+        <Grid item />
         <Grid item>
           <Button
             variant="contained"
@@ -166,32 +130,30 @@ const StorageFiles = () => {
           </Button>
         </Grid>
       </Grid>
-      {templateDocuments.length > 0 && (
+      {containers.length > 0 && (
         <DataTable
-          dsData={formatData(templateDocuments)}
+          dsData={formatData()}
           actions={actions}
           handleAction={handleAction}
-          handleSelect={handleSelect}
-          handleSelectAll={handleSelectAll}
-          selectedItems={selectedTemplates}
+          selectable={false}
         />
       )}
-      {templateDocuments.length > 0 && (
-        <Grid container style={{ marginTop: '-8px' }}>
-          <Grid item xs={7} />
-          <Grid item xs={5}>
-            <Paginator
-              handlePageChange={handlePageChange}
-              limit={limit}
-              handleLimitChange={handleLimitChange}
-              page={page}
-              count={totalCount}
-            />
-          </Grid>
-        </Grid>
-      )}
+      {/*{templateDocuments.length > 0 && (*/}
+      {/*  <Grid container style={{ marginTop: '-8px' }}>*/}
+      {/*    <Grid item xs={7} />*/}
+      {/*    <Grid item xs={5}>*/}
+      {/*      <Paginator*/}
+      {/*        handlePageChange={handlePageChange}*/}
+      {/*        limit={limit}*/}
+      {/*        handleLimitChange={handleLimitChange}*/}
+      {/*        page={page}*/}
+      {/*        count={totalCount}*/}
+      {/*      />*/}
+      {/*    </Grid>*/}
+      {/*  </Grid>*/}
+      {/*)}*/}
       <StorageCreateDrawer open={drawerCreateOpen} closeDrawer={handleCloseDrawer} />
-      <StorageAddDrawer open={true} closeDrawer={handleCloseDrawer} />
+      <StorageAddDrawer open={drawerAddOpen} closeDrawer={handleCloseDrawer} />
     </div>
   );
 };

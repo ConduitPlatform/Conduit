@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { IStorageConfig } from '../../models/storage/StorageModels';
+import { IContainer, IStorageConfig } from '../../models/storage/StorageModels';
 import {
   createStorageContainer,
   createStorageFile,
@@ -21,6 +21,12 @@ import { base64example } from '../../assets/svgs/ExampleBase64';
 interface IStorageSlice {
   data: {
     config: IStorageConfig;
+    containers: {
+      containers: IContainer[];
+      containersCount: number;
+    };
+    folders: any;
+    files: any;
   };
 }
 
@@ -40,6 +46,12 @@ const initialState: IStorageSlice = {
         bucketName: '',
       },
     },
+    containers: {
+      containers: [],
+      containersCount: 0,
+    },
+    folders: [],
+    files: [],
   },
 };
 
@@ -50,10 +62,8 @@ export const asyncGetStorageConfig = createAsyncThunk(
     try {
       const { data } = await getStorageSettings();
       thunkAPI.dispatch(setAppDefaults());
-      console.log('config-data', data);
       return data;
     } catch (error) {
-      console.log('config-error');
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -68,11 +78,79 @@ export const asyncSaveStorageConfig = createAsyncThunk(
     try {
       const { data } = await putStorageSettings(dataForConfig);
       thunkAPI.dispatch(setAppDefaults());
-      console.log('saveConfig data', data);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
-      console.log('saveConfig error', error);
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageContainers = createAsyncThunk(
+  'storage/getStorageContainers',
+  async (
+    params: {
+      skip: number;
+      limit: number;
+    },
+    thunkAPI
+  ) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getStorageContainers(params);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageFolders = createAsyncThunk(
+  'storage/getStorageFolders',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const params = {
+        skip: 0,
+        limit: 10,
+        container: 'conduit',
+        // parent:
+      };
+      const { data } = await getStorageFolders(params);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageFiles = createAsyncThunk(
+  'storage/getStorageFiles',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const params = {
+        skip: 0,
+        limit: 10,
+        // folder: 'conduit';
+        container: 'conduit',
+      };
+      const { data } = await getStorageFiles(params);
+      console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
@@ -150,30 +228,6 @@ export const asyncAddStorageContainer = createAsyncThunk(
   }
 );
 
-export const asyncGetStorageFiles = createAsyncThunk(
-  'storage/getStorageFiles',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const params = {
-        skip: 0,
-        limit: 10,
-        // folder: 'conduit';
-        container: 'conduit',
-      };
-      const { data } = await getStorageFiles(params);
-      console.log('success', data);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      console.log('error', error);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 export const asyncGetStorageFile = createAsyncThunk(
   'storage/getStorageFile',
   async (arg, thunkAPI) => {
@@ -237,52 +291,6 @@ export const asyncUpdateStorageFile = createAsyncThunk(
   }
 );
 
-export const asyncGetStorageFolders = createAsyncThunk(
-  'storage/getStorageFolders',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const params = {
-        skip: 0,
-        limit: 10,
-        container: 'conduit',
-        // parent:
-      };
-      const { data } = await getStorageFolders(params);
-      console.log('success', data);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      console.log('error', error);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
-export const asyncGetStorageContainers = createAsyncThunk(
-  'storage/getStorageContainers',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const params = {
-        skip: 0,
-        limit: 10,
-      };
-      const { data } = await getStorageContainers(params);
-      console.log('success', data);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      console.log('error', error);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 const storageSlice = createSlice({
   name: 'storage',
   initialState,
@@ -297,6 +305,9 @@ const storageSlice = createSlice({
     });
     builder.addCase(asyncSaveStorageConfig.fulfilled, (state, action) => {
       state.data.config = action.payload;
+    });
+    builder.addCase(asyncGetStorageContainers.fulfilled, (state, action) => {
+      state.data.containers = action.payload;
     });
   },
 });
