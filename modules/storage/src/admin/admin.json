@@ -46,6 +46,11 @@
       "protoName": "getFiles"
     },
     {
+      "path": "/file/:id/data",
+      "method": "GET",
+      "protoName": "getFileData"
+    },
+    {
       "path": "/file/:id",
       "method": "GET",
       "protoName": "getFile"

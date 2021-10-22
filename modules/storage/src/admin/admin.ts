@@ -22,6 +22,7 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
+        getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
         createFolder: this.createFolder.bind(this),
         getFolders: this.getFolders.bind(this),
         getFiles: this.getFiles.bind(this),
