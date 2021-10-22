@@ -17,6 +17,28 @@ export class AzureStorage implements IStorageProvider {
     );
   }
 
+  async deleteContainer(name: string): Promise<boolean | Error> {
+    let t = await this._storage.getContainerClient(name).deleteIfExists();
+    return t.succeeded;
+  }
+
+  async deleteFolder(name: string): Promise<boolean | Error> {
+    let exists = await this.folderExists(name);
+    if (!exists) return false;
+    console.log('Folder found');
+
+    console.log('Getting blobs list..');
+    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    console.log('Deleting blobs...');
+    let i = 0;
+    for await (const blob of containerClient.listBlobsFlat()) {
+      i++;
+      await containerClient.deleteBlob(blob.name);
+    }
+    console.log(`${i} blobs deleted.`);
+    return true;
+  }
+
   /**
    * Used to create a new folder
    * @param name For the folder

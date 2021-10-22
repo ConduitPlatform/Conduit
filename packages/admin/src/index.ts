@@ -348,7 +348,7 @@ export default class AdminModule extends IConduitAdmin {
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
     routes.forEach((r: any) => {
-      let handler = (req: any, res: any, next: any) => {
+      let handler = (req: Request, res: Response, next: NextFunction) => {
         const context = (req as any).conduit;
         let params: any = {};
         if (req.query) {
@@ -418,13 +418,27 @@ export default class AdminModule extends IConduitAdmin {
               });
             }
           }
-          let sendResult = result.result;
-          try {
-            sendResult = JSON.parse(result.result);
-          } catch (error) {
-            // do nothing
+          if (result.result) {
+            let sendResult = result.result;
+            try {
+              sendResult = JSON.parse(result.result);
+            } catch (error) {
+              return res.status(500).json({
+                name: 'INTERNAL_SERVER_ERROR',
+                status: 500,
+                message: 'Failed to parse service response!',
+              });
+            }
+            res.status(200).json(sendResult);
+          } else if (result.redirect) {
+            res.redirect(result.redirect);
+          } else {
+            return res.status(500).json({
+              name: 'INTERNAL_SERVER_ERROR',
+              status: 500,
+              message: 'Something went wrong',
+            });
           }
-          res.status(200).json(sendResult);
         });
       };
       this._registerRoute(r.method, r.path, handler);

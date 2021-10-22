@@ -16,6 +16,13 @@ export class GoogleCloudStorage implements IStorageProvider {
     });
   }
 
+  deleteContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  deleteFolder(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+
   async createContainer(name: string): Promise<boolean | Error> {
     // Creates the new bucket
     await this._storage.createBucket(name);
