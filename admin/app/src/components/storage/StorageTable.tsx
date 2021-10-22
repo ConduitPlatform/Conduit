@@ -1,4 +1,4 @@
-import { Button, Grid, InputAdornment, TextField } from '@material-ui/core';
+import { Button, Grid, InputAdornment, TextField, Typography } from '@material-ui/core';
 import React, { FC, useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
@@ -35,27 +35,14 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   data: any;
+  path: string;
+  handleAdd: any;
+  handleCreate: any;
 }
 
-const StorageTable: FC<Props> = ({ data }) => {
+const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
-
-  const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
-  const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
-
-  const handleCreate = () => {
-    setDrawerCreateOpen(true);
-  };
-
-  const handleAddFile = () => {
-    setDrawerAddOpen(true);
-  };
-
-  const handleCloseDrawer = () => {
-    setDrawerAddOpen(false);
-    setDrawerCreateOpen(false);
-  };
 
   const formatData = () => {
     return data.map((container: any) => {
@@ -87,11 +74,25 @@ const StorageTable: FC<Props> = ({ data }) => {
 
   const actions = [deleteAction];
 
+  const handleGetSomeData = () => {
+    dispatch(asyncGetStorageFiles());
+  };
+
   return (
-    <div>
+    <>
       <Grid container item xs={12} className={classes.topContainer}>
-        <Grid item />
         <Grid item>
+          <Typography variant="subtitle1">{path}</Typography>
+        </Grid>
+        <Grid item>
+          <Button
+            variant="contained"
+            color="secondary"
+            className={classes.createButton}
+            onClick={() => handleGetSomeData()}>
+            {/*onClick={() => dispatch(asyncGetStorageFiles())}>*/}
+            Get Data
+          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -104,7 +105,7 @@ const StorageTable: FC<Props> = ({ data }) => {
             variant="contained"
             color="secondary"
             startIcon={<AddCircleOutline />}
-            onClick={() => handleAddFile()}>
+            onClick={() => handleAdd()}>
             {/*onClick={() => dispatch(asyncGetStorageFiles())}>*/}
             Add
           </Button>
@@ -133,9 +134,7 @@ const StorageTable: FC<Props> = ({ data }) => {
       {/*    </Grid>*/}
       {/*  </Grid>*/}
       {/*)}*/}
-      <StorageCreateDrawer open={drawerCreateOpen} closeDrawer={handleCloseDrawer} />
-      <StorageAddDrawer open={drawerAddOpen} closeDrawer={handleCloseDrawer} />
-    </div>
+    </>
   );
 };
 

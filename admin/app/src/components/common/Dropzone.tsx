@@ -44,7 +44,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   file: string;
-  setFile: (value: string) => void;
+  setFile: (data: string, name: string) => void;
 }
 
 const Dropzone: FC<Props> = ({ file, setFile }) => {
@@ -58,7 +58,7 @@ const Dropzone: FC<Props> = ({ file, setFile }) => {
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const base64 = reader.result.split(',')[1];
-        setFile(base64);
+        setFile(base64, readerFile.name);
       }
     };
     reader.onerror = (error) => {

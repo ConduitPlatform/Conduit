@@ -141,8 +141,8 @@ export const asyncGetStorageFiles = createAsyncThunk(
       const params = {
         skip: 0,
         limit: 10,
-        // folder: 'conduit';
-        container: 'conduit',
+        folder: 'images',
+        container: 'test',
       };
       const { data } = await getStorageFiles(params);
       console.log('success', data);
@@ -159,17 +159,9 @@ export const asyncGetStorageFiles = createAsyncThunk(
 
 export const asyncAddStorageFile = createAsyncThunk(
   'storage/addStorageFile',
-  async (arg, thunkAPI) => {
+  async (fileData: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const fileData = {
-        name: 'example',
-        data: base64example,
-        folder: 'test-folder',
-        container: 'conduit',
-        // mimeType: any,
-        // isPublic: any,
-      };
       const { data } = await createStorageFile(fileData);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());

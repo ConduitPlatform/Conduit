@@ -4,6 +4,9 @@ import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
 import Dropzone from '../common/Dropzone';
+import { IContainer } from '../../models/storage/StorageModels';
+import { useAppDispatch } from '../../redux/store';
+import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,12 +44,12 @@ interface FileData {
 interface Props {
   open: boolean;
   closeDrawer: () => void;
+  containers: IContainer[];
 }
 
-const containers = ['conduit', 'conduit-1', 'conduit-2', 'conduit-3', 'conduit-4'];
-
-const StorageAddDrawer: FC<Props> = ({ open, closeDrawer }) => {
+const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const initialFileData = {
     name: '',
@@ -63,7 +66,16 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer }) => {
   };
 
   const handleAdd = () => {
-    // console.log('handleAdd');
+    closeDrawer();
+    dispatch(asyncAddStorageFile(fileData));
+  };
+
+  const handleSetFile = (data: string, name: string) => {
+    setFileData({
+      ...fileData,
+      data: data,
+      name: fileData.name ? fileData.name : name,
+    });
   };
 
   return (
@@ -72,15 +84,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer }) => {
         <Typography variant="h6" className={classes.title}>
           Add File
         </Typography>
-        <Dropzone
-          file={fileData.data}
-          setFile={(value) => {
-            setFileData({
-              ...fileData,
-              data: value,
-            });
-          }}
-        />
+        <Dropzone file={fileData.data} setFile={handleSetFile} />
         <TextField
           variant="outlined"
           label="File Name"
@@ -106,8 +110,8 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer }) => {
           }}
           variant="outlined">
           {containers.map((container, index) => (
-            <MenuItem value={container} key={index}>
-              {container}
+            <MenuItem value={container.name} key={index}>
+              {container.name}
             </MenuItem>
           ))}
         </TextField>
