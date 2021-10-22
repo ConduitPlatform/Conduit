@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -8,7 +8,6 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
-import { isNumber } from 'lodash';
 import moment from 'moment';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
@@ -42,6 +41,9 @@ type Action = {
 };
 
 interface Props {
+  headers: any;
+  sort?: { asc: boolean; index: string | null };
+  setSort?: any;
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
@@ -51,6 +53,9 @@ interface Props {
 }
 
 const DataTable: React.FC<Props> = ({
+  headers,
+  sort,
+  setSort,
   dsData,
   actions,
   handleAction,
@@ -60,17 +65,17 @@ const DataTable: React.FC<Props> = ({
   ...rest
 }) => {
   const classes = useStyles();
-
   /** table header and rows */
   const rows = dsData;
-  const headerCells = Object.keys(dsData[0]).map((header, index) => {
-    return {
-      id: header,
-      numeric: isNumber(rows[index]),
-      disablePadding: false,
-      label: header,
-    };
-  });
+
+  const onSelectedField = (index: string) => {
+    setSort((prevState: any) => {
+      if (prevState.index === index) {
+        return { asc: !prevState.asc, index: index };
+      }
+      return { asc: prevState.asc, index: index };
+    });
+  };
 
   const getValue = (value: any) => {
     if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
@@ -111,14 +116,13 @@ const DataTable: React.FC<Props> = ({
                 indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
               />
             </TableCell>
-            {headerCells.map((headCell) => (
-              <TableCell
-                className={classes.header}
-                key={headCell.id}
-                align={headCell.numeric ? 'right' : 'left'}
-                padding={headCell.disablePadding ? 'none' : 'default'}>
-                <TableSortLabel active={false} direction={'asc'}>
-                  {headCell.label}
+            {headers.map((header: any) => (
+              <TableCell className={classes.header} key={header.sort}>
+                <TableSortLabel
+                  active={sort?.index === header.sort}
+                  direction={sort?.asc ? 'asc' : 'desc'}
+                  onClick={() => onSelectedField(header.sort)}>
+                  {header.title}
                 </TableSortLabel>
               </TableCell>
             ))}

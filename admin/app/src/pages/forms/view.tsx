@@ -57,6 +57,10 @@ const Create = () => {
   const [skip, setSkip] = useState<number>(0);
   const [openDeleteForms, setOpenDeleteForms] = useState<boolean>(false);
   const [selectedForm, setSelectedForm] = useState<FormsModel>(emptyFormState);
+  const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
+    asc: false,
+    index: null,
+  });
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
   const [drawer, setDrawer] = useState<boolean>(false);
@@ -160,17 +164,6 @@ const Create = () => {
     setPage(0);
   };
 
-  const formatData = (data: FormsModel[]) => {
-    return data.map((u) => {
-      return {
-        _id: u._id,
-        Name: u.name,
-        Email: u.emailField,
-        Enabled: u.enabled,
-      };
-    });
-  };
-
   const handleAction = (action: { title: string; type: string }, data: any) => {
     const currentForm = forms?.find((form) => form._id === data._id);
     if (currentForm !== undefined) {
@@ -240,6 +233,24 @@ const Create = () => {
     return `Are you sure you want to delete ${form.name}? `;
   };
 
+  const formatData = (data: FormsModel[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        Name: u.name,
+        Email: u.emailField,
+        Enabled: u.enabled,
+      };
+    });
+  };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'name' },
+    { title: 'Email', sort: 'emailField' },
+    { title: 'Enabled', sort: 'enabled' },
+  ];
+
   return (
     <div>
       <Grid container justify="space-between" style={{ marginBottom: '5px' }}>
@@ -284,6 +295,9 @@ const Create = () => {
       {forms.length ? (
         <Box>
           <DataTable
+            headers={headers}
+            sort={sort}
+            setSort={setSort}
             dsData={formatData(forms)}
             actions={actions}
             handleAction={handleAction}

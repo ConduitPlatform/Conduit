@@ -60,9 +60,20 @@ const SchemasTable: FC<Props> = ({
 }) => {
   const classes = useStyles();
   const [active, setActive] = useState(true);
+  const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
+    asc: false,
+    index: null,
+  });
 
   const handleChange = (event: any, newValue: any) => {
     setActive(newValue);
+  };
+
+  const getActions = () => {
+    if (active) {
+      return activeActions;
+    }
+    return disabledActions;
   };
 
   const visibleData = () => {
@@ -83,12 +94,12 @@ const SchemasTable: FC<Props> = ({
       : null;
   };
 
-  const getActions = () => {
-    if (active) {
-      return activeActions;
-    }
-    return disabledActions;
-  };
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'name' },
+    { title: 'Created at', sort: 'createdAt' },
+    { title: 'Updated at', sort: 'updatedAt' },
+  ];
 
   return (
     <Container maxWidth={'lg'}>
@@ -119,7 +130,14 @@ const SchemasTable: FC<Props> = ({
         </Grid>
       </Grid>
       {visibleData() && (
-        <DataTable dsData={visibleData()} actions={getActions()} handleAction={handleActions} />
+        <DataTable
+          headers={headers}
+          sort={sort}
+          setSort={setSort}
+          dsData={visibleData()}
+          actions={getActions()}
+          handleAction={handleActions}
+        />
       )}
     </Container>
   );
