@@ -2,6 +2,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import React, { ChangeEvent, useState } from 'react';
 import { Grid, Container, Select, Input, Switch, Button } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles(() => ({
   textSpacing: {
@@ -32,6 +33,7 @@ const CoreSettingsTab: React.FC = () => {
   const [port, setPort] = useState<number>(initialStates.port);
   const [toggleRest, setToggleRest] = useState<boolean>(initialStates.toggleRest);
   const [toggleGraphQL, setToggleGraphQL] = useState<boolean>(initialStates.toggleGraphQL);
+  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   const onSelectChange = (event: ChangeEvent<any>) => {
     setSelectedEnum(event.target.value);
@@ -147,11 +149,19 @@ const CoreSettingsTab: React.FC = () => {
             placeholder={'Save'}
             variant={'contained'}
             color={'primary'}
-            onClick={onSaveClick}>
+            onClick={() => setOpenSaveDialog(true)}>
             Save
           </Button>
         </Grid>
       </Grid>
+      <ConfirmationDialog
+        open={openSaveDialog}
+        handleClose={() => setOpenSaveDialog(false)}
+        title={'Are you sure you want to proceed?'}
+        description={'Core settings changed'}
+        buttonAction={onSaveClick}
+        buttonText={'Proceed'}
+      />
     </Container>
   );
 };
