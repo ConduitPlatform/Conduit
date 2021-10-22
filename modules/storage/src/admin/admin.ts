@@ -236,7 +236,7 @@ export class AdminRoutes {
   }
 
   async getFiles(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, folder, container } = JSON.parse(call.request.params);
+    const { skip, limit, folder, container, search } = JSON.parse(call.request.params);
     if (isNil(skip) || isNil(limit)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -251,10 +251,13 @@ export class AdminRoutes {
       });
     }
 
-    let query: { container: string; folder?: string } = { container };
+    let query: { container: string; folder?: string; name?: any } = { container };
 
     if (!isNil(folder)) {
       query.folder = folder;
+    }
+    if (!isNil(search)) {
+      query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
     let files = await this.grpcSdk.databaseProvider!.findMany(
