@@ -71,6 +71,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     };
     setEdit(false);
     handleSave(data);
+    setOpenSaveDialog(false);
   };
 
   const renderSettingsFields = () => {

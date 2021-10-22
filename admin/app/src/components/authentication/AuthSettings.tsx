@@ -98,8 +98,6 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     setEdit(false);
     handleSave(data);
     setOpenSaveDialog(false);
-
-    setOpenSaveDialog(false);
   };
 
   const handleClickShowPassword = () => {
