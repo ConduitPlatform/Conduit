@@ -26,6 +26,10 @@ export interface IStorageProvider {
 
   containerExists(name: string): Promise<boolean | Error>;
 
+  deleteContainer(name: string): Promise<boolean | Error>;
+
+  deleteFolder(name: string): Promise<boolean | Error>;
+
   delete(fileName: string): Promise<boolean | Error>;
 
   exists(fileName: string): Promise<boolean | Error>;

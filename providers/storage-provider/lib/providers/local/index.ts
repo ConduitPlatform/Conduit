@@ -1,5 +1,5 @@
-import { IStorageProvider } from '../../interfaces/IStorageProvider';
-import { StorageConfig } from '../../interfaces/StorageConfig';
+import { IStorageProvider } from '../../interfaces';
+import { StorageConfig } from '../../interfaces';
 import { access, existsSync, mkdir, readFile, rename, unlink, writeFile } from 'fs';
 import { resolve } from 'path';
 
@@ -10,6 +10,13 @@ export class LocalStorage implements IStorageProvider {
   constructor(options?: StorageConfig) {
     this._rootStoragePath = options && options.storagePath ? options.storagePath : '';
     this._storagePath = this._rootStoragePath;
+  }
+
+  deleteContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  deleteFolder(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
   }
 
   get(fileName: string): Promise<Buffer | Error> {
