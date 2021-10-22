@@ -1,5 +1,6 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { DatabaseProviderClient } from '../../protoUtils/database-provider';
+import { ConduitSchema } from '../../classes';
 
 export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
   constructor(url: string) {
@@ -45,7 +46,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  createSchemaFromAdapter(schema: any): Promise<any> {
+  createSchemaFromAdapter(schema: ConduitSchema): Promise<any> {
     return new Promise((resolve, reject) => {
       this.client?.createSchemaFromAdapter(
         {
@@ -53,6 +54,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
             name: schema.name,
             modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
             modelOptions: JSON.stringify(schema.modelOptions),
+            collectionName: schema.collectionName,
           },
         },
         (err: any, res: any) => {
@@ -63,6 +65,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
               name: res.schema.name,
               modelSchema: JSON.parse(res.schema.modelSchema),
               modelOptions: JSON.parse(res.schema.modelOptions),
+              collectionName: res.schema.collectionName,
             });
           }
         }

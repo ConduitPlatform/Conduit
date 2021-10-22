@@ -2,12 +2,12 @@ import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import { DatabaseAdapter } from '../../interfaces';
 import { systemRequiredValidator } from '../utils/validateSchemas';
+import { DatabaseAdapter } from '../DatabaseAdapter';
 
 let deepPopulate = require('mongoose-deep-populate');
 
-export class MongooseAdapter implements DatabaseAdapter {
+export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
@@ -20,10 +20,11 @@ export class MongooseAdapter implements DatabaseAdapter {
     useFindAndModify: false,
     useUnifiedTopology: true,
   };
-  models?: { [name: string]: MongooseSchema };
+
   registeredSchemas: Map<string, ConduitSchema>;
 
   constructor(connectionString: string) {
+    super();
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
@@ -72,7 +73,7 @@ export class MongooseAdapter implements DatabaseAdapter {
       });
   }
 
-  createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
+  async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
     const Schema = this.mongoose.Schema;
     if (!this.models) {
       this.models = {};
@@ -80,19 +81,17 @@ export class MongooseAdapter implements DatabaseAdapter {
 
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
-        try {
-          schema = systemRequiredValidator(
-            this.registeredSchemas.get(schema.name)!,
-            schema
-          );
-        } catch (err) {
-          return new Promise((resolve, reject) => {
-            reject(err);
-          });
-        }
+        schema = systemRequiredValidator(
+          this.registeredSchemas.get(schema.name)!,
+          schema
+        );
         // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
       }
       delete this.mongoose.connection.models[schema.name];
+    }
+    let owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new Error('Not authorized to modify model');
     }
 
     let newSchema = schemaConverter(schema);
@@ -105,9 +104,8 @@ export class MongooseAdapter implements DatabaseAdapter {
       deepPopulate,
       this
     );
-    return new Promise((resolve, reject) => {
-      resolve(this.models![schema.name]);
-    });
+    await this.saveSchemaToDatabase(schema);
+    return this.models![schema.name];
   }
 
   getSchema(schemaName: string): ConduitSchema {
