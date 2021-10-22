@@ -26,12 +26,16 @@ export class Admin {
   async createClient(req: Request, res: Response, next: NextFunction) {
     const { platform } = req.body;
     if (!Object.values(PlatformTypesEnum).includes(platform)) {
-      return res.status(401).json({ error: 'Invalid platform' });
+      return res.status(400).json({
+        name: 'INVALID_PARAMS',
+        status: 400,
+        message: 'Platform not supported',
+      });
     }
 
     let clientId = Math.random().toString(36).substring(10);
     let clientSecret = randomBytes(64).toString('hex');
-    let error;
+    let error: string;
 
     let client = await this.grpcSdk.databaseProvider
       ?.create('Client', {
@@ -39,24 +43,38 @@ export class Admin {
         clientSecret,
         platform,
       })
-      .catch((err) => (error = err));
+      .catch((err: Error) => (error = err.message));
+    // @ts-ignore
     if (error) {
       console.error(error);
-      return res.status(500).json({ message: 'Something went wrong!' });
+      return res.status(500).json({
+        name: 'INTERNAL_SERVER_ERROR',
+        status: 500,
+        message: error ?? 'Something went wrong',
+      });
     }
 
     return res.json({ id: client._id, clientId, clientSecret, platform });
   }
 
   async deleteClient(req: Request, res: Response, next: NextFunction) {
-    if (!req.params.id) res.status(400).json({ message: 'Client parameter missing' });
+    if (!req.params.id)
+      return res.status(400).json({
+        name: 'INVALID_PARAMS',
+        status: 400,
+        message: 'id missing',
+      });
     this.grpcSdk.databaseProvider
       ?.deleteOne('Client', { _id: req.params.id })
       .then((client: any) => {
         return res.json({ message: 'Client deleted' });
       })
       .catch((e) => {
-        return res.status(500).json({ message: 'Client update failed!' });
+        return res.status(500).json({
+          name: 'INTERNAL_SERVER_ERROR',
+          status: 500,
+          message: e.message ?? 'Something went wrong',
+        });
       });
   }
 
@@ -67,7 +85,11 @@ export class Admin {
         res.json(clients);
       })
       .catch((e) => {
-        return res.status(500).json({ message: 'Client fetch failed!' });
+        return res.status(500).json({
+          name: 'INTERNAL_SERVER_ERROR',
+          status: 500,
+          message: e.message ?? 'Something went wrong',
+        });
       });
   }
 }

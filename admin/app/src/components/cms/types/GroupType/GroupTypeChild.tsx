@@ -18,7 +18,6 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 100,
     width: '100%',
     border: '1px dotted black',
-    backgroundColor: theme.palette.grey['100'],
   },
   rootDragging: {
     minHeight: 100,
@@ -52,12 +51,7 @@ interface IProps {
   groupIndex: number;
   itemIndex: number;
   handleGroupDelete: (index: number, groupIndex: number, itemIndex: number) => void;
-  handleGroupDrawer: (
-    groupItem: any,
-    index: number,
-    groupIndex: number,
-    itemIndex: number
-  ) => void;
+  handleGroupDrawer: (groupItem: any, index: number, groupIndex: number, itemIndex: number) => void;
 }
 
 const GroupGroupType: FC<IProps> = ({
@@ -123,15 +117,8 @@ const GroupGroupType: FC<IProps> = ({
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}>
                         <Box width={'99%'}>{handleGroupContent(groupItem)}</Box>
-                        <Box
-                          display={'flex'}
-                          flexDirection={'column'}
-                          width={'99%'}
-                          mb={2}>
-                          <Box
-                            display={'flex'}
-                            width={'100%'}
-                            justifyContent={'space-between'}>
+                        <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
+                          <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
                             <Box display={'flex'}>
                               <Typography variant={'body2'} style={{ marginRight: 8 }}>
                                 {groupItem.name}
@@ -140,19 +127,12 @@ const GroupGroupType: FC<IProps> = ({
                             <Box display={'flex'}>
                               <DeleteIcon
                                 className={classes.icon}
-                                onClick={() =>
-                                  handleGroupDelete(index, groupIndex, itemIndex)
-                                }
+                                onClick={() => handleGroupDelete(index, groupIndex, itemIndex)}
                               />
                               <SettingsIcon
                                 className={classes.icon}
                                 onClick={() =>
-                                  handleGroupDrawer(
-                                    groupItem,
-                                    index,
-                                    groupIndex,
-                                    itemIndex
-                                  )
+                                  handleGroupDrawer(groupItem, index, groupIndex, itemIndex)
                                 }
                               />
                             </Box>

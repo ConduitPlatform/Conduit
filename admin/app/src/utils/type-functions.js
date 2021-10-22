@@ -24,9 +24,7 @@ export const addToChildGroup = (data, groupId, item, droppableDestination) => {
     }
   });
 
-  const idPosition2 = data[idPosition].content.findIndex(
-    (object2) => object2.name === groupId
-  );
+  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
 
   clone[idPosition].content[idPosition2].content.splice(droppableDestination.index, 0, {
     ...item,
@@ -56,9 +54,7 @@ export const updateGroupChildItem = (data, groupId, item, position) => {
     return object.content.find((content) => content.name === groupId);
   });
 
-  const idPosition2 = data[idPosition].content.findIndex(
-    (object2) => object2.name === groupId
-  );
+  const idPosition2 = data[idPosition].content.findIndex((object2) => object2.name === groupId);
 
   clone[idPosition].content[idPosition2].content.splice(position, 1, { ...item });
   return clone;
@@ -182,9 +178,7 @@ const constructFieldType = (field) => {
   if (typeField.type === 'Relation' && typeField.isArray) {
     typeField.relation = field.relation;
     typeField.type = field.type[0].type;
-    typeField.select = typeField.select = isNil(field.type[0].select)
-      ? true
-      : field.type[0].select;
+    typeField.select = typeField.select = isNil(field.type[0].select) ? true : field.type[0].select;
     typeField.required = field.type[0].required;
     typeField.model = field.type[0].model;
   } else {

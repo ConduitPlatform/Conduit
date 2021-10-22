@@ -67,8 +67,8 @@ const SecretsTab: React.FC = () => {
         <Grid item xs={12}>
           <Typography variant={'h6'}>All available conduit Clients</Typography>
           <Typography variant={'subtitle1'}>
-            Below you can see all previously generated Clients, create new ones or delete
-            old clients
+            Below you can see all previously generated Clients, create new ones or delete old
+            clients
           </Typography>
         </Grid>
         <Grid item xs={8}>

@@ -17,48 +17,20 @@ export interface AuthUserUI {
   _id: string;
 }
 
-export interface LocalTypes {
-  enabled: boolean;
-  sendVerificationEmail: boolean;
-  verificationRequired: boolean;
-  identifier: string;
-  verification_redirect_uri: string;
-  forgot_password_redirect_uri: string;
-}
-
-export interface GoogleTypes {
+export interface SignInTypes {
   enabled: boolean;
   accountLinking: boolean;
-  clientId: string;
+  sendVerificationEmail?: boolean;
+  verificationRequired?: boolean;
+  clientId?: string;
+  identifier?: string;
+  verification_redirect_uri?: string;
+  forgot_password_redirect_uri?: string;
+  redirect_uri?: string;
+  clientSecret?: string;
 }
 
-export interface FacebookTypes {
-  enabled: boolean;
-  accountLinking: boolean;
-  clientId: string;
-}
-
-export interface KakaoTypes {
-  enabled: boolean;
-  clientId: string;
-  redirect_uri: string;
-}
-
-export interface TwitchTypes {
-  enabled: boolean;
-  clientId: string;
-  redirect_uri: string;
-  clientSecret: string;
-}
-
-export type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch' | 'kakao';
-
-export type SocialDataTypes =
-  | LocalTypes
-  | GoogleTypes
-  | FacebookTypes
-  | KakaoTypes
-  | TwitchTypes;
+export type SocialNameTypes = 'local' | 'google' | 'facebook' | 'twitch';
 
 export interface ServiceAccount {
   active: boolean;
@@ -88,9 +60,8 @@ export interface SignInMethods {
   tokenInvalidationPeriod: number;
   twofa: { enabled: boolean };
   service: { enabled: boolean };
-  facebook: FacebookTypes;
-  google: GoogleTypes;
-  local: LocalTypes;
-  kakao: KakaoTypes;
-  twitch: TwitchTypes;
+  facebook: SignInTypes;
+  google: SignInTypes;
+  local: SignInTypes;
+  twitch: SignInTypes;
 }

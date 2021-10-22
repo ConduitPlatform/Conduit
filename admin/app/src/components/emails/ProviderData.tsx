@@ -1,5 +1,5 @@
 import { Container } from '@material-ui/core';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
@@ -11,7 +11,18 @@ import Switch from '@material-ui/core/Switch';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
-import { EmailSettings, EmailSettingsState } from '../../models/emails/EmailModels';
+import {
+  EmailSettings,
+  ITransportSettings,
+  MailgunSettings,
+  MandrillSettings,
+  SendgridSettings,
+  SmtpSettings,
+  TransportProviders,
+} from '../../models/emails/EmailModels';
+import TransportSettings from './TransportSettings';
+import { useAppSelector } from '../../redux/store';
+import { isNil, isEmpty } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,45 +43,89 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     width: '100%',
   },
+  menuItem: {
+    textTransform: 'capitalize',
+  },
+  muiSelect: {
+    textTransform: 'capitalize',
+  },
 }));
 
+const transportProviders: ('mailgun' | 'smtp' | 'mandrill' | 'sendgrid')[] = [
+  'mailgun',
+  'smtp',
+  'mandrill',
+  'sendgrid',
+];
+
 interface Props {
-  settings: EmailSettings;
   handleSave: (data: EmailSettings) => void;
 }
 
-const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
+const ProviderData: React.FC<Props> = ({ handleSave }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsState] = useState<EmailSettingsState>({
-    transport: '',
+
+  const { settings } = useAppSelector((state) => state.emailsSlice.data);
+
+  const [settingsState, setSettingsState] = useState<EmailSettings>({
     active: false,
-    transportSettings: {
-      apiKey: '',
-      domain: '',
-      host: '',
-    },
     sendingDomain: '',
+    transport: TransportProviders.smtp,
+    transportSettings: {
+      mailgun: {
+        apiKey: '',
+        domain: '',
+        host: '',
+      },
+      smtp: {
+        port: '',
+        host: '',
+        auth: {
+          username: '',
+          password: '',
+          method: '',
+        },
+      },
+      mandrill: {
+        apiKey: '',
+      },
+      sendgrid: {
+        apiUser: '',
+      },
+    },
   });
+
+  const initializeSettings = useCallback(() => {
+    let settingsObj: EmailSettings = { ...settingsState };
+    const initial: EmailSettings = { ...settings };
+
+    settingsObj = { ...settingsObj, ...initial };
+
+    transportProviders.forEach((provider) => {
+      const providerSettings: MailgunSettings | SmtpSettings | MandrillSettings | SendgridSettings =
+        {
+          ...settingsObj.transportSettings[provider],
+          ...initial.transportSettings[provider],
+        };
+
+      settingsObj.transportSettings = {
+        ...settingsObj.transportSettings,
+        [provider]: {
+          ...providerSettings,
+        },
+      };
+    });
+
+    return settingsObj;
+  }, [settings]);
 
   useEffect(() => {
     if (!settings) {
       return;
     }
-    const data = {
-      active: settings.active,
-      transport: settings.transport,
-      sendingDomain: settings.sendingDomain,
-      transportSettings: {
-        apiKey: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.apiKey as string,
-        domain: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.domain as string,
-        host: settings.transportSettings[settings.transport as 'mailgun' | 'smtp']
-          ?.host as string,
-      },
-    };
-    setSettingsState(data);
-  }, [settings]);
+    const newSettings = initializeSettings();
+    setSettingsState(newSettings);
+  }, [initializeSettings, settings]);
 
   const handleCancel = () => {
     setSettingsState({
@@ -81,21 +136,63 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
   };
 
   const onSaveClick = () => {
-    const data = {
-      doc: settings.doc,
-      active: settingsState.active,
-      transport: settingsState.transport,
-      sendingDomain: settingsState.sendingDomain,
-      transportSettings: {
-        [settingsState.transport]: {
-          apiKey: settingsState.transportSettings.apiKey,
-          domain: settingsState.transportSettings.domain,
-          host: settingsState.transportSettings.host,
+    const transportSettings = settingsState.transportSettings;
+    const keys: TransportProviders[] = Object.keys(transportSettings) as TransportProviders[];
+    let newTransportSettings: any = {};
+    keys.forEach((k) => {
+      if (!isNil(transportSettings[k]) && !isEmpty(transportSettings[k])) {
+        newTransportSettings = { ...newTransportSettings, [k]: transportSettings[k] };
+      } else {
+        newTransportSettings = { ...newTransportSettings, [k]: null };
+      }
+    });
+    const newSettings: EmailSettings = {
+      ...settingsState,
+      transportSettings: newTransportSettings,
+    };
+    handleSave(newSettings);
+  };
+
+  const onChange = (
+    value: string,
+    key: string,
+    provider: TransportProviders,
+    authItem?: string
+  ) => {
+    if (authItem) {
+      const smtpProvider: SmtpSettings = settingsState.transportSettings[provider] as SmtpSettings;
+      if (!smtpProvider) {
+        return;
+      }
+      const newSettings: ITransportSettings = {
+        ...settingsState.transportSettings,
+        smtp: {
+          ...smtpProvider,
+          auth: {
+            ...smtpProvider.auth,
+            [authItem]: value,
+          },
         },
+      };
+      setSettingsState({
+        ...settingsState,
+        transportSettings: newSettings,
+      });
+      return;
+    }
+
+    const newSettings = {
+      ...settingsState.transportSettings,
+      [provider]: {
+        ...settingsState.transportSettings[provider],
+        [key]: value,
       },
     };
 
-    handleSave(data);
+    setSettingsState({
+      ...settingsState,
+      transportSettings: newSettings,
+    });
   };
 
   const renderSettingsFields = () => {
@@ -112,17 +209,17 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
             onChange={(event) => {
               setSettingsState({
                 ...settingsState,
-                transport: event.target.value,
+                transport: event.target.value as TransportProviders,
               });
             }}
+            className={classes.muiSelect}
             helperText="Select your transport provider"
             variant="outlined">
-            <MenuItem key={'mailgun'} value={'mailgun'}>
-              Mailgun
-            </MenuItem>
-            <MenuItem key={'smtp'} value={'smtp'}>
-              Smtp
-            </MenuItem>
+            {transportProviders.map((provider, index) => (
+              <MenuItem value={provider} key={index} className={classes.menuItem}>
+                {provider}
+              </MenuItem>
+            ))}
           </TextField>
         </Grid>
         <Grid item xs={12}>
@@ -139,68 +236,11 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
           />
         </Grid>
         <Divider className={classes.divider} />
-        <Grid item xs={12}>
-          <Typography variant={'h6'}>Transport settings</Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="apiKey"
-            label="API key"
-            variant="outlined"
-            value={settingsState.transportSettings.apiKey}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  apiKey: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="domain"
-            label="Domain"
-            variant="outlined"
-            value={settingsState.transportSettings.domain}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  domain: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            required
-            id="host"
-            label="Host"
-            variant="outlined"
-            value={settingsState.transportSettings.host}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                transportSettings: {
-                  ...settingsState.transportSettings,
-                  host: event.target.value,
-                },
-              });
-            }}
-          />
-        </Grid>
+        <TransportSettings data={settingsState} onChange={onChange} />
       </>
     );
   };
 
-  // return <></>;
   return (
     <Container>
       <Paper className={classes.paper}>
@@ -235,10 +275,7 @@ const ProviderData: React.FC<Props> = ({ settings, handleSave }) => {
             {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'}>
-            <Button
-              onClick={() => handleCancel()}
-              style={{ marginRight: 16 }}
-              color={'primary'}>
+            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
             <Button

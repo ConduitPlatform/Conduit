@@ -126,16 +126,11 @@ const DisableSchemaDialog: FC<Props> = ({
         {createDialogTitle(selectedSchema.action)}
       </DialogTitle>
       <DialogContent>
-        <span style={{ fontWeight: 'bold' }}>
-          {selectedSchema ? selectedSchema.data.name : ''}
-        </span>
+        <span style={{ fontWeight: 'bold' }}>{selectedSchema ? selectedSchema.data.name : ''}</span>
       </DialogContent>
       <DialogContent>{createDialogInfo(selectedSchema.action)}</DialogContent>
       <DialogActions>
-        <Button
-          onClick={() => handleClose()}
-          variant="contained"
-          style={{ textTransform: 'none' }}>
+        <Button onClick={() => handleClose()} variant="contained" style={{ textTransform: 'none' }}>
           Cancel
         </Button>
         <Button

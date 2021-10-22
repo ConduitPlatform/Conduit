@@ -46,7 +46,7 @@ export default {
       doc:
         'The client id that is provided by google developer console for a specific app',
       format: 'String',
-      default: '407408718192.apps.googleusercontent.com',
+      nullable: true,
     },
     accountLinking: {
       doc:
@@ -70,21 +70,6 @@ export default {
         'When enabled, if a new facebook user matches with an existing email on the database, they will be enriched with facebook details',
       format: 'Boolean',
       default: true,
-    },
-  },
-  kakao: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-    clientId: {
-      doc: 'Kakao client id',
-      format: 'String',
-      default: '',
-    },
-    redirect_uri: {
-      format: 'String',
-      default: '',
     },
   },
   twitch: {

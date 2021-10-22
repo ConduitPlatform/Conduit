@@ -75,5 +75,33 @@ export default {
         },
       },
     },
+    mandrill: {
+      doc: 'The Mandrill config',
+      nullable: true,
+      default: null,
+      apiKey: {
+        doc: 'The Mandrill API key',
+        format: 'String',
+        default: null,
+        nullable: true,
+      },
+    },
+    sendgrid: {
+      doc: 'The SendGrid config',
+      nullable: true,
+      default: null,
+      apiKey: {
+        doc: 'The SendGrid API key',
+        format: 'String',
+        default: null,
+        nullable: true,
+      },
+      apiUser: {
+        doc: 'The SendGrid API username',
+        format: 'String',
+        default: null,
+        nullable: true,
+      }
+    }
   },
 };

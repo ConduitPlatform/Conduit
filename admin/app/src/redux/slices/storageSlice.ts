@@ -3,7 +3,7 @@ import { IStorageConfig } from '../../models/storage/StorageModels';
 import { getStorageSettings, putStorageSettings } from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
+import { enqueueErrorNotification } from '../../utils/useNotifier';
 
 interface IStorageSlice {
   data: {
@@ -37,9 +37,8 @@ export const asyncGetStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -54,9 +53,7 @@ export const asyncSaveStorageConfig = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -66,8 +63,8 @@ const storageSlice = createSlice({
   name: 'storage',
   initialState,
   reducers: {
-    clearStoragePageStore(state) {
-      state = initialState;
+    clearStoragePageStore: () => {
+      return initialState;
     },
   },
   extraReducers: (builder) => {

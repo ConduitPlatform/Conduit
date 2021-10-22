@@ -19,7 +19,6 @@ const JWT_CONFIG = (token: string) => ({
   Authorization: `JWT ${token}`,
 });
 
-//Interceptors
 axios.interceptors.request.use(
   (config) => {
     const reduxStore = getCurrentStore();
@@ -30,7 +29,6 @@ axios.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.log(error);
     return Promise.reject(error.response);
   }
 );
@@ -40,7 +38,6 @@ axios.interceptors.response.use(
     return config;
   },
   (error) => {
-    console.log(error);
     if (error.response.status === 401) {
       const reduxStore = getCurrentStore();
       if (reduxStore) {
@@ -48,7 +45,6 @@ axios.interceptors.response.use(
         Router.replace('/login');
       }
     }
-    console.log(error);
     return Promise.reject(error.response);
   }
 );

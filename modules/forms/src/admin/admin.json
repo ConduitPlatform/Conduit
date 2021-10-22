@@ -19,6 +19,11 @@
       "path": "/update/:formId",
       "method": "PUT",
       "protoName": "editFormById"
+    },
+    {
+      "path": "/delete",
+      "method": "DELETE",
+      "protoName": "deleteForms"
     }
   ]
 }

@@ -7,14 +7,7 @@ export interface IClient {
   updatedAt: string;
 }
 
-export type IPlatformTypes =
-  | 'WEB'
-  | 'ANDROID'
-  | 'IOS'
-  | 'IPADOS'
-  | 'WINDOWS'
-  | 'MACOS'
-  | 'LINUX';
+export type IPlatformTypes = 'WEB' | 'ANDROID' | 'IOS' | 'IPADOS' | 'WINDOWS' | 'MACOS' | 'LINUX';
 
 export interface INewAdminUser {
   username: string;

@@ -6,9 +6,34 @@
       "protoName": "createFile"
     },
     {
+      "path": "/folder",
+      "method": "POST",
+      "protoName": "createFolder"
+    },
+    {
+      "path": "/containers",
+      "method": "POST",
+      "protoName": "createContainer"
+    },
+    {
+      "path": "/containers",
+      "method": "GET",
+      "protoName": "getContainers"
+    },
+    {
+      "path": "/folder",
+      "method": "GET",
+      "protoName": "getFolders"
+    },
+    {
       "path": "/file/:id",
       "method": "PUT",
       "protoName": "updateFile"
+    },
+    {
+      "path": "/file",
+      "method": "GET",
+      "protoName": "getFiles"
     },
     {
       "path": "/file/:id",

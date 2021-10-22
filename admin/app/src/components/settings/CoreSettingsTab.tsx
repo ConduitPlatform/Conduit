@@ -31,9 +31,7 @@ const CoreSettingsTab: React.FC = () => {
   const [url, setUrl] = useState<string>(initialStates.url);
   const [port, setPort] = useState<number>(initialStates.port);
   const [toggleRest, setToggleRest] = useState<boolean>(initialStates.toggleRest);
-  const [toggleGraphQL, setToggleGraphQL] = useState<boolean>(
-    initialStates.toggleGraphQL
-  );
+  const [toggleGraphQL, setToggleGraphQL] = useState<boolean>(initialStates.toggleGraphQL);
 
   const onSelectChange = (event: ChangeEvent<any>) => {
     setSelectedEnum(event.target.value);
@@ -89,10 +87,7 @@ const CoreSettingsTab: React.FC = () => {
             alignItems={'center'}
             wrap={'nowrap'}
             style={{ marginRight: 32 }}>
-            <Typography
-              component={'span'}
-              variant={'subtitle2'}
-              className={classes.textSpacing}>
+            <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
               Url:
             </Typography>
             <Input
@@ -103,10 +98,7 @@ const CoreSettingsTab: React.FC = () => {
             />
           </Grid>
           <Grid item container alignItems={'center'} wrap={'nowrap'}>
-            <Typography
-              component={'span'}
-              variant={'subtitle2'}
-              className={classes.textSpacing}>
+            <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
               Port:
             </Typography>
 

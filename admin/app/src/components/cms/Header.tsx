@@ -12,6 +12,7 @@ import { useDispatch } from 'react-redux';
 import { clearSelectedSchema } from '../../redux/slices/cmsSlice';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 export const headerHeight = 64;
 
@@ -106,8 +107,13 @@ const Header: FC<Props> = ({
     }
   }, [authentication, crudOperations, name]);
 
-  const handleDataName = (event: React.ChangeEvent<{ value: any }>) => {
-    setSchemaName(event.target.value);
+  const handleDataName = (value: string) => {
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The schema name can only contain alpharithmetics and _'));
+    }
+
+    setSchemaName(value.replace(/[^a-z0-9_]/gi, ''));
   };
 
   const handleData = () => {
@@ -121,7 +127,7 @@ const Header: FC<Props> = ({
   return (
     <Box className={clsx(classes.header, classes.colorWhite)} {...rest}>
       <Box display={'flex'} alignItems={'center'}>
-        <Link href="/cms">
+        <Link href="/cms/schemas">
           {/* TODO call dispatch clear cms */}
           <a style={{ textDecoration: 'none' }} onClick={handleBackButtonClick}>
             <Box className={classes.backIconContainer}>
@@ -136,7 +142,7 @@ const Header: FC<Props> = ({
           className={clsx(classes.input, classes.colorWhite)}
           id="data-name"
           placeholder={'Schema name'}
-          onChange={handleDataName}
+          onChange={(event) => handleDataName(event.target.value)}
           disableUnderline
           value={schemaName}
           readOnly={readOnly}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import CustomDrawer from './Drawer';
-import CustomHeader from './Header';
 import { useRouter } from 'next/router';
 import { asyncGetAdminModules } from '../../redux/slices/appAuthSlice';
 import { Theme } from '@material-ui/core';
@@ -8,7 +7,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import NotificationsSystem, { atalhoTheme, dismissNotification } from 'reapop';
+import useNotifier from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -21,7 +20,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     padding: 0,
     minHeight: '100vh',
   },
-  toolbar: theme.mixins.toolbar,
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
   },
@@ -32,44 +30,53 @@ const useStyles = makeStyles((theme: Theme) => ({
 }));
 
 export const Layout: React.FC = ({ children, ...rest }) => {
+  useNotifier();
   const classes = useStyles();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.appAuthSlice.data);
-  const notifications = useAppSelector((state) => state.notifications);
   const { loading } = useAppSelector((state) => state.appSlice);
-  const [open, setOpen] = useState<boolean>(false);
   const [menuDisabled, setMenuDisabled] = useState<boolean>(false);
-  const [itemSelected, setItemSelected] = useState<number>(0);
+  const [itemSelected, setItemSelected] = useState<string>('');
 
   useEffect(() => {
-    switch (router.pathname) {
-      case '/':
-        setItemSelected(0);
+    const splitUri = router.pathname.split('/')[1];
+    switch (splitUri) {
+      case 'authentication':
+        setItemSelected('authentication');
         break;
-      case '/authentication':
-        setItemSelected(1);
+      case 'push-notifications':
+        setItemSelected('push-notifications');
         break;
-      case '/notification':
-        setItemSelected(2);
+      case 'sms':
+        setItemSelected('sms');
         break;
-      case '/sms':
-        setItemSelected(3);
+      case 'emails':
+        setItemSelected('email');
         break;
-      case '/emails':
-        setItemSelected(4);
+      case 'cms':
+        setItemSelected('cms');
         break;
-      case '/cms':
-        setItemSelected(5);
+      case 'storage':
+        setItemSelected('storage');
         break;
-      case '/storage':
-        setItemSelected(6);
+      case 'settings':
+        setItemSelected('settings');
         break;
-      case '/settings':
-        setItemSelected(7);
+      case 'chat':
+        setItemSelected('chat');
+        break;
+      case 'forms':
+        setItemSelected('forms');
+        break;
+      case 'payments':
+        setItemSelected('payments');
+        break;
+      case 'database-provider':
+        setItemSelected('database-provider');
         break;
       default:
-        setItemSelected(0);
+        setItemSelected('');
     }
 
     if (router.pathname === '/login' || router.pathname === '/cms/build-types') {
@@ -85,37 +92,10 @@ export const Layout: React.FC = ({ children, ...rest }) => {
     }
   }, [dispatch, token]);
 
-  const menuClick = () => {
-    setOpen(!open);
-  };
-
-  const logoClick = async () => {
-    await router.push('/');
-  };
-
-  let appBar, drawer;
-  if (!menuDisabled) {
-    appBar = (
-      <CustomHeader onMenuClick={() => menuClick()} onLogoClick={() => logoClick()} />
-    );
-    drawer = <CustomDrawer itemSelected={itemSelected} open={open} />;
-  } else {
-    appBar = <CustomHeader showMenuButton={false} onMenuClick={() => menuClick()} />;
-  }
-
   return (
     <div className={classes.root} {...rest}>
-      {appBar}
-      {drawer}
-      <main className={classes.content}>
-        <div className={classes.toolbar} />
-        {children}
-      </main>
-      <NotificationsSystem
-        notifications={notifications}
-        dismissNotification={(id) => dispatch(dismissNotification(id))}
-        theme={atalhoTheme}
-      />
+      {!menuDisabled ? <CustomDrawer itemSelected={itemSelected} /> : <></>}
+      <main className={classes.content}>{children}</main>
       <Backdrop open={loading} className={classes.backdrop}>
         <CircularProgress color="secondary" />
       </Backdrop>

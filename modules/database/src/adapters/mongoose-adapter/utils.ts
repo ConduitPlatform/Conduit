@@ -44,15 +44,19 @@ async function _createWithPopulations(
         if (!isObject(val)) {
           continue;
         }
-        if (fields[key][0].hasOwnProperty('ref')) {
-          const { model } = adapter.getSchemaModel(fields[key][0].ref);
+        let field = fields[key];
+        if (!isArray(field) && field.type && isArray(field.type)) {
+          field = field.type;
+        }
+        if (field[0].hasOwnProperty('ref')) {
+          const { model } = adapter.getSchemaModel(field[0].ref);
           if (validate) {
             await model.model.validate(val);
           } else {
             document[key][i] = await _createOrUpdate(val, model);
           }
         } else {
-          await _createWithPopulations(fields[key][0], val, adapter, validate);
+          await _createWithPopulations(field[0], val, adapter, validate);
         }
       }
     } else if (isObject(document[key])) {

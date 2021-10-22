@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme) => ({
   list: {
     height: '100%',
     border: '1px',
-    background: '#fff',
+    background: '#303030',
     padding: theme.spacing(4, 10),
     minHeight: theme.spacing(65),
     borderRadius: '4px',
@@ -64,11 +64,7 @@ interface Props extends BoxProps {
   handleDelete: (index: number) => void;
   handleGroupDrawer: (groupItem: any, index: number, groupIndex: number) => void;
   handleGroupDelete: (index: number, groupIndex: number) => void;
-  handleGroupInGroupDelete: (
-    index: number,
-    groupIndex: number,
-    itemIndex: number
-  ) => void;
+  handleGroupInGroupDelete: (index: number, groupIndex: number, itemIndex: number) => void;
   handleGroupInGroupDrawer: (
     groupItem: any,
     index: number,
@@ -139,10 +135,7 @@ const BuildTypesContent: FC<Props> = ({
                       {...provided.draggableProps}>
                       <Box width={'99%'}>{handleItemContent(item, index)}</Box>
                       <Box display={'flex'} flexDirection={'column'} width={'99%'} mb={2}>
-                        <Box
-                          display={'flex'}
-                          width={'100%'}
-                          justifyContent={'space-between'}>
+                        <Box display={'flex'} width={'100%'} justifyContent={'space-between'}>
                           <Box display={'flex'}>
                             <Typography variant={'body2'} style={{ marginRight: 8 }}>
                               Field name: <strong>{item.name}</strong>
@@ -176,9 +169,7 @@ const BuildTypesContent: FC<Props> = ({
                 className={classes.listPlaceholder}
                 style={snapshot.isDraggingOver ? { opacity: 0.4 } : {}}>
                 <Content className={classes.listPlaceholderItems} />
-                <Typography
-                  variant={'subtitle2'}
-                  className={classes.listPlaceholderItems}>
+                <Typography variant={'subtitle2'} className={classes.listPlaceholderItems}>
                   Simply drag and drop
                 </Typography>
                 <Typography variant={'body2'}>

@@ -140,9 +140,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
         </Grid>
         <Divider className={classes.divider} />
         <Grid item xs={12}>
-          <Typography variant={'h6'}>
-            The config for the Google storage provide
-          </Typography>
+          <Typography variant={'h6'}>The config for the Google storage provide</Typography>
         </Grid>
         <Grid item xs={6}>
           <TextField
@@ -218,10 +216,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave, ...rest }) => {
             {settingsState.active && renderSettingsFields()}
           </Grid>
           <Grid item container xs={12} justify={'flex-end'} style={{ marginTop: 16 }}>
-            <Button
-              onClick={() => handleCancel()}
-              style={{ marginRight: 16 }}
-              color={'primary'}>
+            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
             <Button

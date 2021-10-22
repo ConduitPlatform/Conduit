@@ -1,310 +1,88 @@
 import React from 'react';
-import { Drawer, Theme } from '@material-ui/core';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
+import { Paper, Theme, Typography } from '@material-ui/core';
 import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-import {
-  Email,
-  ExitToApp,
-  Home,
-  Notifications,
-  People,
-  Settings,
-  Toc,
-  Cloud,
-  Sms,
-} from '@material-ui/icons';
-import clsx from 'clsx';
-import Link from 'next/link';
-import Router from 'next/router';
+import { ExitToApp, Settings } from '@material-ui/icons';
+import Router, { useRouter } from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-
-const drawerWidth = 200;
-const drawerWidthClosed = 52;
+import Modules from '../modules/Modules';
+import CustomListItem from './CustomListItem';
 
 const useStyles = makeStyles((theme: Theme) => ({
-  drawerOpen: {
-    width: drawerWidth,
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+  drawer: {
+    width: 224,
+    display: 'flex',
+    flexDirection: 'column',
   },
-  drawerClose: {
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    overflowX: 'hidden',
-    width: drawerWidthClosed,
+  title: {
+    color: theme.palette.secondary.main,
+    paddingTop: theme.spacing(2),
   },
-  toolbar: theme.mixins.toolbar,
-  listItem: {
-    color: theme.palette.primary.main,
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: theme.palette.primary.main,
-    paddingLeft: 4,
-    paddingRight: 4,
-    '&:hover': {
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
-    },
-    '&:focus': {
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
-    },
-    '&.Mui-selected': {
-      color: theme.palette.common.white,
-      background: theme.palette.primary.main,
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: theme.palette.primary.main,
-      '&:hover': {
-        background: theme.palette.primary.dark,
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: theme.palette.primary.dark,
-      },
-      '&:focus': {
-        background: theme.palette.primary.dark,
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: theme.palette.primary.dark,
-      },
-    },
+  listContainer: {
+    padding: theme.spacing(1),
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
-  listItemText: {
-    fontWeight: 'bold',
-  },
-  listItemIcon: {
-    minWidth: 36,
-    marginRight: theme.spacing(1),
-    color: 'inherit',
+  logoutContainer: {
+    margin: 0,
+    paddingLeft: theme.spacing(1),
   },
 }));
 
-interface IModule {
-  moduleName: string;
-  url: string;
-}
-
 interface Props {
-  open: boolean;
-  itemSelected?: number;
+  itemSelected?: string;
 }
 
-const CustomDrawer: React.FC<Props> = ({ open, itemSelected, ...rest }) => {
+const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
-  const { enabledModules } = useAppSelector((state) => state.appAuthSlice.data);
-
-  const drawerOpen = () => {
-    if (open === null || open === undefined) {
-      return false;
-    }
-    return open;
-  };
-
-  const divStyle = {
-    padding: '8px',
-  };
-
-  const itemStyle = {
-    height: '34px',
-    borderRadius: '4px',
-    marginBottom: '12px',
-  };
+  const { enabledModules, disabledModules } = useAppSelector((state) => state.appAuthSlice.data);
 
   const handleLogout = async () => {
     dispatch(asyncLogout());
     await Router.replace('/login');
   };
 
-  const isModuleDisabled = (moduleName: string) => {
-    const found = enabledModules.find(
-      (module: IModule) => module.moduleName === moduleName
-    );
-    return !found;
-  };
-
   return (
-    <Drawer
-      variant="permanent"
-      className={clsx({
-        [classes.drawerOpen]: drawerOpen(),
-        [classes.drawerClose]: !drawerOpen(),
-      })}
-      classes={{
-        paper: clsx({
-          [classes.drawerOpen]: drawerOpen(),
-          [classes.drawerClose]: !drawerOpen(),
-        }),
-      }}
-      open={drawerOpen()}
-      {...rest}>
-      <div className={classes.toolbar} />
-
-      <div className={classes.toolbar} />
-
-      <div style={divStyle}>
-        <Divider />
-
+    <Paper className={classes.drawer} elevation={2} {...rest}>
+      <ListItem className={classes.title}>
+        <Typography variant="h5">Conduit</Typography>
+      </ListItem>
+      <div className={classes.listContainer}>
         <List component="nav">
-          <Link href="/">
-            <ListItem
-              button
-              key={'Home'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 0}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Home color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Home'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
-          <Link href="/authentication" prefetch={false}>
-            <ListItem
-              button
-              disabled={isModuleDisabled('authentication')}
-              key={'Authentication'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 1}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <People color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Authentication'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
-          <Link href="/notification">
-            <ListItem
-              disabled={isModuleDisabled('notification')}
-              button
-              key={'Notification'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 2}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Notifications color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Notification'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
-          <Link href="/sms">
-            <ListItem
-              disabled={isModuleDisabled('sms')}
-              button
-              key={'sms'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 3}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Sms color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'SMS'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/emails">
-            <ListItem
-              disabled={isModuleDisabled('email')}
-              button
-              key={'Emails'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 4}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Email color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Emails'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
-          <Link href="/cms">
-            <ListItem
-              button
-              disabled={isModuleDisabled('cms')}
-              key={'CMS'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 5}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Toc color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText primary={'CMS'} classes={{ primary: classes.listItemText }} />
-            </ListItem>
-          </Link>
-          <Link href="/storage">
-            <ListItem
-              button
-              key={'Storage'}
-              disabled={isModuleDisabled('storage')}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 6}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Cloud color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Storage'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
-          <Link href="/settings">
-            <ListItem
-              button
-              key={'Settings'}
-              className={classes.listItem}
-              style={itemStyle}
-              selected={itemSelected === 7}>
-              <ListItemIcon className={classes.listItemIcon}>
-                <Settings color={'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={'Settings'}
-                classes={{ primary: classes.listItemText }}
-              />
-            </ListItem>
-          </Link>
+          <Divider />
+          <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
+          <CustomListItem
+            selected={itemSelected === 'settings'}
+            icon={<Settings color={'inherit'} />}
+            title="Settings"
+            onClick={() => router.replace('/settings/clientsdk')}
+          />
+          <Divider />
+          {disabledModules.length > 0 ? (
+            <>
+              <Modules modules={disabledModules} itemSelected={itemSelected} />
+              <Divider />
+            </>
+          ) : (
+            <></>
+          )}
         </List>
-        <Divider />
-        <List>
-          <ListItem
-            button
-            className={classes.listItem}
-            style={itemStyle}
-            onClick={handleLogout}>
-            <ListItemIcon className={classes.listItemIcon}>
-              <ExitToApp color={'inherit'} />
-            </ListItemIcon>
-            <ListItemText
-              primary={'Log out'}
-              classes={{ primary: classes.listItemText }}
-            />
-          </ListItem>
-        </List>
+        <CustomListItem
+          icon={<ExitToApp color={'inherit'} />}
+          title="Log out"
+          onClick={() => handleLogout()}
+          className={classes.logoutContainer}
+        />
       </div>
-    </Drawer>
+    </Paper>
   );
 };
 

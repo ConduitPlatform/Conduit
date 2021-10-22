@@ -74,9 +74,7 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
     handleClose();
   };
 
-  const handleCheckBoxChange = (event: {
-    target: { name: string; checked: boolean };
-  }) => {
+  const handleCheckBoxChange = (event: { target: { name: string; checked: boolean } }) => {
     setValues({ ...values, [event.target.name]: event.target.checked });
   };
 
@@ -163,6 +161,7 @@ const EditUserDialog: React.FC<Props> = ({ data, open, handleClose }) => {
                       onChange={handleCheckBoxChange}
                       name="hasTwoFA"
                       color="secondary"
+                      disabled={!values.phoneNumber}
                     />
                   }
                   label="Has 2 factor authentication"

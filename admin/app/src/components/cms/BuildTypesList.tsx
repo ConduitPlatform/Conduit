@@ -50,15 +50,7 @@ const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   const classes = useStyles();
 
   const handleIcon = (
-    item:
-      | 'Text'
-      | 'Number'
-      | 'Date'
-      | 'Boolean'
-      | 'Enum'
-      | 'ObjectId'
-      | 'Group'
-      | 'Relation'
+    item: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Group' | 'Relation'
   ) => {
     switch (item) {
       case 'Text':
@@ -83,15 +75,7 @@ const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
   };
 
   const handleItem = (
-    item:
-      | 'Text'
-      | 'Number'
-      | 'Date'
-      | 'Boolean'
-      | 'Enum'
-      | 'ObjectId'
-      | 'Group'
-      | 'Relation'
+    item: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Enum' | 'ObjectId' | 'Group' | 'Relation'
   ) => {
     return (
       <>
@@ -116,9 +100,7 @@ const BuildTypesList: FC<Props> = ({ item, index, ...rest }) => {
             {handleItem(item)}
           </Card>
           {snapshot.isDragging && (
-            <Card className={clsx(classes.item, classes.itemClone)}>
-              {handleItem(item)}
-            </Card>
+            <Card className={clsx(classes.item, classes.itemClone)}>{handleItem(item)}</Card>
           )}
         </>
       )}

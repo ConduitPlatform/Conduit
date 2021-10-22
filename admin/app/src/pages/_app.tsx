@@ -1,25 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { ReactElement, ReactNode, useEffect } from 'react';
 import { ThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import theme from '../utils/theme';
 import type { AppContext, AppProps } from 'next/app';
 import App from 'next/app';
 import { Provider } from 'react-redux';
 import Head from 'next/head';
 import { initializeStore, useStore } from '../redux/store';
-import { getCookie } from '../utils/cookie';
-import { setToken } from '../redux/slices/appAuthSlice';
 import { Layout } from '../components/navigation/Layout';
-import { setUpNotifications } from 'reapop';
+import { setToken } from '../redux/slices/appAuthSlice';
+import { getCookie } from '../utils/cookie';
+import { NextPage } from 'next';
+import theme from '../theme';
+import { SnackbarMessage, SnackbarProvider } from 'notistack';
+import Snackbar from '../components/navigation/Snackbar';
 
-setUpNotifications({
-  defaultProps: {
-    position: 'bottom-right',
-    dismissible: true,
-  },
-});
+type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement) => ReactNode;
+};
 
-const ConduitApp = ({ Component, pageProps }: AppProps) => {
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
+
+const ConduitApp = ({ Component, pageProps }: AppPropsWithLayout) => {
   const reduxStore = useStore(pageProps.initialReduxState);
 
   useEffect(() => {
@@ -29,21 +32,32 @@ const ConduitApp = ({ Component, pageProps }: AppProps) => {
     }
   }, []);
 
+  const getLayout = Component.getLayout || ((page: any) => page);
+
+  const formOptions = (optionsString: SnackbarMessage) => {
+    if (optionsString == undefined) return {};
+    return JSON.parse(optionsString as string);
+  };
+
   return (
     <>
       <Head>
         <title>Conduit - App</title>
-        <meta
-          name="viewport"
-          content="minimum-scale=1, initial-scale=1, width=device-width"
-        />
+        <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
       </Head>
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
+          <SnackbarProvider
+            preventDuplicate={true}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            content={(key, message) => <Snackbar id={key} options={formOptions(message)} />}>
+            <CssBaseline />
+            <Layout>{getLayout(<Component {...pageProps} />)}</Layout>
+          </SnackbarProvider>
         </ThemeProvider>
       </Provider>
     </>

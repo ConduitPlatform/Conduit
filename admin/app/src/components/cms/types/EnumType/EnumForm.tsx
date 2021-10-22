@@ -104,11 +104,7 @@ const EnumForm: FC<IProps> = ({
         }}
         helperText={'It will appear in the entry editor'}
       />
-      <FormControl
-        className={classes.formControl}
-        variant={'outlined'}
-        fullWidth
-        required>
+      <FormControl className={classes.formControl} variant={'outlined'} fullWidth required>
         <InputLabel id="field-type">Type</InputLabel>
         <Select
           labelId="field-type"
@@ -199,11 +195,7 @@ const EnumForm: FC<IProps> = ({
       </Box>
 
       <Box display={'flex'} width={'100%'}>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          style={{ marginRight: 16 }}>
+        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>
