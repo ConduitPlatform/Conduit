@@ -143,6 +143,10 @@ export class DatabaseProvider implements ConduitServiceModule {
         schema.owner = res.moduleName;
         return this._activeAdapter.createSchemaFromAdapter(schema);
       })
+      .catch(() => {
+        schema.owner = 'unknown';
+        return this._activeAdapter.createSchemaFromAdapter(schema);
+      })
       .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,

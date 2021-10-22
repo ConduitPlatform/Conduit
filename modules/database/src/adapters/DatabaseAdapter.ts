@@ -24,6 +24,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   ): { model: SchemaAdapter<any>; relations: any };
 
   async checkModelOwnership(schema: ConduitSchema) {
+    if (schema.name === '_declaredSchema') return true;
     let model = await this.models!['_declaredSchema'].findOne(
       JSON.stringify({ name: schema.name })
     );
