@@ -21,6 +21,7 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';
 import { asyncSaveNotificationConfig } from '../../redux/slices/notificationsSlice';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -68,6 +69,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     privateKey: '',
     clientEmail: '',
   });
+  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   useEffect(() => {
     if (!config) {
@@ -292,13 +294,21 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                 variant="contained"
                 color="primary"
                 style={{ alignSelf: 'flex-end' }}
-                onClick={() => asyncSaveNotificationConfig(formData)}>
+                onClick={() => setOpenSaveDialog(true)}>
                 Save
               </Button>
             </Grid>
           )}
         </Grid>
       </Paper>
+      <ConfirmationDialog
+        open={openSaveDialog}
+        handleClose={() => setOpenSaveDialog(false)}
+        title={'Are you sure you want to proceed?'}
+        description={'Forms settings changed'}
+        buttonAction={() => asyncSaveNotificationConfig(formData)}
+        buttonText={'Proceed'}
+      />
     </Container>
   );
 };
