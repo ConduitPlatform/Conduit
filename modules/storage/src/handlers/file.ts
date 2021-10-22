@@ -63,6 +63,30 @@ export class FileHandlers {
         });
       }
     }
+    let exists;
+    if (!isNil(folder)) {
+      exists = await this.storageProvider.container(usedContainer).folderExists(folder);
+      if (!exists) {
+        await this.database.create('_StorageFolder', {
+          name: folder,
+          container: usedContainer,
+          isPublic,
+        });
+        await this.storageProvider.container(usedContainer).createFolder(folder);
+      }
+    }
+
+    exists = await this.database.findOne('File', {
+      name,
+      container: usedContainer,
+      folder,
+    });
+    if (exists) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'File already exists',
+      });
+    }
 
     if (!isString(data)) {
       return callback({
@@ -73,23 +97,10 @@ export class FileHandlers {
 
     try {
       const buffer = Buffer.from(data, 'base64');
-      let exists;
-      if (!isNil(folder)) {
-        exists = await this.storageProvider.container(usedContainer).folderExists(folder);
-        if (!exists) {
-          await this.database.create('_StorageFolder', {
-            name: folder,
-            container: usedContainer,
-            isPublic,
-          });
-          await this.storageProvider.container(usedContainer).createFolder(folder);
-        }
 
-        await this.storageProvider.container(usedContainer).store(folder + name, buffer);
-      } else {
-        await this.storageProvider.container(usedContainer).store(name, buffer);
-      }
-
+      await this.storageProvider
+        .container(usedContainer)
+        .store((folder ?? '') + name, buffer);
       let publicUrl = null;
       if (isPublic) {
         publicUrl = await this.storageProvider.container(folder).getPublicUrl(name);
@@ -329,6 +340,18 @@ export class FileHandlers {
           });
           await this.storageProvider.container(newContainer).createFolder(newFolder);
         }
+      }
+
+      let exists = await this.database.findOne('File', {
+        name: name,
+        container: newContainer,
+        folder: newFolder,
+      });
+      if (exists) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'File already exists',
+        });
       }
 
       await this.storageProvider
