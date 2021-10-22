@@ -10,7 +10,7 @@ export const putStorageSettings = (storageData: IStorageConfig) =>
   });
 
 export const getStorageContainers = (params: { skip: number; limit: number }) =>
-  axios.get(`${CONDUIT_API}/admin/storage/containers`, {
+  axios.get(`${CONDUIT_API}/admin/storage/container`, {
     params: {
       ...params,
     },
@@ -68,4 +68,4 @@ export const createStorageFolder = (folderData: {
 }) => axios.post(`${CONDUIT_API}/admin/storage/folder`, { ...folderData });
 
 export const createStorageContainer = (containerData: { name: string; isPublic: boolean }) =>
-  axios.post(`${CONDUIT_API}/admin/storage/containers`, { ...containerData });
+  axios.post(`${CONDUIT_API}/admin/storage/container`, { ...containerData });

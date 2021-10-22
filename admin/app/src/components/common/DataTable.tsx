@@ -34,6 +34,9 @@ const useStyles = makeStyles((theme) => ({
     width: '350px',
     maxWidth: '350px',
   },
+  tableRowClick: {
+    cursor: 'pointer',
+  },
 }));
 
 type Action = {
@@ -49,6 +52,7 @@ interface Props {
   selectedItems?: string[];
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
+  handleRowClick?: (data: any) => void;
 }
 
 const DataTable: React.FC<Props> = ({
@@ -59,6 +63,7 @@ const DataTable: React.FC<Props> = ({
   selectedItems = [],
   handleSelect,
   handleSelectAll,
+  handleRowClick,
   ...rest
 }) => {
   const classes = useStyles();
@@ -99,6 +104,12 @@ const DataTable: React.FC<Props> = ({
     }
   };
 
+  const onRowClick = (item: any) => {
+    if (handleRowClick) {
+      handleRowClick(item);
+    }
+  };
+
   return (
     <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
       <Table stickyHeader className={classes.table}>
@@ -131,7 +142,10 @@ const DataTable: React.FC<Props> = ({
         </TableHead>
         <TableBody>
           {rows.map((row: any, i: number) => (
-            <TableRow key={i}>
+            <TableRow
+              key={i}
+              onClick={() => onRowClick(row)}
+              className={handleRowClick ? classes.tableRowClick : ''}>
               {selectable && (
                 <TableCell align="left" padding="none">
                   <Checkbox
