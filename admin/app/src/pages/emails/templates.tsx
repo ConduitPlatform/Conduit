@@ -160,24 +160,6 @@ const Templates = () => {
     dispatch(asyncGetEmailTemplates({ skip, limit, search }));
   }, [dispatch, limit, skip, search]);
 
-  const formatData = (data: EmailTemplateType[]) => {
-    return data.map((u) => {
-      return {
-        _id: u._id,
-        Name: u.name,
-        External: u.externalManaged,
-        'Updated At': u.updatedAt,
-      };
-    });
-  };
-
-  const headers = [
-    { title: '_id', sort: '_id' },
-    { title: 'Name', sort: 'name' },
-    { title: 'Externa;', sort: 'externalManaged' },
-    { title: 'Updated At', sort: 'updatedAt' },
-  ];
-
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
@@ -266,6 +248,24 @@ const Templates = () => {
   };
 
   const actions = [toDelete, toUpload, toView];
+
+  const formatData = (data: EmailTemplateType[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        Name: u.name,
+        External: u.externalManaged,
+        'Updated At': u.updatedAt,
+      };
+    });
+  };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'name' },
+    { title: 'Externa;', sort: 'externalManaged' },
+    { title: 'Updated At', sort: 'updatedAt' },
+  ];
 
   return (
     <div>

@@ -119,8 +119,8 @@ const DataTable: React.FC<Props> = ({
             {headers.map((header: any) => (
               <TableCell className={classes.header} key={header.sort}>
                 <TableSortLabel
-                  active={sort.index === header.sort}
-                  direction={sort.asc ? 'asc' : 'desc'}
+                  active={sort?.index === header.sort}
+                  direction={sort?.asc ? 'asc' : 'desc'}
                   onClick={() => onSelectedField(header.sort)}>
                   {header.title}
                 </TableSortLabel>

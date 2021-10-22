@@ -69,6 +69,13 @@ const SchemasTable: FC<Props> = ({
     setActive(newValue);
   };
 
+  const getActions = () => {
+    if (active) {
+      return activeActions;
+    }
+    return disabledActions;
+  };
+
   const visibleData = () => {
     let displayedData;
     if (active) {
@@ -93,13 +100,6 @@ const SchemasTable: FC<Props> = ({
     { title: 'Created at', sort: 'createdAt' },
     { title: 'Updated at', sort: 'updatedAt' },
   ];
-
-  const getActions = () => {
-    if (active) {
-      return activeActions;
-    }
-    return disabledActions;
-  };
 
   return (
     <Container maxWidth={'lg'}>

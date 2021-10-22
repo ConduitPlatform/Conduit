@@ -164,24 +164,6 @@ const Create = () => {
     setPage(0);
   };
 
-  const formatData = (data: FormsModel[]) => {
-    return data.map((u) => {
-      return {
-        _id: u._id,
-        Name: u.name,
-        Email: u.emailField,
-        Enabled: u.enabled,
-      };
-    });
-  };
-
-  const headers = [
-    { title: '_id', sort: '_id' },
-    { title: 'Name', sort: 'name' },
-    { title: 'Email', sort: 'emailField' },
-    { title: 'Enabled', sort: 'enabled' },
-  ];
-
   const handleAction = (action: { title: string; type: string }, data: any) => {
     const currentForm = forms?.find((form) => form._id === data._id);
     if (currentForm !== undefined) {
@@ -250,6 +232,24 @@ const Create = () => {
     }
     return `Are you sure you want to delete ${form.name}? `;
   };
+
+  const formatData = (data: FormsModel[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        Name: u.name,
+        Email: u.emailField,
+        Enabled: u.enabled,
+      };
+    });
+  };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'name' },
+    { title: 'Email', sort: 'emailField' },
+    { title: 'Enabled', sort: 'enabled' },
+  ];
 
   return (
     <div>
