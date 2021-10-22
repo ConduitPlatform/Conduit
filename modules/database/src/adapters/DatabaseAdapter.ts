@@ -77,8 +77,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         schema.owner = model.ownerModule;
         return schema;
       })
-      .map((model: { schema: ConduitSchema; owner: string }) => {
-        return this.createSchemaFromAdapter(model.schema);
+      .map((model: ConduitSchema) => {
+        return this.createSchemaFromAdapter(model);
       });
 
     await Promise.all(models);

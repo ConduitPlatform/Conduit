@@ -63,6 +63,8 @@ export class DatabaseProvider implements ConduitServiceModule {
     let grpcServer = new GrpcServer(process.env.SERVICE_URL);
 
     this._port = (await grpcServer.createNewServer()).toString();
+    await this._activeAdapter.createSchemaFromAdapter(schema);
+    await this._activeAdapter.recoverSchemasFromDatabase();
     await grpcServer.addService(
       path.resolve(__dirname, './database-provider.proto'),
       'databaseprovider.DatabaseProvider',
@@ -87,8 +89,6 @@ export class DatabaseProvider implements ConduitServiceModule {
   async activate() {
     const self = this;
     await this.conduit.initializeEventBus();
-    await this._activeAdapter.createSchemaFromAdapter(schema);
-    await this._activeAdapter.recoverSchemasFromDatabase();
     self.conduit.bus?.subscribe('database_provider', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
