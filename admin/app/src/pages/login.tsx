@@ -12,7 +12,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../redux/store';
 import { useRouter } from 'next/router';
 import Grid from '@material-ui/core/Grid';
-import LoginIllustration from '../components/svgs/LoginIllustration';
+import LoginIllustration from '../assets/svgs/LoginIllustration';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -98,6 +98,7 @@ const Login: React.FC = () => {
                     name="username"
                     autoComplete="username"
                     autoFocus
+                    InputLabelProps={{ required: false }}
                   />
                   <TextField
                     onChange={handleChange}
@@ -111,6 +112,7 @@ const Login: React.FC = () => {
                     type="password"
                     id="password"
                     autoComplete="current-password"
+                    InputLabelProps={{ required: false }}
                   />
                   <FormControlLabel
                     value={values.remember}

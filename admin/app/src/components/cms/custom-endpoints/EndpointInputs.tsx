@@ -27,10 +27,7 @@ const EndpointInputs: FC<Props> = ({
   setSelectedInputs,
   handleRemoveInput,
 }) => {
-  const handleInputNameChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    index: number
-  ) => {
+  const handleInputNameChange = (event: React.ChangeEvent<{ value: any }>, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -42,10 +39,7 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputTypeChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    index: number
-  ) => {
+  const handleInputTypeChange = (event: React.ChangeEvent<{ value: any }>, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -56,10 +50,7 @@ const EndpointInputs: FC<Props> = ({
       setSelectedInputs(currentInputs);
     }
   };
-  const handleInputLocationChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    index: number
-  ) => {
+  const handleInputLocationChange = (event: React.ChangeEvent<{ value: any }>, index: number) => {
     const value = event.target.value;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -70,10 +61,7 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputIsArray = (
-    event: React.ChangeEvent<{ checked: boolean }>,
-    index: number
-  ) => {
+  const handleInputIsArray = (event: React.ChangeEvent<{ checked: boolean }>, index: number) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -84,10 +72,7 @@ const EndpointInputs: FC<Props> = ({
     }
   };
 
-  const handleInputIsOptional = (
-    event: React.ChangeEvent<{ checked: any }>,
-    index: number
-  ) => {
+  const handleInputIsOptional = (event: React.ChangeEvent<{ checked: any }>, index: number) => {
     const value = event.target.checked;
     const currentInputs = selectedInputs.slice();
     const input = { ...currentInputs[index] };
@@ -177,10 +162,7 @@ const EndpointInputs: FC<Props> = ({
         </Grid>
       </Grid>
       <Grid item xs={1}>
-        <IconButton
-          disabled={!editMode}
-          size="small"
-          onClick={() => handleRemoveInput(index)}>
+        <IconButton disabled={!editMode} size="small" onClick={() => handleRemoveInput(index)}>
           <RemoveCircleOutlineIcon />
         </IconButton>
       </Grid>

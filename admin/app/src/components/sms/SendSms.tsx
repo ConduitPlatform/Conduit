@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-
 import { makeStyles } from '@material-ui/core/styles';
-
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
@@ -20,7 +18,6 @@ const useStyles = makeStyles((theme) => ({
 const SendSms: React.FC = () => {
   const classes = useStyles();
 
-  const [number, setNumber] = useState<string>('');
   const [content, setContent] = useState<string>('');
 
   return (
@@ -32,16 +29,6 @@ const SendSms: React.FC = () => {
               Compose your SMS message
             </Typography>
             <Sms />
-          </Grid>
-          <Grid item style={{ marginTop: 16 }} xs={12}>
-            <TextField
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              type={'text'}
-              variant="outlined"
-              label="Phone Number"
-              placeholder={'ex. +3069xxxxxxxx'}
-            />
           </Grid>
           <Grid item style={{ marginTop: 16 }} xs={12}>
             <TextField
@@ -64,19 +51,11 @@ const SendSms: React.FC = () => {
               startIcon={<Clear />}
               style={{ marginRight: 16 }}
               onClick={() => {
-                setNumber('');
                 setContent('');
               }}>
               Clear
             </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              disabled={!number || !content}
-              startIcon={<Send />}
-              onClick={() => {
-                console.log('handle sms send');
-              }}>
+            <Button variant="contained" color="primary" disabled={!content} startIcon={<Send />}>
               Send
             </Button>
           </Grid>

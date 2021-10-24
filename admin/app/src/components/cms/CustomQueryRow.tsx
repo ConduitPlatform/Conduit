@@ -24,10 +24,10 @@ const useStyles = makeStyles((theme) => ({
       paddingLeft: 12,
     },
     '&.Mui-selected': {
-      backgroundColor: '#3399ff !important',
+      backgroundColor: theme.palette.primary.main,
       color: 'white',
       '&:hover': {
-        backgroundColor: '#3399ff !important',
+        backgroundColor: theme.palette.primary.main,
         color: 'white',
       },
     },
@@ -100,24 +100,6 @@ const CustomQueryRow: FC<Props> = ({
     selectedInputs,
   ]);
 
-  const prepareOptions = (schemaField: any, indexQuery: any) => {
-    return availableFieldsOfSchema.map((field: any, index: number) => {
-      if (typeof field.type === 'string' || Array.isArray(field.type)) {
-        return (
-          <MenuItem
-            className={classes.menuItem}
-            key={`idxO-${index}-field`}
-            value={field.name}>
-            {field.name}
-          </MenuItem>
-        );
-      }
-
-      return getSubFields(field);
-    });
-  };
-
-  //TODO more-fields-available
   const getSecondSubField = (field: any, valuePrefix: any, suffix: any) => {
     const keys = Object?.keys(field?.type);
     const itemTop = (
@@ -200,6 +182,20 @@ const CustomQueryRow: FC<Props> = ({
     }
   };
 
+  const prepareOptions = () => {
+    return availableFieldsOfSchema.map((field: any, index: number) => {
+      if (typeof field.type === 'string' || Array.isArray(field.type)) {
+        return (
+          <MenuItem className={classes.menuItem} key={`idxO-${index}-field`} value={field.name}>
+            {field.name}
+          </MenuItem>
+        );
+      }
+
+      return getSubFields(field);
+    });
+  };
+
   const getCustomPlaceHolder = () => {
     if (selectedType === 'number') {
       return 'ex. 15';
@@ -209,7 +205,6 @@ const CustomQueryRow: FC<Props> = ({
 
   const inputCustomChange = (e: React.ChangeEvent<{ value: any }>, i: number) => {
     let value = e.target.value;
-    console.log('value', value);
     if (selectedType === 'boolean') {
       value = value !== 'false';
     }
@@ -244,7 +239,7 @@ const CustomQueryRow: FC<Props> = ({
               getContentAnchorEl: null,
             }}>
             <option aria-label="None" value="" />
-            {prepareOptions(query.schemaField, index)}
+            {prepareOptions()}
           </Select>
         </FormControl>
       </Grid>
@@ -263,9 +258,7 @@ const CustomQueryRow: FC<Props> = ({
             <option disabled={selectedType !== 'number'} value={ConditionsEnum.GREATER}>
               {'(>) greater than'}
             </option>
-            <option
-              disabled={selectedType !== 'number'}
-              value={ConditionsEnum.GREATER_EQ}>
+            <option disabled={selectedType !== 'number'} value={ConditionsEnum.GREATER_EQ}>
               {'(>=) greater that or equal to'}
             </option>
             <option disabled={selectedType !== 'number'} value={ConditionsEnum.LESS}>
@@ -294,8 +287,7 @@ const CustomQueryRow: FC<Props> = ({
             disabled={!editMode}
             native
             value={
-              query.comparisonField.type === 'Custom' ||
-              query.comparisonField.type === 'Context'
+              query.comparisonField.type === 'Custom' || query.comparisonField.type === 'Context'
                 ? query.comparisonField.type
                 : query.comparisonField.type + '-' + query.comparisonField.value
             }
@@ -324,8 +316,7 @@ const CustomQueryRow: FC<Props> = ({
           </Select>
         </FormControl>
       </Grid>
-      {query.comparisonField.type === 'Custom' ||
-      query.comparisonField.type === 'Context' ? (
+      {query.comparisonField.type === 'Custom' || query.comparisonField.type === 'Context' ? (
         <Grid item xs={2}>
           {selectedType === 'Boolean' ? (
             <Select
@@ -342,18 +333,14 @@ const CustomQueryRow: FC<Props> = ({
             <TextField
               type={selectedType?.toLowerCase()}
               label={
-                query.comparisonField.type === 'Custom'
-                  ? 'Custom value'
-                  : 'Select from context'
+                query.comparisonField.type === 'Custom' ? 'Custom value' : 'Select from context'
               }
               variant={'filled'}
               disabled={!editMode}
               size={'small'}
               fullWidth
               placeholder={
-                query.comparisonField.type === 'Custom'
-                  ? getCustomPlaceHolder()
-                  : 'ex. user._id'
+                query.comparisonField.type === 'Custom' ? getCustomPlaceHolder() : 'ex. user._id'
               }
               value={query.comparisonField.value}
               onChange={(event) => inputCustomChange(event, index)}

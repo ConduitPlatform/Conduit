@@ -13,7 +13,8 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import { Visibility, VisibilityOff } from '@material-ui/icons';
 import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
-import { SettingsStateTypes } from '../../models/authentication/AuthModels';
+import { SettingsStateTypes, SignInMethods } from '../../models/authentication/AuthModels';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,7 +33,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   handleSave: (data: SettingsStateTypes) => void;
-  settingsData: any;
+  settingsData: SignInMethods | null;
 }
 
 const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
@@ -48,6 +49,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     jwtSecret: '',
     showSecret: false,
   });
+  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   useEffect(() => {
     if (!settingsData) {
@@ -65,6 +67,9 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   }, [settingsData]);
 
   const handleCancel = () => {
+    if (!settingsData) {
+      return;
+    }
     setEdit(false);
     setSettingsState({
       active: settingsData.active,
@@ -92,6 +97,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     };
     setEdit(false);
     handleSave(data);
+    setOpenSaveDialog(false);
   };
 
   const handleClickShowPassword = () => {
@@ -106,9 +112,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     return (
       <>
         <Grid item xs={12}>
-          <Typography variant={'h6'}>
-            Limit the authentication tries/requests of clients
-          </Typography>
+          <Typography variant={'h6'}>Limit the authentication tries/requests of clients</Typography>
         </Grid>
         <Grid item xs={12}>
           <TextField
@@ -276,17 +280,14 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
           </Grid>
           {edit && (
             <Grid item container xs={12} justify={'flex-end'}>
-              <Button
-                onClick={() => handleCancel()}
-                style={{ marginRight: 16 }}
-                color={'primary'}>
+              <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
                 Cancel
               </Button>
               <Button
                 variant="contained"
                 color="primary"
                 style={{ alignSelf: 'flex-end' }}
-                onClick={() => save()}>
+                onClick={() => setOpenSaveDialog(true)}>
                 Save
               </Button>
             </Grid>
@@ -303,6 +304,14 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
           )}
         </Grid>
       </Paper>
+      <ConfirmationDialog
+        open={openSaveDialog}
+        handleClose={() => setOpenSaveDialog(false)}
+        title={'Are you sure you want to proceed?'}
+        description={'Authentication settings changed'}
+        buttonAction={save}
+        buttonText={'Proceed'}
+      />
     </Container>
   );
 };

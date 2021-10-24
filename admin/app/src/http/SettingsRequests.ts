@@ -38,9 +38,6 @@ export const refreshServiceAccount = (serviceId: string) => {
   return axios.put(`${CONDUIT_API}/admin/authentication/services`, { serviceId });
 };
 
-export const postNewAdminUser = (endpointData: {
-  username: string;
-  password: string;
-}) => {
+export const postNewAdminUser = (endpointData: { username: string; password: string }) => {
   return axios.post(`${CONDUIT_API}/admin/create`, endpointData);
 };

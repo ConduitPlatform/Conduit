@@ -4,6 +4,10 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import BlockIcon from '@material-ui/icons/Block';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import View from '@material-ui/icons/ViewDay';
+import Upload from '@material-ui/icons/CloudUpload';
+import Sync from '@material-ui/icons/Sync';
+import ReplyAll from '@material-ui/icons/ReplyAll';
 
 interface Action {
   title: string;
@@ -14,21 +18,30 @@ interface Props {
   actions?: Action[];
   onActionClick: (action: Action) => void;
   isBlocked: boolean;
+  editDisabled?: boolean;
 }
 
-const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked }) => {
+const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, editDisabled }) => {
   const handleActions = (action: Action) => {
     switch (action.type) {
       case 'delete':
         return <DeleteIcon color="primary" />;
       case 'edit':
-        return <EditIcon color="primary" />;
+        return <EditIcon color={editDisabled ? 'disabled' : 'primary'} />;
       case 'block/unblock':
         return <BlockIcon color={isBlocked ? 'error' : 'primary'} />;
       case 'disable':
         return <BlockIcon color="primary" />;
       case 'enable':
         return <CheckCircleIcon color="primary" />;
+      case 'view':
+        return <View color="primary" />;
+      case 'upload':
+        return <Upload color="primary" />;
+      case 'sync':
+        return <Sync color="primary" />;
+      case 'replies':
+        return <ReplyAll color="primary" />;
       default:
         return <></>;
     }
@@ -42,7 +55,8 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked }
             <Tooltip title={action.title} key={index}>
               <IconButton
                 key={`${action.title}${index}`}
-                onClick={() => onActionClick(action)}>
+                onClick={() => onActionClick(action)}
+                disabled={action.type === 'edit' && editDisabled}>
                 {handleActions(action)}
               </IconButton>
             </Tooltip>

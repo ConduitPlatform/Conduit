@@ -12,5 +12,6 @@ export const getErrorData = (errorProp: any) => {
 
   if (!detailsFound && !errorFound && !statusFound) {
     return 'An unexpected error happened!';
-  } else return `${detailsFound ? details : ''} ${errorFound ? error : ''} ${statusFound ? status : ''}`;
+  } else
+    return `${detailsFound ? details : ''} ${errorFound ? error : ''} ${statusFound ? status : ''}`;
 };

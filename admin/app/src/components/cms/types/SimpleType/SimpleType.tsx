@@ -8,7 +8,7 @@ import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip';
 import FieldIndicators from '../../FieldIndicators';
 import Grid from '@material-ui/core/Grid';
-import { ISimpleData, ISimpleDataTypes } from '../../../../models/cms/BuildTypesModels';
+import { ISimpleDataTypes } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {

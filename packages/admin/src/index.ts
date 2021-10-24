@@ -3,12 +3,16 @@ import { hashPassword, verifyToken } from './utils/auth';
 import { Handler, NextFunction, Request, Response, Router } from 'express';
 import { AuthHandlers } from './handlers/auth';
 import { AdminSchema } from './models/Admin';
-import { ConduitCommons, IConduitAdmin } from '@quintessential-sft/conduit-commons';
+import {
+  ConduitCommons,
+  ConduitError,
+  IConduitAdmin,
+} from '@quintessential-sft/conduit-commons';
 import AdminConfigSchema from './config';
 import fs from 'fs';
 import path from 'path';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { loadPackageDefinition, Server, status, credentials } from '@grpc/grpc-js';
+import { credentials, loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -52,30 +56,6 @@ export default class AdminModule extends IConduitAdmin {
     await this.handleDatabase().catch(console.log);
     this.adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
     const self = this;
-    this.conduit
-      .getRouter()
-      .registerDirectRouter(
-        '/admin/login',
-        (req: Request, res: Response, next: NextFunction) =>
-          self.adminHandlers.loginAdmin(req, res, next).catch(next)
-      );
-    this.conduit
-      .getRouter()
-      .registerDirectRouter(
-        '/admin/modules',
-        (req: Request, res: Response, next: NextFunction) => {
-          let response: any[] = [];
-          // this is used here as such, because the config manager is simply the config package
-          // todo update the config manager interface so that we don't need these castings
-          ((this.conduit.getConfigManager() as any).registeredModules as Map<
-            string,
-            string
-          >).forEach((val: any, key: any) => {
-            response.push(val);
-          });
-          res.json(response);
-        }
-      );
 
     // todo fix the middlewares
     //@ts-ignore
@@ -91,8 +71,11 @@ export default class AdminModule extends IConduitAdmin {
     this.conduit
       .getState()
       .getKey('admin')
-      .then((r) => {
-        if (!r || r.length === 0) return;
+      .then((r: any) => {
+        if (!r || r.length === 0) {
+          self.refreshRouter();
+          return;
+        }
         let state = JSON.parse(r);
         if (state.routes) {
           state.routes.forEach((r: any) => {
@@ -105,8 +88,8 @@ export default class AdminModule extends IConduitAdmin {
 
             self._grpcRoutes[r.url] = r.routes;
           });
-          self.refreshRouter();
         }
+        self.refreshRouter();
       })
       .catch((err) => {
         console.log('Failed to recover state');
@@ -365,7 +348,7 @@ export default class AdminModule extends IConduitAdmin {
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
     routes.forEach((r: any) => {
-      let handler = (req: any, res: any, next: any) => {
+      let handler = (req: Request, res: Response, next: NextFunction) => {
         const context = (req as any).conduit;
         let params: any = {};
         if (req.query) {
@@ -391,15 +374,71 @@ export default class AdminModule extends IConduitAdmin {
         };
         client[r.grpcFunction](request, (err: any, result: any) => {
           if (err) {
-            return res.status(500).send(err);
+            console.log(err);
+            if (err.hasOwnProperty('status')) {
+              return res.status((err as ConduitError).status).json({
+                name: err.name,
+                status: (err as ConduitError).status,
+                message: err.message,
+              });
+            } else if (err.hasOwnProperty('code')) {
+              let statusCode: number;
+              let name: string;
+              switch (err.code) {
+                case 3:
+                  name = 'INVALID_ARGUMENTS';
+                  statusCode = 400;
+                  break;
+                case 5:
+                  name = 'NOT_FOUND';
+                  statusCode = 404;
+                  break;
+                case 7:
+                  name = 'FORBIDDEN';
+                  statusCode = 403;
+                  break;
+                case 16:
+                  name = 'UNAUTHORIZED';
+                  statusCode = 401;
+                  break;
+                default:
+                  name = 'INTERNAL_SERVER_ERROR';
+                  statusCode = 500;
+              }
+              return res.status(statusCode).json({
+                name,
+                status: statusCode,
+                message: err.details,
+              });
+            } else {
+              return res.status(500).json({
+                name: 'INTERNAL_SERVER_ERROR',
+                status: 500,
+                message: 'Something went wrong',
+              });
+            }
           }
-          let sendResult = result.result;
-          try {
-            sendResult = JSON.parse(result.result);
-          } catch (error) {
-            // do nothing
+          if (result.result) {
+            let sendResult = result.result;
+            try {
+              sendResult = JSON.parse(result.result);
+            } catch (error) {
+              return res.status(500).json({
+                name: 'INTERNAL_SERVER_ERROR',
+                status: 500,
+                message: 'Failed to parse service response!',
+              });
+            }
+            res.status(200).json(sendResult);
+          } else if (result.redirect) {
+            res.redirect(result.redirect);
+          } else {
+            return res.status(500).json({
+              name: 'INTERNAL_SERVER_ERROR',
+              status: 500,
+              message: 'Something went wrong',
+            });
           }
-          res.status(200).json(sendResult);
         });
       };
       this._registerRoute(r.method, r.path, handler);
@@ -436,6 +475,45 @@ export default class AdminModule extends IConduitAdmin {
     const self = this;
     this.router = Router();
     this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
+    this.router.post('/login', (req: Request, res: Response, next: NextFunction) =>
+      self.adminHandlers.loginAdmin(req, res, next).catch(next)
+    );
+    this.router.get('/modules', (req: Request, res: Response, next: NextFunction) => {
+      let response: any[] = [];
+      // this is used here as such, because the config manager is simply the config package
+      // todo update the config manager interface so that we don't need these castings
+      ((this.conduit.getConfigManager() as any).registeredModules as Map<
+        string,
+        string
+      >).forEach((val: any, key: any) => {
+        response.push(val);
+      });
+      res.json(response);
+    });
+    // this.conduit
+    //   .getRouter()
+    //   .registerDirectRouter(
+    //     '/admin/login',
+    //     (req: Request, res: Response, next: NextFunction) =>
+    //       self.adminHandlers.loginAdmin(req, res, next).catch(next)
+    //   );
+    // this.conduit
+    //   .getRouter()
+    //   .registerDirectRouter(
+    //     '/admin/modules',
+    //     (req: Request, res: Response, next: NextFunction) => {
+    //       let response: any[] = [];
+    //       // this is used here as such, because the config manager is simply the config package
+    //       // todo update the config manager interface so that we don't need these castings
+    //       ((this.conduit.getConfigManager() as any).registeredModules as Map<
+    //         string,
+    //         string
+    //         >).forEach((val: any, key: any) => {
+    //         response.push(val);
+    //       });
+    //       res.json(response);
+    //     }
+    //   );
     this.router.use((req, res, next) => this.authMiddleware(req, res, next));
     this.router.post('/create', (req: Request, res: Response, next: NextFunction) =>
       self.adminHandlers.createAdmin(req, res, next).catch(next)

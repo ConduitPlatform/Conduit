@@ -55,8 +55,8 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
     <Container maxWidth="md">
       <Paper className={classes.paper} elevation={5}>
         <Typography variant={'h6'} className={classes.typography}>
-          <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />{' '}
-          Push notification
+          <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} /> Push
+          notification
         </Typography>
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>

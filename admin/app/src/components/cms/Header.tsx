@@ -12,6 +12,7 @@ import { useDispatch } from 'react-redux';
 import { clearSelectedSchema } from '../../redux/slices/cmsSlice';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 export const headerHeight = 64;
 
@@ -81,7 +82,14 @@ interface Props {
   handleSave: (name: string, readOnly: boolean) => void;
 }
 
-const Header: FC<Props> = ({ name, authentication, crudOperations, readOnly, handleSave, ...rest }) => {
+const Header: FC<Props> = ({
+  name,
+  authentication,
+  crudOperations,
+  readOnly,
+  handleSave,
+  ...rest
+}) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -99,8 +107,13 @@ const Header: FC<Props> = ({ name, authentication, crudOperations, readOnly, han
     }
   }, [authentication, crudOperations, name]);
 
-  const handleDataName = (event: React.ChangeEvent<{ value: any }>) => {
-    setSchemaName(event.target.value);
+  const handleDataName = (value: string) => {
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The schema name can only contain alpharithmetics and _'));
+    }
+
+    setSchemaName(value.replace(/[^a-z0-9_]/gi, ''));
   };
 
   const handleData = () => {
@@ -129,7 +142,7 @@ const Header: FC<Props> = ({ name, authentication, crudOperations, readOnly, han
           className={clsx(classes.input, classes.colorWhite)}
           id="data-name"
           placeholder={'Schema name'}
-          onChange={handleDataName}
+          onChange={(event) => handleDataName(event.target.value)}
           disableUnderline
           value={schemaName}
           readOnly={readOnly}
@@ -162,7 +175,9 @@ const Header: FC<Props> = ({ name, authentication, crudOperations, readOnly, han
         />
       </Box>
       <Box display={'flex'} alignItems={'center'}>
-        <Button className={clsx(classes.saveButton, classes.colorWhite)} onClick={() => handleData()}>
+        <Button
+          className={clsx(classes.saveButton, classes.colorWhite)}
+          onClick={() => handleData()}>
           <SaveIcon className={classes.saveIcon} />
           <Typography>Save</Typography>
         </Button>

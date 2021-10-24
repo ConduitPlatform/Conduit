@@ -11,6 +11,10 @@ export default new ConduitSchema(
     },
     folder: {
       type: TYPE.String,
+      systemRequired: true,
+    },
+    container: {
+      type: TYPE.String,
       required: true,
       systemRequired: true,
     },

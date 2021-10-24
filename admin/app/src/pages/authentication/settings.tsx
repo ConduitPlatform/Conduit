@@ -11,9 +11,7 @@ import AuthSettings from '../../components/authentication/AuthSettings';
 const Settings = () => {
   const dispatch = useAppDispatch();
 
-  const { signInMethods: configData } = useAppSelector(
-    (state) => state.authenticationSlice.data
-  );
+  const { signInMethods: configData } = useAppSelector((state) => state.authenticationSlice.data);
 
   useEffect(() => {
     dispatch(asyncGetAuthenticationConfig());

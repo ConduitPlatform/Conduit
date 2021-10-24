@@ -1,9 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import {
-  IClient,
-  INewAdminUser,
-  IPlatformTypes,
-} from '../../models/settings/SettingsModels';
+import { IClient, INewAdminUser, IPlatformTypes } from '../../models/settings/SettingsModels';
 import {
   getAvailableClientsRequest,
   generateNewClientRequest,
@@ -13,7 +9,7 @@ import {
 } from '../../http/SettingsRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { notify } from 'reapop';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 
 interface INotificationSlice {
   data: {
@@ -34,9 +30,8 @@ export const asyncGetAvailableClients = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -52,9 +47,8 @@ export const asyncGenerateNewClient = createAsyncThunk(
 
       return data;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -69,9 +63,8 @@ export const asyncDeleteClient = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return _id;
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -85,9 +78,8 @@ export const asyncPutCoreSettings = createAsyncThunk(
       thunkAPI.dispatch(setAppDefaults());
       return await putCoreRequest(data);
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }
@@ -102,17 +94,12 @@ export const asyncCreateAdminUser = createAsyncThunk(
         username: values.username,
         password: values.password,
       };
-      thunkAPI.dispatch(
-        notify(`Successfully created user ${body.username}!`, 'success', {
-          dismissAfter: 3000,
-        })
-      );
+      await postNewAdminUser(body);
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully created user ${body.username}!`));
       thunkAPI.dispatch(setAppDefaults());
-      const { data } = await postNewAdminUser(body); //fix this
     } catch (error) {
-      thunkAPI.dispatch(
-        notify(`${getErrorData(error)}`, 'error', { dismissAfter: 3000 })
-      );
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
     }
   }

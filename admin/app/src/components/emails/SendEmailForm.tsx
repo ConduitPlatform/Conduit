@@ -15,6 +15,8 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import InputLabel from '@material-ui/core/InputLabel';
 import Select from '@material-ui/core/Select';
 import FormControl from '@material-ui/core/FormControl';
+import { isString } from 'lodash';
+import { IEmailState } from '../../models/emails/IEmailState';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -29,17 +31,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-// interface IEmailState {
-//   email: string;
-//   sender: string;
-//   subject: string;
-//   body: string;
-//   template: string;
-//   variables: [];
-//   variablesValues: { [key: string]: string };
-//   templateName: string;
-// }
-
 interface Props {
   templates: EmailTemplateType[];
 }
@@ -49,12 +40,12 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
-  const [emailState, setEmailState] = useState({
+  const [emailState, setEmailState] = useState<IEmailState>({
+    _id: '',
     email: '',
     sender: '',
     subject: '',
     body: '',
-    template: '',
     variables: [],
     variablesValues: {},
     templateName: '',
@@ -62,7 +53,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
   const sendEmail = () => {
     let email;
-    if (emailState.template) {
+    if (emailState.templateName) {
       email = {
         templateName: emailState.templateName,
         variables: emailState.variablesValues,
@@ -83,20 +74,22 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
   const clearEmail = () => {
     setEmailState({
+      _id: '',
       email: '',
       sender: '',
       subject: '',
       body: '',
-      template: '',
       variables: [],
       variablesValues: {},
       templateName: '',
     });
   };
 
-  const handleChangeTemplate = (event: any) => {
-    const selectedTemplate = event.target.value;
+  const handleChangeTemplate = (event: React.ChangeEvent<{ value: unknown }>) => {
+    if (!isString(event.target.value)) return;
+    const selectedTemplate = templates.find((template) => template._id === event.target.value);
 
+    if (!selectedTemplate) return;
     let variableValues = {};
     selectedTemplate.variables.forEach((variable: string) => {
       variableValues = { ...variableValues, [variable]: '' };
@@ -104,16 +97,17 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
     setEmailState({
       ...emailState,
+      _id: selectedTemplate._id,
       variables: selectedTemplate.variables,
       templateName: selectedTemplate.name,
       subject: selectedTemplate.subject,
       variablesValues: variableValues,
-      template: selectedTemplate,
       body: selectedTemplate.body,
     });
   };
 
-  const handleVariableChange = (event: any, variable: string) => {
+  const handleVariableChange = (event: React.ChangeEvent<{ value: unknown }>, variable: string) => {
+    if (!isString(event.target.value)) return;
     const newValue = event.target.value;
     const variableValues = { ...emailState.variablesValues, [variable]: newValue };
     setEmailState({ ...emailState, variablesValues: variableValues });
@@ -199,22 +193,19 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                 required={withTemplate}
                 disabled={!withTemplate}
                 style={{ minWidth: '65ch' }}>
-                <InputLabel id="demo-simple-select-outlined-label">
-                  Email Template
-                </InputLabel>
+                <InputLabel id="demo-simple-select-outlined-label">Email Template</InputLabel>
                 <Select
                   labelId="demo-simple-select-outlined-label"
                   id="demo-simple-select-outlined"
-                  value={emailState.template}
+                  value={emailState._id}
+                  renderValue={() => emailState.templateName}
                   onChange={handleChangeTemplate}
                   label="Email Template">
                   <MenuItem value="none">
                     <em>None</em>
                   </MenuItem>
                   {templates?.map((template) => (
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
-                    <MenuItem key={template._id} value={template}>
+                    <MenuItem key={template._id} value={template._id}>
                       {template.name}
                     </MenuItem>
                   ))}
@@ -250,7 +241,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                     required
                     fullWidth
                     value={emailState.variablesValues[variable]}
-                    onChange={(e) => handleVariableChange(e, variable)}
+                    onChange={(event) => handleVariableChange(event, variable)}
                   />
                 </Grid>
               ))}

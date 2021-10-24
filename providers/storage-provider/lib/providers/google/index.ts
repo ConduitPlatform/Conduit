@@ -1,5 +1,4 @@
-import { IStorageProvider } from '../../interfaces';
-import { StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces';
 
 import { Storage } from '@google-cloud/storage';
 
@@ -17,32 +16,81 @@ export class GoogleCloudStorage implements IStorageProvider {
     });
   }
 
-  /**
-   * Used to create a new bucket
-   * @param name For the bucket
-   */
-  async createFolder(name: string): Promise<boolean | Error> {
+  deleteContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  deleteFolder(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+
+  async createContainer(name: string): Promise<boolean | Error> {
     // Creates the new bucket
     await this._storage.createBucket(name);
     this._activeBucket = name;
     return true;
   }
 
-  /**
-   * Used to switch the current bucket.
-   * Ex. storage.bucket('photos').file('test')
-   * @param name For the bucket
-   */
-  folder(name: string): IStorageProvider {
+  container(name: string): IStorageProvider {
     this._activeBucket = name;
     return this;
   }
 
-  folderExists(name: string): Promise<boolean | Error> {
-    // terribly wrong but w/e
-    return (this._storage.bucket(this._activeBucket).exists() as unknown) as Promise<
-      boolean | Error
-    >;
+  async containerExists(name: string): Promise<boolean | Error> {
+    let exists = await this._storage.bucket(name).exists();
+    return exists[0];
+  }
+
+  async moveToContainer(
+    filename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
+    let newBucketFile = this._storage.bucket(newContainer).file(filename);
+    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
+    return true;
+  }
+
+  async moveToContainerAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
+    let newBucketFile = this._storage.bucket(newContainer).file(newFilename);
+    await this._storage
+      .bucket(this._activeBucket)
+      .file(currentFilename)
+      .move(newBucketFile);
+    return true;
+  }
+
+  /**
+   * Used to create a new folder
+   * @param name For the folder
+   */
+  async createFolder(name: string): Promise<boolean | Error> {
+    let bucket = await this._storage.bucket(this._activeBucket);
+    let exists = await bucket.exists();
+    if (!exists[0]) {
+      await bucket.create();
+    }
+
+    exists = await bucket.file(name + '/keep.txt').exists();
+    if (exists[0]) {
+      return true;
+    }
+    await bucket.file(name + '/keep.txt').save(Buffer.from('DO NOT DELETE'));
+    return true;
+  }
+
+  async folderExists(name: string): Promise<boolean | Error> {
+    let bucket = await this._storage.bucket(this._activeBucket);
+    let exists = await bucket.exists();
+    if (!exists[0]) {
+      return false;
+    }
+
+    exists = await bucket.file(name + '/keep.txt').exists();
+
+    return exists[0];
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
@@ -115,9 +163,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    let newBucketFile = this._storage.bucket(newFolder).file(filename);
-    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
-    return true;
+    throw new Error('Method not implemented!');
   }
 
   async moveToFolderAndRename(
@@ -125,11 +171,6 @@ export class GoogleCloudStorage implements IStorageProvider {
     newFilename: string,
     newFolder: string
   ): Promise<boolean | Error> {
-    let newBucketFile = this._storage.bucket(newFolder).file(newFilename);
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newBucketFile);
-    return true;
+    throw new Error('Method not implemented!');
   }
 }

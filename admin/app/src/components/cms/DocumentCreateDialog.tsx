@@ -38,13 +38,7 @@ interface Props {
   editData: any;
 }
 
-const CreateDialog: FC<Props> = ({
-  schema,
-  handleCreate,
-  handleEdit,
-  handleCancel,
-  editData,
-}) => {
+const CreateDialog: FC<Props> = ({ schema, handleCreate, handleEdit, handleCancel, editData }) => {
   const classes = useStyles();
   const [document, setDocument] = useState([]);
   const [isDisabled, setIsDisabled] = useState(true);
@@ -184,10 +178,7 @@ const CreateDialog: FC<Props> = ({
         <Grid container>
           <Grid item container xs={12} justify={'flex-end'}>
             {isDisabled && editData ? (
-              <Button
-                variant={'outlined'}
-                onClick={() => setIsDisabled(false)}
-                color={'primary'}>
+              <Button variant={'outlined'} onClick={() => setIsDisabled(false)} color={'primary'}>
                 Edit Document
               </Button>
             ) : (

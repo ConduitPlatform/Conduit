@@ -14,6 +14,12 @@ export default class MyDocument extends Document {
             rel="stylesheet"
             href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
           />
+          {/* eslint-disable */}
+          <link
+            href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,100&display=swap"
+            rel="stylesheet"
+          />
+          {/* eslint-enable */}
         </Head>
         <body>
           <Main />

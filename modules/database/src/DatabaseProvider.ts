@@ -1,6 +1,6 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
-import { DatabaseAdapter, SchemaAdapter } from './interfaces';
+import { SchemaAdapter } from './interfaces';
 import ConduitGrpcSdk, {
   ConduitSchema,
   ConduitServiceModule,
@@ -21,11 +21,15 @@ import {
   UpdateManyRequest,
   UpdateRequest,
 } from './types';
+import schema from './models/Schema.schema';
+import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
+import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 
 const MODULE_NAME = 'database';
 
 export class DatabaseProvider implements ConduitServiceModule {
-  private readonly _activeAdapter: DatabaseAdapter;
+  private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
 
   constructor(private readonly conduit: ConduitGrpcSdk) {
     const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
@@ -50,30 +54,8 @@ export class DatabaseProvider implements ConduitServiceModule {
 
   publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
-    const self = this;
-    this.conduit.state
-      ?.getState()
-      .then((r: any) => {
-        let state = !r || r.length === 0 ? {} : JSON.parse(r);
-        self._activeAdapter.registeredSchemas.forEach((k: ConduitSchema) => {
-          state[k.name] = {
-            _name: k.name,
-            _fields: k.fields,
-            _modelOptions: k.modelOptions,
-            _collectionName: k.collectionName,
-          };
-        });
-
-        return this.conduit.state?.setState(JSON.stringify(state));
-      })
-      .then(() => {
-        this.conduit.bus!.publish('database_provider', sendingSchema);
-        console.log('Updated state');
-      })
-      .catch((err: any) => {
-        console.log('Failed to update state');
-        console.error(err);
-      });
+    this.conduit.bus!.publish('database_provider', sendingSchema);
+    console.log('Updated state');
   }
 
   async initialize() {
@@ -81,6 +63,8 @@ export class DatabaseProvider implements ConduitServiceModule {
     let grpcServer = new GrpcServer(process.env.SERVICE_URL);
 
     this._port = (await grpcServer.createNewServer()).toString();
+    await this._activeAdapter.createSchemaFromAdapter(schema);
+    await this._activeAdapter.recoverSchemasFromDatabase();
     await grpcServer.addService(
       path.resolve(__dirname, './database-provider.proto'),
       'databaseprovider.DatabaseProvider',
@@ -121,6 +105,7 @@ export class DatabaseProvider implements ConduitServiceModule {
             receivedSchema.modelOptions,
             receivedSchema.collectionName
           );
+          schema.owner = receivedSchema.owner;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
             .then(() => {})
@@ -132,30 +117,6 @@ export class DatabaseProvider implements ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-    this.conduit.state
-      ?.getState()
-      .then((r: any) => {
-        if (!r || r.length === 0) return;
-        let state = JSON.parse(r);
-        Object.keys(state).forEach((schemaName: string) => {
-          const schema = new ConduitSchema(
-            state[schemaName]._name ?? state[schemaName].name,
-            state[schemaName]._fields ?? state[schemaName].modelSchema,
-            state[schemaName]._modelOptions ?? state[schemaName].modelOptions,
-            state[schemaName]._collectionName ?? null
-          );
-          self._activeAdapter
-            .createSchemaFromAdapter(schema)
-            .then(() => {})
-            .catch(() => {
-              console.log('Failed to create/update schema');
-            });
-        });
-      })
-      .catch((err: any) => {
-        console.log('Failed to recover state');
-        console.error(err);
-      });
   }
 
   /**
@@ -167,7 +128,8 @@ export class DatabaseProvider implements ConduitServiceModule {
     let schema = new ConduitSchema(
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
-      JSON.parse(call.request.schema.modelOptions)
+      JSON.parse(call.request.schema.modelOptions),
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -175,24 +137,35 @@ export class DatabaseProvider implements ConduitServiceModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    this._activeAdapter
-      .createSchemaFromAdapter(schema)
+    this.conduit.config
+      .getModuleUrlByInstance((call as any).getPeer())
+      .then((res: { url: string; moduleName: string }) => {
+        schema.owner = res.moduleName;
+        return this._activeAdapter.createSchemaFromAdapter(schema);
+      })
+      .catch(() => {
+        schema.owner = 'unknown';
+        return this._activeAdapter.createSchemaFromAdapter(schema);
+      })
       .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
+          collectionName: schemaAdapter.originalSchema.collectionName,
         };
         this.publishSchema({
           name: call.request.schema.name,
           modelSchema: JSON.parse(call.request.schema.modelSchema),
           modelOptions: JSON.parse(call.request.schema.modelOptions),
+          collectionName: call.request.schema.collectionName,
+          owner: schemaAdapter.originalSchema.owner,
         });
         callback(null, {
           schema: originalSchema,
         });
       })
-      .catch((err) => {
+      .catch((err: any) => {
         callback({
           code: status.INTERNAL,
           message: err.message,
@@ -213,6 +186,7 @@ export class DatabaseProvider implements ConduitServiceModule {
           name: schemaAdapter.name,
           modelSchema: JSON.stringify(schemaAdapter.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.modelOptions),
+          collectionName: schemaAdapter.collectionName,
         },
       });
     } catch (err) {
@@ -232,6 +206,7 @@ export class DatabaseProvider implements ConduitServiceModule {
             name: schema.name,
             modelSchema: JSON.stringify(schema.modelSchema),
             modelOptions: JSON.stringify(schema.modelOptions),
+            collectionName: schema.collectionName,
           };
         }),
       });

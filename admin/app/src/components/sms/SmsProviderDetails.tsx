@@ -1,214 +1,183 @@
-import React, { useCallback, useEffect, useState } from 'react';
-
+import { Container } from '@material-ui/core';
+import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-
-import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { Clear, Send } from '@material-ui/icons';
+import Grid from '@material-ui/core/Grid';
+import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import Box from '@material-ui/core/Box';
+import Switch from '@material-ui/core/Switch';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Divider from '@material-ui/core/Divider';
 import MenuItem from '@material-ui/core/MenuItem';
-import Switch from '@material-ui/core/Switch';
+import { useAppSelector } from '../../redux/store';
+import { ChildConfigKey, ConfigKey, ISmsConfig, ISmsProviders } from '../../models/sms/SmsModels';
+import SmsProviderDetailsFields from './SmsProviderDetailsFields';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
-    padding: theme.spacing(1, 1),
+    padding: theme.spacing(2),
     color: theme.palette.text.secondary,
   },
-  fieldSpace: {
-    marginTop: theme.spacing(1.5),
+  textField: {
+    marginBottom: theme.spacing(2),
+  },
+  typography: {
+    marginBottom: theme.spacing(4),
+  },
+  innerGrid: {
+    paddingLeft: theme.spacing(4),
   },
   divider: {
-    margin: theme.spacing(2, 0),
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    width: '100%',
+  },
+  menuItem: {
+    textTransform: 'capitalize',
+  },
+  muiSelect: {
+    textTransform: 'capitalize',
   },
 }));
 
-const config = {
-  active: true,
-  providerName: 'twilio',
-  twilio: {
-    verify: {
-      active: true,
-      serviceSid: '***REMOVED***',
-    },
-    phoneNumber: '***REMOVED***',
-    accountSID: '***REMOVED***',
-    authToken: '***REMOVED***',
-  },
-  twilio2: {
-    verify: {
-      active: false,
-      serviceSid: 'prodsprods',
-    },
-    phoneNumber: '***REMOVED***',
-    accountSID: 'prodsprodsprods',
-    authToken: 'prodsprodsprodsprods',
-  },
-};
+const providers: 'twilio'[] = ['twilio'];
 
 const SmsProviderDetails: React.FC = () => {
   const classes = useStyles();
 
-  const [number, setNumber] = useState<string>('');
-  const [accountSID, setAccountSID] = useState<string>('');
-  const [authToken, setAuthToken] = useState<string>('');
-  const [serviceID, setServiceID] = useState<string>('');
-  const [verify, setVerify] = useState<boolean>(false);
-  const [provider, setProvider] = useState<string>('');
+  const { config } = useAppSelector((state) => state.smsSlice.data);
 
-  useEffect(() => {
-    const selected = config.providerName;
-    setProvider(selected);
-  }, []);
-
-  const prepareValues = useCallback(
-    (config: any) => {
-      if (provider) {
-        setNumber(config[provider].phoneNumber);
-        setAuthToken(config[provider].authToken);
-        setAccountSID(config[provider].accountSID);
-        setVerify(config[provider].verify.active);
-        setServiceID(config[provider].verify.serviceSid);
-      }
-    },
-    [provider]
-  );
-
-  useEffect(() => {
-    prepareValues(config);
-  }, [prepareValues, provider]);
-
-  const onSaveClick = () => {
-    const data = {
-      active: true,
-      providerName: provider,
-      [provider]: {
-        verify: {
-          active: verify,
-          serviceSid: serviceID,
-        },
-        phoneNumber: number,
-        accountSID: accountSID,
-        authToken: authToken,
+  const [configState, setConfigState] = useState<ISmsConfig>({
+    active: false,
+    providerName: ISmsProviders.twilio,
+    twilio: {
+      phoneNumber: '',
+      accountSID: '',
+      authToken: '',
+      verify: {
+        active: false,
+        serviceSid: '',
       },
-    };
-    console.log('onSaveClick', data);
+    },
+  });
+
+  useEffect(() => {
+    if (!config) {
+      return;
+    }
+    setConfigState(config);
+  }, [config]);
+
+  const handleCancel = () => {
+    setConfigState({
+      ...configState,
+      active: config.active,
+      providerName: config.providerName,
+    });
   };
 
-  const onCancelClick = () => {
-    const selected = config.providerName;
-    setProvider(selected);
+  const onChange = (value: string | boolean, key: ConfigKey, childKey?: ChildConfigKey) => {
+    const innerConfigState = configState[configState.providerName];
+    if (childKey) {
+      const newConfig = {
+        ...configState,
+        [configState.providerName]: {
+          ...innerConfigState,
+          verify: {
+            ...innerConfigState.verify,
+            [childKey]: value,
+          },
+        },
+      };
+      setConfigState(newConfig);
+      return;
+    }
+    const configNew = {
+      ...configState,
+      [configState.providerName]: {
+        ...innerConfigState,
+        [key]: value,
+      },
+    };
+    setConfigState(configNew);
+  };
+
+  const renderSettingsFields = () => {
+    return (
+      <>
+        <Grid item xs={12}>
+          <Typography variant={'h6'}>Provider</Typography>
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            select
+            label=""
+            value={configState.providerName}
+            onChange={(event) => {
+              setConfigState({
+                ...configState,
+                providerName: event.target.value as ISmsProviders,
+              });
+            }}
+            className={classes.muiSelect}
+            helperText="Select your provider"
+            variant="outlined">
+            {providers.map((provider, index) => (
+              <MenuItem value={provider} key={index} className={classes.menuItem}>
+                {provider}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Divider className={classes.divider} />
+        <SmsProviderDetailsFields
+          data={configState[configState.providerName]}
+          onChange={onChange}
+        />
+      </>
+    );
   };
 
   return (
     <Container>
       <Paper className={classes.paper}>
-        <Grid container style={{ padding: `16px 32px` }}>
-          <Grid item xs={12}>
-            <Typography variant={'h6'}>Provider Details</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Divider className={classes.divider} />
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant={'h6'}>Provider</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              className={classes.fieldSpace}
-              select
-              value={provider}
-              onChange={(event) => setProvider(event.target.value)}
-              label=""
-              helperText="Select your provider"
-              variant="outlined">
-              <MenuItem value={'twilio'}>Twilio</MenuItem>
-              <MenuItem value={'twilio2'}>Twilio2</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item style={{ marginTop: 32 }} xs={12}>
-            <Typography variant={'h6'}>Provider Settings</Typography>
-            <Divider className={classes.divider} />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              className={classes.fieldSpace}
-              required
-              id="phone"
-              label="Phone Number"
-              variant="outlined"
+        <Grid container>
+          <Box
+            width={'100%'}
+            display={'inline-flex'}
+            justifyContent={'space-between'}
+            alignItems={'center'}>
+            <Typography variant={'h6'}>Sms Settings Module</Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={configState.active}
+                  onChange={() =>
+                    setConfigState({
+                      ...configState,
+                      active: !configState.active,
+                    })
+                  }
+                  value={'active'}
+                  color="primary"
+                />
+              }
+              label={''}
             />
+          </Box>
+
+          <Divider className={classes.divider} />
+
+          <Grid container spacing={2} className={classes.innerGrid}>
+            {configState.active && renderSettingsFields()}
           </Grid>
-          <Grid item xs={12}>
-            <TextField
-              value={accountSID}
-              onChange={(e) => setAccountSID(e.target.value)}
-              className={classes.fieldSpace}
-              required
-              id="sid"
-              label="Account SID"
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              value={authToken}
-              onChange={(e) => setAuthToken(e.target.value)}
-              className={classes.fieldSpace}
-              required
-              id="auth"
-              label="Auth Token"
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12} style={{ marginTop: 32 }}>
-            <Typography variant={'h6'}>Verify</Typography>
-          </Grid>
-          <Grid
-            item
-            className={classes.fieldSpace}
-            container
-            alignItems={'center'}
-            xs={12}>
-            <Typography variant={'body1'}>Verify:</Typography>
-            <Switch
-              size={'medium'}
-              color={'primary'}
-              checked={verify}
-              onChange={() => setVerify(!verify)}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              value={serviceID}
-              onChange={(e) => setServiceID(e.target.value)}
-              className={classes.fieldSpace}
-              required
-              id="sid"
-              label="Service ID"
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item container style={{ marginTop: 16 }} justify="flex-end" xs={12}>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<Clear />}
-              style={{ marginRight: 16 }}
-              onClick={onCancelClick}>
+          <Grid item container xs={12} justify={'flex-end'}>
+            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
               Cancel
             </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              disabled={config.providerName === provider}
-              startIcon={<Send />}
-              onClick={onSaveClick}>
+            <Button variant="contained" color="primary" style={{ alignSelf: 'flex-end' }}>
               Save
             </Button>
           </Grid>

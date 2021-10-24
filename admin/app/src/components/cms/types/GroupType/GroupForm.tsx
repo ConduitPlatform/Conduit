@@ -141,11 +141,7 @@ const GroupForm: FC<IProps> = ({
             </Typography>
             <FormControlLabel
               control={
-                <Switch
-                  checked={groupData.select}
-                  onChange={handleFieldSelect}
-                  color="primary"
-                />
+                <Switch checked={groupData.select} onChange={handleFieldSelect} color="primary" />
               }
               label=""
             />
@@ -188,11 +184,7 @@ const GroupForm: FC<IProps> = ({
       </Grid>
 
       <Box display={'flex'} width={'100%'}>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          style={{ marginRight: 16 }}>
+        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

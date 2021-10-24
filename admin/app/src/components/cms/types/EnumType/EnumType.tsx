@@ -6,7 +6,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { makeStyles } from '@material-ui/core/styles';
 import SelectIcon from '@material-ui/icons/FormatListBulleted';
 import Grid from '@material-ui/core/Grid';
-import { IEnumData } from '../../../../models/cms/BuildTypesModels';
+// import { IEnumData } from '../../../../models/cms/BuildTypesModels';
 
 const useStyles = makeStyles((theme) => ({
   icon: {

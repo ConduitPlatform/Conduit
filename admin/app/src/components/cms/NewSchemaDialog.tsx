@@ -6,10 +6,11 @@ import DialogActions from '@material-ui/core/DialogActions';
 import Button from '@material-ui/core/Button';
 import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import slugify from '../../utils/slugify';
 import Link from 'next/link';
+import { useAppDispatch } from '../../redux/store';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -44,28 +45,25 @@ interface Props {
 
 const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
   const classes = useStyles();
-
+  const dispatch = useAppDispatch();
   const [typeName, setTypeName] = useState('');
-  const [typeId, setTypeId] = useState('');
 
-  useEffect(() => {
-    const slug = slugify(typeName);
-    setTypeId(slug);
-  }, [typeName]);
+  const handleTypeName = (value: string) => {
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(enqueueInfoNotification('The schema name can only contain alpharithmetics and _'));
+    }
 
-  const handleTypeName = (event: React.ChangeEvent<{ value: any }>) => {
-    setTypeName(event.target.value.split(' ').join(''));
+    setTypeName(value.replace(/[^a-z0-9_]/gi, ''));
   };
 
   const handleAddType = () => {
     setTypeName('');
-    setTypeId('');
     handleClose();
   };
 
   const handleCloseClick = () => {
     setTypeName('');
-    setTypeId('');
     handleClose();
   };
 
@@ -77,9 +75,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
       onClose={handleCloseClick}
       classes={{ paper: classes.paper }}>
       <Box maxWidth={600}>
-        <DialogTitle
-          id="new-custom-type"
-          style={{ textAlign: 'center', marginBottom: 16 }}>
+        <DialogTitle id="new-custom-type" style={{ textAlign: 'center', marginBottom: 16 }}>
           Create new Schema
         </DialogTitle>
         <DialogContent style={{ marginBottom: 16 }}>
@@ -89,7 +85,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
             label="Enter your type name"
             variant="standard"
             value={typeName}
-            onChange={handleTypeName}
+            onChange={(event) => handleTypeName(event.target.value)}
           />
         </DialogContent>
         <DialogActions style={{ justifyContent: 'center' }}>
@@ -102,7 +98,7 @@ const NewSchemaDialog: FC<Props> = ({ open, handleClose }) => {
                 color="primary"
                 variant="contained"
                 style={{ textTransform: 'none' }}
-                disabled={typeName === '' && typeId === ''}>
+                disabled={typeName === ''}>
                 Create new Schema
               </Button>
             </a>

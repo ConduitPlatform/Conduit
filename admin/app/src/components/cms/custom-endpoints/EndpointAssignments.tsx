@@ -1,16 +1,9 @@
-import {
-  FormControl,
-  Grid,
-  IconButton,
-  Select,
-  TextField,
-  Typography,
-} from '@material-ui/core';
+import { FormControl, Grid, IconButton, Select, TextField, Typography } from '@material-ui/core';
 import React, { FC, Fragment, useCallback } from 'react';
 import ActionTypes from '../../../models/ActionTypes';
 import RemoveCircleOutlineIcon from '@material-ui/icons/RemoveCircleOutline';
 import OperationEnum from '../../../models/OperationsEnum';
-import { deepClone } from '../../utils/deepClone';
+import { deepClone } from '../../../utils/deepClone';
 import { Assignment, Input } from '../../../models/customEndpoints/customEndpointsModels';
 
 interface Props {
@@ -30,10 +23,7 @@ const EndpointAssignments: FC<Props> = ({
   setSelectedAssignments,
   availableFieldsOfSchema,
 }) => {
-  const handleAssignmentFieldChange = (
-    event: React.ChangeEvent<{ value: any }>,
-    index: number
-  ) => {
+  const handleAssignmentFieldChange = (event: React.ChangeEvent<{ value: any }>, index: number) => {
     const value = event.target.value;
     const currentAssignments = selectedAssignments.slice();
 
@@ -173,14 +163,10 @@ const EndpointAssignments: FC<Props> = ({
                 value={ActionTypes.DECREMENT}>
                 DECREMENT
               </option>
-              <option
-                disabled={!isArrayType(assignment.schemaField)}
-                value={ActionTypes.APPEND}>
+              <option disabled={!isArrayType(assignment.schemaField)} value={ActionTypes.APPEND}>
                 APPEND
               </option>
-              <option
-                disabled={!isArrayType(assignment.schemaField)}
-                value={ActionTypes.REMOVE}>
+              <option disabled={!isArrayType(assignment.schemaField)} value={ActionTypes.REMOVE}>
                 REMOVE
               </option>
             </Select>
@@ -196,9 +182,7 @@ const EndpointAssignments: FC<Props> = ({
                 assignment.assignmentField.type === 'Custom' ||
                 assignment.assignmentField.type === 'Context'
                   ? assignment.assignmentField.type
-                  : assignment.assignmentField.type +
-                    '-' +
-                    assignment.assignmentField.value
+                  : assignment.assignmentField.type + '-' + assignment.assignmentField.value
               }
               onChange={(event) => handleAssignmentValueFieldChange(event, index)}>
               <option aria-label="None" value="" />

@@ -2,23 +2,17 @@ import React, { ReactElement, ReactNode, useEffect } from 'react';
 import { ThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import type { AppContext, AppProps } from 'next/app';
+import App from 'next/app';
 import { Provider } from 'react-redux';
 import Head from 'next/head';
 import { initializeStore, useStore } from '../redux/store';
 import { Layout } from '../components/navigation/Layout';
-import { setUpNotifications } from 'reapop';
 import { setToken } from '../redux/slices/appAuthSlice';
-import App from 'next/app';
 import { getCookie } from '../utils/cookie';
 import { NextPage } from 'next';
 import theme from '../theme';
-
-setUpNotifications({
-  defaultProps: {
-    position: 'bottom-right',
-    dismissible: true,
-  },
-});
+import { SnackbarMessage, SnackbarProvider } from 'notistack';
+import Snackbar from '../components/navigation/Snackbar';
 
 type NextPageWithLayout = NextPage & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -40,21 +34,30 @@ const ConduitApp = ({ Component, pageProps }: AppPropsWithLayout) => {
 
   const getLayout = Component.getLayout || ((page: any) => page);
 
+  const formOptions = (optionsString: SnackbarMessage) => {
+    if (optionsString == undefined) return {};
+    return JSON.parse(optionsString as string);
+  };
+
   return (
     <>
       <Head>
         <title>Conduit - App</title>
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,100&display=swap"
-          rel="stylesheet"
-        />
       </Head>
       <Provider store={reduxStore}>
         <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Layout>{getLayout(<Component {...pageProps} />)}</Layout>
+          <SnackbarProvider
+            preventDuplicate={true}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            content={(key, message) => <Snackbar id={key} options={formOptions(message)} />}>
+            <CssBaseline />
+            <Layout>{getLayout(<Component {...pageProps} />)}</Layout>
+          </SnackbarProvider>
         </ThemeProvider>
       </Provider>
     </>
@@ -70,13 +73,6 @@ ConduitApp.getInitialProps = async (appContext: AppContext) => {
   const { dispatch } = reduxStore;
 
   const cookie = getCookie('JWT', ctx.req);
-
-  setUpNotifications({
-    defaultProps: {
-      position: 'bottom-right',
-      dismissible: true,
-    },
-  });
 
   if (
     typeof window === 'undefined' &&

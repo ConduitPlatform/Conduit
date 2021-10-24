@@ -116,9 +116,7 @@ const RelationForm: FC<IProps> = ({
     setSimpleData({ ...simpleData, isArray: !simpleData.isArray });
   };
 
-  const handleFieldRelation = (
-    event: React.ChangeEvent<{ name?: string; value: unknown }>
-  ) => {
+  const handleFieldRelation = (event: React.ChangeEvent<{ name?: string; value: unknown }>) => {
     setSimpleData({ ...simpleData, model: event.target.value as string });
   };
 
@@ -252,11 +250,7 @@ const RelationForm: FC<IProps> = ({
       </FormControl>
 
       <Box display={'flex'} width={'100%'}>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          style={{ marginRight: 16 }}>
+        <Button variant="contained" color="primary" type="submit" style={{ marginRight: 16 }}>
           OK
         </Button>
         <Button variant="contained" onClick={onClose}>

@@ -16,7 +16,6 @@ import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
-import { KakaoHandlers } from '../handlers/kakao';
 import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
@@ -28,7 +27,6 @@ export class AuthenticationRoutes {
   private readonly googleHandlers: GoogleHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
-  private readonly kakaoHandlers: KakaoHandlers;
   private readonly twitchHandlers: TwitchHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
@@ -36,7 +34,6 @@ export class AuthenticationRoutes {
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
     this.googleHandlers = new GoogleHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
-    this.kakaoHandlers = new KakaoHandlers(grpcSdk);
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
   }
@@ -63,8 +60,6 @@ export class AuthenticationRoutes {
         ),
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-        authenticateKakao: this.kakaoHandlers.authenticate.bind(this.kakaoHandlers),
-        beginAuthKakao: this.kakaoHandlers.beginAuth.bind(this.kakaoHandlers),
         authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
         beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
@@ -374,47 +369,6 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
-
-    errorMessage = null;
-    authActive = await this.kakaoHandlers
-      .validate()
-      .catch((e: any) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/hook/kakao',
-            action: ConduitRouteActions.GET,
-            description: `Login/register with KakaoTalk using redirection mechanism.`,
-            urlParams: {
-              code: ConduitString.Required,
-              state: ConduitString.Required,
-            },
-          },
-          new ConduitRouteReturnDefinition('KakaoResponse', {
-            userId: ConduitString.Required,
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          'authenticateKakao'
-        )
-      );
-
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/init/kakao',
-            description: `Begins the authentication process with KakaoTalk.`,
-            action: ConduitRouteActions.GET,
-          },
-          new ConduitRouteReturnDefinition('KakaoInitResponse', 'String'),
-          'beginAuthKakao'
-        )
-      );
-
-      enabled = true;
-    }
-
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()

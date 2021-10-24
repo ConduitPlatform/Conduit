@@ -1,10 +1,11 @@
 {
+  "parser": "typescript",
   "trailingComma": "es5",
   "tabWidth": 2,
   "semi": true,
   "singleQuote": true,
   "arrowParens": "always",
-  "jsxBracketSameLine": true,
-  "endOfLine": "lf",
-  "printWidth": 120
+  "bracketSameLine": true,
+  "endOfLine": "auto",
+  "printWidth": 100
 }

@@ -1,13 +1,11 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import CmsLayout from '../../components/navigation/InnerLayouts/cmsLayout';
 import { asyncGetCmsSchemas, asyncGetSchemaDocuments } from '../../redux/slices/cmsSlice';
 import { Schema } from '../../models/cms/CmsModels';
-import { useRouter } from 'next/router';
 import SchemaData from '../../components/cms/SchemaData';
 
 const SchemaDataPage = () => {
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const data = useAppSelector((state) => state.cmsSlice.data);
 
@@ -29,7 +27,9 @@ const SchemaDataPage = () => {
   return (
     data &&
     data.schemas &&
-    data.schemas.length > 0 && <SchemaData schemas={getActiveSchemas()} handleSchemaChange={handleSelectSchema} />
+    data.schemas.length > 0 && (
+      <SchemaData schemas={getActiveSchemas()} handleSchemaChange={handleSelectSchema} />
+    )
   );
 };
 

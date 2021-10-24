@@ -54,6 +54,18 @@ const ServiceAccountsTabs = () => {
   });
   const [serviceAccounts, setServiceAccounts] = useState<ServiceAccount[]>([]);
 
+  const fetchServiceAccounts = async () => {
+    try {
+      const axiosResponse = await getServiceAccounts();
+      if (axiosResponse.data && axiosResponse.data.services) {
+        const services = axiosResponse.data.services;
+        setServiceAccounts(services);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchServiceAccounts();
   }, []);
@@ -63,13 +75,18 @@ const ServiceAccountsTabs = () => {
     setConfirmation(true);
   };
 
+  const handleCloseConfirmation = () => {
+    setServiceId('');
+    setConfirmation(false);
+  };
+
   const handleDeletion = async () => {
     handleCloseConfirmation();
     try {
       await deleteServiceAccounts(serviceId);
       await fetchServiceAccounts();
-    } catch (e) {
-      console.log(e);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -86,11 +103,6 @@ const ServiceAccountsTabs = () => {
     setCreatedService({ name: '', token: '' });
   };
 
-  const handleCloseConfirmation = () => {
-    setServiceId('');
-    setConfirmation(false);
-  };
-
   const handleCreate = async () => {
     if (name) {
       try {
@@ -99,8 +111,8 @@ const ServiceAccountsTabs = () => {
         setTokenDialog(true);
         setCreatedService(response.data);
         await fetchServiceAccounts();
-      } catch (e) {
-        console.log(e);
+      } catch (error) {
+        throw error;
       }
     }
   };
@@ -112,20 +124,8 @@ const ServiceAccountsTabs = () => {
       setTokenDialog(true);
       setCreatedService(response.data);
       await fetchServiceAccounts();
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  const fetchServiceAccounts = async () => {
-    try {
-      const axiosResponse = await getServiceAccounts();
-      if (axiosResponse.data && axiosResponse.data.services) {
-        const services = axiosResponse.data.services;
-        setServiceAccounts(services);
-      }
-    } catch (e) {
-      console.log(e);
+    } catch (error) {
+      throw error;
     }
   };
 

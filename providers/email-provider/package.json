@@ -15,9 +15,16 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/client": "^7.4.7",
+
+    "await-to-js": "^3.0.0",
     "lodash": "^4.17.20",
+    "mailgun-js": "^0.22.0",
+    "mandrill-api": "^1.0.45",
     "nodemailer": "^6.4.16",
     "nodemailer-mailgun-transport": "^2.0.0",
+    "nodemailer-mandrill-transport": "^1.2.0",
+    "nodemailer-sendgrid": "^1.0.3",
     "snyk": "^1.321.0"
   },
   "directories": {
@@ -36,7 +43,9 @@
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
+    "@types/mailgun-js": "^0.22.12",
     "@types/lodash": "^4.14.149",
+    "@types/mandrill-api": "^1.0.30",
     "@types/mocha": "^7.0.2",
     "@types/nodemailer": "^6.4.0",
     "@types/nodemailer-mailgun-transport": "^1.4.1",
