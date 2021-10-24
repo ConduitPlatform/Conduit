@@ -12,8 +12,8 @@ services:
     links:
       - redis
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
 
   database-provider:
     image: "quintessential.azurecr.io/conduit-database:${IMAGE_TAG}"
