@@ -15,7 +15,7 @@ let adminPaths = require('../admin/admin.json').functions;
 var protoLoader = require('@grpc/proto-loader');
 var PROTO_PATH = __dirname + '/router.proto';
 
-export class AgoraRouter {
+export class ExampleRouter {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
       keepCase: true,
@@ -37,14 +37,14 @@ export class AgoraRouter {
     });
     this._url = process.env.SERVICE_URL || '0.0.0.0:' + result;
 
-    let suppliers = new Stuff(grpcSdk);
+    let stuffController = new Stuff(grpcSdk);
 
     grpcServer.addService(router.service, {
-      reviewOrder: suppliers.reviewOrder.bind(suppliers),
-      myOrdersSupplier: suppliers.myOrdersSupplier.bind(suppliers),
-      getSupplierCustomers: suppliers.getSupplierCustomers.bind(suppliers),
-      deleteSupplierCustomer: suppliers.deleteSupplierCustomer.bind(suppliers),
-      getSupplierCustomersExport: suppliers.getSupplierCustomersXLSX.bind(suppliers),
+      getStuff: stuffController.getStuff.bind(stuffController),
+      updateStuff: stuffController.updateStuff.bind(stuffController),
+      updatePartOfStuff: stuffController.updatePartOfStuff.bind(stuffController),
+      deleteStuff: stuffController.deleteStuff.bind(stuffController),
+      createStuff: stuffController.createStuff.bind(stuffController),
     });
 
     new AdminHandlers(grpcServer, grpcSdk);
@@ -66,27 +66,112 @@ export class AgoraRouter {
       constructRoute(
         new ConduitRoute(
           {
-            bodyParams: {
-              deliveryAddress: {
-                fullName: { type: TYPE.String, required: true },
-                address: { type: TYPE.String, required: true },
-                area: { type: TYPE.String, required: true },
-                postCode: { type: TYPE.Number, required: true },
-                phone: { type: TYPE.String, required: true },
+            queryParams: {
+              skip: {
+                type: TYPE.Number,
+                required: true,
               },
-              store: { type: TYPE.String, required: true },
-              supplier: { type: TYPE.String, required: true },
-              deliveryDate: { type: TYPE.Date, required: true },
-              comments: { type: TYPE.String, required: true },
+              limit: {
+                type: TYPE.Number,
+                required: true,
+              },
+              sort: {
+                type: [TYPE.String],
+                required: false,
+              },
             },
-            action: ConduitRouteActions.POST,
-            path: '/services/submitOrder',
+            action: ConduitRouteActions.GET,
+            path: '/services/stuff',
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('SubmitOrderResponse', {
-            orderNumber: TYPE.String,
+          new ConduitRouteReturnDefinition('GetStuffResponse', {
+            documents: ['Stuff'],
+            documentsCount: TYPE.Number,
           }),
-          'submitOrder'
+          'getStuff'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            bodyParams: {
+              // add here all the params included in the schema
+              // Since this is a UPDATE(PUT) endpoint,
+              // the client needs to provide all fields
+            },
+            urlParams: {
+              id: { type: TYPE.String, required: true },
+            },
+            action: ConduitRouteActions.UPDATE,
+            path: '/services/stuff/:id',
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('UpdateStuffResponse', {
+            // add here all the fields included in the schema
+          }),
+          'updateStuff'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            bodyParams: {
+              // add here all the params included in the schema
+              // Since this is a PATCH endpoint,
+              // the client does not need to provide all fields
+            },
+            urlParams: {
+              id: { type: TYPE.String, required: true },
+            },
+            action: ConduitRouteActions.PATCH,
+            path: '/services/stuff/:id',
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('UpdatePartOfStuffResponse', {
+            // add here all the fields included in the schema
+          }),
+          'updatePartOfStuff'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            urlParams: {
+              id: { type: TYPE.String, required: true },
+            },
+            action: ConduitRouteActions.DELETE,
+            path: '/services/stuff/:id',
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('Stuff', 'String'),
+          'deleteStuff'
+        )
+      )
+    );
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            bodyParams: {
+              // add here all the params required by the schema
+            },
+            action: ConduitRouteActions.POST,
+            path: '/services/stuff',
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('Stuff', {
+            // add here all the fields included in the schema
+          }),
+          'createStuff'
         )
       )
     );

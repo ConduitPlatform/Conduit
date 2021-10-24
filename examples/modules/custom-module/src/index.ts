@@ -1,11 +1,11 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import * as process from 'process';
-import { AgoraRouter } from './router/Routes';
+import { ExampleRouter } from './router/Routes';
 
 if (process.env.CONDUIT_URL) {
   let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_URL, 'my-custom-service');
-  let wms = new AgoraRouter(grpcSdk);
-  let url = wms.url;
+  let exampleRouter = new ExampleRouter(grpcSdk);
+  let url = exampleRouter.url;
   if (process.env.REGISTER_NAME === 'true') {
     url = 'my-custom-service:' + url.split(':')[1];
   }

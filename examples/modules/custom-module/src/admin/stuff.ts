@@ -51,6 +51,7 @@ export class Stuff {
     if (!params.id) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
     }
+
     if (!params.supplier) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
@@ -58,7 +59,15 @@ export class Stuff {
       });
     }
 
-    return callback(null, { result: JSON.stringify({ ...supplier }) });
+    // This will replace the document in effect, if we wanted to simply patch the document
+    // then wee need to add "true" in the updateProvidedOnly argument
+    let updated = await this.grpcSdk.databaseProvider!.findByIdAndUpdate(
+      'Stuff',
+      params.id,
+      { ...params.supplier }
+    );
+
+    return callback(null, { result: JSON.stringify({ ...updated }) });
   }
 
   async updatePartOfStuff(call: any, callback: any) {
@@ -68,14 +77,20 @@ export class Stuff {
     if (!params.id) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
     }
-    if (!params.supplier) {
+    if (!params.stuff) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'supplier is required',
+        message: 'stuff is required',
       });
     }
-
-    return callback(null, { result: JSON.stringify({ ...supplier }) });
+    // This will only update provided fields
+    let updated = await this.grpcSdk.databaseProvider!.findByIdAndUpdate(
+      'Stuff',
+      params.id,
+      { ...params.stuff },
+      true
+    );
+    return callback(null, { result: JSON.stringify({ ...updated }) });
   }
 
   async createStuff(call: any, callback: any) {
@@ -85,14 +100,17 @@ export class Stuff {
     if (!params.id) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
     }
-    if (!params.supplier) {
+    if (!params.stuff) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
-        message: 'supplier is required',
+        message: 'stuff is required',
       });
     }
 
-    return callback(null, { result: JSON.stringify({ ...supplier }) });
+    let created = await this.grpcSdk.databaseProvider!.create('Stuff', {
+      ...params.stuff,
+    });
+    return callback(null, { result: JSON.stringify({ ...created }) });
   }
 
   async deleteStuff(call: any, callback: any) {
@@ -100,16 +118,15 @@ export class Stuff {
     if (!params.id) {
       return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'id is required' });
     }
-    let supplier = await this.grpcSdk.databaseProvider!.findOne('suppliers', {
+    let stuff = await this.grpcSdk.databaseProvider!.findOne('Stuff', {
       _id: params.id,
     });
 
-    if (!supplier) {
-      return callback({ code: grpc.status.NOT_FOUND, message: 'Supplier not found' });
+    if (!stuff) {
+      return callback({ code: grpc.status.NOT_FOUND, message: 'Stuff not found' });
     }
 
-    await this.grpcSdk.databaseProvider!.deleteOne('suppliers', { _id: params.id });
-    await this.grpcSdk.authentication!.userDelete(supplier.user);
+    await this.grpcSdk.databaseProvider!.deleteOne('Stuff', { _id: params.id });
 
     return callback(null, { result: 'Done' });
   }
