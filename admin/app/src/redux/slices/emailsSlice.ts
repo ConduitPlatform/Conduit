@@ -97,11 +97,11 @@ export const asyncGetExternalTemplates = createAsyncThunk(
 
 export const asyncUploadTemplate = createAsyncThunk(
   'emails/uploadTemplate',
-  async (params: { name: string; body: string; subject: string }, thunkAPI) => {
+  async (_id: string, thunkAPI) => {
     try {
-      const { data } = await uploadTemplateRequest(params);
+      await uploadTemplateRequest(_id);
       thunkAPI.dispatch(setAppDefaults());
-      return data;
+      return _id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -279,6 +279,12 @@ const emailsSlice = createSlice({
     });
     builder.addCase(asyncSendEmail.fulfilled, () => {
       //handle success
+    });
+    builder.addCase(asyncUploadTemplate.fulfilled, (state, action) => {
+      const templateToUpdate = state.data.templateDocuments.find(
+        (template) => template._id === action.payload
+      );
+      if (templateToUpdate !== undefined) templateToUpdate.externalManaged = true;
     });
   },
 });
