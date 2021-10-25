@@ -47,6 +47,7 @@ export class AdminHandlers {
     const { _id } = JSON.parse(
       call.request.params
     );
+
     if( isNil(_id)) {
       return callback({
         code: status.INTERNAL,
