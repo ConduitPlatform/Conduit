@@ -250,21 +250,12 @@ export class AdminHandlers {
     variables = variables.filter(
       (value: any, index: any) => variables.indexOf(value) === index
     );
-    if(!externalManaged) {
-      if ((isNil(name) || isNil(subject) || isNil(body))) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Required fields are missing',
-        });
-      }
-    }
-    else{
-      if(isNil(name) || isNil(body)){
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Required fields are missing',
-        });
-      }
+
+    if ((isNil(name) || isNil(subject) || isNil(body))) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Required fields are missing',
+      });
     }
 
     if (externalManaged) {
