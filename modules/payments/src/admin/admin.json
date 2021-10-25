@@ -4,6 +4,21 @@
       "path": "/products",
       "method": "POST",
       "protoName": "createProduct"
+    },
+    {
+      "path": "/customer",
+      "method": "POST",
+      "protoName": "createCustomer"
+    },
+    {
+      "path": "/customer/:id",
+      "method": "PUT",
+      "protoName": "updateCustomer"
+    },
+    {
+      "path": "/customer",
+      "method": "GET",
+      "protoName": "getCustomers"
     }
   ]
 }
