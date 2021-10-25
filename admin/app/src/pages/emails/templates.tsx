@@ -196,12 +196,16 @@ const Templates = () => {
           dispatch(enqueueInfoNotification('The selected template is already uploaded'));
           return;
         }
-        const templateToUpload = {
-          name: currentTemplate.name,
-          body: currentTemplate.body,
-          subject: currentTemplate.subject,
-        };
-        dispatch(asyncUploadTemplate(templateToUpload));
+
+        if (currentTemplate._id !== undefined) {
+          const templateToUpload = {
+            name: currentTemplate.name,
+            body: currentTemplate.body,
+            subject: currentTemplate.subject,
+            _id: currentTemplate._id,
+          };
+          dispatch(asyncUploadTemplate(templateToUpload));
+        }
       }
     }
   };
@@ -359,7 +363,7 @@ const Templates = () => {
       ) : (
         <Typography>No available templates</Typography>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
         {!importTemplate ? (
           <Box>
             <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
