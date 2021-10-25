@@ -1,7 +1,10 @@
 version: "3.9"
 services:
+  redis:
+    image: redis
+
   core:
-    image: quintessential.azurecr.io/conduit:latest
+    image: "quintessential.azurecr.io/conduit:${IMAGE_TAG}"
     ports:
       - "55152:55152"
       - "3000:3000"
@@ -9,18 +12,43 @@ services:
     links:
       - redis
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+
   database-provider:
-    image: quintessential.azurecr.io/conduit-database:latest
+    image: "quintessential.azurecr.io/conduit-database:${IMAGE_TAG}"
     ports:
       - "55153:55153"
     links:
       - core
+    depends_on:
+      - core
     environment:
-      - databaseURL=REPLACE_ME_WITH_CREDENTIALS
-      - SERVICE_URL=0.0.0.0:55153
-      - REGISTER_NAME=true
-      - CONDUIT_SERVER=core:55152
-  redis:
-    image: redis
+      databaseURL: "${_MONGO_URL}"
+      SERVICE_URL: 0.0.0.0:55153
+      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: core:55152
+
+  authentication:
+    image: "quintessential.azurecr.io/conduit-authentication:${_IMAGE_TAG}"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - database-provider
+    links:
+      - core
+    environment:
+      CONDUIT_SERVER: core:55152
+
+  # admin:
+  #   image: quintessential.azurecr.io/conduit-admin:${__IMAGE_tAG}
+  #   links:
+  #     - core
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - authentication
+  #   environment:
+  #     CONDUIT_API: core:3000
+  #     CONDUIT_URL: admin:8080
+  #     MASTER_KEY: M4ST3RK3Y
