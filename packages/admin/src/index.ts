@@ -422,13 +422,7 @@ export default class AdminModule extends IConduitAdmin {
             let sendResult = result.result;
             try {
               sendResult = JSON.parse(result.result);
-            } catch (error) {
-              return res.status(500).json({
-                name: 'INTERNAL_SERVER_ERROR',
-                status: 500,
-                message: 'Failed to parse service response!',
-              });
-            }
+            } catch (error) {}
             res.status(200).json(sendResult);
           } else if (result.redirect) {
             res.redirect(result.redirect);
