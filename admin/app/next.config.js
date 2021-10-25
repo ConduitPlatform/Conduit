@@ -9,7 +9,7 @@ module.exports = (phase) => {
 
   const env = {
     CONDUIT_URL: (() => {
-      if (isDev) return 'http://localhost:3000';
+      if (isDev) return 'https://conduit-core.dev.quintessential.gr';
       if (isProd) {
         return process.env.CONDUIT_URL;
       }
