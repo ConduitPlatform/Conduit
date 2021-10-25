@@ -1,27 +1,15 @@
-import { Button, Grid, InputAdornment, TextField, Typography } from '@material-ui/core';
-import React, { FC, useEffect, useState } from 'react';
+import { Button, Grid, Typography } from '@material-ui/core';
+import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
-import { asyncGetEmailTemplates } from '../../redux/slices/emailsSlice';
-import SearchIcon from '@material-ui/icons/Search';
+import { useAppDispatch } from '../../redux/store';
+import { EmailUI } from '../../models/emails/EmailModels';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import DataTable from '../common/DataTable';
-import Paginator from '../common/Paginator';
-import StorageCreateDrawer from './StorageCreateDrawer';
-import StorageAddDrawer from './StorageAddDrawer';
 import {
-  asyncAddStorageContainer,
-  asyncAddStorageFile,
-  asyncAddStorageFolder,
-  asyncDeleteStorageFile,
-  asyncGetStorageContainers,
-  asyncGetStorageFile,
+  asyncGetStorageContainerData,
   asyncGetStorageFiles,
   asyncGetStorageFolders,
-  asyncUpdateStorageFile,
 } from '../../redux/slices/storageSlice';
-import { IContainer } from '../../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -75,7 +63,7 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate }) => {
   const actions = [deleteAction];
 
   const handleGetSomeData = () => {
-    dispatch(asyncGetStorageFiles());
+    dispatch(asyncGetStorageContainerData());
   };
 
   return (

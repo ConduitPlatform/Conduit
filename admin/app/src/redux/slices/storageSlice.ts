@@ -17,6 +17,7 @@ import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
 import { base64example } from '../../assets/svgs/ExampleBase64';
+import { concat } from 'lodash';
 
 interface IStorageSlice {
   data: {
@@ -25,8 +26,10 @@ interface IStorageSlice {
       containers: IContainer[];
       containersCount: number;
     };
-    folders: any;
-    files: any;
+    containerData: {
+      totalCount: number;
+      data: any;
+    };
   };
 }
 
@@ -50,8 +53,10 @@ const initialState: IStorageSlice = {
       containers: [],
       containersCount: 0,
     },
-    folders: [],
-    files: [],
+    containerData: {
+      totalCount: 0,
+      data: null,
+    },
   },
 };
 
@@ -114,16 +119,9 @@ export const asyncGetStorageFolders = createAsyncThunk(
   async (arg, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const params = {
-        skip: 0,
-        limit: 10,
-        container: 'conduit',
-        // parent:
-      };
-      const { data } = await getStorageFolders(params);
-      console.log('success', data);
+      // console.log('asyncGetStorageFolders', data);
       thunkAPI.dispatch(setAppDefaults());
-      return data;
+      // return data;
     } catch (error) {
       console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
@@ -145,9 +143,57 @@ export const asyncGetStorageFiles = createAsyncThunk(
         container: 'test',
       };
       const { data } = await getStorageFiles(params);
-      console.log('success', data);
+      console.log('asyncGetStorageFiles', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
+    } catch (error) {
+      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncGetStorageContainerData = createAsyncThunk(
+  'storage/getStorageContainerData',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const skip = 0;
+      const limit = 10;
+
+      const folderParams = {
+        skip: skip,
+        limit: limit,
+        container: 'conduit',
+        // parent:
+      };
+      const { data: folderData } = await getStorageFolders(folderParams);
+      const folderLength = folderData.folders.length;
+
+      let fileSkip = 0;
+      let fileLimit = 10;
+      if (folderLength <= limit) {
+        fileLimit = limit - folderLength;
+      }
+      if (folderLength <= skip) {
+        fileSkip = skip - folderLength;
+      }
+
+      const fileParams = {
+        skip: fileSkip,
+        limit: fileLimit,
+        // folder: 'images',
+        container: 'test',
+      };
+      const { data: fileData } = await getStorageFiles(fileParams);
+      console.log('fileData', fileData);
+
+      const newArray = concat(folderData.folders, fileData.files);
+
+      console.log('newArray', newArray);
+      thunkAPI.dispatch(setAppDefaults());
     } catch (error) {
       console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));

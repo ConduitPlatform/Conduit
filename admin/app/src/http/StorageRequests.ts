@@ -38,12 +38,14 @@ export const getStorageFiles = (fileData: {
   limit: number;
   container: string;
   folder?: string;
-}) =>
-  axios.get(`${CONDUIT_API}/admin/storage/file`, {
+}) => {
+  if (fileData.limit === 0) return { data: undefined };
+  return axios.get(`${CONDUIT_API}/admin/storage/file`, {
     params: {
       ...fileData,
     },
   });
+};
 
 export const getStorageFile = (id: string) => axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
 

@@ -8,11 +8,6 @@ import StorageAddDrawer from './StorageAddDrawer';
 
 const useStyles = makeStyles(() => ({}));
 
-interface IParent {
-  name: string;
-  type: 'container' | 'folder' | null;
-}
-
 const StorageFiles = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
@@ -21,11 +16,7 @@ const StorageFiles = () => {
     containers: { containers, containersCount },
   } = useAppSelector((state) => state.storageSlice.data);
 
-  const [parent, setParent] = useState<IParent>({
-    name: '',
-    type: 'container',
-  });
-  const [path, setPath] = useState<string>('/module/folder/file');
+  const [path, setPath] = useState<string>('/');
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
@@ -33,12 +24,12 @@ const StorageFiles = () => {
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (parent.type === 'container') {
+    if (path === '/') {
       dispatch(asyncGetStorageContainers({ skip, limit }));
       return;
     }
     // dispatch(asyncGetStorageFiles({ skip, limit }));
-  }, [dispatch, limit, parent, skip]);
+  }, [dispatch, limit, path, skip]);
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
