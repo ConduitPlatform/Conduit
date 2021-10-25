@@ -17,7 +17,12 @@ export const SubscriptionSchema = new ConduitSchema(
       model: 'PaymentsCustomer',
     },
     activeUntil: TYPE.Date,
-    transactions: TYPE.ObjectId,
+    transactions: [
+      {
+        type: TYPE.Relation,
+        model: 'Transaction',
+      },
+    ],
     provider: TYPE.String,
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
