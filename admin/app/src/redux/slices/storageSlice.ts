@@ -114,47 +114,6 @@ export const asyncGetStorageContainers = createAsyncThunk(
   }
 );
 
-export const asyncGetStorageFolders = createAsyncThunk(
-  'storage/getStorageFolders',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      // console.log('asyncGetStorageFolders', data);
-      thunkAPI.dispatch(setAppDefaults());
-      // return data;
-    } catch (error) {
-      console.log('error', error);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
-export const asyncGetStorageFiles = createAsyncThunk(
-  'storage/getStorageFiles',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const params = {
-        skip: 0,
-        limit: 10,
-        folder: 'images',
-        container: 'test',
-      };
-      const { data } = await getStorageFiles(params);
-      console.log('asyncGetStorageFiles', data);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      console.log('error', error);
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 export const asyncGetStorageContainerData = createAsyncThunk(
   'storage/getStorageContainerData',
   async (params: { skip: number; limit: number; container: string; folder: string }, thunkAPI) => {

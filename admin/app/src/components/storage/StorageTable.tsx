@@ -26,22 +26,39 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  data: any;
+  containers: any;
+  containerData: any;
   path: string;
   handleAdd: any;
   handleCreate: any;
   handlePathClick: (value: string) => void;
 }
 
-const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePathClick }) => {
+const StorageTable: FC<Props> = ({
+  containers,
+  containerData,
+  path,
+  handleAdd,
+  handleCreate,
+  handlePathClick,
+}) => {
   const classes = useStyles();
 
   const formatData = () => {
-    return data.map((container: any) => {
+    if (path === '/')
+      return containers.map((item: any) => {
+        return {
+          icon: <FolderIcon />,
+          Name: item.name,
+          isPublic: item.isPublic,
+        };
+      });
+    return containerData.map((item: any) => {
       return {
         icon: <FolderIcon />,
-        Name: container.name,
-        isPublic: container.isPublic,
+        Name: item.name,
+        isPublic: item.isPublic,
+        mimeType: item.mimeType,
       };
     });
   };
@@ -62,7 +79,8 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePa
 
   const actions = [deleteAction];
 
-  const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }];
+  const containerHeaders = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }];
+  const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }, { title: 'mimeType' }];
 
   const onPathClick = (item: string, index?: number) => {
     const splitPath = path.split('/');
@@ -76,7 +94,7 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePa
       handlePathClick('/');
       return;
     }
-    if (path.split('/')[1]) {
+    if (splitPath[1]) {
       handlePathClick(`${path}/${item}`);
       return;
     }
@@ -118,16 +136,14 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePa
           </Button>
         </Grid>
       </Grid>
-      {data.length > 0 && (
-        <DataTable
-          dsData={formatData()}
-          actions={actions}
-          handleAction={handleAction}
-          selectable={false}
-          handleRowClick={(value) => onPathClick(value.Name)}
-          headers={headers}
-        />
-      )}
+      <DataTable
+        dsData={formatData()}
+        actions={actions}
+        handleAction={handleAction}
+        selectable={false}
+        handleRowClick={(value) => onPathClick(value.Name)}
+        headers={path === '/' ? containerHeaders : headers}
+      />
       {/*{templateDocuments.length > 0 && (*/}
       {/*  <Grid container style={{ marginTop: '-8px' }}>*/}
       {/*    <Grid item xs={7} />*/}

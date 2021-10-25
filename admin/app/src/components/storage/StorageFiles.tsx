@@ -5,7 +5,6 @@ import StorageTable from './StorageTable';
 import {
   asyncGetStorageContainerData,
   asyncGetStorageContainers,
-  asyncGetStorageFiles,
 } from '../../redux/slices/storageSlice';
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
@@ -80,7 +79,8 @@ const StorageFiles = () => {
   return (
     <>
       <StorageTable
-        data={path === '/' ? containers : data}
+        containers={containers}
+        containerData={data}
         path={path}
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
