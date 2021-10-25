@@ -44,17 +44,42 @@ export class AdminHandlers {
   }
 
   async uploadTemplate(call: RouterRequest, callback: RouterResponse){
-    const { template } = JSON.parse(
+    const { _id } = JSON.parse(
       call.request.params
     );
-    const {name,body} = template;
-    if( isNil(name) || isNil(body)) {
+
+    if( isNil(_id)) {
       return callback({
         code: status.INTERNAL,
-        message: 'Body/name is missing!',
+        message: 'id must be provided!',
       });
     }
     let errorMessage;
+    const templateDocument = await this.database
+      .findOne('EmailTemplate', { _id: _id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    if(templateDocument){
+      templateDocument['externalManaged'] = true;
+      await this.database
+        .findByIdAndUpdate('EmailTemplate',_id,templateDocument)
+        .catch((e: any) => (errorMessage = e.message));
+
+      if (!isNil(errorMessage))
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+    }
+    const template = {
+      name: templateDocument.name,
+      body: templateDocument.body,
+    }
     const created = await (this.emailService.createExternalTemplate(template) as any)
     .catch((e: any) => (errorMessage = e.message));
       if(!isNil(errorMessage)){
