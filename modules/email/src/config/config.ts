@@ -18,26 +18,22 @@ export default {
       apiKey: {
         doc: 'The email service API key',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
       domain: {
         doc: 'The domain for the emails',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
       host: {
         doc: 'The host for email service',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
       proxy: {
         doc: 'The email proxy',
         format: '*',
-        default: null,
-        nullable: true,
+        default: '',
       },
     },
     smtp: {
@@ -47,31 +43,26 @@ export default {
       port: {
         doc: 'The port the SMTP server is listening on',
         format: 'Number',
-        default: null,
-        nullable: true,
+        default: '',
       },
       host: {
         doc: 'The SMTP server address',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
       auth: {
         doc: 'The SMTP server auth details',
         username: {
           format: 'String',
-          default: null,
-          nullable: true,
+          default: '',
         },
         password: {
           format: 'String',
-          default: null,
-          nullable: true,
+          default: '',
         },
         method: {
           format: 'String',
-          default: null,
-          nullable: true,
+          default: '',
         },
       },
     },
@@ -82,8 +73,7 @@ export default {
       apiKey: {
         doc: 'The Mandrill API key',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
     },
     sendgrid: {
@@ -93,15 +83,13 @@ export default {
       apiKey: {
         doc: 'The SendGrid API key',
         format: 'String',
-        default: null,
-        nullable: true,
+        default: '',
       },
       apiUser: {
         doc: 'The SendGrid API username',
         format: 'String',
-        default: null,
-        nullable: true,
-      }
-    }
+        default: '',
+      },
+    },
   },
 };

@@ -11,8 +11,7 @@ export default {
     },
     secret_key: {
       format: 'String',
-      default: null,
-      nullable: true,
+      default: '',
     },
   },
 };
