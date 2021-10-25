@@ -97,16 +97,11 @@ export const asyncGetExternalTemplates = createAsyncThunk(
 
 export const asyncUploadTemplate = createAsyncThunk(
   'emails/uploadTemplate',
-  async (params: { name: string; body: string; subject: string; _id: string }, thunkAPI) => {
+  async (_id: string, thunkAPI) => {
     try {
-      const { data } = await uploadTemplateRequest(
-        params.name,
-        params.body,
-        params.subject,
-        params._id
-      );
+      await uploadTemplateRequest(_id);
       thunkAPI.dispatch(setAppDefaults());
-      return params._id;
+      return _id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));

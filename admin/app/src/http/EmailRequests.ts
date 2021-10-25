@@ -19,9 +19,8 @@ export const putEmailTemplateRequest = (templateId: string, data: EmailData) =>
 export const deleteEmailTemplateRequest = (ids: string[]) => {
   return axios.delete(`${CONDUIT_API}/admin/email/templates`, { data: { ids: ids } });
 };
-export const uploadTemplateRequest = (name: string, body: string, subject: string, _id: string) =>
+export const uploadTemplateRequest = (_id: string) =>
   axios.post(`${CONDUIT_API}/admin/email/templates/upload`, {
-    template: { name, body, subject },
     _id,
   });
 

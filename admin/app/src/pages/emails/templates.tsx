@@ -198,13 +198,7 @@ const Templates = () => {
         }
 
         if (currentTemplate._id !== undefined) {
-          const templateToUpload = {
-            name: currentTemplate.name,
-            body: currentTemplate.body,
-            subject: currentTemplate.subject,
-            _id: currentTemplate._id,
-          };
-          dispatch(asyncUploadTemplate(templateToUpload));
+          dispatch(asyncUploadTemplate(currentTemplate._id));
         }
       }
     }
