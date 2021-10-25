@@ -1,10 +1,14 @@
-import { Button, Grid, Typography } from '@material-ui/core';
 import React, { FC } from 'react';
+import { Button, Grid, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { EmailUI } from '../../models/emails/EmailModels';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import DataTable from '../common/DataTable';
 import FolderIcon from '@material-ui/icons/Folder';
+import DescriptionIcon from '@material-ui/icons/Description';
+import FolderOpenIcon from '@material-ui/icons/FolderOpen';
+import { asyncGetStorageFile } from '../../redux/slices/storageSlice';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -43,19 +47,20 @@ const StorageTable: FC<Props> = ({
   handlePathClick,
 }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const formatData = () => {
     if (path === '/')
       return containers.map((item: any) => {
         return {
-          icon: <FolderIcon />,
+          icon: <FolderOpenIcon />,
           Name: item.name,
           isPublic: item.isPublic,
         };
       });
     return containerData.map((item: any) => {
       return {
-        icon: <FolderIcon />,
+        icon: item.isFile ? <DescriptionIcon /> : <FolderIcon />,
         Name: item.name,
         isPublic: item.isPublic,
         mimeType: item.mimeType,
@@ -83,6 +88,13 @@ const StorageTable: FC<Props> = ({
   const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }, { title: 'mimeType' }];
 
   const onPathClick = (item: string, index?: number) => {
+    // if (containerData.length > 0) {
+    const file = containerData.find((itemFile: any) => itemFile.name === item);
+
+    if (file) {
+      dispatch(asyncGetStorageFile(file._id));
+      return;
+    }
     const splitPath = path.split('/');
     if (index === splitPath.length - 1) return;
     if (index && splitPath.length - index >= 2) {

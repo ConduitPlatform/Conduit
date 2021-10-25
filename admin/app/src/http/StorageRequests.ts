@@ -45,7 +45,8 @@ export const getStorageFiles = (fileData: {
     },
   });
 
-export const getStorageFile = (id: string) => axios.get(`${CONDUIT_API}/admin/storage/file/${id}`);
+export const getStorageFile = (id: string) =>
+  axios.get(`${CONDUIT_API}/admin/storage/file/${id}/data`);
 
 export const deleteStorageFile = (id: string) =>
   axios.delete(`${CONDUIT_API}/admin/storage/file/${id}`);

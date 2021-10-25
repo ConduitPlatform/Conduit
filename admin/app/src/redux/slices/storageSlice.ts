@@ -104,7 +104,14 @@ export const asyncGetStorageContainers = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getStorageContainers(params);
+      // const containerData = data.containers.map((container: any) => {
+      //   return Object.assign(container, { isContainer: true });
+      // });
       thunkAPI.dispatch(setAppDefaults());
+      // return {
+      //   containers: containerData,
+      //   containersCount: data.containersCount,
+      // };
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -144,13 +151,17 @@ export const asyncGetStorageContainerData = createAsyncThunk(
         container: params.container,
       };
       const { data: fileData } = await getStorageFiles(fileParams);
+      const newFileData = fileData.files.map((file: any) => {
+        return Object.assign(file, { isFile: true });
+      });
+
       const totalCount = folderData.folderCount + fileData.filesCount;
 
       thunkAPI.dispatch(setAppDefaults());
       if (fileLimit < 1) {
         return { data: folderData.folders, totalCount: totalCount };
       }
-      return { data: concat(folderData.folders, fileData.files), totalCount: totalCount };
+      return { data: concat(folderData.folders, newFileData), totalCount: totalCount };
     } catch (error) {
       console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
@@ -200,11 +211,9 @@ export const asyncAddStorageContainer = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await createStorageContainer(containerData);
-      console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -214,16 +223,14 @@ export const asyncAddStorageContainer = createAsyncThunk(
 
 export const asyncGetStorageFile = createAsyncThunk(
   'storage/getStorageFile',
-  async (arg, thunkAPI) => {
+  async (id: string, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const fileId = '61714e908afe4116b6882ea9';
-      const { data } = await getStorageFile(fileId);
+      const { data } = await getStorageFile(id);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
