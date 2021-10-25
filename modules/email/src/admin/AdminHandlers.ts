@@ -241,6 +241,7 @@ export class AdminHandlers {
     const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
     );
+
     let externalId = undefined;
     const body_vars = getHBValues(body);
     const subject_vars = getHBValues(subject);
@@ -249,13 +250,25 @@ export class AdminHandlers {
     variables = variables.filter(
       (value: any, index: any) => variables.indexOf(value) === index
     );
-    if (isNil(name) || isNil(subject) || isNil(body)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+    if(!externalManaged) {
+      if ((isNil(name) || isNil(subject) || isNil(body))) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Required fields are missing',
+        });
+      }
     }
+    else{
+      if(isNil(name) || isNil(body)){
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Required fields are missing',
+        });
+      }
+    }
+
     if (externalManaged) {
+
       if (isNil(_id)) {
         //that means that we want to create an external managed template
         const [err, template] = await to(
