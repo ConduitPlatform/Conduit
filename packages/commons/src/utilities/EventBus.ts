@@ -27,9 +27,17 @@ export class EventBus {
     const self = this;
     this._clientSubscriber.on('message', (channel: string, message: string) => {
       if (channel !== channelName) return;
-      if (message.indexOf(self._signature) === -1) {
+      // if the message supports the signature
+      if (message.indexOf('CND_Signature') !== -1) {
+        // if the message does not contain this module's signature
+        if (message.indexOf(self._signature) === -1) {
+          self._subscribedChannels[channelName].forEach((fn) => {
+            fn(message.split('CND_Signature:')[0]);
+          });
+        }
+      } else {
         self._subscribedChannels[channelName].forEach((fn) => {
-          fn(message.slice(message.indexOf('CND_Signature:')));
+          fn(message);
         });
       }
     });
