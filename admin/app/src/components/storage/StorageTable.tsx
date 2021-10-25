@@ -64,20 +64,23 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePa
 
   const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }];
 
-  const onPathClick = (item: string, index: number) => {
+  const onPathClick = (item: string, index?: number) => {
+    const splitPath = path.split('/');
+    if (index === splitPath.length - 1) return;
+    if (index && splitPath.length - index >= 2) {
+      const newPath = splitPath.slice(0, index);
+      handlePathClick(`${newPath.join('/')}/${item}`);
+      return;
+    }
     if (index === 0) {
       handlePathClick('/');
       return;
     }
-    handlePathClick(`${path}/${item}`);
-  }; //combine these two
-
-  const onRowClick = (value: { Name: string; isPublic: boolean }) => {
     if (path.split('/')[1]) {
-      handlePathClick(`${path}/${value.Name}`);
+      handlePathClick(`${path}/${item}`);
       return;
     }
-    handlePathClick(`${path}${value.Name}`);
+    handlePathClick(`${path}${item}`);
   };
 
   return (
@@ -121,7 +124,7 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePa
           actions={actions}
           handleAction={handleAction}
           selectable={false}
-          handleRowClick={(value) => onRowClick(value)}
+          handleRowClick={(value) => onPathClick(value.Name)}
           headers={headers}
         />
       )}

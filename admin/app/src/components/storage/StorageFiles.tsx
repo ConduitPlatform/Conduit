@@ -33,12 +33,13 @@ const StorageFiles = () => {
       dispatch(asyncGetStorageContainers({ skip, limit }));
       return;
     }
+    const splitPath = path.split('/');
     dispatch(
       asyncGetStorageContainerData({
         skip: skip,
         limit: limit,
-        container: 'conduit',
-        folder: '',
+        container: splitPath[1],
+        folder: splitPath.length > 2 ? splitPath[splitPath.length - 1] : '',
       })
     );
   }, [dispatch, limit, path, skip]);
