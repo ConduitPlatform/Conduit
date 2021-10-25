@@ -64,8 +64,23 @@ export class AdminHandlers {
         message: errorMessage,
       });
 
+    const template = {
+      name: templateDocument.name,
+      body: templateDocument.body,
+    }
+
+    const created = await (this.emailService.createExternalTemplate(template) as any)
+      .catch((e: any) => (errorMessage = e.message));
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+
     if(templateDocument){
       templateDocument['externalManaged'] = true;
+      templateDocument['externalId'] =  created.id;
       await this.database
         .findByIdAndUpdate('EmailTemplate',_id,templateDocument)
         .catch((e: any) => (errorMessage = e.message));
@@ -76,18 +91,6 @@ export class AdminHandlers {
           message: errorMessage,
         });
     }
-    const template = {
-      name: templateDocument.name,
-      body: templateDocument.body,
-    }
-    const created = await (this.emailService.createExternalTemplate(template) as any)
-    .catch((e: any) => (errorMessage = e.message));
-      if(!isNil(errorMessage)){
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-      }
 
     return callback(null, { result: JSON.stringify({ created }) });
   }
