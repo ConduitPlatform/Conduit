@@ -125,6 +125,7 @@ const Templates = () => {
     };
     dispatch(asyncCreateNewEmailTemplate(newData));
     setSelectedTemplate(newData);
+    setDrawer(false);
   };
 
   const handleClose = () => {
@@ -329,7 +330,7 @@ const Templates = () => {
           </Button>
         </Grid>
       </Grid>
-      {templateDocuments.length > 0 && (
+      {templateDocuments.length > 0 ? (
         <>
           <DataTable
             sort={sort}
@@ -355,6 +356,8 @@ const Templates = () => {
             </Grid>
           </Grid>
         </>
+      ) : (
+        <Typography>No available templates</Typography>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
         {!importTemplate ? (
