@@ -33,6 +33,7 @@ import ExternalTemplates from '../../components/emails/ExternalTemplates';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 // import useDebounce from '../../hooks/useDebounce';
 
@@ -120,6 +121,7 @@ const Templates = () => {
       body: data.body,
       externalManaged: data.externalManaged,
       variables: data.variables,
+      _id: data._id,
     };
     dispatch(asyncCreateNewEmailTemplate(newData));
     setSelectedTemplate(newData);
@@ -189,6 +191,10 @@ const Templates = () => {
         setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
+        if (currentTemplate.externalManaged) {
+          dispatch(enqueueInfoNotification('The selected template is already uploaded'));
+          return;
+        }
         const templateToUpload = {
           name: currentTemplate.name,
           body: currentTemplate.body,
@@ -263,7 +269,7 @@ const Templates = () => {
   const headers = [
     { title: '_id', sort: '_id' },
     { title: 'Name', sort: 'name' },
-    { title: 'Externa;', sort: 'externalManaged' },
+    { title: 'External', sort: 'externalManaged' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 
