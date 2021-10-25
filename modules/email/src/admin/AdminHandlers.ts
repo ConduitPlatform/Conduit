@@ -44,14 +44,13 @@ export class AdminHandlers {
   }
 
   async uploadTemplate(call: RouterRequest, callback: RouterResponse){
-    const { _id,template } = JSON.parse(
+    const { _id } = JSON.parse(
       call.request.params
     );
-    const {name,body} = template;
-    if( isNil(name) || isNil(body) || isNil(_id)) {
+    if( isNil(_id)) {
       return callback({
         code: status.INTERNAL,
-        message: 'Body/name is missing!',
+        message: 'id must be provided!',
       });
     }
     let errorMessage;
@@ -75,6 +74,10 @@ export class AdminHandlers {
           code: status.INTERNAL,
           message: errorMessage,
         });
+    }
+    const template = {
+      name: templateDocument.name,
+      body: templateDocument.body,
     }
     const created = await (this.emailService.createExternalTemplate(template) as any)
     .catch((e: any) => (errorMessage = e.message));
