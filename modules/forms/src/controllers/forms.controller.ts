@@ -26,7 +26,6 @@ export class FormsController {
   }
 
   private async loadExistingForms() {
-    await this._adapter.createSchemaFromAdapter(FormsSchema);
     this._adapter
       .findMany('Forms', { enabled: true })
       .then((r: any) => {

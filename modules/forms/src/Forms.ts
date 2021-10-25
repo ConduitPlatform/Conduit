@@ -123,6 +123,8 @@ export default class FormsModule implements ConduitServiceModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
+      await this.registerSchemas();
+      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
       this._router = new FormRoutes(this.grpcServer, this.grpcSdk);
       this._formController = new FormsController(this.grpcSdk, this._router);
       this._admin = new AdminHandlers(
@@ -130,8 +132,6 @@ export default class FormsModule implements ConduitServiceModule {
         this.grpcSdk,
         this._formController
       );
-      await this.registerSchemas();
-      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
       this.isRunning = true;
     }
   }
