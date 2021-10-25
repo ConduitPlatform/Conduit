@@ -10,6 +10,7 @@ import {
   asyncGetStorageFiles,
   asyncGetStorageFolders,
 } from '../../redux/slices/storageSlice';
+import FolderIcon from '@material-ui/icons/Folder';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -26,15 +27,17 @@ interface Props {
   path: string;
   handleAdd: any;
   handleCreate: any;
+  handleRowClick: (data: any) => void;
 }
 
-const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate }) => {
+const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handleRowClick }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
   const formatData = () => {
     return data.map((container: any) => {
       return {
+        icon: <FolderIcon />,
         Name: container.name,
         isPublic: container.isPublic,
       };
@@ -50,9 +53,8 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate }) => {
     // }
   };
 
-  const handleRowClick = (value: { Name: string; isPublic: boolean }) => {
-    const foundContainer = data.find((container: any) => container.name === value.Name);
-    console.log('foundContainer', foundContainer);
+  const onRowClick = (value: { Name: string; isPublic: boolean }) => {
+    handleRowClick(value.Name);
   };
 
   const deleteAction = {
@@ -105,7 +107,7 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate }) => {
           actions={actions}
           handleAction={handleAction}
           selectable={false}
-          handleRowClick={(value) => handleRowClick(value)}
+          handleRowClick={(value) => onRowClick(value)}
         />
       )}
       {/*{templateDocuments.length > 0 && (*/}

@@ -14,6 +14,7 @@ const StorageFiles = () => {
 
   const {
     containers: { containers, containersCount },
+    containerData: { data, totalCount },
   } = useAppSelector((state) => state.storageSlice.data);
 
   const [path, setPath] = useState<string>('/');
@@ -22,6 +23,8 @@ const StorageFiles = () => {
   const [limit, setLimit] = useState<number>(10);
   const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
+
+  console.log('data', data);
 
   useEffect(() => {
     if (path === '/') {
@@ -60,13 +63,18 @@ const StorageFiles = () => {
     setDrawerCreateOpen(false);
   };
 
+  const handleRowClick = (rowData: any) => {
+    setPath(`/${rowData}`);
+  };
+
   return (
     <>
       <StorageTable
-        data={containers}
+        data={path === '/' ? containers : data}
         path={path}
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
+        handleRowClick={handleRowClick}
       />
       <StorageCreateDrawer
         open={drawerCreateOpen}

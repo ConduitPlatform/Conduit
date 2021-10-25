@@ -188,12 +188,13 @@ export const asyncGetStorageContainerData = createAsyncThunk(
         container: 'test',
       };
       const { data: fileData } = await getStorageFiles(fileParams);
-      console.log('fileData', fileData);
+      const totalCount = folderData.folderCount + fileData.filesCount;
 
-      const newArray = concat(folderData.folders, fileData.files);
-
-      console.log('newArray', newArray);
       thunkAPI.dispatch(setAppDefaults());
+      if (fileLimit < 1) {
+        return { data: folderData.folders, totalCount: totalCount };
+      }
+      return { data: concat(folderData.folders, fileData.files), totalCount: totalCount };
     } catch (error) {
       console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
@@ -335,6 +336,9 @@ const storageSlice = createSlice({
     });
     builder.addCase(asyncGetStorageContainers.fulfilled, (state, action) => {
       state.data.containers = action.payload;
+    });
+    builder.addCase(asyncGetStorageContainerData.fulfilled, (state, action) => {
+      state.data.containerData = action.payload;
     });
   },
 });

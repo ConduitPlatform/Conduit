@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { isValidElement } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -83,7 +83,17 @@ const DataTable: React.FC<Props> = ({
     if (moment(value, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true).isValid()) {
       return moment(value).format('DD/MM/YYYY');
     }
+    if (isValidElement(value)) {
+      return value;
+    }
     return value?.toString();
+  };
+
+  const getHeaderValues = (value: string) => {
+    if (value === 'icon') {
+      return '';
+    }
+    return value;
   };
 
   const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
@@ -133,7 +143,7 @@ const DataTable: React.FC<Props> = ({
                 align={headCell.numeric ? 'right' : 'left'}
                 padding={headCell.disablePadding ? 'none' : 'default'}>
                 <TableSortLabel active={false} direction={'asc'}>
-                  {headCell.label}
+                  {getHeaderValues(headCell.label)}
                 </TableSortLabel>
               </TableCell>
             ))}
