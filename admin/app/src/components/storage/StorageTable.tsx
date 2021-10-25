@@ -91,7 +91,7 @@ const StorageTable: FC<Props> = ({
     // if (containerData.length > 0) {
     const file = containerData.find((itemFile: any) => itemFile.name === item);
 
-    if (file) {
+    if (containerData.length > 0 && file.isFile) {
       dispatch(asyncGetStorageFile(file._id));
       return;
     }

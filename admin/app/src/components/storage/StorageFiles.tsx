@@ -28,11 +28,8 @@ const StorageFiles = () => {
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (path === '/') {
-      dispatch(asyncGetStorageContainers({ skip, limit }));
-      return;
-    }
     const splitPath = path.split('/');
+    dispatch(asyncGetStorageContainers({ skip, limit }));
     dispatch(
       asyncGetStorageContainerData({
         skip: skip,
