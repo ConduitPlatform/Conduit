@@ -76,6 +76,7 @@ const DataTable: React.FC<Props> = ({
   const rows = dsData;
 
   const onSelectedField = (index: string) => {
+    if (!setSort) return;
     setSort((prevState: any) => {
       if (prevState.index === index) {
         return { asc: !prevState.asc, index: index };
@@ -131,24 +132,28 @@ const DataTable: React.FC<Props> = ({
         <TableHead>
           <TableRow>
             {selectable && (
-            <TableCell className={classes.header} align="left" padding="none">
-              <Checkbox
-                color="primary"
-                onChange={onMenuItemSelectAll}
-                checked={selectedItems?.length === dsData.length}
-                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-              />
-            </TableCell>
+              <TableCell className={classes.header} align="left" padding="none">
+                <Checkbox
+                  color="primary"
+                  onChange={onMenuItemSelectAll}
+                  checked={selectedItems?.length === dsData.length}
+                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+                />
+              </TableCell>
             )}
-            {headers.map((header: any) => (
-              <TableCell className={classes.header} key={header.sort}>
-                <TableSortLabel
-                  active={sort?.index === header.sort}
-                  direction={sort?.asc ? 'asc' : 'desc'}
-                  onClick={() => onSelectedField(header.sort)}>
-                  {getHeaderValues(headCell.label)}
-                </TableSortLabel>
+            {headers.map((header: any, index: number) => (
+              <TableCell className={classes.header} key={`${header.title}${index}`}>
+                {header.sort ? (
+                  <TableSortLabel
+                    active={sort?.index === header.sort}
+                    direction={sort?.asc ? 'asc' : 'desc'}
+                    onClick={() => onSelectedField(header.sort)}>
+                    {getHeaderValues(header.title)}
+                  </TableSortLabel>
+                ) : (
+                  <>{getHeaderValues(header.title)}</>
+                )}
               </TableCell>
             ))}
             {actions && <TableCell className={classes.header} />}
@@ -170,7 +175,9 @@ const DataTable: React.FC<Props> = ({
                 </TableCell>
               )}
               {Object.keys(row).map((item, j) => (
-                <TableCell className={classes.ellipsisStyle} key={`${i}-${j}`}>
+                <TableCell
+                  className={isValidElement(row[item]) ? '' : classes.ellipsisStyle}
+                  key={`${i}-${j}`}>
                   {getValue(row[item])}
                 </TableCell>
               ))}

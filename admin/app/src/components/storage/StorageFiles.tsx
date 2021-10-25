@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import StorageTable from './StorageTable';
-import { asyncGetStorageContainers, asyncGetStorageFiles } from '../../redux/slices/storageSlice';
+import {
+  asyncGetStorageContainerData,
+  asyncGetStorageContainers,
+  asyncGetStorageFiles,
+} from '../../redux/slices/storageSlice';
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
 
@@ -24,14 +28,19 @@ const StorageFiles = () => {
   const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
 
-  console.log('data', data);
-
   useEffect(() => {
     if (path === '/') {
       dispatch(asyncGetStorageContainers({ skip, limit }));
       return;
     }
-    // dispatch(asyncGetStorageFiles({ skip, limit }));
+    dispatch(
+      asyncGetStorageContainerData({
+        skip: skip,
+        limit: limit,
+        container: 'conduit',
+        folder: '',
+      })
+    );
   }, [dispatch, limit, path, skip]);
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
@@ -63,8 +72,8 @@ const StorageFiles = () => {
     setDrawerCreateOpen(false);
   };
 
-  const handleRowClick = (rowData: any) => {
-    setPath(`/${rowData}`);
+  const handlePathClick = (value: string) => {
+    setPath(value);
   };
 
   return (
@@ -74,7 +83,7 @@ const StorageFiles = () => {
         path={path}
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
-        handleRowClick={handleRowClick}
+        handlePathClick={handlePathClick}
       />
       <StorageCreateDrawer
         open={drawerCreateOpen}

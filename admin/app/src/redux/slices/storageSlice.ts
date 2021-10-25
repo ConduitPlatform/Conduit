@@ -27,8 +27,8 @@ interface IStorageSlice {
       containersCount: number;
     };
     containerData: {
-      totalCount: number;
       data: any;
+      totalCount: number;
     };
   };
 }
@@ -55,7 +55,7 @@ const initialState: IStorageSlice = {
     },
     containerData: {
       totalCount: 0,
-      data: null,
+      data: [],
     },
   },
 };
@@ -157,35 +157,32 @@ export const asyncGetStorageFiles = createAsyncThunk(
 
 export const asyncGetStorageContainerData = createAsyncThunk(
   'storage/getStorageContainerData',
-  async (arg, thunkAPI) => {
+  async (params: { skip: number; limit: number; container: string; folder: string }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const skip = 0;
-      const limit = 10;
-
       const folderParams = {
-        skip: skip,
-        limit: limit,
-        container: 'conduit',
-        // parent:
+        skip: params.skip,
+        limit: params.limit,
+        container: params.container,
+        parent: params.folder ? params.folder : undefined,
       };
       const { data: folderData } = await getStorageFolders(folderParams);
       const folderLength = folderData.folders.length;
 
       let fileSkip = 0;
       let fileLimit = 10;
-      if (folderLength <= limit) {
-        fileLimit = limit - folderLength;
+      if (folderLength <= params.limit) {
+        fileLimit = params.limit - folderLength;
       }
-      if (folderLength <= skip) {
-        fileSkip = skip - folderLength;
+      if (folderLength <= params.skip) {
+        fileSkip = params.skip - folderLength;
       }
 
       const fileParams = {
         skip: fileSkip,
         limit: fileLimit,
-        // folder: 'images',
-        container: 'test',
+        folder: params.folder ? params.folder : undefined,
+        container: params.container,
       };
       const { data: fileData } = await getStorageFiles(fileParams);
       const totalCount = folderData.folderCount + fileData.filesCount;

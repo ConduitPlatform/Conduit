@@ -1,15 +1,9 @@
 import { Button, Grid, Typography } from '@material-ui/core';
 import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppDispatch } from '../../redux/store';
 import { EmailUI } from '../../models/emails/EmailModels';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import DataTable from '../common/DataTable';
-import {
-  asyncGetStorageContainerData,
-  asyncGetStorageFiles,
-  asyncGetStorageFolders,
-} from '../../redux/slices/storageSlice';
 import FolderIcon from '@material-ui/icons/Folder';
 
 const useStyles = makeStyles((theme) => ({
@@ -20,6 +14,15 @@ const useStyles = makeStyles((theme) => ({
   createButton: {
     marginRight: theme.spacing(1),
   },
+  pathContainer: {
+    display: 'flex',
+  },
+  pathItem: {
+    cursor: 'pointer',
+    '&:hover': {
+      textDecoration: 'underline',
+    },
+  },
 }));
 
 interface Props {
@@ -27,12 +30,11 @@ interface Props {
   path: string;
   handleAdd: any;
   handleCreate: any;
-  handleRowClick: (data: any) => void;
+  handlePathClick: (value: string) => void;
 }
 
-const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handleRowClick }) => {
+const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handlePathClick }) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
 
   const formatData = () => {
     return data.map((container: any) => {
@@ -53,10 +55,6 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handleRo
     // }
   };
 
-  const onRowClick = (value: { Name: string; isPublic: boolean }) => {
-    handleRowClick(value.Name);
-  };
-
   const deleteAction = {
     title: 'Delete',
     type: 'delete',
@@ -64,25 +62,41 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handleRo
 
   const actions = [deleteAction];
 
-  const handleGetSomeData = () => {
-    dispatch(asyncGetStorageContainerData());
+  const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }];
+
+  const onPathClick = (item: string, index: number) => {
+    if (index === 0) {
+      handlePathClick('/');
+      return;
+    }
+    handlePathClick(`${path}/${item}`);
+  }; //combine these two
+
+  const onRowClick = (value: { Name: string; isPublic: boolean }) => {
+    if (path.split('/')[1]) {
+      handlePathClick(`${path}/${value.Name}`);
+      return;
+    }
+    handlePathClick(`${path}${value.Name}`);
   };
 
   return (
     <>
       <Grid container item xs={12} className={classes.topContainer}>
-        <Grid item>
-          <Typography variant="subtitle1">{path}</Typography>
+        <Grid item className={classes.pathContainer}>
+          {path.split('/').map((item, index) => {
+            return (
+              <Typography
+                variant="subtitle1"
+                className={classes.pathItem}
+                onClick={() => onPathClick(item, index)}
+                key={index}>
+                {index === 0 ? '..' : `/${item}`}
+              </Typography>
+            );
+          })}
         </Grid>
         <Grid item>
-          <Button
-            variant="contained"
-            color="secondary"
-            className={classes.createButton}
-            onClick={() => handleGetSomeData()}>
-            {/*onClick={() => dispatch(asyncGetStorageFiles())}>*/}
-            Get Data
-          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -108,6 +122,7 @@ const StorageTable: FC<Props> = ({ data, path, handleAdd, handleCreate, handleRo
           handleAction={handleAction}
           selectable={false}
           handleRowClick={(value) => onRowClick(value)}
+          headers={headers}
         />
       )}
       {/*{templateDocuments.length > 0 && (*/}
