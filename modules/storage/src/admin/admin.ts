@@ -22,11 +22,14 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
+        getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
         createFolder: this.createFolder.bind(this),
         getFolders: this.getFolders.bind(this),
         getFiles: this.getFiles.bind(this),
         getContainers: this.getContainers.bind(this),
         createContainer: this.createContainer.bind(this),
+        deleteFolder: this.deleteFolder.bind(this),
+        deleteContainer: this.deleteContainer.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module');
@@ -74,6 +77,40 @@ export class AdminRoutes {
     return callback(null, { result: JSON.stringify(folder) });
   }
 
+  async deleteFolder(call: RouterRequest, callback: RouterResponse) {
+    const { name, container } = JSON.parse(call.request.params);
+
+    if (isNil(name)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Name is required',
+      });
+    }
+    if (isNil(container)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Container is required',
+      });
+    }
+    let folder = await this.grpcSdk.databaseProvider!.findOne('_StorageFolder', {
+      name,
+      container,
+    });
+    if (isNil(folder)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Folder does not exist',
+      });
+    } else {
+      await this.fileHandlers.storage.container(container).deleteFolder(name);
+      await this.grpcSdk.databaseProvider!.deleteOne('_StorageFolder', {
+        name,
+        container,
+      });
+    }
+    return callback(null, { result: 'OK' });
+  }
+
   async createContainer(call: RouterRequest, callback: RouterResponse) {
     const { name, isPublic } = JSON.parse(call.request.params);
 
@@ -83,25 +120,65 @@ export class AdminRoutes {
         message: 'Name is required',
       });
     }
-    let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-      name,
-    });
-    if (isNil(container)) {
-      container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
+    try {
+      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
         name,
-        isPublic,
       });
-      let exists = await this.fileHandlers.storage.containerExists(container);
-      if (!exists) {
-        await this.fileHandlers.storage.createContainer(container);
+      if (isNil(container)) {
+        let exists = await this.fileHandlers.storage.containerExists(name);
+        if (!exists) {
+          await this.fileHandlers.storage.createContainer(name);
+        }
+        container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
+          name,
+          isPublic,
+        });
+      } else {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Container already exists',
+        });
       }
-    } else {
+      return callback(null, { result: JSON.stringify(container) });
+    } catch (e) {
       return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Container already exists',
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong',
       });
     }
-    return callback(null, { result: JSON.stringify(container) });
+  }
+
+  async deleteContainer(call: RouterRequest, callback: RouterResponse) {
+    const { name } = JSON.parse(call.request.params);
+
+    if (isNil(name)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Name is required',
+      });
+    }
+    try {
+      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
+        name,
+      });
+      if (isNil(container)) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Container does not exist',
+        });
+      } else {
+        await this.fileHandlers.storage.deleteContainer(name);
+        await this.grpcSdk.databaseProvider!.deleteOne('_StorageContainer', {
+          name,
+        });
+      }
+      return callback(null, { result: JSON.stringify(container) });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong',
+      });
+    }
   }
 
   async getFolders(call: RouterRequest, callback: RouterResponse) {
@@ -159,7 +236,7 @@ export class AdminRoutes {
   }
 
   async getFiles(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, folder, container } = JSON.parse(call.request.params);
+    const { skip, limit, folder, container, search } = JSON.parse(call.request.params);
     if (isNil(skip) || isNil(limit)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -174,10 +251,13 @@ export class AdminRoutes {
       });
     }
 
-    let query: { container: string; folder?: string } = { container };
+    let query: { container: string; folder?: string; name?: any } = { container };
 
     if (!isNil(folder)) {
       query.folder = folder;
+    }
+    if (!isNil(search)) {
+      query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
     let files = await this.grpcSdk.databaseProvider!.findMany(

@@ -70,6 +70,10 @@ const Users = () => {
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [filter, setFilter] = useState('all');
+  const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
+    asc: false,
+    index: null,
+  });
   const [selectedUser, setSelectedUser] = useState<AuthUser>({
     active: false,
     createdAt: '',
@@ -295,6 +299,8 @@ const Users = () => {
       </Grid>
       {users && users.length > 0 ? (
         <AuthUsers
+          sort={sort}
+          setSort={setSort}
           users={users}
           handleAction={handleAction}
           handleSelect={handleSelect}

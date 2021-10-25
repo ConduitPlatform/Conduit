@@ -23,6 +23,7 @@ import {
 import TransportSettings from './TransportSettings';
 import { useAppSelector } from '../../redux/store';
 import { isNil, isEmpty } from 'lodash';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -66,6 +67,7 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
   const classes = useStyles();
 
   const { settings } = useAppSelector((state) => state.emailsSlice.data);
+  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   const [settingsState, setSettingsState] = useState<EmailSettings>({
     active: false,
@@ -151,6 +153,7 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
       transportSettings: newTransportSettings,
     };
     handleSave(newSettings);
+    setOpenSaveDialog(false);
   };
 
   const onChange = (
@@ -282,12 +285,20 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
               variant="contained"
               color="primary"
               style={{ alignSelf: 'flex-end' }}
-              onClick={() => onSaveClick()}>
+              onClick={() => setOpenSaveDialog(true)}>
               Save
             </Button>
           </Grid>
         </Grid>
       </Paper>
+      <ConfirmationDialog
+        open={openSaveDialog}
+        handleClose={() => setOpenSaveDialog(false)}
+        title={'Are you sure you want to proceed?'}
+        description={'Provider settings changed'}
+        buttonAction={onSaveClick}
+        buttonText={'Proceed'}
+      />
     </Container>
   );
 };

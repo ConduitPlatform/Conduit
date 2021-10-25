@@ -10,6 +10,7 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { FormSettingsConfig } from '../../models/forms/FormsModels';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -39,6 +40,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     active: false,
     useAttachments: false,
   });
+  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   useEffect(() => {
     if (!settingsData) {
@@ -69,6 +71,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     };
     setEdit(false);
     handleSave(data);
+    setOpenSaveDialog(false);
   };
 
   const renderSettingsFields = () => {
@@ -147,7 +150,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                 variant="contained"
                 color="primary"
                 style={{ alignSelf: 'flex-end' }}
-                onClick={() => save()}>
+                onClick={() => setOpenSaveDialog(true)}>
                 Save
               </Button>
             </Grid>
@@ -164,6 +167,14 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
           )}
         </Grid>
       </Paper>
+      <ConfirmationDialog
+        open={openSaveDialog}
+        handleClose={() => setOpenSaveDialog(false)}
+        title={'Are you sure you want to proceed?'}
+        description={'Forms settings changed'}
+        buttonAction={save}
+        buttonText={'Proceed'}
+      />
     </Container>
   );
 };

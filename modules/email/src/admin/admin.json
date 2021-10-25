@@ -21,6 +21,11 @@
       "protoName": "deleteTemplate"
     },
     {
+      "path": "/templates",
+      "method": "DELETE",
+      "protoName": "deleteManyTemplates"
+    },
+    {
       "path": "/send",
       "method": "POST",
       "protoName": "sendEmail"
@@ -29,6 +34,11 @@
       "path": "/externalTemplates",
       "method": "GET",
       "protoName": "getExternalTemplates"
+    },
+    {
+      "path": "/templates/upload",
+      "method": "POST",
+      "protoName": "uploadTemplate"
     },
     {
       "path": "/syncExternalTemplates",

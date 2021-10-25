@@ -1,4 +1,4 @@
-import { isNil, template } from 'lodash';
+import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
 import ConduitGrpcSdk, {
   GrpcServer,
@@ -10,6 +10,7 @@ import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private database: any;
@@ -28,7 +29,9 @@ export class AdminHandlers {
         sendEmail: this.sendEmail.bind(this),
         getExternalTemplates: this.getExternalTemplates.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
-        syncExternalTemplates: this.syncExternalTemplates.bind(this)
+        syncExternalTemplates: this.syncExternalTemplates.bind(this),
+        deleteManyTemplates: this.deleteManyTemplates.bind(this),
+        uploadTemplate: this.uploadTemplate.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -38,6 +41,30 @@ export class AdminHandlers {
 
   setEmailService(emailService: EmailService) {
     this.emailService = emailService;
+  }
+
+  async uploadTemplate(call: RouterRequest, callback: RouterResponse){
+    const { template } = JSON.parse(
+      call.request.params
+    );
+    const {name,body} = template;
+    if( isNil(name) || isNil(body)) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Body/name is missing!',
+      });
+    }
+    let errorMessage;
+    const created = await (this.emailService.createExternalTemplate(template) as any)
+    .catch((e: any) => (errorMessage = e.message));
+      if(!isNil(errorMessage)){
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage,
+        });
+      }
+
+    return callback(null, { result: JSON.stringify({ created }) });
   }
 
   async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
@@ -63,7 +90,7 @@ export class AdminHandlers {
           subject: element.versions[0].subject,
           externalId: element.id,
           variables: element.versions[0].variables,
-          body: element.versions[0].plainContent,
+          body: element.versions[0].body,
         }
 
         const updatedTemplate = await this.database
@@ -79,6 +106,62 @@ export class AdminHandlers {
     }
     totalCount = updated.length;
     return callback(null, { result: JSON.stringify({ updated,totalCount }) });
+  }
+  async deleteManyTemplates(call: RouterRequest, callback: RouterResponse){
+    const { ids } = JSON.parse(
+      call.request.params
+    );
+    if (isNil(ids) || ids.length === 0) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids is required and must be an array',
+      });
+    }
+    let errorMessage;
+    let totalCount = ids.length;
+    const templateDocuments = await this.database
+      .findMany('EmailTemplate',{ _id: { $in: ids } })
+      .catch((e:any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+
+    const foundDocuments = templateDocuments.length;
+    if( foundDocuments !== totalCount){
+        return callback({
+          code: status.INTERNAL,
+          message: 'some ids were not found',
+        })
+    }
+
+    for( let template of templateDocuments){
+      if( template.externalManaged){
+        await this.emailService.deleteExternalTemplate(template.externalId)
+          ?.catch((e:any) => (errorMessage= e.message));
+
+        if(!isNil(errorMessage)){
+          return callback({
+            code: status.INTERNAL,
+            message: errorMessage,
+          });
+        }
+      }
+    }
+    const deletedDocuments = await this.database
+      .deleteMany('EmailTemplate',{ _id: { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    return callback(null, { result: JSON.stringify({ deletedDocuments }) });
   }
 
   async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
@@ -113,7 +196,7 @@ export class AdminHandlers {
   }
 
   async getTemplates(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -123,10 +206,17 @@ export class AdminHandlers {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
+    let query:any = {};
+    let identifier;
+
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    }
 
     const templateDocumentsPromise = this.database.findMany(
       'EmailTemplate',
-      {},
+      query,
       null,
       skipNumber,
       limitNumber
@@ -151,6 +241,7 @@ export class AdminHandlers {
     const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
       call.request.params
     );
+
     let externalId = undefined;
     const body_vars = getHBValues(body);
     const subject_vars = getHBValues(subject);
@@ -159,13 +250,16 @@ export class AdminHandlers {
     variables = variables.filter(
       (value: any, index: any) => variables.indexOf(value) === index
     );
-    if (isNil(name) || isNil(subject) || isNil(body)) {
+
+    if ((isNil(name) || isNil(subject) || isNil(body))) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Required fields are missing',
       });
     }
+
     if (externalManaged) {
+
       if (isNil(_id)) {
         //that means that we want to create an external managed template
         const [err, template] = await to(

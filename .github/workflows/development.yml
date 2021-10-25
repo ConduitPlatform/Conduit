@@ -68,7 +68,15 @@ jobs:
       - name: Deploy storage-provider
         uses: fjogeleit/http-request-action@master
         with:
-          url: "http://20.101.9.248/storage-provider/conduit-grp/"
+          url: "http://20.101.9.248/storage/conduit-grp/"
+          method: "POST"
+          username: admin
+          password: ${{ secrets.KUBECTLPROXY_PASSWORD }}
+          
+      - name: Deploy chat
+        uses: fjogeleit/http-request-action@master
+        with:
+          url: "http://20.101.9.248/chat/conduit-grp/"
           method: "POST"
           username: admin
           password: ${{ secrets.KUBECTLPROXY_PASSWORD }}

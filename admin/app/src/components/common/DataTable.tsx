@@ -8,7 +8,6 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
-import { isNumber } from 'lodash';
 import moment from 'moment';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
@@ -45,6 +44,9 @@ type Action = {
 };
 
 interface Props {
+  headers: any;
+  sort?: { asc: boolean; index: string | null };
+  setSort?: any;
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
   selectable?: boolean;
   actions?: Action[];
@@ -56,6 +58,9 @@ interface Props {
 }
 
 const DataTable: React.FC<Props> = ({
+  headers,
+  sort,
+  setSort,
   dsData,
   actions,
   handleAction,
@@ -67,17 +72,17 @@ const DataTable: React.FC<Props> = ({
   ...rest
 }) => {
   const classes = useStyles();
-
   /** table header and rows */
   const rows = dsData;
-  const headerCells = Object.keys(dsData[0]).map((header, index) => {
-    return {
-      id: header,
-      numeric: isNumber(rows[index]),
-      disablePadding: false,
-      label: header,
-    };
-  });
+
+  const onSelectedField = (index: string) => {
+    setSort((prevState: any) => {
+      if (prevState.index === index) {
+        return { asc: !prevState.asc, index: index };
+      }
+      return { asc: prevState.asc, index: index };
+    });
+  };
 
   const getValue = (value: any) => {
     if (moment(value, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true).isValid()) {
@@ -126,23 +131,22 @@ const DataTable: React.FC<Props> = ({
         <TableHead>
           <TableRow>
             {selectable && (
-              <TableCell className={classes.header} align="left" padding="none">
-                <Checkbox
-                  color="primary"
-                  onChange={onMenuItemSelectAll}
-                  checked={selectedItems?.length === dsData.length}
-                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-                />
-              </TableCell>
+            <TableCell className={classes.header} align="left" padding="none">
+              <Checkbox
+                color="primary"
+                onChange={onMenuItemSelectAll}
+                checked={selectedItems?.length === dsData.length}
+                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+              />
+            </TableCell>
             )}
-            {headerCells.map((headCell) => (
-              <TableCell
-                className={classes.header}
-                key={headCell.id}
-                align={headCell.numeric ? 'right' : 'left'}
-                padding={headCell.disablePadding ? 'none' : 'default'}>
-                <TableSortLabel active={false} direction={'asc'}>
+            {headers.map((header: any) => (
+              <TableCell className={classes.header} key={header.sort}>
+                <TableSortLabel
+                  active={sort?.index === header.sort}
+                  direction={sort?.asc ? 'asc' : 'desc'}
+                  onClick={() => onSelectedField(header.sort)}>
                   {getHeaderValues(headCell.label)}
                 </TableSortLabel>
               </TableCell>

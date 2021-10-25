@@ -11,12 +11,22 @@
       "protoName": "createFolder"
     },
     {
-      "path": "/containers",
+      "path": "/folder/:id",
+      "method": "DELETE",
+      "protoName": "deleteFolder"
+    },
+    {
+      "path": "/container",
       "method": "POST",
       "protoName": "createContainer"
     },
     {
-      "path": "/containers",
+      "path": "/container/:id",
+      "method": "DELETE",
+      "protoName": "deleteContainer"
+    },
+    {
+      "path": "/container",
       "method": "GET",
       "protoName": "getContainers"
     },
@@ -34,6 +44,11 @@
       "path": "/file",
       "method": "GET",
       "protoName": "getFiles"
+    },
+    {
+      "path": "/file/:id/data",
+      "method": "GET",
+      "protoName": "getFileData"
     },
     {
       "path": "/file/:id",

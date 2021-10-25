@@ -5,6 +5,7 @@ export class ConduitSchema {
   readonly fields: ConduitModel;
   readonly collectionName: string;
   readonly modelOptions: ConduitModelOptions;
+  private ownerModule?: string;
 
   constructor(
     name: string,
@@ -15,8 +16,19 @@ export class ConduitSchema {
     this.name = name;
     this.fields = fields;
     this.modelOptions = modelOptions ? modelOptions : {};
-    // todo should pluralize like mongoose
-    this.collectionName = collectionName ? collectionName : this.name;
+    if (collectionName && collectionName !== '') {
+      this.collectionName = collectionName;
+    } else {
+      this.collectionName = this.name;
+    }
+  }
+
+  get owner(): string | undefined {
+    return this.ownerModule;
+  }
+
+  set owner(owner: string | undefined) {
+    this.ownerModule = owner;
   }
 
   get modelSchema(): ConduitModel {

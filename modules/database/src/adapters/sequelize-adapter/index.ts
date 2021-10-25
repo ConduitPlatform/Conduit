@@ -1,18 +1,18 @@
-import { DatabaseAdapter } from '../../interfaces';
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
+import { DatabaseAdapter } from '../DatabaseAdapter';
 
-export class SequelizeAdapter implements DatabaseAdapter {
+export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
   connectionUri: string;
   sequelize: Sequelize;
-  models: { [name: string]: SequelizeSchema };
   registeredSchemas: Map<string, ConduitSchema>;
 
   constructor(connectionUri: string) {
+    super();
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
@@ -25,18 +25,17 @@ export class SequelizeAdapter implements DatabaseAdapter {
 
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
-        try {
-          schema = systemRequiredValidator(
-            this.registeredSchemas.get(schema.name)!,
-            schema
-          );
-        } catch (err) {
-          return Promise.reject(err);
-        }
+        schema = systemRequiredValidator(
+          this.registeredSchemas.get(schema.name)!,
+          schema
+        );
       }
       delete this.sequelize.models[schema.name];
     }
-
+    let owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new Error('Not authorized to modify model');
+    }
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
@@ -47,7 +46,7 @@ export class SequelizeAdapter implements DatabaseAdapter {
       this
     );
     await this.models[schema.name].sync();
-
+    await this.saveSchemaToDatabase(schema);
     return this.models![schema.name];
   }
 
@@ -74,8 +73,9 @@ export class SequelizeAdapter implements DatabaseAdapter {
       const self = this;
       let relations: any = {};
       for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] =
-          self.models[this.models[schemaName].relations[key]];
+        relations[this.models[schemaName].relations[key]] = self.models![
+          this.models[schemaName].relations[key]
+        ];
       }
       return { model: this.models[schemaName], relations };
     }

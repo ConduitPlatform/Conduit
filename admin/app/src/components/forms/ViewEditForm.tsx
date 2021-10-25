@@ -175,10 +175,6 @@ const ViewEditForm: React.FC<Props> = ({
       return;
     }
 
-    if (Object.keys(formState.fields).length === 0) {
-      dispatch(enqueueErrorNotification('Form fields are empty', 'emailError'));
-      return;
-    }
     const fields: { [key: string]: string } = {};
     inputFields.forEach((item) => {
       if (item.key !== '' && item.type !== '') fields[item.key] = item.type;
