@@ -28,13 +28,11 @@ export default {
     },
     verification_redirect_uri: {
       format: 'String',
-      default: null,
-      nullable: true,
+      default: '',
     },
     forgot_password_redirect_uri: {
       format: 'String',
-      default: null,
-      nullable: true,
+      default: '',
     },
   },
   google: {
@@ -46,6 +44,7 @@ export default {
       doc:
         'The client id that is provided by google developer console for a specific app',
       format: 'String',
+      default: '',
       nullable: true,
     },
     accountLinking: {
