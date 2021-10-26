@@ -25,11 +25,34 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
         createCustomer: this.createCustomer.bind(this),
+        getCustomer: this.getCustomer.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
         console.error(err);
       });
+  }
+
+  async getCustomer(call: RouterRequest, callback: RouterResponse){
+    const {customerId} = JSON.parse(call.request.params);
+    if(isNil(customerId)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'customerId is missing!'
+      })
+    }
+    let errorMessage;
+    const customer = await this.database
+      .findOne('PaymentsCustomer',{_id:customerId})
+      .catch((err:any) => errorMessage =  err);
+
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      })
+    }
+    return callback( null, { result: JSON.stringify(customer) })
   }
 
   async createCustomer(call: RouterRequest, callback: RouterResponse){
