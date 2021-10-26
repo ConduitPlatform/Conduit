@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isArray, isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
 let paths = require('./admin.json').functions;
@@ -34,7 +34,7 @@ export class AdminHandlers {
   }
 
   async getCustomers(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,ids } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -45,9 +45,15 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {};
-    let identifier;
-
-
+    if(isNil(ids)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array',
+      });
+    }
+    else if(ids.length !== 0){
+      query['_id'] = { $in: ids};
+    }
     const customerDocumentsPromise = this.database.findMany(
       'PaymentsCustomer',
       query,
@@ -55,7 +61,7 @@ export class AdminHandlers {
       skipNumber,
       limitNumber
     );
-    const totalCountPromise = this.database.countDocuments('PaymentsCustomer', {});
+    const totalCountPromise = this.database.countDocuments('PaymentsCustomer', query);
 
     let errorMessage;
     const [customerDocuments, totalCount] = await Promise.all([
