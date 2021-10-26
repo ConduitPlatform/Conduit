@@ -191,7 +191,6 @@ const Templates = () => {
       }
       if (action.type === 'delete') {
         setSelectedTemplate(currentTemplate);
-        console.log(currentTemplate);
         setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
