@@ -1,17 +1,16 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { AuthUser } from '../../models/authentication/AuthModels';
-import { SignInMethods } from '../../models/authentication/AuthModels';
+import { AuthUser, SignInMethods } from '../../models/authentication/AuthModels';
 import {
-  getAuthUsersDataReq,
-  createNewUsers,
-  editUser,
-  blockUser,
-  unblockUser,
-  deleteUser,
-  getAuthenticationConfig,
-  putAuthenticationConfig,
   blockUnblockUsers,
+  blockUser,
+  createNewUsers,
+  deleteUser,
   deleteUsers,
+  editUser,
+  getAuthenticationConfig,
+  getAuthUsersDataReq,
+  putAuthenticationConfig,
+  unblockUser,
 } from '../../http/AuthenticationRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
@@ -59,7 +58,10 @@ export const asyncGetAuthUserData = createAsyncThunk(
 
 export const asyncAddNewUser = createAsyncThunk(
   'authentication/addUser',
-  async (params: { values: { password: string; email: string }; getUsers: any }, thunkAPI) => {
+  async (
+    params: { values: { password: string; email: string }; getUsers: () => void },
+    thunkAPI
+  ) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await createNewUsers(params.values);
