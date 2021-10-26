@@ -24,11 +24,77 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
+        createCustomer: this.createCustomer.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
         console.error(err);
       });
+  }
+
+  async createCustomer(call: RouterRequest, callback: RouterResponse){
+    const {
+      userId,
+      email,
+      phoneNumber,
+      buyerName,
+      address,
+      postCode,
+      stripe
+    } = JSON.parse(call.request.params);
+
+    if(isNil(userId) || isNil(email) || isNil(phoneNumber) ){
+      return callback({
+        code: status.INTERNAL,
+        message: 'userId,  email, phoneNumber are required'
+      })
+    }
+    let errorMessage: string | null = null;
+    const user = await this.database
+      .findOne('User',{userId})
+      .catch( (err:any) => errorMessage = err);
+
+    if(!isNil(user)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'User with id: ' + userId + ' does not exists'
+      });
+    }
+
+    let  customerDoc = {
+      userId,
+      email,
+      phoneNumber,
+      buyerName,
+      address,
+      postCode,
+      stripe
+    };
+
+    const customerExists = await this.database
+      .findOne('PaymentsCustomer',{userId: userId})
+      .catch((error:any) => errorMessage = error);
+
+    if(isNil(customerExists)) {
+
+      const createdCustomer = await this.database
+        .create('PaymentsCustomer', customerDoc)
+        .catch((error: any) => errorMessage = error);
+
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        })
+      }
+      return callback(null,{ result: JSON.stringify(createdCustomer) })
+    }
+    else{
+      return callback({
+        code: status.INTERNAL,
+        message: 'Customer with userId: ' + userId + ' already  exists!'
+      });
+    }
   }
 
   async createProduct(call: RouterRequest, callback: RouterResponse) {
