@@ -127,11 +127,6 @@ const Users = () => {
     }
   };
 
-  const handleNewUserDispatch = (values: { password: string; email: string }) => {
-    dispatch(asyncAddNewUser({ values, limit }));
-    setDrawer(false);
-  };
-
   const handleSelect = (id: string) => {
     const newSelectedUsers = [...selectedUsers];
     if (selectedUsers.includes(id)) {
@@ -175,6 +170,11 @@ const Users = () => {
   const getUsersCallback = useCallback(() => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [debouncedSearch, dispatch, filter, limit, skip]);
+
+  const handleNewUserDispatch = (values: { password: string; email: string }) => {
+    dispatch(asyncAddNewUser({ values, getUsers: getUsersCallback }));
+    setDrawer(false);
+  };
 
   const handleBlock = () => {
     if (openBlockUI.multiple) {

@@ -59,16 +59,13 @@ export const asyncGetAuthUserData = createAsyncThunk(
 
 export const asyncAddNewUser = createAsyncThunk(
   'authentication/addUser',
-  async (params: { values: { password: string; email: string }; limit: number }, thunkAPI) => {
+  async (params: { values: { password: string; email: string }; getUsers: any }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createNewUsers(params.values);
-      thunkAPI.dispatch(
-        asyncGetAuthUserData({ skip: 0, limit: params.limit, search: '', filter: 'none' })
-      );
+      await createNewUsers(params.values);
+      params.getUsers();
       thunkAPI.dispatch(enqueueSuccessNotification(`Successfully added ${params.values.email}!`));
       thunkAPI.dispatch(setAppDefaults());
-      return { data, params };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -220,9 +217,6 @@ const authenticationSlice = createSlice({
     builder.addCase(asyncGetAuthUserData.fulfilled, (state, action) => {
       state.data.authUsers.users = action.payload.users;
       state.data.authUsers.count = action.payload.count;
-    });
-    builder.addCase(asyncAddNewUser.fulfilled, (state) => {
-      state.data.authUsers.count++;
     });
     builder.addCase(asyncEditUser.fulfilled, (state, action) => {
       const foundIndex = state.data.authUsers.users.findIndex(

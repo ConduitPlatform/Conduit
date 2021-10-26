@@ -86,6 +86,7 @@ const Templates = () => {
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
+    setImportTemplate(false);
     setSelectedTemplate(originalTemplateState);
     setCreate(true);
     setEdit(true);
@@ -129,10 +130,10 @@ const Templates = () => {
   };
 
   const handleClose = () => {
+    setImportTemplate(false);
     setEdit(false);
     setCreate(false);
     setDrawer(false);
-    setImportTemplate(false);
     setSelectedTemplate(originalTemplateState);
     setSelectedTemplate(originalTemplateState);
     setOpenDeleteTemplates(false);
@@ -181,6 +182,7 @@ const Templates = () => {
 
   const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
     const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
+
     if (currentTemplate !== undefined) {
       if (action.type === 'view') {
         setSelectedTemplate(currentTemplate);
@@ -189,6 +191,7 @@ const Templates = () => {
       }
       if (action.type === 'delete') {
         setSelectedTemplate(currentTemplate);
+        console.log(currentTemplate);
         setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
