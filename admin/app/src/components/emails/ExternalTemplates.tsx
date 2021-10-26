@@ -6,6 +6,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  TextField,
 } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
 import { makeStyles } from '@material-ui/core/styles';
@@ -15,6 +16,7 @@ import { CallMissedOutgoing } from '@material-ui/icons';
 import { asyncGetExternalTemplates } from '../../redux/slices/emailsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,6 +47,10 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
+  textField: {
+    width: '100%',
+    marginTop: theme.spacing(2),
+  },
 }));
 
 interface Props {
@@ -73,6 +79,10 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
   }, [dispatch]);
 
   const handleSaveData = () => {
+    if (selectedTemplate.subject === '' || selectedTemplate.subject === undefined) {
+      dispatch(enqueueInfoNotification('Please provide a valid subject', 'externalSubject'));
+      return;
+    }
     const data = {
       name: selectedTemplate.name,
       subject: selectedTemplate.subject,
@@ -90,7 +100,9 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
     const foundTemplate = externalTemplates.find(
       (template: EmailTemplateType) => template.name === e.target.value
     );
-    if (e.target.value !== '' && foundTemplate !== undefined) setSelectedTemplate(foundTemplate);
+
+    if (e.target.value !== '' && foundTemplate !== undefined)
+      setSelectedTemplate({ ...foundTemplate, subject: '' });
     else setSelectedTemplate(emptyTemplate);
   };
 
@@ -130,11 +142,27 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Sender Input:</Typography>
-            <Typography variant="body2">{selectedTemplate.sender}</Typography>
+            {selectedTemplate.sender === '' || selectedTemplate.sender === undefined ? (
+              'No sender input provided'
+            ) : (
+              <Typography variant="body2">{selectedTemplate.sender}</Typography>
+            )}
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2">Subject:</Typography>
-            <Typography variant="body1">{selectedTemplate.subject}</Typography>
+            <TextField
+              className={classes.textField}
+              label={'Subject'}
+              variant={'outlined'}
+              value={selectedTemplate.subject}
+              helperText="Provide a subject for the imported template."
+              onChange={(event) => {
+                setSelectedTemplate({
+                  ...selectedTemplate,
+                  subject: event.target.value,
+                });
+              }}
+            />
           </Grid>
           <Grid item xs={12}>
             <Typography variant="body1">Body:</Typography>

@@ -69,7 +69,7 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
   const { settings } = useAppSelector((state) => state.emailsSlice.data);
   const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
-  const [settingsState, setSettingsState] = useState<EmailSettings>({
+  const initialSettingsState = {
     active: false,
     sendingDomain: '',
     transport: TransportProviders.smtp,
@@ -95,46 +95,53 @@ const ProviderData: React.FC<Props> = ({ handleSave }) => {
         apiUser: '',
       },
     },
-  });
+  };
+  const [settingsState, setSettingsState] = useState<EmailSettings>(initialSettingsState);
 
-  const initializeSettings = useCallback(() => {
-    let settingsObj: EmailSettings = { ...settingsState };
-    const initial: EmailSettings = { ...settings };
+  const initializeSettings = useCallback(
+    (prevState) => {
+      let settingsObj: EmailSettings = { ...prevState };
 
-    settingsObj = { ...settingsObj, ...initial };
-
-    transportProviders.forEach((provider) => {
-      const providerSettings: MailgunSettings | SmtpSettings | MandrillSettings | SendgridSettings =
-        {
+      transportProviders.forEach((provider) => {
+        const providerSettings:
+          | MailgunSettings
+          | SmtpSettings
+          | MandrillSettings
+          | SendgridSettings = {
           ...settingsObj.transportSettings[provider],
-          ...initial.transportSettings[provider],
+          ...settings.transportSettings[provider],
         };
 
-      settingsObj.transportSettings = {
-        ...settingsObj.transportSettings,
-        [provider]: {
-          ...providerSettings,
-        },
-      };
-    });
+        settingsObj.transportSettings = {
+          ...settingsObj.transportSettings,
+          [provider]: {
+            ...providerSettings,
+          },
+        };
+      });
 
-    return settingsObj;
-  }, [settings]);
+      settingsObj = {
+        ...settingsObj,
+        active: settings.active,
+        sendingDomain: settings.sendingDomain,
+        transport: settings.transport,
+      };
+
+      return settingsObj;
+    },
+    [settings]
+  );
 
   useEffect(() => {
     if (!settings) {
       return;
     }
-    const newSettings = initializeSettings();
-    setSettingsState(newSettings);
+    setSettingsState((prevState) => initializeSettings(prevState));
   }, [initializeSettings, settings]);
 
   const handleCancel = () => {
-    setSettingsState({
-      ...settingsState,
-      active: settings.active,
-      transport: settings.transport,
-    });
+    const initializedState = initializeSettings(initialSettingsState);
+    setSettingsState(initializedState);
   };
 
   const onSaveClick = () => {

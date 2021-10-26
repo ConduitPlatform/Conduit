@@ -54,9 +54,7 @@ export class AdminHandlers {
         message: 'id must be provided!',
       });
     }
-
     let errorMessage;
-
     const templateDocument = await this.database
       .findOne('EmailTemplate', { _id: _id })
       .catch((e: any) => (errorMessage = e.message));
@@ -70,6 +68,7 @@ export class AdminHandlers {
       name: templateDocument.name,
       body: templateDocument.body,
     }
+
     const created = await (this.emailService.createExternalTemplate(template) as any)
       .catch((e: any) => (errorMessage = e.message));
     if(!isNil(errorMessage)){
@@ -81,7 +80,7 @@ export class AdminHandlers {
 
     if(templateDocument){
       templateDocument['externalManaged'] = true;
-      templateDocument['externalId'] = created.id;
+      templateDocument['externalId'] =  created.id;
       await this.database
         .findByIdAndUpdate('EmailTemplate',_id,templateDocument)
         .catch((e: any) => (errorMessage = e.message));
@@ -92,6 +91,7 @@ export class AdminHandlers {
           message: errorMessage,
         });
     }
+
     return callback(null, { result: JSON.stringify({ created }) });
   }
 
@@ -150,14 +150,13 @@ export class AdminHandlers {
     const templateDocuments = await this.database
       .findMany('EmailTemplate',{ _id: { $in: ids } })
       .catch((e:any) => (errorMessage = e.message));
-    console.log(templateDocuments);
+
     if(!isNil(errorMessage)) {
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
       });
     }
-
 
     const foundDocuments = templateDocuments.length;
     if( foundDocuments !== totalCount){
@@ -168,13 +167,11 @@ export class AdminHandlers {
     }
 
     for( let template of templateDocuments){
-
       if( template.externalManaged){
         await this.emailService.deleteExternalTemplate(template.externalId)
           ?.catch((e:any) => (errorMessage= e.message));
 
         if(!isNil(errorMessage)){
-          console.log(errorMessage);
           return callback({
             code: status.INTERNAL,
             message: errorMessage,
@@ -182,13 +179,11 @@ export class AdminHandlers {
         }
       }
     }
-    console.log('edw')
     const deletedDocuments = await this.database
       .deleteMany('EmailTemplate',{ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
     if(!isNil(errorMessage)){
-      console.log('edw');
       return callback({
         code: status.INTERNAL,
         message: errorMessage,

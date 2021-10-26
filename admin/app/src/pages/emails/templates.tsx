@@ -33,6 +33,7 @@ import ExternalTemplates from '../../components/emails/ExternalTemplates';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
 
 // import useDebounce from '../../hooks/useDebounce';
 
@@ -120,9 +121,11 @@ const Templates = () => {
       body: data.body,
       externalManaged: data.externalManaged,
       variables: data.variables,
+      _id: data._id,
     };
     dispatch(asyncCreateNewEmailTemplate(newData));
     setSelectedTemplate(newData);
+    setDrawer(false);
   };
 
   const handleClose = () => {
@@ -189,12 +192,14 @@ const Templates = () => {
         setOpenDeleteTemplates(true);
       }
       if (action.type === 'upload') {
-        const templateToUpload = {
-          name: currentTemplate.name,
-          body: currentTemplate.body,
-          subject: currentTemplate.subject,
-        };
-        dispatch(asyncUploadTemplate(templateToUpload));
+        if (currentTemplate.externalManaged) {
+          dispatch(enqueueInfoNotification('The selected template is already uploaded'));
+          return;
+        }
+
+        if (currentTemplate._id !== undefined) {
+          dispatch(asyncUploadTemplate(currentTemplate._id));
+        }
       }
     }
   };
@@ -263,7 +268,7 @@ const Templates = () => {
   const headers = [
     { title: '_id', sort: '_id' },
     { title: 'Name', sort: 'name' },
-    { title: 'Externa;', sort: 'externalManaged' },
+    { title: 'External', sort: 'externalManaged' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 
@@ -323,7 +328,7 @@ const Templates = () => {
           </Button>
         </Grid>
       </Grid>
-      {templateDocuments.length > 0 && (
+      {templateDocuments.length > 0 ? (
         <>
           <DataTable
             sort={sort}
@@ -349,8 +354,10 @@ const Templates = () => {
             </Grid>
           </Grid>
         </>
+      ) : (
+        <Typography>No available templates</Typography>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={700}>
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
         {!importTemplate ? (
           <Box>
             <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
