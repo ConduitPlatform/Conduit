@@ -11,7 +11,6 @@ import {
   asyncAddNewUser,
   asyncBlockUnblockUsers,
   asyncBlockUserUI,
-  asyncDeleteUser,
   asyncDeleteUsers,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,

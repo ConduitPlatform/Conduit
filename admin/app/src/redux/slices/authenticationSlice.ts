@@ -4,7 +4,6 @@ import {
   blockUnblockUsers,
   blockUser,
   createNewUsers,
-  deleteUser,
   deleteUsers,
   editUser,
   getAuthenticationConfig,
