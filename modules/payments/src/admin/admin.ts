@@ -25,7 +25,7 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
         createCustomer: this.createCustomer.bind(this),
-        getCustomer: this.getCustomer.bind(this)
+        getCustomers: this.getCustomers.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -33,26 +33,42 @@ export class AdminHandlers {
       });
   }
 
-  async getCustomer(call: RouterRequest, callback: RouterResponse){
-    const {customerId} = JSON.parse(call.request.params);
-    if(isNil(customerId)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'customerId is missing!'
-      })
-    }
-    let errorMessage;
-    const customer = await this.database
-      .findOne('PaymentsCustomer',{_id:customerId})
-      .catch((err:any) => errorMessage =  err);
+  async getCustomers(call: RouterRequest, callback: RouterResponse) {
+    const { skip, limit } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
 
-    if(!isNil(errorMessage)){
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    let identifier;
+
+
+    const customerDocumentsPromise = this.database.findMany(
+      'PaymentsCustomer',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('PaymentsCustomer', {});
+
+    let errorMessage;
+    const [customerDocuments, totalCount] = await Promise.all([
+      customerDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
         message: errorMessage,
-      })
-    }
-    return callback( null, { result: JSON.stringify(customer) })
+      });
+
+    return callback(null, { result: JSON.stringify({ customerDocuments, totalCount }) });
   }
 
   async createCustomer(call: RouterRequest, callback: RouterResponse){
