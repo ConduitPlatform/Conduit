@@ -240,10 +240,9 @@ export const asyncGetStorageFile = createAsyncThunk(
 
 export const asyncDeleteStorageFile = createAsyncThunk(
   'storage/deleteStorageFile',
-  async (arg, thunkAPI) => {
+  async (fileId: string, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const fileId = '617158368afe4116b6882eb0';
       const { data } = await deleteStorageFile(fileId);
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
@@ -302,6 +301,10 @@ const storageSlice = createSlice({
     });
     builder.addCase(asyncGetStorageContainerData.fulfilled, (state, action) => {
       state.data.containerData = action.payload;
+    });
+    builder.addCase(asyncDeleteStorageFile.fulfilled, (state, action) => {
+      // const fouldFile = state.data.containerData.data.findIndex((item) => item)
+      // state.data.containerData = action.payload;
     });
   },
 });

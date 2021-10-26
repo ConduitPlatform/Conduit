@@ -1,13 +1,12 @@
 import React, { FC } from 'react';
 import { Button, Grid, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import { EmailUI } from '../../models/emails/EmailModels';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import DataTable from '../common/DataTable';
 import FolderIcon from '@material-ui/icons/Folder';
 import DescriptionIcon from '@material-ui/icons/Description';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
-import { asyncGetStorageFile } from '../../redux/slices/storageSlice';
+import { asyncDeleteStorageFile, asyncGetStorageFile } from '../../redux/slices/storageSlice';
 import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
@@ -68,13 +67,18 @@ const StorageTable: FC<Props> = ({
     });
   };
 
-  const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
-    // const currentTemplate = templateDocuments?.find((template) => template._id === data._id);
-    // if (currentTemplate !== undefined) {
-    //   if (action.type === 'delete') {
-    //     //handle delete
-    //   }
-    // }
+  const handleAction = (action: { title: string; type: string }, data: any) => {
+    if (path === '/') {
+      const container = containers.find((item) => item.name === data.Name);
+      console.log('delete container', container._id);
+      return;
+    }
+    const foundItem = containerData.find((item) => item.name === data.Name);
+    if (data.isFile) {
+      console.log('delete file', foundItem._id);
+      return;
+    }
+    dispatch(asyncDeleteStorageFile(foundItem._id));
   };
 
   const deleteAction = {
@@ -91,7 +95,7 @@ const StorageTable: FC<Props> = ({
     // if (containerData.length > 0) {
     const file = containerData.find((itemFile: any) => itemFile.name === item);
 
-    if (containerData.length > 0 && file.isFile) {
+    if (containerData.length > 0 && file?.isFile) {
       dispatch(asyncGetStorageFile(file._id));
       return;
     }

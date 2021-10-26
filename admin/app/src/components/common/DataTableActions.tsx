@@ -55,7 +55,10 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, 
             <Tooltip title={action.title} key={index}>
               <IconButton
                 key={`${action.title}${index}`}
-                onClick={() => onActionClick(action)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onActionClick(action);
+                }}
                 disabled={action.type === 'edit' && editDisabled}>
                 {handleActions(action)}
               </IconButton>
