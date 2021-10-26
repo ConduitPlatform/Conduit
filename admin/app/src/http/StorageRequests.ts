@@ -9,6 +9,7 @@ export const putStorageSettings = (storageData: IStorageConfig) =>
     ...storageData,
   });
 
+//Get
 export const getStorageContainers = (params: { skip: number; limit: number }) =>
   axios.get(`${CONDUIT_API}/admin/storage/container`, {
     params: {
@@ -28,11 +29,6 @@ export const getStorageFolders = (folderData: {
     },
   });
 
-// export const updateStorageFile = (fileData: IStorageFile) =>
-export const updateStorageFile = (
-  fileData: any //not working
-) => axios.put(`${CONDUIT_API}/admin/storage/file/${fileData.id}`, { ...fileData });
-
 export const getStorageFiles = (fileData: {
   skip: number;
   limit: number;
@@ -48,11 +44,14 @@ export const getStorageFiles = (fileData: {
 export const getStorageFile = (id: string) =>
   axios.get(`${CONDUIT_API}/admin/storage/file/${id}/data`);
 
-export const deleteStorageFile = (id: string) =>
-  axios.delete(`${CONDUIT_API}/admin/storage/file/${id}`);
+//Update
 
-//CREATE
+// export const updateStorageFile = (fileData: IStorageFile) =>
+export const updateStorageFile = (
+  fileData: any //not working
+) => axios.put(`${CONDUIT_API}/admin/storage/file/${fileData.id}`, { ...fileData });
 
+//Create
 export const createStorageFile = (fileData: {
   name: string;
   data: string;
@@ -70,3 +69,17 @@ export const createStorageFolder = (folderData: {
 
 export const createStorageContainer = (containerData: { name: string; isPublic: boolean }) =>
   axios.post(`${CONDUIT_API}/admin/storage/container`, { ...containerData });
+
+//Delete
+export const deleteStorageFile = (id: string) =>
+  axios.delete(`${CONDUIT_API}/admin/storage/file/${id}`);
+
+export const deleteStorageFolder = (params: { id: string; name: string; container: string }) =>
+  axios.delete(`${CONDUIT_API}/admin/storage/folder/${params.id}`, {
+    data: { ...params },
+  });
+
+export const deleteStorageContainer = (params: { id: string; name: string }) =>
+  axios.delete(`${CONDUIT_API}/admin/storage/container/${params.id}`, {
+    data: { ...params },
+  });

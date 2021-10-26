@@ -91,9 +91,11 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
   const handleSave = () => {
     if (selected === Selected.container) {
       dispatch(asyncAddStorageContainer(inputData.container));
+      closeDrawer();
       return;
     }
     dispatch(asyncAddStorageFolder(inputData.folder));
+    closeDrawer();
   };
 
   return (

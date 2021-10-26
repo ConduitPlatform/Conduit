@@ -6,7 +6,12 @@ import DataTable from '../common/DataTable';
 import FolderIcon from '@material-ui/icons/Folder';
 import DescriptionIcon from '@material-ui/icons/Description';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
-import { asyncDeleteStorageFile, asyncGetStorageFile } from '../../redux/slices/storageSlice';
+import {
+  asyncDeleteStorageContainer,
+  asyncDeleteStorageFile,
+  asyncDeleteStorageFolder,
+  asyncGetStorageFile,
+} from '../../redux/slices/storageSlice';
 import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
@@ -69,16 +74,22 @@ const StorageTable: FC<Props> = ({
 
   const handleAction = (action: { title: string; type: string }, data: any) => {
     if (path === '/') {
-      const container = containers.find((item) => item.name === data.Name);
-      console.log('delete container', container._id);
+      const container = containers.find((item: any) => item.name === data.Name);
+      dispatch(asyncDeleteStorageContainer({ id: container._id, name: container.name }));
       return;
     }
-    const foundItem = containerData.find((item) => item.name === data.Name);
+    const foundItem = containerData.find((item: any) => item.name === data.Name);
     if (data.isFile) {
-      console.log('delete file', foundItem._id);
+      dispatch(asyncDeleteStorageFile(foundItem._id));
       return;
     }
-    dispatch(asyncDeleteStorageFile(foundItem._id));
+    dispatch(
+      asyncDeleteStorageFolder({
+        id: foundItem._id,
+        name: foundItem.name,
+        container: foundItem.container,
+      })
+    );
   };
 
   const deleteAction = {

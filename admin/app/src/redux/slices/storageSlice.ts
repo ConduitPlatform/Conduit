@@ -1,10 +1,12 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
 import { IContainer, IStorageConfig } from '../../models/storage/StorageModels';
 import {
   createStorageContainer,
   createStorageFile,
   createStorageFolder,
+  deleteStorageContainer,
   deleteStorageFile,
+  deleteStorageFolder,
   getStorageContainers,
   getStorageFile,
   getStorageFiles,
@@ -15,7 +17,7 @@ import {
 } from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { enqueueErrorNotification } from '../../utils/useNotifier';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import { base64example } from '../../assets/svgs/ExampleBase64';
 import { concat } from 'lodash';
 
@@ -104,14 +106,7 @@ export const asyncGetStorageContainers = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getStorageContainers(params);
-      // const containerData = data.containers.map((container: any) => {
-      //   return Object.assign(container, { isContainer: true });
-      // });
       thunkAPI.dispatch(setAppDefaults());
-      // return {
-      //   containers: containerData,
-      //   containersCount: data.containersCount,
-      // };
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -177,11 +172,10 @@ export const asyncAddStorageFile = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await createStorageFile(fileData);
-      console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully added file!'));
       return data;
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -196,6 +190,7 @@ export const asyncAddStorageFolder = createAsyncThunk(
     try {
       const { data } = await createStorageFolder(folderData);
       thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully added folder!'));
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -212,6 +207,7 @@ export const asyncAddStorageContainer = createAsyncThunk(
     try {
       const { data } = await createStorageContainer(containerData);
       thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully added container!'));
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -243,12 +239,45 @@ export const asyncDeleteStorageFile = createAsyncThunk(
   async (fileId: string, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await deleteStorageFile(fileId);
-      console.log('success', data);
+      await deleteStorageFile(fileId);
       thunkAPI.dispatch(setAppDefaults());
-      return data;
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted file!'));
+      return fileId;
     } catch (error) {
-      console.log('error', error);
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteStorageFolder = createAsyncThunk(
+  'storage/deleteStorageFolder',
+  async (params: { id: string; name: string; container: string }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteStorageFolder(params);
+      thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted folder!'));
+      return params.id;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteStorageContainer = createAsyncThunk(
+  'storage/deleteStorageContainer',
+  async (params: { id: string; name: string }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteStorageContainer(params);
+      thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted container!'));
+      return params.id;
+    } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -269,6 +298,7 @@ export const asyncUpdateStorageFile = createAsyncThunk(
         data: base64example,
       };
       const { data } = await updateStorageFile(fileData);
+      thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
       console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
@@ -303,8 +333,22 @@ const storageSlice = createSlice({
       state.data.containerData = action.payload;
     });
     builder.addCase(asyncDeleteStorageFile.fulfilled, (state, action) => {
-      // const fouldFile = state.data.containerData.data.findIndex((item) => item)
-      // state.data.containerData = action.payload;
+      const foundIndex = state.data.containerData.data.findIndex(
+        (item: any) => item._id === action.payload
+      );
+      if (foundIndex !== -1) state.data.containerData.data.splice(foundIndex, 1);
+    });
+    builder.addCase(asyncDeleteStorageFolder.fulfilled, (state, action) => {
+      const foundIndex = state.data.containerData.data.findIndex(
+        (item: any) => item._id === action.payload
+      );
+      if (foundIndex !== -1) state.data.containerData.data.splice(foundIndex, 1);
+    });
+    builder.addCase(asyncDeleteStorageContainer.fulfilled, (state, action) => {
+      const foundIndex = state.data.containers.containers.findIndex(
+        (item: any) => item._id === action.payload
+      );
+      if (foundIndex !== -1) state.data.containers.containers.splice(foundIndex, 1);
     });
   },
 });
