@@ -15,6 +15,7 @@ import { NotificationData } from '../../models/notifications/NotificationModels'
 import DataTableActions from './DataTableActions';
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
+import { Typography } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   table: {
@@ -36,6 +37,12 @@ const useStyles = makeStyles((theme) => ({
   tableRowClick: {
     cursor: 'pointer',
   },
+  placeholder: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(4),
+  },
 }));
 
 type Action = {
@@ -55,13 +62,14 @@ interface Props {
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   handleRowClick?: (data: any) => void;
+  placeholder?: string;
 }
 
 const DataTable: React.FC<Props> = ({
   headers,
   sort,
   setSort,
-  dsData,
+  dsData = [],
   actions,
   handleAction,
   selectable = true,
@@ -69,11 +77,10 @@ const DataTable: React.FC<Props> = ({
   handleSelect,
   handleSelectAll,
   handleRowClick,
+  placeholder = 'Not available',
   ...rest
 }) => {
   const classes = useStyles();
-  /** table header and rows */
-  const rows = dsData;
 
   const onSelectedField = (index: string) => {
     if (!setSort) return;
@@ -127,73 +134,82 @@ const DataTable: React.FC<Props> = ({
   };
 
   return (
-    <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
-      <Table stickyHeader className={classes.table}>
-        <TableHead>
-          <TableRow>
-            {selectable && (
-              <TableCell className={classes.header} align="left" padding="none">
-                <Checkbox
-                  color="primary"
-                  onChange={onMenuItemSelectAll}
-                  checked={selectedItems?.length === dsData.length}
-                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-                />
-              </TableCell>
-            )}
-            {headers.map((header: any, index: number) => (
-              <TableCell className={classes.header} key={`${header.title}${index}`}>
-                {header.sort ? (
-                  <TableSortLabel
-                    active={sort?.index === header.sort}
-                    direction={sort?.asc ? 'asc' : 'desc'}
-                    onClick={() => onSelectedField(header.sort)}>
-                    {getHeaderValues(header.title)}
-                  </TableSortLabel>
-                ) : (
-                  <>{getHeaderValues(header.title)}</>
-                )}
-              </TableCell>
-            ))}
-            {actions && <TableCell className={classes.header} />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row: any, i: number) => (
-            <TableRow
-              key={i}
-              onClick={() => onRowClick(row)}
-              className={handleRowClick ? classes.tableRowClick : ''}>
+    <>
+      <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
+        <Table stickyHeader className={classes.table}>
+          <TableHead>
+            <TableRow>
               {selectable && (
-                <TableCell align="left" padding="none">
+                <TableCell className={classes.header} align="left" padding="none">
                   <Checkbox
                     color="primary"
-                    checked={selectedItems?.includes(row._id)}
-                    onChange={() => onMenuItemSelect(row._id)}
+                    onChange={onMenuItemSelectAll}
+                    checked={selectedItems?.length === dsData.length}
+                    indeterminate={
+                      selectedItems?.length > 0 && selectedItems?.length < dsData.length
+                    }
+                    indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
                   />
                 </TableCell>
               )}
-              {Object.keys(row).map((item, j) => (
-                <TableCell
-                  className={isValidElement(row[item]) ? '' : classes.ellipsisStyle}
-                  key={`${i}-${j}`}>
-                  {getValue(row[item])}
+              {headers.map((header: any, index: number) => (
+                <TableCell className={classes.header} key={`${header.title}${index}`}>
+                  {header.sort ? (
+                    <TableSortLabel
+                      active={sort?.index === header.sort}
+                      direction={sort?.asc ? 'asc' : 'desc'}
+                      onClick={() => onSelectedField(header.sort)}>
+                      {getHeaderValues(header.title)}
+                    </TableSortLabel>
+                  ) : (
+                    <>{getHeaderValues(header.title)}</>
+                  )}
                 </TableCell>
               ))}
-              <TableCell key={`action-${i}`} align={'right'}>
-                <DataTableActions
-                  actions={actions}
-                  onActionClick={(action) => onMenuItemClick(action, row)}
-                  isBlocked={!row.Active}
-                  editDisabled={selectedItems?.length > 1}
-                />
-              </TableCell>
+              {actions && <TableCell className={classes.header} />}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {dsData.map((row: any, i: number) => (
+              <TableRow
+                key={i}
+                onClick={() => onRowClick(row)}
+                className={handleRowClick ? classes.tableRowClick : ''}>
+                {selectable && (
+                  <TableCell align="left" padding="none">
+                    <Checkbox
+                      color="primary"
+                      checked={selectedItems?.includes(row._id)}
+                      onChange={() => onMenuItemSelect(row._id)}
+                    />
+                  </TableCell>
+                )}
+                {Object.keys(row).map((item, j) => (
+                  <TableCell
+                    className={isValidElement(row[item]) ? '' : classes.ellipsisStyle}
+                    key={`${i}-${j}`}>
+                    {getValue(row[item])}
+                  </TableCell>
+                ))}
+                <TableCell key={`action-${i}`} align={'right'}>
+                  <DataTableActions
+                    actions={actions}
+                    onActionClick={(action) => onMenuItemClick(action, row)}
+                    isBlocked={!row.Active}
+                    editDisabled={selectedItems?.length > 1}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {dsData.length < 1 && (
+        <Paper className={classes.placeholder}>
+          <Typography variant="subtitle1">{placeholder}</Typography>
+        </Paper>
+      )}
+    </>
   );
 };
 
