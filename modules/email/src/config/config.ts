@@ -13,7 +13,6 @@ export default {
     default: 'conduit.com',
   },
   transportSettings: {
-    doc: 'The settings for the transport',
     mailgun: {
       apiKey: {
         doc: 'The email service API key',
@@ -37,13 +36,10 @@ export default {
       },
     },
     smtp: {
-      doc: 'The SMTP transport settings',
-      nullable: true,
-      default: null,
       port: {
         doc: 'The port the SMTP server is listening on',
         format: 'Number',
-        default: '',
+        default: -1,
       },
       host: {
         doc: 'The SMTP server address',
@@ -51,7 +47,6 @@ export default {
         default: '',
       },
       auth: {
-        doc: 'The SMTP server auth details',
         username: {
           format: 'String',
           default: '',
@@ -67,9 +62,6 @@ export default {
       },
     },
     mandrill: {
-      doc: 'The Mandrill config',
-      nullable: true,
-      default: null,
       apiKey: {
         doc: 'The Mandrill API key',
         format: 'String',
@@ -77,9 +69,6 @@ export default {
       },
     },
     sendgrid: {
-      doc: 'The SendGrid config',
-      nullable: true,
-      default: null,
       apiKey: {
         doc: 'The SendGrid API key',
         format: 'String',
