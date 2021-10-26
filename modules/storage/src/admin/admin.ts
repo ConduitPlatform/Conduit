@@ -251,10 +251,12 @@ export class AdminRoutes {
       });
     }
 
-    let query: { container: string; folder?: string; name?: any } = { container };
+    let query: { container: string; folder?: string | null; name?: any } = { container };
 
     if (!isNil(folder)) {
       query.folder = folder;
+    } else {
+      query.folder = null;
     }
     if (!isNil(search)) {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
