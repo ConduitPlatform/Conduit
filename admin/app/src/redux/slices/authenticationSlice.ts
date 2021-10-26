@@ -142,23 +142,6 @@ export const asyncUnblockUserUI = createAsyncThunk(
   }
 );
 
-export const asyncDeleteUser = createAsyncThunk(
-  'authentication/deleteUser',
-  async (params: { id: string; getUsers: any }, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      await deleteUser(params.id);
-      params.getUsers();
-      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted user!`));
-      thunkAPI.dispatch(setAppDefaults());
-    } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 export const asyncDeleteUsers = createAsyncThunk(
   'authentication/deleteUsers',
   async (params: { ids: string[]; getUsers: any }, thunkAPI) => {

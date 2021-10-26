@@ -223,7 +223,7 @@ const Users = () => {
   };
 
   const deleteButtonAction = () => {
-    if (openDeleteUser.open) {
+    if (openDeleteUser.open && openDeleteUser.multiple) {
       const params = {
         ids: selectedUsers,
         getUsers: getUsersCallback,
@@ -231,10 +231,10 @@ const Users = () => {
       dispatch(asyncDeleteUsers(params));
     } else {
       const params = {
-        id: selectedUser._id,
+        ids: [`${selectedUser._id}`],
         getUsers: getUsersCallback,
       };
-      dispatch(asyncDeleteUser(params));
+      dispatch(asyncDeleteUsers(params));
     }
     setOpenDeleteUser({
       open: false,
