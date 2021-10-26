@@ -101,6 +101,7 @@ export const asyncUploadTemplate = createAsyncThunk(
     try {
       await uploadTemplateRequest(_id);
       thunkAPI.dispatch(setAppDefaults());
+      thunkAPI.dispatch(enqueueSuccessNotification('Email template was uploaded successfully!'));
       return _id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
