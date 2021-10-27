@@ -103,7 +103,9 @@ export class FileHandlers {
         .store((folder ?? '') + name, buffer);
       let publicUrl = null;
       if (isPublic) {
-        publicUrl = await this.storageProvider.container(folder).getPublicUrl(name);
+        publicUrl = await this.storageProvider
+          .container(usedContainer)
+          .getPublicUrl((folder ?? '') + name);
       }
 
       const newFile = await this.database.create('File', {

@@ -107,6 +107,10 @@ export class AdminRoutes {
         name,
         container,
       });
+      await this.grpcSdk.databaseProvider!.deleteMany('File', {
+        folder: name,
+        container,
+      });
     }
     return callback(null, { result: 'OK' });
   }
