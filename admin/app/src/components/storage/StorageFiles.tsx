@@ -101,9 +101,9 @@ const StorageFiles = () => {
     dispatch(asyncAddStorageFile({ fileData, getContainerData }));
   };
 
-  const handleEditFile = () => {
-    setDrawerAddOpen(true);
-  };
+  // const handleEditFile = () => {
+  //   setDrawerAddOpen(true);
+  // };
 
   const handleDelete = (
     type: 'container' | 'folder' | 'file',
@@ -195,7 +195,7 @@ const StorageFiles = () => {
         path={path}
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
-        handleEdit={handleEditFile}
+        // handleEdit={handleEditFile}
         handlePathClick={handlePathClick}
         handleDelete={handleDelete}
         handleLimitChange={handleLimitChange}

@@ -7,6 +7,11 @@ import FolderIcon from '@material-ui/icons/Folder';
 import DescriptionIcon from '@material-ui/icons/Description';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
 import Paginator from '../common/Paginator';
+import {
+  IStorageContainerData,
+  IStorageFileData,
+  IStorageFolderData,
+} from '../../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -27,13 +32,30 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+interface IContainerTable {
+  icon: JSX.Element;
+  Name: string;
+  isPublic: boolean;
+}
+
+interface IContainerDataTable {
+  icon: JSX.Element;
+  Name: string;
+  isPublic: boolean;
+  mimeType: string;
+}
+
+type FormData = IContainerTable | IContainerDataTable;
+
+type ContainerDataProps = IStorageFileData | IStorageFolderData;
+
 interface Props {
-  containers: any;
-  containerData: any;
+  containers: IStorageContainerData[];
+  containerData: ContainerDataProps[];
   path: string;
-  handleAdd: any;
-  handleCreate: any;
-  handleEdit: (value: boolean) => void;
+  handleAdd: () => void;
+  handleCreate: () => void;
+  // handleEdit: (value: boolean) => void;
   handlePathClick: (value: string) => void;
   handleDelete: (
     type: 'container' | 'folder' | 'file',
@@ -41,8 +63,8 @@ interface Props {
     name: string,
     container?: string
   ) => void;
-  handlePageChange: any;
-  handleLimitChange: any;
+  handlePageChange: (event: React.MouseEvent<HTMLButtonElement> | null, page: number) => void;
+  handleLimitChange: (value: number) => void;
   limit: number;
   page: number;
   count: number;
@@ -54,7 +76,7 @@ const StorageTable: FC<Props> = ({
   path,
   handleAdd,
   handleCreate,
-  handleEdit,
+  // handleEdit,
   handlePathClick,
   handleDelete,
   handlePageChange,
@@ -67,31 +89,33 @@ const StorageTable: FC<Props> = ({
 
   const formatData = () => {
     if (path === '/')
-      return containers.map((item: any) => {
+      return containers.map((item: IStorageContainerData) => {
         return {
           icon: <FolderOpenIcon />,
           Name: item.name,
           isPublic: item.isPublic,
         };
       });
-    return containerData.map((item: any) => {
+    return containerData.map((item: ContainerDataProps) => {
       return {
-        icon: item.isFile ? <DescriptionIcon /> : <FolderIcon />,
+        icon: 'isFile' in item && item.isFile ? <DescriptionIcon /> : <FolderIcon />,
         Name: item.name,
         isPublic: item.isPublic,
-        mimeType: item.mimeType,
+        mimeType: 'mimeType' in item ? item.mimeType : undefined,
       };
     });
   };
 
-  const handleAction = (action: { title: string; type: string }, data: any) => {
+  const handleAction = (action: { title: string; type: string }, data: FormData) => {
     if (path === '/') {
-      const container = containers.find((item: any) => item.name === data.Name);
+      const container = containers.find((item: IStorageContainerData) => item.name === data.Name);
+      if (!container) return;
       handleDelete('container', container._id, container.name);
       return;
     }
-    const foundItem = containerData.find((item: any) => item.name === data.Name);
-    if (foundItem.isFile) {
+    const foundItem = containerData.find((item: ContainerDataProps) => item.name === data.Name);
+    if (!foundItem) return;
+    if ('isFile' in foundItem && foundItem.isFile) {
       handleDelete('file', foundItem._id, foundItem.name);
       return;
     }
@@ -109,10 +133,12 @@ const StorageTable: FC<Props> = ({
   const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }, { title: 'mimeType' }];
 
   const onPathClick = (item: string, index?: number) => {
-    const file = containerData.find((itemFile: any) => itemFile.name === item);
-    if (containerData.length > 0 && file?.isFile) {
+    const file = containerData.find((itemFile: ContainerDataProps) => {
+      return itemFile.name === item;
+    });
+    if (containerData.length > 0 && file && 'isFile' in file && file.isFile) {
       // handleEdit(true);
-      console.log('handle edit');
+      // console.log('handle edit');
       // dispatch(asyncSetSelectedStorageFile(file));
       return;
     }
