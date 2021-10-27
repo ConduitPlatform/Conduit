@@ -27,13 +27,15 @@ export class AdminHandlers {
         createCustomer: this.createCustomer.bind(this),
         getCustomers: this.getCustomers.bind(this),
         getProducts: this.getProducts.bind(this),
-        editProduct: this.editProduct.bind(this)
+        editProduct: this.editProduct.bind(this),
+        getSubscription: this.getSubscription.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
         console.error(err);
       });
   }
+
   async getProducts(call: RouterRequest, callback:RouterResponse){
     const { skip, limit,ids } = JSON.parse(call.request.params);
     let skipNumber = 0,
@@ -304,5 +306,49 @@ export class AdminHandlers {
     this.grpcSdk.bus?.publish('payments:create:Product', JSON.stringify(productDoc));
 
     return callback(null, { result: JSON.stringify(product) });
+  }
+
+  async getSubscription(call: RouterRequest, callback: RouterResponse){
+    const { skip, limit,ids } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    if(isNil(ids)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array',
+      });
+    }
+    else if(ids.length !== 0){
+      query['_id'] = { $in: ids};
+    }
+    const subscriptionDocumentsPromise = this.database.findMany(
+      'Subscription',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Subscription', query);
+
+    let errorMessage;
+    const [subscriptionDocuments, totalCount] = await Promise.all([
+      subscriptionDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    return callback(null, { result: JSON.stringify({ subscriptionDocuments, totalCount }) });
+
   }
 }
