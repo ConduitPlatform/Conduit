@@ -14,7 +14,6 @@ export interface IStorageConfig {
 }
 
 export interface IStorageFile {
-  id: string;
   name: string;
   data: string;
   folder?: string;

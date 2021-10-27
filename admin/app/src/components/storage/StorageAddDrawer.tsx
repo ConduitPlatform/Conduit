@@ -45,7 +45,6 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   // console.log('selectedFile', selectedFile);
 
   const initialFileData = {
-    id: '',
     name: '',
     data: '',
     folder: '',
@@ -63,7 +62,6 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   const handleAdd = () => {
     closeDrawer();
     const sendFileData = {
-      id: fileData.id,
       name: fileData.name,
       data: fileData.data,
       folder: fileData.folder ? `${fileData.folder}/` : undefined,
