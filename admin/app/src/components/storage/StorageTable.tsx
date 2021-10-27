@@ -9,8 +9,9 @@ import FolderOpenIcon from '@material-ui/icons/FolderOpen';
 import {
   asyncDeleteStorageContainer,
   asyncDeleteStorageFile,
-  asyncDeleteStorageFolder,
   asyncGetStorageFile,
+  asyncSetSelectedStorageFile,
+  setSelectedFile,
 } from '../../redux/slices/storageSlice';
 import { useAppDispatch } from '../../redux/store';
 
@@ -39,7 +40,14 @@ interface Props {
   path: string;
   handleAdd: any;
   handleCreate: any;
+  handleEdit: (value: boolean) => void;
   handlePathClick: (value: string) => void;
+  handleDelete: (
+    type: 'container' | 'folder' | 'file',
+    id: string,
+    name: string,
+    container?: string
+  ) => void;
 }
 
 const StorageTable: FC<Props> = ({
@@ -48,7 +56,9 @@ const StorageTable: FC<Props> = ({
   path,
   handleAdd,
   handleCreate,
+  handleEdit,
   handlePathClick,
+  handleDelete,
 }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
@@ -75,21 +85,15 @@ const StorageTable: FC<Props> = ({
   const handleAction = (action: { title: string; type: string }, data: any) => {
     if (path === '/') {
       const container = containers.find((item: any) => item.name === data.Name);
-      dispatch(asyncDeleteStorageContainer({ id: container._id, name: container.name }));
+      handleDelete('container', container._id, container.name);
       return;
     }
     const foundItem = containerData.find((item: any) => item.name === data.Name);
     if (data.isFile) {
-      dispatch(asyncDeleteStorageFile(foundItem._id));
+      handleDelete('file', foundItem._id, foundItem.name);
       return;
     }
-    dispatch(
-      asyncDeleteStorageFolder({
-        id: foundItem._id,
-        name: foundItem.name,
-        container: foundItem.container,
-      })
-    );
+    handleDelete('folder', foundItem._id, foundItem.name, foundItem.container);
   };
 
   const deleteAction = {
@@ -108,8 +112,11 @@ const StorageTable: FC<Props> = ({
 
     if (containerData.length > 0 && file?.isFile) {
       dispatch(asyncGetStorageFile(file._id));
+      handleEdit(true);
+      dispatch(asyncSetSelectedStorageFile(file));
       return;
     }
+    //to be replaced with next dynamic routing
     const splitPath = path.split('/');
     if (index === splitPath.length - 1) return;
     if (index && splitPath.length - index >= 2) {

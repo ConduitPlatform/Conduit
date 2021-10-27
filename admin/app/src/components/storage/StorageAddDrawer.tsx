@@ -1,11 +1,11 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
 import Dropzone from '../common/Dropzone';
 import { IContainer } from '../../models/storage/StorageModels';
-import { useAppDispatch } from '../../redux/store';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
 
 const useStyles = makeStyles((theme) => ({
@@ -43,13 +43,16 @@ interface FileData {
 
 interface Props {
   open: boolean;
+  edit: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
 }
 
-const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
+const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
+  // console.log('selectedFile', selectedFile);
 
   const initialFileData = {
     name: '',
@@ -57,6 +60,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
     folder: '',
     container: '',
     isPublic: false,
+    url: '',
   };
   const [fileData, setFileData] = useState<FileData>(initialFileData);
 
@@ -67,7 +71,14 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
 
   const handleAdd = () => {
     closeDrawer();
-    dispatch(asyncAddStorageFile(fileData));
+    const sendFileData = {
+      name: fileData.name,
+      data: fileData.data,
+      folder: `${fileData.folder}/`,
+      container: fileData.container,
+      isPublic: fileData.isPublic,
+    };
+    dispatch(asyncAddStorageFile(sendFileData));
   };
 
   const handleSetFile = (data: string, name: string) => {
@@ -84,7 +95,11 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
         <Typography variant="h6" className={classes.title}>
           Add File
         </Typography>
-        <Dropzone file={fileData.data} setFile={handleSetFile} />
+        <Dropzone
+          file={fileData.data}
+          // url={fileData.url}
+          setFile={handleSetFile}
+        />
         <TextField
           variant="outlined"
           label="File Name"

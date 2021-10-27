@@ -44,10 +44,15 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   file: string;
+  // url: string;
   setFile: (data: string, name: string) => void;
 }
 
-const Dropzone: FC<Props> = ({ file, setFile }) => {
+const Dropzone: FC<Props> = ({
+  file,
+  // url,
+  setFile,
+}) => {
   const classes = useStyles();
   const [fileName, setFileName] = useState('');
 
@@ -81,8 +86,12 @@ const Dropzone: FC<Props> = ({ file, setFile }) => {
       <Box className={classes.dropContainer}>
         {file ? (
           <>
-            <Box className={classes.fileName}>{fileName}</Box>
-            <img src={'data:image/jpeg;base64,' + file} alt={''} className={classes.image} />
+            {/*<Box className={classes.fileName}>{fileName}</Box>*/}
+            {/*<img*/}
+            {/*  src={url ? url : 'data:image/jpeg;base64,' + file}*/}
+            {/*  alt={''}*/}
+            {/*  className={classes.image}*/}
+            {/*/>*/}
           </>
         ) : (
           <>

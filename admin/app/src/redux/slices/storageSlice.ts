@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { IContainer, IStorageConfig } from '../../models/storage/StorageModels';
 import {
   createStorageContainer,
@@ -10,6 +10,7 @@ import {
   getStorageContainers,
   getStorageFile,
   getStorageFiles,
+  getStorageFileUrl,
   getStorageFolders,
   getStorageSettings,
   putStorageSettings,
@@ -32,6 +33,7 @@ interface IStorageSlice {
       data: any;
       totalCount: number;
     };
+    selectedFile: undefined;
   };
 }
 
@@ -59,6 +61,7 @@ const initialState: IStorageSlice = {
       totalCount: 0,
       data: [],
     },
+    selectedFile: undefined,
   },
 };
 
@@ -223,7 +226,6 @@ export const asyncGetStorageFile = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await getStorageFile(id);
-      console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
@@ -311,12 +313,38 @@ export const asyncUpdateStorageFile = createAsyncThunk(
   }
 );
 
+export const asyncSetSelectedStorageFile = createAsyncThunk(
+  'storage/setSelectedStorageFile',
+  async (file: any, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      console.log('file', file);
+      if (!file.url) {
+        const { data } = await getStorageFileUrl(file._id);
+        console.log('data', data);
+      }
+      // const { data } = await updateStorageFile(fileData);
+      // thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
+      // console.log('success', data);
+      thunkAPI.dispatch(setAppDefaults());
+      // return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
 const storageSlice = createSlice({
   name: 'storage',
   initialState,
   reducers: {
     clearStoragePageStore: () => {
       return initialState;
+    },
+    setSelectedFile: (state, action) => {
+      state.data.selectedFile = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -353,6 +381,6 @@ const storageSlice = createSlice({
   },
 });
 
-export const { clearStoragePageStore } = storageSlice.actions;
+export const { clearStoragePageStore, setSelectedFile } = storageSlice.actions;
 
 export default storageSlice.reducer;
