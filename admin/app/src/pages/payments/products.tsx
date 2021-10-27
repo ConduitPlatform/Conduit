@@ -12,6 +12,7 @@ import {
   InputAdornment,
   Tooltip,
   Box,
+  Icon,
 } from '@material-ui/core';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
@@ -27,6 +28,7 @@ import {
 } from '../../redux/slices/paymentsSlice';
 import { Product } from '../../models/payments/PaymentsModels';
 import ViewEditProduct from '../../components/payments/ViewEditProduct';
+import { Check, Close } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -35,7 +37,9 @@ const useStyles = makeStyles((theme) => ({
   btnAlignment2: {
     marginRight: theme.spacing(1.5),
   },
-  actions: {},
+  actions: {
+    marginBottom: '5px',
+  },
   noProducts: {
     textAlign: 'center',
     marginTop: '200px',
@@ -249,7 +253,7 @@ const Products = () => {
       return {
         _id: u._id,
         value: u.value,
-        subsciption: u.isSubscriptions,
+        subsciption: u.isSubscriptions ? 'true' : 'false',
         'Updated At': u.updatedAt,
       };
     });
@@ -266,7 +270,7 @@ const Products = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          {products.length > 0 && (
+          {count > 0 && (
             <TextField
               size="small"
               variant="outlined"

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { PaymentSettings } from '../models/payments/PaymentsModels';
 import { CONDUIT_API } from './requestsConfig';
 
 export const getCustomersRequest = (skip: number, limit: number, search?: string) =>
@@ -32,3 +33,8 @@ export const getSubscriptionsRequest = (skip: number, limit: number, search?: st
   axios.get(`${CONDUIT_API}/admin/payments/subscriptions`, {
     params: { skip, limit, search: search !== '' ? search : undefined },
   });
+
+export const getPaymentSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/payments`);
+
+export const putPaymentSettingsRequest = (data: PaymentSettings) =>
+  axios.put(`${CONDUIT_API}/admin/config/payments`, { ...data });

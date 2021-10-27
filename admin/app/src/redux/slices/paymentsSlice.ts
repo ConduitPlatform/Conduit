@@ -3,16 +3,24 @@ import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import {
   getCustomersRequest,
+  getPaymentSettingsRequest,
   getProductsRequest,
   getSubscriptionsRequest,
   getTransactionsRequest,
   postCustomerRequest,
   postProductsRequest,
   putCustomerRequest,
+  putPaymentSettingsRequest,
   putProductRequest,
 } from '../../http/PaymentsRequests';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
-import { Customer, Product, Subscription, Transaction } from '../../models/payments/PaymentsModels';
+import {
+  Customer,
+  PaymentSettings,
+  Product,
+  Subscription,
+  Transaction,
+} from '../../models/payments/PaymentsModels';
 
 interface IPaymentsSlice {
   data: {
@@ -29,6 +37,7 @@ interface IPaymentsSlice {
       count: number;
     };
     subscriptions: Subscription[];
+    settings: PaymentSettings;
   };
 }
 
@@ -47,6 +56,13 @@ const initialState: IPaymentsSlice = {
       count: 0,
     },
     subscriptions: [],
+    settings: {
+      active: false,
+      stripe: {
+        enabled: false,
+        secret_key: '',
+      },
+    },
   },
 };
 
@@ -190,6 +206,38 @@ export const asyncGetSubscriptions = createAsyncThunk(
   }
 );
 
+export const asyncGetPaymentSettings = createAsyncThunk(
+  'authentication/getConfig',
+  async (arg, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await getPaymentSettingsRequest();
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncUpdatePaymentSettings = createAsyncThunk(
+  'authentication/updateConfig',
+  async (body: any, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await putPaymentSettingsRequest(body);
+      thunkAPI.dispatch(setAppDefaults());
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
 const paymentsSlice = createSlice({
   name: 'payments',
   initialState,
@@ -205,17 +253,24 @@ const paymentsSlice = createSlice({
     });
     builder.addCase(asyncGetProducts.fulfilled, (state, action) => {
       state.data.productData.products = action.payload.productDocuments;
-      state.data.productData.count = action.payload.count;
+      state.data.productData.count = action.payload.totalCount;
     });
     builder.addCase(asyncCreateProduct.fulfilled, (state, action) => {
       state.data.productData.products.push(action.payload.product);
       state.data.productData.count = state.data.productData.count++;
     });
     builder.addCase(asyncGetTransactions.fulfilled, (state, action) => {
-      state.data.transactionData = action.payload;
+      state.data.transactionData.transactions = action.payload.transactionDocuments;
+      state.data.transactionData.count = action.payload.totalCount;
     });
     builder.addCase(asyncGetSubscriptions.fulfilled, (state, action) => {
       state.data.subscriptions = action.payload;
+    });
+    builder.addCase(asyncGetPaymentSettings.fulfilled, (state, action) => {
+      state.data.settings = action.payload;
+    });
+    builder.addCase(asyncUpdatePaymentSettings.fulfilled, (state, action) => {
+      state.data.settings = action.payload;
     });
   },
 });

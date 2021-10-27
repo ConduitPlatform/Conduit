@@ -10,9 +10,17 @@ import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
-import { Button, Paper } from '@material-ui/core';
+import {
+  Button,
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  Paper,
+  Select,
+  Switch,
+  MenuItem,
+} from '@material-ui/core';
 import { Product } from '../../models/payments/PaymentsModels';
-import { number } from 'prop-types';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -151,9 +159,9 @@ const ViewEditProduct: React.FC<Props> = ({
     });
   };
 
-  const handleDisabled = () => {
-    return productState._id && productState.name && productState.stripe;
-  };
+  // const handleDisabled = () => {
+  //   return productState._id && productState.name && productState.stripe;
+  // };
 
   return (
     <Container className={classes.marginTop}>
@@ -184,31 +192,60 @@ const ViewEditProduct: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    className={classes.textField}
-                    label={'Recurs'}
-                    variant={'outlined'}
-                    value={productState.recurring}
-                    onChange={(event) => {
-                      setProductState({ ...productState, recurring: event.target.value });
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    className={classes.textField}
-                    label={'Recurring count'}
-                    variant={'outlined'}
-                    value={productState.recurringCount}
-                    onChange={(event) => {
-                      setProductState({
-                        ...productState,
-                        recurring: event.target.value,
-                      });
-                    }}
-                  />
-                </Grid>
+                <Paper elevation={1} className={classes.paper}>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={productState.isSubscriptions}
+                          onChange={(event) => {
+                            setProductState({
+                              ...productState,
+                              isSubscriptions: !productState.isSubscriptions,
+                            });
+                          }}
+                          inputProps={{ 'aria-label': 'controlled' }}
+                        />
+                      }
+                      label="Subscription"
+                    />
+                  </Grid>
+                  {productState.isSubscriptions && (
+                    <>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel id="demo-simple-select-label">Recurs</InputLabel>
+                          <Select
+                            labelId="demo-simple-select-label"
+                            id="demo-simple-select"
+                            value={productState.recurring}
+                            label="Recurs"
+                            onChange={(event) => {
+                              setProductState({ ...productState, recurring: event.target.value });
+                            }}>
+                            <MenuItem value={'week'}>Weekly</MenuItem>
+                            <MenuItem value={'month'}>Monthly</MenuItem>
+                            <MenuItem value={'year'}>Yearly</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} style={{ marginTop: '10px' }}>
+                        <TextField
+                          className={classes.textField}
+                          label={'Recurring count'}
+                          variant={'outlined'}
+                          value={productState.recurringCount}
+                          onChange={(event) => {
+                            setProductState({
+                              ...productState,
+                              recurring: event.target.value,
+                            });
+                          }}
+                        />
+                      </Grid>
+                    </>
+                  )}
+                </Paper>
               </>
             ) : (
               <>
@@ -240,7 +277,6 @@ const ViewEditProduct: React.FC<Props> = ({
               variant="contained"
               color="secondary"
               startIcon={<EditIcon />}
-              disabled
               onClick={() => setEdit(true)}>
               Edit
             </Button>
@@ -257,8 +293,7 @@ const ViewEditProduct: React.FC<Props> = ({
                 variant="contained"
                 color="primary"
                 startIcon={<Save />}
-                onClick={handleSaveClick}
-                disabled={!handleDisabled()}>
+                onClick={handleSaveClick}>
                 Save
               </Button>
             </>

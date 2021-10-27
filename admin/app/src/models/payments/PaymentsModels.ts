@@ -54,3 +54,11 @@ export interface Subscription {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface PaymentSettings {
+  active: boolean;
+  stripe: {
+    enabled: boolean;
+    secret_key: string;
+  };
+}

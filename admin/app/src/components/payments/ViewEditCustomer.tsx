@@ -214,7 +214,7 @@ const ViewEditCustomer: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                {/* <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
                     label={'Stripe ID'}
@@ -224,7 +224,7 @@ const ViewEditCustomer: React.FC<Props> = ({
                       setCustomerState({ ...customerState, email: event.target.value });
                     }}
                   />
-                </Grid>
+                </Grid> */}
               </>
             ) : (
               <>
@@ -248,10 +248,10 @@ const ViewEditCustomer: React.FC<Props> = ({
                   <Typography variant="subtitle2">Postal code:</Typography>
                   <Typography variant="h6">{customerState.postCode}</Typography>
                 </Grid>
-                <Grid item xs={12}>
+                {/* <Grid item xs={12}>
                   <Typography variant="subtitle2">Stripe ID:</Typography>
                   <Typography variant="h6">{customerState.stripe.customerId}</Typography>
-                </Grid>
+                </Grid> */}
               </>
             )}
           </Grid>
@@ -264,7 +264,6 @@ const ViewEditCustomer: React.FC<Props> = ({
               variant="contained"
               color="secondary"
               startIcon={<EditIcon />}
-              disabled
               onClick={() => setEdit(true)}>
               Edit
             </Button>
@@ -281,8 +280,7 @@ const ViewEditCustomer: React.FC<Props> = ({
                 variant="contained"
                 color="primary"
                 startIcon={<Save />}
-                onClick={handleSaveClick}
-                disabled={!handleDisabled()}>
+                onClick={handleSaveClick}>
                 Save
               </Button>
             </>

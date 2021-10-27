@@ -37,7 +37,9 @@ const useStyles = makeStyles((theme) => ({
   btnAlignment2: {
     marginRight: theme.spacing(1.5),
   },
-  actions: {},
+  actions: {
+    marginBottom: '5px',
+  },
   noCustomers: {
     textAlign: 'center',
     marginTop: '200px',
@@ -247,7 +249,7 @@ const Customers = () => {
     return data.map((u) => {
       return {
         _id: u._id,
-        Name: u.buyerName,
+        email: u.email,
         PostCode: u.postCode,
         'Updated At': u.updatedAt,
       };
@@ -265,7 +267,7 @@ const Customers = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          {customers.length > 0 && (
+          {count > 0 && (
             <TextField
               size="small"
               variant="outlined"
