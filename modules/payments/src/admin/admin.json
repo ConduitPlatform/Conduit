@@ -29,6 +29,11 @@
       "path": "/subscription",
       "method": "GET",
       "protoName": "getSubscription"
+    },
+    {
+      "path": "/transactions",
+      "method": "GET",
+      "protoName": "getTransactions"
     }
   ]
 }

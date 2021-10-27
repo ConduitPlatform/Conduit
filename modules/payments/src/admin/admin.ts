@@ -8,6 +8,7 @@ import { isArray, isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 export class AdminHandlers {
   private database: any;
 
@@ -29,6 +30,7 @@ export class AdminHandlers {
         getProducts: this.getProducts.bind(this),
         editProduct: this.editProduct.bind(this),
         getSubscription: this.getSubscription.bind(this),
+        getTransactions: this.getTransactions.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -37,7 +39,7 @@ export class AdminHandlers {
   }
 
   async getProducts(call: RouterRequest, callback:RouterResponse){
-    const { skip, limit,ids } = JSON.parse(call.request.params);
+    const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -48,14 +50,10 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {};
-    if(isNil(ids)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids must be an array',
-      });
-    }
-    else if(ids.length !== 0){
-      query['_id'] = { $in: ids};
+    let identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const productDocumentsPromise = this.database.findMany(
       'Product',
@@ -81,7 +79,7 @@ export class AdminHandlers {
   }
 
   async getCustomers(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit,ids } = JSON.parse(call.request.params);
+    const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -92,14 +90,10 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {};
-    if(isNil(ids)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids must be an array',
-      });
-    }
-    else if(ids.length !== 0){
-      query['_id'] = { $in: ids};
+    let identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const customerDocumentsPromise = this.database.findMany(
       'PaymentsCustomer',
@@ -141,7 +135,7 @@ export class AdminHandlers {
       return callback({
         code: status.NOT_FOUND,
         message: 'Product not found',
-      });
+      });0
     }
     ['name', 'value', 'currency','isSubscription','recurring','recurringCount','stripe'].forEach((key) => {
       if (params[key] ) {
@@ -349,6 +343,50 @@ export class AdminHandlers {
         message: errorMessage,
       });
     return callback(null, { result: JSON.stringify({ subscriptionDocuments, totalCount }) });
+
+  }
+
+  async getTransactions(call: RouterRequest, callback: RouterResponse){
+    const { skip, limit,customerId,productId} = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+
+    if(!isNil(customerId) && isNil(productId)){
+      query['customerId'] = customerId
+    }
+    else if(isNil(customerId) && !isNil(productId)){
+      query['product'] = productId
+    }
+
+    console.log(query);
+    const transactionDocumentsPromise = this.database.findMany(
+      'Transaction',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Transaction', query);
+
+    let errorMessage;
+    const [transactionDocuments, totalCount] = await Promise.all([
+      transactionDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    return callback(null, { result: JSON.stringify({ transactionDocuments, totalCount }) });
 
   }
 }
