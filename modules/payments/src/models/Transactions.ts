@@ -4,9 +4,9 @@ export const TransactionSchema = new ConduitSchema(
   'Transaction',
   {
     _id: TYPE.ObjectId,
-    userId: {
+    customerId: {
       type: TYPE.Relation,
-      model: 'User',
+      model: 'PaymentsCustomer',
     },
     provider: TYPE.String,
     product: {
