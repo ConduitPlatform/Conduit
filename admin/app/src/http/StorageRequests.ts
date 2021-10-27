@@ -60,8 +60,8 @@ export const createStorageFile = (fileData: {
   data: string;
   folder: string;
   container: string;
-  mimeType?: string;
-  isPublic?: boolean;
+  mimeType: string;
+  isPublic: boolean;
 }) => axios.post(`${CONDUIT_API}/admin/storage/file`, { ...fileData });
 
 export const createStorageFolder = (folderData: {

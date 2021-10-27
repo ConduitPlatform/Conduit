@@ -39,6 +39,7 @@ interface FileData {
   folder: string;
   container: string;
   isPublic: boolean;
+  mimeType: string;
 }
 
 interface Props {
@@ -61,6 +62,7 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
     folder: '',
     container: '',
     isPublic: false,
+    mimeType: '',
     url: '',
   };
   const [fileData, setFileData] = useState<FileData>(initialFileData);
@@ -78,15 +80,17 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
       folder: fileData.folder ? `${fileData.folder}/` : undefined,
       container: fileData.container,
       isPublic: fileData.isPublic,
+      mimeType: fileData.mimeType,
     };
     setFileData(initialFileData);
     handleAddFile(sendFileData);
   };
 
-  const handleSetFile = (data: string, name: string) => {
+  const handleSetFile = (data: string, mimeType: string, name: string) => {
     setFileData({
       ...fileData,
       data: data,
+      mimeType: mimeType,
       name: fileData.name ? fileData.name : name,
     });
   };

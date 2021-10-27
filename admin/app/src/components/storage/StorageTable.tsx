@@ -25,9 +25,6 @@ const useStyles = makeStyles((theme) => ({
       textDecoration: 'underline',
     },
   },
-  dataTable: {
-    // backgroundColor: 'pink',
-  },
 }));
 
 interface Props {
@@ -112,9 +109,7 @@ const StorageTable: FC<Props> = ({
   const headers = [{ title: '' }, { title: 'Name' }, { title: 'is Public' }, { title: 'mimeType' }];
 
   const onPathClick = (item: string, index?: number) => {
-    // if (containerData.length > 0) {
     const file = containerData.find((itemFile: any) => itemFile.name === item);
-
     if (containerData.length > 0 && file?.isFile) {
       // handleEdit(true);
       console.log('handle edit');
@@ -170,7 +165,6 @@ const StorageTable: FC<Props> = ({
             color="secondary"
             startIcon={<AddCircleOutline />}
             onClick={() => handleAdd()}>
-            {/*onClick={() => dispatch(asyncGetStorageFiles())}>*/}
             Add
           </Button>
         </Grid>
@@ -182,7 +176,6 @@ const StorageTable: FC<Props> = ({
         selectable={false}
         handleRowClick={(value) => onPathClick(value.Name)}
         headers={path === '/' ? containerHeaders : headers}
-        className={classes.dataTable}
       />
       <Grid container style={{ marginTop: '-8px' }}>
         <Grid item xs={7} />

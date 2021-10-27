@@ -45,7 +45,7 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   file: string;
   // url: string;
-  setFile: (data: string, name: string) => void;
+  setFile: (data: string, mimeType: string, name: string) => void;
 }
 
 const Dropzone: FC<Props> = ({
@@ -62,8 +62,9 @@ const Dropzone: FC<Props> = ({
     reader.readAsDataURL(readerFile);
     reader.onload = () => {
       if (typeof reader.result === 'string') {
+        const mimeType = reader.result.split(';')[0].split(':')[1];
         const base64 = reader.result.split(',')[1];
-        setFile(base64, readerFile.name);
+        setFile(base64, mimeType, readerFile.name);
       }
     };
     reader.onerror = (error) => {
