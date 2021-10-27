@@ -65,6 +65,12 @@ const StorageFiles = () => {
     getContainerData();
   }, [getContainerData, getContainers]);
 
+  useEffect(() => {
+    setPage(0);
+    setSkip(0);
+    setLimit(10);
+  }, [path]);
+
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
@@ -137,8 +143,6 @@ const StorageFiles = () => {
     }
   };
 
-  console.log('dialog', dialog);
-
   const handleDeleteAction = () => {
     setDialog(dialogInitialState);
     switch (dialog.type) {
@@ -185,6 +189,11 @@ const StorageFiles = () => {
         handleEdit={handleEditFile}
         handlePathClick={handlePathClick}
         handleDelete={handleDelete}
+        handleLimitChange={handleLimitChange}
+        handlePageChange={handlePageChange}
+        limit={limit}
+        page={page}
+        count={path === '/' ? containersCount : totalCount}
       />
       <StorageCreateDrawer
         open={drawerCreateOpen}

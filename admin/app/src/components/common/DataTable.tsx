@@ -6,7 +6,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import Paper from '@material-ui/core/Paper';
+import Paper, { PaperProps } from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import moment from 'moment';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
@@ -50,7 +50,7 @@ type Action = {
   type: string;
 };
 
-interface Props {
+interface Props extends PaperProps {
   headers: any;
   sort?: { asc: boolean; index: string | null };
   setSort?: any;

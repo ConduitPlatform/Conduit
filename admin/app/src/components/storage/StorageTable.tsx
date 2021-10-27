@@ -6,14 +6,7 @@ import DataTable from '../common/DataTable';
 import FolderIcon from '@material-ui/icons/Folder';
 import DescriptionIcon from '@material-ui/icons/Description';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
-import {
-  asyncDeleteStorageContainer,
-  asyncDeleteStorageFile,
-  asyncGetStorageFile,
-  asyncSetSelectedStorageFile,
-  setSelectedFile,
-} from '../../redux/slices/storageSlice';
-import { useAppDispatch } from '../../redux/store';
+import Paginator from '../common/Paginator';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -32,6 +25,9 @@ const useStyles = makeStyles((theme) => ({
       textDecoration: 'underline',
     },
   },
+  dataTable: {
+    // backgroundColor: 'pink',
+  },
 }));
 
 interface Props {
@@ -48,6 +44,11 @@ interface Props {
     name: string,
     container?: string
   ) => void;
+  handlePageChange: any;
+  handleLimitChange: any;
+  limit: number;
+  page: number;
+  count: number;
 }
 
 const StorageTable: FC<Props> = ({
@@ -59,9 +60,13 @@ const StorageTable: FC<Props> = ({
   handleEdit,
   handlePathClick,
   handleDelete,
+  handlePageChange,
+  handleLimitChange,
+  limit,
+  page,
+  count,
 }) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
 
   const formatData = () => {
     if (path === '/')
@@ -177,21 +182,20 @@ const StorageTable: FC<Props> = ({
         selectable={false}
         handleRowClick={(value) => onPathClick(value.Name)}
         headers={path === '/' ? containerHeaders : headers}
+        className={classes.dataTable}
       />
-      {/*{templateDocuments.length > 0 && (*/}
-      {/*  <Grid container style={{ marginTop: '-8px' }}>*/}
-      {/*    <Grid item xs={7} />*/}
-      {/*    <Grid item xs={5}>*/}
-      {/*      <Paginator*/}
-      {/*        handlePageChange={handlePageChange}*/}
-      {/*        limit={limit}*/}
-      {/*        handleLimitChange={handleLimitChange}*/}
-      {/*        page={page}*/}
-      {/*        count={totalCount}*/}
-      {/*      />*/}
-      {/*    </Grid>*/}
-      {/*  </Grid>*/}
-      {/*)}*/}
+      <Grid container style={{ marginTop: '-8px' }}>
+        <Grid item xs={7} />
+        <Grid item xs={5}>
+          <Paginator
+            handlePageChange={handlePageChange}
+            limit={limit}
+            handleLimitChange={handleLimitChange}
+            page={page}
+            count={count}
+          />
+        </Grid>
+      </Grid>
     </>
   );
 };
