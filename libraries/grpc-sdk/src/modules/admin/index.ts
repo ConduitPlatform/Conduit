@@ -22,6 +22,7 @@ message AdminRequest {
 // all admin responses return their results as stringified json
 message AdminResponse {
   string result = 1;
+  string redirect = 2;
 }
 `;
 

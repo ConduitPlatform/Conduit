@@ -220,19 +220,12 @@ export class FileHandlers {
       if (found.isPublic) {
         return callback(null, { redirect: found.url });
       }
-      if (found.folder) {
-        return callback(null, {
-          redirect: await this.storageProvider
-            .container(found.container)
-            .getSignedUrl(found.folder + found.name),
-        });
-      } else {
-        return callback(null, {
-          redirect: await this.storageProvider
-            .container(found.container)
-            .getSignedUrl(found.name),
-        });
-      }
+      let url = await this.storageProvider
+        .container(found.container)
+        .getSignedUrl((found.folder ?? '') + found.name);
+      return callback(null, {
+        redirect: url,
+      });
     } catch (e) {
       return callback({
         code: status.INTERNAL,
