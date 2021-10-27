@@ -82,7 +82,7 @@ const Products = () => {
     dispatch(asyncGetProducts({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
-  const { products, totalCount } = useAppSelector((state) => state.paymentsSlice.data.products);
+  const { products, count } = useAppSelector((state) => state.paymentsSlice.data.productData);
 
   const newProduct = () => {
     setSelectedProduct(originalProductState);
@@ -323,7 +323,7 @@ const Products = () => {
                 limit={limit}
                 handleLimitChange={handleLimitChange}
                 page={page}
-                count={totalCount}
+                count={count}
               />
             </Grid>
           </Grid>

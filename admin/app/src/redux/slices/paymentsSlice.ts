@@ -16,30 +16,36 @@ import { Customer, Product, Subscription, Transaction } from '../../models/payme
 
 interface IPaymentsSlice {
   data: {
-    customers: {
+    customerData: {
       customers: Customer[];
-      totalCount: number;
+      count: number;
     };
-    products: {
+    productData: {
       products: Product[];
-      totalCount: number;
+      count: number;
     };
-    transactions: Transaction[];
+    transactionData: {
+      transactions: Transaction[];
+      count: number;
+    };
     subscriptions: Subscription[];
   };
 }
 
 const initialState: IPaymentsSlice = {
   data: {
-    customers: {
+    customerData: {
       customers: [],
-      totalCount: 0,
+      count: 0,
     },
-    products: {
+    productData: {
       products: [],
-      totalCount: 0,
+      count: 0,
     },
-    transactions: [],
+    transactionData: {
+      transactions: [],
+      count: 0,
+    },
     subscriptions: [],
   },
 };
@@ -65,7 +71,7 @@ export const asyncCreateCustomer = createAsyncThunk(
     try {
       const { data } = await postCustomerRequest(customerData);
       thunkAPI.dispatch(
-        enqueueSuccessNotification(`Successfully created template ${customerData.name}!`)
+        enqueueSuccessNotification(`Successfully created customer ${customerData.name}!`)
       );
       thunkAPI.dispatch(setAppDefaults());
       return data;
@@ -87,7 +93,7 @@ export const asyncSaveCustomerChanges = createAsyncThunk(
       } = await putCustomerRequest(dataForThunk._id, dataForThunk.data);
       thunkAPI.dispatch(
         enqueueSuccessNotification(
-          `Successfully saved changes for the template ${dataForThunk.data.name}!`
+          `Successfully saved changes for the customer ${dataForThunk.data.name}!`
         )
       );
       thunkAPI.dispatch(setAppDefaults());
@@ -121,7 +127,7 @@ export const asyncCreateProduct = createAsyncThunk(
     try {
       const { data } = await postProductsRequest(productData);
       thunkAPI.dispatch(
-        enqueueSuccessNotification(`Successfully created template ${productData.name}!`)
+        enqueueSuccessNotification(`Successfully created product ${productData.name}!`)
       );
       thunkAPI.dispatch(setAppDefaults());
       return data;
@@ -143,7 +149,7 @@ export const asyncSaveProductChanges = createAsyncThunk(
       } = await putProductRequest(dataForThunk._id, dataForThunk.data);
       thunkAPI.dispatch(
         enqueueSuccessNotification(
-          `Successfully saved changes for the template ${dataForThunk.data.name}!`
+          `Successfully saved changes for the product ${dataForThunk.data.name}!`
         )
       );
       thunkAPI.dispatch(setAppDefaults());
@@ -190,23 +196,23 @@ const paymentsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(asyncGetCustomers.fulfilled, (state, action) => {
-      state.data.customers.customers = action.payload.customerDocuments;
-      state.data.customers.totalCount = action.payload.totalCount;
+      state.data.customerData.customers = action.payload.customerDocuments;
+      state.data.customerData.count = action.payload.totalCount;
     });
     builder.addCase(asyncCreateCustomer.fulfilled, (state, action) => {
-      state.data.customers.customers.push(action.payload.customer);
-      state.data.customers.totalCount = state.data.customers.totalCount++;
+      state.data.customerData.customers.push(action.payload.customer);
+      state.data.customerData.count = state.data.customerData.count++;
     });
     builder.addCase(asyncGetProducts.fulfilled, (state, action) => {
-      state.data.products.products = action.payload.productDocuments;
-      state.data.products.totalCount = action.payload.totalCount;
+      state.data.productData.products = action.payload.productDocuments;
+      state.data.productData.count = action.payload.count;
     });
     builder.addCase(asyncCreateProduct.fulfilled, (state, action) => {
-      state.data.products.products.push(action.payload.product);
-      state.data.products.totalCount = state.data.products.totalCount++;
+      state.data.productData.products.push(action.payload.product);
+      state.data.productData.count = state.data.productData.count++;
     });
     builder.addCase(asyncGetTransactions.fulfilled, (state, action) => {
-      state.data.transactions = action.payload;
+      state.data.transactionData = action.payload;
     });
     builder.addCase(asyncGetSubscriptions.fulfilled, (state, action) => {
       state.data.subscriptions = action.payload;

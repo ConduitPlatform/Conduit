@@ -1,4 +1,4 @@
-import React, { ReactElement, useCallback, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import DataTable from '../../components/common/DataTable';
 import { EmailUI } from '../../models/emails/EmailModels';
@@ -83,7 +83,7 @@ const Customers = () => {
     dispatch(asyncGetCustomers({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
-  const { customers, totalCount } = useAppSelector((state) => state.paymentsSlice.data.customers);
+  const { customers, count } = useAppSelector((state) => state.paymentsSlice.data.customerData);
 
   const newCustomer = () => {
     setSelectedCustomer(originalCustomerState);
@@ -322,7 +322,7 @@ const Customers = () => {
                 limit={limit}
                 handleLimitChange={handleLimitChange}
                 page={page}
-                count={totalCount}
+                count={count}
               />
             </Grid>
           </Grid>
