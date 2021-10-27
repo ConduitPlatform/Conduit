@@ -8,10 +8,6 @@ export const SubscriptionSchema = new ConduitSchema(
       type: TYPE.Relation,
       model: 'Product',
     },
-    userId: {
-      type: TYPE.Relation,
-      model: 'User',
-    },
     customerId: {
       type: TYPE.Relation,
       model: 'PaymentsCustomer',
