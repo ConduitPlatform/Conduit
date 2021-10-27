@@ -190,10 +190,17 @@ export const asyncAddStorageFile = createAsyncThunk(
 
 export const asyncAddStorageFolder = createAsyncThunk(
   'storage/addStorageFolder',
-  async (folderData: { name: string; container: string; isPublic: boolean }, thunkAPI) => {
+  async (
+    params: {
+      folderData: { name: string; container: string; isPublic: boolean };
+      getContainerData: any;
+    },
+    thunkAPI
+  ) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createStorageFolder(folderData);
+      const { data } = await createStorageFolder(params.folderData);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully added folder!'));
       return data;
@@ -207,10 +214,14 @@ export const asyncAddStorageFolder = createAsyncThunk(
 
 export const asyncAddStorageContainer = createAsyncThunk(
   'storage/addStorageContainer',
-  async (containerData: { name: string; isPublic: boolean }, thunkAPI) => {
+  async (
+    params: { containerData: { name: string; isPublic: boolean }; getContainers: any },
+    thunkAPI
+  ) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createStorageContainer(containerData);
+      const { data } = await createStorageContainer(params.containerData);
+      params.getContainers();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully added container!'));
       return data;

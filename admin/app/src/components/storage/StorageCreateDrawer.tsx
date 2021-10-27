@@ -62,11 +62,18 @@ interface Props {
   open: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
+  handleCreateFolder: any;
+  handleCreateContainer: any;
 }
 
-const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
+const StorageCreateDrawer: FC<Props> = ({
+  open,
+  closeDrawer,
+  containers,
+  handleCreateFolder,
+  handleCreateContainer,
+}) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
 
   const [selected, setSelected] = useState<Selected>(Selected.container);
 
@@ -90,7 +97,7 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
 
   const handleSave = () => {
     if (selected === Selected.container) {
-      dispatch(asyncAddStorageContainer(inputData.container));
+      handleCreateContainer(inputData.container);
       setInputData(initialInputData);
       closeDrawer();
       return;
@@ -100,7 +107,7 @@ const StorageCreateDrawer: FC<Props> = ({ open, closeDrawer, containers }) => {
       container: inputData.folder.container,
       isPublic: inputData.folder.isPublic,
     };
-    dispatch(asyncAddStorageFolder(folderData));
+    handleCreateFolder(folderData);
     setInputData(initialInputData);
     closeDrawer();
   };

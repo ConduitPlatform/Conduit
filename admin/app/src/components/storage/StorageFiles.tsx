@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import StorageTable from './StorageTable';
 import {
+  asyncAddStorageContainer,
   asyncAddStorageFile,
+  asyncAddStorageFolder,
   asyncDeleteStorageContainer,
   asyncDeleteStorageFile,
   asyncDeleteStorageFolder,
@@ -63,7 +65,7 @@ const StorageFiles = () => {
   useEffect(() => {
     getContainers();
     getContainerData();
-  }, [getContainerData, getContainers]);
+  }, [getContainerData, getContainers, skip, limit]);
 
   useEffect(() => {
     setPage(0);
@@ -178,6 +180,14 @@ const StorageFiles = () => {
     setDialog(dialogInitialState);
   };
 
+  const handleCreateFolder = (folderData: any) => {
+    dispatch(asyncAddStorageFolder({ folderData, getContainerData }));
+  };
+
+  const handleCreateContainer = (containerData: any) => {
+    dispatch(asyncAddStorageContainer({ containerData, getContainers }));
+  };
+
   return (
     <>
       <StorageTable
@@ -199,6 +209,8 @@ const StorageFiles = () => {
         open={drawerCreateOpen}
         closeDrawer={handleCloseDrawer}
         containers={containers}
+        handleCreateFolder={handleCreateFolder}
+        handleCreateContainer={handleCreateContainer}
       />
       <StorageAddDrawer
         open={drawerAddOpen}
