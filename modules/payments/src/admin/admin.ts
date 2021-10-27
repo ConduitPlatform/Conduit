@@ -25,12 +25,57 @@ export class AdminHandlers {
       .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
         createCustomer: this.createCustomer.bind(this),
-        getCustomers: this.getCustomers.bind(this)
+        getCustomers: this.getCustomers.bind(this),
+        getProducts: this.getProducts.bind(this),
+        editProduct: this.editProduct.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
         console.error(err);
       });
+  }
+  async getProducts(call: RouterRequest, callback:RouterResponse){
+    const { skip, limit,ids } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    if(isNil(ids)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array',
+      });
+    }
+    else if(ids.length !== 0){
+      query['_id'] = { $in: ids};
+    }
+    const productDocumentsPromise = this.database.findMany(
+      'Product',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Product', query);
+
+    let errorMessage;
+    const [productDocuments, totalCount] = await Promise.all([
+      productDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ productDocuments, totalCount }) });
   }
 
   async getCustomers(call: RouterRequest, callback: RouterResponse) {
@@ -75,6 +120,42 @@ export class AdminHandlers {
       });
 
     return callback(null, { result: JSON.stringify({ customerDocuments, totalCount }) });
+  }
+
+  async editProduct(call:RouterRequest,callback:RouterResponse){
+    const params = JSON.parse(call.request.params);
+    const id = params.id;
+    let errorMessage: string | null = null;
+    const productDocument = await this.database
+      .findOne('Product', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    if (isNil(productDocument)) {
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'Product not found',
+      });
+    }
+    ['name', 'value', 'currency','isSubscription','recurring','recurringCount','stripe'].forEach((key) => {
+      if (params[key] ) {
+          productDocument[key] = params[key];
+      }
+    });
+    const updatedProduct = await this.database
+      .findByIdAndUpdate('Product', id, productDocument)
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ updatedProduct }) });
   }
 
   async createCustomer(call: RouterRequest, callback: RouterResponse){
