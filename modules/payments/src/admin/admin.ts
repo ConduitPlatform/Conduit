@@ -359,10 +359,10 @@ export class AdminHandlers {
     }
     let query:any = {};
 
-    if(!isNil(customerId) && isNil(productId)){
+    if(!isNil(customerId)){
       query['customerId'] = customerId
     }
-    else if(isNil(customerId) && !isNil(productId)){
+    else if(!isNil(productId)){
       query['product'] = productId
     }
 
