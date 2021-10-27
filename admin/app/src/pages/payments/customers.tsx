@@ -265,21 +265,23 @@ const Customers = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          <TextField
-            size="small"
-            variant="outlined"
-            name="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            label="Find customer"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+          {customers.length > 0 && (
+            <TextField
+              size="small"
+              variant="outlined"
+              name="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              label="Find customer"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
         </Grid>
         <Grid item>
           {selectedCustomers.length > 0 && (

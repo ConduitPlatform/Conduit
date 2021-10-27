@@ -288,11 +288,6 @@ const ViewEditCustomer: React.FC<Props> = ({
             </>
           )}
         </Grid>
-        {!edit && (
-          <div className={classes.centeredImg}>
-            <Image src={EmailImage} width="200px" alt="mail" />
-          </div>
-        )}
       </Box>
     </Container>
   );
