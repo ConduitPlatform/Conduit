@@ -36,7 +36,7 @@ const useStyles = makeStyles((theme) => ({
 interface FileData {
   name: string;
   data: string;
-  folder: string;
+  folder?: string;
   container: string;
   isPublic: boolean;
   mimeType: string;
@@ -47,13 +47,13 @@ interface Props {
   edit: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
-  handleAddFile: any;
+  handleAddFile: (data: FileData) => void;
 }
 
 const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, handleAddFile }) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
-  const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
+  // const dispatch = useAppDispatch();
+  // const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
   // console.log('selectedFile', selectedFile);
 
   const initialFileData = {
@@ -63,7 +63,7 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
     container: '',
     isPublic: false,
     mimeType: '',
-    url: '',
+    // url: '',
   };
   const [fileData, setFileData] = useState<FileData>(initialFileData);
 

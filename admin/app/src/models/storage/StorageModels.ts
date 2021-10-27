@@ -30,3 +30,20 @@ export interface IContainer {
   __v: number;
   _id: string;
 }
+
+export enum CreateFormSelected {
+  folder = 'folder',
+  container = 'container',
+}
+
+export interface ICreateForm {
+  container: {
+    name: string;
+    isPublic: boolean;
+  };
+  folder: {
+    name: string;
+    container: string;
+    isPublic: boolean;
+  };
+}

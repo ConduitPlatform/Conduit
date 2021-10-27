@@ -3,9 +3,7 @@ import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
-import { IContainer } from '../../models/storage/StorageModels';
-import { useAppDispatch } from '../../redux/store';
-import { asyncAddStorageContainer, asyncAddStorageFolder } from '../../redux/slices/storageSlice';
+import { CreateFormSelected, IContainer, ICreateForm } from '../../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,29 +39,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-enum Selected {
-  folder = 'folder',
-  container = 'container',
-}
-
-interface InputData {
-  container: {
-    name: string;
-    isPublic: boolean;
-  };
-  folder: {
-    name: string;
-    container: string;
-    isPublic: boolean;
-  };
-}
-
 interface Props {
   open: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
-  handleCreateFolder: any;
-  handleCreateContainer: any;
+  handleCreateFolder: (data: ICreateForm['folder']) => void;
+  handleCreateContainer: (data: ICreateForm['container']) => void;
 }
 
 const StorageCreateDrawer: FC<Props> = ({
@@ -75,7 +56,7 @@ const StorageCreateDrawer: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const [selected, setSelected] = useState<Selected>(Selected.container);
+  const [selected, setSelected] = useState<CreateFormSelected>(CreateFormSelected.container);
 
   const initialInputData = {
     container: {
@@ -88,7 +69,7 @@ const StorageCreateDrawer: FC<Props> = ({
       isPublic: false,
     },
   };
-  const [inputData, setInputData] = useState<InputData>(initialInputData);
+  const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
 
   const handleCancel = () => {
     setInputData(initialInputData);
@@ -96,7 +77,7 @@ const StorageCreateDrawer: FC<Props> = ({
   };
 
   const handleSave = () => {
-    if (selected === Selected.container) {
+    if (selected === CreateFormSelected.container) {
       handleCreateContainer(inputData.container);
       setInputData(initialInputData);
       closeDrawer();
@@ -124,7 +105,7 @@ const StorageCreateDrawer: FC<Props> = ({
             label=""
             value={selected}
             onChange={(event) => {
-              setSelected(event.target.value as Selected);
+              setSelected(event.target.value as CreateFormSelected);
             }}
             variant="outlined"
             style={{ padding: 0 }}
@@ -150,7 +131,7 @@ const StorageCreateDrawer: FC<Props> = ({
             });
           }}
         />
-        {selected === Selected.folder && (
+        {selected === CreateFormSelected.folder && (
           <TextField
             select
             label="Container"
