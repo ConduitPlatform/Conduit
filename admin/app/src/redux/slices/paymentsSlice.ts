@@ -10,13 +10,14 @@ import {
   postProductsRequest,
 } from '../../http/PaymentsRequests';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
+import { Customer, Product, Subscription, Transaction } from '../../models/payments/PaymentsModels';
 
 interface IPaymentsSlice {
   data: {
-    customers: any[];
-    products: any;
-    transactions: any[];
-    subscriptions: any[];
+    customers: Customer[];
+    products: Product[];
+    transactions: Transaction[];
+    subscriptions: Subscription[];
   };
 }
 

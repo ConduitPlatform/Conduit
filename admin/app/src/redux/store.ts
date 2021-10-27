@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import appSlice from './slices/appSlice';
 import formsSlice from './slices/formsSlice';
+import paymentsSlice from './slices/paymentsSlice';
 
 let store: any;
 
@@ -25,6 +26,7 @@ export const makeStore = (preloadedState: any) =>
       cmsSlice,
       customEndpointsSlice,
       notificationsSlice,
+      paymentsSlice,
       storageSlice,
       settingsSlice,
       emailsSlice,

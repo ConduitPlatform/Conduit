@@ -1,8 +1,333 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
+import DataTable from '../../components/common/DataTable';
+import { EmailUI } from '../../models/emails/EmailModels';
+import {
+  Button,
+  Grid,
+  Typography,
+  TextField,
+  IconButton,
+  makeStyles,
+  InputAdornment,
+  Tooltip,
+  Box,
+} from '@material-ui/core';
+import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
+import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
+import SearchIcon from '@material-ui/icons/Search';
+import Paginator from '../../components/common/Paginator';
+import { DeleteTwoTone } from '@material-ui/icons';
+import useDebounce from '../../hooks/useDebounce';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
+import { asyncCreateCustomer, asyncGetCustomers } from '../../redux/slices/paymentsSlice';
+import { Customer } from '../../models/payments/PaymentsModels';
+import ViewEditCustomer from '../../components/payments/ViewEditCustomer';
+
+// import useDebounce from '../../hooks/useDebounce';
+
+const useStyles = makeStyles((theme) => ({
+  btnAlignment: {
+    marginLeft: theme.spacing(1.5),
+  },
+  btnAlignment2: {
+    marginRight: theme.spacing(1.5),
+  },
+  actions: {},
+}));
 
 const Customers = () => {
-  return <div>Under construction...</div>;
+  const classes = useStyles();
+  const dispatch = useAppDispatch();
+
+  const originalCustomerState = {
+    _id: '',
+    userId: '',
+    email: '',
+    buyerName: false,
+    phoneNumber: '',
+    address: '',
+    postCode: '',
+    stripe: {
+      customerId: '',
+    },
+    updatedAt: '',
+    createdAt: '',
+  };
+  const [skip, setSkip] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(10);
+  const [page, setPage] = useState<number>(0);
+  const [search, setSearch] = useState<string>('');
+  const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
+    asc: false,
+    index: null,
+  });
+  const [openDeleteCustomers, setOpenDeleteCustomers] = useState<boolean>(false);
+  const [drawer, setDrawer] = useState<boolean>(false);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer>(originalCustomerState);
+  const [create, setCreate] = useState<boolean>(false);
+  const [edit, setEdit] = useState<boolean>(false);
+
+  const debouncedSearch: string = useDebounce(search, 500);
+
+  useEffect(() => {
+    dispatch(asyncGetCustomers({ skip, limit, search: debouncedSearch }));
+  }, [dispatch, limit, skip, debouncedSearch]);
+
+  const { customers } = useAppSelector((state) => state.paymentsSlice.data);
+
+  const newCustomer = () => {
+    setSelectedCustomer(originalCustomerState);
+    setCreate(true);
+    setEdit(true);
+    setDrawer(true);
+  };
+
+  const createNewCustomer = (data: Customer) => {
+    const newData = {
+      _id: data._id,
+      userId: data.userId,
+      email: data.email,
+      buyerName: data.buyerName,
+      phoneNumber: data.phoneNumber,
+      address: data.address,
+      postCode: data.postCode,
+      stripe: {
+        customerId: data.stripe.customerId,
+      },
+      updatedAt: data.updatedAt,
+      createdAt: data.createdAt,
+    };
+    dispatch(asyncCreateCustomer(newData));
+    setSelectedCustomer(newData);
+    setDrawer(false);
+  };
+
+  const handleClose = () => {
+    setEdit(false);
+    setCreate(false);
+    setDrawer(false);
+    setSelectedCustomer(originalCustomerState);
+    setSelectedCustomer(originalCustomerState);
+    setOpenDeleteCustomers(false);
+  };
+
+  const handleSelect = (id: string) => {
+    const newSelectedCustomers = [...selectedCustomers];
+
+    if (selectedCustomers.includes(id)) {
+      const index = newSelectedCustomers.findIndex((newId) => newId === id);
+      newSelectedCustomers.splice(index, 1);
+    } else {
+      newSelectedCustomers.push(id);
+    }
+    setSelectedCustomers(newSelectedCustomers);
+  };
+
+  const handleSelectAll = (data: EmailUI[]) => {
+    if (selectedCustomers.length === customers.length) {
+      setSelectedCustomers([]);
+      return;
+    }
+    const newSelectedCustomers = data.map((item: EmailUI) => item._id);
+    setSelectedCustomers(newSelectedCustomers);
+  };
+
+  const getCustomersCallBack = useCallback(() => {
+    dispatch(asyncGetCustomers({ skip, limit, search }));
+  }, [dispatch, limit, skip, search]);
+
+  const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
+    if (val > page) {
+      setPage(page + 1);
+      setSkip(skip + limit);
+    } else {
+      setPage(page - 1);
+      setSkip(skip - limit);
+    }
+  };
+
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
+    setSkip(0);
+    setPage(0);
+  };
+
+  const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
+    const currentCustomer = customers?.find((customer) => customer._id === data._id);
+
+    if (currentCustomer !== undefined) {
+      if (action.type === 'view') {
+        setSelectedCustomer(currentCustomer);
+        setEdit(false);
+        setDrawer(true);
+      }
+      if (action.type === 'delete') {
+        setSelectedCustomer(currentCustomer);
+        setOpenDeleteCustomers(true);
+      }
+    }
+  };
+
+  // To be impemented
+
+  // const handleDeleteTitle = (customer: EmailTemplateType) => {
+  //   if (selectedCustomer.name === '') {
+  //     return 'Delete selected customers';
+  //   }
+  //   return `Delete template ${customer.name}`;
+  // };
+
+  // const handleDeleteDescription = (customer: EmailTemplateType) => {
+  //   if (selectedCustomer.name === '') {
+  //     return 'Are you sure you want to delete the selected customers?';
+  //   }
+  //   return `Are you sure you want to delete ${customer.name}? `;
+  // };
+  // const deleteButtonAction = () => {
+  //   if (openDeleteCustomers && selectedCustomer.name == '') {
+  //     const params = {
+  //       ids: selectedCustomers,
+  //       getTemplates: getCustomersCallBack,
+  //     };
+  //     dispatch(asyncDeleteCustomers(params));
+  //   } else {
+  //     const params = {
+  //       ids: [`${selectedCustomer._id}`],
+  //       getTemplates: getCustomersCallBack,
+  //     };
+  //     dispatch(asyncDeleteCustomers(params));
+  //   }
+  //   setOpenDeleteCustomers(false);
+  //   setSelectedCustomer(originalCustomerState);
+  //   setSelectedCustomers([]);
+  // };
+
+  const toDelete = {
+    title: 'Delete',
+    type: 'delete',
+  };
+
+  const toView = {
+    title: 'View',
+    type: 'view',
+  };
+
+  const actions = [toDelete, toView];
+
+  const formatData = (data: Customer[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        Name: u.buyerName,
+        PostCode: u.postCode,
+        'Updated At': u.updatedAt,
+      };
+    });
+  };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Name', sort: 'buyerName' },
+    { title: 'Post Code', sort: 'postCode' },
+    { title: 'Updated At', sort: 'updatedAt' },
+  ];
+
+  return (
+    <div>
+      <Grid container item xs={12} justify="space-between" className={classes.actions}>
+        <Grid item>
+          <TextField
+            size="small"
+            variant="outlined"
+            name="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            label="Find customer"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item>
+          {selectedCustomers.length > 0 && (
+            <IconButton
+              aria-label="delete"
+              color="primary"
+              onClick={() => setOpenDeleteCustomers(true)}>
+              <Tooltip title="Delete multiple customers">
+                <DeleteTwoTone />
+              </Tooltip>
+            </IconButton>
+          )}
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddCircleOutline />}
+            onClick={() => newCustomer()}>
+            New Customers
+          </Button>
+        </Grid>
+      </Grid>
+      {customers.length > 0 ? (
+        <>
+          <DataTable
+            sort={sort}
+            setSort={setSort}
+            headers={headers}
+            dsData={formatData(customers)}
+            actions={actions}
+            handleAction={handleAction}
+            handleSelect={handleSelect}
+            handleSelectAll={handleSelectAll}
+            selectedItems={selectedCustomers}
+          />
+          <Grid container style={{ marginTop: '-8px' }}>
+            <Grid item xs={7} />
+            <Grid item xs={5}>
+              <Paginator
+                handlePageChange={handlePageChange}
+                limit={limit}
+                handleLimitChange={handleLimitChange}
+                page={page}
+                count={customers.length}
+              />
+            </Grid>
+          </Grid>
+        </>
+      ) : (
+        <Typography>No available customers</Typography>
+      )}
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
+        <Box>
+          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
+            {!create ? 'Customer overview' : 'Create a new customer'}
+          </Typography>
+          <ViewEditCustomer
+            handleCreate={createNewCustomer}
+            customer={selectedCustomer}
+            edit={edit}
+            setEdit={setEdit}
+            create={create}
+            setCreate={setCreate}
+          />
+        </Box>
+      </DrawerWrapper>
+      {/* <ConfirmationDialog
+        open={openDeleteCustomers}
+        handleClose={handleClose}
+        title={handleDeleteTitle(selectedCustomer)}
+        description={handleDeleteDescription(selectedCustomer)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      /> */}
+    </div>
+  );
 };
 
 Customers.getLayout = function getLayout(page: ReactElement) {
