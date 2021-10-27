@@ -366,7 +366,6 @@ export class AdminHandlers {
       query['product'] = productId
     }
 
-    console.log(query);
     const transactionDocumentsPromise = this.database.findMany(
       'Transaction',
       query,
