@@ -15,6 +15,7 @@ import {
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import { ICreateForm, IStorageFile } from '../../models/storage/StorageModels';
 
 const StorageFiles = () => {
   const dispatch = useAppDispatch();
@@ -30,7 +31,6 @@ const StorageFiles = () => {
   const [limit, setLimit] = useState<number>(10);
   const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
-  const [edit, setEdit] = useState<boolean>(false);
   const dialogInitialState = {
     open: false,
     title: '',
@@ -97,13 +97,12 @@ const StorageFiles = () => {
     setDrawerAddOpen(true);
   };
 
-  const handleAddFileAction = (fileData: any) => {
+  const handleAddFileAction = (fileData: IStorageFile) => {
     dispatch(asyncAddStorageFile({ fileData, getContainerData }));
   };
 
   const handleEditFile = () => {
     setDrawerAddOpen(true);
-    setEdit(true);
   };
 
   const handleDelete = (
@@ -180,11 +179,11 @@ const StorageFiles = () => {
     setDialog(dialogInitialState);
   };
 
-  const handleCreateFolder = (folderData: any) => {
+  const handleCreateFolder = (folderData: ICreateForm['folder']) => {
     dispatch(asyncAddStorageFolder({ folderData, getContainerData }));
   };
 
-  const handleCreateContainer = (containerData: any) => {
+  const handleCreateContainer = (containerData: ICreateForm['container']) => {
     dispatch(asyncAddStorageContainer({ containerData, getContainers }));
   };
 
@@ -214,7 +213,6 @@ const StorageFiles = () => {
       />
       <StorageAddDrawer
         open={drawerAddOpen}
-        edit={edit}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleAddFile={handleAddFileAction}

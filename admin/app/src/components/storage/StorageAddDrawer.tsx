@@ -1,12 +1,10 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { makeStyles } from '@material-ui/core/styles';
 import Dropzone from '../common/Dropzone';
-import { IContainer } from '../../models/storage/StorageModels';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { asyncAddStorageFile } from '../../redux/slices/storageSlice';
+import { IContainer, IStorageFile } from '../../models/storage/StorageModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -33,39 +31,29 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface FileData {
-  name: string;
-  data: string;
-  folder?: string;
-  container: string;
-  isPublic: boolean;
-  mimeType: string;
-}
-
 interface Props {
   open: boolean;
-  edit: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
-  handleAddFile: (data: FileData) => void;
+  handleAddFile: (data: IStorageFile) => void;
 }
 
-const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, handleAddFile }) => {
+const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile }) => {
   const classes = useStyles();
   // const dispatch = useAppDispatch();
   // const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
   // console.log('selectedFile', selectedFile);
 
   const initialFileData = {
+    id: '',
     name: '',
     data: '',
     folder: '',
     container: '',
     isPublic: false,
     mimeType: '',
-    // url: '',
   };
-  const [fileData, setFileData] = useState<FileData>(initialFileData);
+  const [fileData, setFileData] = useState<IStorageFile>(initialFileData);
 
   const handleCancel = () => {
     closeDrawer();
@@ -75,6 +63,7 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
   const handleAdd = () => {
     closeDrawer();
     const sendFileData = {
+      id: fileData.id,
       name: fileData.name,
       data: fileData.data,
       folder: fileData.folder ? `${fileData.folder}/` : undefined,
@@ -101,11 +90,7 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
         <Typography variant="h6" className={classes.title}>
           Add File
         </Typography>
-        <Dropzone
-          file={fileData.data}
-          // url={fileData.url}
-          setFile={handleSetFile}
-        />
+        <Dropzone file={fileData.data} setFile={handleSetFile} />
         <TextField
           variant="outlined"
           label="File Name"

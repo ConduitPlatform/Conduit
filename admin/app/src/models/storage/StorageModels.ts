@@ -15,11 +15,12 @@ export interface IStorageConfig {
 
 export interface IStorageFile {
   id: string;
+  name: string;
   data: string;
-  name?: string;
-  container?: string;
   folder?: string;
-  mimeType?: any;
+  container: string;
+  isPublic: boolean;
+  mimeType: string;
 }
 
 export interface IContainer {
