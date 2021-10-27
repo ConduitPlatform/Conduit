@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import StorageTable from './StorageTable';
 import {
+  asyncAddStorageFile,
   asyncDeleteStorageContainer,
   asyncDeleteStorageFile,
   asyncDeleteStorageFolder,
@@ -86,6 +87,10 @@ const StorageFiles = () => {
 
   const handleAddFile = () => {
     setDrawerAddOpen(true);
+  };
+
+  const handleAddFileAction = (fileData: any) => {
+    dispatch(asyncAddStorageFile({ fileData, getContainerData }));
   };
 
   const handleEditFile = () => {
@@ -189,7 +194,7 @@ const StorageFiles = () => {
         edit={edit}
         closeDrawer={handleCloseDrawer}
         containers={containers}
-        // handleAdd
+        handleAddFile={handleAddFileAction}
       />
       <ConfirmationDialog
         open={dialog.open}

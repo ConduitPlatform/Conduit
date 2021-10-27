@@ -46,9 +46,10 @@ interface Props {
   edit: boolean;
   closeDrawer: () => void;
   containers: IContainer[];
+  handleAddFile: any;
 }
 
-const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers }) => {
+const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, handleAddFile }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
   const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
@@ -74,11 +75,11 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers }) =>
     const sendFileData = {
       name: fileData.name,
       data: fileData.data,
-      folder: `${fileData.folder}/`,
+      folder: fileData.folder ? `${fileData.folder}/` : undefined,
       container: fileData.container,
       isPublic: fileData.isPublic,
     };
-    dispatch(asyncAddStorageFile(sendFileData));
+    handleAddFile(sendFileData);
   };
 
   const handleSetFile = (data: string, name: string) => {

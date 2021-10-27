@@ -131,6 +131,7 @@ export const asyncGetStorageContainerData = createAsyncThunk(
         parent: params.folder ? params.folder : undefined,
       };
       const { data: folderData } = await getStorageFolders(folderParams);
+      console.log('folderData', folderData);
       const folderLength = folderData.folders.length;
 
       let fileSkip = 0;
@@ -171,10 +172,11 @@ export const asyncGetStorageContainerData = createAsyncThunk(
 
 export const asyncAddStorageFile = createAsyncThunk(
   'storage/addStorageFile',
-  async (fileData: any, thunkAPI) => {
+  async ({ fileData, getContainerData }: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await createStorageFile(fileData);
+      getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully added file!'));
       return data;
