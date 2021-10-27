@@ -89,7 +89,7 @@ const StorageTable: FC<Props> = ({
       return;
     }
     const foundItem = containerData.find((item: any) => item.name === data.Name);
-    if (data.isFile) {
+    if (foundItem.isFile) {
       handleDelete('file', foundItem._id, foundItem.name);
       return;
     }
@@ -111,9 +111,9 @@ const StorageTable: FC<Props> = ({
     const file = containerData.find((itemFile: any) => itemFile.name === item);
 
     if (containerData.length > 0 && file?.isFile) {
-      dispatch(asyncGetStorageFile(file._id));
-      handleEdit(true);
-      dispatch(asyncSetSelectedStorageFile(file));
+      // handleEdit(true);
+      console.log('handle edit');
+      // dispatch(asyncSetSelectedStorageFile(file));
       return;
     }
     //to be replaced with next dynamic routing

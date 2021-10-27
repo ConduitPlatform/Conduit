@@ -137,6 +137,8 @@ const StorageFiles = () => {
     }
   };
 
+  console.log('dialog', dialog);
+
   const handleDeleteAction = () => {
     setDialog(dialogInitialState);
     switch (dialog.type) {

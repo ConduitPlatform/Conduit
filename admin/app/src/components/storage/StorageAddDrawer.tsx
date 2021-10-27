@@ -79,6 +79,7 @@ const StorageAddDrawer: FC<Props> = ({ open, edit, closeDrawer, containers, hand
       container: fileData.container,
       isPublic: fileData.isPublic,
     };
+    setFileData(initialFileData);
     handleAddFile(sendFileData);
   };
 
