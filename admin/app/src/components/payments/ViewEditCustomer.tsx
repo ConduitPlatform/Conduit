@@ -59,6 +59,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   handleCreate: (customer: Customer) => void;
+  handleSave: (customer: Customer) => void;
   customer: Customer;
   edit: boolean;
   setEdit: (value: boolean) => void;
@@ -68,6 +69,7 @@ interface Props {
 
 const ViewEditCustomer: React.FC<Props> = ({
   handleCreate,
+  handleSave,
   customer,
   edit,
   setEdit,
@@ -81,15 +83,13 @@ const ViewEditCustomer: React.FC<Props> = ({
     _id: '',
     userId: '',
     email: '',
-    buyerName: false,
+    buyerName: '',
     phoneNumber: '',
     address: '',
     postCode: '',
     stripe: {
       customerId: '',
     },
-    updatedAt: '',
-    createdAt: '',
   });
 
   useEffect(() => {
@@ -105,14 +105,14 @@ const ViewEditCustomer: React.FC<Props> = ({
         stripe: {
           customerId: customer.stripe.customerId,
         },
-        updatedAt: customer.updatedAt,
-        createdAt: customer.createdAt,
       });
   }, [customer, edit, create]);
 
   const handleSaveClick = () => {
     if (create) {
       handleCreate(customerState);
+    } else {
+      handleSave(customerState);
     }
     setCreate(false);
     setEdit(!edit);
@@ -124,15 +124,13 @@ const ViewEditCustomer: React.FC<Props> = ({
         _id: '',
         userId: '',
         email: '',
-        buyerName: false,
+        buyerName: '',
         phoneNumber: '',
         address: '',
         postCode: '',
         stripe: {
           customerId: '',
         },
-        updatedAt: '',
-        createdAt: '',
       });
       return;
     }
@@ -147,8 +145,6 @@ const ViewEditCustomer: React.FC<Props> = ({
       stripe: {
         customerId: customer.stripe.customerId,
       },
-      updatedAt: customer.updatedAt,
-      createdAt: customer.createdAt,
     });
   };
 

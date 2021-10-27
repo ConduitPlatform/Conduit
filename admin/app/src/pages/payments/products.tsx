@@ -20,7 +20,11 @@ import Paginator from '../../components/common/Paginator';
 import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
-import { asyncCreateProduct, asyncGetProducts } from '../../redux/slices/paymentsSlice';
+import {
+  asyncCreateProduct,
+  asyncGetProducts,
+  asyncSaveProductChanges,
+} from '../../redux/slices/paymentsSlice';
 import { Product } from '../../models/payments/PaymentsModels';
 import ViewEditProduct from '../../components/payments/ViewEditProduct';
 
@@ -32,6 +36,10 @@ const useStyles = makeStyles((theme) => ({
     marginRight: theme.spacing(1.5),
   },
   actions: {},
+  noProducts: {
+    textAlign: 'center',
+    marginTop: '200px',
+  },
 }));
 
 const Products = () => {
@@ -74,13 +82,33 @@ const Products = () => {
     dispatch(asyncGetProducts({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
-  const { products } = useAppSelector((state) => state.paymentsSlice.data);
+  const { products, totalCount } = useAppSelector((state) => state.paymentsSlice.data.products);
 
   const newProduct = () => {
     setSelectedProduct(originalProductState);
     setCreate(true);
     setEdit(true);
     setDrawer(true);
+  };
+
+  const saveProductChanges = (data: Product) => {
+    const _id = data._id;
+    const updatedData = {
+      name: data.name,
+      value: data.value,
+      currency: data.currency,
+      isSubscriptions: data.isSubscriptions,
+      recurring: data.recurring,
+      recurringCount: data.recurringCount,
+      stripe: {
+        subscriptionId: data.stripe.subscriptionId,
+        priceId: data.stripe.subscriptionId,
+      },
+    };
+    if (_id !== undefined) {
+      dispatch(asyncSaveProductChanges({ _id, data: updatedData }));
+    }
+    setSelectedProduct(updatedData);
   };
 
   const createNewProduct = (data: Product) => {
@@ -270,7 +298,7 @@ const Products = () => {
             color="primary"
             startIcon={<AddCircleOutline />}
             onClick={() => newProduct()}>
-            New products
+            Add products
           </Button>
         </Grid>
       </Grid>
@@ -295,13 +323,15 @@ const Products = () => {
                 limit={limit}
                 handleLimitChange={handleLimitChange}
                 page={page}
-                count={products.length}
+                count={totalCount}
               />
             </Grid>
           </Grid>
         </>
       ) : (
-        <Typography>No available products</Typography>
+        <Box className={classes.noProducts}>
+          <Typography>No available products</Typography>
+        </Box>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
         <Box>
@@ -310,6 +340,7 @@ const Products = () => {
           </Typography>
           <ViewEditProduct
             handleCreate={createNewProduct}
+            handleSave={saveProductChanges}
             product={selectedProduct}
             edit={edit}
             setEdit={setEdit}

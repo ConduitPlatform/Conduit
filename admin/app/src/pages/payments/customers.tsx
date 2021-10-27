@@ -20,7 +20,11 @@ import Paginator from '../../components/common/Paginator';
 import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
-import { asyncCreateCustomer, asyncGetCustomers } from '../../redux/slices/paymentsSlice';
+import {
+  asyncCreateCustomer,
+  asyncGetCustomers,
+  asyncSaveCustomerChanges,
+} from '../../redux/slices/paymentsSlice';
 import { Customer } from '../../models/payments/PaymentsModels';
 import ViewEditCustomer from '../../components/payments/ViewEditCustomer';
 
@@ -34,6 +38,10 @@ const useStyles = makeStyles((theme) => ({
     marginRight: theme.spacing(1.5),
   },
   actions: {},
+  noCustomers: {
+    textAlign: 'center',
+    marginTop: '200px',
+  },
 }));
 
 const Customers = () => {
@@ -44,7 +52,7 @@ const Customers = () => {
     _id: '',
     userId: '',
     email: '',
-    buyerName: false,
+    buyerName: '',
     phoneNumber: '',
     address: '',
     postCode: '',
@@ -75,13 +83,32 @@ const Customers = () => {
     dispatch(asyncGetCustomers({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
-  const { customers } = useAppSelector((state) => state.paymentsSlice.data);
+  const { customers, totalCount } = useAppSelector((state) => state.paymentsSlice.data.customers);
 
   const newCustomer = () => {
     setSelectedCustomer(originalCustomerState);
     setCreate(true);
     setEdit(true);
     setDrawer(true);
+  };
+
+  const saveCustomerChanges = (data: Customer) => {
+    const _id = data._id;
+    const updatedData = {
+      userId: data.userId,
+      email: data.email,
+      buyerName: data.buyerName,
+      phoneNumber: data.phoneNumber,
+      address: data.address,
+      postCode: data.postCode,
+      stripe: {
+        customerId: data.stripe.customerId,
+      },
+    };
+    if (_id !== undefined) {
+      dispatch(asyncSaveCustomerChanges({ _id, data: updatedData }));
+    }
+    setSelectedCustomer(updatedData);
   };
 
   const createNewCustomer = (data: Customer) => {
@@ -134,10 +161,6 @@ const Customers = () => {
     setSelectedCustomers(newSelectedCustomers);
   };
 
-  const getCustomersCallBack = useCallback(() => {
-    dispatch(asyncGetCustomers({ skip, limit, search }));
-  }, [dispatch, limit, skip, search]);
-
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
@@ -171,6 +194,10 @@ const Customers = () => {
   };
 
   // To be impemented
+
+  // const getCustomersCallBack = useCallback(() => {
+  //   dispatch(asyncGetCustomers({ skip, limit, search }));
+  // }, [dispatch, limit, skip, search]);
 
   // const handleDeleteTitle = (customer: EmailTemplateType) => {
   //   if (selectedCustomer.name === '') {
@@ -270,7 +297,7 @@ const Customers = () => {
             color="primary"
             startIcon={<AddCircleOutline />}
             onClick={() => newCustomer()}>
-            New Customers
+            Add Customer
           </Button>
         </Grid>
       </Grid>
@@ -295,13 +322,15 @@ const Customers = () => {
                 limit={limit}
                 handleLimitChange={handleLimitChange}
                 page={page}
-                count={customers.length}
+                count={totalCount}
               />
             </Grid>
           </Grid>
         </>
       ) : (
-        <Typography>No available customers</Typography>
+        <Box className={classes.noCustomers}>
+          <Typography>No available customers</Typography>
+        </Box>
       )}
       <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
         <Box>
@@ -310,6 +339,7 @@ const Customers = () => {
           </Typography>
           <ViewEditCustomer
             handleCreate={createNewCustomer}
+            handleSave={saveCustomerChanges}
             customer={selectedCustomer}
             edit={edit}
             setEdit={setEdit}

@@ -12,6 +12,7 @@ import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
 import { Button, Paper } from '@material-ui/core';
 import { Product } from '../../models/payments/PaymentsModels';
+import { number } from 'prop-types';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -58,6 +59,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   handleCreate: (product: Product) => void;
+  handleSave: (product: Product) => void;
   product: Product;
   edit: boolean;
   setEdit: (value: boolean) => void;
@@ -67,6 +69,7 @@ interface Props {
 
 const ViewEditProduct: React.FC<Props> = ({
   handleCreate,
+  handleSave,
   product,
   edit,
   setEdit,
@@ -87,8 +90,6 @@ const ViewEditProduct: React.FC<Props> = ({
       subscriptionId: '',
       priceId: '',
     },
-    updatedAt: '',
-    createdAt: '',
   });
 
   useEffect(() => {
@@ -105,14 +106,14 @@ const ViewEditProduct: React.FC<Props> = ({
           subscriptionId: product.stripe.subscriptionId,
           priceId: product.stripe.subscriptionId,
         },
-        updatedAt: product.updatedAt,
-        createdAt: product.createdAt,
       });
   }, [product, edit, create]);
 
   const handleSaveClick = () => {
     if (create) {
       handleCreate(productState);
+    } else {
+      handleSave(productState);
     }
     setCreate(false);
     setEdit(!edit);
@@ -132,8 +133,6 @@ const ViewEditProduct: React.FC<Props> = ({
           subscriptionId: '',
           priceId: '',
         },
-        updatedAt: '',
-        createdAt: '',
       });
       return;
     }
@@ -149,8 +148,6 @@ const ViewEditProduct: React.FC<Props> = ({
         subscriptionId: product.stripe.subscriptionId,
         priceId: product.stripe.subscriptionId,
       },
-      updatedAt: product.updatedAt,
-      createdAt: product.createdAt,
     });
   };
 
@@ -207,7 +204,7 @@ const ViewEditProduct: React.FC<Props> = ({
                     onChange={(event) => {
                       setProductState({
                         ...productState,
-                        recurringCount: event.target.value,
+                        recurring: event.target.value,
                       });
                     }}
                   />

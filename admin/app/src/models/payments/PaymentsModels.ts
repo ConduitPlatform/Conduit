@@ -1,20 +1,20 @@
 export interface Customer {
-  _id: string;
+  _id?: string;
   userId: string;
   email: string;
-  buyerName: boolean;
+  buyerName: string;
   phoneNumber: string;
   address: string;
   postCode: string;
   stripe: {
     customerId: string;
   };
-  updatedAt: string;
-  createdAt: string;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface Product {
-  _id: string;
+  _id?: string;
   name: string;
   value: number;
   currency: string;
@@ -25,23 +25,23 @@ export interface Product {
     subscriptionId: string;
     priceId: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Transaction {
-  _id: string;
+  _id?: string;
   userId: string;
   provider: string;
   product: string;
   quantity: number;
   data: any;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Subscription {
-  _id: string;
+  _id?: string;
   product: string;
   userId: string;
   customerId: string;
@@ -51,6 +51,6 @@ export interface Subscription {
   activeUntil: string;
   transactions: any;
   provider: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -8,14 +8,22 @@ import {
   getTransactionsRequest,
   postCustomerRequest,
   postProductsRequest,
+  putCustomerRequest,
+  putProductRequest,
 } from '../../http/PaymentsRequests';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import { Customer, Product, Subscription, Transaction } from '../../models/payments/PaymentsModels';
 
 interface IPaymentsSlice {
   data: {
-    customers: Customer[];
-    products: Product[];
+    customers: {
+      customers: Customer[];
+      totalCount: number;
+    };
+    products: {
+      products: Product[];
+      totalCount: number;
+    };
     transactions: Transaction[];
     subscriptions: Subscription[];
   };
@@ -23,8 +31,14 @@ interface IPaymentsSlice {
 
 const initialState: IPaymentsSlice = {
   data: {
-    customers: [],
-    products: [],
+    customers: {
+      customers: [],
+      totalCount: 0,
+    },
+    products: {
+      products: [],
+      totalCount: 0,
+    },
     transactions: [],
     subscriptions: [],
   },
@@ -63,8 +77,31 @@ export const asyncCreateCustomer = createAsyncThunk(
   }
 );
 
+export const asyncSaveCustomerChanges = createAsyncThunk(
+  'payment/saveCustomerChanges',
+  async (dataForThunk: { _id: string; data: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const {
+        data: { updatedCustomer },
+      } = await putCustomerRequest(dataForThunk._id, dataForThunk.data);
+      thunkAPI.dispatch(
+        enqueueSuccessNotification(
+          `Successfully saved changes for the template ${dataForThunk.data.name}!`
+        )
+      );
+      thunkAPI.dispatch(setAppDefaults());
+      return updatedCustomer;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
 export const asyncGetProducts = createAsyncThunk(
-  'notifications/saveConfig',
+  'payments/getProducts',
   async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
     try {
       const { data } = await getProductsRequest(params.skip, params.limit, params.search);
@@ -78,7 +115,7 @@ export const asyncGetProducts = createAsyncThunk(
 );
 
 export const asyncCreateProduct = createAsyncThunk(
-  'payments/createCustomer',
+  'payments/createProduct',
   async (productData: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
@@ -88,6 +125,29 @@ export const asyncCreateProduct = createAsyncThunk(
       );
       thunkAPI.dispatch(setAppDefaults());
       return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncSaveProductChanges = createAsyncThunk(
+  'payments/saveProductChanges',
+  async (dataForThunk: { _id: string; data: Product }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const {
+        data: { updatedProduct },
+      } = await putProductRequest(dataForThunk._id, dataForThunk.data);
+      thunkAPI.dispatch(
+        enqueueSuccessNotification(
+          `Successfully saved changes for the template ${dataForThunk.data.name}!`
+        )
+      );
+      thunkAPI.dispatch(setAppDefaults());
+      return updatedProduct;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -130,10 +190,20 @@ const paymentsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(asyncGetCustomers.fulfilled, (state, action) => {
-      state.data.customers = action.payload;
+      state.data.customers.customers = action.payload.customerDocuments;
+      state.data.customers.totalCount = action.payload.totalCount;
+    });
+    builder.addCase(asyncCreateCustomer.fulfilled, (state, action) => {
+      state.data.customers.customers.push(action.payload.customer);
+      state.data.customers.totalCount = state.data.customers.totalCount++;
     });
     builder.addCase(asyncGetProducts.fulfilled, (state, action) => {
-      state.data.products = action.payload;
+      state.data.products.products = action.payload.productDocuments;
+      state.data.products.totalCount = action.payload.totalCount;
+    });
+    builder.addCase(asyncCreateProduct.fulfilled, (state, action) => {
+      state.data.products.products.push(action.payload.product);
+      state.data.products.totalCount = state.data.products.totalCount++;
     });
     builder.addCase(asyncGetTransactions.fulfilled, (state, action) => {
       state.data.transactions = action.payload;
