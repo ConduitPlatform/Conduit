@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isArray, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
 let paths = require('./admin.json').functions;
