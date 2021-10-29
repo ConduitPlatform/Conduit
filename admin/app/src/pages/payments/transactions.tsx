@@ -122,21 +122,23 @@ const Transactions = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          <TextField
-            size="small"
-            variant="outlined"
-            name="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            label="Find transaction"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+          {count > 0 && (
+            <TextField
+              size="small"
+              variant="outlined"
+              name="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              label="Find transaction"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
         </Grid>
         <Grid item></Grid>
       </Grid>

@@ -1,8 +1,4 @@
 import React, { ReactElement, useEffect } from 'react';
-import {
-  asyncGetAuthenticationConfig,
-  asyncUpdateAuthenticationConfig,
-} from '../../redux/slices/authenticationSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
 import PaymentSettings from '../../components/payments/PaymentSettings';

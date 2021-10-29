@@ -28,8 +28,6 @@ import {
 import { Customer } from '../../models/payments/PaymentsModels';
 import ViewEditCustomer from '../../components/payments/ViewEditCustomer';
 
-// import useDebounce from '../../hooks/useDebounce';
-
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
     marginLeft: theme.spacing(1.5),

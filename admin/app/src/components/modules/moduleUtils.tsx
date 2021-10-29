@@ -59,6 +59,8 @@ export const handleModuleNavigation = (moduleName: string) => {
       return '/push-notifications/view';
     case 'forms':
       return '/forms/view';
+    case 'payments':
+      return '/payments/customers';
     case 'sms':
       return '/sms/send';
     default:

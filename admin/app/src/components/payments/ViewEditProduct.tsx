@@ -7,9 +7,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Cancel, Save } from '@material-ui/icons';
 import EditIcon from '@material-ui/icons/Edit';
-import React, { useEffect, useState } from 'react';
-import Image from 'next/dist/client/image';
-import EmailImage from '../../assets/email.svg';
+import React, { SyntheticEvent, useEffect, useState } from 'react';
 import {
   Button,
   FormControl,
@@ -91,13 +89,9 @@ const ViewEditProduct: React.FC<Props> = ({
     name: '',
     value: 0,
     currency: '',
-    isSubscriptions: false,
+    isSubscription: false,
     recurring: '',
     recurringCount: 0,
-    stripe: {
-      subscriptionId: '',
-      priceId: '',
-    },
   });
 
   useEffect(() => {
@@ -107,13 +101,9 @@ const ViewEditProduct: React.FC<Props> = ({
         name: product.name,
         value: product.value,
         currency: product.currency,
-        isSubscriptions: product.isSubscriptions,
+        isSubscription: product.isSubscription,
         recurring: product.recurring,
         recurringCount: product.recurringCount,
-        stripe: {
-          subscriptionId: product.stripe.subscriptionId,
-          priceId: product.stripe.subscriptionId,
-        },
       });
   }, [product, edit, create]);
 
@@ -134,13 +124,9 @@ const ViewEditProduct: React.FC<Props> = ({
         name: '',
         value: 0,
         currency: '',
-        isSubscriptions: false,
+        isSubscription: false,
         recurring: '',
         recurringCount: 0,
-        stripe: {
-          subscriptionId: '',
-          priceId: '',
-        },
       });
       return;
     }
@@ -149,19 +135,34 @@ const ViewEditProduct: React.FC<Props> = ({
       name: product.name,
       value: product.value,
       currency: product.currency,
-      isSubscriptions: product.isSubscriptions,
+      isSubscription: product.isSubscription,
       recurring: product.recurring,
       recurringCount: product.recurringCount,
-      stripe: {
-        subscriptionId: product.stripe.subscriptionId,
-        priceId: product.stripe.subscriptionId,
-      },
     });
   };
 
   // const handleDisabled = () => {
   //   return productState._id && productState.name && productState.stripe;
   // };
+
+  const currencies = [
+    {
+      value: 'USD',
+      label: '$',
+    },
+    {
+      value: 'EUR',
+      label: '€',
+    },
+    {
+      value: 'BTC',
+      label: '฿',
+    },
+    {
+      value: 'JPY',
+      label: '¥',
+    },
+  ];
 
   return (
     <Container className={classes.marginTop}>
@@ -183,25 +184,32 @@ const ViewEditProduct: React.FC<Props> = ({
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
-                    className={classes.textField}
-                    label={'Currency'}
+                    fullWidth
                     variant={'outlined'}
+                    select
+                    label="Select"
                     value={productState.currency}
                     onChange={(event) => {
                       setProductState({ ...productState, currency: event.target.value });
                     }}
-                  />
+                    helperText="Please select your currency">
+                    {currencies.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </Grid>
-                <Paper elevation={1} className={classes.paper}>
+                <Paper elevation={6} className={classes.paper} style={{ width: '100%' }}>
                   <Grid item xs={12}>
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={productState.isSubscriptions}
-                          onChange={(event) => {
+                          checked={productState.isSubscription}
+                          onChange={(e) => {
                             setProductState({
                               ...productState,
-                              isSubscriptions: !productState.isSubscriptions,
+                              isSubscription: !productState.isSubscription,
                             });
                           }}
                           inputProps={{ 'aria-label': 'controlled' }}
@@ -210,12 +218,13 @@ const ViewEditProduct: React.FC<Props> = ({
                       label="Subscription"
                     />
                   </Grid>
-                  {productState.isSubscriptions && (
+                  {productState.isSubscription && (
                     <>
-                      <Grid item xs={12}>
+                      <Grid item xs={12} style={{ marginTop: '10px' }}>
                         <FormControl fullWidth>
                           <InputLabel id="demo-simple-select-label">Recurs</InputLabel>
                           <Select
+                            variant="outlined"
                             labelId="demo-simple-select-label"
                             id="demo-simple-select"
                             value={productState.recurring}
@@ -223,6 +232,7 @@ const ViewEditProduct: React.FC<Props> = ({
                             onChange={(event) => {
                               setProductState({ ...productState, recurring: event.target.value });
                             }}>
+                            <MenuItem value={'day'}>Daily</MenuItem>
                             <MenuItem value={'week'}>Weekly</MenuItem>
                             <MenuItem value={'month'}>Monthly</MenuItem>
                             <MenuItem value={'year'}>Yearly</MenuItem>
@@ -234,11 +244,12 @@ const ViewEditProduct: React.FC<Props> = ({
                           className={classes.textField}
                           label={'Recurring count'}
                           variant={'outlined'}
+                          type="number"
                           value={productState.recurringCount}
                           onChange={(event) => {
                             setProductState({
                               ...productState,
-                              recurring: event.target.value,
+                              recurringCount: event.target.value,
                             });
                           }}
                         />

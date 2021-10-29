@@ -36,7 +36,7 @@ interface IPaymentsSlice {
       transactions: Transaction[];
       count: number;
     };
-    subscriptions: Subscription[];
+    subscriptionData: { subscriptions: Subscription[]; count: number };
     settings: PaymentSettings;
   };
 }
@@ -55,7 +55,10 @@ const initialState: IPaymentsSlice = {
       transactions: [],
       count: 0,
     },
-    subscriptions: [],
+    subscriptionData: {
+      subscriptions: [],
+      count: 0,
+    },
     settings: {
       active: false,
       stripe: {
@@ -238,6 +241,18 @@ export const asyncUpdatePaymentSettings = createAsyncThunk(
   }
 );
 
+const updateProductByID = (updated: Product, products: Product[]) => {
+  return products.map((p) => {
+    if (p._id === updated._id) {
+      return {
+        ...updated,
+      };
+    } else {
+      return p;
+    }
+  });
+};
+
 const paymentsSlice = createSlice({
   name: 'payments',
   initialState,
@@ -259,12 +274,19 @@ const paymentsSlice = createSlice({
       state.data.productData.products.push(action.payload.product);
       state.data.productData.count = state.data.productData.count++;
     });
+    builder.addCase(asyncSaveProductChanges.fulfilled, (state, action) => {
+      state.data.productData.products = updateProductByID(
+        action.payload,
+        state.data.productData.products
+      );
+    });
     builder.addCase(asyncGetTransactions.fulfilled, (state, action) => {
       state.data.transactionData.transactions = action.payload.transactionDocuments;
       state.data.transactionData.count = action.payload.totalCount;
     });
     builder.addCase(asyncGetSubscriptions.fulfilled, (state, action) => {
-      state.data.subscriptions = action.payload;
+      state.data.subscriptionData.subscriptions = action.payload.subscriptionDocuments;
+      state.data.subscriptionData.count = action.payload.totalCount;
     });
     builder.addCase(asyncGetPaymentSettings.fulfilled, (state, action) => {
       state.data.settings = action.payload;

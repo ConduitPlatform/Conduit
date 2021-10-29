@@ -8,13 +8,13 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
-import moment from 'moment';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
-import DataTableActions from './DataTableActions';
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
+
+import DataTableRows from './DataTableRows';
 
 const useStyles = makeStyles((theme) => ({
   table: {
@@ -41,6 +41,7 @@ type Action = {
 };
 
 interface Props {
+  collapsible?: any;
   headers: any;
   sort?: { asc: boolean; index: string | null };
   setSort?: any;
@@ -53,6 +54,7 @@ interface Props {
 }
 
 const DataTable: React.FC<Props> = ({
+  collapsible,
   headers,
   sort,
   setSort,
@@ -75,25 +77,6 @@ const DataTable: React.FC<Props> = ({
       }
       return { asc: prevState.asc, index: index };
     });
-  };
-
-  const getValue = (value: any) => {
-    if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
-      return moment(value).format('DD/MM/YYYY');
-    }
-    return value?.toString();
-  };
-
-  const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
-    if (handleAction) {
-      handleAction(action, data);
-    }
-  };
-
-  const onMenuItemSelect = (id: string) => {
-    if (handleSelect) {
-      handleSelect(id);
-    }
   };
 
   const onMenuItemSelectAll = () => {
@@ -131,28 +114,16 @@ const DataTable: React.FC<Props> = ({
         </TableHead>
         <TableBody>
           {rows.map((row: any, i: number) => (
-            <TableRow key={i}>
-              <TableCell align="left" padding="none">
-                <Checkbox
-                  color="primary"
-                  checked={selectedItems?.includes(row._id)}
-                  onChange={() => onMenuItemSelect(row._id)}
-                />
-              </TableCell>
-              {Object.keys(row).map((item, j) => (
-                <TableCell className={classes.ellipsisStyle} key={`${i}-${j}`}>
-                  {getValue(row[item])}
-                </TableCell>
-              ))}
-              <TableCell key={`action-${i}`} align={'right'}>
-                <DataTableActions
-                  actions={actions}
-                  onActionClick={(action) => onMenuItemClick(action, row)}
-                  isBlocked={!row.Active}
-                  editDisabled={selectedItems?.length > 1}
-                />
-              </TableCell>
-            </TableRow>
+            <DataTableRows
+              collapsible={collapsible}
+              row={row}
+              index={i}
+              handleAction={handleAction}
+              handleSelect={handleSelect}
+              selectedItems={selectedItems}
+              key={i}
+              actions={actions}
+            />
           ))}
         </TableBody>
       </Table>

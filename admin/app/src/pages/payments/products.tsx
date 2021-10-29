@@ -12,7 +12,6 @@ import {
   InputAdornment,
   Tooltip,
   Box,
-  Icon,
 } from '@material-ui/core';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
@@ -28,7 +27,6 @@ import {
 } from '../../redux/slices/paymentsSlice';
 import { Product } from '../../models/payments/PaymentsModels';
 import ViewEditProduct from '../../components/payments/ViewEditProduct';
-import { Check, Close } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -55,7 +53,7 @@ const Products = () => {
     name: '',
     value: 0,
     currency: '',
-    isSubscriptions: false,
+    isSubscription: false,
     recurring: '',
     recurringCount: 0,
     stripe: {
@@ -101,13 +99,9 @@ const Products = () => {
       name: data.name,
       value: data.value,
       currency: data.currency,
-      isSubscriptions: data.isSubscriptions,
+      isSubscription: data.isSubscription,
       recurring: data.recurring,
       recurringCount: data.recurringCount,
-      stripe: {
-        subscriptionId: data.stripe.subscriptionId,
-        priceId: data.stripe.subscriptionId,
-      },
     };
     if (_id !== undefined) {
       dispatch(asyncSaveProductChanges({ _id, data: updatedData }));
@@ -121,15 +115,9 @@ const Products = () => {
       name: data.name,
       value: data.value,
       currency: data.currency,
-      isSubscriptions: data.isSubscriptions,
+      isSubscription: data.isSubscription,
       recurring: data.recurring,
       recurringCount: data.recurringCount,
-      stripe: {
-        subscriptionId: data.stripe.subscriptionId,
-        priceId: data.stripe.subscriptionId,
-      },
-      updatedAt: data.updatedAt,
-      createdAt: data.createdAt,
     };
     dispatch(asyncCreateProduct(newData));
     setSelectedProduct(newData);
@@ -253,7 +241,8 @@ const Products = () => {
       return {
         _id: u._id,
         value: u.value,
-        subsciption: u.isSubscriptions ? 'true' : 'false',
+        name: u.name,
+        subsciption: u.isSubscription ? 'true' : 'false',
         'Updated At': u.updatedAt,
       };
     });
@@ -262,7 +251,8 @@ const Products = () => {
   const headers = [
     { title: '_id', sort: '_id' },
     { title: 'Value', sort: 'value' },
-    { title: 'Subscription', sort: 'isSubscriptions' },
+    { title: 'Product name', sort: 'name' },
+    { title: 'Subscription', sort: 'isSubscription' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 

@@ -18,10 +18,10 @@ export interface Product {
   name: string;
   value: number;
   currency: string;
-  isSubscriptions: boolean;
-  recurring: string;
+  isSubscription: boolean;
+  recurring: 'day' | 'week' | 'month' | 'year' | any;
   recurringCount: number;
-  stripe: {
+  stripe?: {
     subscriptionId: string;
     priceId: string;
   };
