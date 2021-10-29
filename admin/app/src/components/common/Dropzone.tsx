@@ -81,13 +81,24 @@ const Dropzone: FC<Props> = ({
   const { ...rootProps } = getRootProps();
   const { ...inputProps } = getInputProps();
 
+  const handleDropzoneText = () => {
+    if (isDragActive) {
+      return <Typography variant="body1">Drop the files here ...</Typography>;
+    }
+    return (
+      <Typography variant="body1">
+        {"Drag 'n' drop some files here, or click to select files"}
+      </Typography>
+    );
+  };
+
   return (
     <Box className={classes.root} {...rootProps}>
       <input {...inputProps} />
       <Box className={classes.dropContainer}>
         {file ? (
           <>
-            {/*<Box className={classes.fileName}>{fileName}</Box>*/}
+            <Box className={classes.fileName}>{fileName}</Box>
             {/*<img*/}
             {/*  src={url ? url : 'data:image/jpeg;base64,' + file}*/}
             {/*  alt={''}*/}
@@ -95,15 +106,7 @@ const Dropzone: FC<Props> = ({
             {/*/>*/}
           </>
         ) : (
-          <>
-            {isDragActive ? (
-              <Typography variant="body1">Drop the files here ...</Typography>
-            ) : (
-              <Typography variant="body1">
-                {"Drag 'n' drop some files here, or click to select files"}
-              </Typography>
-            )}
-          </>
+          <>{handleDropzoneText()}</>
         )}
       </Box>
     </Box>
