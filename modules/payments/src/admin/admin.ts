@@ -133,9 +133,9 @@ export class AdminHandlers {
     }
     if (isNil(productDocument)) {
       return callback({
-        code: status.NOT_FOUND,
+        code: status.INTERNAL,
         message: 'Product not found',
-      });0
+      });
     }
     ['name', 'value', 'currency','isSubscription','recurring','recurringCount','stripe'].forEach((key) => {
       if (params[key] ) {
@@ -196,7 +196,12 @@ export class AdminHandlers {
     const customerExists = await this.database
       .findOne('PaymentsCustomer',{userId: userId})
       .catch((error:any) => errorMessage = error);
-
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage
+      })
+    }
     if(isNil(customerExists)) {
 
       const createdCustomer = await this.database
@@ -211,13 +216,9 @@ export class AdminHandlers {
       }
       return callback(null,{ result: JSON.stringify(createdCustomer) })
     }
-    else{
-      return callback({
-        code: status.INTERNAL,
-        message: 'Customer with userId: ' + userId + ' already  exists!'
-      });
-    }
+
   }
+
 
   async createProduct(call: RouterRequest, callback: RouterResponse) {
     const {
@@ -235,7 +236,14 @@ export class AdminHandlers {
         message: 'product name, value and currency are required',
       });
     }
-
+    if(!isNil(isSubscription)){
+      if(isNil(recurring)){
+        return callback({
+          code: status.INTERNAL,
+          message: 'recurring  must be provided!'
+        })
+      }
+    }
     let errorMessage: string | null = null;
 
     let productDoc: any = {
