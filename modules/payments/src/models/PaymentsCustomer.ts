@@ -8,9 +8,15 @@ export const PaymentsCustomerSchema = new ConduitSchema(
       type: TYPE.Relation,
       model: 'User',
     },
-    email: TYPE.String,
+    email: {
+      type: TYPE.String,
+      required: true,
+    },
+    phoneNumber: {
+      type: TYPE.String,
+      required: true
+    },
     buyerName: TYPE.String,
-    phoneNumber: TYPE.String,
     address: TYPE.String,
     postCode: TYPE.String,
     stripe: {
