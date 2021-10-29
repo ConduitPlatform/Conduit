@@ -7,11 +7,7 @@ import FolderIcon from '@material-ui/icons/Folder';
 import DescriptionIcon from '@material-ui/icons/Description';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
 import Paginator from '../common/Paginator';
-import {
-  IStorageContainerData,
-  IStorageFileData,
-  IStorageFolderData,
-} from '../../models/storage/StorageModels';
+import { ContainerDataProps, IStorageContainerData } from '../../models/storage/StorageModels';
 import { asyncSetSelectedStorageFile } from '../../redux/slices/storageSlice';
 import { useAppDispatch } from '../../redux/store';
 
@@ -48,8 +44,6 @@ interface IContainerDataTable {
 }
 
 type FormData = IContainerTable | IContainerDataTable;
-
-type ContainerDataProps = IStorageFileData | IStorageFolderData;
 
 interface Props {
   containers: IStorageContainerData[];

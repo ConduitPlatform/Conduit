@@ -1,5 +1,12 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { IContainer, IStorageConfig } from '../../models/storage/StorageModels';
+import { createAsyncThunk, createSlice, current } from '@reduxjs/toolkit';
+import {
+  ContainerDataProps,
+  IContainer,
+  IStorageConfig,
+  IStorageFile,
+  IStorageFileData,
+  IStorageFolderData,
+} from '../../models/storage/StorageModels';
 import {
   createStorageContainer,
   createStorageFile,
@@ -21,6 +28,10 @@ import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import { base64example } from '../../assets/svgs/ExampleBase64';
 import { concat } from 'lodash';
+import {
+  ICreateStorageContainer,
+  ICreateStorageFolder,
+} from '../../models/storage/StorageRequestsModels';
 
 interface IStorageSlice {
   data: {
@@ -30,7 +41,7 @@ interface IStorageSlice {
       containersCount: number;
     };
     containerData: {
-      data: any;
+      data: ContainerDataProps[];
       totalCount: number;
     };
     selectedFile: undefined;
@@ -149,7 +160,7 @@ export const asyncGetStorageContainerData = createAsyncThunk(
         container: params.container,
       };
       const { data: fileData } = await getStorageFiles(fileParams);
-      const newFileData = fileData.files.map((file: any) => {
+      const newFileData = fileData.files.map((file: IStorageFileData) => {
         return Object.assign(file, { isFile: true });
       });
 
@@ -170,11 +181,11 @@ export const asyncGetStorageContainerData = createAsyncThunk(
 
 export const asyncAddStorageFile = createAsyncThunk(
   'storage/addStorageFile',
-  async ({ fileData, getContainerData }: any, thunkAPI) => {
+  async (params: { fileData: IStorageFile; getContainerData: () => void }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await createStorageFile(fileData);
-      getContainerData();
+      const { data } = await createStorageFile(params.fileData);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully added file!'));
       return data;
@@ -190,8 +201,8 @@ export const asyncAddStorageFolder = createAsyncThunk(
   'storage/addStorageFolder',
   async (
     params: {
-      folderData: { name: string; container: string; isPublic: boolean };
-      getContainerData: any;
+      folderData: ICreateStorageFolder;
+      getContainerData: () => void;
     },
     thunkAPI
   ) => {
@@ -213,7 +224,7 @@ export const asyncAddStorageFolder = createAsyncThunk(
 export const asyncAddStorageContainer = createAsyncThunk(
   'storage/addStorageContainer',
   async (
-    params: { containerData: { name: string; isPublic: boolean }; getContainers: any },
+    params: { containerData: ICreateStorageContainer; getContainers: () => void },
     thunkAPI
   ) => {
     thunkAPI.dispatch(setAppLoading(true));
@@ -312,11 +323,9 @@ export const asyncUpdateStorageFile = createAsyncThunk(
       };
       const { data } = await updateStorageFile(fileData);
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
-      console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;
@@ -329,10 +338,10 @@ export const asyncSetSelectedStorageFile = createAsyncThunk(
   async (file: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      console.log('file', file);
+      // console.log('file', file);
       if (!file.url) {
-        const { data } = await getStorageFileUrl(file._id);
-        console.log('data', data);
+        // const { data } = await getStorageFileUrl(file._id);
+        // console.log('data', data);
       }
       // const { data } = await updateStorageFile(fileData);
       // thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
@@ -373,19 +382,19 @@ const storageSlice = createSlice({
     });
     builder.addCase(asyncDeleteStorageFile.fulfilled, (state, action) => {
       const foundIndex = state.data.containerData.data.findIndex(
-        (item: any) => item._id === action.payload
+        (item) => item._id === action.payload
       );
       if (foundIndex !== -1) state.data.containerData.data.splice(foundIndex, 1);
     });
     builder.addCase(asyncDeleteStorageFolder.fulfilled, (state, action) => {
       const foundIndex = state.data.containerData.data.findIndex(
-        (item: any) => item._id === action.payload
+        (item: IStorageFolderData) => item._id === action.payload
       );
       if (foundIndex !== -1) state.data.containerData.data.splice(foundIndex, 1);
     });
     builder.addCase(asyncDeleteStorageContainer.fulfilled, (state, action) => {
       const foundIndex = state.data.containers.containers.findIndex(
-        (item: any) => item._id === action.payload
+        (item) => item._id === action.payload
       );
       if (foundIndex !== -1) state.data.containers.containers.splice(foundIndex, 1);
     });

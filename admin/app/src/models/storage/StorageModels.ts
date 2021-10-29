@@ -37,6 +37,8 @@ export interface IStorageFolderData {
   __v: number;
 }
 
+export type ContainerDataProps = IStorageFileData | IStorageFolderData;
+
 export interface IStorageContainerData {
   createdAt: string;
   isPublic: boolean;
@@ -51,8 +53,8 @@ export interface IStorageFile {
   data: string;
   folder?: string;
   container: string;
-  isPublic: boolean;
   mimeType: string;
+  isPublic: boolean;
 }
 
 export interface IContainer {
