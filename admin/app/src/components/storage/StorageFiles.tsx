@@ -210,12 +210,14 @@ const StorageFiles = () => {
         containers={containers}
         handleCreateFolder={handleCreateFolder}
         handleCreateContainer={handleCreateContainer}
+        path={path}
       />
       <StorageAddDrawer
         open={drawerAddOpen}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleAddFile={handleAddFileAction}
+        path={path}
       />
       <ConfirmationDialog
         open={dialog.open}

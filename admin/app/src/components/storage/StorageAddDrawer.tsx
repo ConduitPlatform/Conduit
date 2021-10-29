@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
@@ -36,9 +36,10 @@ interface Props {
   closeDrawer: () => void;
   containers: IContainer[];
   handleAddFile: (data: IStorageFile) => void;
+  path: string;
 }
 
-const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile }) => {
+const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile, path }) => {
   const classes = useStyles();
   // const dispatch = useAppDispatch();
   // const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
@@ -53,6 +54,28 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
     mimeType: '',
   };
   const [fileData, setFileData] = useState<IStorageFile>(initialFileData);
+
+  useEffect(() => {
+    const splitPath = path.split('/');
+    const filteredSplitPath = splitPath.filter((item) => {
+      return item !== '';
+    });
+    if (filteredSplitPath.length < 1) return;
+    if (filteredSplitPath.length > 1) {
+      setFileData((prevState) => {
+        return {
+          ...prevState,
+          folder: filteredSplitPath[filteredSplitPath.length - 1],
+        };
+      });
+    }
+    setFileData((prevState) => {
+      return {
+        ...prevState,
+        container: filteredSplitPath[0],
+      };
+    });
+  }, [path]);
 
   const handleCancel = () => {
     closeDrawer();

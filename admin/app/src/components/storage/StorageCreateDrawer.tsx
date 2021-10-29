@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
@@ -45,6 +45,7 @@ interface Props {
   containers: IContainer[];
   handleCreateFolder: (data: ICreateForm['folder']) => void;
   handleCreateContainer: (data: ICreateForm['container']) => void;
+  path: string;
 }
 
 const StorageCreateDrawer: FC<Props> = ({
@@ -53,6 +54,7 @@ const StorageCreateDrawer: FC<Props> = ({
   containers,
   handleCreateFolder,
   handleCreateContainer,
+  path,
 }) => {
   const classes = useStyles();
 
@@ -70,6 +72,23 @@ const StorageCreateDrawer: FC<Props> = ({
     },
   };
   const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
+
+  useEffect(() => {
+    const splitPath = path.split('/');
+    const filteredSplitPath = splitPath.filter((item) => {
+      return item !== '';
+    });
+    if (filteredSplitPath.length < 1) return;
+    setInputData((prevState) => {
+      return {
+        ...prevState,
+        folder: {
+          ...prevState.folder,
+          container: filteredSplitPath[0],
+        },
+      };
+    });
+  }, [path]);
 
   const handleCancel = () => {
     setInputData(initialInputData);

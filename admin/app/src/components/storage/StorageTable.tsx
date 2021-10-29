@@ -12,6 +12,8 @@ import {
   IStorageFileData,
   IStorageFolderData,
 } from '../../models/storage/StorageModels';
+import { asyncSetSelectedStorageFile } from '../../redux/slices/storageSlice';
+import { useAppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles((theme) => ({
   topContainer: {
@@ -86,6 +88,7 @@ const StorageTable: FC<Props> = ({
   count,
 }) => {
   const classes = useStyles();
+  const dispatch = useAppDispatch();
 
   const formatData = () => {
     if (path === '/')
@@ -139,7 +142,7 @@ const StorageTable: FC<Props> = ({
     if (containerData.length > 0 && file && 'isFile' in file && file.isFile) {
       // handleEdit(true);
       // console.log('handle edit');
-      // dispatch(asyncSetSelectedStorageFile(file));
+      dispatch(asyncSetSelectedStorageFile(file));
       return;
     }
     //to be replaced with next dynamic routing
