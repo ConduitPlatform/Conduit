@@ -45,7 +45,7 @@ interface Props {
   containers: IContainer[];
   handleCreateFolder: (data: ICreateForm['folder']) => void;
   handleCreateContainer: (data: ICreateForm['container']) => void;
-  path: string;
+  path: string[];
 }
 
 const StorageCreateDrawer: FC<Props> = ({
@@ -74,17 +74,13 @@ const StorageCreateDrawer: FC<Props> = ({
   const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
 
   useEffect(() => {
-    const splitPath = path.split('/');
-    const filteredSplitPath = splitPath.filter((item) => {
-      return item !== '';
-    });
-    if (filteredSplitPath.length < 1) return;
+    if (path.length < 1) return;
     setInputData((prevState) => {
       return {
         ...prevState,
         folder: {
           ...prevState.folder,
-          container: filteredSplitPath[0],
+          container: path[0],
         },
       };
     });

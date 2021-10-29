@@ -36,7 +36,7 @@ interface Props {
   closeDrawer: () => void;
   containers: IContainer[];
   handleAddFile: (data: IStorageFile) => void;
-  path: string;
+  path: string[];
 }
 
 const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile, path }) => {
@@ -56,23 +56,19 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   const [fileData, setFileData] = useState<IStorageFile>(initialFileData);
 
   useEffect(() => {
-    const splitPath = path.split('/');
-    const filteredSplitPath = splitPath.filter((item) => {
-      return item !== '';
-    });
-    if (filteredSplitPath.length < 1) return;
-    if (filteredSplitPath.length > 1) {
+    if (path.length < 1) return;
+    if (path.length > 1) {
       setFileData((prevState) => {
         return {
           ...prevState,
-          folder: filteredSplitPath[filteredSplitPath.length - 1],
+          folder: path[path.length - 1],
         };
       });
     }
     setFileData((prevState) => {
       return {
         ...prevState,
-        container: filteredSplitPath[0],
+        container: path[0],
       };
     });
   }, [path]);

@@ -26,6 +26,7 @@ const StorageFiles = () => {
   } = useAppSelector((state) => state.storageSlice.data);
 
   const [path, setPath] = useState<string>('/');
+  const [filteredPath, setFilteredPath] = useState<string[]>([]);
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
@@ -46,21 +47,24 @@ const StorageFiles = () => {
   }, [dispatch, limit, skip]);
 
   const getContainerData = useCallback(() => {
-    const splitPath = path.split('/');
-    const filteredSplitPath = splitPath.filter((item) => {
-      return item !== '';
-    });
-    if (filteredSplitPath.length < 1) return;
+    if (filteredPath.length < 1) return;
     dispatch(
       asyncGetStorageContainerData({
         skip: skip,
         limit: limit,
-        container: filteredSplitPath[0],
-        folder:
-          filteredSplitPath.length > 1 ? `${filteredSplitPath[filteredSplitPath.length - 1]}/` : '',
+        container: filteredPath[0],
+        folder: filteredPath.length > 1 ? `${filteredPath[filteredPath.length - 1]}/` : '',
       })
     );
-  }, [dispatch, limit, path, skip]);
+  }, [dispatch, filteredPath, limit, skip]);
+
+  useEffect(() => {
+    const splitPath = path.split('/');
+    const filteredSplitPath = splitPath.filter((item) => {
+      return item !== '';
+    });
+    setFilteredPath(filteredSplitPath);
+  }, [path]);
 
   useEffect(() => {
     getContainers();
@@ -100,10 +104,6 @@ const StorageFiles = () => {
   const handleAddFileAction = (fileData: IStorageFile) => {
     dispatch(asyncAddStorageFile({ fileData, getContainerData }));
   };
-
-  // const handleEditFile = () => {
-  //   setDrawerAddOpen(true);
-  // };
 
   const handleDelete = (
     type: 'container' | 'folder' | 'file',
@@ -195,7 +195,6 @@ const StorageFiles = () => {
         path={path}
         handleAdd={handleAddFile}
         handleCreate={handleCreate}
-        // handleEdit={handleEditFile}
         handlePathClick={handlePathClick}
         handleDelete={handleDelete}
         handleLimitChange={handleLimitChange}
@@ -210,14 +209,14 @@ const StorageFiles = () => {
         containers={containers}
         handleCreateFolder={handleCreateFolder}
         handleCreateContainer={handleCreateContainer}
-        path={path}
+        path={filteredPath}
       />
       <StorageAddDrawer
         open={drawerAddOpen}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleAddFile={handleAddFileAction}
-        path={path}
+        path={filteredPath}
       />
       <ConfirmationDialog
         open={dialog.open}

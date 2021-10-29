@@ -131,7 +131,6 @@ export const asyncGetStorageContainerData = createAsyncThunk(
         parent: params.folder ? params.folder : undefined,
       };
       const { data: folderData } = await getStorageFolders(folderParams);
-      console.log('folderData', folderData);
       const folderLength = folderData.folders.length;
 
       let fileSkip = 0;
@@ -162,7 +161,6 @@ export const asyncGetStorageContainerData = createAsyncThunk(
       }
       return { data: concat(folderData.folders, newFileData), totalCount: totalCount };
     } catch (error) {
-      console.log('error', error);
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
       throw error;

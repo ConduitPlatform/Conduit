@@ -78,7 +78,6 @@ const StorageTable: FC<Props> = ({
   path,
   handleAdd,
   handleCreate,
-  // handleEdit,
   handlePathClick,
   handleDelete,
   handlePageChange,
@@ -140,8 +139,6 @@ const StorageTable: FC<Props> = ({
       return itemFile.name === item;
     });
     if (containerData.length > 0 && file && 'isFile' in file && file.isFile) {
-      // handleEdit(true);
-      // console.log('handle edit');
       dispatch(asyncSetSelectedStorageFile(file));
       return;
     }
