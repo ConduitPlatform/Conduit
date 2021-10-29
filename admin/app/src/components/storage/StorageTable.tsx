@@ -190,6 +190,7 @@ const StorageTable: FC<Props> = ({
             variant="contained"
             color="secondary"
             startIcon={<AddCircleOutline />}
+            disabled={path === '/'}
             onClick={() => handleAdd()}>
             Add
           </Button>

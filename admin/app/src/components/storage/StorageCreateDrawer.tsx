@@ -74,6 +74,7 @@ const StorageCreateDrawer: FC<Props> = ({
   const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
 
   useEffect(() => {
+    setSelected(CreateFormSelected.container);
     if (path.length < 1) return;
     setInputData((prevState) => {
       return {
@@ -128,7 +129,9 @@ const StorageCreateDrawer: FC<Props> = ({
               root: classes.selectRoot,
             }}>
             <MenuItem value="container">Container</MenuItem>
-            <MenuItem value="folder">Folder</MenuItem>
+            <MenuItem value="folder" disabled={path.length < 1}>
+              Folder
+            </MenuItem>
           </TextField>
         </Box>
         <TextField

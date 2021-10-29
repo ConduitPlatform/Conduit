@@ -62,12 +62,15 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
         return {
           ...prevState,
           folder: path[path.length - 1],
+          container: path[0],
         };
       });
+      return;
     }
     setFileData((prevState) => {
       return {
         ...prevState,
+        folder: '',
         container: path[0],
       };
     });
