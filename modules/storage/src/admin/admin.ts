@@ -107,6 +107,10 @@ export class AdminRoutes {
         name,
         container,
       });
+      await this.grpcSdk.databaseProvider!.deleteMany('File', {
+        folder: name,
+        container,
+      });
     }
     return callback(null, { result: 'OK' });
   }
@@ -170,6 +174,12 @@ export class AdminRoutes {
         await this.fileHandlers.storage.deleteContainer(name);
         await this.grpcSdk.databaseProvider!.deleteOne('_StorageContainer', {
           name,
+        });
+        await this.grpcSdk.databaseProvider!.deleteMany('File', {
+          container: name,
+        });
+        await this.grpcSdk.databaseProvider!.deleteMany('_StorageFolder', {
+          container:name,
         });
       }
       return callback(null, { result: JSON.stringify(container) });
@@ -251,10 +261,12 @@ export class AdminRoutes {
       });
     }
 
-    let query: { container: string; folder?: string; name?: any } = { container };
+    let query: { container: string; folder?: string | null; name?: any } = { container };
 
     if (!isNil(folder)) {
       query.folder = folder;
+    } else {
+      query.folder = null;
     }
     if (!isNil(search)) {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };

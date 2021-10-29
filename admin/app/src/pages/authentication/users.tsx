@@ -11,7 +11,6 @@ import {
   asyncAddNewUser,
   asyncBlockUnblockUsers,
   asyncBlockUserUI,
-  asyncDeleteUser,
   asyncDeleteUsers,
   asyncGetAuthenticationConfig,
   asyncGetAuthUserData,
@@ -127,11 +126,6 @@ const Users = () => {
     }
   };
 
-  const handleNewUserDispatch = (values: { password: string; email: string }) => {
-    dispatch(asyncAddNewUser({ values, limit }));
-    setDrawer(false);
-  };
-
   const handleSelect = (id: string) => {
     const newSelectedUsers = [...selectedUsers];
     if (selectedUsers.includes(id)) {
@@ -175,6 +169,11 @@ const Users = () => {
   const getUsersCallback = useCallback(() => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [debouncedSearch, dispatch, filter, limit, skip]);
+
+  const handleNewUserDispatch = (values: { password: string; email: string }) => {
+    dispatch(asyncAddNewUser({ values, getUsers: getUsersCallback }));
+    setDrawer(false);
+  };
 
   const handleBlock = () => {
     if (openBlockUI.multiple) {
@@ -223,7 +222,7 @@ const Users = () => {
   };
 
   const deleteButtonAction = () => {
-    if (openDeleteUser.open) {
+    if (openDeleteUser.open && openDeleteUser.multiple) {
       const params = {
         ids: selectedUsers,
         getUsers: getUsersCallback,
@@ -231,10 +230,10 @@ const Users = () => {
       dispatch(asyncDeleteUsers(params));
     } else {
       const params = {
-        id: selectedUser._id,
+        ids: [`${selectedUser._id}`],
         getUsers: getUsersCallback,
       };
-      dispatch(asyncDeleteUser(params));
+      dispatch(asyncDeleteUsers(params));
     }
     setOpenDeleteUser({
       open: false,

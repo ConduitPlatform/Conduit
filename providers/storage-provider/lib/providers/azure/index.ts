@@ -32,8 +32,13 @@ export class AzureStorage implements IStorageProvider {
     console.log('Deleting blobs...');
     let i = 0;
     for await (const blob of containerClient.listBlobsFlat()) {
-      i++;
-      await containerClient.deleteBlob(blob.name);
+      if (
+        blob.name.indexOf(name) !== -1 &&
+        blob.name.split(name)[1].indexOf('/') === -1
+      ) {
+        i++;
+        await containerClient.deleteBlob(blob.name);
+      }
     }
     console.log(`${i} blobs deleted.`);
     return true;
@@ -47,13 +52,13 @@ export class AzureStorage implements IStorageProvider {
     let containerClient = await this._storage.getContainerClient(this._activeContainer);
     await containerClient.createIfNotExists();
 
-    let exists = await containerClient.getBlockBlobClient(name + '/keep.txt').exists();
+    let exists = await containerClient.getBlockBlobClient(name + '.keep.txt').exists();
 
     if (exists) {
       return true;
     }
     await containerClient
-      .getBlockBlobClient(name + '/.keep.txt')
+      .getBlockBlobClient(name + '.keep.txt')
       .uploadData(Buffer.from('DO NOT DELETE'));
     return true;
   }
@@ -63,7 +68,7 @@ export class AzureStorage implements IStorageProvider {
     let exists = await containerClient.exists();
     if (!exists) return false;
 
-    exists = await containerClient.getBlockBlobClient(name + '/keep.txt').exists();
+    exists = await containerClient.getBlockBlobClient(name + '.keep.txt').exists();
 
     return exists;
   }

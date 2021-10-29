@@ -8,6 +8,7 @@ import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 export class AdminHandlers {
   private database: any;
 
@@ -24,12 +25,200 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         createProduct: this.createProduct.bind(this),
+        createCustomer: this.createCustomer.bind(this),
+        getCustomers: this.getCustomers.bind(this),
+        getProducts: this.getProducts.bind(this),
+        editProduct: this.editProduct.bind(this),
+        getSubscription: this.getSubscription.bind(this),
+        getTransactions: this.getTransactions.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
         console.error(err);
       });
   }
+
+  async getProducts(call: RouterRequest, callback:RouterResponse){
+    const { skip, limit,search } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    let identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    }
+    const productDocumentsPromise = this.database.findMany(
+      'Product',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Product', query);
+
+    let errorMessage;
+    const [productDocuments, totalCount] = await Promise.all([
+      productDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ productDocuments, totalCount }) });
+  }
+
+  async getCustomers(call: RouterRequest, callback: RouterResponse) {
+    const { skip, limit,search } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    let identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    }
+    const customerDocumentsPromise = this.database.findMany(
+      'PaymentsCustomer',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('PaymentsCustomer', query);
+
+    let errorMessage;
+    const [customerDocuments, totalCount] = await Promise.all([
+      customerDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ customerDocuments, totalCount }) });
+  }
+
+  async editProduct(call:RouterRequest,callback:RouterResponse){
+    const params = JSON.parse(call.request.params);
+    const id = params.id;
+    let errorMessage: string | null = null;
+    const productDocument = await this.database
+      .findOne('Product', { _id: id })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    if (isNil(productDocument)) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Product not found',
+      });
+    }
+    ['name', 'value', 'currency','isSubscription','recurring','recurringCount','stripe'].forEach((key) => {
+      if (params[key] ) {
+          productDocument[key] = params[key];
+      }
+    });
+    const updatedProduct = await this.database
+      .findByIdAndUpdate('Product', id, productDocument)
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ updatedProduct }) });
+  }
+
+  async createCustomer(call: RouterRequest, callback: RouterResponse){
+    const {
+      userId,
+      email,
+      phoneNumber,
+      buyerName,
+      address,
+      postCode,
+      stripe
+    } = JSON.parse(call.request.params);
+
+    if(isNil(userId) || isNil(email) || isNil(phoneNumber) ){
+      return callback({
+        code: status.INTERNAL,
+        message: 'userId,  email, phoneNumber are required'
+      })
+    }
+    let errorMessage: string | null = null;
+    const user = await this.database
+      .findOne('User',{userId})
+      .catch( (err:any) => errorMessage = err);
+
+    if(!isNil(user)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'User with id: ' + userId + ' does not exists'
+      });
+    }
+
+    let  customerDoc = {
+      userId,
+      email,
+      phoneNumber,
+      buyerName,
+      address,
+      postCode,
+      stripe
+    };
+
+    const customerExists = await this.database
+      .findOne('PaymentsCustomer',{userId: userId})
+      .catch((error:any) => errorMessage = error);
+    if (!isNil(errorMessage)) {
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage
+      })
+    }
+    if(isNil(customerExists)) {
+
+      const createdCustomer = await this.database
+        .create('PaymentsCustomer', customerDoc)
+        .catch((error: any) => errorMessage = error);
+
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        })
+      }
+      return callback(null,{ result: JSON.stringify(createdCustomer) })
+    }
+
+  }
+
 
   async createProduct(call: RouterRequest, callback: RouterResponse) {
     const {
@@ -47,7 +236,14 @@ export class AdminHandlers {
         message: 'product name, value and currency are required',
       });
     }
-
+    if(!isNil(isSubscription)){
+      if(isNil(recurring)){
+        return callback({
+          code: status.INTERNAL,
+          message: 'recurring  must be provided!'
+        })
+      }
+    }
     let errorMessage: string | null = null;
 
     let productDoc: any = {
@@ -112,5 +308,92 @@ export class AdminHandlers {
     this.grpcSdk.bus?.publish('payments:create:Product', JSON.stringify(productDoc));
 
     return callback(null, { result: JSON.stringify(product) });
+  }
+
+  async getSubscription(call: RouterRequest, callback: RouterResponse){
+    const { skip, limit,ids } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    if(isNil(ids)){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array',
+      });
+    }
+    else if(ids.length !== 0){
+      query['_id'] = { $in: ids};
+    }
+    const subscriptionDocumentsPromise = this.database.findMany(
+      'Subscription',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Subscription', query);
+
+    let errorMessage;
+    const [subscriptionDocuments, totalCount] = await Promise.all([
+      subscriptionDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    return callback(null, { result: JSON.stringify({ subscriptionDocuments, totalCount }) });
+
+  }
+
+  async getTransactions(call: RouterRequest, callback: RouterResponse){
+    const { skip, limit,customerId,productId} = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+
+    if(!isNil(customerId)){
+      query['customerId'] = customerId
+    }
+    else if(!isNil(productId)){
+      query['product'] = productId
+    }
+
+    const transactionDocumentsPromise = this.database.findMany(
+      'Transaction',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('Transaction', query);
+
+    let errorMessage;
+    const [transactionDocuments, totalCount] = await Promise.all([
+      transactionDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    return callback(null, { result: JSON.stringify({ transactionDocuments, totalCount }) });
+
   }
 }

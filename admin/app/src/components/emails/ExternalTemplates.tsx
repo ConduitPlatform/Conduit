@@ -17,6 +17,7 @@ import { asyncGetExternalTemplates } from '../../redux/slices/emailsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
+import { camelCase } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -98,7 +99,7 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
   const handleTemplateChange = (e: any) => {
     setSelect(e.target.value);
     const foundTemplate = externalTemplates.find(
-      (template: EmailTemplateType) => template.name === e.target.value
+      (template: EmailTemplateType) => camelCase(template.name) === camelCase(e.target.value)
     );
 
     if (e.target.value !== '' && foundTemplate !== undefined)
