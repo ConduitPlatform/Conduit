@@ -265,7 +265,7 @@ const Customers = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          {count > 0 && (
+          {count >= 0 && (
             <TextField
               size="small"
               variant="outlined"
@@ -286,6 +286,8 @@ const Customers = () => {
         <Grid item>
           {selectedCustomers.length > 0 && (
             <IconButton
+              style={{ marginRight: '10px' }}
+              size="small"
               aria-label="delete"
               color="primary"
               onClick={() => setOpenDeleteCustomers(true)}>

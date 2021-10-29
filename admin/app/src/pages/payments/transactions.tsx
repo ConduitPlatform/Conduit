@@ -122,7 +122,7 @@ const Transactions = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          {count > 0 && (
+          {count >= 0 && (
             <TextField
               size="small"
               variant="outlined"

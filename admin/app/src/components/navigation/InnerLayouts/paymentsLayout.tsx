@@ -5,7 +5,7 @@ import Typography from '@material-ui/core/Typography';
 import { Box, Button } from '@material-ui/core';
 import { useRouter } from 'next/router';
 import sharedClasses from './sharedClasses';
-import { Toc } from '@material-ui/icons';
+import { Payment } from '@material-ui/icons';
 
 const PaymentsLayout: React.FC<unknown> = ({ children }) => {
   const classes = sharedClasses();
@@ -35,11 +35,11 @@ const PaymentsLayout: React.FC<unknown> = ({ children }) => {
         <Typography className={classes.navContent} variant={'h4'}>
           Payments
           <a
-            href={`${process.env.CONDUIT_URL}/swagger/#/cms`}
+            href={`${process.env.CONDUIT_URL}/swagger/#/payments`}
             target="_blank"
             rel="noreferrer"
             className={classes.swaggerButton}>
-            <Button variant="outlined" endIcon={<Toc />}>
+            <Button variant="outlined" endIcon={<Payment />}>
               SWAGGER
             </Button>
           </a>

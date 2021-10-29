@@ -263,7 +263,7 @@ const paymentsSlice = createSlice({
       state.data.customerData.count = action.payload.totalCount;
     });
     builder.addCase(asyncCreateCustomer.fulfilled, (state, action) => {
-      state.data.customerData.customers.push(action.payload.customer);
+      state.data.customerData.customers.push(action.payload);
       state.data.customerData.count = state.data.customerData.count++;
     });
     builder.addCase(asyncGetProducts.fulfilled, (state, action) => {
@@ -271,7 +271,7 @@ const paymentsSlice = createSlice({
       state.data.productData.count = action.payload.totalCount;
     });
     builder.addCase(asyncCreateProduct.fulfilled, (state, action) => {
-      state.data.productData.products.push(action.payload.product);
+      state.data.productData.products.push(action.payload);
       state.data.productData.count = state.data.productData.count++;
     });
     builder.addCase(asyncSaveProductChanges.fulfilled, (state, action) => {

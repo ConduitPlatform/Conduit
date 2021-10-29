@@ -7,7 +7,7 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Cancel, Save } from '@material-ui/icons';
 import EditIcon from '@material-ui/icons/Edit';
-import React, { SyntheticEvent, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Button,
   FormControl,
@@ -182,17 +182,31 @@ const ViewEditProduct: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={8} style={{ marginTop: '10px' }}>
+                  <TextField
+                    className={classes.textField}
+                    label={'Value'}
+                    variant={'outlined'}
+                    type="number"
+                    value={productState.value}
+                    onChange={(event) => {
+                      setProductState({
+                        ...productState,
+                        value: event.target.value,
+                      });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={4} style={{ marginTop: '10px' }}>
                   <TextField
                     fullWidth
                     variant={'outlined'}
                     select
-                    label="Select"
+                    label="Currency"
                     value={productState.currency}
                     onChange={(event) => {
                       setProductState({ ...productState, currency: event.target.value });
-                    }}
-                    helperText="Please select your currency">
+                    }}>
                     {currencies.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -221,14 +235,12 @@ const ViewEditProduct: React.FC<Props> = ({
                   {productState.isSubscription && (
                     <>
                       <Grid item xs={12} style={{ marginTop: '10px' }}>
-                        <FormControl fullWidth>
+                        <FormControl variant="outlined" fullWidth>
                           <InputLabel id="demo-simple-select-label">Recurs</InputLabel>
                           <Select
-                            variant="outlined"
                             labelId="demo-simple-select-label"
                             id="demo-simple-select"
                             value={productState.recurring}
-                            label="Recurs"
                             onChange={(event) => {
                               setProductState({ ...productState, recurring: event.target.value });
                             }}>
@@ -261,21 +273,34 @@ const ViewEditProduct: React.FC<Props> = ({
             ) : (
               <>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Product name:</Typography>
-                  <Typography variant="h6">{productState.name}</Typography>
+                  <Typography
+                    variant="h5"
+                    align="center"
+                    color="primary"
+                    style={{ marginTop: '-20px' }}>
+                    {productState.name}
+                  </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={8}>
+                  <Typography variant="subtitle2">Value:</Typography>
+                  <Typography variant="h6">{productState.value}</Typography>
+                </Grid>
+                <Grid item xs={4}>
                   <Typography variant="subtitle2">Currency:</Typography>
                   <Typography variant="h6">{productState.currency}</Typography>
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Recurs:</Typography>
-                  <Typography variant="h6">{productState.recurring}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Reccuring count:</Typography>
-                  <Typography variant="h6">{productState.recurringCount}</Typography>
-                </Grid>
+                {productState.isSubscription && (
+                  <>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">Recurs:</Typography>
+                      <Typography variant="h6">{productState.recurring}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">Reccuring count:</Typography>
+                      <Typography variant="h6">{productState.recurringCount}</Typography>
+                    </Grid>
+                  </>
+                )}
               </>
             )}
           </Grid>

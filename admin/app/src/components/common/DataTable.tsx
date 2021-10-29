@@ -91,13 +91,15 @@ const DataTable: React.FC<Props> = ({
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
-              <Checkbox
-                color="primary"
-                onChange={onMenuItemSelectAll}
-                checked={selectedItems?.length === dsData.length}
-                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-              />
+              {!collapsible && (
+                <Checkbox
+                  color="primary"
+                  onChange={onMenuItemSelectAll}
+                  checked={selectedItems?.length === dsData.length}
+                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+                />
+              )}
             </TableCell>
             {headers.map((header: any) => (
               <TableCell className={classes.header} key={header.sort}>
@@ -109,13 +111,13 @@ const DataTable: React.FC<Props> = ({
                 </TableSortLabel>
               </TableCell>
             ))}
-            {actions && <TableCell className={classes.header} />}
+            {(actions || collapsible) && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.map((row: any, i: number) => (
             <DataTableRows
-              collapsible={collapsible}
+              collapsible={collapsible !== undefined ? collapsible[i] : null}
               row={row}
               index={i}
               handleAction={handleAction}

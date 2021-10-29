@@ -6,13 +6,13 @@ import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Cancel, Save } from '@material-ui/icons';
-import EditIcon from '@material-ui/icons/Edit';
-import React, { useEffect, useState } from 'react';
 import Image from 'next/dist/client/image';
-import EmailImage from '../../assets/email.svg';
+import CustomerIcon from '../../assets/svgs/customer.svg';
+import React, { useEffect, useState } from 'react';
 import { Button, Paper } from '@material-ui/core';
 import { useAppDispatch } from '../../redux/store';
 import { Customer } from '../../models/payments/PaymentsModels';
+import { enqueueErrorNotification } from '../../utils/useNotifier';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -54,6 +54,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: '-30px',
   },
 }));
 
@@ -109,6 +110,13 @@ const ViewEditCustomer: React.FC<Props> = ({
   }, [customer, edit, create]);
 
   const handleSaveClick = () => {
+    const regex = /^\S+@\S+\.\S+$/;
+    if (!regex.test(customerState.email)) {
+      dispatch(
+        enqueueErrorNotification('The email address you provided is not valid', 'emailError')
+      );
+      return;
+    }
     if (create) {
       handleCreate(customerState);
     } else {
@@ -260,13 +268,7 @@ const ViewEditCustomer: React.FC<Props> = ({
 
         <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
           {!edit ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EditIcon />}
-              onClick={() => setEdit(true)}>
-              Edit
-            </Button>
+            ''
           ) : (
             <>
               <Button
@@ -286,6 +288,9 @@ const ViewEditCustomer: React.FC<Props> = ({
             </>
           )}
         </Grid>
+        <div className={classes.centeredImg}>
+          <Image src={CustomerIcon} width="200px" alt="customer" />
+        </div>
       </Box>
     </Container>
   );

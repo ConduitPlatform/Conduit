@@ -1,11 +1,14 @@
-import { Paper, Typography } from '@material-ui/core';
+import { Chip, Paper, Typography } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
+import Image from 'next/dist/client/image';
+import TransactionImage from '../../assets/svgs/transaction.svg';
 
 import React from 'react';
 import { Transaction } from '../../models/payments/PaymentsModels';
+import { keyBy } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -67,10 +70,6 @@ const ViewTransaction: React.FC<Props> = ({ transaction }) => {
               <Typography variant="h6">{transaction._id}</Typography>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="subtitle2">User ID:</Typography>
-              <Typography variant="h6">{transaction.userId}</Typography>
-            </Grid>
-            <Grid item xs={12}>
               <Typography variant="subtitle2">Provider:</Typography>
               <Typography variant="h6">{transaction.provider}</Typography>
             </Grid>
@@ -84,7 +83,9 @@ const ViewTransaction: React.FC<Props> = ({ transaction }) => {
             </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle2">Data:</Typography>
-              <Typography variant="h6">{transaction.quantity}</Typography>
+              {Object.entries(transaction.data).map(([key, value], index: number) => (
+                <Chip size="small" label={`${key}: ${value}`} key={index} />
+              ))}
             </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle2">Date:</Typography>
@@ -92,6 +93,9 @@ const ViewTransaction: React.FC<Props> = ({ transaction }) => {
             </Grid>
           </Grid>
         </Paper>
+        <div className={classes.centeredImg}>
+          <Image src={TransactionImage} width="200px" alt="transaction" />
+        </div>
       </Box>
     </Container>
   );

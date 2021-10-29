@@ -2,24 +2,32 @@ import React, { useState } from 'react';
 import {
   Box,
   Checkbox,
+  Chip,
   Collapse,
   IconButton,
   makeStyles,
   TableCell,
   TableRow,
-  Typography,
 } from '@material-ui/core';
 import DataTableActions from './DataTableActions';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@material-ui/icons';
 import moment from 'moment';
 
-const useStyles = makeStyles(() => ({
+const useStyles = makeStyles((theme) => ({
   ellipsisStyle: {
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
     overflow: 'hidden',
     width: '350px',
     maxWidth: '350px',
+  },
+  pill: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    '& > *': {
+      margin: theme.spacing(1),
+    },
   },
 }));
 
@@ -103,10 +111,15 @@ const DataTableRows: React.FC<Props> = ({
         <TableRow>
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <Box style={{ margin: '1' }}>
-                <Typography variant="h6" gutterBottom component="div">
-                  History
-                </Typography>
+              <Box className={classes.pill}>
+                {Object.entries(collapsible).map(([key, value]) => (
+                  <Chip
+                    size="small"
+                    color="primary"
+                    label={`${key}: ${value}`}
+                    key={`row ${key}`}
+                  />
+                ))}
               </Box>
             </Collapse>
           </TableCell>

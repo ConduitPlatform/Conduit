@@ -16,7 +16,9 @@ const useStyles = makeStyles((theme) => ({
   btnAlignment2: {
     marginRight: theme.spacing(1.5),
   },
-  actions: {},
+  actions: {
+    marginBottom: '5px',
+  },
   noSubscriptions: {
     textAlign: 'center',
     marginTop: '200px',
@@ -46,6 +48,32 @@ const Subscriptions = () => {
     (state) => state.paymentsSlice.data.subscriptionData
   );
 
+  // Placeholder data
+  // const subscriptions = [
+  //   {
+  //     _id: '323242543535353d342',
+  //     product: 'Disney',
+  //     userId: 'fsefsf2323232',
+  //     provider: 'Stripe',
+  //     createdAt: '24/6/21',
+  //     updatedAt: '24/6/23',
+  //     customerId: 'fsfsefw3423dff',
+  //     activeUntil: '30/5/21',
+  //     transactions: '3',
+  //   },
+  //   {
+  //     _id: '323242543535353d342',
+  //     product: 'Hulu',
+  //     userId: 'Kostas',
+  //     provider: 'Stripe',
+  //     createdAt: '24/6/21',
+  //     updatedAt: '24/6/23',
+  //     customerId: 'fsfsefw3423sasdff',
+  //     activeUntil: '30/3/21',
+  //     transactions: '22',
+  //   },
+  // ];
+
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
       setPage(page + 1);
@@ -68,8 +96,19 @@ const Subscriptions = () => {
         _id: u._id,
         product: u.product,
         activeUntil: u.activeUntil,
-        provider: u.provider,
         'Updated At': u.updatedAt,
+      };
+    });
+  };
+
+  const formatCollapsibleData = (data: Subscription[]) => {
+    return data.map((u) => {
+      return {
+        transactions: u.transactions,
+        userId: u.userId,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        customerId: u.customerId,
       };
     });
   };
@@ -78,7 +117,6 @@ const Subscriptions = () => {
     { title: '_id', sort: '_id' },
     { title: 'Product', sort: 'product' },
     { title: 'Active until', sort: 'actuveUntil' },
-    { title: 'Provider', sort: 'provider' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 
@@ -86,7 +124,7 @@ const Subscriptions = () => {
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
         <Grid item>
-          {count > 0 && (
+          {subscriptions && (
             <TextField
               size="small"
               variant="outlined"
@@ -109,11 +147,11 @@ const Subscriptions = () => {
       {subscriptions.length > 0 ? (
         <>
           <DataTable
-            collapsible={true}
+            dsData={formatData(subscriptions)}
+            collapsible={formatCollapsibleData(subscriptions)}
             sort={sort}
             setSort={setSort}
             headers={headers}
-            dsData={formatData(subscriptions)}
           />
           <Grid container style={{ marginTop: '-8px' }}>
             <Grid item xs={7} />

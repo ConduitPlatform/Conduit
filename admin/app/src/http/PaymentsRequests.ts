@@ -30,7 +30,7 @@ export const getTransactionsRequest = (skip: number, limit: number, search?: str
   });
 
 export const getSubscriptionsRequest = (skip: number, limit: number, search?: string) =>
-  axios.get(`${CONDUIT_API}/admin/payments/subscriptions`, {
+  axios.get(`${CONDUIT_API}/admin/payments/subscription`, {
     params: { skip, limit, search: search !== '' ? search : undefined },
   });
 
