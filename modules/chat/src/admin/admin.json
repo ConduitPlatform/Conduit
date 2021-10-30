@@ -1,0 +1,9 @@
+{
+  "functions": [
+    {
+      "path": "/chatRoom",
+      "method": "POST",
+      "protoName": "createRoom"
+    }
+  ]
+}
