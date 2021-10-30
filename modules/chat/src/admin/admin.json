@@ -1,7 +1,7 @@
 {
   "functions": [
     {
-      "path": "/chatRoom",
+      "path": "/room",
       "method": "POST",
       "protoName": "createRoom"
     }
