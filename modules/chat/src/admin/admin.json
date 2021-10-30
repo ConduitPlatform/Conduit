@@ -9,6 +9,11 @@
       "path": "/rooms",
       "method": "GET",
       "protoName": "getRooms"
+    },
+    {
+      "path": "/rooms",
+      "method": "DELETE",
+      "protoName": "deleteRooms"
     }
   ]
 }

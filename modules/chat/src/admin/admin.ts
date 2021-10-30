@@ -20,7 +20,8 @@ export class AdminHandlers{
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         createRoom: this.createRoom.bind(this),
-        getRooms: this.getRooms.bind(this)
+        getRooms: this.getRooms.bind(this),
+        deleteRooms: this.deleteRooms.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -132,5 +133,28 @@ export class AdminHandlers{
       })
     }
     return callback(null, { result: JSON.stringify(room)});
+  }
+
+  async deleteRooms(call: RouterRequest, callback: RouterResponse){
+    const {ids} = JSON.parse(call.request.params);
+    if(isNil(ids) || !Array.isArray((ids))){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array'
+      })
+    }
+    let errorMessage;
+    const deletedRooms = await this.database
+      .deleteMany('ChatRoom', { _id: { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    const totalCount = deletedRooms.deletedCount;
+    return callback(null, { result: JSON.stringify({ deletedRooms,totalCount }) });
   }
 }
