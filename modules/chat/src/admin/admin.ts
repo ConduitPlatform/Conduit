@@ -7,6 +7,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers{
   private database: any;
@@ -19,6 +20,7 @@ export class AdminHandlers{
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         createRoom: this.createRoom.bind(this),
+        getRooms: this.getRooms.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -47,6 +49,49 @@ export class AdminHandlers{
         });
       }
     }
+  }
+
+  async getRooms(call: RouterRequest, callback: RouterResponse){
+
+    const { skip, limit,search } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let query:any = {};
+    let identifier;
+
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    }
+
+    const chatRoomDocumentsPromise = this.database.findMany(
+      'ChatRoom',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = this.database.countDocuments('ChatRoom', {});
+
+    let errorMessage: string | null = null;
+    const [chatRoomDocuments, totalCount] = await Promise.all([
+      chatRoomDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ chatRoomDocuments, totalCount }) });
   }
 
   async createRoom(call: RouterRequest, callback: RouterResponse){

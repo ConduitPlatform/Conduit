@@ -4,6 +4,11 @@
       "path": "/room",
       "method": "POST",
       "protoName": "createRoom"
+    },
+    {
+      "path": "/rooms",
+      "method": "GET",
+      "protoName": "getRooms"
     }
   ]
 }
