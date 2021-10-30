@@ -21,7 +21,8 @@ export class AdminHandlers{
       .registerAdmin(server, paths, {
         createRoom: this.createRoom.bind(this),
         getRooms: this.getRooms.bind(this),
-        deleteRooms: this.deleteRooms.bind(this)
+        deleteRooms: this.deleteRooms.bind(this),
+        getMessages: this.getMessages.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -133,6 +134,73 @@ export class AdminHandlers{
       })
     }
     return callback(null, { result: JSON.stringify(room)});
+  }
+
+  async getMessages(call: RouterRequest, callback: RouterResponse) {
+    const { skip,limit,senderId, roomId } = JSON.parse(call.request.params);
+    let skipNumber = 0,
+      limitNumber = 25;
+
+    if (!isNil(skip)) {
+      skipNumber = Number.parseInt(skip as string);
+    }
+    if (!isNil(limit)) {
+      limitNumber = Number.parseInt(limit as string);
+    }
+    let errorMessage;
+    let query : any = {};
+    let schema = null;
+    let id;
+    let filter: boolean = false;
+    if(!isNil(senderId) && isNil(roomId)){
+      schema = 'User';
+      query['senderUser'] = { senderId };
+      id = senderId;
+      filter = true;
+    }
+    else if(isNil(senderId) && !isNil(roomId)){
+      schema = 'ChatRoom';
+      query['room'] = { roomId };
+      id = roomId;
+      filter = true;
+    }
+    if(filter) {
+      const room_or_user = await this.database
+        .findOne(schema, id)
+        .catch((err: any) => errorMessage = err);
+
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        });
+      }
+      if (isNil(room_or_user)) {
+        return callback({
+          code: status.NOT_FOUND,
+          message: 'document with id ' + room_or_user + ' not found'
+        })
+      }
+    }
+
+    const messagesPromise = this.database.findMany(
+      'ChatMessage',
+      query,
+      null,
+      skipNumber,
+      limitNumber
+    );
+    const countPromise = this.database.countDocuments('ChatMessage', {});
+    const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
+      (e: any) => (errorMessage = e.message)
+    );
+    if (!isNil(errorMessage))
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+
+    return callback(null, { result: JSON.stringify({ messages, count }) });
   }
 
   async deleteRooms(call: RouterRequest, callback: RouterResponse){
