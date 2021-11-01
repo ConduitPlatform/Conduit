@@ -224,7 +224,7 @@ export class FileHandlers {
         .container(found.container)
         .getSignedUrl((found.folder ?? '') + found.name);
 
-      if(!redirect){
+      if(!isNil(redirect) && !redirect){
         return callback(null, {
           result: url,
         });
