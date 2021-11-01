@@ -19,7 +19,9 @@ const useStyles = makeStyles((theme) => ({
   btnAlignment2: {
     marginRight: theme.spacing(1.5),
   },
-  actions: {},
+  actions: {
+    marginBottom: '5px',
+  },
   noTransactions: {
     textAlign: 'center',
     marginTop: '200px',
@@ -97,8 +99,6 @@ const Transactions = () => {
   const handleSelect = (id: string) => {
     const newSelectedTransactions = [...selectedTransactions];
 
-    console.log(newSelectedTransactions);
-
     if (selectedTransactions.includes(id)) {
       const index = newSelectedTransactions.findIndex((newId) => newId === id);
       newSelectedTransactions.splice(index, 1);
@@ -130,6 +130,7 @@ const Transactions = () => {
         _id: u._id,
         provider: u.provider,
         product: u.product,
+        quantity: u.quantity,
         'Updated At': u.updatedAt,
       };
     });
@@ -139,6 +140,7 @@ const Transactions = () => {
     { title: '_id', sort: '_id' },
     { title: 'Provider', sort: 'provider' },
     { title: 'Product', sort: 'product' },
+    { title: 'Quantity', sort: 'quantity' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 

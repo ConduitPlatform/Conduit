@@ -6,6 +6,7 @@ import {
   asyncGetPaymentSettings,
   asyncUpdatePaymentSettings,
 } from '../../redux/slices/paymentsSlice';
+import { PaymentSettings as IPaymentSettings } from '../../models/payments/PaymentsModels';
 
 const Settings = () => {
   const dispatch = useAppDispatch();
@@ -16,7 +17,7 @@ const Settings = () => {
     dispatch(asyncGetPaymentSettings());
   }, [dispatch]);
 
-  const handleSettingsSave = (data: any) => {
+  const handleSettingsSave = (data: IPaymentSettings) => {
     const body = {
       ...settings,
       ...data,

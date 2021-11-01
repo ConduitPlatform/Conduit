@@ -104,7 +104,7 @@ const Subscriptions = () => {
   const formatCollapsibleData = (data: Subscription[]) => {
     return data.map((u) => {
       return {
-        transactions: Object.entries(u.transactions).map(([key, value]) => `${key}: ${value}`),
+        transactions: u.transactions,
         userId: u.userId,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,

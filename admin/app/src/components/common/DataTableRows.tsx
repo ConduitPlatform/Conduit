@@ -8,10 +8,13 @@ import {
   makeStyles,
   TableCell,
   TableRow,
+  Typography,
 } from '@material-ui/core';
 import DataTableActions from './DataTableActions';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@material-ui/icons';
 import moment from 'moment';
+import { Transaction } from '../../models/payments/PaymentsModels';
+import DataTable from './DataTable';
 
 const useStyles = makeStyles((theme) => ({
   ellipsisStyle: {
@@ -26,7 +29,7 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
     flexWrap: 'wrap',
     '& > *': {
-      margin: theme.spacing(1),
+      margin: theme.spacing(0.5),
     },
   },
 }));
@@ -37,7 +40,7 @@ type Action = {
 };
 
 interface Props {
-  collapsible?: any;
+  collapsibleData?: any;
   row: any;
   index: number;
   actions?: Action[];
@@ -48,7 +51,7 @@ interface Props {
 }
 
 const DataTableRows: React.FC<Props> = ({
-  collapsible,
+  collapsibleData: collapsible,
   row,
   index,
   handleAction,
@@ -77,6 +80,27 @@ const DataTableRows: React.FC<Props> = ({
       handleSelect(id);
     }
   };
+
+  const formatInnerTable = (data: Transaction[]) => {
+    return data.map((u) => {
+      return {
+        _id: u._id,
+        provider: u.provider,
+        product: u.product,
+        quantity: u.quantity,
+        'Updated At': u.updatedAt,
+      };
+    });
+  };
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Provider', sort: 'provider' },
+    { title: 'Product', sort: 'product' },
+    { title: 'Quantity', sort: 'quantity' },
+    { title: 'Updated At', sort: 'updatedAt' },
+  ];
+
   return (
     <>
       <TableRow key={index}>
@@ -112,14 +136,29 @@ const DataTableRows: React.FC<Props> = ({
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <Box className={classes.pill}>
-                {Object.entries(collapsible).map(([key, value], index: number) => (
-                  <Chip
-                    size="small"
-                    color={index === 0 ? 'primary' : 'secondary'}
-                    label={`${key}: ${value}`}
-                    key={`row ${key}`}
-                  />
-                ))}
+                {Object.entries(collapsible).map(([key, value], index: number) =>
+                  Array.isArray(value) ? (
+                    <Box
+                      key={index}
+                      width="83vw"
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="center"
+                      alignContent="center">
+                      <Typography>Transactions: </Typography>
+                      <DataTable inner dsData={formatInnerTable(value)} headers={headers} />
+                    </Box>
+                  ) : (
+                    <Box key={index} className={classes.pill}>
+                      <Chip
+                        size="small"
+                        color={`primary`}
+                        label={`${key}: ${value}`}
+                        key={`row ${key}`}
+                      />
+                    </Box>
+                  )
+                )}
               </Box>
             </Collapse>
           </TableCell>

@@ -192,7 +192,7 @@ const ViewEditProduct: React.FC<Props> = ({
                     onChange={(event) => {
                       setProductState({
                         ...productState,
-                        value: event.target.value,
+                        value: parseInt(event.target.value, 10),
                       });
                     }}
                   />
@@ -220,7 +220,7 @@ const ViewEditProduct: React.FC<Props> = ({
                       control={
                         <Switch
                           checked={productState.isSubscription}
-                          onChange={(e) => {
+                          onChange={() => {
                             setProductState({
                               ...productState,
                               isSubscription: !productState.isSubscription,
@@ -240,6 +240,7 @@ const ViewEditProduct: React.FC<Props> = ({
                           <Select
                             labelId="demo-simple-select-label"
                             id="demo-simple-select"
+                            label="Recurs"
                             value={productState.recurring}
                             onChange={(event) => {
                               setProductState({ ...productState, recurring: event.target.value });
@@ -261,7 +262,7 @@ const ViewEditProduct: React.FC<Props> = ({
                           onChange={(event) => {
                             setProductState({
                               ...productState,
-                              recurringCount: event.target.value,
+                              recurringCount: parseInt(event.target.value, 10),
                             });
                           }}
                         />

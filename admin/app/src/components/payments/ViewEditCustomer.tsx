@@ -9,10 +9,13 @@ import { Cancel, Save } from '@material-ui/icons';
 import Image from 'next/dist/client/image';
 import CustomerIcon from '../../assets/svgs/customer.svg';
 import React, { useEffect, useState } from 'react';
-import { Button, Paper } from '@material-ui/core';
-import { useAppDispatch } from '../../redux/store';
+import { Button, FormControl, InputLabel, MenuItem, Paper, Select } from '@material-ui/core';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { Customer } from '../../models/payments/PaymentsModels';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
+import { camelCase } from 'lodash';
+import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
+import { AuthUser } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -79,6 +82,11 @@ const ViewEditCustomer: React.FC<Props> = ({
 }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const [select, setSelect] = useState<string | number>(-1);
+
+  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+
+  console.log(users);
 
   const [customerState, setCustomerState] = useState<Customer>({
     _id: '',
@@ -92,6 +100,12 @@ const ViewEditCustomer: React.FC<Props> = ({
       customerId: '',
     },
   });
+
+  useEffect(() => {
+    dispatch(asyncGetAuthUserData({ skip: 0, limit: 100, search: '', filter: 'all' }));
+  }, [dispatch]);
+
+  console.log(customerState);
 
   useEffect(() => {
     if (!create)
@@ -156,8 +170,14 @@ const ViewEditCustomer: React.FC<Props> = ({
     });
   };
 
-  const handleDisabled = () => {
-    return customerState.buyerName && customerState._id && customerState.stripe;
+  const handleUserChange = (e: React.ChangeEvent<any>) => {
+    setSelect(e.target.value);
+
+    const foundUser = users.find((user: AuthUser) => user._id === e.target.value);
+
+    if (e.target.value !== '' && foundUser !== undefined)
+      setCustomerState({ ...customerState, userId: foundUser._id });
+    else setCustomerState({ ...customerState, userId: '' });
   };
 
   return (
@@ -179,15 +199,20 @@ const ViewEditCustomer: React.FC<Props> = ({
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField
-                    className={classes.textField}
-                    label={'User Id'}
-                    variant={'outlined'}
-                    value={customerState.userId}
-                    onChange={(event) => {
-                      setCustomerState({ ...customerState, userId: event.target.value });
-                    }}
-                  />
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel>{select === -1 ? 'Select user' : 'Selected user'}</InputLabel>
+                    <Select label="Select user" value={select} onChange={handleUserChange}>
+                      <MenuItem value={-1}>
+                        <em>None</em>
+                      </MenuItem>
+                      {users.length > 0 &&
+                        users.map((user, index: number) => (
+                          <MenuItem key={index} value={user._id}>
+                            {user.email}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12}>
                   <TextField

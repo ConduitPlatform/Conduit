@@ -26,6 +26,10 @@ const useStyles = makeStyles((theme) => ({
   tableContainer: {
     maxHeight: '70vh',
   },
+  innerTableContainer: {
+    maxHeight: '70vh',
+    backgroundColor: theme.palette.background.default,
+  },
   ellipsisStyle: {
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
@@ -42,9 +46,15 @@ type Action = {
 
 interface Props {
   collapsible?: any;
+  inner?: boolean;
   headers: any;
   sort?: { asc: boolean; index: string | null };
-  setSort?: any;
+  setSort?: React.Dispatch<
+    React.SetStateAction<{
+      asc: boolean;
+      index: string | null;
+    }>
+  >;
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
@@ -55,6 +65,7 @@ interface Props {
 
 const DataTable: React.FC<Props> = ({
   collapsible,
+  inner,
   headers,
   sort,
   setSort,
@@ -67,16 +78,17 @@ const DataTable: React.FC<Props> = ({
   ...rest
 }) => {
   const classes = useStyles();
-  /** table header and rows */
+
   const rows = dsData;
 
   const onSelectedField = (index: string) => {
-    setSort((prevState: any) => {
-      if (prevState.index === index) {
-        return { asc: !prevState.asc, index: index };
-      }
-      return { asc: prevState.asc, index: index };
-    });
+    if (setSort !== undefined)
+      setSort((prevState: { asc: boolean; index: string | null }) => {
+        if (prevState.index === index) {
+          return { asc: !prevState.asc, index: index };
+        }
+        return { asc: prevState.asc, index: index };
+      });
   };
 
   const onMenuItemSelectAll = () => {
@@ -86,7 +98,10 @@ const DataTable: React.FC<Props> = ({
   };
 
   return (
-    <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
+    <TableContainer
+      className={!inner ? classes.tableContainer : classes.innerTableContainer}
+      component={Paper}
+      {...rest}>
       <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
@@ -111,13 +126,13 @@ const DataTable: React.FC<Props> = ({
                 </TableSortLabel>
               </TableCell>
             ))}
-            {(actions || collapsible) && <TableCell className={classes.header} />}
+            {(actions || collapsible || inner) && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.map((row: any, i: number) => (
             <DataTableRows
-              collapsible={collapsible !== undefined ? collapsible[i] : null}
+              collapsibleData={collapsible !== undefined ? collapsible[i] : null}
               row={row}
               index={i}
               handleAction={handleAction}

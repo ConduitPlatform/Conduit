@@ -71,6 +71,7 @@ const Products = () => {
     asc: false,
     index: null,
   });
+
   const [openDeleteProducts, setOpenDeleteProducts] = useState<boolean>(false);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -185,44 +186,6 @@ const Products = () => {
       }
     }
   };
-
-  // To be impemented
-
-  // const getProductsCallback = useCallback(() => {
-  //   dispatch(asyncGetProducts({ skip, limit, search }));
-  // }, [dispatch, limit, skip, search]);
-
-  // const handleDeleteTitle = (product: Product) => {
-  //   if (selectedProduct.name === '') {
-  //     return 'Delete selected products';
-  //   }
-  //   return `Delete template ${product.name}`;
-  // };
-
-  // const handleDeleteDescription = (product: Product) => {
-  //   if (selectedProduct.name === '') {
-  //     return 'Are you sure you want to delete the selected products?';
-  //   }
-  //   return `Are you sure you want to delete ${product.name}? `;
-  // };
-  // const deleteButtonAction = () => {
-  //   if (openDeleteProducts && selectedProduct.name == '') {
-  //     const params = {
-  //       ids: selectedProducts,
-  //       getTemplates: getProductsCallback,
-  //     };
-  //     dispatch(asyncDeleteProducts(params));
-  //   } else {
-  //     const params = {
-  //       ids: [`${selectedProduct._id}`],
-  //       getTemplates: getProductsCallback,
-  //     };
-  //     dispatch(asyncDeleteProducts(params));
-  //   }
-  //   setOpenDeleteProducts(false);
-  //   setSelectedProduct(originalProductState);
-  //   setSelectedProducts([]);
-  // };
 
   const toDelete = {
     title: 'Delete',
@@ -347,14 +310,6 @@ const Products = () => {
           />
         </Box>
       </DrawerWrapper>
-      {/* <ConfirmationDialog
-        open={openDeleteProducts}
-        handleClose={handleClose}
-        title={handleDeleteTitle(selectedProduct)}
-        description={handleDeleteDescription(selectedProduct)}
-        buttonAction={deleteButtonAction}
-        buttonText={'Delete'}
-      /> */}
     </div>
   );
 };
@@ -364,3 +319,50 @@ Products.getLayout = function getLayout(page: ReactElement) {
 };
 
 export default Products;
+
+// To be impemented
+
+// const getProductsCallback = useCallback(() => {
+//   dispatch(asyncGetProducts({ skip, limit, search }));
+// }, [dispatch, limit, skip, search]);
+
+// const handleDeleteTitle = (product: Product) => {
+//   if (selectedProduct.name === '') {
+//     return 'Delete selected products';
+//   }
+//   return `Delete template ${product.name}`;
+// };
+
+// const handleDeleteDescription = (product: Product) => {
+//   if (selectedProduct.name === '') {
+//     return 'Are you sure you want to delete the selected products?';
+//   }
+//   return `Are you sure you want to delete ${product.name}? `;
+// };
+// const deleteButtonAction = () => {
+//   if (openDeleteProducts && selectedProduct.name == '') {
+//     const params = {
+//       ids: selectedProducts,
+//       getTemplates: getProductsCallback,
+//     };
+//     dispatch(asyncDeleteProducts(params));
+//   } else {
+//     const params = {
+//       ids: [`${selectedProduct._id}`],
+//       getTemplates: getProductsCallback,
+//     };
+//     dispatch(asyncDeleteProducts(params));
+//   }
+//   setOpenDeleteProducts(false);
+//   setSelectedProduct(originalProductState);
+//   setSelectedProducts([]);
+// };
+
+/* <ConfirmationDialog
+        open={openDeleteProducts}
+        handleClose={handleClose}
+        title={handleDeleteTitle(selectedProduct)}
+        description={handleDeleteDescription(selectedProduct)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      /> */
