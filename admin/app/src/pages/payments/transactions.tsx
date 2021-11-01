@@ -48,6 +48,7 @@ const Transactions = () => {
     asc: false,
     index: null,
   });
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction>(originalTransactionState);
@@ -91,6 +92,29 @@ const Transactions = () => {
         setDrawer(true);
       }
     }
+  };
+
+  const handleSelect = (id: string) => {
+    const newSelectedTransactions = [...selectedTransactions];
+
+    console.log(newSelectedTransactions);
+
+    if (selectedTransactions.includes(id)) {
+      const index = newSelectedTransactions.findIndex((newId) => newId === id);
+      newSelectedTransactions.splice(index, 1);
+    } else {
+      newSelectedTransactions.push(id);
+    }
+    setSelectedTransactions(newSelectedTransactions);
+  };
+
+  const handleSelectAll = (data: EmailUI[]) => {
+    if (selectedTransactions.length === transactions.length) {
+      setSelectedTransactions([]);
+      return;
+    }
+    const newSelectedTransactions = data.map((item: EmailUI) => item._id);
+    setSelectedTransactions(newSelectedTransactions);
   };
 
   const toView = {
@@ -149,8 +173,11 @@ const Transactions = () => {
             setSort={setSort}
             headers={headers}
             dsData={formatData(transactions)}
+            handleSelect={handleSelect}
+            handleSelectAll={handleSelectAll}
             actions={actions}
             handleAction={handleAction}
+            selectedItems={selectedTransactions}
           />
           <Grid container style={{ marginTop: '-8px' }}>
             <Grid item xs={7} />

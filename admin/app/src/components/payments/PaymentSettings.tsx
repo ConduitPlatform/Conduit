@@ -1,4 +1,4 @@
-import { Container } from '@material-ui/core';
+import { Container, MenuItem } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
@@ -39,12 +39,14 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const [edit, setEdit] = useState<boolean>(false);
   const [settingsState, setSettingsState] = useState<IPaymentSettings>({
     active: false,
+    providerName: 'stripe',
     stripe: {
       enabled: false,
       secret_key: '',
     },
   });
   const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
+  const [provider, setProvider] = useState<string>(settingsState.providerName);
 
   useEffect(() => {
     if (!settingsData) {
@@ -52,6 +54,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     }
     setSettingsState({
       active: settingsData.active,
+      providerName: 'stripe',
       stripe: {
         enabled: settingsData.stripe.enabled,
         secret_key: settingsData.stripe.secret_key,
@@ -66,11 +69,23 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     setEdit(false);
     setSettingsState({
       active: settingsData.active,
+      providerName: 'stripe',
       stripe: {
         enabled: settingsData.stripe.enabled,
         secret_key: settingsData.stripe.secret_key,
       },
     });
+  };
+
+  const providers = [
+    {
+      value: 'stripe',
+      label: 'Stripe',
+    },
+  ];
+
+  const handleProviderChange = (event: React.ChangeEvent<{ value: string }>) => {
+    setProvider(event.target.value);
   };
 
   const handleEditClick = () => {
@@ -80,6 +95,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const save = () => {
     const data = {
       active: settingsState.active,
+      providerName: 'stripe',
       stripe: {
         enabled: settingsState.stripe.enabled,
         secret_key: settingsState.stripe.secret_key,
@@ -93,53 +109,76 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const renderSettingsFields = () => {
     return (
       <>
-        <Grid item xs={6}>
-          <Box
-            width={'100%'}
-            display={'inline-flex'}
-            justifyContent={'space-between'}
-            alignItems={'center'}>
-            <Typography variant={'h6'}>Enable stripe payments</Typography>
-            <FormControlLabel
-              label={''}
-              control={
-                <Switch
-                  disabled={!edit}
-                  checked={settingsState.stripe.enabled}
-                  onChange={() => {
-                    setSettingsState({
-                      ...settingsState,
-                      stripe: { ...settingsState.stripe, enabled: !settingsState.stripe.enabled },
-                    });
-                  }}
-                  value={'accountLinking'}
-                  color="primary"
-                />
-              }
-            />
-          </Box>
-        </Grid>
-        <Grid item xs={12}>
-          <Typography variant={'h6'}>Stripe secret key</Typography>
-        </Grid>
         <Grid item xs={12}>
           <TextField
             disabled={!edit}
-            id="outlined-number"
-            label="Secret key"
-            variant="outlined"
-            InputLabelProps={{
-              shrink: true,
-            }}
-            onChange={(event) => {
-              setSettingsState({
-                ...settingsState,
-                stripe: { ...settingsState.stripe, secret_key: event.target.value },
-              });
-            }}
-            value={settingsState.stripe.secret_key}
-          />
+            id="outlined-select-provider"
+            select
+            label="Provider"
+            value={provider}
+            onChange={handleProviderChange}
+            variant="outlined">
+            {providers.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </Grid>
+        {settingsState.providerName === 'stripe' && (
+          <>
+            <Grid item xs={6}>
+              <Box
+                width={'100%'}
+                display={'inline-flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}>
+                <Typography variant={'h6'}>Enable stripe payments</Typography>
+                <FormControlLabel
+                  label={''}
+                  control={
+                    <Switch
+                      disabled={!edit}
+                      checked={settingsState.stripe.enabled}
+                      onChange={() => {
+                        setSettingsState({
+                          ...settingsState,
+                          stripe: {
+                            ...settingsState.stripe,
+                            enabled: !settingsState.stripe.enabled,
+                          },
+                        });
+                      }}
+                      value={'accountLinking'}
+                      color="primary"
+                    />
+                  }
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant={'h6'}>Stripe secret key</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                disabled={!edit}
+                id="outlined-number"
+                label="Secret key"
+                variant="outlined"
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                onChange={(event) => {
+                  setSettingsState({
+                    ...settingsState,
+                    stripe: { ...settingsState.stripe, secret_key: event.target.value },
+                  });
+                }}
+                value={settingsState.stripe.secret_key}
+              />
+            </Grid>
+          </>
+        )}
       </>
     );
   };

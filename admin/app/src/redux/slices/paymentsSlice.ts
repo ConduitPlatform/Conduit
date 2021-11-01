@@ -61,6 +61,7 @@ const initialState: IPaymentsSlice = {
     },
     settings: {
       active: false,
+      providerName: '',
       stripe: {
         enabled: false,
         secret_key: '',

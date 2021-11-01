@@ -48,7 +48,7 @@ const Subscriptions = () => {
     (state) => state.paymentsSlice.data.subscriptionData
   );
 
-  // Placeholder data
+  // // Placeholder data
   // const subscriptions = [
   //   {
   //     _id: '323242543535353d342',
@@ -59,7 +59,7 @@ const Subscriptions = () => {
   //     updatedAt: '24/6/23',
   //     customerId: 'fsfsefw3423dff',
   //     activeUntil: '30/5/21',
-  //     transactions: '3',
+  //     transactions: { name: 'Dim', money: '32', stripe: 'false' },
   //   },
   //   {
   //     _id: '323242543535353d342',
@@ -70,7 +70,7 @@ const Subscriptions = () => {
   //     updatedAt: '24/6/23',
   //     customerId: 'fsfsefw3423sasdff',
   //     activeUntil: '30/3/21',
-  //     transactions: '22',
+  //     transactions: { name: 'Kostas', money: '22', stripe: 'true' },
   //   },
   // ];
 
@@ -104,7 +104,7 @@ const Subscriptions = () => {
   const formatCollapsibleData = (data: Subscription[]) => {
     return data.map((u) => {
       return {
-        transactions: u.transactions,
+        transactions: Object.entries(u.transactions).map(([key, value]) => `${key}: ${value}`),
         userId: u.userId,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,

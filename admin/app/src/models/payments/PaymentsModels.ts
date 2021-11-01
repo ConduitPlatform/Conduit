@@ -57,6 +57,7 @@ export interface Subscription {
 
 export interface PaymentSettings {
   active: boolean;
+  providerName: string;
   stripe: {
     enabled: boolean;
     secret_key: string;

@@ -192,6 +192,17 @@ const ViewEditCustomer: React.FC<Props> = ({
                 <Grid item xs={12}>
                   <TextField
                     className={classes.textField}
+                    label={'Buyer name'}
+                    variant={'outlined'}
+                    value={customerState.buyerName}
+                    onChange={(event) => {
+                      setCustomerState({ ...customerState, buyerName: event.target.value });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    className={classes.textField}
                     label={'Phone number'}
                     variant={'outlined'}
                     value={customerState.phoneNumber}
@@ -243,6 +254,10 @@ const ViewEditCustomer: React.FC<Props> = ({
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Sender:</Typography>
                   <Typography variant="h6">{customerState.userId}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Sender:</Typography>
+                  <Typography variant="h6">{customerState.buyerName}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Phone number:</Typography>

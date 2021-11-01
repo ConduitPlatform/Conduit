@@ -112,10 +112,10 @@ const DataTableRows: React.FC<Props> = ({
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <Box className={classes.pill}>
-                {Object.entries(collapsible).map(([key, value]) => (
+                {Object.entries(collapsible).map(([key, value], index: number) => (
                   <Chip
                     size="small"
-                    color="primary"
+                    color={index === 0 ? 'primary' : 'secondary'}
                     label={`${key}: ${value}`}
                     key={`row ${key}`}
                   />
