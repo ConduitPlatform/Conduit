@@ -204,7 +204,7 @@ export class FileHandlers {
   }
 
   async getFileUrl(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
+    const { id,redirect } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -223,6 +223,12 @@ export class FileHandlers {
       let url = await this.storageProvider
         .container(found.container)
         .getSignedUrl((found.folder ?? '') + found.name);
+
+      if(!isNil(redirect) && !redirect){
+        return callback(null, {
+          result: url,
+        });
+      }
       return callback(null, {
         redirect: url,
       });
