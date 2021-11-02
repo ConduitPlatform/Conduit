@@ -87,10 +87,7 @@ export default class PaymentsModule implements ConduitServiceModule {
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
     const newConfig = JSON.parse(call.request.newConfig);
-    if (
-      isNil(newConfig.active) ||
-      isNil(newConfig[newConfig.providerName])
-    ) {
+    if (isNil(newConfig.active)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Invalid configuration given',
