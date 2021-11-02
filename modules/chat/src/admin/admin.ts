@@ -23,6 +23,7 @@ export class AdminHandlers{
         getRooms: this.getRooms.bind(this),
         deleteRooms: this.deleteRooms.bind(this),
         getMessages: this.getMessages.bind(this),
+        deleteMessages: this.deleteMessages.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -235,5 +236,27 @@ export class AdminHandlers{
     }
     const totalCount = deletedRooms.deletedCount;
     return callback(null, { result: JSON.stringify({ deletedRooms,totalCount }) });
+  }
+
+  async deleteMessages(call: RouterRequest, callback: RouterResponse){
+    const {ids} = JSON.parse(call.request.params);
+    if(isNil(ids) || !Array.isArray((ids))){
+      return callback({
+        code: status.INTERNAL,
+        message: 'ids must be an array'
+      })
+    }
+    let errorMessage;
+    const deletedMessages:any = await this.database
+      .deleteMany('ChatMessage', { _id: { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage,
+      });
+    }
+    const totalCount = deletedMessages.deletedCount;
+    return callback(null, { result: JSON.stringify({ deletedMessages,totalCount }) });
   }
 }
