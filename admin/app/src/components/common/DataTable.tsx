@@ -131,7 +131,7 @@ const DataTable: React.FC<Props> = ({
         <TableBody>
           {rows.map((row: any, i: number) => (
             <DataTableRows
-              collapsibleData={collapsible !== undefined ? collapsible[i] : null}
+              collapsible={collapsible !== undefined ? collapsible[i] : null}
               row={row}
               index={i}
               handleAction={handleAction}

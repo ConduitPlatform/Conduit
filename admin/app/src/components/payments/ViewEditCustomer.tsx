@@ -41,7 +41,7 @@ const ViewEditCustomer: React.FC<Props> = ({
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
-  const [customerState, setCustomerState] = useState<Customer>({
+  const initialState = {
     _id: '',
     userId: '',
     email: '',
@@ -52,7 +52,9 @@ const ViewEditCustomer: React.FC<Props> = ({
     stripe: {
       customerId: '',
     },
-  });
+  };
+
+  const [customerState, setCustomerState] = useState<Customer>(initialState);
 
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip: 0, limit: 100, search: '', filter: 'all' }));
@@ -93,18 +95,7 @@ const ViewEditCustomer: React.FC<Props> = ({
 
   const handleCancelClick = () => {
     if (create) {
-      setCustomerState({
-        _id: '',
-        userId: '',
-        email: '',
-        buyerName: '',
-        phoneNumber: '',
-        address: '',
-        postCode: '',
-        stripe: {
-          customerId: '',
-        },
-      });
+      setCustomerState(initialState);
       return;
     }
     setCustomerState({

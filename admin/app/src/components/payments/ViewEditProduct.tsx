@@ -17,7 +17,7 @@ import {
   Switch,
   MenuItem,
 } from '@material-ui/core';
-import { Product } from '../../models/payments/PaymentsModels';
+import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import sharedClasses from './sharedClasses';
 
 interface Props {
@@ -41,15 +41,17 @@ const ViewEditProduct: React.FC<Props> = ({
 }) => {
   const classes = sharedClasses();
 
-  const [productState, setProductState] = useState<Product>({
+  const initialState = {
     _id: '',
     name: '',
     value: 0,
     currency: '',
     isSubscription: false,
-    recurring: '',
+    recurring: reccuringEnum.day,
     recurringCount: 0,
-  });
+  };
+
+  const [productState, setProductState] = useState<Product>(initialState);
 
   useEffect(() => {
     if (!create)
@@ -76,15 +78,7 @@ const ViewEditProduct: React.FC<Props> = ({
 
   const handleCancelClick = () => {
     if (create) {
-      setProductState({
-        _id: '',
-        name: '',
-        value: 0,
-        currency: '',
-        isSubscription: false,
-        recurring: '',
-        recurringCount: 0,
-      });
+      setProductState(initialState);
       return;
     }
     setProductState({
@@ -196,12 +190,15 @@ const ViewEditProduct: React.FC<Props> = ({
                             label="Recurs"
                             value={productState.recurring}
                             onChange={(event) => {
-                              setProductState({ ...productState, recurring: event.target.value });
+                              setProductState({
+                                ...productState,
+                                recurring: event.target.value as reccuringEnum,
+                              });
                             }}>
-                            <MenuItem value={'day'}>Daily</MenuItem>
-                            <MenuItem value={'week'}>Weekly</MenuItem>
-                            <MenuItem value={'month'}>Monthly</MenuItem>
-                            <MenuItem value={'year'}>Yearly</MenuItem>
+                            <MenuItem value={reccuringEnum.day}>Daily</MenuItem>
+                            <MenuItem value={reccuringEnum.week}>Weekly</MenuItem>
+                            <MenuItem value={reccuringEnum.month}>Monthly</MenuItem>
+                            <MenuItem value={reccuringEnum.year}>Yearly</MenuItem>
                           </Select>
                         </FormControl>
                       </Grid>

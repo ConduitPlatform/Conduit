@@ -11,7 +11,10 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import ConfirmationDialog from '../common/ConfirmationDialog';
-import { PaymentSettings as IPaymentSettings } from '../../models/payments/PaymentsModels';
+import {
+  PaymentSettings as IPaymentSettings,
+  providerEnum,
+} from '../../models/payments/PaymentsModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -39,7 +42,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const [edit, setEdit] = useState<boolean>(false);
   const [settingsState, setSettingsState] = useState<IPaymentSettings>({
     active: false,
-    providerName: 'stripe',
+    providerName: providerEnum.stripe,
     stripe: {
       enabled: false,
       secret_key: '',
@@ -54,7 +57,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     }
     setSettingsState({
       active: settingsData.active,
-      providerName: 'stripe',
+      providerName: settingsData.providerName,
       stripe: {
         enabled: settingsData.stripe.enabled,
         secret_key: settingsData.stripe.secret_key,
@@ -69,7 +72,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     setEdit(false);
     setSettingsState({
       active: settingsData.active,
-      providerName: 'stripe',
+      providerName: settingsData.providerName,
       stripe: {
         enabled: settingsData.stripe.enabled,
         secret_key: settingsData.stripe.secret_key,
@@ -79,7 +82,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
 
   const providers = [
     {
-      value: 'stripe',
+      value: providerEnum.stripe,
       label: 'Stripe',
     },
   ];
@@ -95,7 +98,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const save = () => {
     const data = {
       active: settingsState.active,
-      providerName: 'stripe',
+      providerName: settingsState.providerName,
       stripe: {
         enabled: settingsState.stripe.enabled,
         secret_key: settingsState.stripe.secret_key,
@@ -125,7 +128,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
             ))}
           </TextField>
         </Grid>
-        {settingsState.providerName === 'stripe' && (
+        {settingsState.providerName === providerEnum.stripe && (
           <>
             <Grid item xs={6}>
               <Box
