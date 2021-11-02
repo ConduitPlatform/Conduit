@@ -43,8 +43,12 @@ export const getStorageFiles = (fileData: IGetStorageFiles) =>
 export const getStorageFile = (id: string) =>
   axios.get(`${CONDUIT_API}/admin/storage/file/${id}/data`);
 
-export const getStorageFileUrl = (id: string) =>
-  axios.get(`${CONDUIT_API}/admin/storage/getFileUrl/${id}`);
+export const getStorageFileUrl = (id: string, redirect: boolean) =>
+  axios.get(`${CONDUIT_API}/admin/storage/getFileUrl/${id}`, {
+    params: {
+      redirect: false,
+    },
+  });
 
 // export const updateStorageFile = (fileData: IStorageFile) =>
 export const updateStorageFile = (

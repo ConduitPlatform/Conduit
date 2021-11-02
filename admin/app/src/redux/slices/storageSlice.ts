@@ -15,7 +15,6 @@ import {
   deleteStorageFile,
   deleteStorageFolder,
   getStorageContainers,
-  getStorageFile,
   getStorageFiles,
   getStorageFileUrl,
   getStorageFolders,
@@ -44,7 +43,7 @@ interface IStorageSlice {
       data: ContainerDataProps[];
       totalCount: number;
     };
-    selectedFile: undefined;
+    selectedFileUrl: string;
   };
 }
 
@@ -72,7 +71,7 @@ const initialState: IStorageSlice = {
       totalCount: 0,
       data: [],
     },
-    selectedFile: undefined,
+    selectedFileUrl: '',
   },
 };
 
@@ -242,22 +241,6 @@ export const asyncAddStorageContainer = createAsyncThunk(
   }
 );
 
-export const asyncGetStorageFile = createAsyncThunk(
-  'storage/getStorageFile',
-  async (id: string, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const { data } = await getStorageFile(id);
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
-
 export const asyncDeleteStorageFile = createAsyncThunk(
   'storage/deleteStorageFile',
   async (fileId: string, thunkAPI) => {
@@ -338,16 +321,15 @@ export const asyncSetSelectedStorageFile = createAsyncThunk(
   async (file: any, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      // console.log('file', file);
+      let url;
       if (!file.url) {
-        // const { data } = await getStorageFileUrl(file._id);
-        // console.log('data', data);
+        const { data } = await getStorageFileUrl(file._id, false);
+        url = data;
+      } else {
+        url = file.url;
       }
-      // const { data } = await updateStorageFile(fileData);
-      // thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
-      // console.log('success', data);
       thunkAPI.dispatch(setAppDefaults());
-      // return data;
+      return url;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -363,8 +345,8 @@ const storageSlice = createSlice({
     clearStoragePageStore: () => {
       return initialState;
     },
-    setSelectedFile: (state, action) => {
-      state.data.selectedFile = action.payload;
+    clearStorageContainerData: (state) => {
+      state.data.containerData.data = [];
     },
   },
   extraReducers: (builder) => {
@@ -398,9 +380,12 @@ const storageSlice = createSlice({
       );
       if (foundIndex !== -1) state.data.containers.containers.splice(foundIndex, 1);
     });
+    builder.addCase(asyncSetSelectedStorageFile.fulfilled, (state, action) => {
+      state.data.selectedFileUrl = action.payload;
+    });
   },
 });
 
-export const { clearStoragePageStore, setSelectedFile } = storageSlice.actions;
+export const { clearStoragePageStore, clearStorageContainerData } = storageSlice.actions;
 
 export default storageSlice.reducer;

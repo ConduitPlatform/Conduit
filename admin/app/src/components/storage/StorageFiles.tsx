@@ -10,7 +10,7 @@ import {
   asyncDeleteStorageFolder,
   asyncGetStorageContainerData,
   asyncGetStorageContainers,
-  setSelectedFile,
+  clearStorageContainerData,
 } from '../../redux/slices/storageSlice';
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
@@ -47,7 +47,10 @@ const StorageFiles = () => {
   }, [dispatch, limit, skip]);
 
   const getContainerData = useCallback(() => {
-    if (filteredPath.length < 1) return;
+    if (filteredPath.length < 1) {
+      dispatch(clearStorageContainerData());
+      return;
+    }
     dispatch(
       asyncGetStorageContainerData({
         skip: skip,
@@ -76,6 +79,12 @@ const StorageFiles = () => {
     setSkip(0);
     setLimit(10);
   }, [path]);
+
+  // useEffect(() => {
+  //   if (selectedFileUrl) {
+  //     window.open(selectedFileUrl, '_blank');
+  //   }
+  // }, [selectedFileUrl]);
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
@@ -168,7 +177,6 @@ const StorageFiles = () => {
   const handleCloseDrawer = () => {
     setDrawerAddOpen(false);
     setDrawerCreateOpen(false);
-    dispatch(setSelectedFile(undefined));
   };
 
   const handlePathClick = (value: string) => {
