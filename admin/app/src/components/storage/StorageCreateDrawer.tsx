@@ -40,7 +40,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props {
-  open: boolean;
+  data: { open: boolean; type: CreateFormSelected };
   closeDrawer: () => void;
   containers: IContainer[];
   handleCreateFolder: (data: ICreateForm['folder']) => void;
@@ -49,7 +49,7 @@ interface Props {
 }
 
 const StorageCreateDrawer: FC<Props> = ({
-  open,
+  data,
   closeDrawer,
   containers,
   handleCreateFolder,
@@ -58,8 +58,6 @@ const StorageCreateDrawer: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const [selected, setSelected] = useState<CreateFormSelected>(CreateFormSelected.container);
-
   const initialInputData = {
     container: {
       name: '',
@@ -67,15 +65,31 @@ const StorageCreateDrawer: FC<Props> = ({
     },
     folder: {
       name: '',
-      container: '',
+      container: path[0],
       isPublic: false,
     },
   };
   const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
 
+  const setInitialInputData = () => {
+    setInputData((prevState) => {
+      return {
+        ...prevState,
+        folder: {
+          ...prevState.folder,
+          name: '',
+          isPublic: false,
+        },
+        container: {
+          ...prevState.container,
+          name: '',
+          isPublic: false,
+        },
+      };
+    });
+  };
+
   useEffect(() => {
-    setSelected(CreateFormSelected.container);
-    if (path.length < 1) return;
     setInputData((prevState) => {
       return {
         ...prevState,
@@ -88,14 +102,14 @@ const StorageCreateDrawer: FC<Props> = ({
   }, [path]);
 
   const handleCancel = () => {
-    setInputData(initialInputData);
+    setInitialInputData();
     closeDrawer();
   };
 
   const handleSave = () => {
-    if (selected === CreateFormSelected.container) {
+    if (data.type === CreateFormSelected.container) {
       handleCreateContainer(inputData.container);
-      setInputData(initialInputData);
+      setInitialInputData();
       closeDrawer();
       return;
     }
@@ -105,51 +119,34 @@ const StorageCreateDrawer: FC<Props> = ({
       isPublic: inputData.folder.isPublic,
     };
     handleCreateFolder(folderData);
-    setInputData(initialInputData);
+    setInitialInputData();
     closeDrawer();
   };
 
   return (
-    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={256}>
+    <DrawerWrapper open={data.open} closeDrawer={() => closeDrawer()} width={256}>
       <Box className={classes.root}>
         <Box className={classes.createContainer}>
           <Typography variant="h6" className={classes.createTitle}>
-            Create
+            Create {data.type}
           </Typography>
-          <TextField
-            select
-            label=""
-            value={selected}
-            onChange={(event) => {
-              setSelected(event.target.value as CreateFormSelected);
-            }}
-            variant="outlined"
-            style={{ padding: 0 }}
-            classes={{
-              root: classes.selectRoot,
-            }}>
-            <MenuItem value="container">Container</MenuItem>
-            <MenuItem value="folder" disabled={path.length < 1}>
-              Folder
-            </MenuItem>
-          </TextField>
         </Box>
         <TextField
           variant="outlined"
           label="Name"
           className={classes.input}
-          value={inputData[selected].name}
+          value={inputData[data.type].name}
           onChange={(event) => {
             setInputData({
               ...inputData,
-              [selected]: {
-                ...inputData[selected],
+              [data.type]: {
+                ...inputData[data.type],
                 name: event.target.value,
               },
             });
           }}
         />
-        {selected === CreateFormSelected.folder && (
+        {data.type === CreateFormSelected.folder && (
           <TextField
             select
             label="Container"
@@ -176,12 +173,12 @@ const StorageCreateDrawer: FC<Props> = ({
           <Typography variant="subtitle1">Is Public</Typography>
           <Switch
             color="primary"
-            value={inputData[selected].isPublic}
+            value={inputData[data.type].isPublic}
             onChange={(event) => {
               setInputData({
                 ...inputData,
-                [selected]: {
-                  ...inputData[selected],
+                [data.type]: {
+                  ...inputData[data.type],
                   isPublic: event.target.checked,
                 },
               });

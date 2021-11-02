@@ -50,7 +50,8 @@ interface Props {
   containerData: ContainerDataProps[];
   path: string;
   handleAdd: () => void;
-  handleCreate: () => void;
+  handleCreateContainer: () => void;
+  handleCreateFolder: () => void;
   // handleEdit: (value: boolean) => void;
   handlePathClick: (value: string) => void;
   handleDelete: (
@@ -71,7 +72,8 @@ const StorageTable: FC<Props> = ({
   containerData,
   path,
   handleAdd,
-  handleCreate,
+  handleCreateContainer,
+  handleCreateFolder,
   handlePathClick,
   handleDelete,
   handlePageChange,
@@ -177,8 +179,17 @@ const StorageTable: FC<Props> = ({
             color="primary"
             className={classes.createButton}
             startIcon={<AddCircleOutline />}
-            onClick={() => handleCreate()}>
-            Create
+            onClick={() => handleCreateContainer()}>
+            Create Container
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.createButton}
+            startIcon={<AddCircleOutline />}
+            disabled={path === '/'}
+            onClick={() => handleCreateFolder()}>
+            Create Folder
           </Button>
           <Button
             variant="contained"

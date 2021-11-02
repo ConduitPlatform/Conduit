@@ -15,7 +15,7 @@ import {
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
 import ConfirmationDialog from '../common/ConfirmationDialog';
-import { ICreateForm, IStorageFile } from '../../models/storage/StorageModels';
+import { CreateFormSelected, ICreateForm, IStorageFile } from '../../models/storage/StorageModels';
 
 const StorageFiles = () => {
   const dispatch = useAppDispatch();
@@ -30,7 +30,10 @@ const StorageFiles = () => {
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
-  const [drawerCreateOpen, setDrawerCreateOpen] = useState<boolean>(false);
+  const [drawerCreateOpen, setDrawerCreateOpen] = useState({
+    open: false,
+    type: CreateFormSelected.container,
+  });
   const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
   const dialogInitialState = {
     open: false,
@@ -102,8 +105,18 @@ const StorageFiles = () => {
     setPage(0);
   };
 
-  const handleCreate = () => {
-    setDrawerCreateOpen(true);
+  const onCreateContainer = () => {
+    setDrawerCreateOpen({
+      open: true,
+      type: CreateFormSelected.container,
+    });
+  };
+
+  const onCreateFolder = () => {
+    setDrawerCreateOpen({
+      open: true,
+      type: CreateFormSelected.folder,
+    });
   };
 
   const handleAddFile = () => {
@@ -176,7 +189,10 @@ const StorageFiles = () => {
 
   const handleCloseDrawer = () => {
     setDrawerAddOpen(false);
-    setDrawerCreateOpen(false);
+    setDrawerCreateOpen({
+      open: false,
+      type: CreateFormSelected.container,
+    });
   };
 
   const handlePathClick = (value: string) => {
@@ -202,7 +218,8 @@ const StorageFiles = () => {
         containerData={data}
         path={path}
         handleAdd={handleAddFile}
-        handleCreate={handleCreate}
+        handleCreateContainer={onCreateContainer}
+        handleCreateFolder={onCreateFolder}
         handlePathClick={handlePathClick}
         handleDelete={handleDelete}
         handleLimitChange={handleLimitChange}
@@ -212,7 +229,7 @@ const StorageFiles = () => {
         count={path === '/' ? containersCount : totalCount}
       />
       <StorageCreateDrawer
-        open={drawerCreateOpen}
+        data={drawerCreateOpen}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleCreateFolder={handleCreateFolder}

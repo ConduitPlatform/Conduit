@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
@@ -76,9 +76,21 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
     });
   }, [path]);
 
+  const setInitialFileData = () => {
+    setFileData((prevState) => {
+      return {
+        ...prevState,
+        name: '',
+        data: '',
+        isPublic: false,
+        mimeType: '',
+      };
+    });
+  };
+
   const handleCancel = () => {
     closeDrawer();
-    setFileData(initialFileData);
+    setInitialFileData();
   };
 
   const handleAdd = () => {
@@ -91,7 +103,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
       isPublic: fileData.isPublic,
       mimeType: fileData.mimeType,
     };
-    setFileData(initialFileData);
+    setInitialFileData();
     handleAddFile(sendFileData);
   };
 
