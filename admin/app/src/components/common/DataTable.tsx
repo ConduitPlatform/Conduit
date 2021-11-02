@@ -62,7 +62,6 @@ interface Props extends PaperProps {
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   handleRowClick?: (data: any) => void;
-  placeholder?: string;
 }
 
 const DataTable: React.FC<Props> = ({
@@ -77,7 +76,6 @@ const DataTable: React.FC<Props> = ({
   handleSelect,
   handleSelectAll,
   handleRowClick,
-  placeholder = 'Not available',
   ...rest
 }) => {
   const classes = useStyles();
@@ -204,11 +202,6 @@ const DataTable: React.FC<Props> = ({
           </TableBody>
         </Table>
       </TableContainer>
-      {dsData.length < 1 && (
-        <Paper className={classes.placeholder}>
-          <Typography variant="subtitle1">{placeholder}</Typography>
-        </Paper>
-      )}
     </>
   );
 };
