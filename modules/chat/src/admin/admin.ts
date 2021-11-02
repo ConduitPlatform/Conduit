@@ -1,7 +1,7 @@
 import ConduitGrpcSdk, {
   GrpcServer,
   RouterResponse,
-  RouterRequest
+  RouterRequest, DatabaseProvider,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -10,12 +10,12 @@ let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers{
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(server: GrpcServer, private readonly  grpcSdk: ConduitGrpcSdk) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database =  self.grpcSdk.databaseProvider;
+      self.database =  self.grpcSdk.databaseProvider!;
     });
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
@@ -33,7 +33,7 @@ export class AdminHandlers{
   private async validateUsersInput(users: any[]) {
     const uniqueUsers = Array.from(new Set(users));
     let errorMessage: string | null = null;
-    const usersToBeAdded = await this.database
+    const usersToBeAdded:any = await this.database
       .findMany('User', { _id: { $in: uniqueUsers } })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -54,7 +54,17 @@ export class AdminHandlers{
   }
 
   async getRooms(call: RouterRequest, callback: RouterResponse){
-
+    // const senderUser = '6181175b24cdb6258c5204e5';
+    // const room = '61811dcf24cdb6258c5204ed';
+    // const message = 'psixoules m ti kanete eimai o deuteros';
+    // const c = await this.database.create('ChatMessage',{
+    //   senderUser,
+    //   room,
+    //   message,
+    // })
+    //   .catch((err:any) => {
+    //     console.log(err);
+    //   });
     const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
@@ -76,7 +86,7 @@ export class AdminHandlers{
     const chatRoomDocumentsPromise = this.database.findMany(
       'ChatRoom',
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
@@ -149,24 +159,24 @@ export class AdminHandlers{
     }
     let errorMessage;
     let query : any = {};
-    let schema = null;
+    let schema;
     let id;
     let filter: boolean = false;
     if(!isNil(senderId) && isNil(roomId)){
       schema = 'User';
-      query['senderUser'] = { senderId };
+      query['senderUser'] = senderId ;
       id = senderId;
       filter = true;
     }
     else if(isNil(senderId) && !isNil(roomId)){
       schema = 'ChatRoom';
-      query['room'] = { roomId };
+      query['room'] =  roomId ;
       id = roomId;
       filter = true;
     }
-    if(filter) {
+    if(filter && schema) {
       const room_or_user = await this.database
-        .findOne(schema, id)
+        .findOne(schema, {_id: id})
         .catch((err: any) => errorMessage = err);
 
       if (!isNil(errorMessage)) {
@@ -178,7 +188,7 @@ export class AdminHandlers{
       if (isNil(room_or_user)) {
         return callback({
           code: status.NOT_FOUND,
-          message: 'document with id ' + room_or_user + ' not found'
+          message: 'document with id ' + id + ' not found'
         })
       }
     }
@@ -186,11 +196,11 @@ export class AdminHandlers{
     const messagesPromise = this.database.findMany(
       'ChatMessage',
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
-    const countPromise = this.database.countDocuments('ChatMessage', {});
+    const countPromise = this.database.countDocuments('ChatMessage', query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
       (e: any) => (errorMessage = e.message)
     );
@@ -212,7 +222,7 @@ export class AdminHandlers{
       })
     }
     let errorMessage;
-    const deletedRooms = await this.database
+    const deletedRooms:any = await this.database
       .deleteMany('ChatRoom', { _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
