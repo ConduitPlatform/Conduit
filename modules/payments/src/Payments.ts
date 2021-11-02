@@ -89,7 +89,6 @@ export default class PaymentsModule implements ConduitServiceModule {
     const newConfig = JSON.parse(call.request.newConfig);
     if (
       isNil(newConfig.active) ||
-      isNil(newConfig.providerName) ||
       isNil(newConfig[newConfig.providerName])
     ) {
       return callback({
