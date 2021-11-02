@@ -18,7 +18,6 @@ import {
   Customer,
   PaymentSettings,
   Product,
-  providerEnum,
   Subscription,
   Transaction,
 } from '../../models/payments/PaymentsModels';
@@ -62,7 +61,6 @@ const initialState: IPaymentsSlice = {
     },
     settings: {
       active: false,
-      providerName: providerEnum.stripe,
       stripe: {
         enabled: false,
         secret_key: '',

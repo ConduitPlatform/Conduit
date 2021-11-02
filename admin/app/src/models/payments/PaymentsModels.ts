@@ -64,13 +64,8 @@ export interface Subscription {
 
 export interface PaymentSettings {
   active: boolean;
-  providerName: providerEnum;
   stripe: {
     enabled: boolean;
     secret_key: string;
   };
-}
-
-export enum providerEnum {
-  stripe = 'stripe',
 }
