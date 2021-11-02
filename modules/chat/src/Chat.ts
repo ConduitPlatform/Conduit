@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitServiceModule,
+  DatabaseProvider,
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
@@ -7,13 +8,14 @@ import ConduitGrpcSdk, {
 import ChatConfigSchema from './config';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isArray, isNil } from 'lodash';
 import { ChatRoutes } from './routes/Routes';
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
+import { validateUsersInput } from './utils';
 
 export default class ChatModule implements ConduitServiceModule {
-  private database: any;
+  private database: DatabaseProvider;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private grpcServer: GrpcServer;
@@ -35,9 +37,78 @@ export default class ChatModule implements ConduitServiceModule {
       'chat.Chat',
       {
         setConfig: this.setConfig.bind(this),
+        createRoom: this.createRoom.bind(this),
+        deleteRoom: this.deleteRoom.bind(this),
       }
     );
     await this.grpcServer.start();
+  }
+
+  async createRoom(call: any, callback: any) {
+    const { name, participants } = call.request.params;
+
+    if (isNil(participants) || !isArray(participants) || participants.length === 0) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'participants array is required and cannot be empty',
+      });
+    }
+
+    try {
+      await validateUsersInput(this.grpcSdk, participants);
+    } catch (e) {
+      return callback({ code: e.code, message: e.message });
+    }
+
+    let errorMessage: string | null = null;
+    const room = await this.database
+      .create('ChatRoom', {
+        name: name,
+        participants: participants,
+      })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
+    this.grpcSdk.bus?.publish(
+      'chat:create:ChatRoom',
+      JSON.stringify({ name: room.name, participants: room.participants })
+    );
+    callback(null, {
+      result: JSON.stringify({
+        _id: room._id,
+        name: room.name,
+        participants: room.participants,
+      }),
+    });
+  }
+
+  async deleteRoom(call: any, callback: any) {
+    const { _id } = call.request.params;
+
+    let errorMessage: string | null = null;
+    const room: any = await this.database
+      .deleteOne('ChatRoom', {
+        _id: _id,
+      })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
+    this.grpcSdk.bus?.publish('chat:delete:ChatRoom', JSON.stringify({ _id: _id }));
+    callback(null, {
+      result: JSON.stringify({
+        _id: room._id,
+        name: room.name,
+        participants: room.participants,
+      }),
+    });
   }
 
   async activate() {
@@ -107,7 +178,7 @@ export default class ChatModule implements ConduitServiceModule {
 
   private async enableModule() {
     if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider;
+      this.database = this.grpcSdk.databaseProvider!;
       this._router = new ChatRoutes(this.grpcServer, this.grpcSdk);
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();

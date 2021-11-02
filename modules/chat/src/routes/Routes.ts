@@ -14,6 +14,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { validateUsersInput } from '../utils';
 
 export class ChatRoutes {
   private database: any;
@@ -37,7 +38,7 @@ export class ChatRoutes {
     }
 
     try {
-      await this.validateUsersInput(users);
+      await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
       return callback({ code: e.code, message: e.message });
     }
@@ -88,7 +89,7 @@ export class ChatRoutes {
     }
 
     try {
-      await this.validateUsersInput(users);
+      await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
       return callback({ code: e.code, message: e.message });
     }
@@ -398,29 +399,6 @@ export class ChatRoutes {
         console.log('Failed to register routes for module');
         console.log(err);
       });
-  }
-
-  private async validateUsersInput(users: any[]) {
-    const uniqueUsers = Array.from(new Set(users));
-    let errorMessage: string | null = null;
-    const usersToBeAdded = await this.database
-      .findMany('User', { _id: { $in: uniqueUsers } })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
-    }
-    if (usersToBeAdded.length != uniqueUsers.length) {
-      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
-      const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
-      if (wrongIds.length != 0) {
-        return Promise.reject({
-          code: status.INVALID_ARGUMENT,
-          message: `users [${wrongIds}] do not exist`,
-        });
-      }
-    }
   }
 
   private async getRegisteredRoutes(): Promise<any[]> {
