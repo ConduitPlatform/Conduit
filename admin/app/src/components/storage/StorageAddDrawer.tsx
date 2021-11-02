@@ -1,4 +1,4 @@
-import React, { FC, useCallback, useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
