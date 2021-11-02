@@ -13,7 +13,7 @@ import CustomListItem from './CustomListItem';
 
 const useStyles = makeStyles((theme: Theme) => ({
   drawer: {
-    width: 224,
+    minWidth: 224,
     display: 'flex',
     flexDirection: 'column',
   },

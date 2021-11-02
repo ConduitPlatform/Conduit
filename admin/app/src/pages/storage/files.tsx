@@ -1,5 +1,4 @@
 import React, { ReactElement } from 'react';
-
 import StorageLayout from '../../components/navigation/InnerLayouts/storageLayout';
 import StorageFiles from '../../components/storage/StorageFiles';
 
