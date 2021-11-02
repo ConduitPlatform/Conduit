@@ -10,9 +10,11 @@ import path from 'path';
 import { isNil } from 'lodash';
 import { ChatRoutes } from './routes/Routes';
 import * as models from './models';
+import { AdminHandlers } from './admin/admin';
 
 export default class ChatModule implements ConduitServiceModule {
   private database: any;
+  private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private grpcServer: GrpcServer;
   private _router: ChatRoutes;
@@ -107,6 +109,7 @@ export default class ChatModule implements ConduitServiceModule {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
       this._router = new ChatRoutes(this.grpcServer, this.grpcSdk);
+      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
       this.isRunning = true;
     }
