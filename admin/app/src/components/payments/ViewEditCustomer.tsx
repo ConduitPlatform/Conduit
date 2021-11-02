@@ -217,11 +217,11 @@ const ViewEditCustomer: React.FC<Props> = ({
                   <Typography variant="h6">{customerState.email}</Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Sender:</Typography>
+                  <Typography variant="subtitle2">User ID:</Typography>
                   <Typography variant="h6">{customerState.userId}</Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Sender:</Typography>
+                  <Typography variant="subtitle2">Buyer Name:</Typography>
                   <Typography variant="h6">{customerState.buyerName}</Typography>
                 </Grid>
                 <Grid item xs={12}>
