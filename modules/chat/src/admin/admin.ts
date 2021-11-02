@@ -157,42 +157,43 @@ export class AdminHandlers{
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let errorMessage;
-    let query : any = {};
-    let schema;
-    let id;
-    let filter: boolean = false;
-    if(!isNil(senderId) && isNil(roomId)){
-      schema = 'User';
-      query['senderUser'] = senderId ;
-      id = senderId;
-      filter = true;
-    }
-    else if(isNil(senderId) && !isNil(roomId)){
-      schema = 'ChatRoom';
-      query['room'] =  roomId ;
-      id = roomId;
-      filter = true;
-    }
-    if(filter && schema) {
-      const room_or_user = await this.database
-        .findOne(schema, {_id: id})
+    let errorMessage,query:any = {};
+    if(!isNil(senderId) ) {
+      query['senderUser'] = senderId;
+      const user = await this.database
+        .findOne('User', { _id: senderId })
         .catch((err: any) => errorMessage = err);
-
       if (!isNil(errorMessage)) {
         return callback({
           code: status.INTERNAL,
           message: errorMessage
         });
       }
-      if (isNil(room_or_user)) {
+      if(isNil(user)){
         return callback({
-          code: status.NOT_FOUND,
-          message: 'document with id ' + id + ' not found'
-        })
+          code: status.INTERNAL,
+          message: 'User ' + senderId + ' does not exists'
+        });
       }
     }
-
+    if(!isNil(roomId)){
+      query['room'] =  roomId;
+      const room = await this.database
+        .findOne('ChatRoom', { _id: roomId })
+        .catch((err: any) => errorMessage = err);
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        });
+      }
+      if(isNil(room)){
+        return callback({
+          code: status.INTERNAL,
+          message: 'Room ' + roomId + ' does not exists'
+        });
+      }
+    }
     const messagesPromise = this.database.findMany(
       'ChatMessage',
       query,
