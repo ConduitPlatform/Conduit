@@ -223,6 +223,16 @@ export class AdminHandlers{
         message: errorMessage,
       });
     }
+
+    await this.database
+      .deleteMany('ChatMessage',{ room: { $in: ids } })
+      .catch((err:any) => errorMessage = err);
+    if(!isNil(errorMessage)){
+      return callback({
+        code: status.INTERNAL,
+        message: errorMessage
+      })
+    }
     const totalCount = deletedRooms.deletedCount;
     return callback(null, { result: JSON.stringify({ deletedRooms,totalCount }) });
   }
