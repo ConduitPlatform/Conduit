@@ -136,10 +136,10 @@ const DataTableRows: React.FC<Props> = ({
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <Box className={classes.pill}>
-                {Object.entries(collapsible).map(([key, value], index: number) =>
+                {Object.entries(collapsible).map(([key, value], innerIndex: number) =>
                   Array.isArray(value) ? (
                     <Box
-                      key={index}
+                      key={innerIndex}
                       width="83vw"
                       display="flex"
                       flexDirection="column"
@@ -149,7 +149,7 @@ const DataTableRows: React.FC<Props> = ({
                       <DataTable inner dsData={formatInnerTable(value)} headers={headers} />
                     </Box>
                   ) : (
-                    <Box key={index} className={classes.pill}>
+                    <Box key={innerIndex} className={classes.pill}>
                       <Chip
                         size="small"
                         color={`primary`}

@@ -193,44 +193,6 @@ const Customers = () => {
     }
   };
 
-  // To be impemented
-
-  // const getCustomersCallBack = useCallback(() => {
-  //   dispatch(asyncGetCustomers({ skip, limit, search }));
-  // }, [dispatch, limit, skip, search]);
-
-  // const handleDeleteTitle = (customer: EmailTemplateType) => {
-  //   if (selectedCustomer.name === '') {
-  //     return 'Delete selected customers';
-  //   }
-  //   return `Delete template ${customer.name}`;
-  // };
-
-  // const handleDeleteDescription = (customer: EmailTemplateType) => {
-  //   if (selectedCustomer.name === '') {
-  //     return 'Are you sure you want to delete the selected customers?';
-  //   }
-  //   return `Are you sure you want to delete ${customer.name}? `;
-  // };
-  // const deleteButtonAction = () => {
-  //   if (openDeleteCustomers && selectedCustomer.name == '') {
-  //     const params = {
-  //       ids: selectedCustomers,
-  //       getTemplates: getCustomersCallBack,
-  //     };
-  //     dispatch(asyncDeleteCustomers(params));
-  //   } else {
-  //     const params = {
-  //       ids: [`${selectedCustomer._id}`],
-  //       getTemplates: getCustomersCallBack,
-  //     };
-  //     dispatch(asyncDeleteCustomers(params));
-  //   }
-  //   setOpenDeleteCustomers(false);
-  //   setSelectedCustomer(originalCustomerState);
-  //   setSelectedCustomers([]);
-  // };
-
   const toDelete = {
     title: 'Delete',
     type: 'delete',
@@ -352,14 +314,6 @@ const Customers = () => {
           />
         </Box>
       </DrawerWrapper>
-      {/* <ConfirmationDialog
-        open={openDeleteCustomers}
-        handleClose={handleClose}
-        title={handleDeleteTitle(selectedCustomer)}
-        description={handleDeleteDescription(selectedCustomer)}
-        buttonAction={deleteButtonAction}
-        buttonText={'Delete'}
-      /> */}
     </div>
   );
 };
@@ -369,3 +323,50 @@ Customers.getLayout = function getLayout(page: ReactElement) {
 };
 
 export default Customers;
+
+// To be impemented
+
+// const getCustomersCallBack = useCallback(() => {
+//   dispatch(asyncGetCustomers({ skip, limit, search }));
+// }, [dispatch, limit, skip, search]);
+
+// const handleDeleteTitle = (customer: EmailTemplateType) => {
+//   if (selectedCustomer.name === '') {
+//     return 'Delete selected customers';
+//   }
+//   return `Delete template ${customer.name}`;
+// };
+
+// const handleDeleteDescription = (customer: EmailTemplateType) => {
+//   if (selectedCustomer.name === '') {
+//     return 'Are you sure you want to delete the selected customers?';
+//   }
+//   return `Are you sure you want to delete ${customer.name}? `;
+// };
+// const deleteButtonAction = () => {
+//   if (openDeleteCustomers && selectedCustomer.name == '') {
+//     const params = {
+//       ids: selectedCustomers,
+//       getTemplates: getCustomersCallBack,
+//     };
+//     dispatch(asyncDeleteCustomers(params));
+//   } else {
+//     const params = {
+//       ids: [`${selectedCustomer._id}`],
+//       getTemplates: getCustomersCallBack,
+//     };
+//     dispatch(asyncDeleteCustomers(params));
+//   }
+//   setOpenDeleteCustomers(false);
+//   setSelectedCustomer(originalCustomerState);
+//   setSelectedCustomers([]);
+// };
+
+// /* <ConfirmationDialog
+//         open={openDeleteCustomers}
+//         handleClose={handleClose}
+//         title={handleDeleteTitle(selectedCustomer)}
+//         description={handleDeleteDescription(selectedCustomer)}
+//         buttonAction={deleteButtonAction}
+//         buttonText={'Delete'}
+//       /> */

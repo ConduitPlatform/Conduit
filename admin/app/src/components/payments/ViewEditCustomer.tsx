@@ -2,7 +2,6 @@ import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Cancel, Save } from '@material-ui/icons';
@@ -13,53 +12,9 @@ import { Button, FormControl, InputLabel, MenuItem, Paper, Select } from '@mater
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { Customer } from '../../models/payments/PaymentsModels';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
-import { camelCase } from 'lodash';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    backgroundColor: theme.palette.background.paper,
-    display: 'flex',
-    flexGrow: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    justifyItems: 'center',
-    justifySelf: 'center',
-  },
-  tabs: {
-    borderRight: `1px solid ${theme.palette.divider}`,
-    minWidth: '300px',
-  },
-  divider: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  grid: {
-    marginBottom: theme.spacing(3),
-  },
-  multiline: {
-    width: '100%',
-    marginBottom: theme.spacing(3),
-  },
-  textField: {
-    width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(2),
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(2),
-  },
-  marginTop: {
-    marginTop: '60px',
-  },
-  centeredImg: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: '-30px',
-  },
-}));
+import sharedClasses from './sharedClasses';
 
 interface Props {
   handleCreate: (customer: Customer) => void;
@@ -80,13 +35,11 @@ const ViewEditCustomer: React.FC<Props> = ({
   create,
   setCreate,
 }) => {
-  const classes = useStyles();
+  const classes = sharedClasses();
   const dispatch = useAppDispatch();
   const [select, setSelect] = useState<string | number>(-1);
 
   const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
-
-  console.log(users);
 
   const [customerState, setCustomerState] = useState<Customer>({
     _id: '',
@@ -104,8 +57,6 @@ const ViewEditCustomer: React.FC<Props> = ({
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip: 0, limit: 100, search: '', filter: 'all' }));
   }, [dispatch]);
-
-  console.log(customerState);
 
   useEffect(() => {
     if (!create)
@@ -258,17 +209,6 @@ const ViewEditCustomer: React.FC<Props> = ({
                     }}
                   />
                 </Grid>
-                {/* <Grid item xs={12}>
-                  <TextField
-                    className={classes.textField}
-                    label={'Stripe ID'}
-                    variant={'outlined'}
-                    value={customerState.stripe.customerId}
-                    onChange={(event) => {
-                      setCustomerState({ ...customerState, email: event.target.value });
-                    }}
-                  />
-                </Grid> */}
               </>
             ) : (
               <>
@@ -296,10 +236,6 @@ const ViewEditCustomer: React.FC<Props> = ({
                   <Typography variant="subtitle2">Postal code:</Typography>
                   <Typography variant="h6">{customerState.postCode}</Typography>
                 </Grid>
-                {/* <Grid item xs={12}>
-                  <Typography variant="subtitle2">Stripe ID:</Typography>
-                  <Typography variant="h6">{customerState.stripe.customerId}</Typography>
-                </Grid> */}
               </>
             )}
           </Grid>

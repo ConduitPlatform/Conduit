@@ -1,0 +1,47 @@
+import { createStyles, makeStyles } from '@material-ui/core';
+
+export default makeStyles((theme) =>
+  createStyles({
+    root: {
+      backgroundColor: theme.palette.background.paper,
+      display: 'flex',
+      flexGrow: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      justifyItems: 'center',
+      justifySelf: 'center',
+    },
+    tabs: {
+      borderRight: `1px solid ${theme.palette.divider}`,
+      minWidth: '300px',
+    },
+    divider: {
+      marginTop: theme.spacing(2),
+      marginBottom: theme.spacing(2),
+    },
+    grid: {
+      marginBottom: theme.spacing(3),
+    },
+    multiline: {
+      width: '100%',
+      marginBottom: theme.spacing(3),
+    },
+    textField: {
+      width: '100%',
+    },
+    paper: {
+      padding: theme.spacing(2),
+      color: theme.palette.text.secondary,
+      marginTop: theme.spacing(2),
+    },
+    marginTop: {
+      marginTop: '60px',
+    },
+    centeredImg: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: '-30px',
+    },
+  })
+);

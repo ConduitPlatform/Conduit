@@ -49,7 +49,7 @@ export interface Subscription {
     nextPaymentId: string;
   };
   activeUntil: string;
-  transactions: any;
+  transactions: Transaction[];
   provider: string;
   createdAt?: string;
   updatedAt?: string;
