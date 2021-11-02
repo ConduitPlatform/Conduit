@@ -69,13 +69,13 @@ const StorageProviderSettings: FC<Props> = ({ data, onChange }) => {
                 label="Bucket name"
                 variant="outlined"
                 fullWidth
-                value={data.google.serviceAccountKeyPath}
+                value={data.google.bucketName}
                 onChange={(event) => {
                   onChange({
                     ...data,
                     google: {
                       ...data.google,
-                      serviceAccountKeyPath: event.target.value,
+                      bucketName: event.target.value,
                     },
                   });
                 }}

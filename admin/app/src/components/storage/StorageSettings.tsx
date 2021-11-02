@@ -38,7 +38,7 @@ interface Props {
 
 const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
   const classes = useStyles();
-  const [settingsState, setSettingsState] = useState<IStorageConfig>({
+  const initialSettingsState = {
     active: true,
     allowContainerCreation: true,
     defaultContainer: 'conduit',
@@ -46,7 +46,8 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
     storagePath: '/var/tmp',
     google: { bucketName: '', serviceAccountKeyPath: '' },
     azure: { connectionString: '' },
-  });
+  };
+  const [settingsState, setSettingsState] = useState<IStorageConfig>(initialSettingsState);
 
   useEffect(() => {
     if (!config) {
@@ -59,36 +60,12 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
     if (config) {
       setSettingsState(config);
     } else {
-      setSettingsState({
-        active: false,
-        allowContainerCreation: true,
-        defaultContainer: 'conduit',
-        provider: 'azure',
-        storagePath: '/var/tmp',
-        google: { bucketName: '', serviceAccountKeyPath: '' },
-        azure: { connectionString: '' },
-      });
+      setSettingsState(initialSettingsState);
     }
   };
 
   const save = () => {
-    handleSave({
-      active: true,
-      allowContainerCreation: true,
-      azure: {
-        connectionString:
-          'DefaultEndpointsProtocol=https;AccountName=quintdevstorage;' +
-          'AccountKey=wY/zoWSIeWP3dypqeWPGv/GiNJjyGhq8b6M454pU6eRC5I56Co5D2L00paT' +
-          'GNjcqX8P4Np3S+SqmHK4gB2FB9A==;EndpointSuffix=core.windows.net',
-      },
-      defaultContainer: 'conduit',
-      google: {
-        serviceAccountKeyPath: '',
-        bucketName: '',
-      },
-      provider: 'azure',
-      storagePath: '/var/tmp',
-    });
+    handleSave(settingsState);
   };
 
   return (

@@ -15,7 +15,6 @@ import { NotificationData } from '../../models/notifications/NotificationModels'
 import DataTableActions from './DataTableActions';
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
-import { Typography } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   table: {
@@ -131,6 +130,13 @@ const DataTable: React.FC<Props> = ({
     }
   };
 
+  const handleSortDirection = (asc: boolean) => {
+    if (asc) {
+      return 'asc';
+    }
+    return 'desc';
+  };
+
   return (
     <>
       <TableContainer className={classes.tableContainer} component={Paper} {...rest}>
@@ -155,7 +161,7 @@ const DataTable: React.FC<Props> = ({
                   {header.sort ? (
                     <TableSortLabel
                       active={sort?.index === header.sort}
-                      direction={sort?.asc ? 'asc' : 'desc'}
+                      direction={handleSortDirection(header.sort?.asc)}
                       onClick={() => onSelectedField(header.sort)}>
                       {getHeaderValues(header.title)}
                     </TableSortLabel>
