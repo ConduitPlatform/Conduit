@@ -70,21 +70,28 @@ const DataTableRows: React.FC<Props> = ({
     }
   };
 
+  const extractIcon = () => {
+    if (!collapsible)
+      return (
+        <Checkbox
+          color="primary"
+          checked={selectedItems?.includes(row._id)}
+          onChange={() => onMenuItemSelect(row._id)}
+        />
+      );
+    if (collapsible)
+      return (
+        <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
+          {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+        </IconButton>
+      );
+  };
+
   return (
     <>
       <TableRow key={index}>
         <TableCell align="left" padding="none">
-          {!collapsible ? (
-            <Checkbox
-              color="primary"
-              checked={selectedItems?.includes(row._id)}
-              onChange={() => onMenuItemSelect(row._id)}
-            />
-          ) : (
-            <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
-              {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-            </IconButton>
-          )}
+          {extractIcon()}
         </TableCell>
         {Object.keys(row).map((item, j) => (
           <TableCell className={classes.ellipsisStyle} key={`row ${j}`}>

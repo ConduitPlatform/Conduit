@@ -121,6 +121,15 @@ const ViewEditCustomer: React.FC<Props> = ({
     });
   };
 
+  const extractLabel = () => {
+    switch (select) {
+      case -1:
+        return 'Select user';
+      default:
+        return 'Selected user';
+    }
+  };
+
   const handleUserChange = (e: React.ChangeEvent<any>) => {
     setSelect(e.target.value);
 
@@ -151,7 +160,7 @@ const ViewEditCustomer: React.FC<Props> = ({
                 </Grid>
                 <Grid item xs={12}>
                   <FormControl variant="outlined" fullWidth>
-                    <InputLabel>{select === -1 ? 'Select user' : 'Selected user'}</InputLabel>
+                    <InputLabel>{extractLabel()}</InputLabel>
                     <Select label="Select user" value={select} onChange={handleUserChange}>
                       <MenuItem value={-1}>
                         <em>None</em>
