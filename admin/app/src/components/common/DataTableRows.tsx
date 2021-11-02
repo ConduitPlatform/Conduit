@@ -1,20 +1,9 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Checkbox,
-  Chip,
-  Collapse,
-  IconButton,
-  makeStyles,
-  TableCell,
-  TableRow,
-  Typography,
-} from '@material-ui/core';
+import { Checkbox, IconButton, makeStyles, TableCell, TableRow } from '@material-ui/core';
 import DataTableActions from './DataTableActions';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@material-ui/icons';
 import moment from 'moment';
-import { Transaction } from '../../models/payments/PaymentsModels';
-import DataTable from './DataTable';
+import InnerTable from './InnerTable';
 
 const useStyles = makeStyles((theme) => ({
   ellipsisStyle: {
@@ -81,26 +70,6 @@ const DataTableRows: React.FC<Props> = ({
     }
   };
 
-  const formatInnerTable = (data: Transaction[]) => {
-    return data.map((u) => {
-      return {
-        _id: u._id,
-        provider: u.provider,
-        product: u.product,
-        quantity: u.quantity,
-        'Updated At': u.updatedAt,
-      };
-    });
-  };
-
-  const headers = [
-    { title: '_id', sort: '_id' },
-    { title: 'Provider', sort: 'provider' },
-    { title: 'Product', sort: 'product' },
-    { title: 'Quantity', sort: 'quantity' },
-    { title: 'Updated At', sort: 'updatedAt' },
-  ];
-
   return (
     <>
       <TableRow key={index}>
@@ -131,39 +100,7 @@ const DataTableRows: React.FC<Props> = ({
           />
         </TableCell>
       </TableRow>
-      {collapsible && (
-        <TableRow>
-          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
-            <Collapse in={open} timeout="auto" unmountOnExit>
-              <Box className={classes.pill}>
-                {Object.entries(collapsible).map(([key, value], innerIndex: number) =>
-                  Array.isArray(value) ? (
-                    <Box
-                      key={innerIndex}
-                      width="83vw"
-                      display="flex"
-                      flexDirection="column"
-                      justifyContent="center"
-                      alignContent="center">
-                      <Typography>Transactions: </Typography>
-                      <DataTable inner dsData={formatInnerTable(value)} headers={headers} />
-                    </Box>
-                  ) : (
-                    <Box key={innerIndex} className={classes.pill}>
-                      <Chip
-                        size="small"
-                        color={`primary`}
-                        label={`${key}: ${value}`}
-                        key={`row ${key}`}
-                      />
-                    </Box>
-                  )
-                )}
-              </Box>
-            </Collapse>
-          </TableCell>
-        </TableRow>
-      )}
+      {collapsible && <InnerTable open={open} collapsibleData={collapsible} />}
     </>
   );
 };

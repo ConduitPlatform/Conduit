@@ -13,7 +13,6 @@ import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
-
 import DataTableRows from './DataTableRows';
 
 const useStyles = makeStyles((theme) => ({
