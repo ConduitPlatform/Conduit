@@ -9,6 +9,27 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message CreateRoomRequest {
+  string name = 1;
+  repeated string participants = 2;
+}
+
+message DeleteRoomRequest {
+  string id = 1;
+}
+
+message Room{
+  string _id = 1;
+  string name = 2;
+  repeated string participants = 3;
+}
+
+message GetRoomResponse {
+  repeated Room rooms = 1;
+}
+
 service Chat {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (GetRoomResponse);
+  rpc DeleteRoom(DeleteRoomRequest) returns (GetRoomResponse);
 }
