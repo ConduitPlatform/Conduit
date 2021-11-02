@@ -311,7 +311,7 @@ export class AdminHandlers {
   }
 
   async getSubscription(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit,ids } = JSON.parse(call.request.params);
+    const { skip, limit } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -322,15 +322,6 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {};
-    if(isNil(ids)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids must be an array',
-      });
-    }
-    else if(ids.length !== 0){
-      query['_id'] = { $in: ids};
-    }
     const subscriptionDocumentsPromise = this.database.findMany(
       'Subscription',
       query,
