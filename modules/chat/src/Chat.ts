@@ -87,12 +87,12 @@ export default class ChatModule implements ConduitServiceModule {
   }
 
   async deleteRoom(call: any, callback: any) {
-    const { _id } = call.request.params;
+    const { id } = call.request.params;
 
     let errorMessage: string | null = null;
     const room: any = await this.database
       .deleteOne('ChatRoom', {
-        _id: _id,
+        _id: id,
       })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -101,7 +101,14 @@ export default class ChatModule implements ConduitServiceModule {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    this.grpcSdk.bus?.publish('chat:delete:ChatRoom', JSON.stringify({ _id: _id }));
+    this.grpcSdk.bus?.publish(
+      'chat:delete:ChatRoom',
+      JSON.stringify({
+        _id: room._id,
+        name: room.name,
+        participants: room.participants,
+      })
+    );
     callback(null, {
       result: JSON.stringify({
         _id: room._id,
