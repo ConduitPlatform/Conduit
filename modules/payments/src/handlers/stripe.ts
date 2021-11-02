@@ -125,7 +125,7 @@ export class StripeHandlers {
 
     await this.database
       .create('Transaction', {
-        userId,
+        customerId,
         provider: PROVIDER_NAME,
         product: productId,
         data: intent,

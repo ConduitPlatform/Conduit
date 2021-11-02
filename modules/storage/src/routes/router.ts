@@ -104,6 +104,9 @@ export class FileRoutes {
             urlParams: {
               id: { type: TYPE.String, required: true },
             },
+            queryParams:{
+              redirect: { type: TYPE.Boolean, required: false}
+            },
             action: ConduitRouteActions.GET,
             path: '/storage/getFileUrl/:id',
           },

@@ -107,6 +107,10 @@ export class AdminRoutes {
         name,
         container,
       });
+      await this.grpcSdk.databaseProvider!.deleteMany('File', {
+        folder: name,
+        container,
+      });
     }
     return callback(null, { result: 'OK' });
   }
@@ -170,6 +174,12 @@ export class AdminRoutes {
         await this.fileHandlers.storage.deleteContainer(name);
         await this.grpcSdk.databaseProvider!.deleteOne('_StorageContainer', {
           name,
+        });
+        await this.grpcSdk.databaseProvider!.deleteMany('File', {
+          container: name,
+        });
+        await this.grpcSdk.databaseProvider!.deleteMany('_StorageFolder', {
+          container:name,
         });
       }
       return callback(null, { result: JSON.stringify(container) });

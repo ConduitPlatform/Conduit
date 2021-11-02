@@ -103,7 +103,9 @@ export class FileHandlers {
         .store((folder ?? '') + name, buffer);
       let publicUrl = null;
       if (isPublic) {
-        publicUrl = await this.storageProvider.container(folder).getPublicUrl(name);
+        publicUrl = await this.storageProvider
+          .container(usedContainer)
+          .getPublicUrl((folder ?? '') + name);
       }
 
       const newFile = await this.database.create('File', {
@@ -202,7 +204,7 @@ export class FileHandlers {
   }
 
   async getFileUrl(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
+    const { id, redirect } = JSON.parse(call.request.params);
     if (!isString(id)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -218,19 +220,18 @@ export class FileHandlers {
       if (found.isPublic) {
         return callback(null, { redirect: found.url });
       }
-      if (found.folder) {
+      let url = await this.storageProvider
+        .container(found.container)
+        .getSignedUrl((found.folder ?? '') + found.name);
+
+      if (!isNil(redirect) && (redirect === 'false' || !redirect)) {
         return callback(null, {
-          redirect: await this.storageProvider
-            .container(found.container)
-            .getSignedUrl(found.folder + found.name),
-        });
-      } else {
-        return callback(null, {
-          redirect: await this.storageProvider
-            .container(found.container)
-            .getSignedUrl(found.name),
+          result: url,
         });
       }
+      return callback(null, {
+        redirect: url,
+      });
     } catch (e) {
       return callback({
         code: status.INTERNAL,
