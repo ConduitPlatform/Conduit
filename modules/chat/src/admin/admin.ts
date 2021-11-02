@@ -55,17 +55,6 @@ export class AdminHandlers{
   }
 
   async getRooms(call: RouterRequest, callback: RouterResponse){
-    // const senderUser = '6181175b24cdb6258c5204e5';
-    // const room = '61811dcf24cdb6258c5204ed';
-    // const message = 'psixoules m ti kanete eimai o deuteros';
-    // const c = await this.database.create('ChatMessage',{
-    //   senderUser,
-    //   room,
-    //   message,
-    // })
-    //   .catch((err:any) => {
-    //     console.log(err);
-    //   });
     const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
