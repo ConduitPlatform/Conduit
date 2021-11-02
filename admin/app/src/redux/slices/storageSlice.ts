@@ -292,29 +292,31 @@ export const asyncDeleteStorageContainer = createAsyncThunk(
   }
 );
 
-export const asyncUpdateStorageFile = createAsyncThunk(
-  'storage/updateStorageFile',
-  async (arg, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
-    try {
-      const fileData = {
-        id: '617158368afe4116b6882eb0',
-        name: 'new-example-file',
-        folder: 'test-folder',
-        container: 'conduit',
-        data: base64example,
-      };
-      const { data } = await updateStorageFile(fileData);
-      thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
-      thunkAPI.dispatch(setAppDefaults());
-      return data;
-    } catch (error) {
-      thunkAPI.dispatch(setAppLoading(false));
-      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
-      throw error;
-    }
-  }
-);
+// to be implemented in the future
+
+// export const asyncUpdateStorageFile = createAsyncThunk(
+//   'storage/updateStorageFile',
+//   async (arg, thunkAPI) => {
+//     thunkAPI.dispatch(setAppLoading(true));
+//     try {
+//       const fileData = {
+//         id: '617158368afe4116b6882eb0',
+//         name: 'new-example-file',
+//         folder: 'test-folder',
+//         container: 'conduit',
+//         data: base64example,
+//       };
+//       const { data } = await updateStorageFile(fileData);
+//       thunkAPI.dispatch(enqueueSuccessNotification('Successfully updated file!'));
+//       thunkAPI.dispatch(setAppDefaults());
+//       return data;
+//     } catch (error) {
+//       thunkAPI.dispatch(setAppLoading(false));
+//       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+//       throw error;
+//     }
+//   }
+// );
 
 export const asyncSetSelectedStorageFile = createAsyncThunk(
   'storage/setSelectedStorageFile',

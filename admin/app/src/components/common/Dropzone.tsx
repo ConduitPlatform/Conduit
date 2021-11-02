@@ -99,6 +99,7 @@ const Dropzone: FC<Props> = ({
         {file ? (
           <>
             <Box className={classes.fileName}>{fileName}</Box>
+            {/*to be implemented in the future*/}
             {/*<img*/}
             {/*  src={url ? url : 'data:image/jpeg;base64,' + file}*/}
             {/*  alt={''}*/}
