@@ -2,9 +2,17 @@ import axios from 'axios';
 import { Customer, PaymentSettings, Product } from '../models/payments/PaymentsModels';
 import { CONDUIT_API } from './requestsConfig';
 
-export const getCustomersRequest = (skip: number, limit: number, search?: string) =>
+interface IRequest {
+  skip: number;
+  limit: number;
+  search?: string;
+  productId?: string;
+  customerId?: string;
+}
+
+export const getCustomersRequest = (params: IRequest) =>
   axios.get(`${CONDUIT_API}/admin/payments/customer`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params: { ...params },
   });
 
 export const postCustomerRequest = (data: Customer) =>
@@ -13,9 +21,9 @@ export const postCustomerRequest = (data: Customer) =>
 export const putCustomerRequest = (customerId: string, data: Customer) =>
   axios.put(`${CONDUIT_API}/admin/payments/customer/${customerId}`, { ...data });
 
-export const getProductsRequest = (skip: number, limit: number, search?: string) =>
+export const getProductsRequest = (params: IRequest) =>
   axios.get(`${CONDUIT_API}/admin/payments/products`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params: { ...params },
   });
 
 export const postProductsRequest = (data: Product) =>
@@ -24,20 +32,14 @@ export const postProductsRequest = (data: Product) =>
 export const putProductRequest = (productId: string, data: Product) =>
   axios.put(`${CONDUIT_API}/admin/payments/products/${productId}`, { ...data });
 
-export const getTransactionsRequest = (
-  skip: number,
-  limit: number,
-  search?: string,
-  productId?: string,
-  customerId?: string
-) =>
+export const getTransactionsRequest = (params: IRequest) =>
   axios.get(`${CONDUIT_API}/admin/payments/transactions`, {
-    params: { skip, limit, search: search !== '' ? search : undefined, productId, customerId },
+    params: { ...params },
   });
 
-export const getSubscriptionsRequest = (skip: number, limit: number, search?: string) =>
+export const getSubscriptionsRequest = (params: IRequest) =>
   axios.get(`${CONDUIT_API}/admin/payments/subscription`, {
-    params: { skip, limit, search: search !== '' ? search : undefined, populate: 'transactions' },
+    params: { ...params },
   });
 
 export const getPaymentSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/payments`);
