@@ -19,7 +19,7 @@ export interface Product {
   value: number;
   currency: string;
   isSubscription: boolean;
-  recurring: 'day' | 'week' | 'month' | 'year' | any;
+  recurring: reccuringEnum;
   recurringCount: number;
   stripe?: {
     subscriptionId: string;
@@ -27,6 +27,13 @@ export interface Product {
   };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export enum reccuringEnum {
+  day = 'day',
+  week = 'week',
+  month = 'month',
+  year = 'year',
 }
 
 export interface Transaction {
@@ -57,7 +64,6 @@ export interface Subscription {
 
 export interface PaymentSettings {
   active: boolean;
-  providerName: string;
   stripe: {
     enabled: boolean;
     secret_key: string;

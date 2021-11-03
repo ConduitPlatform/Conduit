@@ -1,15 +1,5 @@
 import React, { FC } from 'react';
-import {
-  Box,
-  Chip,
-  Collapse,
-  makeStyles,
-  TableCell,
-  TableRow,
-  Typography,
-} from '@material-ui/core';
-import DataTable from './DataTable';
-import { Transaction } from '../../models/payments/PaymentsModels';
+import { Box, Chip, Collapse, makeStyles, TableCell, TableRow } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   pill: {
@@ -21,26 +11,6 @@ const useStyles = makeStyles((theme) => ({
     },
   },
 }));
-
-const formatInnerTable = (data: Transaction[]) => {
-  return data.map((u) => {
-    return {
-      _id: u._id,
-      provider: u.provider,
-      product: u.product,
-      quantity: u.quantity,
-      'Updated At': u.updatedAt,
-    };
-  });
-};
-
-const headers = [
-  { title: '_id', sort: '_id' },
-  { title: 'Provider', sort: 'provider' },
-  { title: 'Product', sort: 'product' },
-  { title: 'Quantity', sort: 'quantity' },
-  { title: 'Updated At', sort: 'updatedAt' },
-];
 
 interface Props {
   collapsibleData?: any;
@@ -63,10 +33,7 @@ const InnerTable: FC<Props> = ({ collapsibleData, open }) => {
                   display="flex"
                   flexDirection="column"
                   justifyContent="center"
-                  alignContent="center">
-                  <Typography>Transactions: </Typography>
-                  <DataTable inner dsData={formatInnerTable(value)} headers={headers} />
-                </Box>
+                  alignContent="center"></Box>
               ) : (
                 <Box key={innerIndex} className={classes.pill}>
                   <Chip

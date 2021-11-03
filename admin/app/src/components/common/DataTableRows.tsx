@@ -29,7 +29,7 @@ type Action = {
 };
 
 interface Props {
-  collapsibleData?: any;
+  collapsible?: any;
   row: any;
   index: number;
   actions?: Action[];
@@ -40,7 +40,7 @@ interface Props {
 }
 
 const DataTableRows: React.FC<Props> = ({
-  collapsibleData: collapsible,
+  collapsible,
   row,
   index,
   handleAction,
@@ -71,7 +71,7 @@ const DataTableRows: React.FC<Props> = ({
   };
 
   const extractIcon = () => {
-    if (!collapsible)
+    if (!collapsible && actions)
       return (
         <Checkbox
           color="primary"

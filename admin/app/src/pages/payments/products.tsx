@@ -25,7 +25,7 @@ import {
   asyncGetProducts,
   asyncSaveProductChanges,
 } from '../../redux/slices/paymentsSlice';
-import { Product } from '../../models/payments/PaymentsModels';
+import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import ViewEditProduct from '../../components/payments/ViewEditProduct';
 
 const useStyles = makeStyles((theme) => ({
@@ -54,7 +54,7 @@ const Products = () => {
     value: 0,
     currency: '',
     isSubscription: false,
-    recurring: '',
+    recurring: reccuringEnum.day,
     recurringCount: 0,
     stripe: {
       subscriptionId: '',

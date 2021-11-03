@@ -61,7 +61,6 @@ const initialState: IPaymentsSlice = {
     },
     settings: {
       active: false,
-      providerName: '',
       stripe: {
         enabled: false,
         secret_key: '',
@@ -184,9 +183,24 @@ export const asyncSaveProductChanges = createAsyncThunk(
 
 export const asyncGetTransactions = createAsyncThunk(
   'payments/getTransactions',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (
+    params: {
+      skip: number;
+      limit: number;
+      search?: string;
+      productId?: string;
+      customerId?: string;
+    },
+    thunkAPI
+  ) => {
     try {
-      const { data } = await getTransactionsRequest(params.skip, params.limit, params.search);
+      const { data } = await getTransactionsRequest(
+        params.skip,
+        params.limit,
+        params.search,
+        params.productId,
+        params.customerId
+      );
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));

@@ -3,12 +3,8 @@ import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
-import { Cancel, Save } from '@material-ui/icons';
-import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -17,8 +13,10 @@ import {
   Switch,
   MenuItem,
 } from '@material-ui/core';
-import { Product } from '../../models/payments/PaymentsModels';
-import sharedClasses from './sharedClasses';
+import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
+import sharedClasses from '../common/sharedClasses';
+import ExtractView from './ExtractView';
+import DrawerButtons from '../common/DrawerButtons';
 
 interface Props {
   handleCreate: (product: Product) => void;
@@ -41,15 +39,17 @@ const ViewEditProduct: React.FC<Props> = ({
 }) => {
   const classes = sharedClasses();
 
-  const [productState, setProductState] = useState<Product>({
+  const initialState = {
     _id: '',
     name: '',
     value: 0,
     currency: '',
     isSubscription: false,
-    recurring: '',
+    recurring: reccuringEnum.day,
     recurringCount: 0,
-  });
+  };
+
+  const [productState, setProductState] = useState<Product>(initialState);
 
   useEffect(() => {
     if (!create)
@@ -76,15 +76,7 @@ const ViewEditProduct: React.FC<Props> = ({
 
   const handleCancelClick = () => {
     if (create) {
-      setProductState({
-        _id: '',
-        name: '',
-        value: 0,
-        currency: '',
-        isSubscription: false,
-        recurring: '',
-        recurringCount: 0,
-      });
+      setProductState(initialState);
       return;
     }
     setProductState({
@@ -196,12 +188,15 @@ const ViewEditProduct: React.FC<Props> = ({
                             label="Recurs"
                             value={productState.recurring}
                             onChange={(event) => {
-                              setProductState({ ...productState, recurring: event.target.value });
+                              setProductState({
+                                ...productState,
+                                recurring: event.target.value as reccuringEnum,
+                              });
                             }}>
-                            <MenuItem value={'day'}>Daily</MenuItem>
-                            <MenuItem value={'week'}>Weekly</MenuItem>
-                            <MenuItem value={'month'}>Monthly</MenuItem>
-                            <MenuItem value={'year'}>Yearly</MenuItem>
+                            <MenuItem value={reccuringEnum.day}>Daily</MenuItem>
+                            <MenuItem value={reccuringEnum.week}>Weekly</MenuItem>
+                            <MenuItem value={reccuringEnum.month}>Monthly</MenuItem>
+                            <MenuItem value={reccuringEnum.year}>Yearly</MenuItem>
                           </Select>
                         </FormControl>
                       </Grid>
@@ -225,70 +220,18 @@ const ViewEditProduct: React.FC<Props> = ({
                 </Paper>
               </>
             ) : (
-              <>
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h5"
-                    align="center"
-                    color="primary"
-                    style={{ marginTop: '-20px' }}>
-                    {productState.name}
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="subtitle2">Value:</Typography>
-                  <Typography variant="h6">{productState.value}</Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2">Currency:</Typography>
-                  <Typography variant="h6">{productState.currency}</Typography>
-                </Grid>
-                {productState.isSubscription && (
-                  <>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2">Recurs:</Typography>
-                      <Typography variant="h6">{productState.recurring}</Typography>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2">Reccuring count:</Typography>
-                      <Typography variant="h6">{productState.recurringCount}</Typography>
-                    </Grid>
-                  </>
-                )}
-              </>
+              <ExtractView valuesToShow={productState} />
             )}
           </Grid>
         </Paper>
         <Divider className={classes.divider} />
 
-        <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
-          {!edit ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EditIcon />}
-              onClick={() => setEdit(true)}>
-              Edit
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Cancel />}
-                onClick={handleCancelClick}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Save />}
-                onClick={handleSaveClick}>
-                Save
-              </Button>
-            </>
-          )}
-        </Grid>
+        <DrawerButtons
+          edit={edit}
+          setEdit={setEdit}
+          handleCancelClick={handleCancelClick}
+          handleSaveClick={handleSaveClick}
+        />
       </Box>
     </Container>
   );
