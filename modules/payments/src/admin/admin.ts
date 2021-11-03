@@ -373,7 +373,7 @@ export class AdminHandlers {
     if(!isNil(customerId)){
       query['customerId'] = customerId
     }
-    else if(!isNil(productId)){
+    if(!isNil(productId)){
       query['product'] = productId
     }
     const transactionDocumentsPromise = this.database.findMany(
