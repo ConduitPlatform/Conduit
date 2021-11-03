@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { isValidElement } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -6,7 +6,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import Paper from '@material-ui/core/Paper';
+import Paper, { PaperProps } from '@material-ui/core/Paper';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
@@ -36,6 +36,15 @@ const useStyles = makeStyles((theme) => ({
     width: '350px',
     maxWidth: '350px',
   },
+  tableRowClick: {
+    cursor: 'pointer',
+  },
+  placeholder: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(4),
+  },
 }));
 
 type Action = {
@@ -43,7 +52,7 @@ type Action = {
   type: string;
 };
 
-interface Props {
+interface Props extends PaperProps {
   collapsible?: any;
   inner?: boolean;
   headers: any;
@@ -55,11 +64,13 @@ interface Props {
     }>
   >;
   dsData: SchemaUI[] | AuthUserUI[] | NotificationData[] | any;
+  selectable?: boolean;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
   selectedItems?: string[];
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
+  handleRowClick?: (data: any) => void;
 }
 
 const DataTable: React.FC<Props> = ({
@@ -68,17 +79,18 @@ const DataTable: React.FC<Props> = ({
   headers,
   sort,
   setSort,
-  dsData,
+  dsData = [],
   actions,
   handleAction,
+  selectable = true,
   selectedItems = [],
   handleSelect,
   handleSelectAll,
+  handleRowClick,
   ...rest
 }) => {
   const classes = useStyles();
 
-  const rows = dsData;
 
   const onSelectedField = (index: string) => {
     if (setSort !== undefined)
@@ -90,56 +102,110 @@ const DataTable: React.FC<Props> = ({
       });
   };
 
+  const getValue = (value: any) => {
+    if (moment(value, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true).isValid()) {
+      return moment(value).format('DD/MM/YYYY');
+    }
+    if (isValidElement(value)) {
+      return value;
+    }
+    return value?.toString();
+  };
+
+  const getHeaderValues = (value: string) => {
+    if (value === 'icon') {
+      return '';
+    }
+    return value;
+  };
+
+  const onMenuItemClick = (action: { title: string; type: string }, data: any) => {
+    if (handleAction) {
+      handleAction(action, data);
+    }
+  };
+
+  const onMenuItemSelect = (id: string) => {
+    if (handleSelect) {
+      handleSelect(id);
+    }
+  };
+
   const onMenuItemSelectAll = () => {
     if (handleSelectAll) {
       handleSelectAll(dsData);
     }
   };
 
+  const onRowClick = (item: any) => {
+    if (handleRowClick) {
+      handleRowClick(item);
+    }
+  };
+
+  const handleSortDirection = (asc: boolean) => {
+    if (asc) {
+      return 'asc';
+    }
+    return 'desc';
+  };
+
   return (
-    <TableContainer
-      className={!inner ? classes.tableContainer : classes.innerTableContainer}
-      component={Paper}
-      {...rest}>
+    <TableContainer className={!inner ? classes.tableContainer : classes.innerTableContainer} component={Paper} {...rest}>
       <Table stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
-              {!collapsible && actions && (
-                <Checkbox
-                  color="primary"
-                  onChange={onMenuItemSelectAll}
-                  checked={selectedItems?.length === dsData.length}
-                  indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
-                />
-              )}
+              {!collapsible && actions && selectable && (
+              <Checkbox
+                color="primary"
+                onChange={onMenuItemSelectAll}
+                checked={selectedItems?.length === dsData.length}
+                indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
+                indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+              />)}
             </TableCell>
             {headers.map((header: any) => (
               <TableCell className={classes.header} key={header.sort}>
+                {header.sort ? (
                 <TableSortLabel
                   active={sort?.index === header.sort}
-                  direction={sort?.asc ? 'asc' : 'desc'}
+                  direction={handleSortDirection(header.sort?.asc)}
                   onClick={() => onSelectedField(header.sort)}>
-                  {header.title}
+                  {getHeaderValues(header.title)}
                 </TableSortLabel>
+                ) : (
+                  <>{getHeaderValues(header.title)}</>
+                )}
               </TableCell>
             ))}
-            <TableCell className={classes.header} />
+            {actions && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.map((row: any, i: number) => (
-            <DataTableRows
-              collapsible={collapsible !== undefined ? collapsible[i] : null}
-              row={row}
-              index={i}
-              handleAction={handleAction}
-              handleSelect={handleSelect}
-              selectedItems={selectedItems}
-              key={i}
-              actions={actions}
-            />
+            <TableRow key={i}>
+              <TableCell align="left" padding="none">
+                <Checkbox
+                  color="primary"
+                  checked={selectedItems?.includes(row._id)}
+                  onChange={() => onMenuItemSelect(row._id)}
+                />
+              </TableCell>
+              {Object.keys(row).map((item, j) => (
+                <TableCell className={classes.ellipsisStyle} key={`${i}-${j}`}>
+                  {getValue(row[item])}
+                </TableCell>
+              ))}
+              <TableCell key={`action-${i}`} align={'right'}>
+                <DataTableActions
+                  actions={actions}
+                  onActionClick={(action) => onMenuItemClick(action, row)}
+                  isBlocked={!row.Active}
+                  editDisabled={selectedItems?.length > 1}
+                />
+              </TableCell>
+            </TableRow>
           ))}
         </TableBody>
       </Table>

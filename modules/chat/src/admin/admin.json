@@ -1,0 +1,29 @@
+{
+  "functions": [
+    {
+      "path": "/room",
+      "method": "POST",
+      "protoName": "createRoom"
+    },
+    {
+      "path": "/rooms",
+      "method": "GET",
+      "protoName": "getRooms"
+    },
+    {
+      "path": "/rooms",
+      "method": "DELETE",
+      "protoName": "deleteRooms"
+    },
+    {
+      "path": "/messages",
+      "method": "GET",
+      "protoName": "getMessages"
+    },
+    {
+      "path": "/messages",
+      "method": "DELETE",
+      "protoName": "deleteMessages"
+    }
+  ]
+}

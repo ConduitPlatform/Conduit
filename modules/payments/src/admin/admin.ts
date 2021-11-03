@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   GrpcServer,
   RouterRequest,
   RouterResponse,
@@ -10,7 +11,7 @@ import { StripeHandlers } from '../handlers/stripe';
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 export class AdminHandlers {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(
     server: GrpcServer,
@@ -19,7 +20,7 @@ export class AdminHandlers {
   ) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
+      self.database = self.grpcSdk.databaseProvider!;
     });
 
     this.grpcSdk.admin
@@ -58,9 +59,10 @@ export class AdminHandlers {
     const productDocumentsPromise = this.database.findMany(
       'Product',
       query,
-      null,
+      undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
+
     );
     const totalCountPromise = this.database.countDocuments('Product', query);
 
@@ -93,12 +95,12 @@ export class AdminHandlers {
     let identifier;
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+      query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const customerDocumentsPromise = this.database.findMany(
       'PaymentsCustomer',
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
@@ -173,10 +175,10 @@ export class AdminHandlers {
     }
     let errorMessage: string | null = null;
     const user = await this.database
-      .findOne('User',{userId})
+      .findOne('User',{_id: userId})
       .catch( (err:any) => errorMessage = err);
 
-    if(!isNil(user)){
+    if(isNil(user)){
       return callback({
         code: status.INTERNAL,
         message: 'User with id: ' + userId + ' does not exists'
@@ -216,7 +218,12 @@ export class AdminHandlers {
       }
       return callback(null,{ result: JSON.stringify(createdCustomer) })
     }
-
+    else{
+      return callback({
+        code: status.INTERNAL,
+        message: 'customer with userId ' +  userId + ' already exists'
+      })
+    }
   }
 
 
@@ -311,7 +318,7 @@ export class AdminHandlers {
   }
 
   async getSubscription(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -321,13 +328,18 @@ export class AdminHandlers {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let query:any = {};
+    let query:any = {},populates;
+    if(!isNil(populate) && populate){
+      populates = populate;
+    }
     const subscriptionDocumentsPromise = this.database.findMany(
-      'Subscription',
-      query,
-      null,
-      skipNumber,
-      limitNumber
+        'Subscription',
+        query,
+      undefined,
+        skipNumber,
+        limitNumber,
+        undefined,
+        populates,
     );
     const totalCountPromise = this.database.countDocuments('Subscription', query);
 
@@ -361,14 +373,13 @@ export class AdminHandlers {
     if(!isNil(customerId)){
       query['customerId'] = customerId
     }
-    else if(!isNil(productId)){
+    if(!isNil(productId)){
       query['product'] = productId
     }
-
     const transactionDocumentsPromise = this.database.findMany(
       'Transaction',
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
