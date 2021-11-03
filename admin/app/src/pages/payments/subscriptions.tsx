@@ -1,13 +1,23 @@
 import React, { ReactElement, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import DataTable from '../../components/common/DataTable';
-import { Grid, Typography, TextField, makeStyles, InputAdornment, Box } from '@material-ui/core';
+import {
+  Grid,
+  Typography,
+  TextField,
+  makeStyles,
+  InputAdornment,
+  Box,
+  Chip,
+} from '@material-ui/core';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import useDebounce from '../../hooks/useDebounce';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
 import { asyncGetSubscriptions } from '../../redux/slices/paymentsSlice';
 import { Subscription } from '../../models/payments/PaymentsModels';
+import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
+import ViewSubscription from '../../components/payments/ViewSubscription';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -29,6 +39,21 @@ const Subscriptions = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
+  const originalSubscriptionState = {
+    _id: '',
+    product: '',
+    userId: '',
+    customerId: '',
+    iamport: {
+      nextPaymentId: '',
+    },
+    activeUntil: '',
+    transactions: [],
+    provider: '',
+    createdAt: '',
+    updatedAt: '',
+  };
+
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(0);
@@ -37,6 +62,10 @@ const Subscriptions = () => {
     asc: false,
     index: null,
   });
+  const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>([]);
+  const [drawer, setDrawer] = useState<boolean>(false);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<Subscription>(originalSubscriptionState);
 
   const debouncedSearch: string = useDebounce(search, 500);
 
@@ -48,31 +77,10 @@ const Subscriptions = () => {
     (state) => state.paymentsSlice.data.subscriptionData
   );
 
-  // // Placeholder data
-  // const subscriptions = [
-  //   {
-  //     _id: '323242543535353d342',
-  //     product: 'Disney',
-  //     userId: 'fsefsf2323232',
-  //     provider: 'Stripe',
-  //     createdAt: '24/6/21',
-  //     updatedAt: '24/6/23',
-  //     customerId: 'fsfsefw3423dff',
-  //     activeUntil: '30/5/21',
-  //     transactions: { name: 'Dim', money: '32', stripe: 'false' },
-  //   },
-  //   {
-  //     _id: '323242543535353d342',
-  //     product: 'Hulu',
-  //     userId: 'Kostas',
-  //     provider: 'Stripe',
-  //     createdAt: '24/6/21',
-  //     updatedAt: '24/6/23',
-  //     customerId: 'fsfsefw3423sasdff',
-  //     activeUntil: '30/3/21',
-  //     transactions: { name: 'Kostas', money: '22', stripe: 'true' },
-  //   },
-  // ];
+  const handleClose = () => {
+    setDrawer(false);
+    setSelectedSubscription(originalSubscriptionState);
+  };
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
     if (val > page) {
@@ -101,16 +109,36 @@ const Subscriptions = () => {
     });
   };
 
-  const formatCollapsibleData = (data: Subscription[]) => {
-    return data.map((u) => {
-      return {
-        transactions: u.transactions,
-        userId: u.userId,
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-        customerId: u.customerId,
-      };
-    });
+  const handleAction = (action: { title: string; type: string }, data: Subscription) => {
+    const currentTransaction = subscriptions?.find((subscription) => subscription._id === data._id);
+
+    if (currentTransaction !== undefined) {
+      if (action.type === 'view') {
+        setSelectedSubscription(currentTransaction);
+        setDrawer(true);
+      }
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    const newSelectedSubscriptions = [...selectedSubscriptions];
+
+    if (selectedSubscriptions.includes(id)) {
+      const index = newSelectedSubscriptions.findIndex((newId) => newId === id);
+      newSelectedSubscriptions.splice(index, 1);
+    } else {
+      newSelectedSubscriptions.push(id);
+    }
+    setSelectedSubscriptions(newSelectedSubscriptions);
+  };
+
+  const handleSelectAll = (data: any[]) => {
+    if (setSelectedSubscriptions.length === subscriptions.length) {
+      setSelectedSubscriptions([]);
+      return;
+    }
+    const newSelectedTransactions = data.map((item: any) => item._id);
+    setSelectedSubscriptions(newSelectedTransactions);
   };
 
   const headers = [
@@ -119,6 +147,13 @@ const Subscriptions = () => {
     { title: 'Active until', sort: 'actuveUntil' },
     { title: 'Updated At', sort: 'updatedAt' },
   ];
+
+  const toView = {
+    title: 'View',
+    type: 'view',
+  };
+
+  const actions = [toView];
 
   return (
     <div>
@@ -148,10 +183,14 @@ const Subscriptions = () => {
         <>
           <DataTable
             dsData={formatData(subscriptions)}
-            collapsible={formatCollapsibleData(subscriptions)}
             sort={sort}
             setSort={setSort}
             headers={headers}
+            handleSelect={handleSelect}
+            handleSelectAll={handleSelectAll}
+            actions={actions}
+            handleAction={handleAction}
+            selectedItems={selectedSubscriptions}
           />
           <Grid container style={{ marginTop: '-8px' }}>
             <Grid item xs={7} />
@@ -171,6 +210,14 @@ const Subscriptions = () => {
           <Typography>No available subscription data</Typography>
         </Box>
       )}
+      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={1400}>
+        <Box>
+          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
+            Subscription overview
+          </Typography>
+          <ViewSubscription subscription={selectedSubscription} />
+        </Box>
+      </DrawerWrapper>
     </div>
   );
 };

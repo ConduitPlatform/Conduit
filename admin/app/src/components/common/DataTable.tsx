@@ -105,7 +105,7 @@ const DataTable: React.FC<Props> = ({
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
-              {!collapsible && (
+              {!collapsible && actions && (
                 <Checkbox
                   color="primary"
                   onChange={onMenuItemSelectAll}
@@ -125,7 +125,7 @@ const DataTable: React.FC<Props> = ({
                 </TableSortLabel>
               </TableCell>
             ))}
-            {(actions || collapsible || inner) && <TableCell className={classes.header} />}
+            <TableCell className={classes.header} />
           </TableRow>
         </TableHead>
         <TableBody>

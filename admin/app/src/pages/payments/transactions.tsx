@@ -57,7 +57,13 @@ const Transactions = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetTransactions({ skip, limit, search: debouncedSearch }));
+    dispatch(
+      asyncGetTransactions({
+        skip,
+        limit,
+        search: debouncedSearch,
+      })
+    );
   }, [dispatch, limit, skip, debouncedSearch]);
 
   const { transactions, count } = useAppSelector(
@@ -85,7 +91,7 @@ const Transactions = () => {
     setPage(0);
   };
 
-  const handleAction = (action: { title: string; type: string }, data: EmailUI) => {
+  const handleAction = (action: { title: string; type: string }, data: any) => {
     const currentTransaction = transactions?.find((transaction) => transaction._id === data._id);
 
     if (currentTransaction !== undefined) {

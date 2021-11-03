@@ -3,7 +3,6 @@ import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import { Cancel, Save } from '@material-ui/icons';
 import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
@@ -19,6 +18,7 @@ import {
 } from '@material-ui/core';
 import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import sharedClasses from './sharedClasses';
+import ExtractView from './ExtractView';
 
 interface Props {
   handleCreate: (product: Product) => void;
@@ -222,37 +222,7 @@ const ViewEditProduct: React.FC<Props> = ({
                 </Paper>
               </>
             ) : (
-              <>
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h5"
-                    align="center"
-                    color="primary"
-                    style={{ marginTop: '-20px' }}>
-                    {productState.name}
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="subtitle2">Value:</Typography>
-                  <Typography variant="h6">{productState.value}</Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="subtitle2">Currency:</Typography>
-                  <Typography variant="h6">{productState.currency}</Typography>
-                </Grid>
-                {productState.isSubscription && (
-                  <>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2">Recurs:</Typography>
-                      <Typography variant="h6">{productState.recurring}</Typography>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2">Reccuring count:</Typography>
-                      <Typography variant="h6">{productState.recurringCount}</Typography>
-                    </Grid>
-                  </>
-                )}
-              </>
+              <ExtractView valuesToShow={productState} />
             )}
           </Grid>
         </Paper>

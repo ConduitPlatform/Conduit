@@ -24,14 +24,20 @@ export const postProductsRequest = (data: Product) =>
 export const putProductRequest = (productId: string, data: Product) =>
   axios.put(`${CONDUIT_API}/admin/payments/products/${productId}`, { ...data });
 
-export const getTransactionsRequest = (skip: number, limit: number, search?: string) =>
+export const getTransactionsRequest = (
+  skip: number,
+  limit: number,
+  search?: string,
+  productId?: string,
+  customerId?: string
+) =>
   axios.get(`${CONDUIT_API}/admin/payments/transactions`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params: { skip, limit, search: search !== '' ? search : undefined, productId, customerId },
   });
 
 export const getSubscriptionsRequest = (skip: number, limit: number, search?: string) =>
   axios.get(`${CONDUIT_API}/admin/payments/subscription`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params: { skip, limit, search: search !== '' ? search : undefined, populate: 'transactions' },
   });
 
 export const getPaymentSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/payments`);
