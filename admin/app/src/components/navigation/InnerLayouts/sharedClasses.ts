@@ -20,5 +20,12 @@ export default makeStyles((theme) =>
     navContent: {
       marginTop: '10px',
     },
+    chatRoot: {
+      height: '100vh',
+    },
+    chatContent: {
+      marginTop: '110px',
+      height: 'calc(100% - 110px)',
+    },
   })
 );

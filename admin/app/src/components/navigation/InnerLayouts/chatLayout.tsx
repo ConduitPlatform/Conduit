@@ -24,7 +24,7 @@ const ChatLayout: React.FC<unknown> = ({ children }) => {
   };
 
   return (
-    <Box p={4}>
+    <Box p={4} className={classes.chatRoot}>
       <Box className={classes.navBar}>
         <Typography className={classes.navContent} variant={'h4'}>
           Chat
@@ -43,7 +43,7 @@ const ChatLayout: React.FC<unknown> = ({ children }) => {
           <Tab label="Settings" id="settings" />
         </Tabs>
       </Box>
-      <Box className={classes.content}>{children}</Box>
+      <Box className={classes.chatContent}>{children}</Box>
     </Box>
   );
 };

@@ -3,13 +3,24 @@ import { setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
 import { getChatRooms } from '../../http/ChatRequests';
+import { IChatRoom } from '../../models/chat/ChatModels';
 
 interface IChatSlice {
-  data: any;
+  data: {
+    chatRooms: {
+      data: IChatRoom[];
+      count: number;
+    };
+  };
 }
 
 const initialState: IChatSlice = {
-  data: {},
+  data: {
+    chatRooms: {
+      data: [],
+      count: 0,
+    },
+  },
 };
 
 export const asyncGetChatRooms = createAsyncThunk(
@@ -36,7 +47,8 @@ const chatSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
-      console.log('asyncGetChatRooms', action.payload);
+      state.data.chatRooms.data = action.payload.chatRoomDocuments;
+      state.data.chatRooms.count = action.payload.totalCount;
     });
   },
 });
