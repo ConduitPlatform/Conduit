@@ -26,6 +26,8 @@ export default makeStyles((theme) =>
     chatContent: {
       marginTop: '110px',
       height: 'calc(100% - 110px)',
+      display: 'flex',
+      flexDirection: 'column',
     },
   })
 );
