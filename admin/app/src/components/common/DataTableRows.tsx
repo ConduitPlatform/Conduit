@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { isValidElement, useState } from 'react';
 import { Checkbox, IconButton, makeStyles, TableCell, TableRow } from '@material-ui/core';
 import DataTableActions from './DataTableActions';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@material-ui/icons';
@@ -32,28 +32,35 @@ interface Props {
   collapsible?: any;
   row: any;
   index: number;
+  onRowClick: (item: any) => void;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
   selectedItems: string[];
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
+  selectable: boolean;
 }
 
 const DataTableRows: React.FC<Props> = ({
   collapsible,
   row,
   index,
+  onRowClick,
   handleAction,
   handleSelect,
   selectedItems,
   actions,
+  selectable,
 }) => {
   const classes = useStyles();
   const [open, setOpen] = useState(false);
 
   const getValue = (value: any) => {
-    if (!isNaN(Date.parse(value)) && moment(value).isValid()) {
+    if (moment(value, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]', true).isValid()) {
       return moment(value).format('DD/MM/YYYY');
+    }
+    if (isValidElement(value)) {
+      return value;
     }
     return value?.toString();
   };
@@ -71,7 +78,7 @@ const DataTableRows: React.FC<Props> = ({
   };
 
   const extractIcon = () => {
-    if (!collapsible && actions)
+    if (!collapsible && actions && selectable)
       return (
         <Checkbox
           color="primary"
@@ -89,7 +96,7 @@ const DataTableRows: React.FC<Props> = ({
 
   return (
     <>
-      <TableRow key={index}>
+      <TableRow onClick={() => onRowClick(row)} key={index}>
         <TableCell align="left" padding="none">
           {extractIcon()}
         </TableCell>
