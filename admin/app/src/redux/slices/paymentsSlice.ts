@@ -73,7 +73,11 @@ export const asyncGetCustomers = createAsyncThunk(
   'payments/getCustomers',
   async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
     try {
-      const { data } = await getCustomersRequest(params.skip, params.limit, params.search);
+      const { data } = await getCustomersRequest({
+        skip: params.skip,
+        limit: params.limit,
+        search: params.search ? params.search : undefined,
+      });
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -129,7 +133,11 @@ export const asyncGetProducts = createAsyncThunk(
   'payments/getProducts',
   async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
     try {
-      const { data } = await getProductsRequest(params.skip, params.limit, params.search);
+      const { data } = await getProductsRequest({
+        skip: params.skip,
+        limit: params.limit,
+        search: params.search ? params.search : undefined,
+      });
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -194,13 +202,13 @@ export const asyncGetTransactions = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const { data } = await getTransactionsRequest(
-        params.skip,
-        params.limit,
-        params.search,
-        params.productId,
-        params.customerId
-      );
+      const { data } = await getTransactionsRequest({
+        skip: params.skip,
+        limit: params.limit,
+        search: params.search,
+        productId: params.productId,
+        customerId: params.customerId,
+      });
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -214,7 +222,11 @@ export const asyncGetSubscriptions = createAsyncThunk(
   'payments/getSubscriptions',
   async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
     try {
-      const { data } = await getSubscriptionsRequest(params.skip, params.limit, params.search);
+      const { data } = await getSubscriptionsRequest({
+        skip: params.skip,
+        limit: params.limit,
+        search: params.search,
+      });
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
