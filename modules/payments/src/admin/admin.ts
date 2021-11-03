@@ -95,7 +95,7 @@ export class AdminHandlers {
     let identifier;
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+      query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const customerDocumentsPromise = this.database.findMany(
       'PaymentsCustomer',
