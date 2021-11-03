@@ -1,15 +1,7 @@
 import React, { ReactElement, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import DataTable from '../../components/common/DataTable';
-import {
-  Grid,
-  Typography,
-  TextField,
-  makeStyles,
-  InputAdornment,
-  Box,
-  Chip,
-} from '@material-ui/core';
+import { Grid, Typography, TextField, makeStyles, InputAdornment, Box } from '@material-ui/core';
 import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import useDebounce from '../../hooks/useDebounce';

@@ -17,7 +17,7 @@ import {
   MenuItem,
 } from '@material-ui/core';
 import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
-import sharedClasses from './sharedClasses';
+import sharedClasses from '../common/sharedClasses';
 import ExtractView from './ExtractView';
 
 interface Props {

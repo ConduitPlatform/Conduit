@@ -43,5 +43,14 @@ export default makeStyles((theme) =>
       justifyContent: 'center',
       marginTop: '-30px',
     },
+    chip: {
+      display: 'flex',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      '& > *': {
+        margin: theme.spacing(0.5),
+      },
+      marginTop: '50px',
+    },
   })
 );

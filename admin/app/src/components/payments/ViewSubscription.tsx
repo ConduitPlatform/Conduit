@@ -3,7 +3,6 @@ import { Chip, Paper, Typography } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles } from '@material-ui/core/styles';
 import Image from 'next/dist/client/image';
 import SubsriptionImage from '../../assets/svgs/subscriptions.svg';
 import { Subscription, Transaction } from '../../models/payments/PaymentsModels';
@@ -11,65 +10,14 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetTransactions } from '../../redux/slices/paymentsSlice';
 import DataTable from '../common/DataTable';
 import Paginator from '../common/Paginator';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    backgroundColor: theme.palette.background.paper,
-    display: 'flex',
-    flexGrow: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    justifyItems: 'center',
-    justifySelf: 'center',
-  },
-  tabs: {
-    borderRight: `1px solid ${theme.palette.divider}`,
-    minWidth: '300px',
-  },
-  divider: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  grid: {
-    marginBottom: theme.spacing(3),
-  },
-  multiline: {
-    width: '100%',
-    marginBottom: theme.spacing(3),
-  },
-  textField: {
-    width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(2),
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(2),
-  },
-  marginTop: {
-    marginTop: '60px',
-  },
-  centeredImg: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chip: {
-    display: 'flex',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    '& > *': {
-      margin: theme.spacing(0.5),
-    },
-    marginTop: '50px',
-  },
-}));
+import sharedClasses from '../common/sharedClasses';
 
 interface Props {
   subscription: Subscription;
 }
 
 const ViewSubscription: React.FC<Props> = ({ subscription }) => {
-  const classes = useStyles();
+  const classes = sharedClasses();
   const dispatch = useAppDispatch();
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
@@ -118,14 +66,12 @@ const ViewSubscription: React.FC<Props> = ({ subscription }) => {
     });
   };
 
-  const chipsToDisplay = (subscription: Subscription) => {
-    return Object.entries(subscription).map(
+  const chipsToDisplay = (values: Subscription) => {
+    return Object.entries(values).map(
       ([key, value]) =>
         key !== 'transactions' && <Chip color="secondary" label={`${key}: ${value}`} />
     );
   };
-
-  console.log(subscription);
 
   const headers = [
     { title: '_id', sort: '_id' },

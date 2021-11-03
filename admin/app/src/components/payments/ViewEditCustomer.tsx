@@ -13,7 +13,7 @@ import { Customer } from '../../models/payments/PaymentsModels';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
-import sharedClasses from './sharedClasses';
+import sharedClasses from '../common/sharedClasses';
 import ExtractView from './ExtractView';
 
 interface Props {
@@ -113,12 +113,9 @@ const ViewEditCustomer: React.FC<Props> = ({
   };
 
   const extractLabel = () => {
-    switch (select) {
-      case -1:
-        return 'Select user';
-      default:
-        return 'Selected user';
-    }
+    if (select === -1) {
+      return 'Select user';
+    } else return 'Selected user';
   };
 
   const handleUserChange = (e: React.ChangeEvent<any>) => {
