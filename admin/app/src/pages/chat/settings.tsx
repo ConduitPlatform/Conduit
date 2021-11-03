@@ -1,20 +1,13 @@
-import React from 'react';
-import { Box } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import React, { ReactElement } from 'react';
+import ChatLayout from '../../components/navigation/InnerLayouts/chatLayout';
+import ChatSettings from '../../components/chat/ChatSettings';
 
-const useStyles = makeStyles(() => ({
-  root: {
-    height: '100vh',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-}));
+const Settings = () => {
+  return <ChatSettings />;
+};
 
-const Settings: React.FC = () => {
-  const classes = useStyles();
-
-  return <Box className={classes.root}>Coming soon</Box>;
+Settings.getLayout = function getLayout(page: ReactElement) {
+  return <ChatLayout>{page}</ChatLayout>;
 };
 
 export default Settings;
