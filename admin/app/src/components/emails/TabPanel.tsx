@@ -4,17 +4,16 @@ import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { Cancel, Save } from '@material-ui/icons';
-import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import EmailDetails from './EmailDetails';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
-import { Button, Paper } from '@material-ui/core';
+import { Paper } from '@material-ui/core';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
 import { useAppDispatch } from '../../redux/store';
 import sharedClasses from '../common/sharedClasses';
+import DrawerButtons from '../common/DrawerButtons';
 
 interface Props {
   handleCreate: (templateState: EmailTemplateType) => void;
@@ -178,36 +177,13 @@ const TabPanel: React.FC<Props> = ({
           templateState={templateState}
           setTemplateState={setTemplateState}
         />
-
-        <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
-          {!edit ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EditIcon />}
-              onClick={() => setEdit(true)}>
-              Edit
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Cancel />}
-                onClick={handleCancelClick}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Save />}
-                onClick={handleSaveClick}
-                disabled={!handleDisabled()}>
-                Save
-              </Button>
-            </>
-          )}
-        </Grid>
+        <DrawerButtons
+          edit={edit}
+          setEdit={setEdit}
+          handleCancelClick={handleCancelClick}
+          handleSaveClick={handleSaveClick}
+          handleDisabled={!handleDisabled()}
+        />
         {!edit && (
           <div className={classes.centeredImg}>
             <Image src={EmailImage} width="200px" alt="mail" />

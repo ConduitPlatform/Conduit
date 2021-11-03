@@ -4,13 +4,11 @@ import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { Add, Cancel, Save } from '@material-ui/icons';
-import EditIcon from '@material-ui/icons/Edit';
+import { Add } from '@material-ui/icons';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/dist/client/image';
 import FormsImage from '../../assets/svgs/forms.svg';
 import {
-  Button,
   FormControl,
   FormControlLabel,
   IconButton,
@@ -25,6 +23,7 @@ import Delete from '@material-ui/icons/Delete';
 import { useAppDispatch } from '../../redux/store';
 import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
 import sharedClasses from '../common/sharedClasses';
+import DrawerButtons from '../common/DrawerButtons';
 
 interface Props {
   handleCreate: (formsState: FormsModel) => void;
@@ -323,35 +322,12 @@ const ViewEditForm: React.FC<Props> = ({
             )}
           </Grid>
         </Paper>
-
-        <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
-          {!edit ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EditIcon />}
-              onClick={() => setEdit(true)}>
-              Edit
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Cancel />}
-                onClick={handleCancelClick}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Save />}
-                onClick={handleSaveClick}>
-                Save
-              </Button>
-            </>
-          )}
-        </Grid>
+        <DrawerButtons
+          edit={edit}
+          setEdit={setEdit}
+          handleCancelClick={handleCancelClick}
+          handleSaveClick={handleSaveClick}
+        />
         {!edit && (
           <div className={classes.centeredImg}>
             <Image src={FormsImage} width="200px" alt="mail" />

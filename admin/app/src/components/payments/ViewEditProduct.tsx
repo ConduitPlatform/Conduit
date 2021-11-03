@@ -3,11 +3,8 @@ import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import { Cancel, Save } from '@material-ui/icons';
-import EditIcon from '@material-ui/icons/Edit';
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -19,6 +16,7 @@ import {
 import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import sharedClasses from '../common/sharedClasses';
 import ExtractView from './ExtractView';
+import DrawerButtons from '../common/DrawerButtons';
 
 interface Props {
   handleCreate: (product: Product) => void;
@@ -228,34 +226,12 @@ const ViewEditProduct: React.FC<Props> = ({
         </Paper>
         <Divider className={classes.divider} />
 
-        <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
-          {!edit ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EditIcon />}
-              onClick={() => setEdit(true)}>
-              Edit
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Cancel />}
-                onClick={handleCancelClick}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Save />}
-                onClick={handleSaveClick}>
-                Save
-              </Button>
-            </>
-          )}
-        </Grid>
+        <DrawerButtons
+          edit={edit}
+          setEdit={setEdit}
+          handleCancelClick={handleCancelClick}
+          handleSaveClick={handleSaveClick}
+        />
       </Box>
     </Container>
   );
