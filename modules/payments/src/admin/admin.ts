@@ -318,7 +318,7 @@ export class AdminHandlers {
   }
 
   async getSubscription(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -328,8 +328,10 @@ export class AdminHandlers {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let query:any = {};
-    const populate = ['transactions'];
+    let query:any = {},populates;
+    if(!isNil(populate) && populate){
+      populates = populate;
+    }
     const subscriptionDocumentsPromise = this.database.findMany(
         'Subscription',
         query,
@@ -337,7 +339,7 @@ export class AdminHandlers {
         skipNumber,
         limitNumber,
         undefined,
-        populate,
+        populates,
     );
     const totalCountPromise = this.database.countDocuments('Subscription', query);
 
