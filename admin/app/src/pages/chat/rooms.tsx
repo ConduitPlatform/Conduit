@@ -11,10 +11,10 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const Chat: React.FC = () => {
+const Rooms: React.FC = () => {
   const classes = useStyles();
 
   return <Box className={classes.root}>Coming soon</Box>;
 };
 
-export default Chat;
+export default Rooms;

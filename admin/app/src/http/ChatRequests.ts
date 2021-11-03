@@ -6,8 +6,20 @@ export const createChatRoom = (params: { name: string; participants: string[] })
     ...params,
   });
 
-export const getChatRooms = (params: { skip: number; limit: number; search: string }) =>
+export const getChatRooms = (params: { skip: number; limit: number; search?: string }) =>
   axios.get(`${CONDUIT_API}/admin/chat/rooms`, {
+    params: {
+      ...params,
+    },
+  });
+
+export const getChatMessages = (params: {
+  skip: number;
+  limit: number;
+  senderId?: string;
+  roomId?: string;
+}) =>
+  axios.get(`${CONDUIT_API}/admin/chat/messages`, {
     params: {
       ...params,
     },
@@ -16,18 +28,6 @@ export const getChatRooms = (params: { skip: number; limit: number; search: stri
 export const deleteChatRooms = (params: { ids: string[] }) =>
   axios.delete(`${CONDUIT_API}/admin/chat/rooms`, {
     data: {
-      ...params,
-    },
-  });
-
-export const getChatMessages = (params: {
-  skip: number;
-  limit: number;
-  senderId: string;
-  roomId: string;
-}) =>
-  axios.get(`${CONDUIT_API}/admin/chat/messages`, {
-    params: {
       ...params,
     },
   });

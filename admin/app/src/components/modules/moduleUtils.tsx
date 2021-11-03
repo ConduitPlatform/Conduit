@@ -61,6 +61,8 @@ export const handleModuleNavigation = (moduleName: string) => {
       return '/forms/view';
     case 'sms':
       return '/sms/send';
+    case 'chat':
+      return '/chat/rooms';
     default:
       return `/${moduleName}`;
   }
