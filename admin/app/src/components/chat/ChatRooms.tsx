@@ -7,10 +7,13 @@ import { useAppDispatch } from '../../redux/store';
 import { asyncGetChatRooms } from '../../redux/slices/chatSlice';
 import ChatRoomPanel from './ChatRoomPanel';
 
-const useStyles = makeStyles(() => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
     height: '100%',
+  },
+  tabs: {
+    minWidth: theme.spacing(25),
   },
 }));
 
@@ -39,12 +42,15 @@ const ChatRooms: React.FC = () => {
 
   return (
     <Paper className={classes.root}>
-      <Tabs orientation="vertical" variant="scrollable" value={selected} onChange={handleChange}>
-        <Tab label="Chatroom 1" />
-        <Tab label="Chatroom 2" />
-        <Tab label="Chatroom 3" />
-        <Tab label="Chatroom 4" />
-        <Tab label="Chatroom 5" />
+      <Tabs
+        orientation="vertical"
+        variant="scrollable"
+        value={selected}
+        onChange={handleChange}
+        className={classes.tabs}>
+        {chatRoomPanelData.map((item, index) => {
+          return <Tab label={item.name} key={index} />;
+        })}
       </Tabs>
       {chatRoomPanelData.map((item, index) => {
         if (index === selected) {
