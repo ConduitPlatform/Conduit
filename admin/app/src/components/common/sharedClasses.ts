@@ -52,5 +52,13 @@ export default makeStyles((theme) =>
       },
       marginTop: '50px',
     },
+    fields: {
+      marginTop: theme.spacing(0.5),
+      display: 'flex',
+      marginBottom: theme.spacing(0.5),
+      alignItems: 'center',
+      width: '80%',
+      justifyContent: 'center',
+    },
   })
 );

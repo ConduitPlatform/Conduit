@@ -1,42 +1,11 @@
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import sharedClasses from '../common/sharedClasses';
 import TemplateEditor from './TemplateEditor';
-
-const useStyles = makeStyles((theme) => ({
-  tabs: {
-    borderRight: `1px solid ${theme.palette.divider}`,
-    minWidth: '300px',
-  },
-  divider: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  grid: {
-    marginBottom: theme.spacing(3),
-  },
-  multiline: {
-    width: '100%',
-    marginBottom: theme.spacing(3),
-  },
-  textField: {
-    width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(2),
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(2),
-    backgroundColor: theme.palette.background.default,
-  },
-  chip: {
-    margin: theme.spacing(1),
-    color: theme.palette.secondary.main,
-  },
-}));
 
 interface Props {
   edit: boolean;
@@ -45,7 +14,7 @@ interface Props {
 }
 
 const EmailDetails: React.FC<Props> = ({ edit, templateState, setTemplateState }) => {
-  const classes = useStyles();
+  const classes = sharedClasses();
 
   return (
     <Box>

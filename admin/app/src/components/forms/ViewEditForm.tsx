@@ -2,7 +2,6 @@ import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { Add, Cancel, Save } from '@material-ui/icons';
@@ -25,57 +24,7 @@ import { FormsModel } from '../../models/forms/FormsModels';
 import Delete from '@material-ui/icons/Delete';
 import { useAppDispatch } from '../../redux/store';
 import { enqueueErrorNotification, enqueueInfoNotification } from '../../utils/useNotifier';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    backgroundColor: theme.palette.background.paper,
-    display: 'flex',
-    flexGrow: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    justifyItems: 'center',
-    justifySelf: 'center',
-  },
-  tabs: {
-    borderRight: `1px solid ${theme.palette.divider}`,
-    minWidth: '300px',
-  },
-  divider: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  grid: {
-    marginBottom: theme.spacing(3),
-  },
-  multiline: {
-    width: '100%',
-    marginBottom: theme.spacing(3),
-  },
-  textField: {
-    width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(2),
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(2),
-  },
-  marginTop: {
-    marginTop: '60px',
-  },
-  centeredImg: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fields: {
-    marginTop: theme.spacing(0.5),
-    display: 'flex',
-    marginBottom: theme.spacing(0.5),
-    alignItems: 'center',
-    width: '80%',
-    justifyContent: 'center',
-  },
-}));
+import sharedClasses from '../common/sharedClasses';
 
 interface Props {
   handleCreate: (formsState: FormsModel) => void;
@@ -102,7 +51,7 @@ const ViewEditForm: React.FC<Props> = ({
   create,
   setCreate,
 }) => {
-  const classes = useStyles();
+  const classes = sharedClasses();
   const dispatch = useAppDispatch();
 
   const [formState, setFormState] = useState<FormsModel>({
