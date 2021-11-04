@@ -14,11 +14,7 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
-    const pathNames = [
-      '/push-notifications/view',
-      '/push-notifications/send',
-      '/push-notifications/settings',
-    ];
+    const pathNames = ['/push-notifications/send', '/push-notifications/settings'];
     const index = pathNames.findIndex((pathname) => pathname === router.pathname);
     setValue(index);
   }, [router.pathname]);
@@ -44,7 +40,6 @@ const NotificationLayout: React.FC<unknown> = ({ children }) => {
           </a>
         </Typography>
         <Tabs value={value} className={classes.navContent} onChange={handleChange}>
-          <Tab label="Notifications" id="view" />
           <Tab label="Send Notifications" id="send" />
           <Tab label="Settings" id="settings" />
         </Tabs>
