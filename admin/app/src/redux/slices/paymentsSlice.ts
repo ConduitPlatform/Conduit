@@ -92,12 +92,12 @@ export const asyncGetCustomers = createAsyncThunk(
 
 export const asyncCreateCustomer = createAsyncThunk(
   'payments/createCustomer',
-  async (customerData: any, thunkAPI) => {
+  async (customerData: Customer, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await postCustomerRequest(customerData);
       thunkAPI.dispatch(
-        enqueueSuccessNotification(`Successfully created customer ${customerData.name}!`)
+        enqueueSuccessNotification(`Successfully created customer ${customerData.buyerName}!`)
       );
       thunkAPI.dispatch(setAppDefaults());
       return data;

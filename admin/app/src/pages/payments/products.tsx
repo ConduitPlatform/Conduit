@@ -345,6 +345,7 @@ const Products = () => {
             setEdit={setEdit}
             create={create}
             setCreate={setCreate}
+            handleClose={() => handleClose()}
           />
         </Box>
       </DrawerWrapper>

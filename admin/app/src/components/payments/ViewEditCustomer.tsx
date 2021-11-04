@@ -24,6 +24,7 @@ interface Props {
   setEdit: (value: boolean) => void;
   create: boolean;
   setCreate: (value: boolean) => void;
+  handleClose: () => void;
 }
 
 const ViewEditCustomer: React.FC<Props> = ({
@@ -34,6 +35,7 @@ const ViewEditCustomer: React.FC<Props> = ({
   setEdit,
   create,
   setCreate,
+  handleClose,
 }) => {
   const classes = sharedClasses();
   const dispatch = useAppDispatch();
@@ -95,7 +97,7 @@ const ViewEditCustomer: React.FC<Props> = ({
 
   const handleCancelClick = () => {
     if (create) {
-      setCustomerState(initialState);
+      handleClose();
       return;
     }
     setCustomerState({
