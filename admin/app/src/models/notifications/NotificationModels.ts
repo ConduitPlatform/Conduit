@@ -1,7 +1,6 @@
 export interface NotificationData {
   userId: string;
   title: string;
-  data: string;
   body: string;
 }
 
