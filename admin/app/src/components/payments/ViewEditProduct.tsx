@@ -17,6 +17,8 @@ import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import sharedClasses from '../common/sharedClasses';
 import ExtractView from './ExtractView';
 import DrawerButtons from '../common/DrawerButtons';
+import { enqueueInfoNotification } from '../../utils/useNotifier';
+import { useAppDispatch } from '../../redux/store';
 
 interface Props {
   handleCreate: (product: Product) => void;
@@ -40,6 +42,7 @@ const ViewEditProduct: React.FC<Props> = ({
   handleClose,
 }) => {
   const classes = sharedClasses();
+  const dispatch = useAppDispatch();
 
   const initialState = {
     _id: '',
@@ -111,6 +114,23 @@ const ViewEditProduct: React.FC<Props> = ({
     },
   ];
 
+  const handleNameChange = (value: string) => {
+    const regex = /[^a-z0-9_]/gi;
+    if (regex.test(value)) {
+      dispatch(
+        enqueueInfoNotification(
+          'The product name can only contain alpharithmetics and _',
+          'duplicate'
+        )
+      );
+    }
+
+    setProductState({
+      ...productState,
+      name: value.replace(/[^a-z0-9_]/gi, ''),
+    });
+  };
+
   return (
     <Container className={classes.marginTop}>
       <Box>
@@ -124,9 +144,7 @@ const ViewEditProduct: React.FC<Props> = ({
                     label={'Product name'}
                     variant={'outlined'}
                     value={productState.name}
-                    onChange={(event) => {
-                      setProductState({ ...productState, name: event.target.value });
-                    }}
+                    onChange={(e) => handleNameChange(e.target.value)}
                   />
                 </Grid>
                 <Grid item xs={8} style={{ marginTop: '10px' }}>
