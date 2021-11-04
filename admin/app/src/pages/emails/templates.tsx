@@ -35,8 +35,6 @@ import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
 
-// import useDebounce from '../../hooks/useDebounce';
-
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
     marginLeft: theme.spacing(1.5),

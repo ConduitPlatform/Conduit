@@ -2,6 +2,9 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import {
+  deleteCustomerRequest,
+  deleteProductRequest,
+  deleteTransactionRequest,
   getCustomersRequest,
   getPaymentSettingsRequest,
   getProductsRequest,
@@ -129,6 +132,23 @@ export const asyncSaveCustomerChanges = createAsyncThunk(
   }
 );
 
+export const asyncDeleteCustomers = createAsyncThunk(
+  'emails/deleteCustomers',
+  async (params: { ids: string[]; getCustomers: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteCustomerRequest(params.ids);
+      params.getCustomers();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully delete customers!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`Deletion of customers is currently unavailable`));
+      throw error;
+    }
+  }
+);
+
 export const asyncGetProducts = createAsyncThunk(
   'payments/getProducts',
   async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
@@ -189,6 +209,23 @@ export const asyncSaveProductChanges = createAsyncThunk(
   }
 );
 
+export const asyncDeleteProducts = createAsyncThunk(
+  'emails/deleteProducts',
+  async (params: { ids: string[]; getProducts: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteProductRequest(params.ids);
+      params.getProducts();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted products!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`Deletion of products is currently unavailable`));
+      throw error;
+    }
+  }
+);
+
 export const asyncGetTransactions = createAsyncThunk(
   'payments/getTransactions',
   async (
@@ -213,6 +250,25 @@ export const asyncGetTransactions = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncDeleteTransactions = createAsyncThunk(
+  'emails/deleteProducts',
+  async (params: { ids: string[]; getTransactions: any }, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      await deleteTransactionRequest(params.ids);
+      params.getTransactions();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully deleted transactions!`));
+      thunkAPI.dispatch(setAppDefaults());
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(
+        enqueueErrorNotification(`Deletion of transactions is currently unavailable`)
+      );
       throw error;
     }
   }

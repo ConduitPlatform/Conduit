@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import DataTable from '../../components/common/DataTable';
 import { EmailUI } from '../../models/emails/EmailModels';
@@ -8,9 +8,10 @@ import SearchIcon from '@material-ui/icons/Search';
 import Paginator from '../../components/common/Paginator';
 import useDebounce from '../../hooks/useDebounce';
 import PaymentsLayout from '../../components/navigation/InnerLayouts/paymentsLayout';
-import { asyncGetTransactions } from '../../redux/slices/paymentsSlice';
+import { asyncDeleteTransactions, asyncGetTransactions } from '../../redux/slices/paymentsSlice';
 import { Transaction } from '../../models/payments/PaymentsModels';
 import ViewTransaction from '../../components/payments/ViewTransaction';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -50,6 +51,7 @@ const Transactions = () => {
     asc: false,
     index: null,
   });
+  const [openDeleteTransactions, setOpenDeleteTransactions] = useState<boolean>(false);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedTransaction, setSelectedTransaction] =
@@ -73,6 +75,7 @@ const Transactions = () => {
   const handleClose = () => {
     setDrawer(false);
     setSelectedTransaction(originalTransactionState);
+    setOpenDeleteTransactions(false);
   };
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
@@ -89,6 +92,42 @@ const Transactions = () => {
     setLimit(value);
     setSkip(0);
     setPage(0);
+  };
+
+  const getCustomersCallBack = useCallback(() => {
+    dispatch(asyncGetTransactions({ skip, limit, search }));
+  }, [dispatch, limit, skip, search]);
+
+  const handleDeleteTitle = (transaction: Transaction) => {
+    if (selectedTransaction._id === '') {
+      return 'Delete selected transactions';
+    }
+    return `Delete transaction ${transaction._id}`;
+  };
+
+  const handleDeleteDescription = (transaction: Transaction) => {
+    if (selectedTransaction._id === '') {
+      return 'Are you sure you want to delete the selected treansactions?';
+    }
+    return `Are you sure you want to delete ${transaction._id}? `;
+  };
+  const deleteButtonAction = () => {
+    if (openDeleteTransactions && selectedTransaction._id == '') {
+      const params = {
+        ids: selectedTransactions,
+        getTransactions: getCustomersCallBack,
+      };
+      dispatch(asyncDeleteTransactions(params));
+    } else {
+      const params = {
+        ids: [`${selectedTransaction._id}`],
+        getTransactions: getCustomersCallBack,
+      };
+      dispatch(asyncDeleteTransactions(params));
+    }
+    setOpenDeleteTransactions(false);
+    setSelectedTransaction(originalTransactionState);
+    setSelectedTransactions([]);
   };
 
   const handleAction = (action: { title: string; type: string }, data: any) => {
@@ -123,12 +162,17 @@ const Transactions = () => {
     setSelectedTransactions(newSelectedTransactions);
   };
 
+  const toDelete = {
+    title: 'Delete',
+    type: 'delete',
+  };
+
   const toView = {
     title: 'View',
     type: 'view',
   };
 
-  const actions = [toView];
+  const actions = [toView, toDelete];
 
   const formatData = (data: Transaction[]) => {
     return data.map((u) => {
@@ -213,6 +257,14 @@ const Transactions = () => {
           <ViewTransaction transaction={selectedTransaction} />
         </Box>
       </DrawerWrapper>
+      <ConfirmationDialog
+        open={openDeleteTransactions}
+        handleClose={handleClose}
+        title={handleDeleteTitle(selectedTransaction)}
+        description={handleDeleteDescription(selectedTransaction)}
+        buttonAction={deleteButtonAction}
+        buttonText={'Delete'}
+      />
     </div>
   );
 };
