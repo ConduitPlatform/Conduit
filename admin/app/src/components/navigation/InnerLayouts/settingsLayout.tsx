@@ -9,7 +9,12 @@ const SettingsLayout: React.FC<unknown> = ({ children }) => {
     '/settings/core',
     '/settings/createuser',
   ];
-  const labels = ['clientsdk', 'secrets', 'core', 'createuser'];
+  const labels = [
+    { name: 'clients SDK', id: 'clientsdk' },
+    { name: 'secrets', id: 'secrets' },
+    { name: 'core', id: 'core' },
+    { name: 'create User', id: 'createuser' },
+  ];
 
   return (
     <SharedLayout
