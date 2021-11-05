@@ -1,4 +1,4 @@
-import React, { FC, useCallback, useEffect, useRef, useState } from 'react';
+import React, { FC, useCallback, useEffect, useRef } from 'react';
 import Box from '@material-ui/core/Box';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
@@ -28,7 +28,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const {
     chatMessages: { data, skip, hasMore },
   } = useAppSelector((state) => state.chatSlice.data);
-  const { loading } = useAppSelector((state) => state.appSlice);
+  const { loading } = useAppSelector((state) => state.chatSlice.data.chatMessages);
 
   const observer = useRef<IntersectionObserver>();
   const lastMessageElementRef = useCallback(

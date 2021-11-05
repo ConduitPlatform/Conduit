@@ -16,6 +16,7 @@ interface IChatSlice {
       count: number;
       hasMore: boolean;
       skip: number;
+      loading: boolean;
     };
   };
 }
@@ -31,6 +32,7 @@ const initialState: IChatSlice = {
       count: 0,
       hasMore: true,
       skip: 0,
+      loading: false,
     },
   },
 };
@@ -84,10 +86,17 @@ const chatSlice = createSlice({
       state.data.chatRooms.data = action.payload.chatRoomDocuments;
       state.data.chatRooms.count = action.payload.totalCount;
     });
+    builder.addCase(asyncGetChatMessages.pending, (state) => {
+      state.data.chatMessages.loading = true;
+    });
+    builder.addCase(asyncGetChatMessages.rejected, (state) => {
+      state.data.chatMessages.loading = false;
+    });
     builder.addCase(asyncGetChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data = [...state.data.chatMessages.data, ...action.payload.messages];
       state.data.chatMessages.count = action.payload.count;
       state.data.chatMessages.hasMore = action.payload.hasMore;
+      state.data.chatMessages.loading = false;
     });
   },
 });
