@@ -30,14 +30,16 @@ interface Props {
   returnSelected: string[];
   buttonAction?: () => void;
   handleClose: () => void;
+  getData: any;
+  data: any;
 }
 
 const TableDialog: React.FC<Props> = ({
   open,
   title,
   headers,
-  navigation,
-
+  data
+  getData,
   buttonAction,
   handleClose,
 }) => {
@@ -49,9 +51,13 @@ const TableDialog: React.FC<Props> = ({
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
 
+  useEffect(() => {
+    getData(skip, limit, search);
+  }, [skip, limit, search]);
+
   const debouncedSearch: string = useDebounce(search, 500);
 
-  const { users, count } = useAppSelector((state) => state.authenticationSlice.data);
+ 
 
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch }));
@@ -97,7 +103,7 @@ const TableDialog: React.FC<Props> = ({
             ),
           }}
         />
-        <DataTable headers={headers} dsData={users} />
+        <DataTable headers={headers} dsData={data.users} />
         <Paginator
           count={count}
           limit={limit}

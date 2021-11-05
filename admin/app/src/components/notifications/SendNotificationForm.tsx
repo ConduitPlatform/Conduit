@@ -1,5 +1,5 @@
 import { Container, FormControl, InputLabel, MenuItem, Select } from '@material-ui/core';
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
@@ -13,6 +13,7 @@ import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
+import TableDialog from '../common/TableDialog';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -33,7 +34,17 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const dispatch = useDispatch();
   const [select, setSelect] = useState<string | number>(-1);
 
-  const { users } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+  const { users, count } = useAppSelector((state) => state.authenticationSlice.data);
+
+  const getData = useCallback((params?: { skip: number; limit: number; search: string }) => {
+    dispatch(asyncGetAuthUserData(params));
+  }, []);
+
+  useEffect(() => {
+    if (drawer) {
+      getData();
+    }
+  });
 
   useEffect(() => {
     dispatch(asyncGetAuthUserData({ skip: 0, limit: 100, search: '', filter: 'all' }));
@@ -133,6 +144,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           </Grid>
         </form>
       </Paper>
+      <TableDialog getData={getData} data={{ users, count }} />
     </Container>
   );
 };
