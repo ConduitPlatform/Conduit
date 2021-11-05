@@ -30,13 +30,16 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.error.main,
   },
   success: {
-    backgroundColor: theme.palette.success.main,
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
   },
   info: {
-    backgroundColor: theme.palette.info.main,
+    backgroundColor: theme.palette.secondary.main,
+    color: theme.palette.secondary.contrastText,
   },
   warning: {
-    backgroundColor: theme.palette.warning.main,
+    backgroundColor: theme.palette.warning.dark,
+    color: theme.palette.warning.contrastText,
   },
 }));
 
