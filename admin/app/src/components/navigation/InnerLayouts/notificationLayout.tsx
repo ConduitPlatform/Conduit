@@ -2,13 +2,9 @@ import React from 'react';
 import SharedLayout from './sharedLayout';
 import { Notifications } from '@material-ui/icons';
 
-const NotificationLayout: React.FC<unknown> = ({ children }) => {
-  const pathNames = [
-    '/push-notifications/view',
-    '/push-notifications/send',
-    '/push-notifications/settings',
-  ];
-  const labels = ['view', 'send', 'settings'];
+const NotificationLayout: React.FC = ({ children }) => {
+  const pathNames = ['/push-notifications/send', '/push-notifications/settings'];
+  const labels = ['send', 'settings'];
 
   return (
     <SharedLayout

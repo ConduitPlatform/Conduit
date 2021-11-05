@@ -1,9 +1,6 @@
 import { createStyles, makeStyles } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
-import Typography from '@material-ui/core/Typography';
-import { Box, Button } from '@material-ui/core';
+import { Box, Button, Typography, Tabs, Tab } from '@material-ui/core';
 import { useRouter } from 'next/router';
 
 const useStyles = makeStyles((theme) =>

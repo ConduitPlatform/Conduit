@@ -2,7 +2,7 @@ import React from 'react';
 import SharedLayout from './sharedLayout';
 import { Settings } from '@material-ui/icons';
 
-const SettingsLayout: React.FC<unknown> = ({ children }) => {
+const SettingsLayout: React.FC = ({ children }) => {
   const pathNames = [
     '/settings/clientsdk',
     '/settings/secrets',

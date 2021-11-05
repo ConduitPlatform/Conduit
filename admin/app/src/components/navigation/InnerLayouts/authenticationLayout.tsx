@@ -2,7 +2,7 @@ import React from 'react';
 import SharedLayout from './sharedLayout';
 import { People } from '@material-ui/icons';
 
-const AuthenticationLayout: React.FC<unknown> = ({ children }) => {
+const AuthenticationLayout: React.FC = ({ children }) => {
   const pathNames = [
     '/authentication/users',
     '/authentication/signIn',

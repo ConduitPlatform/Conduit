@@ -2,7 +2,7 @@ import React from 'react';
 import SharedLayout from './sharedLayout';
 import { Payment } from '@material-ui/icons';
 
-const PaymentsLayout: React.FC<unknown> = ({ children }) => {
+const PaymentsLayout: React.FC = ({ children }) => {
   const pathNames = [
     '/payments/customers',
     '/payments/products',
