@@ -11,12 +11,12 @@
       "protoName": "sendNotification"
     },
     {
-      "path": "/send-many",
+      "path": "/sendMany",
       "method": "POST",
       "protoName": "sendManyNotifications"
     },
     {
-      "path": "/send-to-many-devices",
+      "path": "/sendToManyDevices",
       "method": "POST",
       "protoName": "sendToManyDevices"
     }

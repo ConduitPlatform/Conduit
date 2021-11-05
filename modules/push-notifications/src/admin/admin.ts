@@ -31,7 +31,7 @@ export class AdminHandler {
         sendNotification: this.sendNotification.bind(this),
         sendManyNotifications: this.sendManyNotifications.bind(this),
         sendToManyDevices: this.sendToManyDevices.bind(this),
-        getNotificationTokens: this.getNotificationTokens.bind(this),
+        getNotificationToken: this.getNotificationToken.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -135,7 +135,7 @@ export class AdminHandler {
     return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
   }
 
-  async getNotificationTokens(call: RouterRequest, callback: RouterResponse) {
+  async getNotificationToken(call: RouterRequest, callback: RouterResponse) {
     const { userId } = JSON.parse(call.request.params);
     if (isNil(userId)) {
       return callback({
