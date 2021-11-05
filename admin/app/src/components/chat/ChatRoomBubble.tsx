@@ -3,13 +3,14 @@ import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
   },
   contentContainer: {
-    backgroundColor: 'grey',
+    backgroundColor: theme.palette.grey[700],
     borderRadius: theme.spacing(2),
     padding: theme.spacing(1, 2),
     maxWidth: '80%',
@@ -23,17 +24,17 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ChatRoomBubble: FC = ({ ...rest }) => {
+interface Props extends BoxProps {
+  message: string;
+}
+
+const ChatRoomBubble: FC<Props> = ({ message, className, ...rest }) => {
   const classes = useStyles();
   return (
-    <Box className={classes.root} {...rest}>
+    <Box className={clsx(classes.root, className)} {...rest}>
       <Box className={classes.iconContainer} />
       <Box className={classes.contentContainer}>
-        <Typography variant="body2">
-          {`There are many variations of passages of Lorem Ipsum available, but the majority have
-          suffered alteration in some form, by injected humour, or randomised words which don't look
-          even slightly believable.`}
-        </Typography>
+        <Typography variant="body2">{message}</Typography>
       </Box>
     </Box>
   );

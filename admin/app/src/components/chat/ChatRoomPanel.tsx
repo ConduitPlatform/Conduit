@@ -13,6 +13,9 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     overflowY: 'scroll',
   },
+  bubble: {
+    marginBottom: theme.spacing(2),
+  },
 }));
 
 interface Props extends BoxProps {
@@ -23,7 +26,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
   const {
-    chatMessages: { data, count, skip, hasMore },
+    chatMessages: { data, skip, hasMore },
   } = useAppSelector((state) => state.chatSlice.data);
   const { loading } = useAppSelector((state) => state.appSlice);
 
@@ -52,26 +55,15 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
 
   return (
     <Box className={classes.root} {...rest}>
-      {data.map((message, index) => {
+      {data.map((item, index) => {
         if (index === data.length - 1) {
           return (
-            <div
-              ref={lastMessageElementRef}
-              style={{ margin: '48px 0', backgroundColor: 'purple' }}
-              key={index}>
-              <Box>{message.message}</Box>
-              <Box>{message.message}</Box>
-              <Box>{message.message}</Box>
+            <div ref={lastMessageElementRef} key={index}>
+              <ChatRoomBubble message={item.message} className={classes.bubble} />
             </div>
           );
         }
-        return (
-          <Box key={index} style={{ margin: '48px 0', backgroundColor: 'purple' }}>
-            <Box>{message.message}</Box>
-            <Box>{message.message}</Box>
-            <Box>{message.message}</Box>
-          </Box>
-        );
+        return <ChatRoomBubble message={item.message} className={classes.bubble} key={index} />;
       })}
     </Box>
   );
