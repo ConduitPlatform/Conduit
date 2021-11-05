@@ -4,7 +4,7 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { asyncGetChatRooms } from '../../redux/slices/chatSlice';
+import { asyncGetChatRooms, clearChatMessages } from '../../redux/slices/chatSlice';
 import ChatRoomPanel from './ChatRoomPanel';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import CreateChatRoomDrawer from './CreateChatRoomDrawer';
@@ -64,6 +64,7 @@ const ChatRooms: React.FC = () => {
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
+    dispatch(clearChatMessages());
   };
 
   const onCreateChatRoom = () => {

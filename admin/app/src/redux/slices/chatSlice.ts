@@ -15,6 +15,7 @@ interface IChatSlice {
       data: IChatMessage[];
       count: number;
       hasMore: boolean;
+      skip: number;
     };
   };
 }
@@ -29,6 +30,7 @@ const initialState: IChatSlice = {
       data: [],
       count: 0,
       hasMore: true,
+      skip: 0,
     },
   },
 };
@@ -51,7 +53,6 @@ export const asyncGetChatMessages = createAsyncThunk(
   'chat/getChatMessages',
   async (params: { skip: number; senderId?: string; roomId?: string }, thunkAPI) => {
     try {
-      console.log('asyncGetChatMessages called');
       const {
         data: { messages, count },
       } = await getChatMessages(params);
@@ -71,6 +72,12 @@ const chatSlice = createSlice({
     clearChatStore: () => {
       return initialState;
     },
+    addChatMessagesSkip: (state) => {
+      state.data.chatMessages.skip += 10;
+    },
+    clearChatMessages: (state) => {
+      state.data.chatMessages = initialState.data.chatMessages;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
@@ -86,4 +93,4 @@ const chatSlice = createSlice({
 });
 
 export default chatSlice.reducer;
-export const { clearChatStore } = chatSlice.actions;
+export const { clearChatStore, clearChatMessages, addChatMessagesSkip } = chatSlice.actions;
