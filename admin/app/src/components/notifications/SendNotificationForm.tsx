@@ -88,12 +88,13 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   };
 
   const handleSendNotification = () => {
+    setFormState({ ...formState, userIds: selectedUsers });
     handleSend(formState);
   };
 
-  const removeSelectedUser = (idx: number) => {
-    const newArray = selectedUsers.splice(idx, 1);
-    setSelectedUsers(newArray);
+  const removeSelectedUser = (i: number) => {
+    const filteredArray = selectedUsers.filter((user, index) => index !== i);
+    setSelectedUsers(filteredArray);
   };
 
   return (
@@ -114,7 +115,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
               <>
                 <Grid className={classes.center} item xs={12}>
                   <Typography className={classes.center} variant="caption">
-                    Selected users:{' '}
+                    Selected users:
                   </Typography>
                 </Grid>
                 <Grid className={classes.chip} item xs={12}>

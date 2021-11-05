@@ -159,7 +159,12 @@ const TableDialog: React.FC<Props> = ({
         <Button onClick={handleClose} color="primary">
           Cancel
         </Button>
-        <Button onClick={() => handleAction()} color="secondary" variant="contained" autoFocus>
+        <Button
+          disabled={selectedElements.length < 1 ? true : false}
+          onClick={() => handleAction()}
+          color="secondary"
+          variant="contained"
+          autoFocus>
           {buttonText}
         </Button>
       </DialogActions>
