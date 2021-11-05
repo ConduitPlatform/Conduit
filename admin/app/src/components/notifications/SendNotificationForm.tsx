@@ -33,22 +33,41 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const [select, setSelect] = useState<string | number>(-1);
+  const [drawer, setDrawer] = useState<boolean>(false);
 
-  const { users, count } = useAppSelector((state) => state.authenticationSlice.data);
+  const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
-  const getData = useCallback((params?: { skip: number; limit: number; search: string }) => {
-    dispatch(asyncGetAuthUserData(params));
-  }, []);
+  const getData = useCallback(
+    (params: { skip: number; limit: number; search: string; filter: string }) => {
+      dispatch(asyncGetAuthUserData(params));
+    },
+    [dispatch]
+  );
 
   useEffect(() => {
     if (drawer) {
-      getData();
+      getData;
     }
-  });
+  }, [getData, drawer]);
 
-  useEffect(() => {
-    dispatch(asyncGetAuthUserData({ skip: 0, limit: 100, search: '', filter: 'all' }));
-  }, [dispatch]);
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Email', sort: 'email' },
+    { title: 'Active', sort: 'active' },
+    { title: 'Verified', sort: 'isVerified' },
+    { title: 'Registered At', sort: 'createdAt' },
+  ];
+  const formatData = (users: AuthUser[]) => {
+    return users.map((u) => {
+      return {
+        _id: u._id,
+        Email: u.email ? u.email : 'N/A',
+        Active: u.active,
+        Verified: u.isVerified,
+        'Registered At': u.createdAt,
+      };
+    });
+  };
 
   const [formState, setFormState] = useState<NotificationData>({
     title: '',
@@ -93,20 +112,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl variant="outlined" fullWidth>
-                <InputLabel>{extractLabel()}</InputLabel>
-                <Select label="Select user" value={select} onChange={handleUserChange}>
-                  <MenuItem value={-1}>
-                    <em>None</em>
-                  </MenuItem>
-                  {users.length > 0 &&
-                    users.map((user, index: number) => (
-                      <MenuItem key={index} value={user._id}>
-                        {user.email}
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
+              <Button onClick={() => setDrawer(true)}>Add users</Button>
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -144,7 +150,14 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           </Grid>
         </form>
       </Paper>
-      <TableDialog getData={getData} data={{ users, count }} />
+      <TableDialog
+        open={drawer}
+        title={'Select users'}
+        headers={headers}
+        getData={getData}
+        data={{ tableData: formatData(users), count: count }}
+        handleClose={() => setDrawer(false)}
+      />
     </Container>
   );
 };

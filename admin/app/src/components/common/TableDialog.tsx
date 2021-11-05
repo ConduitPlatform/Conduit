@@ -10,7 +10,6 @@ import { InputAdornment, makeStyles, TextField } from '@material-ui/core';
 import DataTable from './DataTable';
 import Paginator from './Paginator';
 import SearchIcon from '@material-ui/icons/Search';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
 import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
@@ -27,46 +26,60 @@ interface Props {
   open: boolean;
   title?: string;
   headers?: { title: string; sort: string }[];
-  returnSelected: string[];
+  returnSelected?: string[];
   buttonAction?: () => void;
   handleClose: () => void;
   getData: any;
-  data: any;
+  data: { tableData: any[]; count: number };
 }
 
 const TableDialog: React.FC<Props> = ({
   open,
   title,
   headers,
-  data
+  data,
   getData,
   buttonAction,
   handleClose,
 }) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
 
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
-
-  useEffect(() => {
-    getData(skip, limit, search);
-  }, [skip, limit, search]);
+  const [selectedElements, setSelectedElements] = useState<string[]>([]);
 
   const debouncedSearch: string = useDebounce(search, 500);
 
- 
-
   useEffect(() => {
-    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch }));
-  }, [dispatch, limit, skip, debouncedSearch]);
+    getData(skip, limit, search, debouncedSearch);
+  }, [skip, limit, search, debouncedSearch, getData]);
 
   const handleLimitChange = (value: number) => {
     setLimit(value);
     setSkip(0);
     setPage(0);
+  };
+
+  const handleSelect = (id: string) => {
+    const newSelectedElements = [...selectedElements];
+    if (selectedElements.includes(id)) {
+      const index = newSelectedElements.findIndex((newId) => newId === id);
+      newSelectedElements.splice(index, 1);
+    } else {
+      newSelectedElements.push(id);
+    }
+    setSelectedElements(newSelectedElements);
+  };
+
+  const handleSelectAll = (data: any) => {
+    if (selectedElements.length === data.tableData.length) {
+      setSelectedElements([]);
+      return;
+    }
+    const newSelectedElements = data.map((item: any) => item._id);
+    setSelectedElements(newSelectedElements);
   };
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
@@ -103,9 +116,14 @@ const TableDialog: React.FC<Props> = ({
             ),
           }}
         />
-        <DataTable headers={headers} dsData={data.users} />
+        <DataTable
+          headers={headers}
+          dsData={data.tableData}
+          handleSelect={handleSelect}
+          handleSelectAll={handleSelectAll}
+        />
         <Paginator
-          count={count}
+          count={data.count}
           limit={limit}
           page={page}
           handleLimitChange={handleLimitChange}
