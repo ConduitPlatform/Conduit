@@ -3,6 +3,7 @@ import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
+import ChatRoomBubble from './ChatRoomBubble';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -20,6 +21,7 @@ const ChatRoomPanel: FC<Props> = ({ name, ...rest }) => {
   return (
     <Box className={classes.root} {...rest}>
       <Typography>{name}</Typography>
+      <ChatRoomBubble />
     </Box>
   );
 };
