@@ -84,7 +84,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     params: ISendNotificationToManyDevices,
     databaseAdapter: any
   ): Promise<any> {
-    const notificationTokens = await databaseAdapter.find('NotificationToken', {
+    const notificationTokens = await databaseAdapter.findMany('NotificationToken', {
       userId: { $in: params.sendTo },
     });
     if (notificationTokens.length === 0) return;
