@@ -13,6 +13,7 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
     flex: 1,
+    overflow: 'hidden',
   },
   topContainer: {
     display: 'flex',
@@ -100,9 +101,9 @@ const ChatRooms: React.FC = () => {
             return <Tab label={item.name} key={index} />;
           })}
         </Tabs>
-        {chatRoomPanelData.map((item, index) => {
+        {data.map((item, index) => {
           if (index === selected) {
-            return <ChatRoomPanel name={item.name} key={index} />;
+            return <ChatRoomPanel panelData={item} key={index} />;
           }
         })}
       </Paper>
