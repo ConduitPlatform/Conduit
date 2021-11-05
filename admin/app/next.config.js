@@ -74,6 +74,11 @@ module.exports = (phase) => {
         destination: '/sms/send',
         permanent: true,
       },
+      {
+        source: '/payments',
+        destination: '/payments/customers',
+        permanent: true,
+      },
     ];
   };
 
