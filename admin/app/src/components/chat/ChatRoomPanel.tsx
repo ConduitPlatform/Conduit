@@ -6,12 +6,18 @@ import ChatRoomBubble from './ChatRoomBubble';
 import { IChatRoom } from '../../models/chat/ChatModels';
 import { addChatMessagesSkip, asyncGetChatMessages } from '../../redux/slices/chatSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+import { Paper } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flex: 1,
     padding: theme.spacing(2),
     overflowY: 'scroll',
+  },
+  infoContainer: {
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.grey[600],
+    marginBottom: theme.spacing(2),
   },
   bubble: {
     marginBottom: theme.spacing(2),
@@ -55,6 +61,9 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
 
   return (
     <Box className={classes.root} {...rest}>
+      <Paper className={classes.infoContainer} elevation={6}>
+        Info
+      </Paper>
       {data.map((item, index) => {
         if (index === data.length - 1) {
           return (

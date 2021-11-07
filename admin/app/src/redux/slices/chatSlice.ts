@@ -75,7 +75,7 @@ const chatSlice = createSlice({
       return initialState;
     },
     addChatMessagesSkip: (state) => {
-      state.data.chatMessages.skip += 10;
+      state.data.chatMessages.skip += 20;
     },
     clearChatMessages: (state) => {
       state.data.chatMessages = initialState.data.chatMessages;
