@@ -126,23 +126,25 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     handleSave(data);
   };
 
-  const handleFileChange = (e: any) => {
+  const handleFileChange = (e) => {
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0], 'UTF-8');
-    fileReader.onload = (event: any) => {
-      const jsonToObject = JSON.parse(event.target?.result);
+    fileReader.onload = (event) => {
+      if (event.target) {
+        const jsonToObject = JSON.parse(event.target.result as string);
 
-      if (
-        'project_id' in jsonToObject &&
-        'private_key' in jsonToObject &&
-        'client_email' in jsonToObject
-      )
-        setFormData({
-          ...formData,
-          projectId: jsonToObject.project_id,
-          privateKey: jsonToObject.private_key,
-          clientEmail: jsonToObject.client_email,
-        });
+        if (
+          'project_id' in jsonToObject &&
+          'private_key' in jsonToObject &&
+          'client_email' in jsonToObject
+        )
+          setFormData({
+            ...formData,
+            projectId: jsonToObject.project_id,
+            privateKey: jsonToObject.private_key,
+            clientEmail: jsonToObject.client_email,
+          });
+      }
     };
   };
 
