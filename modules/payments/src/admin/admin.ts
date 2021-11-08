@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
+import { populateArray } from '../utils/populateArray';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
@@ -329,8 +330,8 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {},populates;
-    if(!isNil(populate) && populate){
-      populates = populate;
+    if(!isNil(populate)){
+      populates = populateArray(populate);
     }
     const subscriptionDocumentsPromise = this.database.findMany(
         'Subscription',
