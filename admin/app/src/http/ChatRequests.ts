@@ -17,6 +17,7 @@ export const createChatRoom = (params: { name: string; participants: string[] })
 export const getChatRooms = (params: { skip: number; limit: number; search?: string }) =>
   axios.get(`${CONDUIT_API}/admin/chat/rooms`, {
     params: {
+      populate: 'participants',
       ...params,
     },
   });

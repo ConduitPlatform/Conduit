@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Paper } from '@material-ui/core';
+import { Box, Button, Paper, TextField } from '@material-ui/core';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import { makeStyles } from '@material-ui/core/styles';
@@ -8,12 +8,14 @@ import { asyncGetChatRooms, clearChatMessages } from '../../redux/slices/chatSli
 import ChatRoomPanel from './ChatRoomPanel';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import CreateChatRoomDrawer from './CreateChatRoomDrawer';
+import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
     flex: 1,
     overflow: 'hidden',
+    padding: theme.spacing(1),
   },
   topContainer: {
     display: 'flex',
@@ -22,6 +24,12 @@ const useStyles = makeStyles((theme) => ({
   },
   tabs: {
     minWidth: theme.spacing(25),
+  },
+  search: {
+    marginBottom: theme.spacing(1),
+  },
+  tabContainer: {
+    padding: theme.spacing(0, 1),
   },
 }));
 
@@ -48,11 +56,14 @@ const ChatRooms: React.FC = () => {
 
   const [selected, setSelected] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>('');
+
+  const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    const params = { skip: 0, limit: 10 };
+    const params = { skip: 0, limit: 10, search: debouncedSearch };
     dispatch(asyncGetChatRooms(params));
-  }, [dispatch]);
+  }, [debouncedSearch, dispatch]);
 
   const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
     setSelected(newValue);
@@ -84,16 +95,27 @@ const ChatRooms: React.FC = () => {
         </Button>
       </Box>
       <Paper className={classes.root}>
-        <Tabs
-          orientation="vertical"
-          variant="scrollable"
-          value={selected}
-          onChange={handleChange}
-          className={classes.tabs}>
-          {data.map((item, index) => {
-            return <Tab label={item.name} key={index} />;
-          })}
-        </Tabs>
+        <Box className={classes.tabContainer}>
+          <TextField
+            className={classes.search}
+            label={'Search'}
+            variant={'outlined'}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+          <Tabs
+            orientation="vertical"
+            variant="scrollable"
+            value={selected}
+            onChange={handleChange}
+            className={classes.tabs}>
+            {data.map((item, index) => {
+              return <Tab label={item.name} key={index} />;
+            })}
+          </Tabs>
+        </Box>
         {data.map((item, index) => {
           if (index === selected) {
             return <ChatRoomPanel panelData={item} key={index} />;

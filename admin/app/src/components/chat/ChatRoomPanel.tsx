@@ -77,8 +77,6 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
     dispatch(asyncGetChatMessages(params));
   }, [panelData._id, dispatch, skip]);
 
-  console.log('data', panelData);
-
   const handleCloseModal = () => {
     setInfoDialog(false);
   };
