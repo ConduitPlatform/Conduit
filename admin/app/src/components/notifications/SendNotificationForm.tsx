@@ -57,8 +57,8 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
     { title: 'Verified', sort: 'isVerified' },
     { title: 'Registered At', sort: 'createdAt' },
   ];
-  const formatData = (users: AuthUser[]) => {
-    return users.map((u) => {
+  const formatData = (usersToFormat: AuthUser[]) => {
+    return usersToFormat.map((u) => {
       return {
         _id: u._id,
         Email: u.email ? u.email : 'N/A',

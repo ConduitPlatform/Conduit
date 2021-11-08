@@ -96,12 +96,12 @@ const TableDialog: React.FC<Props> = ({
     handleClose();
   };
 
-  const handleSelectAll = (data: any) => {
-    if (selectedElements.length === data.length) {
+  const handleSelectAll = (elements: any) => {
+    if (selectedElements.length === elements.length) {
       setSelectedElements([]);
       return;
     }
-    const newSelectedElements = data.map((item: any) => item._id);
+    const newSelectedElements = elements.map((item: any) => item._id);
     setSelectedElements(newSelectedElements);
   };
 

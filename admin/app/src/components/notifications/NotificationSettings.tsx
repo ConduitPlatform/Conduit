@@ -129,8 +129,8 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
   const handleFileChange = (e: any) => {
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0], 'UTF-8');
-    fileReader.onload = (e: any) => {
-      const jsonToObject = JSON.parse(e.target?.result);
+    fileReader.onload = (event: any) => {
+      const jsonToObject = JSON.parse(event.target?.result);
 
       if (
         'project_id' in jsonToObject &&
