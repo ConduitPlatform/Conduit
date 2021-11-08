@@ -16,9 +16,7 @@ import {
 } from '@material-ui/core';
 import { InfoOutlined } from '@material-ui/icons';
 import moment from 'moment';
-import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
-import useLongPress from '../../hooks/useLongPress';
 import clsx from 'clsx';
 
 const useStyles = makeStyles((theme) => ({
@@ -31,7 +29,6 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     overflowY: 'scroll',
-    position: 'relative',
   },
   infoContainer: {
     padding: theme.spacing(1, 2),
@@ -40,6 +37,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    position: 'relative',
   },
   infoButton: {
     cursor: 'pointer',
@@ -69,8 +67,8 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.spacing(3),
     padding: theme.spacing(1, 2),
     position: 'absolute',
-    top: theme.spacing(1),
-    right: theme.spacing(1),
+    top: theme.spacing(8),
+    right: theme.spacing(2.5),
   },
 }));
 
@@ -150,13 +148,13 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
             <InfoOutlined />
           </IconButton>
         </Box>
-      </Paper>
-      <Box className={classes.contentContainer} {...rest}>
         {selected.length > 0 && (
           <Box className={classes.selectedContainer}>
             <Typography>{selected.length} selected</Typography>
           </Box>
         )}
+      </Paper>
+      <Box className={classes.contentContainer} {...rest}>
         {data.map((item, index) => {
           if (index === data.length - 1) {
             return (
