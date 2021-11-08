@@ -1,7 +1,6 @@
-import React, { FC } from 'react';
+import React, { forwardRef } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
-import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
 import { IChatMessage } from '../../models/chat/ChatModels';
@@ -27,14 +26,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-interface Props extends BoxProps {
+interface Props {
   data: IChatMessage;
+  className: string;
 }
 
-const ChatRoomBubble: FC<Props> = ({ data, className, ...rest }) => {
+const ChatRoomBubble = forwardRef<HTMLDivElement, Props>(({ data, className, ...rest }, ref) => {
   const classes = useStyles();
   return (
-    <Box className={clsx(classes.root, className)} {...rest}>
+    <div className={clsx(classes.root, className)} ref={ref} {...rest}>
       <Box className={classes.iconContainer} />
       <Tooltip
         title={`Sent: ${moment(data.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
@@ -43,8 +43,10 @@ const ChatRoomBubble: FC<Props> = ({ data, className, ...rest }) => {
           <Typography variant="body2">{data.message}</Typography>
         </Box>
       </Tooltip>
-    </Box>
+    </div>
   );
-};
+});
+
+ChatRoomBubble.displayName = 'ChatRoomBubble';
 
 export default ChatRoomBubble;

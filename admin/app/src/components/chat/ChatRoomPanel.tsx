@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
     overflowY: 'scroll',
   },
   infoContainer: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1, 2),
     backgroundColor: theme.palette.grey[600],
     marginLeft: theme.spacing(1),
     display: 'flex',
@@ -53,9 +53,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
   },
   actionButton: {
-    height: theme.spacing(3),
-    width: theme.spacing(3),
-    marginLeft: theme.spacing(1),
+    padding: theme.spacing(1),
   },
 }));
 
@@ -113,10 +111,12 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   };
 
   const defaultOptions = {
-    shouldPreventDefault: true,
+    shouldPreventDefault: false,
     delay: 500,
   };
   const longPressEvent = useLongPress(onLongPress, onPress, defaultOptions);
+
+  console.log('longPressEvent', { ...longPressEvent });
 
   return (
     <Box className={classes.root}>
@@ -129,7 +129,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
           <IconButton className={classes.actionButton}>
             <DeleteIcon />
           </IconButton>
-          <IconButton onClick={() => handleOpenModal()} className={classes.actionButton}>
+          <IconButton className={classes.actionButton} onClick={() => handleOpenModal()}>
             <InfoOutlined />
           </IconButton>
         </Box>
@@ -139,11 +139,18 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
           if (index === data.length - 1) {
             return (
               <div ref={lastMessageElementRef} key={index}>
-                <ChatRoomBubble data={item} className={classes.bubble} />
+                <ChatRoomBubble data={item} className={classes.bubble} {...longPressEvent} />
               </div>
             );
           }
-          return <ChatRoomBubble data={item} className={classes.bubble} key={index} />;
+          return (
+            <ChatRoomBubble
+              data={item}
+              className={classes.bubble}
+              key={index}
+              {...longPressEvent}
+            />
+          );
         })}
       </Box>
       <Dialog onClose={handleCloseModal} open={infoDialog} fullWidth maxWidth="xs">

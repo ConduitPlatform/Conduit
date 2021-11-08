@@ -26,7 +26,7 @@ export const getChatMessages = (params: { skip: number; senderId?: string; roomI
   axios.get(`${CONDUIT_API}/admin/chat/messages`, {
     params: {
       ...params,
-      limit: 10,
+      limit: 15,
     },
   });
 
