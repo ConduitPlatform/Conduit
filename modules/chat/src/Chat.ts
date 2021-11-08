@@ -45,7 +45,7 @@ export default class ChatModule implements ConduitServiceModule {
   }
 
   async createRoom(call: any, callback: any) {
-    const { name, participants } = call.request.params;
+    const { name, participants } = call.request;
 
     if (isNil(participants) || !isArray(participants) || participants.length === 0) {
       return callback({
@@ -87,7 +87,7 @@ export default class ChatModule implements ConduitServiceModule {
   }
 
   async deleteRoom(call: any, callback: any) {
-    const { id } = call.request.params;
+    const { id } = call.request;
 
     let errorMessage: string | null = null;
     const room: any = await this.database
