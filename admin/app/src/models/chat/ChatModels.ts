@@ -1,3 +1,9 @@
+export interface IChatConfig {
+  active: boolean;
+  allowMessageDelete: boolean;
+  allowMessageEdit: boolean;
+}
+
 export interface IChatRoom {
   createdAt: string;
   name: string;

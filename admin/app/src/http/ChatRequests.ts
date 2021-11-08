@@ -1,5 +1,13 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
+import { IChatConfig } from '../models/chat/ChatModels';
+
+export const getChatConfig = () => axios.get(`${CONDUIT_API}/admin/config/chat`);
+
+export const putChatConfig = (params: IChatConfig) =>
+  axios.put(`${CONDUIT_API}/admin/config/chat`, {
+    ...params,
+  });
 
 export const createChatRoom = (params: { name: string; participants: string[] }) =>
   axios.post(`${CONDUIT_API}/admin/chat/room`, {

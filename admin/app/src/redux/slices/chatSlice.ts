@@ -2,10 +2,11 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification } from '../../utils/useNotifier';
-import { getChatMessages, getChatRooms } from '../../http/ChatRequests';
-import { IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
+import { getChatConfig, getChatMessages, getChatRooms } from '../../http/ChatRequests';
+import { IChatConfig, IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
 
 interface IChatSlice {
+  config: IChatConfig;
   data: {
     chatRooms: {
       data: IChatRoom[];
@@ -22,6 +23,11 @@ interface IChatSlice {
 }
 
 const initialState: IChatSlice = {
+  config: {
+    active: false,
+    allowMessageDelete: false,
+    allowMessageEdit: false,
+  },
   data: {
     chatRooms: {
       data: [],
@@ -36,6 +42,20 @@ const initialState: IChatSlice = {
     },
   },
 };
+
+export const asyncGetChatConfig = createAsyncThunk(
+  'chat/getChatConfig',
+  async (params, thunkAPI) => {
+    try {
+      const { data } = await getChatConfig();
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
 
 export const asyncGetChatRooms = createAsyncThunk(
   'chat/getChatRooms',
@@ -82,6 +102,9 @@ const chatSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(asyncGetChatConfig.fulfilled, (state, action) => {
+      state.config = action.payload;
+    });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
       state.data.chatRooms.data = action.payload.chatRoomDocuments;
       state.data.chatRooms.count = action.payload.totalCount;

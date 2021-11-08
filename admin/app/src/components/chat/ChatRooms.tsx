@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Modal, Paper, Typography } from '@material-ui/core';
+import { Box, Button, Paper } from '@material-ui/core';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import { makeStyles } from '@material-ui/core/styles';
@@ -25,14 +25,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const chatRoomPanelData = [
-  { name: 'chatRoom 1' },
-  { name: 'chatRoom 2' },
-  { name: 'chatRoom 3' },
-  { name: 'chatRoom 4' },
-  { name: 'chatRoom 5' },
-];
-
 const participants = [
   'Oliver Hansen',
   'Van Henry',
@@ -51,7 +43,7 @@ const ChatRooms: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const {
-    chatRooms: { data, count },
+    chatRooms: { data },
   } = useAppSelector((state) => state.chatSlice.data);
 
   const [selected, setSelected] = useState(0);
@@ -98,7 +90,7 @@ const ChatRooms: React.FC = () => {
           value={selected}
           onChange={handleChange}
           className={classes.tabs}>
-          {chatRoomPanelData.map((item, index) => {
+          {data.map((item, index) => {
             return <Tab label={item.name} key={index} />;
           })}
         </Tabs>
