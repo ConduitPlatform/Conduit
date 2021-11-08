@@ -330,7 +330,7 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
     let query:any = {},populates;
-    if(!isNil(populate) && populate){
+    if(!isNil(populate)){
       populates = populateArray(populate);
     }
     const subscriptionDocumentsPromise = this.database.findMany(

@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { populateArray} from '../utils';
+import {populateArray} from '../utils';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');

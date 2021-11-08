@@ -24,6 +24,7 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
     }
   }
 }
+
 export function populateArray(pop: any) {
   if (!pop) return pop;
   if (pop.indexOf(',') !== -1) {
