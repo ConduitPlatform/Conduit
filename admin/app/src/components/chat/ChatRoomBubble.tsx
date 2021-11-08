@@ -4,6 +4,9 @@ import Typography from '@material-ui/core/Typography';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
 import clsx from 'clsx';
+import { IChatMessage } from '../../models/chat/ChatModels';
+import { Tooltip } from '@material-ui/core';
+import moment from 'moment';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -25,17 +28,21 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface Props extends BoxProps {
-  message: string;
+  data: IChatMessage;
 }
 
-const ChatRoomBubble: FC<Props> = ({ message, className, ...rest }) => {
+const ChatRoomBubble: FC<Props> = ({ data, className, ...rest }) => {
   const classes = useStyles();
   return (
     <Box className={clsx(classes.root, className)} {...rest}>
       <Box className={classes.iconContainer} />
-      <Box className={classes.contentContainer}>
-        <Typography variant="body2">{message}</Typography>
-      </Box>
+      <Tooltip
+        title={`Sent: ${moment(data.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
+        placement="right">
+        <Box className={classes.contentContainer}>
+          <Typography variant="body2">{data.message}</Typography>
+        </Box>
+      </Tooltip>
     </Box>
   );
 };
