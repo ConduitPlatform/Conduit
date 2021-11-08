@@ -19,6 +19,7 @@ import moment from 'moment';
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
 import useLongPress from '../../hooks/useLongPress';
+import clsx from 'clsx';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -30,6 +31,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     overflowY: 'scroll',
+    position: 'relative',
   },
   infoContainer: {
     padding: theme.spacing(1, 2),
@@ -43,7 +45,14 @@ const useStyles = makeStyles((theme) => ({
     cursor: 'pointer',
   },
   bubble: {
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(2, 1),
+    borderRadius: theme.spacing(1),
+    display: 'flex',
+    alignItems: 'center',
+  },
+  bubbleSelected: {
+    backgroundColor: `${theme.palette.grey[700]}80`,
   },
   dialogInfo: {
     marginBottom: theme.spacing(1),
@@ -54,6 +63,14 @@ const useStyles = makeStyles((theme) => ({
   },
   actionButton: {
     padding: theme.spacing(1),
+  },
+  selectedContainer: {
+    backgroundColor: theme.palette.grey[600],
+    borderRadius: theme.spacing(3),
+    padding: theme.spacing(1, 2),
+    position: 'absolute',
+    top: theme.spacing(1),
+    right: theme.spacing(1),
   },
 }));
 
@@ -70,6 +87,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const { loading } = useAppSelector((state) => state.chatSlice.data.chatMessages);
 
   const [infoDialog, setInfoDialog] = useState<boolean>(false);
+  const [selected, setSelected] = useState<string[]>([]);
 
   const observer = useRef<IntersectionObserver>();
   const lastMessageElementRef = useCallback(
@@ -102,30 +120,29 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
     setInfoDialog(true);
   };
 
-  const onLongPress = () => {
-    console.log('long press');
+  const onLongPress = (id: string) => {
+    if (selected.includes(id)) return;
+    const newSelected = [...selected, id];
+    setSelected(newSelected);
   };
 
-  const onPress = () => {
-    console.log('press');
+  const onPress = (id: string) => {
+    if (selected.length < 1) return;
+    const newSelected = [...selected];
+    if (selected.includes(id)) {
+      const itemIndex = selected.findIndex((selectedId) => selectedId === id);
+      newSelected.splice(itemIndex, 1);
+    } else {
+      newSelected.push(id);
+    }
+    setSelected(newSelected);
   };
-
-  const defaultOptions = {
-    shouldPreventDefault: false,
-    delay: 500,
-  };
-  const longPressEvent = useLongPress(onLongPress, onPress, defaultOptions);
-
-  console.log('longPressEvent', { ...longPressEvent });
 
   return (
     <Box className={classes.root}>
       <Paper className={classes.infoContainer} elevation={6}>
         <Typography>{panelData.name}</Typography>
         <Box className={classes.actionContainer}>
-          <IconButton className={classes.actionButton} {...longPressEvent}>
-            <EditIcon />
-          </IconButton>
           <IconButton className={classes.actionButton}>
             <DeleteIcon />
           </IconButton>
@@ -135,20 +152,39 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
         </Box>
       </Paper>
       <Box className={classes.contentContainer} {...rest}>
+        {selected.length > 0 && (
+          <Box className={classes.selectedContainer}>
+            <Typography>{selected.length} selected</Typography>
+          </Box>
+        )}
         {data.map((item, index) => {
           if (index === data.length - 1) {
             return (
               <div ref={lastMessageElementRef} key={index}>
-                <ChatRoomBubble data={item} className={classes.bubble} {...longPressEvent} />
+                <ChatRoomBubble
+                  data={item}
+                  className={
+                    selected.includes(item._id)
+                      ? clsx(classes.bubble, classes.bubbleSelected)
+                      : classes.bubble
+                  }
+                  onLongPress={onLongPress}
+                  onPress={onPress}
+                />
               </div>
             );
           }
           return (
             <ChatRoomBubble
               data={item}
-              className={classes.bubble}
+              className={
+                selected.includes(item._id)
+                  ? clsx(classes.bubble, classes.bubbleSelected)
+                  : classes.bubble
+              }
+              onLongPress={onLongPress}
+              onPress={onPress}
               key={index}
-              {...longPressEvent}
             />
           );
         })}

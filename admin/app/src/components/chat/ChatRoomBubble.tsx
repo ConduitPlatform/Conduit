@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { FC } from 'react';
 import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { IChatMessage } from '../../models/chat/ChatModels';
 import { Tooltip } from '@material-ui/core';
 import moment from 'moment';
+import useLongPress from '../../hooks/useLongPress';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -23,18 +24,36 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: '50%',
     backgroundColor: 'purple',
     marginRight: theme.spacing(1),
+    cursor: 'pointer',
   },
 }));
 
 interface Props {
   data: IChatMessage;
   className: string;
+  onPress: (id: string) => void;
+  onLongPress: (id: string) => void;
 }
 
-const ChatRoomBubble = forwardRef<HTMLDivElement, Props>(({ data, className, ...rest }, ref) => {
+const ChatRoomBubble: FC<Props> = ({ data, className, onPress, onLongPress, ...rest }) => {
   const classes = useStyles();
+
+  const handleLongPress = () => {
+    onLongPress(data._id);
+  };
+
+  const handlePress = () => {
+    onPress(data._id);
+  };
+
+  const defaultOptions = {
+    shouldPreventDefault: false,
+    delay: 500,
+  };
+  const longPressEvent = useLongPress(handleLongPress, handlePress, defaultOptions);
+
   return (
-    <div className={clsx(classes.root, className)} ref={ref} {...rest}>
+    <div className={clsx(classes.root, className)} {...longPressEvent} {...rest}>
       <Box className={classes.iconContainer} />
       <Tooltip
         title={`Sent: ${moment(data.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
@@ -45,8 +64,6 @@ const ChatRoomBubble = forwardRef<HTMLDivElement, Props>(({ data, className, ...
       </Tooltip>
     </div>
   );
-});
-
-ChatRoomBubble.displayName = 'ChatRoomBubble';
+};
 
 export default ChatRoomBubble;
