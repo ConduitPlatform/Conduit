@@ -2,7 +2,7 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import FormsConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -14,21 +14,12 @@ import { FormsController } from './controllers/forms.controller';
 import { FormSubmissionTemplate } from './templates';
 import { status } from '@grpc/grpc-js';
 
-export default class FormsModule implements ConduitServiceModule {
+export default class FormsModule extends ConduitServiceModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private _router: FormRoutes;
   private _formController: FormsController;
-  private grpcServer: GrpcServer;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);

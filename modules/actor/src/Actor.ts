@@ -2,7 +2,7 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import ActorConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -11,19 +11,10 @@ import ConduitGrpcSdk, {
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 
-export default class ActorModule implements ConduitServiceModule {
+export default class ActorModule extends ConduitServiceModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private grpcServer: GrpcServer;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);

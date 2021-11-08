@@ -28,10 +28,11 @@ import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 
 const MODULE_NAME = 'database';
 
-export class DatabaseProvider implements ConduitServiceModule {
+export class DatabaseProvider extends ConduitServiceModule {
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
 
-  constructor(private readonly conduit: ConduitGrpcSdk) {
+  constructor(protected readonly grpcSdk: ConduitGrpcSdk) {
+    super(grpcSdk)
     const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
     const databaseUrl = process.env.databaseURL
       ? process.env.databaseURL
@@ -46,15 +47,9 @@ export class DatabaseProvider implements ConduitServiceModule {
     }
   }
 
-  private _port: string;
-
-  get port() {
-    return this._port;
-  }
-
   publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
-    this.conduit.bus!.publish('database_provider', sendingSchema);
+    this.grpcSdk.bus!.publish('database_provider', sendingSchema);
     console.log('Updated state');
   }
 
@@ -88,11 +83,11 @@ export class DatabaseProvider implements ConduitServiceModule {
 
   async activate() {
     const self = this;
-    await this.conduit.initializeEventBus();
-    self.conduit.bus?.subscribe('database_provider', (message: string) => {
+    await this.grpcSdk.initializeEventBus();
+    self.grpcSdk.bus?.subscribe('database_provider', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
-          this.conduit.bus!.publish('database_provider', JSON.stringify(k));
+          this.grpcSdk.bus!.publish('database_provider', JSON.stringify(k));
         });
         return;
       }
@@ -137,7 +132,7 @@ export class DatabaseProvider implements ConduitServiceModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    this.conduit.config
+    this.grpcSdk.config
       .getModuleUrlByInstance((call as any).getPeer())
       .then((res: { url: string; moduleName: string }) => {
         schema.owner = res.moduleName;
@@ -271,7 +266,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const docString = JSON.stringify(doc);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:create:${call.request.schemaName}`,
         docString
       );
@@ -292,7 +287,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const docsString = JSON.stringify(docs);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:createMany:${call.request.schemaName}`,
         docsString
       );
@@ -317,7 +312,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:update:${call.request.schemaName}`,
         resultString
       );
@@ -342,7 +337,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:updateMany:${call.request.schemaName}`,
         resultString
       );
@@ -363,7 +358,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:delete:${call.request.schemaName}`,
         resultString
       );
@@ -384,7 +379,7 @@ export class DatabaseProvider implements ConduitServiceModule {
 
       const resultString = JSON.stringify(result);
 
-      this.conduit.bus?.publish(
+      this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:delete:${call.request.schemaName}`,
         resultString
       );

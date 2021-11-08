@@ -4,7 +4,7 @@ import { EmailService } from './services/email.service';
 import { AdminHandlers } from './admin/AdminHandlers';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcRequest,
   GrpcResponse,
@@ -36,20 +36,11 @@ type SendEmailRequest = GrpcRequest<{
 }>;
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
-export default class EmailModule implements ConduitServiceModule {
+export default class EmailModule extends ConduitServiceModule {
   private emailProvider: EmailProvider;
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
-  private grpcServer: GrpcServer;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
