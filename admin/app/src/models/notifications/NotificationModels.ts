@@ -1,7 +1,6 @@
 export interface NotificationData {
-  userId: string;
+  userIds: string[];
   title: string;
-  data: string;
   body: string;
 }
 

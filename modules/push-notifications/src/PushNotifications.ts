@@ -4,7 +4,7 @@ import { FirebaseProvider } from './providers/Firebase.provider';
 import PushNotificationsConfigSchema from './config';
 import { isNil } from 'lodash';
 import path from 'path';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -21,19 +21,10 @@ import {
   SetNotificationTokenResponse,
 } from './types';
 
-export default class PushNotificationsModule implements ConduitServiceModule {
+export default class PushNotificationsModule extends ConduitServiceModule {
   private _provider: IPushNotificationsProvider | undefined;
   private isRunning: boolean = false;
-  private grpcServer!: GrpcServer;
   private adminHandler?: AdminHandler;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port!: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   private _routes!: any[];
 

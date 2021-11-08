@@ -10,8 +10,6 @@ WORKDIR /app/modules/database
 
 ENV CONDUIT_SERVER conduit_server
 
-ENV databaseURL ***REMOVED***
-
 ENV SERVICE_URL 0.0.0.0:5000
 
 ENV REGISTER_NAME true

@@ -14,13 +14,11 @@ import makeStyles from '@material-ui/core/styles/makeStyles';
 import TextField from '@material-ui/core/TextField';
 import clsx from 'clsx';
 import Button from '@material-ui/core/Button';
-import { Formik } from 'formik';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';
-import { asyncSaveNotificationConfig } from '../../redux/slices/notificationsSlice';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
@@ -61,14 +59,16 @@ type NotificationSettingsProps = {
 
 const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSave }) => {
   const classes = useStyles();
-  const [editProvider, setEditProvider] = useState(true);
-  const [formData, setFormData] = useState<INotificationSettings>({
+
+  const initialFormData = {
     active: true,
     providerName: '',
     projectId: '',
     privateKey: '',
     clientEmail: '',
-  });
+  };
+  const [edit, setEdit] = useState<boolean>(false);
+  const [formData, setFormData] = useState<INotificationSettings>(initialFormData);
   const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
   useEffect(() => {
@@ -104,12 +104,12 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
   };
 
   const handleToggleEdit = () => {
-    setEditProvider(false);
+    setEdit(!edit);
   };
 
-  const handleCancelButton = (reset: any) => {
-    reset();
-    setEditProvider(true);
+  const handleCancelButton = () => {
+    setFormData(initialFormData);
+    setEdit(false);
   };
 
   const onFormSubmit = (values: INotificationSettings) => {
@@ -122,7 +122,30 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
         clientEmail: values.clientEmail,
       },
     };
+
     handleSave(data);
+  };
+
+  const handleFileChange = (file: File) => {
+    const fileReader = new FileReader();
+    fileReader.readAsText(file, 'UTF-8');
+    fileReader.onload = (event) => {
+      if (event.target && typeof event.target.result === 'string') {
+        const jsonToObject = JSON.parse(event.target.result);
+
+        if (
+          'project_id' in jsonToObject &&
+          'private_key' in jsonToObject &&
+          'client_email' in jsonToObject
+        )
+          setFormData({
+            ...formData,
+            projectId: jsonToObject.project_id,
+            privateKey: jsonToObject.private_key,
+            clientEmail: jsonToObject.client_email,
+          });
+      }
+    };
   };
 
   const renderFields = () => {
@@ -133,6 +156,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             <InputLabel>Provider</InputLabel>
             <Select
               required
+              disabled={!edit}
               labelId="provider-outlined-label"
               value={formData.providerName}
               onChange={handleSelect}
@@ -146,105 +170,90 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
         </Grid>
         <Grid item xs={12}>
           {formData.providerName && (
-            <Formik
-              // style={{ width: '100%' }}
-              initialValues={formData}
-              onSubmit={(values, { setSubmitting, resetForm }) => {
-                onFormSubmit(values);
-                resetForm({
-                  values: formData,
-                });
-                setSubmitting(false);
-              }}>
-              {({ handleSubmit, handleChange, values, handleReset }) => {
-                return (
-                  <form onSubmit={handleSubmit}>
-                    <Grid item xs={12}>
-                      <TextField
-                        onChange={handleChange}
-                        value={values.projectId}
-                        disabled={editProvider}
-                        variant="outlined"
-                        margin="normal"
-                        required
-                        fullWidth
-                        id="projectId"
-                        label="Project Id"
-                        type="text"
-                        name="projectId"
-                        autoComplete="projectId"
-                        autoFocus
-                        className={clsx(classes.textField, classes.simpleTextField)}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        onChange={handleChange}
-                        value={values.privateKey}
-                        disabled={editProvider}
-                        variant="outlined"
-                        margin="normal"
-                        required
-                        fullWidth
-                        name="privateKey"
-                        label="Private key"
-                        type="text"
-                        id="privateKey"
-                        autoComplete="privateKey"
-                        className={clsx(classes.textField, classes.simpleTextField)}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        onChange={handleChange}
-                        value={values.clientEmail}
-                        disabled={editProvider}
-                        variant="outlined"
-                        margin="normal"
-                        required
-                        fullWidth
-                        name="clientEmail"
-                        label="Client email"
-                        type="email"
-                        id="clientEmail"
-                        autoComplete="clientEmail"
-                        className={clsx(classes.textField, classes.simpleTextField)}
-                      />
-                    </Grid>
-                    <Grid item container justify="flex-end" xs={12}>
-                      {!editProvider ? (
-                        <>
-                          <Button
-                            variant="outlined"
-                            className={classes.buttonSpacing}
-                            onClick={() => handleCancelButton(handleReset)}
-                            color="primary">
-                            Cancel
-                          </Button>
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            className={classes.buttonSpacing}
-                            color="primary"
-                            startIcon={<Save />}>
-                            Save
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="contained"
-                          className={classes.buttonSpacing}
-                          onClick={handleToggleEdit}
-                          color="primary"
-                          startIcon={<Edit />}>
-                          Edit
-                        </Button>
-                      )}
-                    </Grid>
-                  </form>
-                );
-              }}
-            </Formik>
+            <>
+              <Grid item xs={12}>
+                <TextField
+                  onChange={(event) => {
+                    setFormData({
+                      ...formData,
+                      projectId: event.target.value,
+                    });
+                  }}
+                  value={formData.projectId}
+                  disabled={!edit}
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="projectId"
+                  label="Project Id"
+                  type="text"
+                  name="projectId"
+                  autoComplete="projectId"
+                  autoFocus
+                  className={clsx(classes.textField, classes.simpleTextField)}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  onChange={(event) => {
+                    setFormData({
+                      ...formData,
+                      privateKey: event.target.value,
+                    });
+                  }}
+                  value={formData.privateKey}
+                  disabled={!edit}
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="privateKey"
+                  label="Private key"
+                  type="text"
+                  id="privateKey"
+                  autoComplete="privateKey"
+                  className={clsx(classes.textField, classes.simpleTextField)}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  onChange={(event) => {
+                    setFormData({
+                      ...formData,
+                      clientEmail: event.target.value,
+                    });
+                  }}
+                  value={formData.clientEmail}
+                  disabled={!edit}
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="clientEmail"
+                  label="Client email"
+                  type="email"
+                  id="clientEmail"
+                  autoComplete="clientEmail"
+                  className={clsx(classes.textField, classes.simpleTextField)}
+                />
+              </Grid>
+              <Typography> OR </Typography>
+              <Button
+                style={{ marginTop: '20px' }}
+                disabled={!edit}
+                variant="contained"
+                component="label">
+                Upload JSON File
+                <input
+                  type="file"
+                  hidden
+                  onChange={(event) => {
+                    event.target.files && handleFileChange(event.target.files[0]);
+                  }}
+                />
+              </Button>
+            </>
           )}
         </Grid>
       </>
@@ -267,6 +276,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             <FormControlLabel
               control={
                 <Switch
+                  disabled={!edit}
                   checked={formData.active}
                   onChange={() =>
                     setFormData({
@@ -274,7 +284,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                       active: !formData.active,
                     })
                   }
-                  value={'accountLinking'}
+                  value={'push-notifications'}
                   color="primary"
                 />
               }
@@ -288,25 +298,45 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             {formData.active && renderFields()}
           </Grid>
 
-          {!formData.active && (
-            <Grid item container xs={12} justify={'flex-end'}>
+          <Grid item container justify="flex-end" xs={12}>
+            {edit && (
+              <>
+                <Button
+                  variant="outlined"
+                  className={classes.buttonSpacing}
+                  onClick={() => handleCancelButton()}
+                  color="primary">
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  className={classes.buttonSpacing}
+                  color="primary"
+                  onClick={() => setOpenSaveDialog(true)}
+                  startIcon={<Save />}>
+                  Save
+                </Button>
+              </>
+            )}
+            {!edit && (
               <Button
-                variant="contained"
+                className={classes.buttonSpacing}
+                onClick={handleToggleEdit}
                 color="primary"
-                style={{ alignSelf: 'flex-end' }}
-                onClick={() => setOpenSaveDialog(true)}>
-                Save
+                startIcon={<Edit />}>
+                Edit
               </Button>
-            </Grid>
-          )}
+            )}
+          </Grid>
         </Grid>
       </Paper>
       <ConfirmationDialog
         open={openSaveDialog}
         handleClose={() => setOpenSaveDialog(false)}
         title={'Are you sure you want to proceed?'}
-        description={'Forms settings changed'}
-        buttonAction={() => asyncSaveNotificationConfig(formData)}
+        description={'Notification settings changed'}
+        buttonAction={() => onFormSubmit(formData)}
         buttonText={'Proceed'}
       />
     </Container>

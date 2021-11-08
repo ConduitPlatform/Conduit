@@ -1,28 +1,33 @@
-import { Container } from '@material-ui/core';
-import React, { FC, useState } from 'react';
+import { Container, Typography, Paper, Grid, Button, TextField } from '@material-ui/core';
+import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
-import clsx from 'clsx';
 import { NotificationData } from '../../models/notifications/NotificationModels';
+import { useAppSelector } from '../../redux/store';
+import { useDispatch } from 'react-redux';
+import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
+import { AuthUser } from '../../models/authentication/AuthModels';
+import TableDialog from '../common/TableDialog';
+import SelectedElements from '../common/SelectedElements';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
     padding: theme.spacing(2),
     color: theme.palette.text.secondary,
   },
-  textField: {
-    marginBottom: theme.spacing(2),
-  },
-  simpleTextField: {
-    width: '65ch',
-  },
   typography: {
     marginBottom: theme.spacing(4),
+  },
+  chip: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    '& > *': {
+      margin: theme.spacing(0.5),
+    },
+  },
+  center: {
+    textAlign: 'center',
   },
 }));
 
@@ -32,12 +37,42 @@ type SendNotificationProps = {
 
 const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
+  const [drawer, setDrawer] = useState<boolean>(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+  const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
+
+  const getData = useCallback(
+    (params: { skip: number; limit: number; search: string; filter: string }) => {
+      dispatch(asyncGetAuthUserData(params));
+    },
+    [dispatch]
+  );
+
+  const headers = [
+    { title: '_id', sort: '_id' },
+    { title: 'Email', sort: 'email' },
+    { title: 'Active', sort: 'active' },
+    { title: 'Verified', sort: 'isVerified' },
+    { title: 'Registered At', sort: 'createdAt' },
+  ];
+  const formatData = (usersToFormat: AuthUser[]) => {
+    return usersToFormat.map((u) => {
+      return {
+        _id: u._id,
+        Email: u.email ? u.email : 'N/A',
+        Active: u.active,
+        Verified: u.isVerified,
+        'Registered At': u.createdAt,
+      };
+    });
+  };
 
   const [formState, setFormState] = useState<NotificationData>({
     title: '',
     body: '',
-    data: '',
-    userId: '',
+    userIds: [''],
   });
 
   const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +83,13 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   };
 
   const handleSendNotification = () => {
+    setFormState({ ...formState, userIds: selectedUsers });
     handleSend(formState);
+  };
+
+  const removeSelectedUser = (i: number) => {
+    const filteredArray = selectedUsers.filter((user, index) => index !== i);
+    setSelectedUsers(filteredArray);
   };
 
   return (
@@ -60,15 +101,22 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
         </Typography>
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>
+            <SelectedElements
+              selectedElements={selectedUsers}
+              handleButtonAction={() => setDrawer(true)}
+              removeSelectedElement={removeSelectedUser}
+              buttonText={'Add users'}
+              header={'Selected users'}
+            />
             <Grid item xs={12}>
               <TextField
                 required
+                fullWidth
                 label="Title"
                 name="title"
                 value={formState.title}
                 onChange={handleDataChange}
                 variant="outlined"
-                className={clsx(classes.textField, classes.simpleTextField)}
               />
             </Grid>
             <Grid item xs={12}>
@@ -76,26 +124,12 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
                 label="Body"
                 name="body"
                 multiline
+                fullWidth
                 rows="10"
                 variant="outlined"
-                placeholder="Write your email here..."
+                placeholder="Write your message here..."
                 required
                 onChange={handleDataChange}
-                className={clsx(classes.textField, classes.simpleTextField)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Data"
-                name="data"
-                multiline
-                rows="10"
-                variant="outlined"
-                placeholder="Write your email here..."
-                required
-                value={formState.data}
-                onChange={handleDataChange}
-                className={clsx(classes.textField, classes.simpleTextField)}
               />
             </Grid>
             <Grid item container justify="flex-end" xs={12}>
@@ -110,6 +144,17 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           </Grid>
         </form>
       </Paper>
+      <TableDialog
+        open={drawer}
+        title={'Select users'}
+        headers={headers}
+        getData={getData}
+        data={{ tableData: formatData(users), count: count }}
+        handleClose={() => setDrawer(false)}
+        buttonText={'Select users'}
+        setExternalElements={setSelectedUsers}
+        externalElements={selectedUsers}
+      />
     </Container>
   );
 };
