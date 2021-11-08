@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitSocket,
+  ConduitString,
   constructRoute,
   constructSocket,
   GrpcServer,
@@ -145,7 +146,7 @@ export class ChatRoutes {
     }
 
     this.grpcSdk.bus?.publish(
-      'chat:leavRoom:ChatRoom',
+      'chat:leaveRoom:ChatRoom',
       JSON.stringify({ roomId, user: user._id })
     );
 
@@ -214,6 +215,88 @@ export class ChatRoutes {
           message: e.message,
         });
       });
+  }
+
+  async getMessage(call: RouterRequest, callback: RouterResponse) {
+    const { id } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+    try {
+      let message = await this.grpcSdk.databaseProvider!.findOne(
+        'ChatMessage',
+        { _id: id },
+        undefined,
+        ['room']
+      );
+      if (!message) {
+        return callback({ code: status.NOT_FOUND, message: 'Message not found!' });
+      }
+      if (message && message.room.participants.indexOf(user._id) === -1) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: 'You do not have access to that message',
+        });
+      }
+
+      callback(null, { result: JSON.stringify(message) });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
+  }
+
+  async getRooms(call: RouterRequest, callback: RouterResponse) {
+    const { skip, limit, populate } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+    try {
+      let rooms = await this.grpcSdk.databaseProvider!.findMany(
+        'ChatRoom',
+        { participants: user._id },
+        undefined,
+        skip,
+        limit,
+        undefined,
+        populate
+      );
+
+      let roomsCount = await this.grpcSdk.databaseProvider!.countDocuments('ChatRoom', {
+        participants: user._id,
+      });
+
+      callback(null, { result: JSON.stringify({ rooms, count: roomsCount }) });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
+  }
+
+  async getRoom(call: RouterRequest, callback: RouterResponse) {
+    const { id, populate } = JSON.parse(call.request.params);
+    const { user } = JSON.parse(call.request.context);
+    try {
+      let room = await this.grpcSdk.databaseProvider!.findOne(
+        'ChatRoom',
+        { _id: id, participants: user._id },
+        undefined,
+        populate
+      );
+      if (!room) {
+        return callback({
+          code: status.NOT_FOUND,
+          message: "Room doesn't exist or you don't have access",
+        });
+      }
+
+      callback(null, { result: JSON.stringify(room) });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: e.message ?? 'Something went wrong!',
+      });
+    }
   }
 
   async deleteMessage(call: RouterRequest, callback: RouterResponse) {
@@ -390,6 +473,9 @@ export class ChatRoutes {
         addUserToRoom: this.addUserToRoom.bind(this),
         leaveRoom: this.leaveRoom.bind(this),
         getMessages: this.getMessages.bind(this),
+        getMessage: this.getMessage.bind(this),
+        getRooms: this.getRooms.bind(this),
+        getRoom: this.getRoom.bind(this),
         deleteMessage: this.deleteMessage.bind(this),
         editMessage: this.editMessage.bind(this),
         onMessage: this.onMessage.bind(this),
@@ -465,6 +551,77 @@ export class ChatRoutes {
       constructRoute(
         new ConduitRoute(
           {
+            urlParams: {
+              id: ConduitString.Required,
+            },
+            path: '/rooms/:id',
+            action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('ChatRoom', {
+            _id: TYPE.ObjectId,
+            name: {
+              type: TYPE.String,
+              required: true,
+            },
+            participants: ['User'],
+            createdAt: TYPE.Date,
+            updatedAt: TYPE.Date,
+          }),
+          'getRoom'
+        )
+      )
+    );
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            path: '/rooms',
+            queryParams: {
+              skip: TYPE.Number,
+              limit: TYPE.Number,
+            },
+            action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('ChatRoomsResponse', {
+            rooms: ['ChatRoom'],
+            count: TYPE.Number,
+          }),
+          'getRooms'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
+            urlParams: {
+              id: ConduitString.Required,
+            },
+            path: '/messages/:id',
+            action: ConduitRouteActions.GET,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('ChatMessage', {
+            _id: TYPE.String,
+            message: TYPE.String,
+            senderUser: TYPE.String,
+            room: TYPE.String,
+            readBy: [TYPE.String],
+            createdAt: TYPE.Date,
+            updatedAt: TYPE.Date,
+          }),
+          'getMessage'
+        )
+      )
+    );
+
+    routesArray.push(
+      constructRoute(
+        new ConduitRoute(
+          {
             path: '/messages',
             action: ConduitRouteActions.GET,
             queryParams: {
@@ -474,18 +631,8 @@ export class ChatRoutes {
             },
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('MessagesResponse', {
-            messages: [
-              {
-                _id: TYPE.String,
-                message: TYPE.String,
-                senderUser: TYPE.String,
-                room: TYPE.String,
-                readBy: [TYPE.String],
-                createdAt: TYPE.Date,
-                updatedAt: TYPE.Date,
-              },
-            ],
+          new ConduitRouteReturnDefinition('ChatMessagesResponse', {
+            messages: ['ChatMessage'],
             count: TYPE.Number,
           }),
           'getMessages'
