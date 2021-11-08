@@ -1,5 +1,5 @@
 import { AdminHandlers } from './admin/admin';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
 } from '@quintessential-sft/conduit-grpc-sdk';
@@ -7,17 +7,8 @@ import { CmsRoutes } from './routes/Routes';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 
-export class CMS implements ConduitServiceModule {
-  private grpcServer!: GrpcServer;
+export class CMS extends ConduitServiceModule {
   private stateActive = true;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port!: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
