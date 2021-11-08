@@ -133,7 +133,7 @@ const DataTable: React.FC<Props> = ({
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
-              {!collapsible && actions && selectable && (
+              {!collapsible && selectable && (
                 <Checkbox
                   color="primary"
                   onChange={onMenuItemSelectAll}
