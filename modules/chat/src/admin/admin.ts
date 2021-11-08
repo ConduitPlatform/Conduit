@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
+import { populateArray} from '../utils';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
@@ -55,7 +56,7 @@ export class AdminHandlers{
   }
 
   async getRooms(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit,search } = JSON.parse(call.request.params);
+    const { skip, limit,search,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -65,9 +66,11 @@ export class AdminHandlers{
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let query:any = {};
+    let query:any = {},populates;
     let identifier;
-
+    if(!isNil(populate)){
+      populates = populateArray(populate);
+    }
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
       query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
@@ -78,7 +81,9 @@ export class AdminHandlers{
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
+      undefined,
+      populates,
     );
     const totalCountPromise = this.database.countDocuments('ChatRoom', {});
 
