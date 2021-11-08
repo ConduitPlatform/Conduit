@@ -126,12 +126,12 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     handleSave(data);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (file: File) => {
     const fileReader = new FileReader();
-    fileReader.readAsText(e.target.files[0], 'UTF-8');
+    fileReader.readAsText(file, 'UTF-8');
     fileReader.onload = (event) => {
-      if (event.target) {
-        const jsonToObject = JSON.parse(event.target.result as string);
+      if (event.target && typeof event.target.result === 'string') {
+        const jsonToObject = JSON.parse(event.target.result);
 
         if (
           'project_id' in jsonToObject &&
@@ -245,7 +245,13 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                 variant="contained"
                 component="label">
                 Upload JSON File
-                <input type="file" hidden onChange={handleFileChange} />
+                <input
+                  type="file"
+                  hidden
+                  onChange={(event) => {
+                    event.target.files && handleFileChange(event.target.files[0]);
+                  }}
+                />
               </Button>
             </>
           )}
