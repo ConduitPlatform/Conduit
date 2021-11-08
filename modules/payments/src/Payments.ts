@@ -1,6 +1,6 @@
 import PaymentsConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -23,21 +23,12 @@ import {
   RefundStripePaymentResponse,
 } from './types';
 
-export default class PaymentsModule implements ConduitServiceModule {
+export default class PaymentsModule extends ConduitServiceModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private grpcServer: GrpcServer;
   private _router: PaymentsRoutes;
   private stripeHandlers: StripeHandlers | null;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
