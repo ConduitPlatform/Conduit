@@ -22,9 +22,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     width: '100%',
   },
-  formControl: {
-    minWidth: 250,
-  },
 }));
 
 interface Props {

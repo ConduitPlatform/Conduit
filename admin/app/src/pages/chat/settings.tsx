@@ -1,7 +1,7 @@
 import React, { ReactElement, useEffect } from 'react';
 import ChatLayout from '../../components/navigation/InnerLayouts/chatLayout';
 import ChatSettings from '../../components/chat/ChatSettings';
-import { asyncGetChatConfig } from '../../redux/slices/chatSlice';
+import { asyncGetChatConfig, asyncPutChatConfig } from '../../redux/slices/chatSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { IChatConfig } from '../../models/chat/ChatModels';
 
@@ -15,7 +15,7 @@ const Settings = () => {
   }, [dispatch]);
 
   const handleChatConfig = (data: IChatConfig) => {
-    // dispatch(asyncSaveStorageConfig(data));
+    dispatch(asyncPutChatConfig(data));
   };
 
   return <ChatSettings config={config} handleSave={handleChatConfig} />;

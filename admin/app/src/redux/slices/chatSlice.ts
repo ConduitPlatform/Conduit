@@ -1,8 +1,13 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
-import { enqueueErrorNotification } from '../../utils/useNotifier';
-import { getChatConfig, getChatMessages, getChatRooms } from '../../http/ChatRequests';
+import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
+import {
+  getChatConfig,
+  getChatMessages,
+  getChatRooms,
+  putChatConfig,
+} from '../../http/ChatRequests';
 import { IChatConfig, IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
 
 interface IChatSlice {
@@ -48,6 +53,23 @@ export const asyncGetChatConfig = createAsyncThunk(
   async (params, thunkAPI) => {
     try {
       const { data } = await getChatConfig();
+      return data;
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncPutChatConfig = createAsyncThunk(
+  'chat/getChatConfig',
+  async (params: IChatConfig, thunkAPI) => {
+    thunkAPI.dispatch(setAppLoading(true));
+    try {
+      const { data } = await putChatConfig(params);
+      thunkAPI.dispatch(enqueueSuccessNotification('Chat config was updated successfully!'));
+      thunkAPI.dispatch(setAppLoading(false));
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
