@@ -6,9 +6,19 @@ import ChatRoomBubble from './ChatRoomBubble';
 import { IChatRoom } from '../../models/chat/ChatModels';
 import { addChatMessagesSkip, asyncGetChatMessages } from '../../redux/slices/chatSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { Dialog, DialogContent, DialogTitle, Paper, Typography } from '@material-ui/core';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Typography,
+} from '@material-ui/core';
 import { InfoOutlined } from '@material-ui/icons';
 import moment from 'moment';
+import EditIcon from '@material-ui/icons/Edit';
+import DeleteIcon from '@material-ui/icons/Delete';
+import useLongPress from '../../hooks/useLongPress';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -37,6 +47,15 @@ const useStyles = makeStyles((theme) => ({
   },
   dialogInfo: {
     marginBottom: theme.spacing(1),
+  },
+  actionContainer: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  actionButton: {
+    height: theme.spacing(3),
+    width: theme.spacing(3),
+    marginLeft: theme.spacing(1),
   },
 }));
 
@@ -85,11 +104,35 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
     setInfoDialog(true);
   };
 
+  const onLongPress = () => {
+    console.log('long press');
+  };
+
+  const onPress = () => {
+    console.log('press');
+  };
+
+  const defaultOptions = {
+    shouldPreventDefault: true,
+    delay: 500,
+  };
+  const longPressEvent = useLongPress(onLongPress, onPress, defaultOptions);
+
   return (
     <Box className={classes.root}>
       <Paper className={classes.infoContainer} elevation={6}>
         <Typography>{panelData.name}</Typography>
-        <InfoOutlined className={classes.infoButton} onClick={() => handleOpenModal()} />
+        <Box className={classes.actionContainer}>
+          <IconButton className={classes.actionButton} {...longPressEvent}>
+            <EditIcon />
+          </IconButton>
+          <IconButton className={classes.actionButton}>
+            <DeleteIcon />
+          </IconButton>
+          <IconButton onClick={() => handleOpenModal()} className={classes.actionButton}>
+            <InfoOutlined />
+          </IconButton>
+        </Box>
       </Paper>
       <Box className={classes.contentContainer} {...rest}>
         {data.map((item, index) => {
