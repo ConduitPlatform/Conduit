@@ -65,7 +65,7 @@ const ChatRooms: React.FC = () => {
     dispatch(asyncGetChatRooms(params));
   }, [debouncedSearch, dispatch]);
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
+  const handleChange = (newValue: number) => {
     setSelected(newValue);
     dispatch(clearChatMessages());
   };
@@ -109,7 +109,7 @@ const ChatRooms: React.FC = () => {
             orientation="vertical"
             variant="scrollable"
             value={selected}
-            onChange={handleChange}
+            onChange={(event, value) => handleChange(value)}
             className={classes.tabs}>
             {data.map((item, index) => {
               return <Tab label={item.name} key={index} />;

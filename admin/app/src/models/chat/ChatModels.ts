@@ -1,3 +1,5 @@
+import { AuthUser } from '../authentication/AuthModels';
+
 export interface IChatConfig {
   active: boolean;
   allowMessageDelete: boolean;
@@ -7,7 +9,7 @@ export interface IChatConfig {
 export interface IChatRoom {
   createdAt: string;
   name: string;
-  participants: string[];
+  participants: AuthUser[];
   updatedAt: string;
   __v: number;
   _id: string;

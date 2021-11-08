@@ -115,6 +115,16 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
           <Typography variant="body1" className={classes.dialogInfo}>
             Created at: {moment(panelData.createdAt).format('MMM Do YYYY, h:mm:ss a')}
           </Typography>
+          <Box>
+            <Typography variant="body1">Participants:</Typography>
+            {panelData.participants.map((participant, index) => {
+              return (
+                <Typography variant={'body2'} key={index}>
+                  {participant.email}
+                </Typography>
+              );
+            })}
+          </Box>
         </DialogContent>
       </Dialog>
     </Box>
