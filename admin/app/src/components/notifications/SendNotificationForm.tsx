@@ -1,19 +1,14 @@
-import { Chip, Container } from '@material-ui/core';
+import { Container, Typography, Paper, Grid, Button, TextField } from '@material-ui/core';
 import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
-
 import { NotificationData } from '../../models/notifications/NotificationModels';
 import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
+import SelectedElements from '../common/SelectedElements';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -106,30 +101,13 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
         </Typography>
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Button variant="contained" color="secondary" onClick={() => setDrawer(true)}>
-                Add users
-              </Button>
-            </Grid>
-            {selectedUsers.length > 0 && (
-              <>
-                <Grid className={classes.center} item xs={12}>
-                  <Typography className={classes.center} variant="caption">
-                    Selected users:
-                  </Typography>
-                </Grid>
-                <Grid className={classes.chip} item xs={12}>
-                  {selectedUsers.map((user, index) => (
-                    <Chip
-                      key={index}
-                      size="small"
-                      label={user}
-                      onDelete={() => removeSelectedUser(index)}
-                    />
-                  ))}
-                </Grid>
-              </>
-            )}
+            <SelectedElements
+              selectedElements={selectedUsers}
+              handleButtonAction={() => setDrawer(true)}
+              removeSelectedElement={removeSelectedUser}
+              buttonText={'Add users'}
+              header={'Selected users'}
+            />
             <Grid item xs={12}>
               <TextField
                 required

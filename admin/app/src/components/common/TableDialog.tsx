@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-
 import {
   Typography,
   DialogContent,
@@ -10,17 +9,24 @@ import {
   InputAdornment,
   makeStyles,
   TextField,
+  IconButton,
 } from '@material-ui/core';
 
 import DataTable from './DataTable';
 import Paginator from './Paginator';
-import SearchIcon from '@material-ui/icons/Search';
+import { Search as SearchIcon, Close } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 
 const useStyles = makeStyles((theme) => ({
   paper: {},
   typography: {
     marginBottom: theme.spacing(4),
+  },
+  closeButton: {
+    position: 'absolute',
+    right: '8px',
+    top: '8px',
+    color: theme.palette.secondary.main,
   },
 }));
 
@@ -117,6 +123,9 @@ const TableDialog: React.FC<Props> = ({
       onClose={handleClose}
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description">
+      <IconButton aria-label="Close" className={classes.closeButton} onClick={handleClose}>
+        <Close />
+      </IconButton>
       <DialogTitle id="alert-dialog-title">{title}</DialogTitle>
       <DialogContent>
         <TextField
