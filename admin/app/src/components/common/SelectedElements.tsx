@@ -25,7 +25,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   selectedElements: string[];
-  removeSelectedElement: (value: any) => void;
+  removeSelectedElement: (value: number) => void;
   handleButtonAction: any;
   buttonText: string;
   header: string;
