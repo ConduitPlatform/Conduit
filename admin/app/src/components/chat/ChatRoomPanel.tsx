@@ -3,21 +3,14 @@ import Box from '@material-ui/core/Box';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
 import ChatRoomBubble from './ChatRoomBubble';
-import { IChatRoom } from '../../models/chat/ChatModels';
+import { IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
 import { addChatMessagesSkip, asyncGetChatMessages } from '../../redux/slices/chatSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Paper,
-  Typography,
-} from '@material-ui/core';
+import { IconButton, Paper, Typography } from '@material-ui/core';
 import { InfoOutlined } from '@material-ui/icons';
-import moment from 'moment';
 import DeleteIcon from '@material-ui/icons/Delete';
 import clsx from 'clsx';
+import ChatInfoDialog from './ChatInfoDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -51,9 +44,6 @@ const useStyles = makeStyles((theme) => ({
   },
   bubbleSelected: {
     backgroundColor: `${theme.palette.grey[700]}80`,
-  },
-  dialogInfo: {
-    marginBottom: theme.spacing(1),
   },
   actionContainer: {
     display: 'flex',
@@ -136,14 +126,32 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
     setSelected(newSelected);
   };
 
+  const getChatBubble = (item: IChatMessage, index?: number) => {
+    return (
+      <ChatRoomBubble
+        data={item}
+        className={
+          selected.includes(item._id)
+            ? clsx(classes.bubble, classes.bubbleSelected)
+            : classes.bubble
+        }
+        onLongPress={onLongPress}
+        onPress={onPress}
+        key={index}
+      />
+    );
+  };
+
   return (
     <Box className={classes.root}>
       <Paper className={classes.infoContainer} elevation={6}>
         <Typography>{panelData.name}</Typography>
         <Box className={classes.actionContainer}>
-          <IconButton className={classes.actionButton}>
-            <DeleteIcon />
-          </IconButton>
+          {selected.length > 0 && (
+            <IconButton className={classes.actionButton}>
+              <DeleteIcon />
+            </IconButton>
+          )}
           <IconButton className={classes.actionButton} onClick={() => handleOpenModal()}>
             <InfoOutlined />
           </IconButton>
@@ -159,58 +167,14 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
           if (index === data.length - 1) {
             return (
               <div ref={lastMessageElementRef} key={index}>
-                <ChatRoomBubble
-                  data={item}
-                  className={
-                    selected.includes(item._id)
-                      ? clsx(classes.bubble, classes.bubbleSelected)
-                      : classes.bubble
-                  }
-                  onLongPress={onLongPress}
-                  onPress={onPress}
-                />
+                {getChatBubble(item)}
               </div>
             );
           }
-          return (
-            <ChatRoomBubble
-              data={item}
-              className={
-                selected.includes(item._id)
-                  ? clsx(classes.bubble, classes.bubbleSelected)
-                  : classes.bubble
-              }
-              onLongPress={onLongPress}
-              onPress={onPress}
-              key={index}
-            />
-          );
+          return getChatBubble(item, index);
         })}
       </Box>
-      <Dialog onClose={handleCloseModal} open={infoDialog} fullWidth maxWidth="xs">
-        <DialogTitle>Info</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" className={classes.dialogInfo}>
-            id: {panelData._id}
-          </Typography>
-          <Typography variant="body1" className={classes.dialogInfo}>
-            Name: {panelData.name}
-          </Typography>
-          <Typography variant="body1" className={classes.dialogInfo}>
-            Created at: {moment(panelData.createdAt).format('MMM Do YYYY, h:mm:ss a')}
-          </Typography>
-          <Box>
-            <Typography variant="body1">Participants:</Typography>
-            {panelData.participants.map((participant, index) => {
-              return (
-                <Typography variant={'body2'} key={index}>
-                  {participant.email}
-                </Typography>
-              );
-            })}
-          </Box>
-        </DialogContent>
-      </Dialog>
+      <ChatInfoDialog data={panelData} open={infoDialog} onClose={handleCloseModal} />
     </Box>
   );
 };
