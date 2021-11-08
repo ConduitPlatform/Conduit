@@ -67,7 +67,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     privateKey: '',
     clientEmail: '',
   };
-  const [editProvider, setEditProvider] = useState(true);
+  const [edit, setEdit] = useState<boolean>(false);
   const [formData, setFormData] = useState<INotificationSettings>(initialFormData);
   const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
 
@@ -104,12 +104,12 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
   };
 
   const handleToggleEdit = () => {
-    setEditProvider(false);
+    setEdit(!edit);
   };
 
   const handleCancelButton = () => {
     setFormData(initialFormData);
-    setEditProvider(true);
+    setEdit(false);
   };
 
   const onFormSubmit = (values: INotificationSettings) => {
@@ -133,15 +133,15 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
       const jsonToObject = JSON.parse(e.target?.result);
 
       if (
-        'projectId' in jsonToObject &&
-        'privateKey' in jsonToObject &&
-        'clientEmail' in jsonToObject
+        'project_id' in jsonToObject &&
+        'private_key' in jsonToObject &&
+        'client_email' in jsonToObject
       )
         setFormData({
           ...formData,
-          projectId: jsonToObject.projectId,
-          privateKey: jsonToObject.privateKey,
-          clientEmail: jsonToObject.clientEmail,
+          projectId: jsonToObject.project_id,
+          privateKey: jsonToObject.private_key,
+          clientEmail: jsonToObject.client_email,
         });
     };
   };
@@ -154,6 +154,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             <InputLabel>Provider</InputLabel>
             <Select
               required
+              disabled={!edit}
               labelId="provider-outlined-label"
               value={formData.providerName}
               onChange={handleSelect}
@@ -177,7 +178,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                     });
                   }}
                   value={formData.projectId}
-                  disabled={editProvider}
+                  disabled={!edit}
                   variant="outlined"
                   margin="normal"
                   required
@@ -200,7 +201,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                     });
                   }}
                   value={formData.privateKey}
-                  disabled={editProvider}
+                  disabled={!edit}
                   variant="outlined"
                   margin="normal"
                   required
@@ -222,7 +223,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                     });
                   }}
                   value={formData.clientEmail}
-                  disabled={editProvider}
+                  disabled={!edit}
                   variant="outlined"
                   margin="normal"
                   required
@@ -236,41 +237,14 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                 />
               </Grid>
               <Typography> OR </Typography>
-              <Button style={{ marginTop: '20px' }} variant="contained" component="label">
+              <Button
+                style={{ marginTop: '20px' }}
+                disabled={!edit}
+                variant="contained"
+                component="label">
                 Upload JSON File
                 <input type="file" hidden onChange={handleFileChange} />
               </Button>
-              <Grid item container justify="flex-end" xs={12}>
-                {!editProvider ? (
-                  <>
-                    <Button
-                      variant="outlined"
-                      className={classes.buttonSpacing}
-                      onClick={() => handleCancelButton()}
-                      color="primary">
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      className={classes.buttonSpacing}
-                      color="primary"
-                      onClick={() => setOpenSaveDialog(true)}
-                      startIcon={<Save />}>
-                      Save
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="contained"
-                    className={classes.buttonSpacing}
-                    onClick={handleToggleEdit}
-                    color="primary"
-                    startIcon={<Edit />}>
-                    Edit
-                  </Button>
-                )}
-              </Grid>
             </>
           )}
         </Grid>
@@ -294,6 +268,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             <FormControlLabel
               control={
                 <Switch
+                  disabled={!edit}
                   checked={formData.active}
                   onChange={() =>
                     setFormData({
@@ -301,7 +276,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                       active: !formData.active,
                     })
                   }
-                  value={'accountLinking'}
+                  value={'push-notifications'}
                   color="primary"
                 />
               }
@@ -315,17 +290,37 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
             {formData.active && renderFields()}
           </Grid>
 
-          {!formData.active && (
-            <Grid item container xs={12} justify={'flex-end'}>
+          <Grid item container justify="flex-end" xs={12}>
+            {edit && (
+              <>
+                <Button
+                  variant="outlined"
+                  className={classes.buttonSpacing}
+                  onClick={() => handleCancelButton()}
+                  color="primary">
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  className={classes.buttonSpacing}
+                  color="primary"
+                  onClick={() => setOpenSaveDialog(true)}
+                  startIcon={<Save />}>
+                  Save
+                </Button>
+              </>
+            )}
+            {!edit && (
               <Button
-                variant="contained"
+                className={classes.buttonSpacing}
+                onClick={handleToggleEdit}
                 color="primary"
-                style={{ alignSelf: 'flex-end' }}
-                onClick={() => setOpenSaveDialog(true)}>
-                Save
+                startIcon={<Edit />}>
+                Edit
               </Button>
-            </Grid>
-          )}
+            )}
+          </Grid>
         </Grid>
       </Paper>
       <ConfirmationDialog

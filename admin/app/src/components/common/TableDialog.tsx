@@ -68,7 +68,7 @@ const TableDialog: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    if (externalElements.length > 0) {
+    if (externalElements.length >= 0) {
       setSelectedElements(externalElements);
     }
   }, [externalElements]);
