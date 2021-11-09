@@ -5,8 +5,8 @@ import { Cancel, Save, Edit } from '@material-ui/icons';
 interface Props {
   edit: boolean;
   setEdit: (value: boolean) => void;
-  handleCancelClick: () => void;
-  handleSaveClick: () => void;
+  handleCancelClick?: () => void;
+  handleSaveClick?: () => void;
   handleDisabled?: any;
 }
 

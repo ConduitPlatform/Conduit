@@ -78,7 +78,7 @@ const DataTableRows: React.FC<Props> = ({
   };
 
   const extractIcon = () => {
-    if (!collapsible && actions && selectable)
+    if (!collapsible && selectable)
       return (
         <Checkbox
           color="primary"
