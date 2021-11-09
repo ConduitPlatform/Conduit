@@ -6,7 +6,7 @@ COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authent
 
 RUN apk update
 
-RUN apk add --no-cache --virtual .gyp python make g++
+RUN apk add --no-cache --virtual .gyp python2 make g++
 
 RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
 

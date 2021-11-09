@@ -4,7 +4,7 @@ import {
 } from '@quintessential-sft/storage-provider';
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   GrpcServer,
   wrapCallbackFunctionForRouter,
@@ -21,19 +21,10 @@ import File from './models/File';
 import Folder from './models/Folder';
 import { ConfigController } from './config/Config.controller';
 
-export class StorageModule implements ConduitServiceModule {
+export class StorageModule extends ConduitServiceModule {
   private storageProvider: IStorageProvider;
   private isRunning: boolean = false;
   private _fileHandlers: FileHandlers;
-  private grpcServer: GrpcServer;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port() {
-    return this._port;
-  }
 
   private _routes: any[];
 

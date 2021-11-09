@@ -191,11 +191,11 @@ export class CmsHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
-    // updatedDocument = await this.database
-    //   ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
-    //   .catch((e: any) => (errorMessage = e.message));
-    // if (!isNil(errorMessage))
-    //   return callback({ code: status.INTERNAL, message: errorMessage });
+    updatedDocument = await this.database
+      ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
@@ -225,11 +225,11 @@ export class CmsHandlers {
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
-    // updatedDocument = await this.database
-    //   ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
-    //   .catch((e: any) => (errorMessage = e.message));
-    // if (!isNil(errorMessage))
-    //   return callback({ code: status.INTERNAL, message: errorMessage });
+    updatedDocument = await this.database
+      ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }

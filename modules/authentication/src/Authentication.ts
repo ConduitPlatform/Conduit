@@ -3,7 +3,7 @@ import { AccessToken, RefreshToken, Token, User } from './models';
 import { AdminHandlers } from './admin/admin';
 import AuthenticationConfigSchema from './config';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   DatabaseProvider,
   GrpcServer,
@@ -21,20 +21,11 @@ import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import randomToken = AuthUtils.randomToken;
 
-export default class AuthenticationModule implements ConduitServiceModule {
+export default class AuthenticationModule extends ConduitServiceModule {
   private database: DatabaseProvider;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private _router: AuthenticationRoutes;
-  private grpcServer: GrpcServer;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);

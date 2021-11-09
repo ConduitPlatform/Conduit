@@ -61,7 +61,7 @@ module.exports = (phase) => {
       },
       {
         source: '/push-notifications',
-        destination: '/push-notifications/view',
+        destination: '/push-notifications/send',
         permanent: true,
       },
       {
@@ -72,6 +72,11 @@ module.exports = (phase) => {
       {
         source: '/sms',
         destination: '/sms/send',
+        permanent: true,
+      },
+      {
+        source: '/payments',
+        destination: '/payments/customers',
         permanent: true,
       },
       {

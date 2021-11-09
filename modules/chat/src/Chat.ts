@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, {
+import {
   ConduitServiceModule,
   DatabaseProvider,
   GrpcServer,
@@ -14,20 +14,11 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import { validateUsersInput } from './utils';
 
-export default class ChatModule implements ConduitServiceModule {
+export default class ChatModule extends ConduitServiceModule {
   private database: DatabaseProvider;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private grpcServer: GrpcServer;
   private _router: ChatRoutes;
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private _port: string;
-
-  get port(): string {
-    return this._port;
-  }
 
   async initialize() {
     this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
@@ -45,7 +36,7 @@ export default class ChatModule implements ConduitServiceModule {
   }
 
   async createRoom(call: any, callback: any) {
-    const { name, participants } = call.request.params;
+    const { name, participants } = call.request;
 
     if (isNil(participants) || !isArray(participants) || participants.length === 0) {
       return callback({
@@ -87,7 +78,7 @@ export default class ChatModule implements ConduitServiceModule {
   }
 
   async deleteRoom(call: any, callback: any) {
-    const { id } = call.request.params;
+    const { id } = call.request;
 
     let errorMessage: string | null = null;
     const room: any = await this.database

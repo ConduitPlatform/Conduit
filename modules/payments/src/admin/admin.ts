@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
+import { populateArray } from '../utils/populateArray';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
@@ -95,7 +96,7 @@ export class AdminHandlers {
     let identifier;
     if(!isNil(search)){
       identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+      query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const customerDocumentsPromise = this.database.findMany(
       'PaymentsCustomer',
@@ -318,7 +319,7 @@ export class AdminHandlers {
   }
 
   async getSubscription(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -328,8 +329,10 @@ export class AdminHandlers {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let query:any = {};
-    const populate = ['transactions'];
+    let query:any = {},populates;
+    if(!isNil(populate)){
+      populates = populateArray(populate);
+    }
     const subscriptionDocumentsPromise = this.database.findMany(
         'Subscription',
         query,
@@ -337,7 +340,7 @@ export class AdminHandlers {
         skipNumber,
         limitNumber,
         undefined,
-        populate,
+        populates,
     );
     const totalCountPromise = this.database.countDocuments('Subscription', query);
 
@@ -371,7 +374,7 @@ export class AdminHandlers {
     if(!isNil(customerId)){
       query['customerId'] = customerId
     }
-    else if(!isNil(productId)){
+    if(!isNil(productId)){
       query['product'] = productId
     }
     const transactionDocumentsPromise = this.database.findMany(

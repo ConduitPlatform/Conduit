@@ -56,9 +56,11 @@ export const handleModuleNavigation = (moduleName: string) => {
     case 'settings':
       return '/settings/clientsdk';
     case 'push-notifications':
-      return '/push-notifications/view';
+      return '/push-notifications/send';
     case 'forms':
       return '/forms/view';
+    case 'payments':
+      return '/payments/customers';
     case 'sms':
       return '/sms/send';
     case 'chat':
