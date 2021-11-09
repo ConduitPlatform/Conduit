@@ -26,11 +26,10 @@ const useStyles = makeStyles((theme) =>
 );
 
 interface Props {
-  children: any;
   pathNames: string[];
   swagger: string;
   icon: JSX.Element;
-  labels: { name: string; id: string }[] | string[];
+  labels: { name: string; id: string }[];
   title: string;
 }
 
@@ -49,16 +48,6 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
     router.push(`${event.currentTarget.id}`, undefined, { shallow: false });
   };
 
-  const extractLabels = (labelsToExtract: Props['labels']) => {
-    return labelsToExtract.map((label: string | { name: string; id: string }, index: number) => (
-      <Tab
-        key={index}
-        label={typeof label === 'object' ? label.name : label}
-        id={typeof label === 'object' ? label.id : label}
-      />
-    ));
-  };
-
   return (
     <Box p={4}>
       <Box className={classes.navBar}>
@@ -75,7 +64,9 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
           </a>
         </Typography>
         <Tabs value={value} className={classes.navContent} onChange={handleChange}>
-          {extractLabels(labels)}
+          {labels.map((label: { name: string; id: string }, index: number) => (
+            <Tab key={index} label={label.name} id={label.id} />
+          ))}
         </Tabs>
       </Box>
       <Box className={classes.content}>{children}</Box>
