@@ -3,6 +3,7 @@ import { setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import {
+  deleteChatMessages,
   getChatConfig,
   getChatMessages,
   getChatRooms,
@@ -109,6 +110,20 @@ export const asyncGetChatMessages = createAsyncThunk(
   }
 );
 
+export const asyncDeleteChatMessages = createAsyncThunk(
+  'chat/deleteChatMessages',
+  async (params: { ids: string[] }, thunkAPI) => {
+    try {
+      await deleteChatMessages(params);
+      return { deletedMessages: params.ids, count: params.ids.length };
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
@@ -142,6 +157,14 @@ const chatSlice = createSlice({
       state.data.chatMessages.count = action.payload.count;
       state.data.chatMessages.hasMore = action.payload.hasMore;
       state.data.chatMessages.loading = false;
+    });
+    builder.addCase(asyncDeleteChatMessages.fulfilled, (state, action) => {
+      state.data.chatMessages.data.forEach((item, index) => {
+        if (action.payload.deletedMessages.includes(item._id)) {
+          state.data.chatMessages.data.splice(index, 1);
+        }
+      });
+      state.data.chatMessages.count -= action.payload.count;
     });
   },
 });

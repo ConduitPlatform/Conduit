@@ -4,13 +4,18 @@ import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
 import ChatRoomBubble from './ChatRoomBubble';
 import { IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
-import { addChatMessagesSkip, asyncGetChatMessages } from '../../redux/slices/chatSlice';
+import {
+  addChatMessagesSkip,
+  asyncDeleteChatMessages,
+  asyncGetChatMessages,
+} from '../../redux/slices/chatSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { IconButton, Paper, Typography } from '@material-ui/core';
 import { InfoOutlined } from '@material-ui/icons';
 import DeleteIcon from '@material-ui/icons/Delete';
 import clsx from 'clsx';
 import ChatInfoDialog from './ChatInfoDialog';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -75,6 +80,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const { loading } = useAppSelector((state) => state.chatSlice.data.chatMessages);
 
   const [infoDialog, setInfoDialog] = useState<boolean>(false);
+  const [deleteDialog, setDeleteDialog] = useState<boolean>(false);
   const [selected, setSelected] = useState<string[]>([]);
 
   const observer = useRef<IntersectionObserver>();
@@ -126,6 +132,20 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
     setSelected(newSelected);
   };
 
+  const onDeletePress = () => {
+    setDeleteDialog(true);
+  };
+
+  const handleDelete = () => {
+    dispatch(asyncDeleteChatMessages({ ids: selected }));
+    setDeleteDialog(false);
+    setSelected([]);
+  };
+
+  const handleClose = () => {
+    setDeleteDialog(false);
+  };
+
   const getChatBubble = (item: IChatMessage, index?: number) => {
     return (
       <ChatRoomBubble
@@ -148,7 +168,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
         <Typography>{panelData.name}</Typography>
         <Box className={classes.actionContainer}>
           {selected.length > 0 && (
-            <IconButton className={classes.actionButton}>
+            <IconButton className={classes.actionButton} onClick={() => onDeletePress()}>
               <DeleteIcon />
             </IconButton>
           )}
@@ -175,6 +195,14 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
         })}
       </Box>
       <ChatInfoDialog data={panelData} open={infoDialog} onClose={handleCloseModal} />
+      <ConfirmationDialog
+        open={deleteDialog}
+        handleClose={handleClose}
+        title="Delete messages"
+        description="Are you sure you want to delete the selected messages?"
+        buttonAction={handleDelete}
+        buttonText={'Delete'}
+      />
     </Box>
   );
 };
