@@ -21,9 +21,7 @@
     "axios": "0.20.0",
     "convict": "^5.2.0",
     "deepdash": "^5.0.4",
-    "lodash": "^4.17.15",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.5"
+    "lodash": "^4.17.15"
   },
   "directories": {
     "lib": "src"
