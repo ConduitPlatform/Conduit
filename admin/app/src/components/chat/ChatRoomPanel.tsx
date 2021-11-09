@@ -37,7 +37,7 @@ const useStyles = makeStyles((theme) => ({
   },
   bubble: {
     marginBottom: theme.spacing(0.5),
-    padding: theme.spacing(2, 1),
+    padding: theme.spacing(1, 1),
     borderRadius: theme.spacing(1),
     display: 'flex',
     alignItems: 'center',
