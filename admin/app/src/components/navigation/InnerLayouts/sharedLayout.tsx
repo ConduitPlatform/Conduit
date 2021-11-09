@@ -4,17 +4,14 @@ import { useRouter } from 'next/router';
 
 const useStyles = makeStyles((theme) =>
   createStyles({
+    root: {
+      height: '100vh',
+      padding: theme.spacing(4),
+    },
     navBar: {
-      position: 'fixed',
-      top: 0,
-      backgroundColor: '#262840',
-      width: '100vw',
-      padding: theme.spacing(0.5),
-      zIndex: 10,
+      marginBottom: theme.spacing(2),
     },
-    content: {
-      marginTop: '110px',
-    },
+    content: {},
     swaggerButton: {
       textDecoration: 'none',
       marginLeft: theme.spacing(8),
@@ -44,12 +41,12 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
   }, [router.pathname, pathNames]);
 
   const handleChange = async (value: number) => {
-    setValue(value);
     await router.push(`${labels[value].id}`);
+    setValue(value);
   };
 
   return (
-    <Box p={4}>
+    <Box className={classes.root}>
       <Box className={classes.navBar}>
         <Typography className={classes.navContent} variant={'h4'}>
           {title}

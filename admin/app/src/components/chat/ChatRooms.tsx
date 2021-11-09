@@ -13,7 +13,7 @@ import useDebounce from '../../hooks/useDebounce';
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
-    flex: 1,
+    maxHeight: '75vh',
     overflow: 'hidden',
     padding: theme.spacing(1),
   },
