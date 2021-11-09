@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
-import { Button, Chip, Grid, makeStyles, Typography } from '@material-ui/core';
+import { Box, Button, Chip, Grid, makeStyles, Typography } from '@material-ui/core';
 import { AddCircle } from '@material-ui/icons';
+import { BoxProps } from '@material-ui/core/Box/Box';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -21,9 +22,12 @@ const useStyles = makeStyles((theme) => ({
   center: {
     textAlign: 'center',
   },
+  button: {
+    marginBottom: theme.spacing(1),
+  },
 }));
 
-interface Props {
+interface Props extends BoxProps {
   selectedElements: string[];
   removeSelectedElement: (value: number) => void;
   handleButtonAction: () => void;
@@ -37,13 +41,15 @@ const SelectedElements: FC<Props> = ({
   handleButtonAction,
   buttonText,
   header,
+  ...rest
 }) => {
   const classes = useStyles();
 
   return (
-    <>
+    <Box {...rest}>
       <Grid item xs={12}>
         <Button
+          className={classes.button}
           variant="contained"
           color="secondary"
           endIcon={<AddCircle />}
@@ -70,7 +76,7 @@ const SelectedElements: FC<Props> = ({
           </Grid>
         </>
       )}
-    </>
+    </Box>
   );
 };
 

@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Button, Paper, TextField } from '@material-ui/core';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { asyncGetChatRooms, clearChatMessages } from '../../redux/slices/chatSlice';
+import {
+  asyncGetChatRooms,
+  asyncPostCreateChatRoom,
+  clearChatMessages,
+} from '../../redux/slices/chatSlice';
 import ChatRoomPanel from './ChatRoomPanel';
 import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import CreateChatRoomDrawer from './CreateChatRoomDrawer';
@@ -33,19 +37,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const participants = [
-  'Oliver Hansen',
-  'Van Henry',
-  'April Tucker',
-  'Ralph Hubbard',
-  'Omar Alexander',
-  'Carlos Abbott',
-  'Miriam Wagner',
-  'Bradley Wilkerson',
-  'Virginia Andrews',
-  'Kelly Snyder',
-];
-
 const ChatRooms: React.FC = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
@@ -60,10 +51,14 @@ const ChatRooms: React.FC = () => {
 
   const debouncedSearch: string = useDebounce(search, 500);
 
-  useEffect(() => {
+  const getChatRooms = useCallback(() => {
     const params = { skip: 0, limit: 10, search: debouncedSearch };
     dispatch(asyncGetChatRooms(params));
   }, [debouncedSearch, dispatch]);
+
+  useEffect(() => {
+    getChatRooms();
+  }, [getChatRooms]);
 
   const handleChange = (newValue: number) => {
     setSelected(newValue);
@@ -74,7 +69,12 @@ const ChatRooms: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  const handleCreateChatRoom = () => {
+  const handleCreateChatRoom = (inputData: { name: string; participants: string[] }) => {
+    const params = {
+      ...inputData,
+      getChatRooms: getChatRooms,
+    };
+    dispatch(asyncPostCreateChatRoom(params));
     setDrawerOpen(false);
   };
 
@@ -124,7 +124,6 @@ const ChatRooms: React.FC = () => {
       </Paper>
       <CreateChatRoomDrawer
         open={drawerOpen}
-        data={participants}
         handleCreateChatRoom={handleCreateChatRoom}
         closeDrawer={onCloseDrawer}
       />

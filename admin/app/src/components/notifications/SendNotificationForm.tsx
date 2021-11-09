@@ -3,8 +3,7 @@ import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
 import { NotificationData } from '../../models/notifications/NotificationModels';
-import { useAppSelector } from '../../redux/store';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
@@ -37,7 +36,7 @@ type SendNotificationProps = {
 
 const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
@@ -96,8 +95,8 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
     <Container maxWidth="md">
       <Paper className={classes.paper} elevation={5}>
         <Typography variant={'h6'} className={classes.typography}>
-          <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} /> Push
-          notification
+          <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />
+          Push notification
         </Typography>
         <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
           <Grid container spacing={2}>

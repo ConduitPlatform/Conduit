@@ -3,6 +3,7 @@ import { setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import {
+  createChatRoom,
   deleteChatMessages,
   getChatConfig,
   getChatMessages,
@@ -102,6 +103,21 @@ export const asyncGetChatMessages = createAsyncThunk(
         data: { messages, count },
       } = await getChatMessages(params);
       return { messages: messages, count: count, hasMore: messages.length > 0 };
+    } catch (error) {
+      thunkAPI.dispatch(setAppLoading(false));
+      thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
+      throw error;
+    }
+  }
+);
+
+export const asyncPostCreateChatRoom = createAsyncThunk(
+  'chat/postCreateChatRoom',
+  async (params: { name: string; participants: string[]; getChatRooms: () => void }, thunkAPI) => {
+    try {
+      await createChatRoom(params);
+      params.getChatRooms();
+      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully created chat room ${name}`));
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
