@@ -5,7 +5,6 @@ import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useState } from 'react';
-import EmailDetails from './EmailDetails';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import Image from 'next/dist/client/image';
 import EmailImage from '../../assets/email.svg';
@@ -14,6 +13,7 @@ import { enqueueInfoNotification } from '../../utils/useNotifier';
 import { useAppDispatch } from '../../redux/store';
 import sharedClasses from '../common/sharedClasses';
 import DrawerButtons from '../common/DrawerButtons';
+import TemplateEditor from './TemplateEditor';
 
 interface Props {
   handleCreate: (templateState: EmailTemplateType) => void;
@@ -156,6 +156,28 @@ const TabPanel: React.FC<Props> = ({
                     onChange={(event) => handleSenderChange(event.target.value)}
                   />
                 </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label={'Subject'}
+                    variant="outlined"
+                    className={classes.textField}
+                    value={templateState.subject}
+                    onChange={(event) => {
+                      setTemplateState({ ...templateState, subject: event.target.value });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TemplateEditor
+                    value={templateState.body}
+                    setValue={(value) => {
+                      setTemplateState({
+                        ...templateState,
+                        body: value,
+                      });
+                    }}
+                  />
+                </Grid>
               </>
             ) : (
               <>
@@ -167,16 +189,21 @@ const TabPanel: React.FC<Props> = ({
                   <Typography variant="subtitle2">Sender:</Typography>
                   <Typography variant="h6">{templateState.sender}</Typography>
                 </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body1">Subject</Typography>
+                  <Typography variant="subtitle2">{templateState.subject}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body1">Body</Typography>
+                  <Typography variant="subtitle2" style={{ whiteSpace: 'pre-line' }}>
+                    {templateState.body}
+                  </Typography>
+                </Grid>
               </>
             )}
           </Grid>
         </Paper>
         <Divider className={classes.divider} />
-        <EmailDetails
-          edit={edit}
-          templateState={templateState}
-          setTemplateState={setTemplateState}
-        />
         <DrawerButtons
           edit={edit}
           setEdit={setEdit}

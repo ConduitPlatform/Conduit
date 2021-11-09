@@ -9,11 +9,8 @@ import AccountCircle from '@material-ui/icons/AccountCircle';
 import addUser from '../../assets/svgs/addUser.svg';
 import Grid from '@material-ui/core/Grid';
 import Image from 'next/image';
-
 import Container from '@material-ui/core/Container';
-import { Typography } from '@material-ui/core';
-import { enqueueInfoNotification } from '../../utils/useNotifier';
-import { useAppDispatch } from '../../redux/store';
+import { useForm, Controller } from 'react-hook-form';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -45,82 +42,72 @@ interface Props {
 
 const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const classes = useStyles();
-  const dispatch = useAppDispatch();
-  const [values, setValues] = useState<{ email: string; password: string }>({
-    email: '',
-    password: '',
-  });
-  const [emptyFieldsError, setEmptyFieldsError] = useState<boolean>(false);
+  const { handleSubmit, control } = useForm();
 
-  const handleSubmit = (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-    const hasEmptyFields = Object.values(values).some((element) => element === '');
-
-    if (hasEmptyFields) {
-      setEmptyFieldsError(true);
-      return;
-    }
-    setEmptyFieldsError(false);
-    handleNewUserDispatch(values);
-    setValues({ email: '', password: '' });
+  const onSubmit = (data: { password: string; email: string }) => {
+    handleNewUserDispatch(data);
   };
-  const handleInputChange = (e: { target: { name: string; value: string } }) => {
-    const { name, value } = e.target;
 
-    if (value.includes(' ')) {
-      dispatch(enqueueInfoNotification(`The ${name} cannot contain spaces`, `${name}`));
-    }
-
-    setValues({ ...values, [name]: value.replace(/\s/g, '') });
-  };
   return (
     <div className={classes.root} style={{ marginTop: '150px' }}>
       <h3 style={{ textAlign: 'center' }}>Add a new user</h3>
-      <form onSubmit={handleSubmit} style={{}}>
+      <form onSubmit={handleSubmit(onSubmit)} style={{}}>
         <Container className={classes.root} maxWidth="sm">
           <Grid container alignItems="center" className={classes.root} spacing={2}>
             <Grid item sm={12}>
-              <TextField
-                fullWidth
-                className={classes.textField}
-                variant="outlined"
-                id="email"
+              <Controller
                 name="email"
-                label="Username/Email"
-                onChange={handleInputChange}
-                value={values.email}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AccountCircle />
-                    </InputAdornment>
-                  ),
-                }}
+                control={control}
+                defaultValue=""
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <TextField
+                    label="Email"
+                    variant="outlined"
+                    value={value}
+                    fullWidth
+                    onChange={onChange}
+                    error={!!error}
+                    helperText={error ? error.message : null}
+                    type="email"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <AccountCircle />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+                rules={{ required: 'Email required' }}
               />
             </Grid>
             <Grid item sm={12}>
-              <TextField
-                fullWidth
-                variant="outlined"
-                id="password"
+              <Controller
                 name="password"
-                label="Password"
-                onChange={handleInputChange}
-                value={values.password}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOpenIcon />
-                    </InputAdornment>
-                  ),
-                }}
+                control={control}
+                defaultValue=""
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <TextField
+                    label="Password"
+                    variant="outlined"
+                    value={value}
+                    fullWidth
+                    onChange={onChange}
+                    error={!!error}
+                    helperText={error ? error.message : null}
+                    type="password"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockOpenIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+                rules={{ required: 'Password required' }}
               />
             </Grid>
-            {emptyFieldsError && (
-              <Grid item sm={12}>
-                <Typography color="error">Please fill the fields</Typography>
-              </Grid>
-            )}
             <Grid item>
               <Button
                 type="submit"
