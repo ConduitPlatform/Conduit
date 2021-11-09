@@ -43,9 +43,9 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
     setValue(index);
   }, [router.pathname, pathNames]);
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
-    setValue(newValue);
-    router.push(`${event.currentTarget.id}`, undefined, { shallow: false });
+  const handleChange = async (value: number) => {
+    setValue(value);
+    await router.push(`${labels[value].id}`);
   };
 
   return (
@@ -63,7 +63,10 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
+        <Tabs
+          value={value}
+          className={classes.navContent}
+          onChange={(event, value) => handleChange(value)}>
           {labels.map((label: { name: string; id: string }, index: number) => (
             <Tab key={index} label={label.name} id={label.id} />
           ))}
