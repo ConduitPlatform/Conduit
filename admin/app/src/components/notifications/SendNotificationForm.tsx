@@ -72,7 +72,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const [formState, setFormState] = useState<NotificationData>({
     title: '',
     body: '',
-    userIds: [''],
+    userIds: [],
   });
 
   const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
