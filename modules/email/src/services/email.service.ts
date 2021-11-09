@@ -1,5 +1,6 @@
 import { isNil } from 'lodash';
 import { EmailProvider } from '@quintessential-sft/email-provider';
+import { EmailTemplate } from '../models';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import { CreateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/CreateEmailTemplate';
@@ -44,10 +45,10 @@ export class EmailService {
 
     const { name, body, subject, variables } = params;
 
-    const existing = await this.database.findOne('EmailTemplate', { name });
+    const existing = await EmailTemplate.getInstance().findOne({ name });
     if (!isNil(existing)) return existing;
 
-    return this.database.create('EmailTemplate', {
+    return EmailTemplate.getInstance().create({
       name,
       subject,
       body,
@@ -65,9 +66,9 @@ export class EmailService {
       throw new Error(`Template/body+subject not provided`);
     }
 
-    let templateFound;
+    let templateFound: EmailTemplate | null;
     if (template) {
-      templateFound = await this.database.findOne('EmailTemplate', { name: template });
+      templateFound = await EmailTemplate.getInstance().findOne({ name: template });
       if (isNil(templateFound)) {
         throw new Error(`Template ${template} not found`);
       }
@@ -76,29 +77,29 @@ export class EmailService {
     if(!isNil(sender)){
       builder.setSender(sender);
     }
-    else if(!isNil(templateFound.sender) && isNil(sender) ){
-      builder.setSender(templateFound.sender);
+    else if(!isNil(templateFound!.sender) && isNil(sender) ){
+      builder.setSender(templateFound!.sender);
     }
     else{
       throw new Error(`Sender must be provided!`);
     }
 
-    if(templateFound.externalManaged){
+    if(templateFound!.externalManaged){
       builder.setTemplate({
-        id: templateFound.id,
+        id: templateFound!._id,
         variables: variables as any,
       })
     }
     else{
-      let handled_body = handlebars.compile(templateFound.body);
-      const bodyString = templateFound
+      let handled_body = handlebars.compile(templateFound!.body);
+      const bodyString = templateFound!
       ? handled_body(variables)
       : body!;
       builder.setContent(bodyString);
     }
-    let handled_subject = handlebars.compile(templateFound.subject);
+    let handled_subject = handlebars.compile(templateFound!.subject);
 
-      const subjectString = templateFound
+      const subjectString = templateFound!
     ? handled_subject(variables)
       : subject!;
 
