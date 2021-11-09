@@ -218,7 +218,7 @@ export class AdminHandlers{
       })
     }
     let errorMessage;
-    const deletedRooms:any = await this.database
+    await this.database
       .deleteMany('ChatRoom', { _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
@@ -238,8 +238,7 @@ export class AdminHandlers{
         message: errorMessage
       })
     }
-    const totalCount = deletedRooms.deletedCount;
-    return callback(null, { result: JSON.stringify({ deletedRooms,totalCount }) });
+    return callback(null, { result: 'Done'});
   }
 
   async deleteMessages(call: RouterRequest, callback: RouterResponse){
@@ -251,7 +250,7 @@ export class AdminHandlers{
       })
     }
     let errorMessage;
-    const deletedMessages:any = await this.database
+    await this.database
       .deleteMany('ChatMessage', { _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if(!isNil(errorMessage)){
@@ -260,7 +259,6 @@ export class AdminHandlers{
         message: errorMessage,
       });
     }
-    const totalCount = deletedMessages.deletedCount;
-    return callback(null, { result: JSON.stringify({ deletedMessages,totalCount }) });
+    return callback(null, { result: 'Done'});
   }
 }
