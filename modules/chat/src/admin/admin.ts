@@ -113,7 +113,7 @@ export class AdminHandlers{
     if(participants.length === 0 ){
       return callback({
         code: status.INTERNAL,
-        message: 'cant create chat room with zero participants'
+        message: 'can not create chat room with no participants'
       })
     }
     try {
