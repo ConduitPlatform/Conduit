@@ -1,11 +1,12 @@
 import React from 'react';
-import { Box, Container, Grid, Typography } from '@material-ui/core';
+import { Box, Container, Grid } from '@material-ui/core';
 import Image from 'next/dist/client/image';
 import FormsImage from '../../assets/svgs/forms.svg';
 import { Button, Paper } from '@material-ui/core';
 import { FormsModel } from '../../models/forms/FormsModels';
 import sharedClasses from '../common/sharedClasses';
 import EditableForm from './EditableForm';
+import ExtractView from '../payments/ExtractView';
 
 interface Props {
   handleCreate: (formsState: FormsModel) => void;
@@ -48,28 +49,7 @@ const ViewEditForm: React.FC<Props> = ({
                 <EditableForm preloadedValues={form} handleSubmitData={handleSaveClick} />
               </>
             ) : (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Form name:</Typography>
-                  <Typography variant="h6">{form.name}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Fields:</Typography>
-                  <Typography variant="h6">Fields...</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Forward To:</Typography>
-                  <Typography variant="h6">{form.forwardTo}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Email Field:</Typography>
-                  <Typography variant="h6">{form.emailField}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Enabled:</Typography>
-                  <Typography variant="h6">{form.enabled ? 'true' : 'false'}</Typography>
-                </Grid>
-              </>
+              <ExtractView valuesToShow={form} />
             )}
           </Grid>
         </Paper>
