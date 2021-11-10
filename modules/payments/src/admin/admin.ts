@@ -8,6 +8,12 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 import { populateArray } from '../utils/populateArray';
+import {
+  PaymentsCustomer,
+  Product,
+  Transaction,
+  Subscription,
+} from '../models';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
@@ -57,15 +63,14 @@ export class AdminHandlers {
       identifier = escapeStringRegexp(search);
       query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
-    const productDocumentsPromise = this.database.findMany(
-      'Product',
-      query,
-      undefined,
-      skipNumber,
-      limitNumber,
-
-    );
-    const totalCountPromise = this.database.countDocuments('Product', query);
+    const productDocumentsPromise = Product.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skipNumber,
+        limitNumber,
+      );
+    const totalCountPromise = Product.getInstance().countDocuments(query);
 
     let errorMessage;
     const [productDocuments, totalCount] = await Promise.all([
@@ -98,14 +103,14 @@ export class AdminHandlers {
       identifier = escapeStringRegexp(search);
       query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
-    const customerDocumentsPromise = this.database.findMany(
-      'PaymentsCustomer',
-      query,
-      undefined,
-      skipNumber,
-      limitNumber
-    );
-    const totalCountPromise = this.database.countDocuments('PaymentsCustomer', query);
+    const customerDocumentsPromise = PaymentsCustomer.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const totalCountPromise = PaymentsCustomer.getInstance().countDocuments(query);
 
     let errorMessage;
     const [customerDocuments, totalCount] = await Promise.all([
@@ -125,8 +130,8 @@ export class AdminHandlers {
     const params = JSON.parse(call.request.params);
     const id = params.id;
     let errorMessage: string | null = null;
-    const productDocument = await this.database
-      .findOne('Product', { _id: id })
+    const productDocument = await Product.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
@@ -145,8 +150,8 @@ export class AdminHandlers {
           productDocument[key] = params[key];
       }
     });
-    const updatedProduct = await this.database
-      .findByIdAndUpdate('Product', id, productDocument)
+    const updatedProduct = await Product.getInstance()
+      .findByIdAndUpdate(id, productDocument)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
@@ -196,8 +201,8 @@ export class AdminHandlers {
       stripe
     };
 
-    const customerExists = await this.database
-      .findOne('PaymentsCustomer',{userId: userId})
+    const customerExists = await PaymentsCustomer.getInstance()
+      .findOne({ userId })
       .catch((error:any) => errorMessage = error);
     if (!isNil(errorMessage)) {
       return callback({
@@ -207,8 +212,8 @@ export class AdminHandlers {
     }
     if(isNil(customerExists)) {
 
-      const createdCustomer = await this.database
-        .create('PaymentsCustomer', customerDoc)
+      const createdCustomer = await PaymentsCustomer.getInstance()
+        .create(customerDoc)
         .catch((error: any) => errorMessage = error);
 
       if (!isNil(errorMessage)) {
@@ -301,8 +306,8 @@ export class AdminHandlers {
       }
     }
 
-    const product = await this.database
-      .create('Product', productDoc)
+    const product = await Product.getInstance()
+      .create(productDoc)
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -333,16 +338,16 @@ export class AdminHandlers {
     if(!isNil(populate)){
       populates = populateArray(populate);
     }
-    const subscriptionDocumentsPromise = this.database.findMany(
-        'Subscription',
+    const subscriptionDocumentsPromise = Subscription.getInstance()
+      .findMany(
         query,
-      undefined,
+        undefined,
         skipNumber,
         limitNumber,
         undefined,
-        populates,
-    );
-    const totalCountPromise = this.database.countDocuments('Subscription', query);
+        populates
+      );
+    const totalCountPromise = Subscription.getInstance().countDocuments(query);
 
     let errorMessage;
     const [subscriptionDocuments, totalCount] = await Promise.all([
@@ -377,14 +382,14 @@ export class AdminHandlers {
     if(!isNil(productId)){
       query['product'] = productId
     }
-    const transactionDocumentsPromise = this.database.findMany(
-      'Transaction',
-      query,
-      undefined,
-      skipNumber,
-      limitNumber
-    );
-    const totalCountPromise = this.database.countDocuments('Transaction', query);
+    const transactionDocumentsPromise = Transaction.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const totalCountPromise = Transaction.getInstance().countDocuments(query);
 
     let errorMessage;
     const [transactionDocuments, totalCount] = await Promise.all([

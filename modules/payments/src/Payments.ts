@@ -163,10 +163,10 @@ export default class PaymentsModule extends ConduitServiceModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
+      await this.registerSchemas();
       this._router = new PaymentsRoutes(this.grpcServer, this.grpcSdk);
       this.stripeHandlers = await this._router.getStripe();
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this.stripeHandlers);
-      await this.registerSchemas();
       this.isRunning = true;
     }
     await this._router.registerRoutes();
