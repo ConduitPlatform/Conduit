@@ -114,7 +114,7 @@ export class AdminHandlers {
           });
         finalConfig = dbConfig.moduleConfigs.sms;
         break;
-      case 'push-notifications':
+      case 'pushNotifications':
         if (!registeredModules.has(module))
           return res.status(400).json({
             name: 'INVALID_PARAMS',
