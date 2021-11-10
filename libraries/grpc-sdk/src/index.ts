@@ -123,7 +123,6 @@ export default class ConduitGrpcSdk {
   }
 
   get pushNotifications(): PushNotifications | null {
-    console.log(this._modules);
     if (this._modules['pushNotifications']) {
       return this._modules['pushNotifications'];
     } else {
