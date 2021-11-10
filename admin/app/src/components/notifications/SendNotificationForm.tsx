@@ -2,12 +2,12 @@ import { Container, Typography, Paper, Grid, Button, TextField } from '@material
 import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
-import { useForm, Controller } from 'react-hook-form';
 import SelectedElements from '../common/SelectedElements';
 
 const useStyles = makeStyles((theme) => ({
@@ -38,10 +38,9 @@ type SendNotificationProps = {
 const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const { handleSubmit, control, reset } = useForm();
-
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
@@ -70,11 +69,22 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
     });
   };
 
-  const onSubmit = (data: { title: string; body: string }) => {
-    console.log({ ...data, userIds: selectedUsers });
+  const [formState, setFormState] = useState<NotificationData>({
+    title: '',
+    body: '',
+    userIds: [],
+  });
 
-    handleSend({ ...data, userIds: selectedUsers });
-    reset();
+  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormState({
+      ...formState,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSendNotification = () => {
+    setFormState({ ...formState, userIds: selectedUsers });
+    handleSend(formState);
   };
 
   const removeSelectedUser = (i: number) => {
@@ -89,8 +99,8 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} /> Push
           notification
         </Typography>
-        <form onSubmit={handleSubmit(onSubmit)} style={{}}>
-          <Grid container alignItems="center" spacing={2}>
+        <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
+          <Grid container spacing={2}>
             <SelectedElements
               selectedElements={selectedUsers}
               handleButtonAction={() => setDrawer(true)}
@@ -98,48 +108,36 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
               buttonText={'Add users'}
               header={'Selected users'}
             />
-            <Grid item sm={12}>
-              <Controller
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                label="Title"
                 name="title"
-                control={control}
-                defaultValue=""
-                render={({ field: { onChange, value }, fieldState: { error } }) => (
-                  <TextField
-                    required
-                    fullWidth
-                    label="Title"
-                    value={value}
-                    onChange={onChange}
-                    variant="outlined"
-                  />
-                )}
-                rules={{ required: 'Email required' }}
+                value={formState.title}
+                onChange={handleDataChange}
+                variant="outlined"
               />
             </Grid>
-            <Grid item sm={12}>
-              <Controller
+            <Grid item xs={12}>
+              <TextField
+                label="Body"
                 name="body"
-                control={control}
-                defaultValue=""
-                render={({ field: { onChange, value }, fieldState: { error } }) => (
-                  <TextField
-                    label="Body"
-                    multiline
-                    fullWidth
-                    error={!!error}
-                    value={value}
-                    rows="10"
-                    variant="outlined"
-                    placeholder="Write your message here..."
-                    required
-                    onChange={onChange}
-                  />
-                )}
-                rules={{ required: 'Password required' }}
+                multiline
+                fullWidth
+                rows="10"
+                variant="outlined"
+                placeholder="Write your message here..."
+                required
+                onChange={handleDataChange}
               />
             </Grid>
             <Grid item container justify="flex-end" xs={12}>
-              <Button variant="contained" color="primary" startIcon={<Send />} type="submit">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Send />}
+                onClick={handleSendNotification}>
                 Send
               </Button>
             </Grid>
