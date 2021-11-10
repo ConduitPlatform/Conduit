@@ -13,7 +13,7 @@ notifications
       (process.env.REGISTER_NAME === 'true' ? 'push-notifications:' : '0.0.0.0:') +
       notifications.port;
 
-    return grpcSdk.config.registerModule('pushnotifications', url);
+    return grpcSdk.config.registerModule('pushNotifications', url);
   })
   .catch((err: Error) => {
     console.log('Failed to initialize server');
