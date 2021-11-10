@@ -18,6 +18,9 @@ interface IChatSlice {
     chatRooms: {
       data: IChatRoom[];
       count: number;
+      hasMore: boolean;
+      skip: number;
+      loading: boolean;
     };
     chatMessages: {
       data: IChatMessage[];
@@ -39,6 +42,9 @@ const initialState: IChatSlice = {
     chatRooms: {
       data: [],
       count: 0,
+      hasMore: true,
+      skip: 0,
+      loading: false,
     },
     chatMessages: {
       data: [],
@@ -83,10 +89,16 @@ export const asyncPutChatConfig = createAsyncThunk(
 
 export const asyncGetChatRooms = createAsyncThunk(
   'chat/getChatRooms',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (params: { skip: number; search?: string }, thunkAPI) => {
     try {
-      const { data } = await getChatRooms(params);
-      return data;
+      const {
+        data: { chatRoomDocuments, totalCount },
+      } = await getChatRooms(params);
+      return {
+        chatRooms: chatRoomDocuments,
+        count: totalCount,
+        hasMore: chatRoomDocuments.length > 0,
+      };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -150,6 +162,9 @@ const chatSlice = createSlice({
     addChatMessagesSkip: (state) => {
       state.data.chatMessages.skip += 20;
     },
+    addChatRoomsSkip: (state) => {
+      state.data.chatRooms.skip += 15;
+    },
     clearChatMessages: (state) => {
       state.data.chatMessages = initialState.data.chatMessages;
     },
@@ -158,9 +173,17 @@ const chatSlice = createSlice({
     builder.addCase(asyncGetChatConfig.fulfilled, (state, action) => {
       state.config = action.payload;
     });
+    builder.addCase(asyncGetChatRooms.pending, (state) => {
+      state.data.chatRooms.loading = true;
+    });
+    builder.addCase(asyncGetChatRooms.rejected, (state) => {
+      state.data.chatRooms.loading = false;
+    });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
-      state.data.chatRooms.data = action.payload.chatRoomDocuments;
-      state.data.chatRooms.count = action.payload.totalCount;
+      state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
+      state.data.chatRooms.count = action.payload.count;
+      state.data.chatRooms.hasMore = action.payload.hasMore;
+      state.data.chatRooms.loading = false;
     });
     builder.addCase(asyncGetChatMessages.pending, (state) => {
       state.data.chatMessages.loading = true;
@@ -186,4 +209,5 @@ const chatSlice = createSlice({
 });
 
 export default chatSlice.reducer;
-export const { clearChatStore, clearChatMessages, addChatMessagesSkip } = chatSlice.actions;
+export const { clearChatStore, clearChatMessages, addChatMessagesSkip, addChatRoomsSkip } =
+  chatSlice.actions;

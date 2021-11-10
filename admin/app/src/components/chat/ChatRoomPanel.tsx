@@ -75,9 +75,8 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
   const {
-    chatMessages: { data, skip, hasMore },
+    chatMessages: { data, skip, hasMore, loading },
   } = useAppSelector((state) => state.chatSlice.data);
-  const { loading } = useAppSelector((state) => state.chatSlice.data.chatMessages);
 
   const [infoDialog, setInfoDialog] = useState<boolean>(false);
   const [deleteDialog, setDeleteDialog] = useState<boolean>(false);

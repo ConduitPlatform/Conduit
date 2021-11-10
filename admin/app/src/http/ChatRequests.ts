@@ -14,10 +14,11 @@ export const createChatRoom = (params: { name: string; participants: string[] })
     ...params,
   });
 
-export const getChatRooms = (params: { skip: number; limit: number; search?: string }) =>
+export const getChatRooms = (params: { skip: number; search?: string }) =>
   axios.get(`${CONDUIT_API}/admin/chat/rooms`, {
     params: {
       populate: 'participants',
+      limit: 15,
       ...params,
     },
   });
@@ -26,7 +27,7 @@ export const getChatMessages = (params: { skip: number; senderId?: string; roomI
   axios.get(`${CONDUIT_API}/admin/chat/messages`, {
     params: {
       ...params,
-      limit: 15,
+      limit: 20,
     },
   });
 
