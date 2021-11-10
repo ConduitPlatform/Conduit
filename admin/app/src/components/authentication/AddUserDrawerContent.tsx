@@ -62,10 +62,24 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
       <Container className={classes.root} maxWidth="sm">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText name="email" control={control} label="Username/Email" />
+            <FormInputText
+              name="email"
+              control={control}
+              label="Username/Email"
+              requiredRules="email/name is required!"
+              typeOfInput={'text'}
+            />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText name="password" control={control} label="Password" />
+            <FormInputText
+              name="password"
+              control={control}
+              label="Password"
+              requiredRules="password is required!"
+              typeOfInput={'password'}
+              minimumLength={5}
+              minLengthMsg={'The minimum length is 5 characters'}
+            />
           </Grid>
           <Grid item>
             <Button
