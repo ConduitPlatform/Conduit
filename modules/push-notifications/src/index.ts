@@ -4,7 +4,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
-let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'pushnotifications');
+let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'pushNotifications');
 let notifications = new PushNotifications(grpcSdk);
 notifications
   .initialize()

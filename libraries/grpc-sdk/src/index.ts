@@ -28,7 +28,7 @@ export default class ConduitGrpcSdk {
     'database-provider': DatabaseProvider,
     storage: Storage,
     email: Email,
-    'push-notifications': PushNotifications,
+    pushNotifications: PushNotifications,
     authentication: Authentication,
     cms: CMS,
     sms: SMS,
@@ -123,6 +123,7 @@ export default class ConduitGrpcSdk {
   }
 
   get pushNotifications(): PushNotifications | null {
+    console.log(this._modules);
     if (this._modules['pushNotifications']) {
       return this._modules['pushNotifications'];
     } else {
