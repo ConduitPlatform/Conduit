@@ -34,13 +34,25 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText name="name" control={control} label="Name" />
+            <FormInputText
+              name="name"
+              control={control}
+              label="Name"
+              requiredRules={'Name is required'}
+              pattern={/^S*$/}
+              errMsg={'No spaces allowed on template name'}
+            />
           </Grid>
           <Grid item sm={12}>
             <FormInputText name="sender" control={control} label="Sender*" />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText name="subject" control={control} label="Subject" />
+            <FormInputText
+              name="subject"
+              control={control}
+              label="Subject"
+              requiredRules={'Subject is required'}
+            />
           </Grid>
           <Grid item sm={12}>
             <Controller
