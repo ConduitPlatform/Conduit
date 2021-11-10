@@ -51,7 +51,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   useEffect(() => {
     const fieldsToDisplay: PropsForInputFields[] = [];
     Object.entries(preloadedValues.fields).forEach(([key, value]) => {
-      fieldsToDisplay.push({ id: uuidV4(), key: key, type: value });
+      fieldsToDisplay.push({ id: uuidV4(), key: key, type: value as string });
     });
     setInputFields(fieldsToDisplay);
   }, [preloadedValues]);
@@ -59,7 +59,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const handleCancel = () => {
     const fieldsToDisplay: PropsForInputFields[] = [];
     Object.entries(preloadedValues.fields).forEach(([key, value]) => {
-      fieldsToDisplay.push({ id: uuidV4(), key: key, type: value });
+      fieldsToDisplay.push({ id: uuidV4(), key: key, type: value as string });
     });
     setInputFields(fieldsToDisplay);
     reset();
@@ -108,7 +108,14 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText name="name" control={control} label="Name" />
+            <FormInputText
+              name="name"
+              control={control}
+              label="Name"
+              requiredRules={'The form name is required'}
+              pattern={/^\S*$/}
+              errMsg={'The form cannot contain whitespaces'}
+            />
           </Grid>
           <Grid item container xs={12}>
             <Grid item xs={11}>
@@ -164,7 +171,12 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             <FormInputText name="forwardTo" control={control} label="Forward to" />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText name="emailField" control={control} label="Email field" />
+            <FormInputText
+              name="emailField"
+              control={control}
+              label="Email field"
+              typeOfInput={'email'}
+            />
           </Grid>
           <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
             <Grid item>
