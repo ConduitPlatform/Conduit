@@ -60,7 +60,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, EmailTemplate.name);
+    super(database, EmailTemplate.name, schema, schemaOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

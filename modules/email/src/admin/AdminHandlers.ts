@@ -14,14 +14,9 @@ let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private database: any;
   private emailService: EmailService;
 
   constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getTemplates: this.getTemplates.bind(this),

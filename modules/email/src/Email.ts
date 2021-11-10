@@ -62,7 +62,7 @@ export default class EmailModule extends ConduitServiceModule {
   async activate() {
     await this.grpcSdk.waitForExistence('database-provider');
     await this.grpcSdk.initializeEventBus();
-    this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {  // <-- Should this be 'email' (more references)
+    this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
       if (message === 'config-update') {
         this.enableModule()
           .then(() => {
@@ -76,14 +76,13 @@ export default class EmailModule extends ConduitServiceModule {
     try {
       await this.grpcSdk.config.get('email');
     } catch (e) {
-      await this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email'); // <-- See here
+      await this.grpcSdk.config.updateConfig(EmailConfigSchema.getProperties(), 'email');
     }
     let config = await this.grpcSdk.config.addFieldstoConfig(
       EmailConfigSchema.getProperties(),
       'email'
     );
-    // Where Shit Gets Rough
-    if (config.active) await this.enableModule();  // this never runs
+    if (config.active) await this.enableModule();
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
