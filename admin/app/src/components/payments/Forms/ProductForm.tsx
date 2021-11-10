@@ -81,10 +81,23 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText name="name" control={control} label="Name" />
+            <FormInputText
+              name="name"
+              control={control}
+              label="Name"
+              requiredRules={'Product name is required'}
+            />
           </Grid>
           <Grid item sm={6}>
-            <FormInputText name="value" control={control} label="Value" />
+            <FormInputText
+              name="value"
+              control={control}
+              label="Value"
+              typeOfInput="number"
+              requiredRules={'Value is required'}
+              pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
+              errMsg={'Negative numbers not allowed'}
+            />
           </Grid>
           <Grid item sm={6}>
             <FormInputDropdown
@@ -112,7 +125,14 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               />
             </Grid>
             <Grid item sm={12} style={{ marginTop: '10px' }}>
-              <FormInputText name="recurringCount" control={control} label="Recurring count" />
+              <FormInputText
+                name="recurringCount"
+                control={control}
+                label="Recurring count"
+                typeOfInput="number"
+                pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
+                errMsg={'Negative number not allowed'}
+              />
             </Grid>
           </Paper>
           <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
