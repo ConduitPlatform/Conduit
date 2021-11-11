@@ -16,9 +16,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     color: theme.palette.text.secondary,
   },
-  innerGrid: {
-    paddingLeft: theme.spacing(4),
-  },
+  innerGrid: {},
   divider: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
@@ -29,15 +27,6 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   handleSave: (data: SettingsStateTypes) => void;
   settingsData: SignInMethods;
-}
-
-interface IFormInput {
-  active: boolean;
-  radioValue: string;
-  checkboxValue: string[];
-  dateValue: Date;
-  dropdownValue: string;
-  sliderValue: number;
 }
 
 const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
@@ -122,10 +111,10 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     <Divider className={classes.divider} />
                   </Box>
                   <Grid item xs={6}>
-                    <Typography variant={'h6'}>Token expire period</Typography>
+                    <Typography variant={'h6'}>Token expiration period</Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <Typography variant={'h6'}>Refresh token expire period</Typography>
+                    <Typography variant={'h6'}>Refresh token expiration period</Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <FormInputText

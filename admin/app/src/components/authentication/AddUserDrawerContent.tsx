@@ -66,7 +66,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
               name="email"
               control={control}
               label="Username/Email"
-              requiredRules="email/name is required!"
+              required="email/name is required!"
               typeOfInput={'text'}
             />
           </Grid>
@@ -75,7 +75,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
               name="password"
               control={control}
               label="Password"
-              requiredRules="password is required!"
+              required="password is required!"
               typeOfInput={'password'}
               minimumLength={5}
               minLengthMsg={'The minimum length is 5 characters'}
