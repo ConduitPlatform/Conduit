@@ -1,6 +1,6 @@
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import Queue from 'bull';
-import { ActorFlowModel } from '../models';
+import { ActorFlows } from '../models';
 import path from 'path';
 import { Cron } from '../_triggers/cron/cron';
 import { Webhook } from '../_triggers/webhook/webhook';
@@ -27,7 +27,7 @@ export class FlowCreator {
       });
   }
 
-  async constructFlow(flowData: ActorFlowModel) {
+  async constructFlow(flowData: ActorFlows) {
     let processorName = flowData.name + '__' + flowData._id;
     flowConstructor(processorName, flowData);
     let queue = new Queue(processorName);
