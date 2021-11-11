@@ -98,7 +98,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
               justifyContent={'space-between'}
               alignItems={'center'}>
               <Typography variant={'h6'}>Activate Payments Module</Typography>
-              <FormSwitch name={'active'} control={control} />
+              <FormSwitch name={'active'} control={control} disabled={!edit} />
             </Box>
 
             <Divider className={classes.divider} />
@@ -113,14 +113,19 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                       justifyContent={'space-between'}
                       alignItems={'center'}>
                       <Typography variant={'h6'}>Enable stripe payments</Typography>
-                      <FormSwitch name={'enabled'} control={control} />
+                      <FormSwitch name={'enabled'} control={control} disabled={!edit} />
                     </Box>
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant={'h6'}>Stripe secret key</Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <FormInputText name={'secret_key'} label={'Secret key'} control={control} />
+                    <FormInputText
+                      name={'secret_key'}
+                      label={'Secret key'}
+                      control={control}
+                      disabled={!edit}
+                    />
                   </Grid>
                 </>
               )}
