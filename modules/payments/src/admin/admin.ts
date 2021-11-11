@@ -13,6 +13,7 @@ import {
   Product,
   Transaction,
   Subscription,
+  User,
 } from '../models';
 
 let paths = require('./admin.json').functions;
@@ -180,8 +181,8 @@ export class AdminHandlers {
       })
     }
     let errorMessage: string | null = null;
-    const user = await this.database
-      .findOne('User',{_id: userId})
+    const user = await User.getInstance()
+      .findOne({_id: userId})
       .catch( (err:any) => errorMessage = err);
 
     if(isNil(user)){
