@@ -1,16 +1,16 @@
 import { Container } from '@material-ui/core';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import Switch from '@material-ui/core/Switch';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { FormSettingsConfig } from '../../models/forms/FormsModels';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -36,145 +36,112 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const classes = useStyles();
 
   const [edit, setEdit] = useState<boolean>(false);
-  const [settingsState, setSettingsState] = useState<FormSettingsConfig>({
-    active: false,
-    useAttachments: false,
+  // const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
+  const methods = useForm<Props['settingsData']>({
+    defaultValues: useMemo(() => {
+      return settingsData;
+    }, [settingsData]),
   });
-  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
+  const { handleSubmit, reset, control } = methods;
 
   useEffect(() => {
-    if (!settingsData) {
-      return;
-    }
-    setSettingsState({
-      active: settingsData.active,
-      useAttachments: settingsData.useAttachments,
-    });
-  }, [settingsData]);
+    reset(settingsData);
+  }, [settingsData, reset]);
+
+  const isActive = useWatch({
+    control,
+    name: 'active',
+  });
 
   const handleCancel = () => {
-    setEdit(false);
-    setSettingsState({
-      active: settingsData.active,
-      useAttachments: settingsData.useAttachments,
-    });
+    reset();
   };
 
   const handleEditClick = () => {
     setEdit(true);
   };
 
-  const save = () => {
-    const data = {
-      active: settingsState.active,
-      useAttachments: settingsData.useAttachments,
-    };
+  const onSubmit = (data: any) => {
+    // const data = {
+    //   active: settingsState.active,
+    //   useAttachments: settingsData.useAttachments,
+    // };
     setEdit(false);
-    handleSave(data);
-    setOpenSaveDialog(false);
-  };
-
-  const renderSettingsFields = () => {
-    return (
-      <>
-        <Grid item xs={12}>
-          <Box
-            width={'100%'}
-            display={'inline-flex'}
-            justifyContent={'space-between'}
-            alignItems={'center'}>
-            <Typography variant={'h6'}>Use Attachments</Typography>
-            <FormControlLabel
-              label={''}
-              control={
-                <Switch
-                  disabled={!edit}
-                  checked={settingsState.useAttachments}
-                  onChange={() => {
-                    setSettingsState({
-                      ...settingsState,
-                      useAttachments: !settingsState.useAttachments,
-                    });
-                  }}
-                  value={'useAttachments'}
-                  color="primary"
-                />
-              }
-            />
-          </Box>
-        </Grid>
-      </>
-    );
+    // handleSave(data);
+    console.log(data);
+    // setOpenSaveDialog(false);
   };
 
   return (
     <Container>
       <Paper className={classes.paper}>
-        <Grid container>
-          <Box
-            width={'100%'}
-            display={'inline-flex'}
-            justifyContent={'space-between'}
-            alignItems={'center'}>
-            <Typography variant={'h6'}>Activate Forms Module</Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  disabled={!edit}
-                  checked={settingsState.active}
-                  onChange={() =>
-                    setSettingsState({
-                      ...settingsState,
-                      active: !settingsState.active,
-                    })
-                  }
-                  value={'accountLinking'}
+        <form onSubmit={handleSubmit(onSubmit)} style={{}}>
+          <Grid container>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
+              <Typography variant={'h6'}>Activate Forms Module</Typography>
+              <FormSwitch control={control} disabled={!edit} name={'active'} />
+            </Box>
+
+            <Divider className={classes.divider} />
+
+            <Grid container spacing={2} className={classes.innerGrid}>
+              {isActive && (
+                <Grid item xs={12}>
+                  <Box
+                    width={'100%'}
+                    display={'inline-flex'}
+                    justifyContent={'space-between'}
+                    alignItems={'center'}>
+                    <Typography variant={'h6'}>Use Attachments</Typography>
+                    <FormSwitch control={control} disabled={!edit} name={'useAttachments'} />
+                  </Box>
+                </Grid>
+              )}
+            </Grid>
+            {edit && (
+              <Grid item container xs={12} justify={'flex-end'}>
+                <Button
+                  onClick={() => handleCancel()}
+                  style={{ marginRight: 16 }}
+                  color={'primary'}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  type="submit"
                   color="primary"
-                />
-              }
-              label={''}
-            />
-          </Box>
-
-          <Divider className={classes.divider} />
-
-          <Grid container spacing={2} className={classes.innerGrid}>
-            {settingsState.active && renderSettingsFields()}
+                  style={{ alignSelf: 'flex-end' }}
+                  // onClick={() => setOpenSaveDialog(true)}
+                >
+                  Save
+                </Button>
+              </Grid>
+            )}
+            {!edit && (
+              <Grid item container xs={12} justify={'flex-end'}>
+                <Button
+                  onClick={() => handleEditClick()}
+                  style={{ marginRight: 16 }}
+                  color={'primary'}>
+                  Edit
+                </Button>
+              </Grid>
+            )}
           </Grid>
-          {edit && (
-            <Grid item container xs={12} justify={'flex-end'}>
-              <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                style={{ alignSelf: 'flex-end' }}
-                onClick={() => setOpenSaveDialog(true)}>
-                Save
-              </Button>
-            </Grid>
-          )}
-          {!edit && (
-            <Grid item container xs={12} justify={'flex-end'}>
-              <Button
-                onClick={() => handleEditClick()}
-                style={{ marginRight: 16 }}
-                color={'primary'}>
-                Edit
-              </Button>
-            </Grid>
-          )}
-        </Grid>
+        </form>
       </Paper>
-      <ConfirmationDialog
+      {/* <ConfirmationDialog
         open={openSaveDialog}
         handleClose={() => setOpenSaveDialog(false)}
         title={'Are you sure you want to proceed?'}
         description={'Forms settings changed'}
         buttonAction={save}
         buttonText={'Proceed'}
-      />
+      /> */}
     </Container>
   );
 };
