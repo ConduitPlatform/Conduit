@@ -1,6 +1,6 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import sharedClasses from '../../common/sharedClasses';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Button, Container, Grid, Paper, Typography } from '@material-ui/core';
 import { Product, reccuringEnum } from '../../../models/payments/PaymentsModels';
 import { FormInputText } from '../../common/RHFormComponents/RHFInputText';
@@ -23,10 +23,14 @@ interface IProductForm {
 
 const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const classes = sharedClasses();
-
   const methods = useForm<IProductForm>({ defaultValues: preloadedValues });
 
   const { handleSubmit, reset, control, setValue } = methods;
+
+  const isSubscription = useWatch({
+    control,
+    name: 'isSubscription',
+  });
 
   useEffect(() => {
     setValue('currency', preloadedValues.currency.toLowerCase());
@@ -116,24 +120,28 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                 <FormSwitch name="isSubscription" control={control} />
               </Grid>
             </Grid>
-            <Grid item sm={12}>
-              <FormInputDropdown
-                options={recuringOptions}
-                name="recurring"
-                control={control}
-                label="Recurring"
-              />
-            </Grid>
-            <Grid item sm={12} style={{ marginTop: '10px' }}>
-              <FormInputText
-                name="recurringCount"
-                control={control}
-                label="Recurring count"
-                typeOfInput="number"
-                pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
-                errMsg={'Negative number not allowed'}
-              />
-            </Grid>
+            {isSubscription && (
+              <>
+                <Grid item sm={12}>
+                  <FormInputDropdown
+                    options={recuringOptions}
+                    name="recurring"
+                    control={control}
+                    label="Recurring"
+                  />
+                </Grid>
+                <Grid item sm={12} style={{ marginTop: '10px' }}>
+                  <FormInputText
+                    name="recurringCount"
+                    control={control}
+                    label="Recurring count"
+                    typeOfInput="number"
+                    pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
+                    errMsg={'Negative number not allowed'}
+                  />
+                </Grid>
+              </>
+            )}
           </Paper>
           <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
             <Grid item>

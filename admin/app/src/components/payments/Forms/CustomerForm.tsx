@@ -28,8 +28,8 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const dispatch = useAppDispatch();
 
   const methods = useForm<ICustomerForm>({ defaultValues: preloadedValues });
-
   const { handleSubmit, reset, control } = methods;
+
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
