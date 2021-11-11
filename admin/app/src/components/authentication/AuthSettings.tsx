@@ -83,7 +83,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
               justifyContent={'space-between'}
               alignItems={'center'}>
               <Typography variant={'h6'}>Activate Authentication Module</Typography>
-              <FormSwitch control={control} name={'active'} />
+              <FormSwitch control={control} name={'active'} disabled={!edit} />
             </Box>
             <Divider className={classes.divider} />
             <Grid container spacing={2} className={classes.innerGrid}>
@@ -95,7 +95,12 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <FormInputText name={'rateLimit'} control={control} label={'Rate limit'} />
+                    <FormInputText
+                      name={'rateLimit'}
+                      control={control}
+                      label={'Rate limit'}
+                      disabled={!edit}
+                    />
                   </Grid>
                   <Grid item xs={6}>
                     <Box
@@ -104,7 +109,11 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                       justifyContent={'space-between'}
                       alignItems={'center'}>
                       <Typography variant={'h6'}>Allow Refresh Token generation</Typography>
-                      <FormSwitch name={'generateRefreshToken'} control={control} />
+                      <FormSwitch
+                        name={'generateRefreshToken'}
+                        control={control}
+                        disabled={!edit}
+                      />
                     </Box>
                   </Grid>
                   <Grid item xs={6} />
@@ -122,6 +131,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                       name={'tokenInvalidationPeriod'}
                       label={'Token invalidation period'}
                       control={control}
+                      disabled={!edit}
                     />
                   </Grid>
                   <Grid item xs={6}>
@@ -129,6 +139,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                       name={'refreshTokenInvalidationPeriod'}
                       label={'Refresh token invalidation period'}
                       control={control}
+                      disabled={!edit}
                     />
                   </Grid>
                   <Box width={'100%'}>
@@ -139,7 +150,12 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                   </Grid>
                   <Grid item xs={6} />
                   <Grid item xs={6}>
-                    <FormInputText name={'jwtSecret'} label={'JWT secret'} control={control} />
+                    <FormInputText
+                      name={'jwtSecret'}
+                      label={'JWT secret'}
+                      control={control}
+                      disabled={!edit}
+                    />
                   </Grid>
                 </>
               )}

@@ -6,6 +6,7 @@ interface IForm {
   name: string;
   control: any;
   label: string;
+  disabled?: boolean;
   requiredRules?: string;
   typeOfInput?: string;
   pattern?: any;
@@ -18,6 +19,7 @@ export const FormInputText = ({
   name,
   control,
   label,
+  disabled,
   requiredRules,
   typeOfInput,
   pattern,
@@ -39,6 +41,7 @@ export const FormInputText = ({
       }}
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <TextField
+          disabled={disabled}
           helperText={error ? error.message : null}
           type={typeOfInput}
           error={!!error}
