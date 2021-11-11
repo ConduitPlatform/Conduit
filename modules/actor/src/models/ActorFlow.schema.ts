@@ -47,8 +47,8 @@ const schemaOptions = {
 };
 const collectionName = undefined;
 
-export class ActorFlows extends ConduitActiveSchema<ActorFlows> {
-  private static _instance: ActorFlows;
+export class ActorFlow extends ConduitActiveSchema<ActorFlow> {
+  private static _instance: ActorFlow;
   _id!: string;
   name!: string;
   trigger!: {
@@ -68,15 +68,15 @@ export class ActorFlows extends ConduitActiveSchema<ActorFlows> {
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, ActorFlows.name, schema, schemaOptions, collectionName);
+    super(database, ActorFlow.name, schema, schemaOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (ActorFlows._instance) return ActorFlows._instance;
+    if (ActorFlow._instance) return ActorFlow._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    ActorFlows._instance = new ActorFlows(database);
-    return ActorFlows._instance;
+    ActorFlow._instance = new ActorFlow(database);
+    return ActorFlow._instance;
   }
 }

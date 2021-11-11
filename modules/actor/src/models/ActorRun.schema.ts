@@ -3,7 +3,7 @@ import {
   DatabaseProvider,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { ActorFlows } from './ActorFlow.schema';
+import { ActorFlow } from './ActorFlow.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -30,25 +30,25 @@ const schemaOptions = {
 };
 const collectionName = undefined;
 
-export class ActorRuns extends ConduitActiveSchema<ActorRuns> {
-  private static _instance: ActorRuns;
+export class ActorRun extends ConduitActiveSchema<ActorRun> {
+  private static _instance: ActorRun;
   _id!: string;
-  flow!: string | ActorFlows;
+  flow!: string | ActorFlow;
   data!: any;
   status!: string;
   createdAt!: Date;
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, ActorRuns.name, schema, schemaOptions, collectionName);
+    super(database, ActorRun.name, schema, schemaOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (ActorRuns._instance) return ActorRuns._instance;
+    if (ActorRun._instance) return ActorRun._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    ActorRuns._instance = new ActorRuns(database);
-    return ActorRuns._instance;
+    ActorRun._instance = new ActorRun(database);
+    return ActorRun._instance;
   }
 }

@@ -2,7 +2,7 @@
  * I know the naming sucks don't judge me
  */
 
-import { ActorFlows } from '../models';
+import { ActorFlow } from '../models';
 import { mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 
@@ -76,7 +76,7 @@ const getActorCode = (actor: {
       `;
 };
 
-export default (processorName: string, flowData: ActorFlows) => {
+export default (processorName: string, flowData: ActorFlow) => {
   let processorCode = '' + PROCESSOR_TEMPLATE;
   let flowRequirements = '';
   let flowCode = '';

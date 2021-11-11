@@ -63,13 +63,13 @@ export class AdminHandlers {
     }
 
     const flowsPromise = this.database.findMany(
-      'ActorFlows',
+      'ActorFlow',
       {},
       undefined,
       skipNumber,
       limitNumber
     );
-    const countPromise = this.database.countDocuments('ActorFlows', {});
+    const countPromise = this.database.countDocuments('ActorFlow', {});
 
     let errorMessage: string | null = null;
     const [flows, count] = await Promise.all([flowsPromise, countPromise]).catch(
@@ -95,7 +95,7 @@ export class AdminHandlers {
     }
     let errorMessage = null;
     const flow = await this.database
-      .findOne('ActorFlows', { _id: id })
+      .findOne('ActorFlow', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
@@ -124,19 +124,19 @@ export class AdminHandlers {
     }
     let errorMessage = null;
     const flow = await this.database
-      .findOne('ActorFlows', { _id: id })
+      .findOne('ActorFlow', { _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
     const flowRuns = this.database.findMany(
-      'ActorRuns',
+      'ActorRun',
       { flow: flow._id },
       undefined,
       skipNumber,
       limitNumber
     );
-    const countPromise = this.database.countDocuments('ActorRuns', {});
+    const countPromise = this.database.countDocuments('ActorRun', {});
 
     errorMessage = null;
     const [runs, count] = await Promise.all([flowRuns, countPromise]).catch(
@@ -201,7 +201,7 @@ export class AdminHandlers {
     }
     let errorMessage = null;
     const flow = await this.database
-      .create('ActorFlows', {
+      .create('ActorFlow', {
         name,
         trigger,
         actors,
