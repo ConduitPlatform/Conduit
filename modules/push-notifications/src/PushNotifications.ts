@@ -11,7 +11,7 @@ import {
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AdminHandler } from './admin/admin';
+import { AdminHandlers } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/Routes';
 import * as models from './models';
 import {
@@ -25,7 +25,7 @@ export default class PushNotificationsModule extends ConduitServiceModule {
   private database: any;
   private _provider: IPushNotificationsProvider | undefined;
   private isRunning: boolean = false;
-  private adminHandler?: AdminHandler;
+  private adminHandlers?: AdminHandlers;
 
   private _routes!: any[];
 
@@ -156,7 +156,7 @@ export default class PushNotificationsModule extends ConduitServiceModule {
       this.database = this.grpcSdk.databaseProvider;
       await this.initProvider();
       await this.registerSchemas();
-      this.adminHandler = new AdminHandler(
+      this.adminHandlers = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
         this._provider!
@@ -164,7 +164,7 @@ export default class PushNotificationsModule extends ConduitServiceModule {
       this.isRunning = true;
     } else {
       await this.initProvider();
-      this.adminHandler!.updateProvider(this._provider!);
+      this.adminHandlers!.updateProvider(this._provider!);
     }
   }
 

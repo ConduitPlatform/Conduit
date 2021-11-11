@@ -10,7 +10,7 @@ import { NotificationToken } from '../models'
 
 let paths = require('./admin.json').functions;
 
-export class AdminHandler {
+export class AdminHandlers {
   private provider: IPushNotificationsProvider;
   private databaseAdapter: any;
   private readonly conduit: ConduitGrpcSdk;
