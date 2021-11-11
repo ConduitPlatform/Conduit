@@ -9,7 +9,6 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { FormSettingsConfig } from '../../models/forms/FormsModels';
-import ConfirmationDialog from '../common/ConfirmationDialog';
 import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
 
 const useStyles = makeStyles((theme) => ({
@@ -36,7 +35,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const classes = useStyles();
 
   const [edit, setEdit] = useState<boolean>(false);
-  // const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
+
   const methods = useForm<Props['settingsData']>({
     defaultValues: useMemo(() => {
       return settingsData;
@@ -54,6 +53,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   });
 
   const handleCancel = () => {
+    setEdit(false);
     reset();
   };
 
@@ -62,14 +62,8 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   };
 
   const onSubmit = (data: any) => {
-    // const data = {
-    //   active: settingsState.active,
-    //   useAttachments: settingsData.useAttachments,
-    // };
     setEdit(false);
-    // handleSave(data);
-    console.log(data);
-    // setOpenSaveDialog(false);
+    handleSave(data);
   };
 
   return (
@@ -114,9 +108,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                   variant="contained"
                   type="submit"
                   color="primary"
-                  style={{ alignSelf: 'flex-end' }}
-                  // onClick={() => setOpenSaveDialog(true)}
-                >
+                  style={{ alignSelf: 'flex-end' }}>
                   Save
                 </Button>
               </Grid>
@@ -134,14 +126,6 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
           </Grid>
         </form>
       </Paper>
-      {/* <ConfirmationDialog
-        open={openSaveDialog}
-        handleClose={() => setOpenSaveDialog(false)}
-        title={'Are you sure you want to proceed?'}
-        description={'Forms settings changed'}
-        buttonAction={save}
-        buttonText={'Proceed'}
-      /> */}
     </Container>
   );
 };
