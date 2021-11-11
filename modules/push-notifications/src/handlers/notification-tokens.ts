@@ -8,8 +8,6 @@ import { NotificationToken } from '../models';
 
 export class NotificationTokensHandler {
 
-  constructor(grpcSdk: ConduitGrpcSdk) {}
-
   async setNotificationToken(call: RouterRequest, callback: RouterResponse) {
     const { token, platform } = JSON.parse(call.request.params);
     if (isNil(token) || isNil(platform)) {

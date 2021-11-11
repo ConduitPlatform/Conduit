@@ -12,7 +12,6 @@ let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
   private provider: IPushNotificationsProvider;
-  private databaseAdapter: any;
   private readonly conduit: ConduitGrpcSdk;
 
   constructor(
@@ -22,10 +21,6 @@ export class AdminHandlers {
   ) {
     this.conduit = conduit;
     this.provider = provider;
-    const self = this;
-    conduit.waitForExistence('database-provider').then(() => {
-      self.databaseAdapter = conduit.databaseProvider;
-    });
 
     this.conduit.admin
       .registerAdmin(server, paths, {
@@ -65,7 +60,7 @@ export class AdminHandlers {
 
     let errorMessage = null;
     await this.provider
-      .sendToDevice(params, this.databaseAdapter)
+      .sendToDevice(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -97,7 +92,7 @@ export class AdminHandlers {
 
     let errorMessage = null;
     await this.provider
-      .sendMany(params, this.databaseAdapter)
+      .sendMany(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -128,7 +123,7 @@ export class AdminHandlers {
 
     let errorMessage = null;
     await this.provider
-      .sendToManyDevices(params, this.databaseAdapter)
+      .sendToManyDevices(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

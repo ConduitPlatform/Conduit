@@ -26,7 +26,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   // TODO check for disabled notifications for users
 
-  async sendToDevice(params: ISendNotification, databaseAdapter: any): Promise<any> {
+  async sendToDevice(params: ISendNotification): Promise<any> {
     const { sendTo, type } = params;
     const userId = sendTo;
     if (isNil(userId)) return;
@@ -53,7 +53,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     return this.fcm.send(message);
   }
 
-  async sendMany(params: ISendNotification[], databaseAdapter: any): Promise<any> {
+  async sendMany(params: ISendNotification[]): Promise<any> {
     const userIds = params.map((param) => param.sendTo);
     const notificationsObj = keyBy(params, (param) => param.sendTo);
 
@@ -85,7 +85,6 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   async sendToManyDevices(
     params: ISendNotificationToManyDevices,
-    databaseAdapter: any
   ): Promise<any> {
     const notificationTokens = await NotificationToken.getInstance()
       .findMany({
