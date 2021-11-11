@@ -12,18 +12,13 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
+import { Product, Subscription } from '../models';
 
 export class PaymentsRoutes {
-  private database: any;
   private readonly stripeHandlers: StripeHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.stripeHandlers = new StripeHandlers(grpcSdk);
-    const self = this;
-
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
   }
 
   async getStripe(): Promise<StripeHandlers | null> {
@@ -39,9 +34,9 @@ export class PaymentsRoutes {
 
   async getProducts(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
-    const products = await this.database.findMany('Product', {}).catch((e: Error) => {
-      errorMessage = e.message;
-    });
+    const products = await Product.getInstance()
+      .findMany({})
+      .catch((e: Error) => { errorMessage = e.message; });
     if (!isNil(errorMessage)) {
       return callback({
         code: status.INTERNAL,
@@ -64,22 +59,19 @@ export class PaymentsRoutes {
 
     let errorMessage: string | null = null;
 
-    const subscriptions = await this.database
+    const subscriptions = await Subscription.getInstance()
       .findMany(
-        'Subscription',
         {
           userId: context.user._id,
           activeUntil: { $gte: new Date() },
         },
-        null,
-        null,
-        null,
-        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
         ['product']
       )
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
+      .catch((e: Error) => { errorMessage = e.message; });
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
