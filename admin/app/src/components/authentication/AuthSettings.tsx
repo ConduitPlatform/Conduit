@@ -31,9 +31,17 @@ interface Props {
   settingsData: SignInMethods;
 }
 
+interface IFormInput {
+  active: boolean;
+  radioValue: string;
+  checkboxValue: string[];
+  dateValue: Date;
+  dropdownValue: string;
+  sliderValue: number;
+}
+
 const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   const classes = useStyles();
-  console.log(settingsData);
   const [edit, setEdit] = useState<boolean>(false);
   const methods = useForm<Props['settingsData']>({
     defaultValues: useMemo(() => {
@@ -51,8 +59,6 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     name: 'active',
   });
 
-  console.log(isActive);
-
   const handleCancel = () => {
     reset();
   };
@@ -62,9 +68,8 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   };
 
   const onSubmit = (data: SignInMethods) => {
-    console.log(data);
     setEdit(false);
-    // handleSave(data);
+    handleSave(data);
   };
 
   return (
