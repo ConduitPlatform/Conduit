@@ -21,7 +21,7 @@ interface IAuthenticationSlice {
       users: AuthUser[];
       count: number;
     };
-    signInMethods: SignInMethods | null;
+    signInMethods: SignInMethods;
   };
 }
 
@@ -31,7 +31,41 @@ const initialState: IAuthenticationSlice = {
       users: [],
       count: 0,
     },
-    signInMethods: null,
+    signInMethods: {
+      active: false,
+      facebook: {
+        enabled: false,
+        accountLinking: true,
+        clientId: '',
+      },
+      generateRefreshToken: false,
+      google: {
+        enabled: false,
+        accountLinking: true,
+        clientId: '',
+      },
+      jwtSecret: '',
+      local: {
+        identifier: '',
+        accountLinking: false,
+        enabled: false,
+        sendVerificationEmail: false,
+        verificationRequired: false,
+        verification_redirect_uri: '',
+      },
+      rateLimit: 3,
+      refreshTokenInvalidationPeriod: 0,
+      service: { enabled: false },
+      tokenInvalidationPeriod: 0,
+      twitch: {
+        accountLinking: false,
+        enabled: false,
+        clientId: '',
+        redirect_uri: '',
+        clientSecret: '',
+      },
+      twofa: { enabled: false },
+    },
   },
 };
 
