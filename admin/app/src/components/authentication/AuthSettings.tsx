@@ -60,6 +60,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   });
 
   const handleCancel = () => {
+    setEdit(!edit);
     reset();
   };
 
