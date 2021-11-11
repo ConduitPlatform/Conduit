@@ -12,8 +12,8 @@ export class FlowCreator {
     private readonly server: GrpcServer
   ) {
     const self = this;
-    grpcSdk
-      .databaseProvider!.findMany('ActorFlow', { enabled: true })
+    ActorFlow.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         if (!r || r.length == 0) return;
         return Promise.all(r.map((flow: any) => self.constructFlow(flow)));

@@ -3,25 +3,20 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { FlowCreator } from '../controllers/flowCreator';
+import { ActorFlow, ActorRun } from '../models'
 
 const { readdirSync, readFileSync } = require('fs');
 
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
-  private database: any;
   private warden: FlowCreator;
 
   constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
     this.warden = new FlowCreator(grpcSdk, server);
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
@@ -62,14 +57,14 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const flowsPromise = this.database.findMany(
-      'ActorFlow',
-      {},
-      undefined,
-      skipNumber,
-      limitNumber
-    );
-    const countPromise = this.database.countDocuments('ActorFlow', {});
+    const flowsPromise = ActorFlow.getInstance()
+      .findMany(
+        {},
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const countPromise = ActorFlow.getInstance().countDocuments({});
 
     let errorMessage: string | null = null;
     const [flows, count] = await Promise.all([flowsPromise, countPromise]).catch(
@@ -94,8 +89,8 @@ export class AdminHandlers {
       });
     }
     let errorMessage = null;
-    const flow = await this.database
-      .findOne('ActorFlow', { _id: id })
+    const flow = await ActorFlow.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
@@ -123,20 +118,20 @@ export class AdminHandlers {
       });
     }
     let errorMessage = null;
-    const flow = await this.database
-      .findOne('ActorFlow', { _id: id })
+    const flow = await ActorFlow.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const flowRuns = this.database.findMany(
-      'ActorRun',
-      { flow: flow._id },
-      undefined,
-      skipNumber,
-      limitNumber
-    );
-    const countPromise = this.database.countDocuments('ActorRun', {});
+    const flowRuns = ActorRun.getInstance()
+      .findMany(
+        { flow: flow._id },
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const countPromise = ActorRun.getInstance().countDocuments({});
 
     errorMessage = null;
     const [runs, count] = await Promise.all([flowRuns, countPromise]).catch(
@@ -200,8 +195,8 @@ export class AdminHandlers {
       }
     }
     let errorMessage = null;
-    const flow = await this.database
-      .create('ActorFlow', {
+    const flow = await ActorFlow.getInstance()
+      .create({
         name,
         trigger,
         actors,
