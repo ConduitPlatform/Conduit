@@ -8,7 +8,7 @@ export const FormSwitch = ({ name, control }: any) => {
       name={name}
       control={control}
       render={({ field: { onChange, value }, fieldState: { error }, formState }) => (
-        <Switch onChange={onChange} value={value} />
+        <Switch onChange={onChange} checked={value} />
       )}
     />
   );
