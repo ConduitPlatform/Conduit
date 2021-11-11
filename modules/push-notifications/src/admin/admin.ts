@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
+import { NotificationToken } from '../models'
 
 let paths = require('./admin.json').functions;
 
@@ -145,8 +146,8 @@ export class AdminHandler {
     }
 
     let errorMessage = null;
-    const tokenDocuments = await this.databaseAdapter
-      .findMany('NotificationToken', { userId })
+    const tokenDocuments = await NotificationToken.getInstance()
+      .findMany({ userId })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

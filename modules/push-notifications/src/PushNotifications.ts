@@ -122,8 +122,8 @@ export default class PushNotificationsModule extends ConduitServiceModule {
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const newTokenDocument = await this.database
-      .create('NotificationToken', {
+    const newTokenDocument = await models.NotificationToken.getInstance()
+      .create({
         userId,
         token,
         platform,
@@ -142,8 +142,8 @@ export default class PushNotificationsModule extends ConduitServiceModule {
     const userId = call.request.userId;
 
     let errorMessage = null;
-    const tokenDocuments: any = await this.database
-      .findMany('NotificationToken', { userId })
+    const tokenDocuments: any = await models.NotificationToken.getInstance()
+      .findMany({ userId })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

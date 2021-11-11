@@ -6,6 +6,7 @@ import {
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification';
 import { isNil, keyBy } from 'lodash';
+import { NotificationToken } from '../models';
 
 export class FirebaseProvider implements IPushNotificationsProvider {
   private readonly fcm: firebase.messaging.Messaging;
@@ -30,9 +31,10 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     const userId = sendTo;
     if (isNil(userId)) return;
 
-    const notificationToken = await databaseAdapter.findOne('NotificationToken', {
-      userId,
-    });
+    const notificationToken = await NotificationToken.getInstance()
+      .findOne({
+        userId,
+      });
     if (isNil(notificationToken)) {
       return;
     }
@@ -55,9 +57,10 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     const userIds = params.map((param) => param.sendTo);
     const notificationsObj = keyBy(params, (param) => param.sendTo);
 
-    const notificationTokens = await databaseAdapter.find('NotificationToken', {
-      userId: { $in: userIds },
-    });
+    const notificationTokens = await NotificationToken.getInstance()
+      .findMany({
+        userId: { $in: userIds },
+      });
 
     const promises = notificationTokens.map(async (token: any) => {
       const id = token.userId.toString();
@@ -84,9 +87,10 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     params: ISendNotificationToManyDevices,
     databaseAdapter: any
   ): Promise<any> {
-    const notificationTokens = await databaseAdapter.findMany('NotificationToken', {
-      userId: { $in: params.sendTo },
-    });
+    const notificationTokens = await NotificationToken.getInstance()
+      .findMany({
+        userId: { $in: params.sendTo },
+      });
     if (notificationTokens.length === 0) return;
 
     const promises = notificationTokens.map(async (notToken: any) => {
