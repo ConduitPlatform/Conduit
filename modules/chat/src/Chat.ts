@@ -52,8 +52,8 @@ export default class ChatModule extends ConduitServiceModule {
     }
 
     let errorMessage: string | null = null;
-    const room = await this.database
-      .create('ChatRoom', {
+    const room = await models.ChatRoom.getInstance()
+      .create({
         name: name,
         participants: participants,
       })
@@ -66,13 +66,13 @@ export default class ChatModule extends ConduitServiceModule {
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: room.name, participants: room.participants })
+      JSON.stringify({ name: (room as models.ChatRoom).name, participants: (room as models.ChatRoom).participants })
     );
     callback(null, {
       result: JSON.stringify({
-        _id: room._id,
-        name: room.name,
-        participants: room.participants,
+        _id: (room as models.ChatRoom)._id,
+        name: (room as models.ChatRoom).name,
+        participants: (room as models.ChatRoom).participants,
       }),
     });
   }
@@ -81,8 +81,8 @@ export default class ChatModule extends ConduitServiceModule {
     const { id } = call.request;
 
     let errorMessage: string | null = null;
-    const room: any = await this.database
-      .deleteOne('ChatRoom', {
+    const room: any = await models.ChatRoom.getInstance()
+      .deleteOne({
         _id: id,
       })
       .catch((e: Error) => {
@@ -177,20 +177,19 @@ export default class ChatModule extends ConduitServiceModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider!;
+      await this.registerSchemas();
       this._router = new ChatRoutes(this.grpcServer, this.grpcSdk);
       this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      await this.registerSchemas();
       this.isRunning = true;
     }
-
     await this._router.registerRoutes();
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model) => {
-      return this.database.createSchemaFromAdapter(model);
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
     });
-
     return Promise.all(promises);
   }
 }
