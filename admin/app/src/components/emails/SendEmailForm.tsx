@@ -1,4 +1,4 @@
-import { Box, Container, MenuItem } from '@material-ui/core';
+import { Box, Container } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -8,13 +8,10 @@ import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
-import { asyncSendEmail } from '../../redux/slices/emailsSlice';
 import { useAppDispatch } from '../../redux/store';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-import InputLabel from '@material-ui/core/InputLabel';
-import Select from '@material-ui/core/Select';
-import FormControl from '@material-ui/core/FormControl';
+
 import { isString } from 'lodash';
 import { useForm, Controller } from 'react-hook-form';
 import { IEmailState } from '../../models/emails/IEmailState';
@@ -54,7 +51,6 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
-  const [variableValues, setVariableValues] = useState<any>({});
 
   const methods = useForm<FormProps>({
     defaultValues: {
@@ -83,28 +79,28 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   });
 
   const template = getValues('templateName');
+  const variables = getValues('variables');
   const variablesValues = getValues('variablesValues');
 
   useEffect(() => {
     if (template !== '') {
       if (!isString(template)) return;
       const selectedTemplate = templates.find((template) => template._id === template);
+      console.log(selectedTemplate);
 
       if (selectedTemplate !== undefined) {
         let variableValues = {};
         selectedTemplate.variables.forEach((variable: string) => {
           variableValues = { ...variableValues, [variable]: '' };
         });
-
         setValue('_id', selectedTemplate._id);
         setValue('variables', selectedTemplate.variables);
-        setValue('templateName', selectedTemplate.name);
         setValue('body', selectedTemplate.name);
         setValue('variablesValues', variableValues);
         setValue('subject', selectedTemplate.subject);
       }
     }
-  });
+  }, []);
 
   const onSubmit = (data: any) => {
     console.log(data);
@@ -192,7 +188,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
               />
             </Grid>
             <Grid container item xs={12} spacing={1}>
-              {emailState.variables.map((variable, index) => (
+              {variables.map((variable, index) => (
                 <Grid key={variable + '_' + index} item xs={3}>
                   <TextField
                     label={variable}
