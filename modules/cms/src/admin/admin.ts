@@ -33,6 +33,7 @@ export class AdminHandlers {
         getById: schemaAdmin.getById.bind(schemaAdmin),
         createSchema: schemaAdmin.createSchema.bind(schemaAdmin),
         toggle: schemaAdmin.toggle.bind(schemaAdmin),
+        toggleMany: schemaAdmin.toggleMany.bind(schemaAdmin),
         editSchema: schemaAdmin.editSchema.bind(schemaAdmin),
         deleteSchema: schemaAdmin.deleteSchema.bind(schemaAdmin),
         getDocuments: documentsAdmin.getDocuments.bind(documentsAdmin),
@@ -42,6 +43,7 @@ export class AdminHandlers {
         editDocument: documentsAdmin.editDocument.bind(documentsAdmin),
         editManyDocuments: documentsAdmin.editManyDocuments.bind(documentsAdmin),
         deleteDocument: documentsAdmin.deleteDocument.bind(documentsAdmin),
+        deleteManySchemas: schemaAdmin.deleteManySchemas.bind(schemaAdmin),
         getCustomEndpoints: customEndpointsAdmin.getCustomEndpoints.bind(
           customEndpointsAdmin
         ),
