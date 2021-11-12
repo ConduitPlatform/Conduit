@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   constructRoute,
   constructSocket,
+  DatabaseProvider,
   GrpcServer,
   RouterRequest,
   RouterResponse,
@@ -18,12 +19,12 @@ import { status } from '@grpc/grpc-js';
 import { validateUsersInput } from '../utils';
 
 export class ChatRoutes {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
     grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = this.grpcSdk.databaseProvider;
+      self.database = this.grpcSdk.databaseProvider!;
     });
   }
 
@@ -161,9 +162,9 @@ export class ChatRoutes {
     let countPromise;
     let errorMessage: string | null = null;
     if (isNil(roomId)) {
-      const rooms = await this.database
+      const rooms: any[] = (await this.database
         .findMany('ChatRoom', { participants: user._id })
-        .catch((e: Error) => (errorMessage = e.message));
+        .catch((e: Error) => (errorMessage = e.message))) as any[];
       if (!isNil(errorMessage)) {
         return callback({ code: status.INTERNAL, message: errorMessage });
       }
@@ -175,7 +176,7 @@ export class ChatRoutes {
         undefined,
         skip,
         limit,
-        '-createdAt'
+        { createdAt: -1 }
       );
       countPromise = this.database.countDocuments('ChatMessage', query);
     } else {
@@ -199,7 +200,7 @@ export class ChatRoutes {
         undefined,
         skip,
         limit,
-        '-createdAt'
+        { createdAt: -1 }
       );
 
       countPromise = this.database.countDocuments('ChatMessage', { room: roomId });
@@ -367,11 +368,11 @@ export class ChatRoutes {
     const { user } = JSON.parse(call.request.context);
 
     let errorMessage: string | null = null;
-    const rooms = await this.database
+    const rooms: any[] = (await this.database
       .findMany('ChatRoom', { participants: user._id })
       .catch((e: Error) => {
         errorMessage = e.message;
-      });
+      })) as any[];
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
