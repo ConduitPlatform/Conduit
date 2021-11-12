@@ -14,6 +14,7 @@ import { User } from '../models';
 import { constructSortObj } from '../utils';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private database: DatabaseProvider;
@@ -72,8 +73,10 @@ export class AdminHandlers {
         query[provider] = { $exists: true, $ne: null };
       }
     }
-    if (!isNil(search)) {
-      query['email'] = { $regex: search };
+    let identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
 
     const users: User[] = await User.getInstance().findMany(
