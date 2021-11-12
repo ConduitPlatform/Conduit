@@ -66,7 +66,10 @@ export default class ChatModule extends ConduitServiceModule {
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: (room as models.ChatRoom).name, participants: (room as models.ChatRoom).participants })
+      JSON.stringify({
+        name: (room as models.ChatRoom).name,
+        participants: (room as models.ChatRoom).participants,
+      })
     );
     callback(null, {
       result: JSON.stringify({
@@ -84,6 +87,17 @@ export default class ChatModule extends ConduitServiceModule {
     const room: any = await models.ChatRoom.getInstance()
       .deleteOne({
         _id: id,
+      })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
+    models.ChatMessage.getInstance()
+      .deleteMany({
+        room: id,
       })
       .catch((e: Error) => {
         errorMessage = e.message;
