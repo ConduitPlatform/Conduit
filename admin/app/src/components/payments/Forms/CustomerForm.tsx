@@ -82,7 +82,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
           <Grid item sm={12}>
             <FormInputText
               typeOfInput={'email'}
-              requiredRules={'Email field is required'}
+              required={'Email field is required'}
               pattern={/\A([\w+\-]\.?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i}
               errMsg={'Wrong email format'}
               name="email"
@@ -103,7 +103,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             <FormInputText
               name="buyerName"
               control={control}
-              requiredRules={'Buyers name is required'}
+              required={'Buyers name is required'}
               label="Buyer's Name"
             />
           </Grid>
@@ -111,7 +111,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             <FormInputText
               name="phoneNumber"
               typeOfInput={'tel'}
-              requiredRules={'Phone number is required'}
+              required={'Phone number is required'}
               control={control}
               label="Phone number"
             />
@@ -119,7 +119,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
           <Grid item sm={12}>
             <FormInputText
               name="address"
-              requiredRules={'Address is required'}
+              required={'Address is required'}
               control={control}
               label="Address"
             />
@@ -127,7 +127,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
           <Grid item sm={12}>
             <FormInputText
               name="postCode"
-              requiredRules={'Post code is required'}
+              required={'Post code is required'}
               control={control}
               label="Post Code"
             />

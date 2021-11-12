@@ -89,7 +89,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               name="name"
               control={control}
               label="Name"
-              requiredRules={'Product name is required'}
+              required={'Product name is required'}
             />
           </Grid>
           <Grid item sm={6}>
@@ -98,7 +98,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               control={control}
               label="Value"
               typeOfInput="number"
-              requiredRules={'Value is required'}
+              required={'Value is required'}
               pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
               errMsg={'Negative numbers not allowed'}
             />
