@@ -46,7 +46,7 @@ export class AdminHandlers {
   }
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, isActive, provider, identifier } = call.request.params;
+    const { skip, limit, isActive, provider, search } = call.request.params;
     let sortObj: any = null;
     if (call.request.params.sort && call.request.params.sort.length > 0) {
       sortObj = constructSortObj(call.request.params.sort);
@@ -72,8 +72,8 @@ export class AdminHandlers {
         query[provider] = { $exists: true, $ne: null };
       }
     }
-    if (!isNil(identifier)) {
-      query['email'] = { $regex: identifier };
+    if (!isNil(search)) {
+      query['email'] = { $regex: search };
     }
 
     const users: User[] = await User.getInstance().findMany(
