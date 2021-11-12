@@ -180,7 +180,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     id: string,
     document: any,
     updateProvidedOnly: boolean = false,
-    populate?: string[],
+    populate?: string | string[]
   ): Promise<T | any> {
 
     return new Promise((resolve, reject) => {
@@ -189,7 +189,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
           id,
           query: this.processQuery(document),
           updateProvidedOnly,
-          populate: populate ?? [],
+          populate: (populate as string[]) ?? [],
         },
         (err: any, res: any) => {
           if (err || !res) {
