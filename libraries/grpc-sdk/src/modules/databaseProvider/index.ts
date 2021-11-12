@@ -179,11 +179,18 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     schemaName: string,
     id: string,
     document: any,
-    updateProvidedOnly: boolean = false
+    updateProvidedOnly: boolean = false,
+    populate?: string[],
   ): Promise<T | any> {
+
     return new Promise((resolve, reject) => {
       this.client?.findByIdAndUpdate(
-        { schemaName, id, query: this.processQuery(document), updateProvidedOnly },
+        { schemaName,
+          id,
+          query: this.processQuery(document),
+          updateProvidedOnly,
+          populate: populate ?? [],
+        },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
