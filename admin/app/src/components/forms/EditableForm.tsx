@@ -112,7 +112,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               name="name"
               control={control}
               label="Name"
-              requiredRules={'The form name is required'}
+              required={'The form name is required'}
               pattern={/^\S*$/}
               errMsg={'The form cannot contain whitespaces'}
             />
