@@ -176,7 +176,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   async findByIdAndUpdate(
     id: string,
     query: string,
-    updateProvidedOnly: boolean = false
+    updateProvidedOnly: boolean = false,
+    populate?: string[],
+    relations?: any
   ): Promise<any> {
     let parsedQuery = JSON.parse(query);
     if (parsedQuery.hasOwnProperty('$inc')) {
@@ -231,8 +233,24 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
-    parsedQuery = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
-    return parsedQuery;
+    let document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
+    if (!isNil(populate) && !isNil(relations)) {
+      for (const relation of populate) {
+        let cache: any = {};
+          if (this.relations.hasOwnProperty(relation)) {
+            if (relations.hasOwnProperty(this.relations[relation])) {
+              if (!cache.hasOwnProperty(document[relation])) {
+                cache[document[relation]] = await relations[
+                  this.relations[relation]
+                  ].findOne({ _id: document[relation] });
+              }
+              document[relation] = cache[document[relation]];
+            }
+          }
+      }
+    }
+
+    return document;
   }
 
   async updateMany(
