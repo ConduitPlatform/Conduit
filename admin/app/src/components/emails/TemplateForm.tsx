@@ -38,7 +38,7 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               name="name"
               control={control}
               label="Name"
-              requiredRules={'Name is required'}
+              required={'Name is required'}
               pattern={/^S*$/}
               errMsg={'No spaces allowed on template name'}
             />
@@ -51,7 +51,7 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               name="subject"
               control={control}
               label="Subject"
-              requiredRules={'Subject is required'}
+              required={'Subject is required'}
             />
           </Grid>
           <Grid item sm={12}>
