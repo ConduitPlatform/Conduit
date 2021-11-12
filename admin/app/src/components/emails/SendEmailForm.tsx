@@ -78,14 +78,14 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     templateName: '',
   });
 
-  const template = getValues('templateName');
+  const templateToShow = getValues('templateName');
   const variables = getValues('variables');
   const variablesValues = getValues('variablesValues');
 
   useEffect(() => {
-    if (template !== '') {
-      if (!isString(template)) return;
-      const selectedTemplate = templates.find((template) => template._id === template);
+    if (templateToShow !== '') {
+      if (!isString(templateToShow)) return;
+      const selectedTemplate = templates.find((template) => template._id === templateToShow);
       console.log(selectedTemplate);
 
       if (selectedTemplate !== undefined) {
