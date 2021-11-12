@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { FormRoutes } from '../routes/Routes';
-import { FormsSchema } from '../models';
 
 export class FormsController {
   private _adapter: any;
