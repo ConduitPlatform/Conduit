@@ -1,5 +1,5 @@
-import { Box, Container } from '@material-ui/core';
-import React, { useEffect, useState } from 'react';
+import { Box, Container, MenuItem } from '@material-ui/core';
+import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import { Clear, MailOutline, Send } from '@material-ui/icons';
@@ -8,15 +8,15 @@ import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
+import { asyncSendEmail } from '../../redux/slices/emailsSlice';
 import { useAppDispatch } from '../../redux/store';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import FormControl from '@material-ui/core/FormControl';
 import { isString } from 'lodash';
-import { useForm, Controller } from 'react-hook-form';
 import { IEmailState } from '../../models/emails/IEmailState';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -35,38 +35,11 @@ interface Props {
   templates: EmailTemplateType[];
 }
 
-interface FormProps {
-  _id: string;
-  email: string;
-  sender: string;
-  subject: string;
-  body: string;
-  variables: string[];
-  variablesValues: {};
-  templateName: string;
-}
-
 const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
   const [withTemplate, setWithTemplate] = useState<boolean>(false);
-
-  const methods = useForm<FormProps>({
-    defaultValues: {
-      _id: '',
-      email: '',
-      sender: '',
-      subject: '',
-      body: '',
-      variables: [],
-      variablesValues: {},
-      templateName: '',
-    },
-  });
-
-  const { handleSubmit, reset, control, getValues, setValue } = methods;
-
   const [emailState, setEmailState] = useState<IEmailState>({
     _id: '',
     email: '',
@@ -78,33 +51,59 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     templateName: '',
   });
 
-  const templateToShow = getValues('templateName');
-  const variables = getValues('variables');
-  const variablesValues = getValues('variablesValues');
-
-  useEffect(() => {
-    if (templateToShow !== '') {
-      if (!isString(templateToShow)) return;
-      const selectedTemplate = templates.find((template) => template._id === templateToShow);
-      console.log(selectedTemplate);
-
-      if (selectedTemplate !== undefined) {
-        let variableValues = {};
-        selectedTemplate.variables.forEach((variable: string) => {
-          variableValues = { ...variableValues, [variable]: '' };
-        });
-        setValue('_id', selectedTemplate._id);
-        setValue('variables', selectedTemplate.variables);
-        setValue('body', selectedTemplate.name);
-        setValue('variablesValues', variableValues);
-        setValue('subject', selectedTemplate.subject);
-      }
+  const sendEmail = () => {
+    let email;
+    if (emailState.templateName) {
+      email = {
+        templateName: emailState.templateName,
+        variables: emailState.variablesValues,
+        sender: emailState.sender,
+        email: emailState.email,
+        body: emailState.body,
+      };
+    } else {
+      email = {
+        subject: emailState.subject,
+        sender: emailState.sender,
+        email: emailState.email,
+        body: emailState.body,
+      };
     }
-  }, []);
+    dispatch(asyncSendEmail(email));
+  };
 
-  const onSubmit = (data: any) => {
-    console.log(data);
-    // dispatch(asyncSendEmail(email));
+  const clearEmail = () => {
+    setEmailState({
+      _id: '',
+      email: '',
+      sender: '',
+      subject: '',
+      body: '',
+      variables: [],
+      variablesValues: {},
+      templateName: '',
+    });
+  };
+
+  const handleChangeTemplate = (event: React.ChangeEvent<{ value: unknown }>) => {
+    if (!isString(event.target.value)) return;
+    const selectedTemplate = templates.find((template) => template._id === event.target.value);
+
+    if (!selectedTemplate) return;
+    let variableValues = {};
+    selectedTemplate.variables.forEach((variable: string) => {
+      variableValues = { ...variableValues, [variable]: '' };
+    });
+
+    setEmailState({
+      ...emailState,
+      _id: selectedTemplate._id,
+      variables: selectedTemplate.variables,
+      templateName: selectedTemplate.name,
+      subject: selectedTemplate.subject,
+      variablesValues: variableValues,
+      body: selectedTemplate.body,
+    });
   };
 
   const handleVariableChange = (event: React.ChangeEvent<{ value: unknown }>, variable: string) => {
@@ -120,36 +119,59 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         <Typography variant={'h6'} className={classes.typography}>
           <MailOutline fontSize={'small'} />. Compose your email
         </Typography>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form noValidate autoComplete="off">
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormInputText
-                name="email"
-                control={control}
+              <TextField
+                required
+                id="recipient"
                 label="Recipient (To:)"
-                required={'Name is required'}
-                pattern={/^S*$/}
-                errMsg={'No spaces allowed on template name'}
+                variant="outlined"
+                type={'email'}
+                placeholder={'joedoe@gmail.com'}
+                className={classes.simpleTextField}
+                value={emailState.email}
+                onChange={(event) => {
+                  setEmailState({
+                    ...emailState,
+                    email: event.target.value,
+                  });
+                }}
               />
             </Grid>
             <Grid item xs={12}>
-              <FormInputText
-                name="sender"
-                control={control}
+              <TextField
+                required
+                id="sender"
                 label="Sender (From:)"
-                required={'Name is required'}
-                pattern={/^S*$/}
-                errMsg={'No spaces allowed on template name'}
+                variant="outlined"
+                placeholder={'Sender'}
+                className={classes.simpleTextField}
+                value={emailState.sender}
+                onChange={(event) => {
+                  setEmailState({
+                    ...emailState,
+                    sender: event.target.value,
+                  });
+                }}
               />
             </Grid>
             <Grid item xs={8}>
-              <FormInputText
-                name="subject"
-                control={control}
+              <TextField
+                id="subject"
                 label="Subject"
-                required={'Name is required'}
-                pattern={/^S*$/}
-                errMsg={'No spaces allowed on template name'}
+                variant="outlined"
+                disabled={withTemplate}
+                required={!withTemplate}
+                value={emailState.subject}
+                placeholder={'Hello World 👋'}
+                className={classes.simpleTextField}
+                onChange={(event) => {
+                  setEmailState({
+                    ...emailState,
+                    subject: event.target.value,
+                  });
+                }}
               />
             </Grid>
             <Grid item xs={4}>
@@ -166,29 +188,52 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
               />
             </Grid>
             <Grid item xs={12}>
-              <FormInputDropdown
-                options={templates?.map((template) => ({
-                  value: template._id,
-                  label: template.name,
-                }))}
-                name="templateName"
+              <FormControl
+                variant="outlined"
+                required={withTemplate}
                 disabled={!withTemplate}
-                control={control}
-                label="Template name"
-              />
+                style={{ minWidth: '65ch' }}>
+                <InputLabel id="demo-simple-select-outlined-label">Email Template</InputLabel>
+                <Select
+                  labelId="demo-simple-select-outlined-label"
+                  id="demo-simple-select-outlined"
+                  value={emailState._id}
+                  renderValue={() => emailState.templateName}
+                  onChange={handleChangeTemplate}
+                  label="Email Template">
+                  <MenuItem value="none">
+                    <em>None</em>
+                  </MenuItem>
+                  {templates?.map((template) => (
+                    <MenuItem key={template._id} value={template._id}>
+                      {template.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <FormInputText
-                name="body"
-                control={control}
+              <TextField
+                disabled={withTemplate}
+                id="outlined-multiline-static"
                 label="Email body"
-                required={'Name is required'}
-                pattern={/^S*$/}
-                errMsg={'No spaces allowed on template name'}
+                multiline
+                rows="10"
+                variant="outlined"
+                placeholder="Write your email here..."
+                required
+                fullWidth
+                value={emailState.body}
+                onChange={(event) => {
+                  setEmailState({
+                    ...emailState,
+                    body: event.target.value,
+                  });
+                }}
               />
             </Grid>
             <Grid container item xs={12} spacing={1}>
-              {variables.map((variable, index) => (
+              {emailState.variables.map((variable, index) => (
                 <Grid key={variable + '_' + index} item xs={3}>
                   <TextField
                     label={variable}
@@ -208,10 +253,14 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                   color="primary"
                   startIcon={<Clear />}
                   style={{ marginRight: 16 }}
-                  onClick={() => reset()}>
+                  onClick={clearEmail}>
                   Clear
                 </Button>
-                <Button variant="contained" color="primary" type="submit" startIcon={<Send />}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Send />}
+                  onClick={sendEmail}>
                   Send
                 </Button>
               </Box>
