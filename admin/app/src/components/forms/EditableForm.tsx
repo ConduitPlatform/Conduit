@@ -39,6 +39,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const classes = sharedClasses();
   const dispatch = useAppDispatch();
   const [inputFields, setInputFields] = useState([{ id: uuidV4(), key: '', type: '' }]);
+  console.log('test');
 
   const methods = useForm<IForm>({ defaultValues: preloadedValues });
 
