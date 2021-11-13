@@ -1,9 +1,9 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
-import { CustomEndpoint } from '../../models/customEndpoint';
+import { CustomEndpoints } from '../../models';
+import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
 import { CmsRoutes } from '../../routes/Routes';
 import { createCustomEndpointRoute } from './utils';
-import schema from '../../models/customEndpoint.schema';
 import { migrateCustomEndpoints } from '../../migrations/customEndpoint.schema.migrations';
 
 export class CustomEndpointController {
@@ -16,7 +16,7 @@ export class CustomEndpointController {
   ) {
     this._adapter = this.grpcSdk.databaseProvider!;
     this._adapter
-      .createSchemaFromAdapter(schema)
+      .createSchemaFromAdapter(CustomEndpoints.getInstance(this._adapter))
       .then(() => {
         console.log('Registered custom endpoints schema');
         return migrateCustomEndpoints(this.grpcSdk);
@@ -44,12 +44,12 @@ export class CustomEndpointController {
   refreshRoutes() {
     return this._adapter
       .findMany('CustomEndpoints', { enabled: true })
-      .then((r: CustomEndpoint[]) => {
+      .then((r: ICustomEndpoint[]) => {
         if (!r || r.length == 0) {
           return console.log('No custom endpoints to register');
         }
         let routes: any[] = [];
-        r.forEach((schema: CustomEndpoint) => {
+        r.forEach((schema: ICustomEndpoint) => {
           routes.push(createCustomEndpointRoute(schema));
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
