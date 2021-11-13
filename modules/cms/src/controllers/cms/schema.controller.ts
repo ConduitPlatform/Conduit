@@ -28,8 +28,8 @@ export class SchemaController {
   }
 
   refreshRoutes() {
-    this._adapter
-      .findMany('SchemaDefinitions', { enabled: true })
+    SchemaDefinitions.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         if (r) {
           let routeSchemas: any = {};
@@ -74,8 +74,8 @@ export class SchemaController {
 
   private async loadExistingSchemas() {
     await this._adapter.createSchemaFromAdapter(SchemaDefinitions.getInstance(this._adapter));
-    this._adapter
-      .findMany('SchemaDefinitions', { enabled: true })
+    SchemaDefinitions.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');

@@ -1,35 +1,40 @@
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { status } from '@grpc/grpc-js';
 import { isNil, isPlainObject } from 'lodash';
+import { CustomEndpoints, SchemaDefinitions } from '../../models';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 
 const OperationsEnum = {
-  GET: 0, //'FIND/GET'
-  POST: 1, //'CREATE'
-  PUT: 2, //'UPDATE/EDIT'
+  GET:    0, //'FIND/GET'
+  POST:   1, //'CREATE'
+  PUT:    2, //'UPDATE/EDIT'
   DELETE: 3, //'DELETE'
-  PATCH: 4, //'PATCH'
+  PATCH:  4, //'PATCH'
 };
 
 export class CustomEndpointsAdmin {
-  private database: any;
+  private database!: DatabaseProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    this.database = this.grpcSdk.databaseProvider;
+    const self = this;
+    grpcSdk.waitForExistence('database-provider').then(() => {
+      self.database = self.grpcSdk.databaseProvider!;
+    });
   }
 
   async getCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
 
-    const customEndpointsDocs = await this.database
-      .findMany('CustomEndpoints', {})
+    const customEndpointsDocs = await CustomEndpoints.getInstance()
+      .findMany({})
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -56,8 +61,8 @@ export class CustomEndpointsAdmin {
     }
     let errorMessage: string | null = null;
     delete params.id;
-    const found = await this.database
-      .findOne('CustomEndpoints', {
+    const found = await CustomEndpoints.getInstance()
+      .findOne({
         _id: id,
       })
       .catch((e: any) => (errorMessage = e.message));
@@ -70,10 +75,8 @@ export class CustomEndpointsAdmin {
     errorMessage = null;
     let findSchema: any;
     if (!isNil(selectedSchema)) {
-      findSchema = await this.database
-        .findOne('SchemaDefinitions', {
-          _id: selectedSchema,
-        })
+      findSchema = await SchemaDefinitions.getInstance()
+        .findOne({ _id: selectedSchema })
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({
@@ -212,8 +215,8 @@ export class CustomEndpointsAdmin {
     found.returns = findSchema.name;
     found.selectedSchemaName = findSchema.name;
 
-    const updatedSchema = await this.database
-      .findByIdAndUpdate('CustomEndpoints', found._id, found)
+    const updatedSchema = await CustomEndpoints.getInstance()
+      .findByIdAndUpdate(found._id, found)
       .catch((e: any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage))
@@ -237,8 +240,8 @@ export class CustomEndpointsAdmin {
       });
     }
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('CustomEndpoints', { _id: id })
+    const schema = await CustomEndpoints.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -250,8 +253,8 @@ export class CustomEndpointsAdmin {
       });
     }
 
-    await this.database
-      .deleteOne('CustomEndpoints', { _id: id })
+    await CustomEndpoints.getInstance()
+      .deleteOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -323,10 +326,8 @@ export class CustomEndpointsAdmin {
         });
       }
 
-      findSchema = await this.database
-        .findOne('SchemaDefinitions', {
-          _id: selectedSchema,
-        })
+      findSchema = await SchemaDefinitions.getInstance()
+        .findOne({ _id: selectedSchema })
         .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({
@@ -484,8 +485,8 @@ export class CustomEndpointsAdmin {
     }
 
     errorMessage = null;
-    const newSchema = await this.database
-      .create('CustomEndpoints', endpoint)
+    const newSchema = await CustomEndpoints.getInstance()
+      .create(endpoint)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({

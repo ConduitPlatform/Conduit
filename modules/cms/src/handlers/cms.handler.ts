@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { SchemaDefinitions } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
@@ -18,8 +19,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -71,8 +72,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -104,8 +105,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -131,8 +132,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -160,8 +161,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -194,8 +195,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -226,8 +227,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -258,8 +259,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -290,8 +291,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

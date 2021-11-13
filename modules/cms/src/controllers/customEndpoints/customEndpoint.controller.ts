@@ -19,7 +19,7 @@ export class CustomEndpointController {
       .createSchemaFromAdapter(CustomEndpoints.getInstance(this._adapter))
       .then(() => {
         console.log('Registered custom endpoints schema');
-        return migrateCustomEndpoints(this.grpcSdk);
+        return migrateCustomEndpoints();
       })
       .then(() => {
         console.log('customEndpoints migration complete');
@@ -42,8 +42,8 @@ export class CustomEndpointController {
   }
 
   refreshRoutes() {
-    return this._adapter
-      .findMany('CustomEndpoints', { enabled: true })
+    return CustomEndpoints.getInstance()
+      .findMany({ enabled: true })
       .then((r: ICustomEndpoint[]) => {
         if (!r || r.length == 0) {
           return console.log('No custom endpoints to register');
