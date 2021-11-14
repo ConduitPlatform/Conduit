@@ -32,8 +32,7 @@ export class CmsHandlers {
     }
 
     let skipNumber = 0,
-      limitNumber = 25,
-      sortObj: any = null;
+      limitNumber = 25;
 
     if (!isNil(skip)) {
       skipNumber = Number.parseInt(skip as string);
@@ -42,25 +41,13 @@ export class CmsHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    if (!isNil(sort) && sort.length > 0) {
-      sortObj = {};
-      sort.forEach((sortVal: string) => {
-        sortVal = sortVal.trim();
-        if (sortVal.indexOf('-') !== -1) {
-          sortObj[sortVal.substr(1)] = -1;
-        } else {
-          sortObj[sortVal] = 1;
-        }
-      });
-    }
-
     const documentsPromise = this.database?.findMany(
       schemaName,
       {},
       undefined,
       skipNumber,
       limitNumber,
-      sortObj,
+      sort,
       populate
     );
     const countPromise = this.database?.countDocuments(schemaName, {});

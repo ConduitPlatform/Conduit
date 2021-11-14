@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { Forms, FormReplies } from '../models';
 import { isNil } from 'lodash';
 import axios from 'axios';
 
@@ -16,8 +17,8 @@ export class FormRoutes {
     const formName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    let form = await this.grpcSdk
-      .databaseProvider!.findOne('Forms', { name: formName })
+    let form = await Forms.getInstance()
+      .findOne({ name: formName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -60,8 +61,8 @@ export class FormRoutes {
 
     errorMessage = null;
     if (honeyPot && possibleSpam) {
-      await this.grpcSdk
-        .databaseProvider!.create('FormReplies', {
+      await FormReplies.getInstance()
+        .create({
           form: form._id,
           data,
           possibleSpam: true,
@@ -74,8 +75,8 @@ export class FormRoutes {
     }
 
     errorMessage = null;
-    await this.grpcSdk
-      .databaseProvider!.create('FormReplies', {
+    await FormReplies.getInstance()
+      .create({
         form: form._id,
         data,
       })

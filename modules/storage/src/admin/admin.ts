@@ -6,6 +6,11 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import {
+  _StorageContainer,
+  _StorageFolder,
+  File,
+} from '../models'
 
 let paths = require('./admin.json').functions;
 
@@ -52,16 +57,18 @@ export class AdminRoutes {
         message: 'Container is required',
       });
     }
-    let folder = await this.grpcSdk.databaseProvider!.findOne('_StorageFolder', {
-      name,
-      container,
-    });
-    if (isNil(folder)) {
-      folder = await this.grpcSdk.databaseProvider!.create('_StorageFolder', {
+    let folder = await _StorageFolder.getInstance()
+      .findOne({
         name,
         container,
-        isPublic,
       });
+    if (isNil(folder)) {
+      folder = await _StorageFolder.getInstance()
+        .create({
+          name,
+          container,
+          isPublic,
+        });
       let exists = await this.fileHandlers.storage
         .container(container)
         .folderExists(name);
@@ -92,10 +99,11 @@ export class AdminRoutes {
         message: 'Container is required',
       });
     }
-    let folder = await this.grpcSdk.databaseProvider!.findOne('_StorageFolder', {
-      name,
-      container,
-    });
+    let folder = await _StorageFolder.getInstance()
+      .findOne({
+        name,
+        container,
+      });
     if (isNil(folder)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -103,14 +111,16 @@ export class AdminRoutes {
       });
     } else {
       await this.fileHandlers.storage.container(container).deleteFolder(name);
-      await this.grpcSdk.databaseProvider!.deleteOne('_StorageFolder', {
+      await _StorageFolder.getInstance()
+      .deleteOne({
         name,
         container,
       });
-      await this.grpcSdk.databaseProvider!.deleteMany('File', {
-        folder: name,
-        container,
-      });
+      await File.getInstance()
+        .deleteMany({
+          folder: name,
+          container,
+        });
     }
     return callback(null, { result: 'OK' });
   }
@@ -125,18 +135,20 @@ export class AdminRoutes {
       });
     }
     try {
-      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-        name,
-      });
+      let container = await _StorageContainer.getInstance()
+        .findOne({
+          name,
+        });
       if (isNil(container)) {
         let exists = await this.fileHandlers.storage.containerExists(name);
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
         }
-        container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
-          name,
-          isPublic,
-        });
+        container = await _StorageContainer.getInstance()
+          .create({
+            name,
+            isPublic,
+          });
       } else {
         return callback({
           code: status.INVALID_ARGUMENT,
@@ -162,9 +174,10 @@ export class AdminRoutes {
       });
     }
     try {
-      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-        name,
-      });
+      let container = await _StorageContainer.getInstance()
+        .findOne({
+          name,
+        });
       if (isNil(container)) {
         return callback({
           code: status.INVALID_ARGUMENT,
@@ -172,15 +185,18 @@ export class AdminRoutes {
         });
       } else {
         await this.fileHandlers.storage.deleteContainer(name);
-        await this.grpcSdk.databaseProvider!.deleteOne('_StorageContainer', {
-          name,
-        });
-        await this.grpcSdk.databaseProvider!.deleteMany('File', {
-          container: name,
-        });
-        await this.grpcSdk.databaseProvider!.deleteMany('_StorageFolder', {
-          container:name,
-        });
+        await _StorageContainer.getInstance()
+          .deleteOne({
+            name,
+          });
+        await File.getInstance()
+          .deleteMany({
+            container: name,
+          });
+        await _StorageFolder.getInstance()
+          .deleteMany({
+            container:name,
+          });
       }
       return callback(null, { result: JSON.stringify(container) });
     } catch (e) {
@@ -206,17 +222,14 @@ export class AdminRoutes {
       query.name = { $regex: `${parent}\/\w+`, $options: 'i' };
     }
 
-    let folders = await this.grpcSdk.databaseProvider!.findMany(
-      '_StorageFolder',
-      query,
-      undefined,
-      skip,
-      limit
-    );
-    let folderCount = await this.grpcSdk.databaseProvider!.countDocuments(
-      '_StorageFolder',
-      query
-    );
+    let folders = await _StorageFolder.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit
+      );
+    let folderCount = await _StorageFolder.getInstance().countDocuments(query);
 
     return callback(null, { result: JSON.stringify({ folders, folderCount }) });
   }
@@ -230,17 +243,14 @@ export class AdminRoutes {
       });
     }
 
-    let containers = await this.grpcSdk.databaseProvider!.findMany(
-      '_StorageContainer',
-      {},
-      undefined,
-      skip,
-      limit
-    );
-    let containersCount = await this.grpcSdk.databaseProvider!.countDocuments(
-      '_StorageContainer',
-      {}
-    );
+    let containers = await _StorageContainer.getInstance()
+      .findMany(
+        {},
+        undefined,
+        skip,
+        limit
+      );
+    let containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return callback(null, { result: JSON.stringify({ containers, containersCount }) });
   }
@@ -272,14 +282,14 @@ export class AdminRoutes {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
-    let files = await this.grpcSdk.databaseProvider!.findMany(
-      'File',
-      query,
-      undefined,
-      skip,
-      limit
-    );
-    let filesCount = await this.grpcSdk.databaseProvider!.countDocuments('File', query);
+    let files = await File.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit
+      );
+    let filesCount = await File.getInstance().countDocuments(query);
 
     return callback(null, { result: JSON.stringify({ files, filesCount }) });
   }
