@@ -381,14 +381,7 @@ export class SchemaAdmin {
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    await CustomEndpoints.getInstance()
-      .deleteMany({ selectedSchema: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
     this.schemaController.refreshRoutes();
-    this.customEndpointController.refreshEndpoints();
     return callback(null, { result: 'Schema successfully deleted' });
   }
 }
