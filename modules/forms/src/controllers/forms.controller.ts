@@ -5,14 +5,12 @@ import ConduitGrpcSdk, {
   constructRoute,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { Forms } from '../models';
 import { FormRoutes } from '../routes/Routes';
-import { FormsSchema } from '../models';
 
 export class FormsController {
-  private _adapter: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: FormRoutes) {
-    this._adapter = this.grpcSdk.databaseProvider!;
     this.loadExistingForms();
     this.initializeState();
   }
@@ -26,8 +24,8 @@ export class FormsController {
   }
 
   private async loadExistingForms() {
-    this._adapter
-      .findMany('Forms', { enabled: true })
+    Forms.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         this._registerRoutes(r);
         this.router.requestRefresh();
@@ -39,8 +37,8 @@ export class FormsController {
   }
 
   refreshRoutes() {
-    this._adapter
-      .findMany('Forms', { enabled: true })
+    Forms.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         this._registerRoutes(r);
         this.router.requestRefresh();

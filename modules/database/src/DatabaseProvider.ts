@@ -307,7 +307,9 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.updateProvidedOnly
+        call.request.updateProvidedOnly,
+        call.request.populate,
+        schemaAdapter.relations,
       );
 
       const resultString = JSON.stringify(result);

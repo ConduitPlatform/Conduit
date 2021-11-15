@@ -8,7 +8,6 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
-  private database: any;
 
   constructor(
     server: GrpcServer,
@@ -16,15 +15,13 @@ export class AdminHandlers {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    this.database = this.grpcSdk.databaseProvider;
-
     // @ts-ignore
     let schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
       this.schemaController,
       this.customEndpointController
     );
-    let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
+    let documentsAdmin = new DocumentsAdmin(this.grpcSdk);
     let customEndpointsAdmin = new CustomEndpointsAdmin(
       this.grpcSdk,
       this.customEndpointController
