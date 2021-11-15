@@ -10,11 +10,11 @@ import { CustomEndpoints, SchemaDefinitions } from '../../models';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 
 const OperationsEnum = {
-  GET:    0, //'FIND/GET'
-  POST:   1, //'CREATE'
-  PUT:    2, //'UPDATE/EDIT'
+  GET: 0, //'FIND/GET'
+  POST: 1, //'CREATE'
+  PUT: 2, //'UPDATE/EDIT'
   DELETE: 3, //'DELETE'
-  PATCH:  4, //'PATCH'
+  PATCH: 4, //'PATCH'
 };
 
 export class CustomEndpointsAdmin {
