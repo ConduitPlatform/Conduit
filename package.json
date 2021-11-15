@@ -1,6 +1,6 @@
 {
   "name": "conduit",
-  "version": "1.0.0",
+  "version": "0.10.5",
   "description": "",
   "main": "index.js",
   "private": true,
@@ -15,7 +15,8 @@
     "build:bootstrap": "lerna run build",
     "build:docker": "docker build -t quintessential.azurecr.io/conduit .",
     "push:docker": "docker push quintessential.azurecr.io/conduit",
-    "deploy:docker": "npm run build:docker && npm run push:docker"
+    "deploy:docker": "npm run build:docker && npm run push:docker",
+    "release": "standard-version"
   },
   "workspaces": [
     "packages/*",
@@ -34,8 +35,15 @@
     "docz": "^2.3.1",
     "prettier": "^2.2.1",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "standard-version": "^9.3.0",
+    "cz-conventional-changelog": "^3.3.0"
   },
   "dependencies": {
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
