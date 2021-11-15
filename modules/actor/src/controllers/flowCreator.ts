@@ -1,6 +1,6 @@
 import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
 import Queue from 'bull';
-import { ActorFlowModel } from '../models';
+import { ActorFlow } from '../models';
 import path from 'path';
 import { Cron } from '../_triggers/cron/cron';
 import { Webhook } from '../_triggers/webhook/webhook';
@@ -12,8 +12,8 @@ export class FlowCreator {
     private readonly server: GrpcServer
   ) {
     const self = this;
-    grpcSdk
-      .databaseProvider!.findMany('ActorFlows', { enabled: true })
+    ActorFlow.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         if (!r || r.length == 0) return;
         return Promise.all(r.map((flow: any) => self.constructFlow(flow)));
@@ -27,7 +27,7 @@ export class FlowCreator {
       });
   }
 
-  async constructFlow(flowData: ActorFlowModel) {
+  async constructFlow(flowData: ActorFlow) {
     let processorName = flowData.name + '__' + flowData._id;
     flowConstructor(processorName, flowData);
     let queue = new Queue(processorName);
