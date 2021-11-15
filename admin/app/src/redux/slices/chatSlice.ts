@@ -117,7 +117,9 @@ export const asyncGetChatMessages = createAsyncThunk(
       const {
         data: { messages, count },
       } = await getChatMessages(params);
-      // console.log('messages', messages);
+      const loaded = { loaded: false };
+
+      // const newMessages = messages.map((message: IChatMessage) => Object.assign(message, loaded));
       return { messages: messages, count: count, hasMore: messages.length > 0 };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));

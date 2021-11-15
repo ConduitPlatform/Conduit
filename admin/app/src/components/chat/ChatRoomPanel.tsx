@@ -69,9 +69,10 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props extends BoxProps {
   panelData: IChatRoom;
+  selectedPanel: number;
 }
 
-const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
+const ChatRoomPanel: FC<Props> = ({ panelData, selectedPanel, ...rest }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
   const {
@@ -159,7 +160,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
         )}
       </Paper>
       <Box className={classes.contentContainer}>
-        <ChatRoomInfiniteLoader roomId={panelData._id} />
+        <ChatRoomInfiniteLoader roomId={panelData._id} selectedPanel={selectedPanel} />
       </Box>
       <ChatInfoDialog data={panelData} open={infoDialog} onClose={handleCloseModal} />
       <ConfirmationDialog

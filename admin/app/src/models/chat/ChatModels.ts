@@ -24,4 +24,5 @@ export interface IChatMessage {
   updatedAt: string;
   __v: number;
   _id: string;
+  loaded?: boolean;
 }

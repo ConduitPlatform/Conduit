@@ -1,4 +1,4 @@
-import React, { CSSProperties, FC, useCallback, useEffect } from 'react';
+import React, { CSSProperties, FC, useCallback, useEffect, useRef } from 'react';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -15,15 +15,29 @@ const itemStatusMap: ItemStatus = {};
 
 interface Props {
   roomId: string;
+  selectedPanel: number;
 }
 
-const ChatRoomInfiniteLoader: FC<Props> = ({ roomId }) => {
+const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   const dispatch = useAppDispatch();
   const {
     chatMessages: { data, count },
   } = useAppSelector((state) => state.chatSlice.data);
 
+  const infiniteLoaderRef = useRef<any>(null);
+  const hasMountedRef = useRef(false);
+
+  useEffect(() => {
+    console.log('selectedPanel', selectedPanel);
+    if (infiniteLoaderRef.current && hasMountedRef.current) {
+      console.log('WORKING AS INTENDED');
+      infiniteLoaderRef.current.resetloadMoreItemsCache(true);
+    }
+    hasMountedRef.current = true;
+  }, [selectedPanel, count]);
+
   const isItemLoaded = (index: number) => {
+    // console.log('isItemLoaded', !!itemStatusMap[index]);
     return !!itemStatusMap[index];
   };
 
@@ -50,7 +64,6 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId }) => {
   );
 
   const loadMoreItems = async (startIndex: number, stopIndex: number) => {
-    console.log('load more items');
     for (let index = startIndex; index <= stopIndex; index++) {
       itemStatusMap[index] = LOADING;
     }
@@ -88,6 +101,7 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId }) => {
         if (!count) return <div>Loading</div>;
         return (
           <InfiniteLoader
+            ref={infiniteLoaderRef}
             isItemLoaded={isItemLoaded}
             itemCount={count}
             loadMoreItems={loadMoreItems}>
