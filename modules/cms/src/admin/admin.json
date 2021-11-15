@@ -26,9 +26,19 @@
       "protoName": "toggle"
     },
     {
+      "path": "/schemas/toggle",
+      "method": "PUT",
+      "protoName": "toggleMany"
+    },
+    {
       "path": "/schemas/:id",
       "method": "PUT",
       "protoName": "editSchema"
+    },
+    {
+      "path": "/schemas",
+      "method": "DELETE",
+      "protoName": "deleteManySchemas"
     },
     {
       "path": "/schemas/:id",

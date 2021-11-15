@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { isNil } from 'lodash';
+import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateSchemaInput } from '../utils/utilities';
 import { CustomEndpoints, SchemaDefinitions } from '../models';
@@ -258,6 +258,53 @@ export class SchemaAdmin {
     });
   }
 
+  async toggleMany(call: RouterRequest, callback: RouterResponse){
+    const { ids,enabled} = JSON.parse(call.request.params);
+    let errorMessage = null;
+    if (isNil(ids) || !isArray(ids) || isNil(enabled)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Required fields are missing',
+      });
+    }
+    await SchemaDefinitions.getInstance()
+      .findMany({ _id: { $in : ids }} )
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    const foundDocumentsCount = await SchemaDefinitions.getInstance()
+      .countDocuments({_id: {$in : ids} })
+      .catch((e:any) => { errorMessage = e.message});
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage })
+
+    if (foundDocumentsCount !== ids.length)
+      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found', })
+
+    const updatedSchemas = await SchemaDefinitions.getInstance()
+      .updateMany({ _id: { $in: ids } }, {enabled: enabled})
+      .catch((e:any) => { errorMessage = e.message})
+    if (!isNil(errorMessage))
+      return callback({code: status.INTERNAL, message: errorMessage});
+
+    await CustomEndpoints.getInstance()
+      .updateMany( { selectedSchema: {$in: ids } },{enabled:enabled})
+      .catch((e:any) => { errorMessage = e.message});
+    if(!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage})
+
+    this.schemaController.refreshRoutes();
+    this.customEndpointController.refreshEndpoints();
+
+    return callback(null, {
+      result: JSON.stringify({
+        updatedSchemas,
+        enabled,
+      }),
+    });
+  }
+
   async editSchema(call: RouterRequest, callback: RouterResponse) {
     const { id, name, fields, modelOptions, authentication, crudOperations } = JSON.parse(
       call.request.params
@@ -391,5 +438,65 @@ export class SchemaAdmin {
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
     return callback(null, { result: 'Schema successfully deleted' });
+  }
+
+  async deleteManySchemas(call: RouterRequest, callback: RouterResponse){
+    const { ids } = JSON.parse(call.request.params);
+    if (isNil(ids) || !isArray(ids)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Path parameter "ids" is required and it should be an array!',
+      });
+    }
+
+    let errorMessage = null;
+    const requestedSchemas = await SchemaDefinitions.getInstance()
+      .findMany({ _id: { $in : ids }})
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    const foundSchemas = await SchemaDefinitions.getInstance()
+      .countDocuments({ _id: { $in : ids }})
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    if( foundSchemas !== requestedSchemas.length)
+      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found' });
+
+
+    for( let schema of requestedSchemas) { // for each schema find if it used by a custom endpoint.
+      const endpoints = await CustomEndpoints.getInstance()
+        .countDocuments({ selectedSchema: schema._id })
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        });
+      }
+      if (!isNil(endpoints) && endpoints > 0) { // if it is used , throw error.
+        return callback({
+          code: status.INTERNAL,
+          message: 'Can not delete schema because it is used by a custom endpoint',
+        });
+      }
+    }
+    await SchemaDefinitions.getInstance()
+      .deleteMany({_id : { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    await CustomEndpoints.getInstance()
+      .deleteMany( { selectedSchema: { $in: ids } } )
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    this.schemaController.refreshRoutes();
+    this.customEndpointController.refreshEndpoints();
+    return callback(null, { result: 'Schemas successfully deleted' });
   }
 }
