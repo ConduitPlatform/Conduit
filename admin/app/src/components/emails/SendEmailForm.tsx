@@ -96,7 +96,6 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         body: data.body,
       };
     }
-    console.log(email);
     dispatch(asyncSendEmail(email));
   };
 
