@@ -54,13 +54,15 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   findByIdAndUpdate(
     id: string,
     document: { [key: string]: any },
-    updateProvidedOnly?: boolean
+    updateProvidedOnly?: boolean,
+    populate?: string | string[],
   ): Promise<T | null> {
     return this.dbInstance.findByIdAndUpdate<T>(
       this.name,
       id,
       document,
-      updateProvidedOnly
+      updateProvidedOnly,
+      populate,
     );
   }
 
