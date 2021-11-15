@@ -1,43 +1,13 @@
-import React, { FC, useEffect, useState } from 'react';
-import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
+import React, { FC, useEffect } from 'react';
+import { Button, Container, Grid } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
-import { makeStyles } from '@material-ui/core/styles';
 import { CreateFormSelected, IContainer, ICreateForm } from '../../models/storage/StorageModels';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: theme.spacing(6),
-  },
-  createContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    textAlign: 'start',
-    marginBottom: theme.spacing(2),
-  },
-  selectRoot: {
-    '& .MuiSelect-root': {
-      padding: theme.spacing(1, 2),
-      paddingRight: theme.spacing(4),
-    },
-  },
-  createTitle: {
-    marginRight: theme.spacing(1),
-  },
-  input: {
-    marginBottom: theme.spacing(1),
-  },
-  switch: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: theme.spacing(2),
-  },
-  saveButton: {
-    marginRight: theme.spacing(1),
-  },
-}));
+import { useForm } from 'react-hook-form';
+import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
+import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import sharedClasses from '../common/sharedClasses';
 
 interface Props {
   data: { open: boolean; type: CreateFormSelected };
@@ -48,6 +18,12 @@ interface Props {
   path: string[];
 }
 
+interface FormProps {
+  name: string;
+  container?: string;
+  isPublic: boolean;
+}
+
 const StorageCreateDrawer: FC<Props> = ({
   data,
   closeDrawer,
@@ -56,148 +32,88 @@ const StorageCreateDrawer: FC<Props> = ({
   handleCreateContainer,
   path,
 }) => {
-  const classes = useStyles();
-
-  const initialInputData = {
-    container: {
-      name: '',
-      isPublic: false,
-    },
-    folder: {
-      name: '',
-      container: path[0],
-      isPublic: false,
-    },
-  };
-  const [inputData, setInputData] = useState<ICreateForm>(initialInputData);
-
-  const setInitialInputData = () => {
-    setInputData((prevState) => {
-      return {
-        ...prevState,
-        folder: {
-          ...prevState.folder,
-          name: '',
-          isPublic: false,
-        },
-        container: {
-          ...prevState.container,
-          name: '',
-          isPublic: false,
-        },
-      };
-    });
-  };
+  const classes = sharedClasses();
+  const methods = useForm<FormProps>({
+    defaultValues: { name: '', container: '', isPublic: false },
+  });
+  const { handleSubmit, reset, control, setValue } = methods;
 
   useEffect(() => {
-    setInputData((prevState) => {
-      return {
-        ...prevState,
-        folder: {
-          ...prevState.folder,
-          container: path[0],
-        },
-      };
-    });
-  }, [path]);
+    if (data.type === CreateFormSelected.folder) {
+      setValue('container', path[0]);
+    }
+  }, [path, data.type, setValue]);
 
   const handleCancel = () => {
-    setInitialInputData();
+    reset();
     closeDrawer();
   };
 
-  const handleSave = () => {
+  const handleSave = (formData: FormProps) => {
     if (data.type === CreateFormSelected.container) {
-      handleCreateContainer(inputData.container);
-      setInitialInputData();
+      handleCreateContainer({ name: formData.name, isPublic: formData.isPublic });
+      reset();
       closeDrawer();
       return;
     }
-    const folderData = {
-      name: `${inputData.folder.name}/`,
-      container: inputData.folder.container,
-      isPublic: inputData.folder.isPublic,
-    };
-    handleCreateFolder(folderData);
-    setInitialInputData();
+    if (formData.container !== undefined) {
+      const folderData = {
+        name: `${formData.name}/`,
+        container: formData.container,
+        isPublic: formData.isPublic,
+      };
+      handleCreateFolder(folderData);
+    }
+    reset();
     closeDrawer();
+  };
+
+  const extractContainers = () => {
+    return containers.map((container) => {
+      return { value: container.name, label: container.name };
+    });
   };
 
   return (
     <DrawerWrapper open={data.open} closeDrawer={() => closeDrawer()} width={256}>
-      <Box className={classes.root}>
-        <Box className={classes.createContainer}>
-          <Typography variant="h6" className={classes.createTitle}>
-            Create {data.type}
-          </Typography>
-        </Box>
-        <TextField
-          variant="outlined"
-          label="Name"
-          className={classes.input}
-          value={inputData[data.type].name}
-          onChange={(event) => {
-            setInputData({
-              ...inputData,
-              [data.type]: {
-                ...inputData[data.type],
-                name: event.target.value,
-              },
-            });
-          }}
-        />
-        {data.type === CreateFormSelected.folder && (
-          <TextField
-            select
-            label="Container"
-            className={classes.input}
-            value={inputData.folder.container}
-            onChange={(event) => {
-              setInputData({
-                ...inputData,
-                folder: {
-                  ...inputData.folder,
-                  container: event.target.value,
-                },
-              });
-            }}
-            variant="outlined">
-            {containers.map((container, index) => (
-              <MenuItem value={container.name} key={index}>
-                {container.name}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-        <Box className={classes.switch}>
-          <Typography variant="subtitle1">Is Public</Typography>
-          <Switch
-            color="primary"
-            value={inputData[data.type].isPublic}
-            onChange={(event) => {
-              setInputData({
-                ...inputData,
-                [data.type]: {
-                  ...inputData[data.type],
-                  isPublic: event.target.checked,
-                },
-              });
-            }}
-          />
-        </Box>
-        <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            className={classes.saveButton}
-            onClick={() => handleSave()}>
-            Save
-          </Button>
-          <Button variant="outlined" onClick={() => handleCancel()}>
-            Cancel
-          </Button>
-        </Box>
-      </Box>
+      <Container maxWidth="lg">
+        <form onSubmit={handleSubmit(handleSave)}>
+          <Grid container alignItems="center" className={classes.root} spacing={2}>
+            <Grid item sm={12}>
+              <Typography variant="h6" className={classes.marginTop}>
+                Create {data.type}
+              </Typography>
+            </Grid>
+            <FormInputText name="name" label="Name" control={control} />
+            {data.type === CreateFormSelected.folder && (
+              <Grid item sm={12}>
+                <FormInputDropdown
+                  options={extractContainers()}
+                  label="Container"
+                  name="container"
+                  control={control}
+                />
+              </Grid>
+            )}
+            <Grid item sm={12}>
+              <Typography variant="subtitle1">Is Public</Typography>
+              <FormSwitch control={control} name="isPublic" />
+            </Grid>
+            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
+              <Grid item>
+                <Button variant="contained" color="primary" type="submit">
+                  Save
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button variant="outlined" onClick={() => handleCancel()}>
+                  Cancel
+                </Button>
+              </Grid>
+            </Grid>
+          </Grid>
+        </form>
+      </Container>
     </DrawerWrapper>
   );
 };
