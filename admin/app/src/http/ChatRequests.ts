@@ -23,11 +23,15 @@ export const getChatRooms = (params: { skip: number; search?: string }) =>
     },
   });
 
-export const getChatMessages = (params: { skip: number; senderId?: string; roomId?: string }) =>
+export const getChatMessages = (params: {
+  skip: number;
+  limit: number;
+  senderId?: string;
+  roomId?: string;
+}) =>
   axios.get(`${CONDUIT_API}/admin/chat/messages`, {
     params: {
       ...params,
-      limit: 20,
     },
   });
 

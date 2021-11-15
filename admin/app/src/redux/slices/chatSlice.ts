@@ -112,11 +112,12 @@ export const asyncGetChatRooms = createAsyncThunk(
 
 export const asyncGetChatMessages = createAsyncThunk(
   'chat/getChatMessages',
-  async (params: { skip: number; senderId?: string; roomId?: string }, thunkAPI) => {
+  async (params: { skip: number; limit: number; senderId?: string; roomId?: string }, thunkAPI) => {
     try {
       const {
         data: { messages, count },
       } = await getChatMessages(params);
+      // console.log('messages', messages);
       return { messages: messages, count: count, hasMore: messages.length > 0 };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));

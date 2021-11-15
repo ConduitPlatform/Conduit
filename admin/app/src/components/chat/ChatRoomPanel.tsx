@@ -82,29 +82,6 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
   const [deleteDialog, setDeleteDialog] = useState<boolean>(false);
   const [selected, setSelected] = useState<string[]>([]);
 
-  const observer = useRef<IntersectionObserver>();
-  const lastMessageElementRef = useCallback(
-    (node) => {
-      if (loading) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          dispatch(addChatMessagesSkip());
-        }
-      });
-      if (node && observer.current) observer.current.observe(node);
-    },
-    [dispatch, hasMore, loading]
-  );
-
-  useEffect(() => {
-    const params = {
-      skip: skip,
-      roomId: panelData._id,
-    };
-    dispatch(asyncGetChatMessages(params));
-  }, [panelData._id, dispatch, skip]);
-
   const handleCloseModal = () => {
     setInfoDialog(false);
   };
@@ -177,7 +154,7 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
         </Box>
         {selected.length > 0 && (
           <Box className={classes.selectedContainer}>
-            <Typography>{selected.length} selected</Typography>
+            <Typography>{selected.length}selected</Typography>
           </Box>
         )}
       </Paper>
