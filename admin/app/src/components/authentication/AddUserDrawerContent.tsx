@@ -7,7 +7,7 @@ import Grid from '@material-ui/core/Grid';
 import Image from 'next/image';
 import Container from '@material-ui/core/Container';
 import { useForm } from 'react-hook-form';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormInput } from '../common/FormComponents/FormInput';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -62,7 +62,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
       <Container className={classes.root} maxWidth="sm">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText
+            <FormInput
               name="email"
               control={control}
               label="Username/Email"
@@ -71,7 +71,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
             />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText
+            <FormInput
               name="password"
               control={control}
               label="Password"

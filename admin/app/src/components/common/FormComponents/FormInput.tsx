@@ -1,10 +1,10 @@
 import React from 'react';
-import { Controller } from 'react-hook-form';
+import { Control, Controller } from 'react-hook-form';
 import TextField from '@material-ui/core/TextField';
 
-interface RHFInputTextProps {
+interface FormInputProps {
   name: string;
-  control: any;
+  control: Control<any>;
   label: string;
   disabled?: boolean;
   required?: string;
@@ -15,7 +15,7 @@ interface RHFInputTextProps {
   minLengthMsg?: string;
 }
 
-export const FormInputText = ({
+export const FormInput = ({
   name,
   control,
   label,
@@ -26,7 +26,7 @@ export const FormInputText = ({
   errMsg,
   minimumLength,
   minLengthMsg,
-}: RHFInputTextProps) => {
+}: FormInputProps) => {
   return (
     <Controller
       name={name}

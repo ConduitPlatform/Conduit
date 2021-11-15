@@ -1,8 +1,14 @@
 import React from 'react';
-import { Controller } from 'react-hook-form';
+import { Control, Controller } from 'react-hook-form';
 import { Switch } from '@material-ui/core';
 
-export const FormSwitch = ({ name, control, disabled }: any) => {
+interface FormSwitchProps {
+  name: string;
+  control: Control<any>;
+  disabled: boolean;
+}
+
+export const FormSwitch: React.FC<FormSwitchProps> = ({ name, control, disabled }) => {
   return (
     <Controller
       name={name}
