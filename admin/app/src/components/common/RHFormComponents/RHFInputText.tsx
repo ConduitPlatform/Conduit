@@ -6,6 +6,7 @@ interface RHFInputTextProps {
   name: string;
   control: any;
   label: string;
+  rows?: number;
   disabled?: boolean;
   required?: string;
   typeOfInput?: string;
@@ -19,6 +20,7 @@ export const FormInputText = ({
   name,
   control,
   label,
+  rows,
   disabled,
   required,
   typeOfInput,
@@ -44,6 +46,8 @@ export const FormInputText = ({
       }}
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <TextField
+          multiline={rows !== undefined && true}
+          rows={rows}
           disabled={disabled}
           helperText={error ? error.message : null}
           type={typeOfInput}
