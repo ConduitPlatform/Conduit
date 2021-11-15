@@ -1,25 +1,16 @@
-import {
-  Box,
-  Container,
-  Checkbox,
-  TextField,
-  Button,
-  Grid,
-  Paper,
-  Typography,
-} from '@material-ui/core';
+import { Box, Container, TextField, Button, Grid, Paper, Typography } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { Clear, MailOutline, Send } from '@material-ui/icons';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { useAppDispatch } from '../../redux/store';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
 import { isString } from 'lodash';
 import { FormInputText } from '../common/RHFormComponents/RHFInputText';
 import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
 import TemplateEditor from './TemplateEditor';
 import { asyncSendEmail } from '../../redux/slices/emailsSlice';
+import { FormCheckBox } from '../common/RHFormComponents/RHFCheckbox';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -47,22 +38,29 @@ interface FormProps {
   subject: string;
   body: string;
   templateName: string;
+  withTemplate: boolean;
 }
 const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const [withTemplate, setWithTemplate] = useState<boolean>(false);
   const [variables, setVariables] = useState<any>({});
 
   const methods = useForm<FormProps>({
-    defaultValues: { email: '', sender: '', subject: '', templateName: '', body: '' },
+    defaultValues: {
+      email: '',
+      sender: '',
+      subject: '',
+      templateName: '',
+      body: '',
+      withTemplate: false,
+    },
   });
   const { handleSubmit, reset, control, setValue, getValues } = methods;
 
   const handleCancel = () => {
     setVariables({});
-    setWithTemplate(false);
+
     reset();
   };
 
@@ -70,13 +68,26 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     control,
     name: 'templateName',
   });
+  const watchWithTemplate = useWatch({
+    control,
+    name: 'withTemplate',
+  });
 
   const selectedFormTemplate = getValues('templateName');
+
+  const withTemplate = getValues('withTemplate');
 
   const onSubmit = (data: any) => {
     let email;
     if (selectedFormTemplate !== '') {
-      email = { ...data, variables: variables };
+      email = {
+        subject: data.subject,
+        sender: data.sender,
+        email: data.email,
+        body: data.body,
+        templateName: data.templateName,
+        variables: variables,
+      };
     } else {
       email = {
         subject: data.subject,
@@ -85,7 +96,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         body: data.body,
       };
     }
-
+    console.log(email);
     dispatch(asyncSendEmail(email));
   };
 
@@ -106,7 +117,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     if (!withTemplate) {
       setValue('subject', ''), setValue('body', ''), setValue('templateName', ''), setVariables({});
     }
-  }, [templateChanged, withTemplate]);
+  }, [templateChanged, watchWithTemplate]);
 
   return (
     <Container maxWidth="md">
@@ -130,17 +141,11 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                 control={control}
               />
             </Grid>
-            <Grid item xs={4}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    className={classes.checkBox}
-                    checked={withTemplate}
-                    onChange={(e) => setWithTemplate(e.target.checked)}
-                    name="withTemplate"
-                    color="primary"
-                  />
-                }
+            <Grid item xs={4} className={classes.checkBox}>
+              <FormCheckBox
+                setValue={setValue}
+                control={control}
+                name="withTemplate"
                 label="With Template"
               />
             </Grid>
