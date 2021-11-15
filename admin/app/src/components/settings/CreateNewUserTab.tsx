@@ -1,10 +1,11 @@
 import React from 'react';
-import { Button, Container, Grid, TextField, Theme, Typography } from '@material-ui/core';
+import { Button, Container, Grid, Theme, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { INewAdminUser } from '../../models/settings/SettingsModels';
-import { Formik } from 'formik';
+import { FormInputText } from '../common/RHFormComponents/RHFInputText';
 import { useDispatch } from 'react-redux';
 import { asyncCreateAdminUser } from '../../redux/slices/settingsSlice';
+import { useForm } from 'react-hook-form';
 
 const useStyles = makeStyles((theme: Theme) => ({
   title: {
@@ -25,9 +26,13 @@ const useStyles = makeStyles((theme: Theme) => ({
 const CreateNewUserTab: React.FC = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
+  const methods = useForm<INewAdminUser>({ defaultValues: { username: '', password: '' } });
+
+  const { handleSubmit, reset, control } = methods;
 
   const handleRegister = (values: INewAdminUser) => {
     dispatch(asyncCreateAdminUser(values));
+    reset();
   };
 
   return (
@@ -38,53 +43,33 @@ const CreateNewUserTab: React.FC = () => {
             Create New User
           </Typography>
         </Grid>
-        <Formik
-          initialValues={{ username: '', password: '' }}
-          onSubmit={(values, { setSubmitting, resetForm }) => {
-            handleRegister(values);
-            resetForm({
-              values: { username: '', password: '' },
-            });
-            setSubmitting(false);
-          }}>
-          {({ handleSubmit, handleChange, values }) => {
-            return (
-              <form onSubmit={handleSubmit} className={classes.form}>
-                <TextField
-                  onChange={handleChange}
-                  value={values.username.trim()}
-                  variant="outlined"
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="username"
-                  label="Username"
-                />
-                <TextField
-                  onChange={handleChange}
-                  value={values.password}
-                  variant="outlined"
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  id="password"
-                  autoComplete="current-password"
-                />
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  className={classes.button}>
-                  Create New User
-                </Button>
-              </form>
-            );
-          }}
-        </Formik>
+        <form onSubmit={handleSubmit(handleRegister)} className={classes.form}>
+          <FormInputText
+            name="username"
+            control={control}
+            required="Username is required"
+            minimumLength={5}
+            minLengthMsg="Username should be 5 characters or longer"
+            label="Username"
+          />
+          <div style={{ marginTop: '10px' }}> </div>
+          <FormInputText
+            name="password"
+            control={control}
+            required="Password is required"
+            minimumLength={5}
+            minLengthMsg="Password should be 5 characters or longer"
+            label="Password"
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            color="primary"
+            className={classes.button}>
+            Create New User
+          </Button>
+        </form>
       </Grid>
     </Container>
   );
