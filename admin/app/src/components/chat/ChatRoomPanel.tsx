@@ -16,6 +16,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import clsx from 'clsx';
 import ChatInfoDialog from './ChatInfoDialog';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import ChatRoomInfiniteLoader from './ChatRoomInfiniteLoader';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -25,8 +26,7 @@ const useStyles = makeStyles((theme) => ({
   },
   contentContainer: {
     flex: 1,
-    padding: theme.spacing(2),
-    overflowY: 'scroll',
+    padding: theme.spacing(2, 0, 2, 2),
   },
   infoContainer: {
     padding: theme.spacing(1, 2),
@@ -181,17 +181,8 @@ const ChatRoomPanel: FC<Props> = ({ panelData, ...rest }) => {
           </Box>
         )}
       </Paper>
-      <Box className={classes.contentContainer} {...rest}>
-        {data.map((item, index) => {
-          if (index === data.length - 1) {
-            return (
-              <div ref={lastMessageElementRef} key={index}>
-                {getChatBubble(item)}
-              </div>
-            );
-          }
-          return getChatBubble(item, index);
-        })}
+      <Box className={classes.contentContainer}>
+        <ChatRoomInfiniteLoader roomId={panelData._id} />
       </Box>
       <ChatInfoDialog data={panelData} open={infoDialog} onClose={handleCloseModal} />
       <ConfirmationDialog

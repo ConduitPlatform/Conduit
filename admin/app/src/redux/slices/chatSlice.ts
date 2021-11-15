@@ -18,6 +18,7 @@ interface IChatSlice {
     chatRooms: {
       data: IChatRoom[];
       count: number;
+      search: string;
       hasMore: boolean;
       skip: number;
       loading: boolean;
@@ -42,6 +43,7 @@ const initialState: IChatSlice = {
     chatRooms: {
       data: [],
       count: 0,
+      search: '',
       hasMore: true,
       skip: 0,
       loading: false,
@@ -98,6 +100,7 @@ export const asyncGetChatRooms = createAsyncThunk(
         chatRooms: chatRoomDocuments,
         count: totalCount,
         hasMore: chatRoomDocuments.length > 0,
+        search: params.search,
       };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -180,7 +183,14 @@ const chatSlice = createSlice({
       state.data.chatRooms.loading = false;
     });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
-      state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
+      if (action.payload.search && action.payload.search !== state.data.chatRooms.search) {
+        state.data.chatRooms.data = action.payload.chatRooms;
+      } else {
+        state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
+      }
+      if (action.payload.search) {
+        state.data.chatRooms.search = action.payload.search;
+      }
       state.data.chatRooms.count = action.payload.count;
       state.data.chatRooms.hasMore = action.payload.hasMore;
       state.data.chatRooms.loading = false;
