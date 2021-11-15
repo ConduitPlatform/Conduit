@@ -7,7 +7,7 @@ export const getAuthUsersDataReq = (skip: number, limit: number, search: string,
     params: {
       skip,
       limit,
-      identifier: search ? search : undefined,
+      search: search ? search : undefined,
       provider: filter !== 'all' ? filter : undefined,
     },
   });

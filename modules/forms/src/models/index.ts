@@ -1,2 +1,2 @@
-export * from './Forms';
-export * from './Replies';
+export * from './Forms.schema';
+export * from './Replies.schema';
