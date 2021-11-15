@@ -24,8 +24,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   ): { model: SchemaAdapter<any>; relations: any };
 
   async checkModelOwnership(schema: ConduitSchema) {
-    if (schema.name === '_declaredSchema') return true;
-    let model = await this.models!['_declaredSchema'].findOne(
+    if (schema.name === '_DeclaredSchema') return true;
+    let model = await this.models!['_DeclaredSchema'].findOne(
       JSON.stringify({ name: schema.name })
     );
 
@@ -38,13 +38,13 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async saveSchemaToDatabase(schema: ConduitSchema) {
-    if (schema.name === '_declaredSchema') return;
+    if (schema.name === '_DeclaredSchema') return;
 
-    let model = await this.models!['_declaredSchema'].findOne(
+    let model = await this.models!['_DeclaredSchema'].findOne(
       JSON.stringify({ name: schema.name })
     );
     if (model) {
-      await this.models!['_declaredSchema'].findByIdAndUpdate(
+      await this.models!['_DeclaredSchema'].findByIdAndUpdate(
         model._id,
         JSON.stringify({
           name: schema.name,
@@ -54,7 +54,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         })
       );
     } else {
-      await this.models!['_declaredSchema'].create(
+      await this.models!['_DeclaredSchema'].create(
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
@@ -66,7 +66,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models = await this.models!['_declaredSchema'].findMany('{}');
+    let models = await this.models!['_DeclaredSchema'].findMany('{}');
     models = models
       .map((model: any) => {
         let schema = new ConduitSchema(
