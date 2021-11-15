@@ -6,7 +6,7 @@ import {
   constructRoute,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { CustomEndpoint } from '../../models/customEndpoint';
+import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
 
 function getOperation(op: number) {
   switch (op) {
@@ -69,7 +69,7 @@ function extractParams(
   return resultingObject;
 }
 
-export function createCustomEndpointRoute(endpoint: CustomEndpoint) {
+export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
   let input: ConduitRouteOptions = {
     path: `/function/${endpoint.name}`,
     action: getOperation(endpoint.operation),
