@@ -1,6 +1,14 @@
-import { Box, Container, TextField, Button, Grid, Paper, Typography } from '@material-ui/core';
+import {
+  Box,
+  Container,
+  TextField,
+  Button,
+  Grid,
+  Paper,
+  Typography,
+  makeStyles,
+} from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import { Clear, MailOutline, Send } from '@material-ui/icons';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
@@ -148,7 +156,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                 label="With Template"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={8}>
               <FormInputDropdown
                 disabled={!withTemplate}
                 label={'Template name'}
