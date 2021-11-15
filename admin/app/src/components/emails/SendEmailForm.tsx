@@ -32,6 +32,9 @@ const useStyles = makeStyles((theme) => ({
   typography: {
     marginBottom: theme.spacing(4),
   },
+  checkBox: {
+    marginTop: '5px',
+  },
 }));
 
 interface Props {
@@ -87,18 +90,23 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   };
 
   useEffect(() => {
-    if (!isString(selectedFormTemplate)) return;
-    const selectedTemplate = templates.find((template) => template.name === selectedFormTemplate);
+    if (withTemplate) {
+      if (!isString(selectedFormTemplate)) return;
+      const selectedTemplate = templates.find((template) => template.name === selectedFormTemplate);
 
-    if (!selectedTemplate) return;
-    let variableValues = {};
-    selectedTemplate.variables.forEach((variable: string) => {
-      variableValues = { ...variables, [variable]: '' };
-    });
-    setValue('subject', selectedTemplate.subject);
-    setValue('body', selectedTemplate.body);
-    setVariables(variableValues);
-  }, [templateChanged]);
+      if (!selectedTemplate) return;
+      let variableValues = {};
+      selectedTemplate.variables.forEach((variable: string) => {
+        variableValues = { ...variables, [variable]: '' };
+      });
+      setValue('subject', selectedTemplate.subject);
+      setValue('body', selectedTemplate.body);
+      setVariables(variableValues);
+    }
+    if (!withTemplate) {
+      setValue('subject', ''), setValue('body', ''), setValue('templateName', ''), setVariables({});
+    }
+  }, [templateChanged, withTemplate]);
 
   return (
     <Container maxWidth="md">
@@ -126,6 +134,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
               <FormControlLabel
                 control={
                   <Checkbox
+                    className={classes.checkBox}
                     checked={withTemplate}
                     onChange={(e) => setWithTemplate(e.target.checked)}
                     name="withTemplate"
