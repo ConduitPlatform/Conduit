@@ -21,14 +21,17 @@ interface Props {
 interface FormData {
   name: string;
   folder: string;
-  container: any;
+  container: string;
   isPublic: boolean;
 }
 
 const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile, path }) => {
   const classes = sharedClasses();
 
-  const [fileData, setFileData] = useState<any>({ data: '', mimeType: '' });
+  const [fileData, setFileData] = useState<{ data: string; mimeType: string }>({
+    data: '',
+    mimeType: '',
+  });
   const methods = useForm<FormData>({
     defaultValues: useMemo(() => {
       return { name: '', folder: '', container: '', isPublic: false };
