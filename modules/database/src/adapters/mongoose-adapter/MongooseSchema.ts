@@ -56,7 +56,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         $set: parsedQuery,
       };
     }
-    return this.model.findByIdAndUpdate(id, parsedQuery, { new: true }).populate(populate).lean().exec();
+    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true })
+    if (populate !== undefined && populate !== null) {
+      finalQuery = this.calculatePopulates(finalQuery, populate);
+    }
+    return finalQuery.lean().exec();
   }
 
   async updateMany(
