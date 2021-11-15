@@ -1,8 +1,8 @@
 import React from 'react';
-import { FormControl, InputLabel, MenuItem, Select } from '@material-ui/core';
+import { FormControl, MenuItem, TextField } from '@material-ui/core';
 import { Controller } from 'react-hook-form';
 
-export const FormInputDropdown: React.FC<any> = ({ name, control, label, options }) => {
+export const FormInputDropdown: React.FC<any> = ({ name, control, label, options, disabled }) => {
   const generateSingleOptions = () => {
     return options.map((option: any) => {
       return (
@@ -15,12 +15,18 @@ export const FormInputDropdown: React.FC<any> = ({ name, control, label, options
 
   return (
     <FormControl fullWidth variant="outlined">
-      <InputLabel>{label}</InputLabel>
       <Controller
         render={({ field: { onChange, value } }) => (
-          <Select onChange={onChange} value={value}>
+          <TextField
+            disabled={disabled}
+            select
+            fullWidth
+            value={value}
+            label={label}
+            onChange={onChange}
+            variant="outlined">
             {generateSingleOptions()}
-          </Select>
+          </TextField>
         )}
         control={control}
         name={name}
