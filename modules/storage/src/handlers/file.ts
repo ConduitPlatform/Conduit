@@ -34,8 +34,8 @@ export class FileHandlers {
     const { name, data, folder, container, mimeType, isPublic } = JSON.parse(
       call.request.params
     );
+    let newFolder = (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
     let config = ConfigController.getInstance().config;
-
     let usedContainer = container;
     // the container is sent from the client
     if (isNil(usedContainer)) {
@@ -65,15 +65,15 @@ export class FileHandlers {
     }
     let exists;
     if (!isNil(folder)) {
-      exists = await this.storageProvider.container(usedContainer).folderExists(folder);
+      exists = await this.storageProvider.container(usedContainer).folderExists(newFolder);
       if (!exists) {
         await _StorageFolder.getInstance()
           .create({
-            name: folder,
+            name: newFolder,
             container: usedContainer,
             isPublic,
           });
-        await this.storageProvider.container(usedContainer).createFolder(folder);
+        await this.storageProvider.container(usedContainer).createFolder(newFolder);
       }
     }
 
@@ -81,7 +81,7 @@ export class FileHandlers {
       .findOne({
         name,
         container: usedContainer,
-        folder,
+        folder: newFolder,
       });
     if (exists) {
       return callback({
@@ -102,19 +102,19 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(usedContainer)
-        .store((folder ?? '') + name, buffer);
+        .store((newFolder ?? '') + name, buffer);
       let publicUrl = null;
       if (isPublic) {
         publicUrl = await this.storageProvider
           .container(usedContainer)
-          .getPublicUrl((folder ?? '') + name);
+          .getPublicUrl((newFolder ?? '') + name);
       }
 
       const newFile = await File.getInstance()
         .create({
           name,
           mimeType,
-          folder,
+          folder: newFolder,
           container: usedContainer,
           isPublic,
           url: publicUrl,
