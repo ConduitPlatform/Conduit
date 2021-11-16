@@ -1,15 +1,15 @@
 import React, { FC, useEffect, useMemo, useState } from 'react';
 import { Container, Grid, Paper, Typography } from '@material-ui/core';
-import { useForm, useWatch } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { Edit, Save, SettingsOutlined } from '@material-ui/icons';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import Button from '@material-ui/core/Button';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';
-import { FormInput } from '../common/FormComponents/FormInput';
-import { FormSelect } from '../common/FormComponents/FormSelect';
-import { FormSwitch } from '../common/FormComponents/FormSwitch';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -59,7 +59,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
       return config;
     }, [config]),
   });
-  const { handleSubmit, reset, control, setValue } = methods;
+  const { reset, control, setValue } = methods;
 
   useEffect(() => {
     reset(config);
@@ -129,113 +129,107 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
   return (
     <Container>
       <Paper className={classes.paper} elevation={5}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid container>
-            <Box
-              width={'100%'}
-              display={'inline-flex'}
-              justifyContent={'space-between'}
-              alignItems={'center'}>
-              <Typography variant={'h6'}>
-                <SettingsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />
-                Notification settings
-              </Typography>
-              <FormSwitch control={control} name={'active'} disabled={!edit} />
-            </Box>
-            <Divider className={classes.divider} />
-            <Grid container spacing={2} className={classes.innerGrid}>
-              {isActive && (
-                <>
-                  <Grid container item alignContent={'center'} xs={12}>
-                    <FormSelect
-                      label={'Provider name'}
-                      name="providerName"
-                      control={control}
-                      options={providers?.map((provider) => ({
-                        name: provider.name,
-                        label: provider.name,
-                      }))}
-                    />
-                  </Grid>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container>
+              <Box
+                width={'100%'}
+                display={'inline-flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}>
+                <Typography variant={'h6'}>
+                  <SettingsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} />
+                  Notification settings
+                </Typography>
+                <FormInputSwitch name={'active'} disabled={!edit} />
+              </Box>
+              <Divider className={classes.divider} />
+              <Grid container spacing={2} className={classes.innerGrid}>
+                {isActive && (
+                  <>
+                    <Grid container item alignContent={'center'} xs={12}>
+                      <FormInputSelect
+                        label={'Provider name'}
+                        name="providerName"
+                        options={providers?.map((provider) => ({
+                          name: provider.name,
+                          label: provider.name,
+                        }))}
+                      />
+                    </Grid>
 
-                  {hasProvider && (
-                    <>
-                      <Grid item xs={12}>
-                        <FormInput
-                          name={'projectId'}
-                          label={'Project Id'}
-                          control={control}
+                    {hasProvider && (
+                      <>
+                        <Grid item xs={12}>
+                          <FormInputText name={'projectId'} label={'Project Id'} disabled={!edit} />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormInputText
+                            name={'privateKey'}
+                            label={'Private key'}
+                            disabled={!edit}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <FormInputText
+                            name={'clientEmail'}
+                            label={'Client Email'}
+                            disabled={!edit}
+                          />
+                        </Grid>
+                        <Typography className={classes.typography}> OR </Typography>
+                        <Button
+                          style={{ marginTop: '30px', marginLeft: '-25px' }}
                           disabled={!edit}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <FormInput
-                          name={'privateKey'}
-                          label={'Private key'}
-                          control={control}
-                          disabled={!edit}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <FormInput
-                          name={'clientEmail'}
-                          label={'Client Email'}
-                          control={control}
-                          disabled={!edit}
-                        />
-                      </Grid>
-                      <Typography className={classes.typography}> OR </Typography>
-                      <Button
-                        style={{ marginTop: '30px', marginLeft: '-25px' }}
-                        disabled={!edit}
-                        variant="contained"
-                        component="label">
-                        Upload JSON File
-                        <input
-                          type="file"
-                          hidden
-                          onChange={(event) => {
-                            event.target.files && handleFileChange(event.target.files[0]);
-                          }}
-                        />
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </Grid>
-            <Grid item container justify="flex-end" xs={12}>
-              {edit && (
-                <>
+                          variant="contained"
+                          component="label">
+                          Upload JSON File
+                          <input
+                            type="file"
+                            hidden
+                            onChange={(event) => {
+                              event.target.files && handleFileChange(event.target.files[0]);
+                            }}
+                          />
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </Grid>
+              <Grid item container justify="flex-end" xs={12}>
+                {edit && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      className={classes.buttonSpacing}
+                      onClick={() => handleCancel()}
+                      color="primary">
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      className={classes.buttonSpacing}
+                      color="primary"
+                      startIcon={<Save />}>
+                      Save
+                    </Button>
+                  </>
+                )}
+                {!edit && (
                   <Button
-                    variant="outlined"
                     className={classes.buttonSpacing}
-                    onClick={() => handleCancel()}
-                    color="primary">
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    className={classes.buttonSpacing}
+                    onClick={() => handleEditClick()}
                     color="primary"
-                    startIcon={<Save />}>
-                    Save
+                    startIcon={<Edit />}>
+                    Edit
                   </Button>
-                </>
-              )}
-              {!edit && (
-                <Button
-                  className={classes.buttonSpacing}
-                  onClick={() => handleEditClick()}
-                  color="primary"
-                  startIcon={<Edit />}>
-                  Edit
-                </Button>
-              )}
+                )}
+              </Grid>
             </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
     </Container>
   );

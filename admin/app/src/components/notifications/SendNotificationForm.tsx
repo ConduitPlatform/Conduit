@@ -2,14 +2,14 @@ import { Container, Typography, Paper, Grid, Button } from '@material-ui/core';
 import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
-import { useForm } from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
 import SelectedElements from '../common/SelectedElements';
-import { FormInput } from '../common/FormComponents/FormInput';
+import { FormInputText } from '../common/FormComponents/FormInputText';
 import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles((theme) => ({
@@ -51,7 +51,6 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const methods = useForm<NotificationInputs>({ defaultValues: defaultValues });
-  const { handleSubmit, control } = methods;
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
@@ -99,28 +98,30 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} /> Push
           notification
         </Typography>
-        <form noValidate autoComplete="off" onSubmit={handleSubmit(onSubmit)}>
-          <Grid container spacing={2}>
-            <SelectedElements
-              selectedElements={selectedUsers}
-              handleButtonAction={() => setDrawer(true)}
-              removeSelectedElement={removeSelectedUser}
-              buttonText={'Add users'}
-              header={'Selected users'}
-            />
-            <Grid item xs={12}>
-              <FormInput name="title" label="title" control={control} />
+        <FormProvider {...methods}>
+          <form noValidate autoComplete="off" onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container spacing={2}>
+              <SelectedElements
+                selectedElements={selectedUsers}
+                handleButtonAction={() => setDrawer(true)}
+                removeSelectedElement={removeSelectedUser}
+                buttonText={'Add users'}
+                header={'Selected users'}
+              />
+              <Grid item xs={12}>
+                <FormInputText name="title" label="title" />
+              </Grid>
+              <Grid item xs={12}>
+                <FormInputText name="body" rows={10} label="Body" />
+              </Grid>
+              <Grid item container justify="flex-end" xs={12}>
+                <Button type="submit" variant="contained" color="primary" startIcon={<Send />}>
+                  Send
+                </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <FormInput name="body" rows={10} label="Body" control={control} />
-            </Grid>
-            <Grid item container justify="flex-end" xs={12}>
-              <Button type="submit" variant="contained" color="primary" startIcon={<Send />}>
-                Send
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
       <TableDialog
         open={drawer}

@@ -1,22 +1,22 @@
 import React from 'react';
 import { MenuItem } from '@material-ui/core';
 import TextField from '@material-ui/core/TextField';
-import { Control, Controller } from 'react-hook-form';
+import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 
 interface FormSelectProps {
   name: string;
-  control: Control<any>;
   label: string;
   options: { name: string; label: string }[];
   disabled?: boolean;
+  rules?: ControllerProps['rules'];
 }
 
-export const FormSelect: React.FC<FormSelectProps> = ({
+export const FormInputSelect: React.FC<FormSelectProps> = ({
   name,
-  control,
   label,
   options,
   disabled,
+  rules,
 }) => {
   const generateSingleOptions = () => {
     return options.map((option: { name: string; label: string }) => {
@@ -28,22 +28,29 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     });
   };
 
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext();
+
   return (
     <Controller
-      render={({ field: { onChange, value }, fieldState: { error } }) => (
+      rules={rules}
+      control={control}
+      name={name}
+      render={({ field }) => (
         <TextField
+          {...field}
           select
           fullWidth
           disabled={disabled}
-          value={value}
+          helperText={errors[name] ? errors[name].message : null}
+          error={!!errors[name]}
           label={label}
-          onChange={onChange}
           variant="outlined">
           {generateSingleOptions()}
         </TextField>
       )}
-      control={control}
-      name={name}
     />
   );
 };
