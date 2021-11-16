@@ -9,9 +9,10 @@ import { asyncGetChatMessages } from '../../redux/slices/chatSlice';
 interface ItemStatus {
   [key: string]: number;
 }
-const LOADING = 1;
+// const LOADING = 1;
+const timeoutAmount = 500;
 const LOADED = 2;
-const itemStatusMap: ItemStatus = {};
+let itemStatusMap: ItemStatus = {};
 
 interface Props {
   roomId: string;
@@ -28,10 +29,9 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   const hasMountedRef = useRef(false);
 
   useEffect(() => {
-    console.log('selectedPanel', selectedPanel);
     if (infiniteLoaderRef.current && hasMountedRef.current) {
-      console.log('WORKING AS INTENDED');
-      infiniteLoaderRef.current.resetloadMoreItemsCache(true);
+      infiniteLoaderRef.current.resetloadMoreItemsCache();
+      itemStatusMap = {};
     }
     hasMountedRef.current = true;
   }, [selectedPanel, count]);
@@ -60,13 +60,13 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
 
   const debouncedGetApiItems = debounce(
     (skip: number, limit: number) => getApiItems(skip, limit),
-    1000
+    timeoutAmount
   );
 
   const loadMoreItems = async (startIndex: number, stopIndex: number) => {
-    for (let index = startIndex; index <= stopIndex; index++) {
-      itemStatusMap[index] = LOADING;
-    }
+    // for (let index = startIndex; index <= stopIndex; index++) {
+    //   itemStatusMap[index] = LOADING;
+    // }
     const limit = count - startIndex - data.length;
     debouncedGetApiItems(data.length, limit);
     await new Promise((resolve) => {
@@ -76,14 +76,14 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
         }
         resolve(undefined);
         clearTimeout(timeout);
-      }, 1000);
+      }, timeoutAmount);
       return timeout;
     });
   };
 
   const Row = ({ index, style }: ListChildComponentProps) => {
     let label;
-    if (itemStatusMap[index] === LOADED) {
+    if (itemStatusMap[index] === LOADED && data[count - index - 1]) {
       label = `${data[count - index - 1]?.message}`;
     } else {
       label = 'Loading...';
