@@ -1,62 +1,50 @@
-import React from 'react';
-import { Controller } from 'react-hook-form';
+import React, { FC } from 'react';
+import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import TextField from '@material-ui/core/TextField';
+import { TextFieldProps } from '@material-ui/core/TextField/TextField';
 
-interface RHFInputTextProps {
+interface FormInputTextProps {
   name: string;
-  control: any;
   label: string;
   rows?: number;
   disabled?: boolean;
-  required?: string;
   typeOfInput?: string;
-  pattern?: RegExp;
-  errMsg?: string;
-  minimumLength?: number;
-  minLengthMsg?: string;
+  rules?: ControllerProps['rules'];
+  textFieldProps?: TextFieldProps;
 }
 
-export const FormInput = ({
+export const FormInput: FC<FormInputTextProps> = ({
   name,
-  control,
   label,
   rows,
   disabled,
-  required,
   typeOfInput,
-  pattern,
-  errMsg,
-  minimumLength,
-  minLengthMsg,
-}: RHFInputTextProps) => {
+  rules,
+  textFieldProps,
+}) => {
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext();
+
   return (
     <Controller
-      name={name}
       control={control}
-      rules={{
-        required: required,
-        pattern: pattern && {
-          value: pattern,
-          message: errMsg !== undefined ? errMsg : '',
-        },
-        minLength: minimumLength && {
-          value: minimumLength,
-          message: minLengthMsg !== undefined ? minLengthMsg : '',
-        },
-      }}
-      render={({ field: { onChange, value }, fieldState: { error } }) => (
+      name={name}
+      rules={rules}
+      render={({ field }) => (
         <TextField
+          {...field}
           multiline={rows !== undefined && true}
           rows={rows}
           disabled={disabled}
-          helperText={error ? error.message : null}
+          helperText={errors[name] ? errors[name].message : null}
           type={typeOfInput}
-          error={!!error}
-          onChange={onChange}
-          value={value}
+          error={!!errors[name]}
           fullWidth
           label={label}
           variant="outlined"
+          {...textFieldProps}
         />
       )}
     />

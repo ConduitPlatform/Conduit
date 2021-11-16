@@ -4,7 +4,7 @@ import { Switch } from '@material-ui/core';
 
 interface FormSwitchProps {
   name: string;
-  control: Control<any>;
+  control?: Control<any>;
   disabled: boolean;
 }
 
