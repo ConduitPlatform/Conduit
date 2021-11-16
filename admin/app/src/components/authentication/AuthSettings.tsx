@@ -10,6 +10,7 @@ import Button from '@material-ui/core/Button';
 import { SettingsStateTypes, SignInMethods } from '../../models/authentication/AuthModels';
 import { FormSwitch } from '../common/FormComponents/FormSwitch';
 import { FormInput } from '../common/FormComponents/FormInput';
+import { camelCase, startCase } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -64,6 +65,13 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     handleSave(data);
   };
 
+  const textFields = [
+    'rateLimit',
+    'tokenInvalidationPeriod',
+    'refreshTokenInvalidationPeriod',
+    'jwtSecret',
+  ];
+
   return (
     <Container maxWidth="md">
       <Paper className={classes.paper}>
@@ -82,19 +90,16 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
               <Grid container spacing={2} className={classes.innerGrid}>
                 {isActive && (
                   <>
-                    <Grid item xs={12}>
-                      <Typography variant={'h6'}>
-                        Limit the authentication tries/requests of clients
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <FormInput
-                        name={'rateLimit'}
-                        control={control}
-                        label={'Rate limit'}
-                        disabled={!edit}
-                      />
-                    </Grid>
+                    {textFields.map((textField, index) => (
+                      <Grid key={index} item xs={6}>
+                        <FormInput
+                          name={textField}
+                          control={control}
+                          label={startCase(camelCase(textField))}
+                          disabled={!edit}
+                        />
+                      </Grid>
+                    ))}
                     <Grid item xs={6}>
                       <Box
                         width={'100%'}
@@ -108,47 +113,6 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                           disabled={!edit}
                         />
                       </Box>
-                    </Grid>
-                    <Grid item xs={6} />
-                    <Box width={'100%'}>
-                      <Divider className={classes.divider} />
-                    </Box>
-                    <Grid item xs={6}>
-                      <Typography variant={'h6'}>Token expiration period</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant={'h6'}>Refresh token expiration period</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <FormInput
-                        name={'tokenInvalidationPeriod'}
-                        label={'Token invalidation period'}
-                        control={control}
-                        disabled={!edit}
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <FormInput
-                        name={'refreshTokenInvalidationPeriod'}
-                        label={'Refresh token invalidation period'}
-                        control={control}
-                        disabled={!edit}
-                      />
-                    </Grid>
-                    <Box width={'100%'}>
-                      <Divider className={classes.divider} />
-                    </Box>
-                    <Grid item xs={6}>
-                      <Typography variant={'h6'}>JWT Secret</Typography>
-                    </Grid>
-                    <Grid item xs={6} />
-                    <Grid item xs={6}>
-                      <FormInput
-                        name={'jwtSecret'}
-                        label={'JWT secret'}
-                        control={control}
-                        disabled={!edit}
-                      />
                     </Grid>
                   </>
                 )}
