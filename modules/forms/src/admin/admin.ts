@@ -148,7 +148,7 @@ export class AdminHandlers {
     }
     let error = null;
     Object.keys(fields).forEach((r) => {
-      if (['String', 'File'].indexOf(fields[r]) === -1) {
+      if (['String', 'File', 'Date', 'Number'].indexOf(fields[r]) === -1) {
         error = true;
       }
     });
@@ -157,7 +157,7 @@ export class AdminHandlers {
       return callback({
         code: status.INVALID_ARGUMENT,
         message:
-          'Fields object should contain fields that have their value as a type either String or File',
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
       });
     }
     error = null;
@@ -204,7 +204,7 @@ export class AdminHandlers {
 
     let error = null;
     Object.keys(fields).forEach((r) => {
-      if (['String', 'File'].indexOf(fields[r]) === -1) {
+      if (['String', 'File', 'Date', 'Number'].indexOf(fields[r]) === -1) {
         error = true;
       }
     });
@@ -213,7 +213,7 @@ export class AdminHandlers {
       return callback({
         code: status.INVALID_ARGUMENT,
         message:
-          'Fields object should contain fields that have their value as a type either String or File',
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
       });
     }
 
