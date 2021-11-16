@@ -26,7 +26,7 @@ interface ItemStatus {
   [key: string]: number;
 }
 // const LOADING = 1;
-const timeoutAmount = 500;
+const timeoutAmount = 750;
 const LOADED = 2;
 let itemStatusMap: ItemStatus = {};
 
@@ -145,10 +145,10 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
                 <List
                   height={height}
                   itemCount={count}
-                  itemSize={52}
+                  itemSize={56}
                   onItemsRendered={onItemsRendered}
                   ref={ref}
-                  initialScrollOffset={count * 52}
+                  initialScrollOffset={count * 56}
                   width={width}>
                   {Row}
                 </List>

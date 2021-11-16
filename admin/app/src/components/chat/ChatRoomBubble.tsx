@@ -19,6 +19,11 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1, 2),
     maxWidth: '80%',
   },
+  skeletonContentContainer: {
+    backgroundColor: theme.palette.grey[700],
+    width: '30%',
+    borderRadius: theme.spacing(2),
+  },
   iconContainer: {
     height: theme.spacing(4),
     width: theme.spacing(4),
@@ -26,6 +31,10 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: 'purple',
     marginRight: theme.spacing(1),
     cursor: 'pointer',
+  },
+  skeletonIconContainer: {
+    backgroundColor: theme.palette.grey[700],
+    marginRight: theme.spacing(1),
   },
 }));
 
@@ -77,8 +86,19 @@ export const ChatRoomBubbleSkeleton: FC<SkeletonProps> = ({ className, ...rest }
   const classes = useStyles();
   return (
     <div className={clsx(classes.root, className)} {...rest}>
-      <Skeleton animation={false} className={classes.iconContainer} />
-      <Skeleton animation={false} className={classes.contentContainer} />
+      <Skeleton
+        animation="wave"
+        variant="circle"
+        height={32}
+        width={32}
+        className={classes.skeletonIconContainer}
+      />
+      <Skeleton
+        animation="wave"
+        variant="rect"
+        height={32}
+        className={classes.skeletonContentContainer}
+      />
     </div>
   );
 };
