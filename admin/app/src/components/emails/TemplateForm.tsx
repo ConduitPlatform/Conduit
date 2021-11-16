@@ -3,8 +3,8 @@ import React, { FC } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import TemplateEditor from './TemplateEditor';
 import sharedClasses from '../common/sharedClasses';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { EmailData, SendEmailData } from '../../models/emails/EmailModels';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { EmailTemplateType } from '../../models/emails/EmailModels';
 
 interface ITemplateForm {
   name: string;
@@ -14,8 +14,8 @@ interface ITemplateForm {
 }
 
 interface Props {
-  preloadedValues: EmailData;
-  handleSubmitData: (data: any) => void;
+  preloadedValues: EmailTemplateType;
+  handleSubmitData: (data: EmailTemplateType) => void;
 }
 
 const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
@@ -25,7 +25,7 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
 
   const { handleSubmit, reset, control } = methods;
 
-  const onSubmit = (data: SendEmailData) => {
+  const onSubmit = (data: EmailTemplateType) => {
     handleSubmitData({ ...data });
   };
 
@@ -34,20 +34,13 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText
-              name="name"
-              control={control}
-              label="Name"
-              required={'Name is required'}
-              pattern={/^S*$/}
-              errMsg={'No spaces allowed on template name'}
-            />
+            <FormInput name="name" control={control} label="Name" required={'Name is required'} />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText name="sender" control={control} label="Sender*" />
+            <FormInput name="sender" control={control} label="Sender*" />
           </Grid>
           <Grid item sm={12}>
-            <FormInputText
+            <FormInput
               name="subject"
               control={control}
               label="Subject"
@@ -59,7 +52,7 @@ const TemplateForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               name="body"
               control={control}
               defaultValue=""
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
+              render={({ field: { onChange, value } }) => (
                 <TemplateEditor value={value} setValue={onChange} />
               )}
               rules={{ required: 'Template body required' }}

@@ -1,11 +1,25 @@
 import React from 'react';
 import { MenuItem } from '@material-ui/core';
 import TextField from '@material-ui/core/TextField';
-import { Controller } from 'react-hook-form';
+import { Control, Controller } from 'react-hook-form';
 
-export const FormInputDropdown: React.FC<any> = ({ name, control, label, options, disabled }) => {
+interface FormSelectProps {
+  name: string;
+  control: Control<any>;
+  label: string;
+  options: { value: string; label: string }[];
+  disabled: boolean;
+}
+
+export const FormSelect: React.FC<FormSelectProps> = ({
+  name,
+  control,
+  label,
+  options,
+  disabled,
+}) => {
   const generateSingleOptions = () => {
-    return options.map((option: any) => {
+    return options.map((option: { value: string; label: string }) => {
       return (
         <MenuItem key={option.value} value={option.value}>
           {option.label}

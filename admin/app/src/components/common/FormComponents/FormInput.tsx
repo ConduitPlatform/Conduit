@@ -1,12 +1,11 @@
 import React from 'react';
-import { Controller } from 'react-hook-form';
+import { Control, Controller } from 'react-hook-form';
 import TextField from '@material-ui/core/TextField';
 
-interface RHFInputTextProps {
+interface FormInputProps {
   name: string;
-  control: any;
+  control: Control<any>;
   label: string;
-  rows?: number;
   disabled?: boolean;
   required?: string;
   typeOfInput?: string;
@@ -16,11 +15,10 @@ interface RHFInputTextProps {
   minLengthMsg?: string;
 }
 
-export const FormInputText = ({
+export const FormInput = ({
   name,
   control,
   label,
-  rows,
   disabled,
   required,
   typeOfInput,
@@ -28,7 +26,7 @@ export const FormInputText = ({
   errMsg,
   minimumLength,
   minLengthMsg,
-}: RHFInputTextProps) => {
+}: FormInputProps) => {
   return (
     <Controller
       name={name}
@@ -46,8 +44,6 @@ export const FormInputText = ({
       }}
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <TextField
-          multiline={rows !== undefined && true}
-          rows={rows}
           disabled={disabled}
           helperText={error ? error.message : null}
           type={typeOfInput}

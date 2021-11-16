@@ -14,11 +14,11 @@ import { useForm, useWatch, Controller } from 'react-hook-form';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { useAppDispatch } from '../../redux/store';
 import { isString } from 'lodash';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { FormSelect } from '../common/FormComponents/FormSelect';
+import { FormCheckBox } from '../common/FormComponents/FormCheckbox';
 import TemplateEditor from './TemplateEditor';
 import { asyncSendEmail } from '../../redux/slices/emailsSlice';
-import { FormCheckBox } from '../common/RHFormComponents/RHFCheckbox';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -52,7 +52,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const [variables, setVariables] = useState<any>({});
+  const [variables, setVariables] = useState<{ [key: string]: string }>({});
 
   const methods = useForm<FormProps>({
     defaultValues: {
@@ -85,7 +85,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
 
   const withTemplate = getValues('withTemplate');
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: FormProps) => {
     let email;
     if (selectedFormTemplate !== '') {
       email = {
@@ -124,7 +124,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
     if (!withTemplate) {
       setValue('subject', ''), setValue('body', ''), setValue('templateName', ''), setVariables({});
     }
-  }, [templateChanged, watchWithTemplate]);
+  }, [templateChanged, watchWithTemplate, templates]);
 
   return (
     <Container maxWidth="md">
@@ -135,13 +135,13 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormInputText name="email" label={'Recipient (To:)'} control={control} />
+              <FormInput name="email" label={'Recipient (To:)'} control={control} />
             </Grid>
             <Grid item xs={12}>
-              <FormInputText name="sender" label={'Sender (From:)'} control={control} />
+              <FormInput name="sender" label={'Sender (From:)'} control={control} />
             </Grid>
             <Grid item xs={8}>
-              <FormInputText
+              <FormInput
                 name="subject"
                 label={'Subject'}
                 disabled={withTemplate}
@@ -157,7 +157,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
               />
             </Grid>
             <Grid item xs={8}>
-              <FormInputDropdown
+              <FormSelect
                 disabled={!withTemplate}
                 label={'Template name'}
                 name="templateName"
