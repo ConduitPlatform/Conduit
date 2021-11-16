@@ -4,9 +4,9 @@ import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { CreateFormSelected, IContainer, ICreateForm } from '../../models/storage/StorageModels';
 import { useForm } from 'react-hook-form';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { FormSelect } from '../common/FormComponents/FormSelect';
+import { FormSwitch } from '../common/FormComponents/FormSwitch';
 import sharedClasses from '../common/sharedClasses';
 
 interface Props {
@@ -70,7 +70,7 @@ const StorageCreateDrawer: FC<Props> = ({
 
   const extractContainers = () => {
     return containers.map((container) => {
-      return { value: container.name, label: container.name };
+      return { name: container.name, label: container.name };
     });
   };
 
@@ -84,10 +84,10 @@ const StorageCreateDrawer: FC<Props> = ({
                 Create {data.type}
               </Typography>
             </Grid>
-            <FormInputText name="name" label="Name" control={control} />
+            <FormInput name="name" label="Name" control={control} />
             {data.type === CreateFormSelected.folder && (
               <Grid item sm={12}>
-                <FormInputDropdown
+                <FormSelect
                   options={extractContainers()}
                   label="Container"
                   name="container"

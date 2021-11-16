@@ -5,9 +5,9 @@ import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import Dropzone from '../common/Dropzone';
 import { IContainer, IStorageFile } from '../../models/storage/StorageModels';
 import { useForm } from 'react-hook-form';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { FormSelect } from '../common/FormComponents/FormSelect';
+import { FormSwitch } from '../common/FormComponents/FormSwitch';
 import sharedClasses from '../common/sharedClasses';
 
 interface Props {
@@ -81,7 +81,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
 
   const extractContainers = () => {
     return containers.map((container) => {
-      return { value: container.name, label: container.name };
+      return { name: container.name, label: container.name };
     });
   };
 
@@ -95,10 +95,10 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
           <Dropzone file={fileData.data} setFile={handleSetFile} />
           <Grid container alignItems="center" className={classes.root} spacing={2}>
             <Grid item sm={12} className={classes.marginTop}>
-              <FormInputText name="name" label="File name" control={control} />
+              <FormInput name="name" label="File name" control={control} />
             </Grid>
             <Grid item sm={12}>
-              <FormInputDropdown
+              <FormSelect
                 options={extractContainers()}
                 label="Container"
                 name="container"
@@ -106,7 +106,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
               />
             </Grid>
             <Grid item sm={12}>
-              <FormInputText name="folder" label="Folder name" control={control} />
+              <FormInput name="folder" label="Folder name" control={control} />
             </Grid>
             <Grid item sm={12}>
               <Typography variant="subtitle1">Public</Typography>

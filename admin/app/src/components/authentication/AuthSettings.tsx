@@ -8,8 +8,8 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { SettingsStateTypes, SignInMethods } from '../../models/authentication/AuthModels';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormSwitch } from '../common/FormComponents/FormSwitch';
+import { FormInput } from '../common/FormComponents/FormInput';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -85,7 +85,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <FormInputText
+                    <FormInput
                       name={'rateLimit'}
                       control={control}
                       label={'Rate limit'}
@@ -117,7 +117,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     <Typography variant={'h6'}>Refresh token expiration period</Typography>
                   </Grid>
                   <Grid item xs={6}>
-                    <FormInputText
+                    <FormInput
                       name={'tokenInvalidationPeriod'}
                       label={'Token invalidation period'}
                       control={control}
@@ -125,7 +125,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     />
                   </Grid>
                   <Grid item xs={6}>
-                    <FormInputText
+                    <FormInput
                       name={'refreshTokenInvalidationPeriod'}
                       label={'Refresh token invalidation period'}
                       control={control}
@@ -140,7 +140,7 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                   </Grid>
                   <Grid item xs={6} />
                   <Grid item xs={6}>
-                    <FormInputText
+                    <FormInput
                       name={'jwtSecret'}
                       label={'JWT secret'}
                       control={control}
