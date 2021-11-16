@@ -44,7 +44,6 @@ export class AdminRoutes {
 
   async createFolder(call: RouterRequest, callback: RouterResponse) {
     const { name, container, isPublic } = JSON.parse(call.request.params);
-
     if (isNil(name)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -57,23 +56,24 @@ export class AdminRoutes {
         message: 'Container is required',
       });
     }
+    let newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
     let folder = await _StorageFolder.getInstance()
       .findOne({
-        name,
+        name: newName,
         container,
       });
     if (isNil(folder)) {
       folder = await _StorageFolder.getInstance()
         .create({
-          name,
+          name: newName,
           container,
           isPublic,
         });
       let exists = await this.fileHandlers.storage
         .container(container)
-        .folderExists(name);
+        .folderExists(newName);
       if (!exists) {
-        await this.fileHandlers.storage.container(container).createFolder(name);
+        await this.fileHandlers.storage.container(container).createFolder(newName);
       }
     } else {
       return callback({
