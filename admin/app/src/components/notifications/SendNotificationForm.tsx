@@ -9,7 +9,8 @@ import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
 import SelectedElements from '../common/SelectedElements';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -33,7 +34,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 type SendNotificationProps = {
-  handleSend: (value: any) => void;
+  handleSend: (value: NotificationData) => void;
 };
 
 interface NotificationInputs {
@@ -82,7 +83,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   };
 
   const onSubmit = (data: NotificationInputs) => {
-    const dataToSend = { ...data, usersIds: selectedUsers };
+    const dataToSend = { ...data, userIds: selectedUsers };
     handleSend(dataToSend);
   };
 
@@ -108,10 +109,10 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
               header={'Selected users'}
             />
             <Grid item xs={12}>
-              <FormInputText name="title" label="title" control={control} />
+              <FormInput name="title" label="title" control={control} />
             </Grid>
             <Grid item xs={12}>
-              <FormInputText name="body" rows={10} label="Body" control={control} />
+              <FormInput name="body" rows={10} label="Body" control={control} />
             </Grid>
             <Grid item container justify="flex-end" xs={12}>
               <Button type="submit" variant="contained" color="primary" startIcon={<Send />}>

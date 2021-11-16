@@ -7,9 +7,9 @@ import Button from '@material-ui/core/Button';
 import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import { INotificationSettings } from '../../models/notifications/NotificationModels';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { FormSelect } from '../common/FormComponents/FormSelect';
+import { FormSwitch } from '../common/FormComponents/FormSwitch';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -47,7 +47,7 @@ const useStyles = makeStyles((theme) => ({
 
 type NotificationSettingsProps = {
   handleSave: (value: any) => void;
-  config: any;
+  config: INotificationSettings;
 };
 
 const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSave }) => {
@@ -121,8 +121,8 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
 
   const providers = [
     {
-      label: 'Firebase',
       name: 'firebase',
+      label: 'Firebase',
     },
   ];
 
@@ -147,12 +147,12 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
               {isActive && (
                 <>
                   <Grid container item alignContent={'center'} xs={12}>
-                    <FormInputDropdown
+                    <FormSelect
                       label={'Provider name'}
                       name="providerName"
                       control={control}
                       options={providers?.map((provider) => ({
-                        value: provider.name,
+                        name: provider.name,
                         label: provider.name,
                       }))}
                     />
@@ -161,7 +161,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                   {hasProvider && (
                     <>
                       <Grid item xs={12}>
-                        <FormInputText
+                        <FormInput
                           name={'projectId'}
                           label={'Project Id'}
                           control={control}
@@ -169,7 +169,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                         />
                       </Grid>
                       <Grid item xs={12}>
-                        <FormInputText
+                        <FormInput
                           name={'privateKey'}
                           label={'Private key'}
                           control={control}
@@ -177,7 +177,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                         />
                       </Grid>
                       <Grid item xs={12}>
-                        <FormInputText
+                        <FormInput
                           name={'clientEmail'}
                           label={'Client Email'}
                           control={control}
