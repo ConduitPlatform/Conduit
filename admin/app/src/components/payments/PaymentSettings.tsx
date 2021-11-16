@@ -9,8 +9,8 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { PaymentSettings as IPaymentSettings } from '../../models/payments/PaymentsModels';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormSwitch } from '../common/FormComponents/FormSwitch';
+import { FormInput } from '../common/FormComponents/FormInput';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -120,7 +120,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     <Typography variant={'h6'}>Stripe secret key</Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <FormInputText
+                    <FormInput
                       name={'secret_key'}
                       label={'Secret key'}
                       control={control}

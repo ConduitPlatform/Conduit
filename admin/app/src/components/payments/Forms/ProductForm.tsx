@@ -1,15 +1,15 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useEffect } from 'react';
 import sharedClasses from '../../common/sharedClasses';
 import { useForm, useWatch } from 'react-hook-form';
 import { Button, Container, Grid, Paper, Typography } from '@material-ui/core';
 import { Product, reccuringEnum } from '../../../models/payments/PaymentsModels';
-import { FormInputText } from '../../common/RHFormComponents/RHFInputText';
-import { FormInputDropdown } from '../../common/RHFormComponents/RHFDropdown';
-import { FormSwitch } from '../../common/RHFormComponents/RHFSwitch';
+import { FormInput } from '../../common/FormComponents/FormInput';
+import { FormSelect } from '../../common/FormComponents/FormSelect';
+import { FormSwitch } from '../../common/FormComponents/FormSwitch';
 
 interface Props {
   preloadedValues: Product;
-  handleSubmitData: (data: any) => void;
+  handleSubmitData: (data: Product) => void;
 }
 
 interface IProductForm {
@@ -37,7 +37,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
     setValue('recurring', reccuringEnum[preloadedValues.recurring]);
   }, [setValue, preloadedValues]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: Product) => {
     handleSubmitData(data);
   };
 
@@ -85,7 +85,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
           <Grid item sm={12}>
-            <FormInputText
+            <FormInput
               name="name"
               control={control}
               label="Name"
@@ -93,7 +93,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             />
           </Grid>
           <Grid item sm={6}>
-            <FormInputText
+            <FormInput
               name="value"
               control={control}
               label="Value"
@@ -104,12 +104,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             />
           </Grid>
           <Grid item sm={6}>
-            <FormInputDropdown
-              options={currencies}
-              name="currency"
-              control={control}
-              label="Currency"
-            />
+            <FormSelect options={currencies} name="currency" control={control} label="Currency" />
           </Grid>
           <Paper elevation={6} className={classes.paper} style={{ width: '100%' }}>
             <Grid item container sm={12}>
@@ -123,7 +118,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             {isSubscription && (
               <>
                 <Grid item sm={12}>
-                  <FormInputDropdown
+                  <FormSelect
                     options={recuringOptions}
                     name="recurring"
                     control={control}
@@ -131,7 +126,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                   />
                 </Grid>
                 <Grid item sm={12} style={{ marginTop: '10px' }}>
-                  <FormInputText
+                  <FormInput
                     name="recurringCount"
                     control={control}
                     label="Recurring count"

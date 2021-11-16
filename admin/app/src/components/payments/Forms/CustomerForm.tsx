@@ -3,16 +3,17 @@ import sharedClasses from '../../common/sharedClasses';
 import { useForm } from 'react-hook-form';
 import { Button, Container, Grid } from '@material-ui/core';
 import { Customer } from '../../../models/payments/PaymentsModels';
-import { FormInputText } from '../../common/RHFormComponents/RHFInputText';
+import { FormInput } from '../../common/FormComponents/FormInput';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
 import { AuthUser } from '../../../models/authentication/AuthModels';
 import { asyncGetAuthUserData } from '../../../redux/slices/authenticationSlice';
 import TableDialog from '../../common/TableDialog';
 import SelectedElements from '../../common/SelectedElements';
+import { camelCase, startCase } from 'lodash';
 
 interface Props {
   preloadedValues: Customer;
-  handleSubmitData: (data: any) => void;
+  handleSubmitData: (data: Customer) => void;
 }
 
 interface ICustomerForm {
@@ -75,21 +76,12 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
     setSelectedUsers(filteredArray);
   };
 
+  const inputs = ['email', 'buyerName', 'phoneNumber', 'address', 'postCode'];
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} style={{}}>
       <Container className={classes.root} maxWidth="xl">
         <Grid container alignItems="center" className={classes.root} spacing={2}>
-          <Grid item sm={12}>
-            <FormInputText
-              typeOfInput={'email'}
-              required={'Email field is required'}
-              pattern={/\A([\w+\-]\.?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i}
-              errMsg={'Wrong email format'}
-              name="email"
-              control={control}
-              label="Email"
-            />
-          </Grid>
           <Grid item sm={12}>
             <SelectedElements
               selectedElements={selectedUsers}
@@ -99,39 +91,17 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               header={'Selected user'}
             />
           </Grid>
-          <Grid item sm={12}>
-            <FormInputText
-              name="buyerName"
-              control={control}
-              required={'Buyers name is required'}
-              label="Buyer's Name"
-            />
-          </Grid>
-          <Grid item sm={12}>
-            <FormInputText
-              name="phoneNumber"
-              typeOfInput={'tel'}
-              required={'Phone number is required'}
-              control={control}
-              label="Phone number"
-            />
-          </Grid>
-          <Grid item sm={12}>
-            <FormInputText
-              name="address"
-              required={'Address is required'}
-              control={control}
-              label="Address"
-            />
-          </Grid>
-          <Grid item sm={12}>
-            <FormInputText
-              name="postCode"
-              required={'Post code is required'}
-              control={control}
-              label="Post Code"
-            />
-          </Grid>
+          {inputs.map((input, index) => (
+            <Grid key={index} item sm={12}>
+              <FormInput
+                name={input}
+                required={'Post code is required'}
+                control={control}
+                label={startCase(camelCase(input))}
+              />
+            </Grid>
+          ))}
+
           <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
             <Grid item>
               <Button type="submit" variant="contained" color="primary" size="large">
