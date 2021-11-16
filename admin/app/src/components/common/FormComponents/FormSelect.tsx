@@ -38,7 +38,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           value={value}
           label={label}
           onChange={onChange}
-          helperText="Select your preferred template"
           variant="outlined">
           {generateSingleOptions()}
         </TextField>
