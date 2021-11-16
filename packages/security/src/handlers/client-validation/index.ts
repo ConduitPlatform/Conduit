@@ -2,11 +2,16 @@ import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
 import { ClientModel } from '../../models/Client';
+import * as bcrypt from 'bcrypt';
+import { DatabaseProvider } from '@quintessential-sft/conduit-grpc-sdk';
 
 export class ClientValidator {
   prod = false;
 
-  constructor(private readonly database: any, private readonly sdk: ConduitCommons) {
+  constructor(
+    private readonly database: DatabaseProvider,
+    private readonly sdk: ConduitCommons
+  ) {
     const self = this;
     sdk
       .getConfigManager()
@@ -42,21 +47,34 @@ export class ClientValidator {
       return next(ConduitError.unauthorized());
     }
 
-    let key = await this.sdk.getState().getKey(`${clientid}-${clientsecret}`);
+    let key = await this.sdk.getState().getKey(`${clientid}`);
     if (key) {
-      (req as any).conduit.clientId = clientid;
-      return next();
+      let valid = await bcrypt.compare(clientsecret, key);
+      if (valid) {
+        (req as any).conduit.clientId = clientid;
+        return next();
+      }
+      // if not valid allow the execution to continue,
+      // for the possibility of a secret refresh
     }
+    let _client: { clientId: string; clientSecret: string };
     this.database
-      .findOne('Client', { clientId: clientid, clientSecret: clientsecret })
+      .findOne('Client', { clientId: clientid },'clientSecret')
       .then((client: any) => {
         if (isNil(client)) {
+          throw ConduitError.unauthorized();
+        }
+        _client = client;
+        return bcrypt.compare(clientsecret, client.clientSecret);
+      })
+      .then((valid: boolean) => {
+        if (!valid) {
           throw ConduitError.unauthorized();
         }
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}-${clientsecret}`, true, 10000);
+        this.sdk.getState().setKey(`${clientid}`, _client.clientSecret, 10000);
         next();
       })
       .catch(() => {

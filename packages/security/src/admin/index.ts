@@ -2,6 +2,7 @@ import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { ConduitCommons, PlatformTypesEnum } from '@quintessential-sft/conduit-commons';
 import { NextFunction, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export class Admin {
   constructor(
@@ -33,14 +34,14 @@ export class Admin {
       });
     }
 
-    let clientId = Math.random().toString(36).substring(10);
+    let clientId = randomBytes(15).toString('hex');
     let clientSecret = randomBytes(64).toString('hex');
     let error: string;
-
+    let hash = await bcrypt.hash(clientSecret, 10);
     let client = await this.grpcSdk.databaseProvider
       ?.create('Client', {
         clientId,
-        clientSecret,
+        clientSecret: hash,
         platform,
       })
       .catch((err: Error) => (error = err.message));
