@@ -5,6 +5,22 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import { debounce } from 'lodash';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetChatMessages } from '../../redux/slices/chatSlice';
+import clsx from 'clsx';
+import ChatRoomBubble, { ChatRoomBubbleSkeleton } from './ChatRoomBubble';
+import { makeStyles } from '@material-ui/core/styles';
+
+const useStyles = makeStyles((theme) => ({
+  bubble: {
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(1, 1),
+    borderRadius: theme.spacing(1),
+    display: 'flex',
+    alignItems: 'center',
+  },
+  bubbleSelected: {
+    backgroundColor: `${theme.palette.grey[700]}80`,
+  },
+}));
 
 interface ItemStatus {
   [key: string]: number;
@@ -21,6 +37,7 @@ interface Props {
 
 const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   const dispatch = useAppDispatch();
+  const classes = useStyles();
   const {
     chatMessages: { data, count },
   } = useAppSelector((state) => state.chatSlice.data);
@@ -82,15 +99,33 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   };
 
   const Row = ({ index, style }: ListChildComponentProps) => {
-    let label;
-    if (itemStatusMap[index] === LOADED && data[count - index - 1]) {
-      label = `${data[count - index - 1]?.message}`;
-    } else {
-      label = 'Loading...';
-    }
+    const rowItem = data[count - index - 1];
+    const loading = !(itemStatusMap[index] === LOADED && rowItem);
     return (
       <div style={style as CSSProperties}>
-        <div>{label}</div>
+        {loading ? (
+          <ChatRoomBubbleSkeleton
+            className={
+              classes.bubble
+              // selected.includes(item._id)
+              //   ? clsx(classes.bubble, classes.bubbleSelected)
+              //   : classes.bubble
+            }
+          />
+        ) : (
+          <ChatRoomBubble
+            data={rowItem}
+            className={
+              classes.bubble
+              // selected.includes(item._id)
+              //   ? clsx(classes.bubble, classes.bubbleSelected)
+              //   : classes.bubble
+            }
+            onLongPress={() => console.log('onLongPress')}
+            onPress={() => console.log('onPress')}
+            // key={index}
+          />
+        )}
       </div>
     );
   };
@@ -110,10 +145,10 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
                 <List
                   height={height}
                   itemCount={count}
-                  itemSize={30}
+                  itemSize={52}
                   onItemsRendered={onItemsRendered}
                   ref={ref}
-                  initialScrollOffset={count * 30}
+                  initialScrollOffset={count * 52}
                   width={width}>
                   {Row}
                 </List>

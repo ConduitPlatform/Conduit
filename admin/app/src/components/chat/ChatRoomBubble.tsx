@@ -7,6 +7,7 @@ import { IChatMessage } from '../../models/chat/ChatModels';
 import { Tooltip } from '@material-ui/core';
 import moment from 'moment';
 import useLongPress from '../../hooks/useLongPress';
+import { Skeleton } from '@material-ui/lab';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -30,7 +31,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   data: IChatMessage;
-  className: string;
+  className?: string;
   onPress: (id: string) => void;
   onLongPress: (id: string) => void;
 }
@@ -56,10 +57,10 @@ const ChatRoomBubble: FC<Props> = ({ data, className, onPress, onLongPress, ...r
     <div className={clsx(classes.root, className)} {...longPressEvent} {...rest}>
       <Box className={classes.iconContainer} />
       <Tooltip
-        title={`Sent: ${moment(data.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
+        title={`Sent: ${moment(data?.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
         placement="right">
         <Box className={classes.contentContainer}>
-          <Typography variant="body2">{data.message}</Typography>
+          <Typography variant="body2">{data?.message}</Typography>
         </Box>
       </Tooltip>
     </div>
@@ -67,3 +68,17 @@ const ChatRoomBubble: FC<Props> = ({ data, className, onPress, onLongPress, ...r
 };
 
 export default ChatRoomBubble;
+
+interface SkeletonProps {
+  className: string;
+}
+
+export const ChatRoomBubbleSkeleton: FC<SkeletonProps> = ({ className, ...rest }) => {
+  const classes = useStyles();
+  return (
+    <div className={clsx(classes.root, className)} {...rest}>
+      <Skeleton animation={false} className={classes.iconContainer} />
+      <Skeleton animation={false} className={classes.contentContainer} />
+    </div>
+  );
+};
