@@ -1,6 +1,6 @@
 import { Container, makeStyles } from '@material-ui/core';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
@@ -8,8 +8,8 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { SettingsStateTypes, SignInMethods } from '../../models/authentication/AuthModels';
-import { FormSwitch } from '../common/FormComponents/FormSwitch';
-import { FormInput } from '../common/FormComponents/FormInput';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
+import { FormInputText } from '../common/FormComponents/FormInputText';
 import { camelCase, startCase } from 'lodash';
 
 const useStyles = makeStyles((theme) => ({
@@ -41,14 +41,16 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     }, [settingsData]),
   });
 
+  const { control } = methods;
+
   useEffect(() => {
     methods.reset(settingsData);
   }, [methods, settingsData]);
 
-  // const isActive = useWatch({
-  //   control,
-  //   name: 'active',
-  // });
+  const isActive = useWatch({
+    control,
+    name: 'active',
+  });
 
   const handleCancel = () => {
     setEdit(!edit);
@@ -64,14 +66,12 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     handleSave(data);
   };
 
-  const textFields = [
+  const inputFields = [
     'rateLimit',
     'tokenInvalidationPeriod',
     'refreshTokenInvalidationPeriod',
     'jwtSecret',
   ];
-
-  console.log('rateLimit', methods.watch('rateLimit'));
 
   return (
     <Container maxWidth="md">
@@ -85,37 +85,35 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                 justifyContent={'space-between'}
                 alignItems={'center'}>
                 <Typography variant={'h6'}>Activate Authentication Module</Typography>
-                {/*<FormSwitch control={control} name={'active'} disabled={!edit} />*/}
+                <FormInputSwitch name={'active'} disabled={!edit} />
               </Box>
               <Divider className={classes.divider} />
               <Grid container spacing={2} className={classes.innerGrid}>
-                {/*{isActive && (*/}
-                <>
-                  {textFields.map((textField, index) => (
-                    <Grid key={index} item xs={6}>
-                      <FormInput
-                        name={textField}
-                        label={startCase(camelCase(textField))}
-                        disabled={!edit}
-                      />
+                {isActive && (
+                  <>
+                    {inputFields.map((field, index) => (
+                      <Grid key={index} item xs={6}>
+                        <FormInputText
+                          name={field}
+                          label={startCase(camelCase(field))}
+                          disabled={!edit}
+                        />
+                      </Grid>
+                    ))}
+                    <Grid item xs={6}>
+                      <Box
+                        width={'100%'}
+                        display={'inline-flex'}
+                        justifyContent={'space-between'}
+                        alignItems={'center'}>
+                        <Typography variant={'subtitle1'}>
+                          Allow Refresh Token generation
+                        </Typography>
+                        <FormInputSwitch name={'generateRefreshToken'} disabled={!edit} />
+                      </Box>
                     </Grid>
-                  ))}
-                  <Grid item xs={6}>
-                    <Box
-                      width={'100%'}
-                      display={'inline-flex'}
-                      justifyContent={'space-between'}
-                      alignItems={'center'}>
-                      <Typography variant={'subtitle1'}>Allow Refresh Token generation</Typography>
-                      {/*<FormSwitch*/}
-                      {/*  name={'generateRefreshToken'}*/}
-                      {/*  control={control}*/}
-                      {/*  disabled={!edit}*/}
-                      {/*/>*/}
-                    </Box>
-                  </Grid>
-                </>
-                {/*)}*/}
+                  </>
+                )}
               </Grid>
               {edit && (
                 <Grid item container xs={12} justify={'flex-end'}>

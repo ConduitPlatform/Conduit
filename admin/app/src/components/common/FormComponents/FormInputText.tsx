@@ -13,7 +13,7 @@ interface FormInputTextProps {
   textFieldProps?: TextFieldProps;
 }
 
-export const FormInput: FC<FormInputTextProps> = ({
+export const FormInputText: FC<FormInputTextProps> = ({
   name,
   label,
   rows,
@@ -38,8 +38,8 @@ export const FormInput: FC<FormInputTextProps> = ({
           multiline={rows !== undefined && true}
           rows={rows}
           disabled={disabled}
-          helperText={errors[name] ? errors[name].message : null}
           type={typeOfInput}
+          helperText={errors[name] ? errors[name].message : null}
           error={!!errors[name]}
           fullWidth
           label={label}
