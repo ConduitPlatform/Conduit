@@ -4,10 +4,10 @@ import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import Dropzone from '../common/Dropzone';
 import { IContainer, IStorageFile } from '../../models/storage/StorageModels';
-import { useForm } from 'react-hook-form';
-import { FormInput } from '../common/FormComponents/FormInput';
-import { FormSelect } from '../common/FormComponents/FormSelect';
-import { FormSwitch } from '../common/FormComponents/FormSwitch';
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 import sharedClasses from '../common/sharedClasses';
 
 interface Props {
@@ -37,7 +37,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
       return { name: '', folder: '', container: '', isPublic: false };
     }, []),
   });
-  const { handleSubmit, reset, control, setValue } = methods;
+  const { reset, setValue } = methods;
 
   useEffect(() => {
     if (path.length < 1) return;
@@ -88,44 +88,41 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   return (
     <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={512}>
       <Container maxWidth="lg">
-        <form onSubmit={handleSubmit(handleAdd)}>
-          <Typography variant="h6" className={classes.marginTop}>
-            Add File
-          </Typography>
-          <Dropzone file={fileData.data} setFile={handleSetFile} />
-          <Grid container alignItems="center" className={classes.root} spacing={2}>
-            <Grid item sm={12} className={classes.marginTop}>
-              <FormInput name="name" label="File name" control={control} />
-            </Grid>
-            <Grid item sm={12}>
-              <FormSelect
-                options={extractContainers()}
-                label="Container"
-                name="container"
-                control={control}
-              />
-            </Grid>
-            <Grid item sm={12}>
-              <FormInput name="folder" label="Folder name" control={control} />
-            </Grid>
-            <Grid item sm={12}>
-              <Typography variant="subtitle1">Public</Typography>
-              <FormSwitch control={control} name="isPublic" />
-            </Grid>
-            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-              <Grid item>
-                <Button variant="contained" color="primary" type="submit">
-                  Add
-                </Button>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(handleAdd)}>
+            <Typography variant="h6" className={classes.marginTop}>
+              Add File
+            </Typography>
+            <Dropzone file={fileData.data} setFile={handleSetFile} />
+            <Grid container alignItems="center" className={classes.root} spacing={2}>
+              <Grid item sm={12} className={classes.marginTop}>
+                <FormInputText name="name" label="File name" />
               </Grid>
-              <Grid item>
-                <Button variant="outlined" onClick={() => handleCancel()}>
-                  Cancel
-                </Button>
+              <Grid item sm={12}>
+                <FormInputSelect options={extractContainers()} label="Container" name="container" />
+              </Grid>
+              <Grid item sm={12}>
+                <FormInputText name="folder" label="Folder name" />
+              </Grid>
+              <Grid item sm={12}>
+                <Typography variant="subtitle1">Public</Typography>
+                <FormInputSwitch name="isPublic" />
+              </Grid>
+              <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
+                <Grid item>
+                  <Button variant="contained" color="primary" type="submit">
+                    Add
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button variant="outlined" onClick={() => handleCancel()}>
+                    Cancel
+                  </Button>
+                </Grid>
               </Grid>
             </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Container>
     </DrawerWrapper>
   );

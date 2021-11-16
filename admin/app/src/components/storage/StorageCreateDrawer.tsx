@@ -3,10 +3,10 @@ import { Button, Container, Grid } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { CreateFormSelected, IContainer, ICreateForm } from '../../models/storage/StorageModels';
-import { useForm } from 'react-hook-form';
-import { FormInput } from '../common/FormComponents/FormInput';
-import { FormSelect } from '../common/FormComponents/FormSelect';
-import { FormSwitch } from '../common/FormComponents/FormSwitch';
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 import sharedClasses from '../common/sharedClasses';
 
 interface Props {
@@ -36,7 +36,7 @@ const StorageCreateDrawer: FC<Props> = ({
   const methods = useForm<FormProps>({
     defaultValues: { name: '', container: '', isPublic: false },
   });
-  const { handleSubmit, reset, control, setValue } = methods;
+  const { reset, setValue } = methods;
 
   useEffect(() => {
     if (data.type === CreateFormSelected.folder) {
@@ -77,42 +77,43 @@ const StorageCreateDrawer: FC<Props> = ({
   return (
     <DrawerWrapper open={data.open} closeDrawer={() => closeDrawer()} width={256}>
       <Container maxWidth="lg">
-        <form onSubmit={handleSubmit(handleSave)}>
-          <Grid container alignItems="center" className={classes.root} spacing={2}>
-            <Grid item sm={12}>
-              <Typography variant="h6" className={classes.marginTop}>
-                Create {data.type}
-              </Typography>
-            </Grid>
-            <FormInput name="name" label="Name" control={control} />
-            {data.type === CreateFormSelected.folder && (
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(handleSave)}>
+            <Grid container alignItems="center" className={classes.root} spacing={2}>
               <Grid item sm={12}>
-                <FormSelect
-                  options={extractContainers()}
-                  label="Container"
-                  name="container"
-                  control={control}
-                />
+                <Typography variant="h6" className={classes.marginTop}>
+                  Create {data.type}
+                </Typography>
               </Grid>
-            )}
-            <Grid item sm={12}>
-              <Typography variant="subtitle1">Is Public</Typography>
-              <FormSwitch control={control} name="isPublic" />
+              <FormInputText name="name" label="Name" />
+              {data.type === CreateFormSelected.folder && (
+                <Grid item sm={12}>
+                  <FormInputSelect
+                    options={extractContainers()}
+                    label="Container"
+                    name="container"
+                  />
+                </Grid>
+              )}
+              <Grid item sm={12}>
+                <Typography variant="subtitle1">Is Public</Typography>
+                <FormInputSwitch name="isPublic" />
+              </Grid>
+              <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
+                <Grid item>
+                  <Button variant="contained" color="primary" type="submit">
+                    Save
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button variant="outlined" onClick={() => handleCancel()}>
+                    Cancel
+                  </Button>
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-              <Grid item>
-                <Button variant="contained" color="primary" type="submit">
-                  Save
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button variant="outlined" onClick={() => handleCancel()}>
-                  Cancel
-                </Button>
-              </Grid>
-            </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Container>
     </DrawerWrapper>
   );
