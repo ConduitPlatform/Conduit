@@ -93,6 +93,7 @@ export class AdminRoutes {
         message: 'Name is required',
       });
     }
+    let newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
     if (isNil(container)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -101,7 +102,7 @@ export class AdminRoutes {
     }
     let folder = await _StorageFolder.getInstance()
       .findOne({
-        name,
+        name: newName,
         container,
       });
     if (isNil(folder)) {
@@ -113,12 +114,12 @@ export class AdminRoutes {
       await this.fileHandlers.storage.container(container).deleteFolder(name);
       await _StorageFolder.getInstance()
       .deleteOne({
-        name,
+        name: newName,
         container,
       });
       await File.getInstance()
         .deleteMany({
-          folder: name,
+          folder: newName,
           container,
         });
     }
@@ -274,7 +275,7 @@ export class AdminRoutes {
     let query: { container: string; folder?: string | null; name?: any } = { container };
 
     if (!isNil(folder)) {
-      query.folder = folder;
+      query.folder =  (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
     } else {
       query.folder = null;
     }
