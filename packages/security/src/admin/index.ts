@@ -37,11 +37,11 @@ export class Admin {
     let clientId = randomBytes(15).toString('hex');
     let clientSecret = randomBytes(64).toString('hex');
     let error: string;
-
+    let hash = await bcrypt.hash(clientSecret, 10);
     let client = await this.grpcSdk.databaseProvider
       ?.create('Client', {
         clientId,
-        clientSecret: bcrypt.hash(clientSecret, 10),
+        clientSecret: hash,
         platform,
       })
       .catch((err: Error) => (error = err.message));

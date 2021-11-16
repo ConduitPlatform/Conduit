@@ -4,6 +4,7 @@ import { Admin } from './admin';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
+import { secretMigrate } from './migrations/Secret.migrate';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
@@ -16,7 +17,7 @@ class SecurityModule extends IConduitSecurity {
     const router = conduit.getRouter();
 
     let clientValidator: ClientValidator = new ClientValidator(
-      grpcSdk.databaseProvider,
+      grpcSdk.databaseProvider!,
       conduit
     );
 
@@ -43,6 +44,7 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true
     );
+    secretMigrate(grpcSdk);
   }
 }
 

@@ -3,11 +3,15 @@ import { isNil } from 'lodash';
 import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
 import { ClientModel } from '../../models/Client';
 import * as bcrypt from 'bcrypt';
+import { DatabaseProvider } from '@quintessential-sft/conduit-grpc-sdk';
 
 export class ClientValidator {
   prod = false;
 
-  constructor(private readonly database: any, private readonly sdk: ConduitCommons) {
+  constructor(
+    private readonly database: DatabaseProvider,
+    private readonly sdk: ConduitCommons
+  ) {
     const self = this;
     sdk
       .getConfigManager()
@@ -55,7 +59,7 @@ export class ClientValidator {
     }
     let _client: { clientId: string; clientSecret: string };
     this.database
-      .findOne('Client', { clientId: clientid })
+      .findOne('Client', { clientId: clientid },'clientSecret')
       .then((client: any) => {
         if (isNil(client)) {
           throw ConduitError.unauthorized();
