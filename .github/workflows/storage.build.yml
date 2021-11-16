@@ -2,6 +2,7 @@ on:
   push:
     paths:
       - "modules/storage/**"
+      - "providers/storage-provider/**"
       - "libraries/grpc-sdk/**"
 jobs:
   deploy:

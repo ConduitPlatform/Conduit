@@ -2,6 +2,7 @@ on:
   push:
     paths:
       - "modules/email/**"
+      - "providers/email-provider/**"
       - "libraries/grpc-sdk/**"
 jobs:
   deploy:
