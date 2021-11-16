@@ -76,76 +76,74 @@ const AuthSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     <Container maxWidth="md">
       <Paper className={classes.paper}>
         <form onSubmit={handleSubmit(onSubmit)} style={{}}>
-          <Container maxWidth="md">
-            <Grid container spacing={3}>
-              <Box
-                width={'100%'}
-                display={'inline-flex'}
-                justifyContent={'space-between'}
-                alignItems={'center'}>
-                <Typography variant={'h6'}>Activate Authentication Module</Typography>
-                <FormSwitch control={control} name={'active'} disabled={!edit} />
-              </Box>
-              <Divider className={classes.divider} />
-              <Grid container spacing={2} className={classes.innerGrid}>
-                {isActive && (
-                  <>
-                    {textFields.map((textField, index) => (
-                      <Grid key={index} item xs={6}>
-                        <FormInput
-                          name={textField}
-                          control={control}
-                          label={startCase(camelCase(textField))}
-                          disabled={!edit}
-                        />
-                      </Grid>
-                    ))}
-                    <Grid item xs={6}>
-                      <Box
-                        width={'100%'}
-                        display={'inline-flex'}
-                        justifyContent={'space-between'}
-                        alignItems={'center'}>
-                        <Typography variant={'h6'}>Allow Refresh Token generation</Typography>
-                        <FormSwitch
-                          name={'generateRefreshToken'}
-                          control={control}
-                          disabled={!edit}
-                        />
-                      </Box>
+          <Grid container spacing={3}>
+            <Box
+              width={'100%'}
+              display={'inline-flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}>
+              <Typography variant={'h6'}>Activate Authentication Module</Typography>
+              <FormSwitch control={control} name={'active'} disabled={!edit} />
+            </Box>
+            <Divider className={classes.divider} />
+            <Grid container spacing={2} className={classes.innerGrid}>
+              {isActive && (
+                <>
+                  {textFields.map((textField, index) => (
+                    <Grid key={index} item xs={6}>
+                      <FormInput
+                        name={textField}
+                        control={control}
+                        label={startCase(camelCase(textField))}
+                        disabled={!edit}
+                      />
                     </Grid>
-                  </>
-                )}
-              </Grid>
-              {edit && (
-                <Grid item container xs={12} justify={'flex-end'}>
-                  <Button
-                    onClick={() => handleCancel()}
-                    style={{ marginRight: 16 }}
-                    color={'primary'}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    style={{ alignSelf: 'flex-end' }}
-                    type="submit">
-                    Save
-                  </Button>
-                </Grid>
-              )}
-              {!edit && (
-                <Grid item container xs={12} justify={'flex-end'}>
-                  <Button
-                    onClick={() => handleEditClick()}
-                    style={{ marginRight: 16 }}
-                    color={'primary'}>
-                    Edit
-                  </Button>
-                </Grid>
+                  ))}
+                  <Grid item xs={6}>
+                    <Box
+                      width={'100%'}
+                      display={'inline-flex'}
+                      justifyContent={'space-between'}
+                      alignItems={'center'}>
+                      <Typography variant={'subtitle1'}>Allow Refresh Token generation</Typography>
+                      <FormSwitch
+                        name={'generateRefreshToken'}
+                        control={control}
+                        disabled={!edit}
+                      />
+                    </Box>
+                  </Grid>
+                </>
               )}
             </Grid>
-          </Container>
+            {edit && (
+              <Grid item container xs={12} justify={'flex-end'}>
+                <Button
+                  onClick={() => handleCancel()}
+                  style={{ marginRight: 16 }}
+                  color={'primary'}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  style={{ alignSelf: 'flex-end' }}
+                  type="submit">
+                  Save
+                </Button>
+              </Grid>
+            )}
+            {!edit && (
+              <Grid item container xs={12} justify={'flex-end'}>
+                <Button
+                  onClick={() => handleEditClick()}
+                  style={{ marginRight: 16 }}
+                  color={'primary'}>
+                  Edit
+                </Button>
+              </Grid>
+            )}
+          </Grid>
         </form>
       </Paper>
     </Container>
