@@ -6,8 +6,8 @@ import addUser from '../../assets/svgs/addUser.svg';
 import Grid from '@material-ui/core/Grid';
 import Image from 'next/image';
 import Container from '@material-ui/core/Container';
-import { useForm } from 'react-hook-form';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormInputText } from '../common/FormComponents/FormInputText';
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -60,39 +60,41 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
     <div className={classes.root} style={{ marginTop: '150px' }}>
       <h3 style={{ textAlign: 'center' }}>Add a new user</h3>
       <Container className={classes.root} maxWidth="sm">
-        <Grid container alignItems="center" className={classes.root} spacing={2}>
-          <Grid item sm={12}>
-            <FormInputText
-              name="email"
-              control={control}
-              label="Username/Email"
-              requiredRules="email/name is required!"
-              typeOfInput={'text'}
-            />
-          </Grid>
-          <Grid item sm={12}>
-            <FormInputText
-              name="password"
-              control={control}
-              label="Password"
-              requiredRules="password is required!"
-              typeOfInput={'password'}
-              minimumLength={5}
-              minLengthMsg={'The minimum length is 5 characters'}
-            />
-          </Grid>
-          <Grid item>
-            <Button
-              onClick={handleSubmit(onSubmit)}
-              type="submit"
-              variant="contained"
-              color="primary"
-              size="large"
-              startIcon={<SaveIcon />}>
-              Save
-            </Button>
-          </Grid>
-        </Grid>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container alignItems="center" className={classes.root} spacing={2}>
+              <Grid item sm={12}>
+                <FormInputText
+                  name="email"
+                  label="Username/Email"
+                  rules={{ required: 'email/name is required!' }}
+                  typeOfInput={'text'}
+                />
+              </Grid>
+              <Grid item sm={12}>
+                <FormInputText
+                  name="password"
+                  label="Password"
+                  rules={{
+                    required: 'password is required!',
+                    minLength: { value: 5, message: 'The minimum length is 5 characters' },
+                  }}
+                  typeOfInput={'password'}
+                />
+              </Grid>
+              <Grid item>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<SaveIcon />}>
+                  Save
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </FormProvider>
       </Container>
 
       <div className={classes.centeredImg}>

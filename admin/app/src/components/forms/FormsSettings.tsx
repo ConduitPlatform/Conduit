@@ -1,6 +1,6 @@
 import { Container } from '@material-ui/core';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -9,7 +9,7 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { FormSettingsConfig } from '../../models/forms/FormsModels';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -36,12 +36,12 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
 
   const [edit, setEdit] = useState<boolean>(false);
 
-  const methods = useForm<Props['settingsData']>({
+  const methods = useForm<FormSettingsConfig>({
     defaultValues: useMemo(() => {
       return settingsData;
     }, [settingsData]),
   });
-  const { handleSubmit, reset, control } = methods;
+  const { reset, control } = methods;
 
   useEffect(() => {
     reset(settingsData);
@@ -61,7 +61,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     setEdit(true);
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: FormSettingsConfig) => {
     setEdit(false);
     handleSave(data);
   };
@@ -69,62 +69,64 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   return (
     <Container>
       <Paper className={classes.paper}>
-        <form onSubmit={handleSubmit(onSubmit)} style={{}}>
-          <Grid container>
-            <Box
-              width={'100%'}
-              display={'inline-flex'}
-              justifyContent={'space-between'}
-              alignItems={'center'}>
-              <Typography variant={'h6'}>Activate Forms Module</Typography>
-              <FormSwitch control={control} disabled={!edit} name={'active'} />
-            </Box>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)} style={{}}>
+            <Grid container>
+              <Box
+                width={'100%'}
+                display={'inline-flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}>
+                <Typography variant={'h6'}>Activate Forms Module</Typography>
+                <FormInputSwitch disabled={!edit} name={'active'} />
+              </Box>
 
-            <Divider className={classes.divider} />
+              <Divider className={classes.divider} />
 
-            <Grid container spacing={2} className={classes.innerGrid}>
-              {isActive && (
-                <Grid item xs={12}>
-                  <Box
-                    width={'100%'}
-                    display={'inline-flex'}
-                    justifyContent={'space-between'}
-                    alignItems={'center'}>
-                    <Typography variant={'h6'}>Use Attachments</Typography>
-                    <FormSwitch control={control} disabled={!edit} name={'useAttachments'} />
-                  </Box>
+              <Grid container spacing={2} className={classes.innerGrid}>
+                {isActive && (
+                  <Grid item xs={12}>
+                    <Box
+                      width={'100%'}
+                      display={'inline-flex'}
+                      justifyContent={'space-between'}
+                      alignItems={'center'}>
+                      <Typography variant={'h6'}>Use Attachments</Typography>
+                      <FormInputSwitch disabled={!edit} name={'useAttachments'} />
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+              {edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleCancel()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    type="submit"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end' }}>
+                    Save
+                  </Button>
+                </Grid>
+              )}
+              {!edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleEditClick()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Edit
+                  </Button>
                 </Grid>
               )}
             </Grid>
-            {edit && (
-              <Grid item container xs={12} justify={'flex-end'}>
-                <Button
-                  onClick={() => handleCancel()}
-                  style={{ marginRight: 16 }}
-                  color={'primary'}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  color="primary"
-                  style={{ alignSelf: 'flex-end' }}>
-                  Save
-                </Button>
-              </Grid>
-            )}
-            {!edit && (
-              <Grid item container xs={12} justify={'flex-end'}>
-                <Button
-                  onClick={() => handleEditClick()}
-                  style={{ marginRight: 16 }}
-                  color={'primary'}>
-                  Edit
-                </Button>
-              </Grid>
-            )}
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
     </Container>
   );
