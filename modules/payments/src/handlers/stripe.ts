@@ -6,19 +6,19 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import {
+  PaymentsCustomer,
+  Product,
+  Transaction,
+} from '../models';
 
 const PROVIDER_NAME = 'stripe';
 
 export class StripeHandlers {
   private client: Stripe;
-  private initialized: boolean = false;
-  private database: any;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.validate()
-      .then(() => {
-        return this.initDb();
-      })
       .catch((e: Error) => {
         console.log('Stripe not active');
       });
@@ -39,15 +39,9 @@ export class StripeHandlers {
         });
       })
       .then(() => {
-        if (!this.initialized) {
-          return this.initDb();
-        }
-      })
-      .then((r: any) => {
         return true;
       })
       .catch((e: Error) => {
-        this.initialized = false;
         throw e;
       });
   }
@@ -64,8 +58,8 @@ export class StripeHandlers {
       });
     }
 
-    const product = await this.database
-      .findOne('Product', { _id: productId })
+    const product = await Product.getInstance()
+      .findOne({ _id: productId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -80,37 +74,38 @@ export class StripeHandlers {
     }
 
     if (!isNil(userId)) {
-      const customerDb = await this.database
-        .findOne('PaymentsCustomer', { userId })
+      const customerDb = await PaymentsCustomer.getInstance()
+        .findOne({ userId })
         .catch((e: Error) => {
           errorMessage = e.message;
         });
       if (!isNil(errorMessage)) {
         return callback({ code: status.INTERNAL, message: errorMessage });
       }
-      if (isNil(customerDb) || isNil(customerDb.stripe)) {
+      if (isNil(customerDb) || isNil((customerDb as PaymentsCustomer).stripe)) {
         const customer = await this.client.customers.create({
           metadata: {
             userId: userId,
           },
         });
         customerId = customer.id;
-        await this.database.create('PaymentsCustomer', {
-          stripe: {
-            customerId,
-          },
-          userId,
-        });
+        await PaymentsCustomer.getInstance()
+          .create({
+            stripe: {
+              customerId,
+            },
+            userId
+          });
       } else {
-        customerId = customerDb.stripe.customerId;
+        customerId = (customerDb as PaymentsCustomer).stripe.customerId;
       }
     }
 
     let options: Stripe.PaymentIntentCreateParams = {
-      amount: product.value,
-      currency: product.currency,
+      amount: (product as Product).value,
+      currency: (product as Product).currency,
       metadata: {
-        product: product.name,
+        product: (product as Product).name,
         userId: isNil(userId) ? null : userId,
         saveCard: saveCard ? 'true' : 'false',
       },
@@ -123,8 +118,8 @@ export class StripeHandlers {
 
     const intent = await this.client.paymentIntents.create(options);
 
-    await this.database
-      .create('Transaction', {
+    await Transaction.getInstance()
+      .create({
         customerId,
         provider: PROVIDER_NAME,
         product: productId,
@@ -139,7 +134,7 @@ export class StripeHandlers {
 
     this.grpcSdk.bus?.publish(
       'payments:createStripe:Transaction',
-      JSON.stringify({ userId, productId, amount: product.value })
+      JSON.stringify({ userId, productId, amount: (product as Product).value })
     );
 
     return callback(null, {
@@ -170,8 +165,8 @@ export class StripeHandlers {
 
     let errorMessage: string | null = null;
 
-    const product = await this.database
-      .findOne('Product', { _id: productId })
+    const product = await Product.getInstance()
+      .findOne({ _id: productId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -185,15 +180,15 @@ export class StripeHandlers {
       });
     }
 
-    const customer = await this.database
-      .findOne('PaymentsCustomer', { userId: context.user._id })
+    const customer = await PaymentsCustomer.getInstance()
+      .findOne({ userId: context.user._id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-    if (isNil(customer) || isNil(customer.stripe)) {
+    if (isNil(customer) || isNil((customer as PaymentsCustomer).stripe)) {
       return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
@@ -201,20 +196,20 @@ export class StripeHandlers {
 
     try {
       const intent = await this.client.paymentIntents.create({
-        amount: product.value,
-        currency: product.currency,
+        amount: (product as Product).value,
+        currency: (product as Product).currency,
         metadata: {
-          product: product.name,
+          product: (product as Product).name,
           userId: context.user._id,
         },
-        customer: customer.stripe.customerId,
+        customer: (customer as PaymentsCustomer).stripe.customerId,
         payment_method: cardId,
         off_session: true,
         confirm: true,
       });
 
-      await this.database
-        .create('Transaction', {
+      await Transaction.getInstance()
+        .create({
           userId: context.user._id,
           provider: PROVIDER_NAME,
           product: productId,
@@ -239,7 +234,7 @@ export class StripeHandlers {
 
     this.grpcSdk.bus?.publish(
       'payments:create:Transaction',
-      JSON.stringify({ userId: context.user._id, productId, amount: product.value })
+      JSON.stringify({ userId: context.user._id, productId, amount: (product as Product).value })
     );
 
     return callback(null, { result: JSON.stringify(res) });
@@ -259,8 +254,8 @@ export class StripeHandlers {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    await this.database
-      .create('Transaction', {
+    await Transaction.getInstance()
+      .create({
         userId,
         provider: PROVIDER_NAME,
         data: intent,
@@ -305,8 +300,8 @@ export class StripeHandlers {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    await this.database
-      .create('Transaction', {
+    await Transaction.getInstance()
+      .create({
         userId,
         provider: PROVIDER_NAME,
         data: intent,
@@ -334,8 +329,8 @@ export class StripeHandlers {
         message: 'No headers provided',
       });
     }
-    const customer = await this.database
-      .findOne('PaymentsCustomer', { userId: context.user._id })
+    const customer = await PaymentsCustomer.getInstance()
+      .findOne({ userId: context.user._id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -343,12 +338,12 @@ export class StripeHandlers {
       return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
-    if (isNil(customer) || isNil(customer.stripe)) {
+    if (isNil(customer) || isNil((customer as PaymentsCustomer).stripe)) {
       return callback({ code: status.INTERNAL, message: 'customer not found' });
     }
 
     const paymentMethods = await this.client.paymentMethods.list({
-      customer: customer.stripe.customerId,
+      customer: (customer as PaymentsCustomer).stripe.customerId,
       type: 'card',
     });
 
@@ -360,8 +355,8 @@ export class StripeHandlers {
     let userId = data.data.object.metadata?.userId;
 
     let errorMessage: string | null = null;
-    await this.database
-      .create('Transaction', {
+    await Transaction.getInstance()
+      .create({
         userId,
         provider: PROVIDER_NAME,
         data,
@@ -406,11 +401,5 @@ export class StripeHandlers {
     });
 
     return Promise.resolve({ subscriptionId: product.id, priceId: price.id });
-  }
-
-  private async initDb() {
-    await this.grpcSdk.waitForExistence('database-provider');
-    this.database = this.grpcSdk.databaseProvider;
-    this.initialized = true;
   }
 }

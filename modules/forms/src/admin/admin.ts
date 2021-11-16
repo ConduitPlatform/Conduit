@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { Forms, FormReplies } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';
@@ -10,17 +11,12 @@ const escapeStringRegexp = require('escape-string-regexp');
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
-  private database: any;
 
   constructor(
     server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly formsController: FormsController
   ) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getForms: this.getForms.bind(this),
@@ -44,8 +40,8 @@ export class AdminHandlers {
       });
     }
     let errorMessage;
-    const forms = await this.database
-      .deleteMany('Forms', { _id: { $in: ids } })
+    const forms = await Forms.getInstance()
+      .deleteMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
     if(!isNil(errorMessage)){
@@ -54,7 +50,7 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    const totalCount = forms.deletedCount;
+    const totalCount = (forms as any).deletedCount;
     return callback(null, { result: JSON.stringify({ forms,totalCount }) });
   }
   async getForms(call: RouterRequest, callback: RouterResponse) {
@@ -75,14 +71,14 @@ export class AdminHandlers {
       query['name'] =  { $regex: `.*${identifier}.*`, $options: 'i'};
     }
 
-    const formsPromise = this.database.findMany(
-      'Forms',
-      query,
-      null,
-      skipNumber,
-      limitNumber
-    );
-    const countPromise = this.database.countDocuments('Forms', {});
+    const formsPromise = Forms.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const countPromise = Forms.getInstance().countDocuments({});
 
     let errorMessage: string | null = null;
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(
@@ -109,14 +105,14 @@ export class AdminHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const repliesPromise = this.database.findMany(
-      'FormReplies',
-      { form: formId },
-      null,
-      skipNumber,
-      limitNumber
-    );
-    const countPromise = this.database.countDocuments('FormReplies', { form: formId });
+    const repliesPromise = FormReplies.getInstance()
+      .findMany(
+        { form: formId },
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const countPromise = FormReplies.getInstance().countDocuments({ form: formId });
 
     let errorMessage: string | null = null;
     const [replies, count] = await Promise.all([repliesPromise, countPromise]).catch(
@@ -165,8 +161,8 @@ export class AdminHandlers {
       });
     }
     error = null;
-    this.database
-      .create('Forms', {
+    Forms.getInstance()
+      .create({
         name,
         fields,
         forwardTo,
@@ -222,8 +218,8 @@ export class AdminHandlers {
     }
 
     error = null;
-    this.database
-      .findByIdAndUpdate('Forms', formId, {
+    Forms.getInstance()
+      .findByIdAndUpdate(formId, {
         name,
         fields,
         forwardTo,

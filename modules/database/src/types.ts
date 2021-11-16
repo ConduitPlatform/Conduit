@@ -56,6 +56,7 @@ export type UpdateRequest = GrpcRequest<{
   id: string;
   query: string;
   updateProvidedOnly?: boolean;
+  populate?: string[]
 }>;
 
 export type UpdateManyRequest = GrpcRequest<{

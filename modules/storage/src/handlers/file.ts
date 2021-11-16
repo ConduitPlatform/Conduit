@@ -6,9 +6,13 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
+import {
+  _StorageContainer,
+  _StorageFolder,
+  File,
+} from '../models'
 
 export class FileHandlers {
-  private database: any;
   private storageProvider: IStorageProvider;
 
   constructor(
@@ -16,16 +20,10 @@ export class FileHandlers {
     storageProvider: IStorageProvider
   ) {
     this.storageProvider = storageProvider;
-    this.initDb(grpcSdk, storageProvider);
   }
 
   get storage() {
     return this.storageProvider;
-  }
-
-  async initDb(grpcSdk: ConduitGrpcSdk, storageProvider: IStorageProvider) {
-    await grpcSdk.waitForExistence('database-provider');
-    this.database = grpcSdk.databaseProvider;
   }
 
   updateProvider(storageProvider: IStorageProvider) {
@@ -43,9 +41,10 @@ export class FileHandlers {
     if (isNil(usedContainer)) {
       usedContainer = config.defaultContainer;
     } else {
-      let container = await this.database.findOne('_StorageContainer', {
-        name: usedContainer,
-      });
+      let container = await _StorageContainer.getInstance()
+        .findOne({
+          name: usedContainer,
+        });
       if (!container) {
         if (!config.allowContainerCreation) {
           return callback({
@@ -57,30 +56,33 @@ export class FileHandlers {
         if (!exists) {
           await this.storageProvider.createContainer(usedContainer);
         }
-        await this.database.create('_StorageContainer', {
-          name: usedContainer,
-          isPublic,
-        });
+        await _StorageContainer.getInstance()
+          .create({
+            name: usedContainer,
+            isPublic,
+          });
       }
     }
     let exists;
     if (!isNil(folder)) {
       exists = await this.storageProvider.container(usedContainer).folderExists(folder);
       if (!exists) {
-        await this.database.create('_StorageFolder', {
-          name: folder,
-          container: usedContainer,
-          isPublic,
-        });
+        await _StorageFolder.getInstance()
+          .create({
+            name: folder,
+            container: usedContainer,
+            isPublic,
+          });
         await this.storageProvider.container(usedContainer).createFolder(folder);
       }
     }
 
-    exists = await this.database.findOne('File', {
-      name,
-      container: usedContainer,
-      folder,
-    });
+    exists = await File.getInstance()
+      .findOne({
+        name,
+        container: usedContainer,
+        folder,
+      });
     if (exists) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -108,14 +110,15 @@ export class FileHandlers {
           .getPublicUrl((folder ?? '') + name);
       }
 
-      const newFile = await this.database.create('File', {
-        name,
-        mimeType,
-        folder,
-        container: usedContainer,
-        isPublic,
-        url: publicUrl,
-      });
+      const newFile = await File.getInstance()
+        .create({
+          name,
+          mimeType,
+          folder,
+          container: usedContainer,
+          isPublic,
+          url: publicUrl,
+        });
 
       return callback(null, {
         result: JSON.stringify({
@@ -142,7 +145,7 @@ export class FileHandlers {
     }
 
     try {
-      const file = await this.database.findOne('File', { _id: id });
+      const file = await File.getInstance().findOne({ _id: id });
       if (isNil(file))
         return callback({
           code: status.NOT_FOUND,
@@ -173,7 +176,7 @@ export class FileHandlers {
     }
 
     try {
-      const file = await this.database.findOne('File', { _id: id });
+      const file = await File.getInstance().findOne({ _id: id });
       if (isNil(file))
         return callback({
           code: status.NOT_FOUND,
@@ -213,7 +216,7 @@ export class FileHandlers {
     }
 
     try {
-      const found = await this.database.findOne('File', { _id: id });
+      const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
         return callback({ code: status.NOT_FOUND, message: 'File not found' });
       }
@@ -250,7 +253,7 @@ export class FileHandlers {
     }
 
     try {
-      let found = await this.database.findOne('File', { _id: id });
+      let found = await File.getInstance().findOne({ _id: id });
 
       if (isNil(found)) {
         return callback({ code: status.NOT_FOUND, message: 'File not found' });
@@ -264,7 +267,7 @@ export class FileHandlers {
           message: 'File could not be deleted',
         });
       }
-      await this.database.deleteOne('File', { _id: id });
+      await File.getInstance().deleteOne({ _id: id });
 
       return callback(null, { result: JSON.stringify({ success: true }) });
     } catch (e) {
@@ -287,7 +290,7 @@ export class FileHandlers {
     }
 
     try {
-      const found = await this.database.findOne('File', { _id: id });
+      const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
         return callback({ code: status.NOT_FOUND, message: 'File not found' });
       }
@@ -312,9 +315,10 @@ export class FileHandlers {
       found.mimeType = mimeType ?? found.mimeType;
 
       if (newContainer !== found.container) {
-        let container = await this.database.findOne('_StorageContainer', {
-          name: newContainer,
-        });
+        let container = await _StorageContainer.getInstance()
+          .findOne({
+            name: newContainer,
+          });
         if (!container) {
           if (!config.allowContainerCreation) {
             return callback({
@@ -326,7 +330,7 @@ export class FileHandlers {
           if (!exists) {
             await this.storageProvider.createContainer(newContainer);
           }
-          await this.database.create('_StorageContainer', { name: newContainer });
+          await _StorageContainer.getInstance().create({ name: newContainer });
         }
       }
 
@@ -335,19 +339,21 @@ export class FileHandlers {
           .container(newContainer)
           .folderExists(newFolder);
         if (!exists) {
-          await this.database.create('_StorageFolder', {
-            name: newFolder,
-            container: newContainer,
-          });
+          await _StorageFolder.getInstance()
+            .create({
+              name: newFolder,
+              container: newContainer,
+            });
           await this.storageProvider.container(newContainer).createFolder(newFolder);
         }
       }
 
-      let exists = await this.database.findOne('File', {
-        name: name,
-        container: newContainer,
-        folder: newFolder,
-      });
+      let exists = await File.getInstance()
+        .findOne({
+          name: name,
+          container: newContainer,
+          folder: newFolder,
+        });
       if (exists) {
         return callback({
           code: status.INVALID_ARGUMENT,
@@ -369,13 +375,13 @@ export class FileHandlers {
       found.folder = newFolder;
       found.container = newContainer;
 
-      const updatedFile = await this.database.findByIdAndUpdate('File', found._id, found);
+      const updatedFile = await File.getInstance().findByIdAndUpdate(found._id, found);
 
       return callback(null, {
         result: JSON.stringify({
-          id: updatedFile._id,
-          name: updatedFile.name,
-          url: updatedFile.url,
+          id: updatedFile!._id,
+          name: updatedFile!.name,
+          url: updatedFile!.url,
         }),
       });
     } catch (e) {
