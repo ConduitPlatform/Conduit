@@ -28,7 +28,7 @@ ifeq ($(MAKECMDGOALS), all)
 	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
 else
-	docker build --no-cache --progress=plain -t conduit-base:latest --build-arg BUILDING_SERVICE=$(MAKECMDGOALS) -f ./Dockerfile ./
+	docker build --no-cache -t conduit-base:latest --build-arg BUILDING_SERVICE=$(MAKECMDGOALS) -f ./Dockerfile ./
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
 endif
 
