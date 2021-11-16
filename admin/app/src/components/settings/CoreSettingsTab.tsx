@@ -3,9 +3,9 @@ import React from 'react';
 import { Grid, Container, Button } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import { useForm } from 'react-hook-form';
-import { FormInputDropdown } from '../common/RHFormComponents/RHFDropdown';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
-import { FormSwitch } from '../common/RHFormComponents/RHFSwitch';
+import { FormSelect } from '../common/FormComponents/FormSelect';
+import { FormInput } from '../common/FormComponents/FormInput';
+import { FormSwitch } from '../common/FormComponents/RHFSwitch';
 
 const useStyles = makeStyles(() => ({
   textSpacing: {
@@ -35,7 +35,7 @@ const CoreSettingsTab: React.FC = () => {
   // const dispatch = useDispatch();
   const methods = useForm<CoreSettings>({ defaultValues: initialStates });
 
-  const { handleSubmit, reset, control } = methods;
+  const { reset, control } = methods;
 
   // const onSaveClick = (data: CoreSettings) => {
   //   // const data = {
@@ -69,7 +69,7 @@ const CoreSettingsTab: React.FC = () => {
             <Typography variant={'subtitle2'} className={classes.textSpacing}>
               Environment:
             </Typography>
-            <FormInputDropdown
+            <FormSelect
               name="selectedEnum"
               control={control}
               label="Environment"
@@ -88,13 +88,13 @@ const CoreSettingsTab: React.FC = () => {
               <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
                 Url:
               </Typography>
-              <FormInputText name="url" label="URL" control={control} />
+              <FormInput name="url" label="URL" control={control} />
             </Grid>
             <Grid item container alignItems={'center'} wrap={'nowrap'}>
               <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
                 Port:
               </Typography>
-              <FormInputText name="port" label="Port" control={control} />
+              <FormInput name="port" label="Port" control={control} />
             </Grid>
           </Grid>
           <Grid item xs={12} style={{ marginTop: 32 }}>

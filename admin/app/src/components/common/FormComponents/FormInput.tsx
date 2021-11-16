@@ -15,7 +15,7 @@ interface RHFInputTextProps {
   minLengthMsg?: string;
 }
 
-export const FormInputText = ({
+export const FormInput = ({
   name,
   control,
   label,

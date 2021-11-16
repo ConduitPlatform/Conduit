@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Container, Grid, Theme, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { INewAdminUser } from '../../models/settings/SettingsModels';
-import { FormInputText } from '../common/RHFormComponents/RHFInputText';
+import { FormInput } from '../common/FormComponents/FormInput';
 import { useDispatch } from 'react-redux';
 import { asyncCreateAdminUser } from '../../redux/slices/settingsSlice';
 import { useForm } from 'react-hook-form';
@@ -44,7 +44,7 @@ const CreateNewUserTab: React.FC = () => {
           </Typography>
         </Grid>
         <form onSubmit={handleSubmit(handleRegister)} className={classes.form}>
-          <FormInputText
+          <FormInput
             name="username"
             control={control}
             required="Username is required"
@@ -53,7 +53,7 @@ const CreateNewUserTab: React.FC = () => {
             label="Username"
           />
           <div style={{ marginTop: '10px' }}> </div>
-          <FormInputText
+          <FormInput
             name="password"
             control={control}
             required="Password is required"
