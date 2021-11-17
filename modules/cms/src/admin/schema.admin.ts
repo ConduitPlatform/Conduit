@@ -1,24 +1,26 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
+  DatabaseProvider,
   RouterRequest,
   RouterResponse,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { isNil } from 'lodash';
+import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateSchemaInput } from '../utils/utilities';
+import { CustomEndpoints, SchemaDefinitions } from '../models';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 
 export class SchemaAdmin {
-  private database: any;
+  private database: DatabaseProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    this.database = this.grpcSdk.databaseProvider;
+    this.database = this.grpcSdk.databaseProvider!;
   }
 
   async getAllSchemas(call: RouterRequest, callback: RouterResponse) {
@@ -33,14 +35,14 @@ export class SchemaAdmin {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    const schemasPromise = this.database.findMany(
-      'SchemaDefinitions',
-      {},
-      null,
-      skipNumber,
-      limitNumber
-    );
-    const documentsCountPromise = this.database.countDocuments('SchemaDefinitions', {});
+    const schemasPromise = SchemaDefinitions.getInstance()
+      .findMany(
+        {},
+        undefined,
+        skipNumber,
+        limitNumber
+      );
+    const documentsCountPromise = SchemaDefinitions.getInstance().countDocuments({});
 
     let errorMessage: string | null = null;
     const [schemas, documentsCount] = await Promise.all([
@@ -67,14 +69,14 @@ export class SchemaAdmin {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    const schemasFromCMS = await this.database
-      .findMany('SchemaDefinitions', {})
+    const schemasFromCMS = await SchemaDefinitions.getInstance()
+      .findMany({})
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    const schemaNamesFromCMS = schemasFromCMS.map((schema: any) => schema.name);
+    const schemaNamesFromCMS = (schemasFromCMS as SchemaDefinitions[]).map((schema: any) => schema.name);
     const schemasFromOtherModules = allSchemas.filter((schema: any) => {
       return !schemaNamesFromCMS.includes(schema.name);
     });
@@ -98,8 +100,8 @@ export class SchemaAdmin {
     }
 
     let errorMessage = null;
-    const requestedSchema = await this.database
-      .findOne('SchemaDefinitions', { _id: id })
+    const requestedSchema = await SchemaDefinitions.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -174,8 +176,8 @@ export class SchemaAdmin {
     }
 
     error = null;
-    const newSchema = await this.database
-      .create('SchemaDefinitions', {
+    const newSchema = await SchemaDefinitions.getInstance()
+      .create({
         name,
         fields,
         modelOptions: options,
@@ -209,8 +211,8 @@ export class SchemaAdmin {
       });
     }
     let errorMessage = null;
-    const requestedSchema = await this.database
-      .findOne('SchemaDefinitions', { _id: id })
+    const requestedSchema = await SchemaDefinitions.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -231,15 +233,14 @@ export class SchemaAdmin {
       )
     );
 
-    const updatedSchema = await this.database
-      .findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema)
+    const updatedSchema = await SchemaDefinitions.getInstance()
+      .findByIdAndUpdate(requestedSchema._id, requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    await this.database
+    await CustomEndpoints.getInstance()
       .updateMany(
-        'CustomEndpoints',
         { selectedSchema: id },
         { enabled: requestedSchema.enabled }
       )
@@ -253,6 +254,53 @@ export class SchemaAdmin {
       result: JSON.stringify({
         name: updatedSchema.name,
         enabled: updatedSchema.enabled,
+      }),
+    });
+  }
+
+  async toggleMany(call: RouterRequest, callback: RouterResponse){
+    const { ids,enabled} = JSON.parse(call.request.params);
+    let errorMessage = null;
+    if (isNil(ids) || !isArray(ids) || isNil(enabled)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Required fields are missing',
+      });
+    }
+    await SchemaDefinitions.getInstance()
+      .findMany({ _id: { $in : ids }} )
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    const foundDocumentsCount = await SchemaDefinitions.getInstance()
+      .countDocuments({_id: {$in : ids} })
+      .catch((e:any) => { errorMessage = e.message});
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage })
+
+    if (foundDocumentsCount !== ids.length)
+      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found', })
+
+    const updatedSchemas = await SchemaDefinitions.getInstance()
+      .updateMany({ _id: { $in: ids } }, {enabled: enabled})
+      .catch((e:any) => { errorMessage = e.message})
+    if (!isNil(errorMessage))
+      return callback({code: status.INTERNAL, message: errorMessage});
+
+    await CustomEndpoints.getInstance()
+      .updateMany( { selectedSchema: {$in: ids } },{enabled:enabled})
+      .catch((e:any) => { errorMessage = e.message});
+    if(!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage})
+
+    this.schemaController.refreshRoutes();
+    this.customEndpointController.refreshEndpoints();
+
+    return callback(null, {
+      result: JSON.stringify({
+        updatedSchemas,
+        enabled,
       }),
     });
   }
@@ -276,8 +324,8 @@ export class SchemaAdmin {
     }
 
     let errorMessage = null;
-    const requestedSchema = await this.database
-      .findOne('SchemaDefinitions', { _id: id })
+    const requestedSchema = await SchemaDefinitions.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -314,8 +362,8 @@ export class SchemaAdmin {
     requestedSchema.crudOperations =
       crudOperations !== null ? crudOperations : requestedSchema.crudOperations;
 
-    const updatedSchema = await this.database
-      .findByIdAndUpdate('SchemaDefinitions', requestedSchema._id, requestedSchema)
+    const updatedSchema = await SchemaDefinitions.getInstance()
+      .findByIdAndUpdate(requestedSchema._id, requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -347,8 +395,8 @@ export class SchemaAdmin {
     }
 
     let errorMessage = null;
-    const requestedSchema = await this.database
-      .findOne('SchemaDefinitions', { _id: id })
+    const requestedSchema = await SchemaDefinitions.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -360,8 +408,9 @@ export class SchemaAdmin {
       });
     }
 
-    const endpoints = await this.database
-      .findMany('CustomEndpoints', { selectedSchema: id })
+    // TODO temporarily errorring out until Admin handles this case
+    const endpoints = await CustomEndpoints.getInstance()
+      .findMany({ selectedSchema: id })
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({ code: status.INVALID_ARGUMENT, message: errorMessage });
@@ -374,14 +423,14 @@ export class SchemaAdmin {
       });
     }
 
-    await this.database
-      .deleteOne('SchemaDefinitions', requestedSchema)
+    await SchemaDefinitions.getInstance()
+      .deleteOne(requestedSchema)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    await this.database
-      .deleteMany('CustomEndpoints', { selectedSchema: id })
+    await CustomEndpoints.getInstance()
+      .deleteMany({ selectedSchema: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -389,5 +438,65 @@ export class SchemaAdmin {
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
     return callback(null, { result: 'Schema successfully deleted' });
+  }
+
+  async deleteManySchemas(call: RouterRequest, callback: RouterResponse){
+    const { ids } = JSON.parse(call.request.params);
+    if (isNil(ids) || !isArray(ids)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Path parameter "ids" is required and it should be an array!',
+      });
+    }
+
+    let errorMessage = null;
+    const requestedSchemas = await SchemaDefinitions.getInstance()
+      .findMany({ _id: { $in : ids }})
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    const foundSchemas = await SchemaDefinitions.getInstance()
+      .countDocuments({ _id: { $in : ids }})
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    if( foundSchemas !== requestedSchemas.length)
+      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found' });
+
+
+    for( let schema of requestedSchemas) { // for each schema find if it used by a custom endpoint.
+      const endpoints = await CustomEndpoints.getInstance()
+        .countDocuments({ selectedSchema: schema._id })
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({
+          code: status.INTERNAL,
+          message: errorMessage
+        });
+      }
+      if (!isNil(endpoints) && endpoints > 0) { // if it is used , throw error.
+        return callback({
+          code: status.INTERNAL,
+          message: 'Can not delete schema because it is used by a custom endpoint',
+        });
+      }
+    }
+    await SchemaDefinitions.getInstance()
+      .deleteMany({_id : { $in: ids } })
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    await CustomEndpoints.getInstance()
+      .deleteMany( { selectedSchema: { $in: ids } } )
+      .catch((e: any) => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+
+    this.schemaController.refreshRoutes();
+    this.customEndpointController.refreshEndpoints();
+    return callback(null, { result: 'Schemas successfully deleted' });
   }
 }

@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
-import { CustomEndpoint } from '../../models/customEndpoint';
+import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
 import { isNil } from 'lodash';
 
 export class CustomEndpointHandler {
@@ -12,14 +12,14 @@ export class CustomEndpointHandler {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  static addNewCustomOperationControl(endpoint: CustomEndpoint) {
+  static addNewCustomOperationControl(endpoint: ICustomEndpoint) {
     CustomEndpointHandler.routeControllers[endpoint.name] = endpoint;
   }
 
   entryPoint(call: RouterRequest, callback: RouterResponse) {
     //use it to find the right controller
     let path = call.request.path.split('/')[3];
-    let endpoint: CustomEndpoint = CustomEndpointHandler.routeControllers[path];
+    let endpoint: ICustomEndpoint = CustomEndpointHandler.routeControllers[path];
     let params = JSON.parse(call.request.params);
     let searchQuery: any = {};
     let createString = '';
