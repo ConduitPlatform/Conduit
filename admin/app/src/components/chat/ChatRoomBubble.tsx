@@ -8,6 +8,7 @@ import { Tooltip } from '@material-ui/core';
 import moment from 'moment';
 import useLongPress from '../../hooks/useLongPress';
 import { Skeleton } from '@material-ui/lab';
+import { AccessibleForward } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -28,9 +29,12 @@ const useStyles = makeStyles((theme) => ({
     height: theme.spacing(4),
     width: theme.spacing(4),
     borderRadius: '50%',
-    backgroundColor: 'purple',
+    backgroundColor: theme.palette.primary.main,
     marginRight: theme.spacing(1),
     cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   skeletonIconContainer: {
     backgroundColor: theme.palette.grey[700],
@@ -64,7 +68,9 @@ const ChatRoomBubble: FC<Props> = ({ data, className, onPress, onLongPress, ...r
 
   return (
     <div className={clsx(classes.root, className)} {...longPressEvent} {...rest}>
-      <Box className={classes.iconContainer} />
+      <Box className={classes.iconContainer}>
+        <AccessibleForward />
+      </Box>
       <Tooltip
         title={`Sent: ${moment(data?.createdAt).format('MMM Do YYYY, h:mm:ss a')}`}
         placement="right">
