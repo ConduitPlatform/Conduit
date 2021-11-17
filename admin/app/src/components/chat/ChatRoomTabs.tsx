@@ -7,13 +7,11 @@ import { useAppDispatch } from '../../redux/store';
 import { asyncGetChatRooms } from '../../redux/slices/chatSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
-import clsx from 'clsx';
 import { IChatRoom } from '../../models/chat/ChatModels';
 import ChatRoomTab, { ChatRoomTabSkeleton } from './ChatRoomTab';
 
 const useStyles = makeStyles((theme) => ({
-  bubble: {},
-  bubbleSelected: {
+  tabSelected: {
     backgroundColor: `${theme.palette.grey[700]}80`,
   },
   noScrollbars: {
@@ -52,7 +50,7 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
           onPress={() => onPress(index)}
           onLongPress={() => onLongPress(index)}
           data={rowItem}
-          className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}
+          className={isSelected ? classes.tabSelected : {}}
         />
       )}
     </div>
@@ -137,7 +135,7 @@ const ChatRoomTabs: FC<Props> = ({
   return (
     <AutoSizer>
       {({ height, width }) => {
-        if (!chatRoomCount) return <div>Loading</div>;
+        if (!chatRoomCount) return <div>Not available Rooms</div>;
         return (
           <InfiniteLoader
             ref={infiniteLoaderRef}

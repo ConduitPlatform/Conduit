@@ -139,7 +139,7 @@ const ChatRoomMessages: FC<Props> = ({
   return (
     <AutoSizer>
       {({ height, width }) => {
-        if (!count) return <div>Loading</div>;
+        if (!count) return <div>Not available Messages</div>;
         return (
           <InfiniteLoader
             ref={infiniteLoaderRef}
