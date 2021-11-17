@@ -70,7 +70,7 @@ const StorageCreateDrawer: FC<Props> = ({
 
   const extractContainers = () => {
     return containers.map((container) => {
-      return { name: container.name, label: container.name };
+      return { label: container.name, value: container.name };
     });
   };
 

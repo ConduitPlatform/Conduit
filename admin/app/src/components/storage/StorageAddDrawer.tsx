@@ -81,7 +81,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
 
   const extractContainers = () => {
     return containers.map((container) => {
-      return { name: container.name, label: container.name };
+      return { label: container.name, value: container.name };
     });
   };
 
