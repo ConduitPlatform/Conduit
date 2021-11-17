@@ -113,6 +113,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                 label="Name"
                 rules={{
                   required: 'The form name is required',
+                  pattern: { value: /^S+$/, message: 'A form name should not have spaces' },
                 }}
               />
             </Grid>
