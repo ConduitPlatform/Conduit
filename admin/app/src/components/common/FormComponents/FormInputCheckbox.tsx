@@ -15,10 +15,7 @@ export const FormInputCheckBox: React.FC<FormCheckboxProps> = ({
   label,
   rules,
 }) => {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext();
+  const { control } = useFormContext();
   return (
     <Controller
       control={control}
