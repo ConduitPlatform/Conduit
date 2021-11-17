@@ -1,11 +1,11 @@
 import React, { FC, useEffect } from 'react';
 import sharedClasses from '../../common/sharedClasses';
-import { useForm, useWatch } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { Button, Container, Grid, Paper, Typography } from '@material-ui/core';
 import { Product, reccuringEnum } from '../../../models/payments/PaymentsModels';
-import { FormInput } from '../../common/FormComponents/FormInput';
-import { FormSelect } from '../../common/FormComponents/FormSelect';
-import { FormSwitch } from '../../common/FormComponents/FormSwitch';
+import { FormInputText } from '../../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../../common/FormComponents/FormInputSelect';
+import { FormInputSwitch } from '../../common/FormComponents/FormInputSwitch';
 
 interface Props {
   preloadedValues: Product;
@@ -43,116 +43,118 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
 
   const currencies = [
     {
-      value: '',
+      name: '',
       label: 'None',
     },
     {
-      value: 'usd',
+      name: 'usd',
       label: '$',
     },
     {
-      value: 'eur',
+      name: 'eur',
       label: '€',
     },
     {
-      value: 'btc',
+      name: 'btc',
       label: '฿',
     },
     {
-      value: 'jpy',
+      name: 'jpy',
       label: '¥',
     },
   ];
 
   const recuringOptions = [
-    { value: reccuringEnum.day, label: 'Daily' },
+    { name: reccuringEnum.day, label: 'Daily' },
     {
-      value: reccuringEnum.week,
+      name: reccuringEnum.week,
       label: 'Weekly',
     },
     {
-      value: reccuringEnum.month,
+      name: reccuringEnum.month,
       label: 'Monthly',
     },
     {
-      value: reccuringEnum.year,
+      name: reccuringEnum.year,
       label: 'Yearly',
     },
   ];
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} style={{}}>
-      <Container className={classes.root} maxWidth="xl">
-        <Grid container alignItems="center" className={classes.root} spacing={2}>
-          <Grid item sm={12}>
-            <FormInput
-              name="name"
-              control={control}
-              label="Name"
-              required={'Product name is required'}
-            />
-          </Grid>
-          <Grid item sm={6}>
-            <FormInput
-              name="value"
-              control={control}
-              label="Value"
-              typeOfInput="number"
-              required={'Value is required'}
-              pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
-              errMsg={'Negative numbers not allowed'}
-            />
-          </Grid>
-          <Grid item sm={6}>
-            <FormSelect options={currencies} name="currency" control={control} label="Currency" />
-          </Grid>
-          <Paper elevation={3} className={classes.paper} style={{ width: '100%' }}>
-            <Grid item container sm={12}>
-              <Grid item sm={11}>
-                <Typography>Is subscription:</Typography>
-              </Grid>
-              <Grid item sm={1}>
-                <FormSwitch name="isSubscription" control={control} />
-              </Grid>
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(onSubmit)} style={{}}>
+        <Container className={classes.root} maxWidth="xl">
+          <Grid container alignItems="center" className={classes.root} spacing={2}>
+            <Grid item sm={12}>
+              <FormInputText
+                name="name"
+                label="Name"
+                rules={{ required: 'Product name is required' }}
+              />
             </Grid>
-            {isSubscription && (
-              <>
-                <Grid item sm={12}>
-                  <FormSelect
-                    options={recuringOptions}
-                    name="recurring"
-                    control={control}
-                    label="Recurring"
-                  />
+            <Grid item sm={6}>
+              <FormInputText
+                name="value"
+                label="Value"
+                typeOfInput="number"
+                rules={{
+                  required: 'Value is required',
+                  pattern: {
+                    value: /^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/,
+                    message: 'Negative number not allowed',
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item sm={6}>
+              <FormInputSelect name="currency" options={currencies} label="Currency" />
+            </Grid>
+            <Paper elevation={3} className={classes.paper} style={{ width: '100%' }}>
+              <Grid item container sm={12}>
+                <Grid item sm={11}>
+                  <Typography>Is subscription:</Typography>
                 </Grid>
-                <Grid item sm={12} style={{ marginTop: '10px' }}>
-                  <FormInput
-                    name="recurringCount"
-                    control={control}
-                    label="Recurring count"
-                    typeOfInput="number"
-                    pattern={/^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/}
-                    errMsg={'Negative number not allowed'}
-                  />
+                <Grid item sm={1}>
+                  <FormInputSwitch name="isSubscription" />
                 </Grid>
-              </>
-            )}
-          </Paper>
-          <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-            <Grid item>
-              <Button type="submit" variant="contained" color="primary" size="large">
-                Save
-              </Button>
-            </Grid>
-            <Grid item>
-              <Button onClick={() => reset()} variant="contained" color="primary" size="large">
-                Cancel
-              </Button>
+              </Grid>
+              {isSubscription && (
+                <>
+                  <Grid item sm={12}>
+                    <FormInputSelect options={recuringOptions} name="recurring" label="Recurring" />
+                  </Grid>
+                  <Grid item sm={12} style={{ marginTop: '10px' }}>
+                    <FormInputText
+                      name="recurringCount"
+                      label="Recurring count"
+                      typeOfInput="number"
+                      rules={{
+                        pattern: {
+                          value: /^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/,
+                          message: 'Negative number not allowed',
+                        },
+                      }}
+                    />
+                  </Grid>
+                </>
+              )}
+            </Paper>
+            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
+              <Grid item>
+                <Button type="submit" variant="contained" color="primary" size="large">
+                  Save
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button onClick={() => reset()} variant="contained" color="primary" size="large">
+                  Cancel
+                </Button>
+              </Grid>
             </Grid>
           </Grid>
-        </Grid>
-      </Container>
-    </form>
+        </Container>
+      </form>
+    </FormProvider>
   );
 };
 

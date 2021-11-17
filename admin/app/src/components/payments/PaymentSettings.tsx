@@ -1,6 +1,6 @@
 import { Container } from '@material-ui/core';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -9,8 +9,8 @@ import Box from '@material-ui/core/Box';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { PaymentSettings as IPaymentSettings } from '../../models/payments/PaymentsModels';
-import { FormSwitch } from '../common/FormComponents/FormSwitch';
-import { FormInput } from '../common/FormComponents/FormInput';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
+import { FormInputText } from '../common/FormComponents/FormInputText';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -51,7 +51,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
       };
     }, [settingsData]),
   });
-  const { handleSubmit, reset, control } = methods;
+  const { reset, control } = methods;
 
   useEffect(() => {
     reset({
@@ -90,75 +90,72 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   return (
     <Container>
       <Paper className={classes.paper}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid container>
-            <Box
-              width={'100%'}
-              display={'inline-flex'}
-              justifyContent={'space-between'}
-              alignItems={'center'}>
-              <Typography variant={'h6'}>Activate Payments Module</Typography>
-              <FormSwitch name={'active'} control={control} disabled={!edit} />
-            </Box>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container>
+              <Box
+                width={'100%'}
+                display={'inline-flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}>
+                <Typography variant={'h6'}>Activate Payments Module</Typography>
+                <FormInputSwitch name={'active'} disabled={!edit} />
+              </Box>
 
-            <Divider className={classes.divider} />
+              <Divider className={classes.divider} />
 
-            <Grid container spacing={2} className={classes.innerGrid}>
-              {isActive && (
-                <>
-                  <Grid item xs={6}>
-                    <Box
-                      width={'100%'}
-                      display={'inline-flex'}
-                      justifyContent={'space-between'}
-                      alignItems={'center'}>
-                      <Typography variant={'h6'}>Enable stripe payments</Typography>
-                      <FormSwitch name={'enabled'} control={control} disabled={!edit} />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant={'h6'}>Stripe secret key</Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormInput
-                      name={'secret_key'}
-                      label={'Secret key'}
-                      control={control}
-                      disabled={!edit}
-                    />
-                  </Grid>
-                </>
+              <Grid container spacing={2} className={classes.innerGrid}>
+                {isActive && (
+                  <>
+                    <Grid item xs={6}>
+                      <Box
+                        width={'100%'}
+                        display={'inline-flex'}
+                        justifyContent={'space-between'}
+                        alignItems={'center'}>
+                        <Typography variant={'h6'}>Enable stripe payments</Typography>
+                        <FormInputSwitch name={'enabled'} disabled={!edit} />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant={'h6'}>Stripe secret key</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormInputText name={'secret_key'} label={'Secret key'} disabled={!edit} />
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+              {edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleCancel()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end' }}
+                    type="submit">
+                    Save
+                  </Button>
+                </Grid>
+              )}
+              {!edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleEditClick()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Edit
+                  </Button>
+                </Grid>
               )}
             </Grid>
-            {edit && (
-              <Grid item container xs={12} justify={'flex-end'}>
-                <Button
-                  onClick={() => handleCancel()}
-                  style={{ marginRight: 16 }}
-                  color={'primary'}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ alignSelf: 'flex-end' }}
-                  type="submit">
-                  Save
-                </Button>
-              </Grid>
-            )}
-            {!edit && (
-              <Grid item container xs={12} justify={'flex-end'}>
-                <Button
-                  onClick={() => handleEditClick()}
-                  style={{ marginRight: 16 }}
-                  color={'primary'}>
-                  Edit
-                </Button>
-              </Grid>
-            )}
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
     </Container>
   );
