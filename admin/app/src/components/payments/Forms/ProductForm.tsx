@@ -100,7 +100,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                 rules={{
                   required: 'Value is required',
                   pattern: {
-                    value: /^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/,
+                    value: /^(?=.*\d)\d{1,3}(?:\.\d\d?)?$/,
                     message: 'Negative number not allowed',
                   },
                 }}
@@ -130,7 +130,7 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                       typeOfInput="number"
                       rules={{
                         pattern: {
-                          value: /^(?=.*[0-9])\d{1,3}(?:\.\d\d?)?$/,
+                          value: /^(?=.*\d)\d{1,3}(?:\.\d\d?)?$/,
                           message: 'Negative number not allowed',
                         },
                       }}
