@@ -1,14 +1,16 @@
-import { Container, Typography, Paper, Grid, Button, TextField } from '@material-ui/core';
+import { Container, Typography, Paper, Grid, Button } from '@material-ui/core';
 import React, { FC, useCallback, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { NotificationsOutlined, Send } from '@material-ui/icons';
-import { NotificationData } from '../../models/notifications/NotificationModels';
+import { FormProvider, useForm } from 'react-hook-form';
 import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
 import SelectedElements from '../common/SelectedElements';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { NotificationData } from '../../models/notifications/NotificationModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -32,15 +34,25 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 type SendNotificationProps = {
-  handleSend: (value: any) => void;
+  handleSend: (value: NotificationData) => void;
+};
+
+interface NotificationInputs {
+  title: string;
+  body: string;
+}
+
+const defaultValues = {
+  title: '',
+  body: '',
 };
 
 const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const classes = useStyles();
   const dispatch = useDispatch();
+  const methods = useForm<NotificationInputs>({ defaultValues: defaultValues });
   const [drawer, setDrawer] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
@@ -69,22 +81,9 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
     });
   };
 
-  const [formState, setFormState] = useState<NotificationData>({
-    title: '',
-    body: '',
-    userIds: [],
-  });
-
-  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormState({
-      ...formState,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSendNotification = () => {
-    setFormState({ ...formState, userIds: selectedUsers });
-    handleSend(formState);
+  const onSubmit = (data: NotificationInputs) => {
+    const dataToSend = { ...data, userIds: selectedUsers };
+    handleSend(dataToSend);
   };
 
   const removeSelectedUser = (i: number) => {
@@ -99,50 +98,30 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           <NotificationsOutlined fontSize={'small'} style={{ marginBottom: '-2px' }} /> Push
           notification
         </Typography>
-        <form noValidate autoComplete="off" onSubmit={handleSendNotification}>
-          <Grid container spacing={2}>
-            <SelectedElements
-              selectedElements={selectedUsers}
-              handleButtonAction={() => setDrawer(true)}
-              removeSelectedElement={removeSelectedUser}
-              buttonText={'Add users'}
-              header={'Selected users'}
-            />
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="Title"
-                name="title"
-                value={formState.title}
-                onChange={handleDataChange}
-                variant="outlined"
+        <FormProvider {...methods}>
+          <form noValidate autoComplete="off" onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container spacing={2}>
+              <SelectedElements
+                selectedElements={selectedUsers}
+                handleButtonAction={() => setDrawer(true)}
+                removeSelectedElement={removeSelectedUser}
+                buttonText={'Add users'}
+                header={'Selected users'}
               />
+              <Grid item xs={12}>
+                <FormInputText name="title" label="title" />
+              </Grid>
+              <Grid item xs={12}>
+                <FormInputText name="body" rows={10} label="Body" />
+              </Grid>
+              <Grid item container justify="flex-end" xs={12}>
+                <Button type="submit" variant="contained" color="primary" startIcon={<Send />}>
+                  Send
+                </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Body"
-                name="body"
-                multiline
-                fullWidth
-                rows="10"
-                variant="outlined"
-                placeholder="Write your message here..."
-                required
-                onChange={handleDataChange}
-              />
-            </Grid>
-            <Grid item container justify="flex-end" xs={12}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Send />}
-                onClick={handleSendNotification}>
-                Send
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
       <TableDialog
         open={drawer}
