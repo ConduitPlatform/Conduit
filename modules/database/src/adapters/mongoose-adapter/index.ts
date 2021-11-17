@@ -104,7 +104,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this
     );
-    if (schema.name !== '_declaredSchema') {
+    if (schema.name !== '_DeclaredSchema') {
       await this.saveSchemaToDatabase(schema);
     }
 
