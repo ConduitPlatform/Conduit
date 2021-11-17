@@ -74,7 +74,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     setEdit(true);
   };
 
-  const onSubmit = (dataToSubmit: any) => {
+  const onSubmit = (dataToSubmit: FormProps) => {
     const data = {
       active: dataToSubmit.active,
       stripe: {

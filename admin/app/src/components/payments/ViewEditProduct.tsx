@@ -29,11 +29,10 @@ const ViewEditProduct: React.FC<Props> = ({
   setEdit,
   create,
   setCreate,
-  handleClose,
 }) => {
   const classes = sharedClasses();
 
-  const handleSaveClick = (data: any) => {
+  const handleSaveClick = (data: Product) => {
     if (create) {
       handleCreate(data);
     } else {
