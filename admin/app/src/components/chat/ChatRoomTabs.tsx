@@ -9,7 +9,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
 import clsx from 'clsx';
 import { IChatRoom } from '../../models/chat/ChatModels';
-import ChatRoomTab from './ChatRoomTab';
+import ChatRoomTab, { ChatRoomTabSkeleton } from './ChatRoomTab';
 
 const useStyles = makeStyles((theme) => ({
   bubble: {},
@@ -46,7 +46,7 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
   return (
     <div style={style as CSSProperties}>
       {loading ? (
-        <div>loading...</div>
+        <ChatRoomTabSkeleton />
       ) : (
         <ChatRoomTab
           onPress={() => onPress(index)}
@@ -154,7 +154,6 @@ const ChatRoomTabs: FC<Props> = ({
                   ref={ref}
                   itemData={itemData}
                   className={classes.noScrollbars}
-                  // style={{ overflow: 'hidden' }}
                   width={width}>
                   {Row}
                 </List>
