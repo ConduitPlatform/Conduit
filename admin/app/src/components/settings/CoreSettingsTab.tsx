@@ -50,9 +50,9 @@ const CoreSettingsTab: React.FC = () => {
   };
 
   const selectOptions = [
-    { name: 'development', label: 'development' },
-    { name: 'production', label: 'production' },
-    { name: 'test', label: 'test' },
+    { value: 'development', label: 'development' },
+    { value: 'production', label: 'production' },
+    { value: 'test', label: 'test' },
   ];
 
   return (

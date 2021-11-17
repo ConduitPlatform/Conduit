@@ -15,10 +15,7 @@ export const FormInputSwitch: React.FC<FormSwitchProps> = ({
   rules,
   switchProps,
 }) => {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext();
+  const { control } = useFormContext();
   return (
     <Controller
       name={name}
