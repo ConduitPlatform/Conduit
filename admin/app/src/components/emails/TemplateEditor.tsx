@@ -19,9 +19,10 @@ const useStyles = makeStyles(() => ({
 interface Props {
   value: string;
   setValue: (value: string) => void;
+  disabled?: boolean;
 }
 
-const TemplateEditor: FC<Props> = ({ value, setValue }) => {
+const TemplateEditor: FC<Props> = ({ value, setValue, disabled }) => {
   const classes = useStyles();
   const onValueChange = (editorValue: string) => {
     if (setValue) {
@@ -32,6 +33,7 @@ const TemplateEditor: FC<Props> = ({ value, setValue }) => {
   return (
     <Editor
       className={classes.editor}
+      disabled={disabled}
       value={value}
       onValueChange={(editorValue) => onValueChange(editorValue)}
       highlight={(editorValue) => highlight(editorValue, languages['handlebars'], 'handlebars')}

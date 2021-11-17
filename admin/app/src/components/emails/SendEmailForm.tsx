@@ -1,22 +1,24 @@
-import { Box, Container, MenuItem } from '@material-ui/core';
-import React, { useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
+import {
+  Box,
+  Container,
+  TextField,
+  Button,
+  Grid,
+  Paper,
+  Typography,
+  makeStyles,
+} from '@material-ui/core';
+import React, { useEffect, useState } from 'react';
 import { Clear, MailOutline, Send } from '@material-ui/icons';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
+import { useForm, useWatch, Controller, FormProvider } from 'react-hook-form';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
-import { asyncSendEmail } from '../../redux/slices/emailsSlice';
 import { useAppDispatch } from '../../redux/store';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import InputLabel from '@material-ui/core/InputLabel';
-import Select from '@material-ui/core/Select';
-import FormControl from '@material-ui/core/FormControl';
 import { isString } from 'lodash';
-import { IEmailState } from '../../models/emails/IEmailState';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputCheckBox } from '../common/FormComponents/FormInputCheckbox';
+import TemplateEditor from './TemplateEditor';
+import { asyncSendEmail } from '../../redux/slices/emailsSlice';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -29,89 +31,104 @@ const useStyles = makeStyles((theme) => ({
   typography: {
     marginBottom: theme.spacing(4),
   },
+  checkBox: {
+    marginTop: '5px',
+  },
 }));
 
 interface Props {
   templates: EmailTemplateType[];
 }
 
+interface FormProps {
+  email: string;
+  sender: string;
+  subject: string;
+  body: string;
+  templateName: string;
+  withTemplate: boolean;
+}
 const SendEmailForm: React.FC<Props> = ({ templates }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
 
-  const [withTemplate, setWithTemplate] = useState<boolean>(false);
-  const [emailState, setEmailState] = useState<IEmailState>({
-    _id: '',
-    email: '',
-    sender: '',
-    subject: '',
-    body: '',
-    variables: [],
-    variablesValues: {},
-    templateName: '',
-  });
+  const [variables, setVariables] = useState<{ [key: string]: string }>({});
 
-  const sendEmail = () => {
-    let email;
-    if (emailState.templateName) {
-      email = {
-        templateName: emailState.templateName,
-        variables: emailState.variablesValues,
-        sender: emailState.sender,
-        email: emailState.email,
-        body: emailState.body,
-      };
-    } else {
-      email = {
-        subject: emailState.subject,
-        sender: emailState.sender,
-        email: emailState.email,
-        body: emailState.body,
-      };
-    }
-    dispatch(asyncSendEmail(email));
-  };
-
-  const clearEmail = () => {
-    setEmailState({
-      _id: '',
+  const methods = useForm<FormProps>({
+    defaultValues: {
       email: '',
       sender: '',
       subject: '',
-      body: '',
-      variables: [],
-      variablesValues: {},
       templateName: '',
-    });
+      body: '',
+      withTemplate: false,
+    },
+  });
+  const { handleSubmit, reset, control, setValue, getValues } = methods;
+
+  const handleCancel = () => {
+    setVariables({});
+
+    reset();
   };
 
-  const handleChangeTemplate = (event: React.ChangeEvent<{ value: unknown }>) => {
-    if (!isString(event.target.value)) return;
-    const selectedTemplate = templates.find((template) => template._id === event.target.value);
+  const templateChanged = useWatch({
+    control,
+    name: 'templateName',
+  });
+  const watchWithTemplate = useWatch({
+    control,
+    name: 'withTemplate',
+  });
 
-    if (!selectedTemplate) return;
-    let variableValues = {};
-    selectedTemplate.variables.forEach((variable: string) => {
-      variableValues = { ...variableValues, [variable]: '' };
-    });
+  const selectedFormTemplate = getValues('templateName');
 
-    setEmailState({
-      ...emailState,
-      _id: selectedTemplate._id,
-      variables: selectedTemplate.variables,
-      templateName: selectedTemplate.name,
-      subject: selectedTemplate.subject,
-      variablesValues: variableValues,
-      body: selectedTemplate.body,
-    });
+  const withTemplate = getValues('withTemplate');
+
+  const onSubmit = (data: FormProps) => {
+    let email;
+    if (selectedFormTemplate !== '') {
+      email = {
+        subject: data.subject,
+        sender: data.sender,
+        email: data.email,
+        body: data.body,
+        templateName: data.templateName,
+        variables: variables,
+      };
+    } else {
+      email = {
+        subject: data.subject,
+        sender: data.sender,
+        email: data.email,
+        body: data.body,
+      };
+    }
+
+    dispatch(asyncSendEmail(email));
   };
 
-  const handleVariableChange = (event: React.ChangeEvent<{ value: unknown }>, variable: string) => {
-    if (!isString(event.target.value)) return;
-    const newValue = event.target.value;
-    const variableValues = { ...emailState.variablesValues, [variable]: newValue };
-    setEmailState({ ...emailState, variablesValues: variableValues });
-  };
+  useEffect(() => {
+    if (withTemplate) {
+      if (!isString(selectedFormTemplate)) return;
+      const selectedTemplate = templates.find((template) => template.name === selectedFormTemplate);
+
+      if (!selectedTemplate) return;
+      let variableValues = {};
+      selectedTemplate.variables.forEach((variable: string) => {
+        variableValues = { ...variables, [variable]: '' };
+      });
+      setValue('subject', selectedTemplate.subject);
+      setValue('body', selectedTemplate.body);
+      setVariables(variableValues);
+    }
+    if (!withTemplate) {
+      setValue('subject', '');
+      setValue('body', '');
+      setValue('templateName', '');
+      setVariables({});
+    }
+  }, [templateChanged, watchWithTemplate, templates]);
 
   return (
     <Container maxWidth="md">
@@ -119,154 +136,81 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         <Typography variant={'h6'} className={classes.typography}>
           <MailOutline fontSize={'small'} />. Compose your email
         </Typography>
-        <form noValidate autoComplete="off">
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                required
-                id="recipient"
-                label="Recipient (To:)"
-                variant="outlined"
-                type={'email'}
-                placeholder={'joedoe@gmail.com'}
-                className={classes.simpleTextField}
-                value={emailState.email}
-                onChange={(event) => {
-                  setEmailState({
-                    ...emailState,
-                    email: event.target.value,
-                  });
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                id="sender"
-                label="Sender (From:)"
-                variant="outlined"
-                placeholder={'Sender'}
-                className={classes.simpleTextField}
-                value={emailState.sender}
-                onChange={(event) => {
-                  setEmailState({
-                    ...emailState,
-                    sender: event.target.value,
-                  });
-                }}
-              />
-            </Grid>
-            <Grid item xs={8}>
-              <TextField
-                id="subject"
-                label="Subject"
-                variant="outlined"
-                disabled={withTemplate}
-                required={!withTemplate}
-                value={emailState.subject}
-                placeholder={'Hello World 👋'}
-                className={classes.simpleTextField}
-                onChange={(event) => {
-                  setEmailState({
-                    ...emailState,
-                    subject: event.target.value,
-                  });
-                }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={withTemplate}
-                    onChange={(e) => setWithTemplate(e.target.checked)}
-                    name="withTemplate"
-                    color="primary"
-                  />
-                }
-                label="With Template"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl
-                variant="outlined"
-                required={withTemplate}
-                disabled={!withTemplate}
-                style={{ minWidth: '65ch' }}>
-                <InputLabel id="demo-simple-select-outlined-label">Email Template</InputLabel>
-                <Select
-                  labelId="demo-simple-select-outlined-label"
-                  id="demo-simple-select-outlined"
-                  value={emailState._id}
-                  renderValue={() => emailState.templateName}
-                  onChange={handleChangeTemplate}
-                  label="Email Template">
-                  <MenuItem value="none">
-                    <em>None</em>
-                  </MenuItem>
-                  {templates?.map((template) => (
-                    <MenuItem key={template._id} value={template._id}>
-                      {template.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                disabled={withTemplate}
-                id="outlined-multiline-static"
-                label="Email body"
-                multiline
-                rows="10"
-                variant="outlined"
-                placeholder="Write your email here..."
-                required
-                fullWidth
-                value={emailState.body}
-                onChange={(event) => {
-                  setEmailState({
-                    ...emailState,
-                    body: event.target.value,
-                  });
-                }}
-              />
-            </Grid>
-            <Grid container item xs={12} spacing={1}>
-              {emailState.variables.map((variable, index) => (
-                <Grid key={variable + '_' + index} item xs={3}>
-                  <TextField
-                    label={variable}
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormInputText name="email" label={'Recipient (To:)'} />
+              </Grid>
+              <Grid item xs={12}>
+                <FormInputText name="sender" label={'Sender (From:)'} />
+              </Grid>
+              <Grid item xs={8}>
+                <FormInputText name="subject" label={'Subject'} disabled={withTemplate} />
+              </Grid>
+              <Grid item xs={4} className={classes.checkBox}>
+                <FormInputCheckBox name="withTemplate" label="With Template" />
+              </Grid>
+              <Grid item xs={8}>
+                <FormInputSelect
+                  disabled={!withTemplate}
+                  label={'Template name'}
+                  name="templateName"
+                  options={templates?.map((template) => ({
+                    label: template.name,
+                    value: template.name,
+                  }))}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Controller
+                  name="body"
+                  control={control}
+                  defaultValue=""
+                  render={({ field: { onChange, value } }) => (
+                    <TemplateEditor
+                      disabled={withTemplate ? true : false}
+                      value={value}
+                      setValue={onChange}
+                    />
+                  )}
+                  rules={{ required: 'Template body required' }}
+                />
+              </Grid>
+              <Grid container item xs={12} spacing={1}>
+                {Object.entries(variables).map(([key, value], index: number) => (
+                  <Grid key={key + '_' + index} item xs={3}>
+                    <TextField
+                      label={key}
+                      variant="outlined"
+                      required
+                      fullWidth
+                      value={value}
+                      onChange={(event) => {
+                        setVariables({ ...variables, [key]: event.target.value });
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+              <Grid item container justify="flex-end" xs={12}>
+                <Box marginTop={3}>
+                  <Button
                     variant="outlined"
-                    required
-                    fullWidth
-                    value={emailState.variablesValues[variable]}
-                    onChange={(event) => handleVariableChange(event, variable)}
-                  />
-                </Grid>
-              ))}
+                    color="primary"
+                    startIcon={<Clear />}
+                    style={{ marginRight: 16 }}
+                    onClick={() => handleCancel()}>
+                    Clear
+                  </Button>
+                  <Button variant="contained" color="primary" startIcon={<Send />} type="submit">
+                    Send
+                  </Button>
+                </Box>
+              </Grid>
             </Grid>
-            <Grid item container justify="flex-end" xs={12}>
-              <Box marginTop={3}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<Clear />}
-                  style={{ marginRight: 16 }}
-                  onClick={clearEmail}>
-                  Clear
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Send />}
-                  onClick={sendEmail}>
-                  Send
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </form>
+          </form>
+        </FormProvider>
       </Paper>
     </Container>
   );
