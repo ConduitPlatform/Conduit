@@ -43,39 +43,39 @@ const ProductForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
 
   const currencies = [
     {
-      name: '',
+      value: '',
       label: 'None',
     },
     {
-      name: 'usd',
+      value: 'usd',
       label: '$',
     },
     {
-      name: 'eur',
+      value: 'eur',
       label: '€',
     },
     {
-      name: 'btc',
+      value: 'btc',
       label: '฿',
     },
     {
-      name: 'jpy',
+      value: 'jpy',
       label: '¥',
     },
   ];
 
   const recuringOptions = [
-    { name: reccuringEnum.day, label: 'Daily' },
+    { value: reccuringEnum.day, label: 'Daily' },
     {
-      name: reccuringEnum.week,
+      value: reccuringEnum.week,
       label: 'Weekly',
     },
     {
-      name: reccuringEnum.month,
+      value: reccuringEnum.month,
       label: 'Monthly',
     },
     {
-      name: reccuringEnum.year,
+      value: reccuringEnum.year,
       label: 'Yearly',
     },
   ];
