@@ -19,16 +19,10 @@ interface IChatSlice {
       data: IChatRoom[];
       count: number;
       search: string;
-      hasMore: boolean;
-      skip: number;
-      loading: boolean;
     };
     chatMessages: {
       data: IChatMessage[];
       count: number;
-      hasMore: boolean;
-      skip: number;
-      loading: boolean;
     };
   };
 }
@@ -44,16 +38,10 @@ const initialState: IChatSlice = {
       data: [],
       count: 0,
       search: '',
-      hasMore: true,
-      skip: 0,
-      loading: false,
     },
     chatMessages: {
       data: [],
       count: 0,
-      hasMore: true,
-      skip: 0,
-      loading: false,
     },
   },
 };
@@ -91,15 +79,16 @@ export const asyncPutChatConfig = createAsyncThunk(
 
 export const asyncGetChatRooms = createAsyncThunk(
   'chat/getChatRooms',
-  async (params: { skip: number; search?: string }, thunkAPI) => {
+  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
     try {
       const {
         data: { chatRoomDocuments, totalCount },
       } = await getChatRooms(params);
+      console.log('chatRoomDocuments', chatRoomDocuments);
+      console.log('totalCount', totalCount);
       return {
         chatRooms: chatRoomDocuments,
         count: totalCount,
-        hasMore: chatRoomDocuments.length > 0,
         search: params.search,
       };
     } catch (error) {
@@ -117,7 +106,7 @@ export const asyncGetChatMessages = createAsyncThunk(
       const {
         data: { messages, count },
       } = await getChatMessages(params);
-      return { messages: messages, count: count, hasMore: messages.length > 0 };
+      return { messages: messages, count: count };
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -162,12 +151,6 @@ const chatSlice = createSlice({
     clearChatStore: () => {
       return initialState;
     },
-    addChatMessagesSkip: (state) => {
-      state.data.chatMessages.skip += 20;
-    },
-    addChatRoomsSkip: (state) => {
-      state.data.chatRooms.skip += 15;
-    },
     clearChatMessages: (state) => {
       state.data.chatMessages = initialState.data.chatMessages;
     },
@@ -176,36 +159,13 @@ const chatSlice = createSlice({
     builder.addCase(asyncGetChatConfig.fulfilled, (state, action) => {
       state.config = action.payload;
     });
-    builder.addCase(asyncGetChatRooms.pending, (state) => {
-      state.data.chatRooms.loading = true;
-    });
-    builder.addCase(asyncGetChatRooms.rejected, (state) => {
-      state.data.chatRooms.loading = false;
-    });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
-      if (action.payload.search && action.payload.search !== state.data.chatRooms.search) {
-        state.data.chatRooms.data = action.payload.chatRooms;
-      } else {
-        state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
-      }
-      if (action.payload.search) {
-        state.data.chatRooms.search = action.payload.search;
-      }
+      state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
       state.data.chatRooms.count = action.payload.count;
-      state.data.chatRooms.hasMore = action.payload.hasMore;
-      state.data.chatRooms.loading = false;
-    });
-    builder.addCase(asyncGetChatMessages.pending, (state) => {
-      state.data.chatMessages.loading = true;
-    });
-    builder.addCase(asyncGetChatMessages.rejected, (state) => {
-      state.data.chatMessages.loading = false;
     });
     builder.addCase(asyncGetChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data = [...state.data.chatMessages.data, ...action.payload.messages];
       state.data.chatMessages.count = action.payload.count;
-      state.data.chatMessages.hasMore = action.payload.hasMore;
-      state.data.chatMessages.loading = false;
     });
     builder.addCase(asyncDeleteChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data.forEach((item, index) => {
@@ -219,5 +179,4 @@ const chatSlice = createSlice({
 });
 
 export default chatSlice.reducer;
-export const { clearChatStore, clearChatMessages, addChatMessagesSkip, addChatRoomsSkip } =
-  chatSlice.actions;
+export const { clearChatStore, clearChatMessages } = chatSlice.actions;

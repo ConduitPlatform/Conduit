@@ -3,12 +3,13 @@ import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { debounce } from 'lodash';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { asyncGetChatMessages } from '../../redux/slices/chatSlice';
+import { useAppDispatch } from '../../redux/store';
+import { asyncGetChatRooms } from '../../redux/slices/chatSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
-import ChatRoomBubble, { ChatRoomBubbleSkeleton } from './ChatRoomBubble';
 import clsx from 'clsx';
+import { IChatRoom } from '../../models/chat/ChatModels';
+import ChatRoomTab from './ChatRoomTab';
 
 const useStyles = makeStyles((theme) => ({
   bubble: {
@@ -27,65 +28,69 @@ interface ItemStatus {
   [key: string]: string;
 }
 const timeoutAmount = 750;
-let messagesStatusMap: ItemStatus = {};
+let tabsStatusMap: ItemStatus = {};
 
 const Row = ({ data, index, style }: ListChildComponentProps) => {
-  const { messages, messagesCount, selectedMessages, onPress, onLongPress, classes } = data;
-  const rowItem = messages[messagesCount - index - 1];
-  const loading = !(messagesStatusMap[index] === 'LOADED' && rowItem);
-  const isSelected = rowItem && selectedMessages.includes(rowItem._id);
+  const { messages, messagesCount, onPress, onLongPress, classes } = data;
+  const rowItem = messages[index];
+  const loading = !(tabsStatusMap[index] === 'LOADED' && rowItem);
+  // const isSelected = rowItem && selectedMessages.includes(rowItem._id);
 
   return (
     <div style={style as CSSProperties}>
       {loading ? (
-        <ChatRoomBubbleSkeleton className={classes.bubble} />
+        <div>loading...</div>
       ) : (
-        <ChatRoomBubble
+        <ChatRoomTab
+          onPress={() => console.log('onPress')}
+          onLongPress={() => console.log('onLongPress')}
           data={rowItem}
-          className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}
-          onLongPress={onLongPress}
-          onPress={onPress}
         />
       )}
+
+      {/*{loading ? (*/}
+      {/*  <ChatRoomBubbleSkeleton className={classes.bubble} />*/}
+      {/*) : (*/}
+      {/*  <ChatRoomBubble*/}
+      {/*    data={rowItem}*/}
+      {/*    className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}*/}
+      {/*    onLongPress={onLongPress}*/}
+      {/*    onPress={onPress}*/}
+      {/*  />*/}
+      {/*)}*/}
     </div>
   );
 };
 
-const createItemData = memoize(
-  (messages, messagesCount, selectedMessages, onPress, onLongPress, classes) => ({
-    messages,
-    messagesCount,
-    selectedMessages,
-    onPress,
-    onLongPress,
-    classes,
-  })
-);
+const createItemData = memoize((messages, messagesCount, onPress, onLongPress, classes) => ({
+  messages,
+  messagesCount,
+  onPress,
+  onLongPress,
+  classes,
+}));
 
-const isItemLoaded = (index: number) => {
-  return !!messagesStatusMap[index];
-};
+const isItemLoaded = (index: number) => !!tabsStatusMap[index];
 
 interface Props {
-  roomId: string;
-  selectedPanel: number;
-  selectedMessages: string[];
+  chatRooms: IChatRoom[];
+  chatRoomCount: number;
+  // selectedPanel: number;
+  // selectedMessages: string[];
   onPress: (id: string) => void;
   onLongPress: (id: string) => void;
 }
 
 const ChatRoomTabs: FC<Props> = ({
-  roomId,
-  selectedPanel,
-  selectedMessages,
+  chatRooms,
+  chatRoomCount,
+  // selectedPanel,
+  // selectedMessages,
   onPress,
   onLongPress,
 }) => {
   const dispatch = useAppDispatch();
   const classes = useStyles();
-  const {
-    chatMessages: { data, count },
-  } = useAppSelector((state) => state.chatSlice.data);
 
   const infiniteLoaderRef = useRef<any>(null);
   const hasMountedRef = useRef(false);
@@ -93,39 +98,35 @@ const ChatRoomTabs: FC<Props> = ({
   useEffect(() => {
     if (infiniteLoaderRef.current && hasMountedRef.current) {
       infiniteLoaderRef.current.resetloadMoreItemsCache();
-      messagesStatusMap = {};
+      tabsStatusMap = {};
     }
     hasMountedRef.current = true;
-  }, [selectedPanel, count]);
+  }, [chatRoomCount]);
 
-  const getChatMessages = useCallback(
+  const getChatRooms = useCallback(
     (skip: number, limit: number) => {
       const params = {
         skip: skip,
         limit: limit,
-        roomId: roomId,
+        // search: roomId,
       };
-      dispatch(asyncGetChatMessages(params));
+      dispatch(asyncGetChatRooms(params));
     },
-    [dispatch, roomId]
+    [dispatch]
   );
 
-  useEffect(() => {
-    getChatMessages(0, 20);
-  }, [getChatMessages]);
-
   const debouncedGetApiItems = debounce(
-    (skip: number, limit: number) => getChatMessages(skip, limit),
+    (skip: number, limit: number) => getChatRooms(skip, limit),
     timeoutAmount
   );
 
   const loadMoreItems = async (startIndex: number, stopIndex: number) => {
-    const limit = count - startIndex - data.length;
-    debouncedGetApiItems(data.length, limit);
+    const limit = stopIndex + 1;
+    debouncedGetApiItems(chatRooms.length, limit);
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         for (let index = startIndex; index <= stopIndex; index++) {
-          messagesStatusMap[index] = 'LOADED';
+          tabsStatusMap[index] = 'LOADED';
         }
         resolve(undefined);
         clearTimeout(timeout);
@@ -134,27 +135,26 @@ const ChatRoomTabs: FC<Props> = ({
     });
   };
 
-  const itemData = createItemData(data, count, selectedMessages, onPress, onLongPress, classes);
+  const itemData = createItemData(chatRooms, chatRoomCount, onPress, onLongPress, classes);
 
   return (
     <AutoSizer>
       {({ height, width }) => {
-        if (!count) return <div>Loading</div>;
+        if (!chatRoomCount) return <div>Loading</div>;
         return (
           <InfiniteLoader
             ref={infiniteLoaderRef}
             isItemLoaded={isItemLoaded}
-            itemCount={count}
+            itemCount={chatRoomCount}
             loadMoreItems={loadMoreItems}>
             {({ onItemsRendered, ref }) => {
               return (
                 <List
                   height={height}
-                  itemCount={count}
+                  itemCount={chatRoomCount}
                   itemSize={56}
                   onItemsRendered={onItemsRendered}
                   ref={ref}
-                  initialScrollOffset={count * 56}
                   itemData={itemData}
                   width={width}>
                   {Row}
