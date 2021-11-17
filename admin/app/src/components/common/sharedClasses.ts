@@ -60,5 +60,8 @@ export default makeStyles((theme) =>
       width: '80%',
       justifyContent: 'center',
     },
+    formFields: {
+      minWidth: 200,
+    },
   })
 );
