@@ -123,7 +123,10 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
       setVariables(variableValues);
     }
     if (!withTemplate) {
-      setValue('subject', ''), setValue('body', ''), setValue('templateName', ''), setVariables({});
+      setValue('subject', '');
+      setValue('body', '');
+      setValue('templateName', '');
+      setVariables({});
     }
   }, [templateChanged, watchWithTemplate, templates]);
 
