@@ -24,6 +24,12 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     width: '100%',
   },
+  alignEnd: {
+    alignSelf: 'flex-end',
+  },
+  marginRight: {
+    marginRight: '16px',
+  },
 }));
 
 interface Props {
@@ -70,7 +76,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
     <Container>
       <Paper className={classes.paper}>
         <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)} style={{}}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
             <Grid container>
               <Box
                 width={'100%'}
@@ -101,7 +107,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                 <Grid item container xs={12} justify={'flex-end'}>
                   <Button
                     onClick={() => handleCancel()}
-                    style={{ marginRight: 16 }}
+                    className={classes.marginRight}
                     color={'primary'}>
                     Cancel
                   </Button>
@@ -109,7 +115,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                     variant="contained"
                     type="submit"
                     color="primary"
-                    style={{ alignSelf: 'flex-end' }}>
+                    className={classes.alignEnd}>
                     Save
                   </Button>
                 </Grid>
@@ -118,7 +124,7 @@ const FormsSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
                 <Grid item container xs={12} justify={'flex-end'}>
                   <Button
                     onClick={() => handleEditClick()}
-                    style={{ marginRight: 16 }}
+                    className={classes.marginRight}
                     color={'primary'}>
                     Edit
                   </Button>

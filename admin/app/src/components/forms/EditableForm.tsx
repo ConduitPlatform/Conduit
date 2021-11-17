@@ -17,6 +17,9 @@ import { v4 as uuidV4 } from 'uuid';
 import { useAppDispatch } from '../../redux/store';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
 import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormsModel } from '../../models/forms/FormsModels';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
+import { string } from 'prop-types';
 
 interface PropsForInputFields {
   id: string;
@@ -25,20 +28,23 @@ interface PropsForInputFields {
 }
 
 interface Props {
-  preloadedValues: any;
-  handleSubmitData: (data: any) => void;
+  preloadedValues: FormsModel;
+  handleSubmitData: (data: FormsModel) => void;
 }
 
 interface IForm {
   name: string;
   forwardTo: string;
   emailField: string;
+  enabled: boolean;
 }
 
 const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const classes = sharedClasses();
   const dispatch = useAppDispatch();
-  const [inputFields, setInputFields] = useState([{ id: uuidV4(), key: '', type: '' }]);
+  const [inputFields, setInputFields] = useState<{ id: string; key: string; type: string }[]>([
+    { id: uuidV4(), key: '', type: '' },
+  ]);
 
   const methods = useForm<IForm>({ defaultValues: preloadedValues });
 
@@ -104,7 +110,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} style={{}}>
+      <form onSubmit={methods.handleSubmit(onSubmit)}>
         <Container className={classes.root} maxWidth="xl">
           <Grid container alignItems="center" className={classes.root} spacing={2}>
             <Grid item sm={12}>
@@ -128,7 +134,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
               </Grid>
             </Grid>
             <Grid item sm={12}>
-              {inputFields.map((x, index: number) => {
+              {inputFields.map((inputField, index: number) => {
                 return (
                   <Grid key={index} container spacing={2}>
                     <Grid item xs={5} className={classes.fields}>
@@ -136,16 +142,16 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                         name="key"
                         label="Key"
                         variant="outlined"
-                        value={x.key}
-                        onChange={handleFieldsChange(x.id)}
+                        value={inputField.key}
+                        onChange={handleFieldsChange(inputField.id)}
                       />
                     </Grid>
                     <Grid item xs={5} className={classes.fields}>
-                      <FormControl style={{ minWidth: 200 }}>
+                      <FormControl className={classes.formFields}>
                         <Select
                           variant="outlined"
-                          value={x.type}
-                          onChange={handleFieldsChange(x.id)}
+                          value={inputField.type}
+                          onChange={handleFieldsChange(inputField.id)}
                           name="type">
                           <MenuItem value={'String'}>String</MenuItem>
                           <MenuItem value={'File'}>File</MenuItem>
@@ -159,7 +165,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
                         color="primary"
                         size="small"
                         aria-label="delete"
-                        onClick={() => handleRemoveField(x.id)}>
+                        onClick={() => handleRemoveField(inputField.id)}>
                         <Delete />
                       </IconButton>
                     </Grid>
@@ -173,7 +179,15 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
             <Grid item sm={12}>
               <FormInputText name="emailField" label="Email field" typeOfInput={'email'} />
             </Grid>
-            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
+            <Grid item container xs={12}>
+              <Grid item xs={11}>
+                <Typography variant="subtitle2">Enabled form:</Typography>
+              </Grid>
+              <Grid item xs={1}>
+                <FormInputSwitch name="enabled" />
+              </Grid>
+            </Grid>
+            <Grid container item xs={12} justify="space-around" className={classes.marginTop}>
               <Grid item>
                 <Button type="submit" variant="contained" color="primary" size="large">
                   Save
