@@ -31,23 +31,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-// &::-webkit-scrollbar {
-//   width: 1px;
-// }
-//
-// &::-webkit-scrollbar-track {
-//   background: transparent;
-// }
-//
-// &::-webkit-scrollbar-thumb {
-//   background-color: transparent;
-// }
-// }
-//
-// .no-scrollbars::-webkit-scrollbar {
-//   display: none;  /* Safari and Chrome */
-// }
-
 interface ItemStatus {
   [key: string]: string;
 }
@@ -92,6 +75,7 @@ interface Props {
   selectedTab: number;
   onPress: (index: number) => void;
   onLongPress: (index: number) => void;
+  debouncedSearch: string;
 }
 
 const ChatRoomTabs: FC<Props> = ({
@@ -100,6 +84,7 @@ const ChatRoomTabs: FC<Props> = ({
   selectedTab,
   onPress,
   onLongPress,
+  debouncedSearch,
 }) => {
   const dispatch = useAppDispatch();
   const classes = useStyles();
@@ -113,18 +98,18 @@ const ChatRoomTabs: FC<Props> = ({
       tabsStatusMap = {};
     }
     hasMountedRef.current = true;
-  }, [chatRoomCount]);
+  }, []);
 
   const getChatRooms = useCallback(
     (skip: number, limit: number) => {
       const params = {
         skip: skip,
         limit: limit,
-        // search: roomId,
+        search: debouncedSearch,
       };
       dispatch(asyncGetChatRooms(params));
     },
-    [dispatch]
+    [debouncedSearch, dispatch]
   );
 
   const debouncedGetApiItems = debounce(

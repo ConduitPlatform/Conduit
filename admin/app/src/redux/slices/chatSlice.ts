@@ -79,13 +79,14 @@ export const asyncPutChatConfig = createAsyncThunk(
 
 export const asyncGetChatRooms = createAsyncThunk(
   'chat/getChatRooms',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (
+    params: { skip: number; limit: number; search?: string; searchChange?: boolean },
+    thunkAPI
+  ) => {
     try {
       const {
         data: { chatRoomDocuments, totalCount },
       } = await getChatRooms(params);
-      console.log('chatRoomDocuments', chatRoomDocuments);
-      console.log('totalCount', totalCount);
       return {
         chatRooms: chatRoomDocuments,
         count: totalCount,
@@ -160,8 +161,13 @@ const chatSlice = createSlice({
       state.config = action.payload;
     });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
-      state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
       state.data.chatRooms.count = action.payload.count;
+      if (action.payload.search && action.payload.search !== state.data.chatRooms.search) {
+        state.data.chatRooms.data = action.payload.chatRooms;
+        state.data.chatRooms.search = action.payload.search;
+        return;
+      }
+      state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
     });
     builder.addCase(asyncGetChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data = [...state.data.chatMessages.data, ...action.payload.messages];

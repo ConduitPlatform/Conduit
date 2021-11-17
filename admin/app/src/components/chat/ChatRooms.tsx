@@ -112,6 +112,7 @@ const ChatRooms: React.FC = () => {
               onPress={onPress}
               onLongPress={onLongPress}
               selectedTab={selected}
+              debouncedSearch={debouncedSearch}
             />
           </Box>
         </Box>
