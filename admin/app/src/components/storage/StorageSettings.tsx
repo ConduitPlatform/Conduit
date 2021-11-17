@@ -39,7 +39,7 @@ interface Props {
 const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
   const classes = useStyles();
   const initialSettingsState = {
-    active: true,
+    active: false,
     allowContainerCreation: true,
     defaultContainer: 'conduit',
     provider: 'azure',
@@ -79,7 +79,16 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
             alignItems={'center'}>
             <Typography variant={'h6'}>Activate Storage Module</Typography>
             <FormControlLabel
-              control={<Switch checked={true} value={'accountLinking'} color="primary" />}
+              control={
+                <Switch
+                  checked={settingsState.active}
+                  onChange={() =>
+                    setSettingsState({ ...settingsState, active: !settingsState.active })
+                  }
+                  value={'accountLinking'}
+                  color="primary"
+                />
+              }
               label={''}
             />
           </Box>
