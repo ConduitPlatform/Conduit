@@ -46,7 +46,7 @@ export class Admin extends ConduitModule<AdminClient> {
     let protoFunctions = '';
     paths.forEach((r) => {
       protoFunctions += `rpc ${
-        r.protoName.charAt(0).toUpperCase() + r.protoName.slice(1)
+        r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
       }(AdminRequest) returns (AdminResponse);\n`;
     });
     let protoFile = protofile_template
@@ -103,7 +103,7 @@ export class Admin extends ConduitModule<AdminClient> {
     }
 
     let request = {
-      routes: grpcPathArray,
+      routes: paths,
       protoFile: protoFile,
       adminUrl: serverUrl,
     };
@@ -117,5 +117,28 @@ export class Admin extends ConduitModule<AdminClient> {
         }
       });
     });
+  }
+
+  // TODO
+  // - use createProtoFunctions in registerAdmin, registerAdminAsync
+
+   private createProtoFunctions(paths: any[]) {
+    let protoFunctions = '';
+    paths.forEach((r) => {
+        protoFunctions += this.createProtoFunctionForRoute(r, protoFunctions);
+    });
+    return protoFunctions;
+  }
+
+  private createProtoFunctionForRoute(path: any, protoFunctions: string) {
+    const newFunction = this.createGrpcFunctionName(path.grpcFunction);
+    if (protoFunctions.indexOf(newFunction) !== -1) {
+      return '';
+    }
+    return `rpc ${newFunction}(AdminRequest) returns (AdminResponse);\n`;
+  }
+
+  private createGrpcFunctionName(grpcFunction: string) {
+    return grpcFunction.charAt(0).toUpperCase() + grpcFunction.slice(1);
   }
 }
