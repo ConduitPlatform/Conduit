@@ -46,7 +46,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 type NotificationSettingsProps = {
-  handleSave: (value: any) => void;
+  handleSave: (values: INotificationSettings) => void;
   config: INotificationSettings;
 };
 
