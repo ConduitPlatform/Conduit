@@ -286,3 +286,4 @@ export class ConduitDefaultRouter implements IConduitRouter {
 }
 
 export * from './builders';
+export * from './controllers/Rest';

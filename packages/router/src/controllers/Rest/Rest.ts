@@ -149,7 +149,9 @@ export class RestController extends ConduitRouter {
               result = r.result ? r.result : r;
             }
             if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              result = JSON.parse(result);
+              if (typeof r.result === 'string') { // only grpc route data is stringified
+                result = JSON.parse(result);
+              }
             } else {
               result = { result: result };
             }
