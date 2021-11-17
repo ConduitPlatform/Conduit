@@ -74,7 +74,7 @@ interface Props {
   onLongPress: (id: string) => void;
 }
 
-const ChatRoomMessages: FC<Props> = ({
+const ChatRoomTabs: FC<Props> = ({
   roomId,
   selectedPanel,
   selectedMessages,
@@ -168,4 +168,4 @@ const ChatRoomMessages: FC<Props> = ({
   );
 };
 
-export default ChatRoomMessages;
+export default ChatRoomTabs;
