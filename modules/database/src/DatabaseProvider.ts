@@ -21,7 +21,7 @@ import {
   UpdateManyRequest,
   UpdateRequest,
 } from './types';
-import schema from './models/Schema.schema';
+import * as models from './models';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -56,10 +56,7 @@ export class DatabaseProvider extends ConduitServiceModule {
   async initialize() {
     await this._activeAdapter.ensureConnected();
     let grpcServer = new GrpcServer(process.env.SERVICE_URL);
-
     this._port = (await grpcServer.createNewServer()).toString();
-    await this._activeAdapter.createSchemaFromAdapter(schema);
-    await this._activeAdapter.recoverSchemasFromDatabase();
     await grpcServer.addService(
       path.resolve(__dirname, './database-provider.proto'),
       'databaseprovider.DatabaseProvider',
@@ -112,6 +109,8 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
+    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
+    await this._activeAdapter.recoverSchemasFromDatabase();
   }
 
   /**
@@ -307,7 +306,9 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.updateProvidedOnly
+        call.request.updateProvidedOnly,
+        call.request.populate,
+        schemaAdapter.relations,
       );
 
       const resultString = JSON.stringify(result);

@@ -56,7 +56,9 @@ export interface SchemaAdapter<T> {
   findByIdAndUpdate(
     id: any,
     document: string,
-    updateProvidedOnly?: boolean
+    updateProvidedOnly?: boolean,
+    populate?: string[],
+    relations?: any
   ): Promise<any>;
 
   updateMany(

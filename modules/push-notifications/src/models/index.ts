@@ -1,1 +1,1 @@
-export * from './NotificationToken';
+export * from './NotificationToken.schema';

@@ -11,22 +11,22 @@ export const errorHandler = (err: Error | ConduitError | any) => {
       case 3:
         name = 'INVALID_ARGUMENTS';
         statusCode = '400';
-        throw new ApolloError(name, statusCode, err);
+        throw new ApolloError(err.details, statusCode, err);
       case 5:
         name = 'NOT_FOUND';
         statusCode = '404';
-        throw new ApolloError(name, statusCode, err);
+        throw new ApolloError(err.details, statusCode, err);
       case 7:
         name = 'FORBIDDEN';
         statusCode = '403';
-        throw new ApolloError(name, statusCode, err);
+        throw new ApolloError(err.details, statusCode, err);
       case 16:
         name = 'UNAUTHORIZED';
         statusCode = '401';
-        throw new ApolloError(name, statusCode, err);
+        throw new ApolloError(err.details, statusCode, err);
       default:
         name = 'INTERNAL_SERVER_ERROR';
-        throw new ApolloError(name, '500', err);
+        throw new ApolloError(err.details, '500', err);
     }
   } else {
     throw new ApolloError(err.message, '500', err);

@@ -6,6 +6,11 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import {
+  _StorageContainer,
+  _StorageFolder,
+  File,
+} from '../models'
 
 let paths = require('./admin.json').functions;
 
@@ -39,7 +44,6 @@ export class AdminRoutes {
 
   async createFolder(call: RouterRequest, callback: RouterResponse) {
     const { name, container, isPublic } = JSON.parse(call.request.params);
-
     if (isNil(name)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -52,21 +56,24 @@ export class AdminRoutes {
         message: 'Container is required',
       });
     }
-    let folder = await this.grpcSdk.databaseProvider!.findOne('_StorageFolder', {
-      name,
-      container,
-    });
-    if (isNil(folder)) {
-      folder = await this.grpcSdk.databaseProvider!.create('_StorageFolder', {
-        name,
+    let newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
+    let folder = await _StorageFolder.getInstance()
+      .findOne({
+        name: newName,
         container,
-        isPublic,
       });
+    if (isNil(folder)) {
+      folder = await _StorageFolder.getInstance()
+        .create({
+          name: newName,
+          container,
+          isPublic,
+        });
       let exists = await this.fileHandlers.storage
         .container(container)
-        .folderExists(name);
+        .folderExists(newName);
       if (!exists) {
-        await this.fileHandlers.storage.container(container).createFolder(name);
+        await this.fileHandlers.storage.container(container).createFolder(newName);
       }
     } else {
       return callback({
@@ -86,16 +93,18 @@ export class AdminRoutes {
         message: 'Name is required',
       });
     }
+    let newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
     if (isNil(container)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Container is required',
       });
     }
-    let folder = await this.grpcSdk.databaseProvider!.findOne('_StorageFolder', {
-      name,
-      container,
-    });
+    let folder = await _StorageFolder.getInstance()
+      .findOne({
+        name: newName,
+        container,
+      });
     if (isNil(folder)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -103,14 +112,16 @@ export class AdminRoutes {
       });
     } else {
       await this.fileHandlers.storage.container(container).deleteFolder(name);
-      await this.grpcSdk.databaseProvider!.deleteOne('_StorageFolder', {
-        name,
+      await _StorageFolder.getInstance()
+      .deleteOne({
+        name: newName,
         container,
       });
-      await this.grpcSdk.databaseProvider!.deleteMany('File', {
-        folder: name,
-        container,
-      });
+      await File.getInstance()
+        .deleteMany({
+          folder: newName,
+          container,
+        });
     }
     return callback(null, { result: 'OK' });
   }
@@ -125,18 +136,20 @@ export class AdminRoutes {
       });
     }
     try {
-      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-        name,
-      });
+      let container = await _StorageContainer.getInstance()
+        .findOne({
+          name,
+        });
       if (isNil(container)) {
         let exists = await this.fileHandlers.storage.containerExists(name);
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
         }
-        container = await this.grpcSdk.databaseProvider!.create('_StorageContainer', {
-          name,
-          isPublic,
-        });
+        container = await _StorageContainer.getInstance()
+          .create({
+            name,
+            isPublic,
+          });
       } else {
         return callback({
           code: status.INVALID_ARGUMENT,
@@ -162,9 +175,10 @@ export class AdminRoutes {
       });
     }
     try {
-      let container = await this.grpcSdk.databaseProvider!.findOne('_StorageContainer', {
-        name,
-      });
+      let container = await _StorageContainer.getInstance()
+        .findOne({
+          name,
+        });
       if (isNil(container)) {
         return callback({
           code: status.INVALID_ARGUMENT,
@@ -172,15 +186,18 @@ export class AdminRoutes {
         });
       } else {
         await this.fileHandlers.storage.deleteContainer(name);
-        await this.grpcSdk.databaseProvider!.deleteOne('_StorageContainer', {
-          name,
-        });
-        await this.grpcSdk.databaseProvider!.deleteMany('File', {
-          container: name,
-        });
-        await this.grpcSdk.databaseProvider!.deleteMany('_StorageFolder', {
-          container:name,
-        });
+        await _StorageContainer.getInstance()
+          .deleteOne({
+            name,
+          });
+        await File.getInstance()
+          .deleteMany({
+            container: name,
+          });
+        await _StorageFolder.getInstance()
+          .deleteMany({
+            container:name,
+          });
       }
       return callback(null, { result: JSON.stringify(container) });
     } catch (e) {
@@ -206,17 +223,14 @@ export class AdminRoutes {
       query.name = { $regex: `${parent}\/\w+`, $options: 'i' };
     }
 
-    let folders = await this.grpcSdk.databaseProvider!.findMany(
-      '_StorageFolder',
-      query,
-      undefined,
-      skip,
-      limit
-    );
-    let folderCount = await this.grpcSdk.databaseProvider!.countDocuments(
-      '_StorageFolder',
-      query
-    );
+    let folders = await _StorageFolder.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit
+      );
+    let folderCount = await _StorageFolder.getInstance().countDocuments(query);
 
     return callback(null, { result: JSON.stringify({ folders, folderCount }) });
   }
@@ -230,17 +244,14 @@ export class AdminRoutes {
       });
     }
 
-    let containers = await this.grpcSdk.databaseProvider!.findMany(
-      '_StorageContainer',
-      {},
-      undefined,
-      skip,
-      limit
-    );
-    let containersCount = await this.grpcSdk.databaseProvider!.countDocuments(
-      '_StorageContainer',
-      {}
-    );
+    let containers = await _StorageContainer.getInstance()
+      .findMany(
+        {},
+        undefined,
+        skip,
+        limit
+      );
+    let containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return callback(null, { result: JSON.stringify({ containers, containersCount }) });
   }
@@ -264,7 +275,7 @@ export class AdminRoutes {
     let query: { container: string; folder?: string | null; name?: any } = { container };
 
     if (!isNil(folder)) {
-      query.folder = folder;
+      query.folder =  (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
     } else {
       query.folder = null;
     }
@@ -272,14 +283,14 @@ export class AdminRoutes {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
-    let files = await this.grpcSdk.databaseProvider!.findMany(
-      'File',
-      query,
-      undefined,
-      skip,
-      limit
-    );
-    let filesCount = await this.grpcSdk.databaseProvider!.countDocuments('File', query);
+    let files = await File.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit
+      );
+    let filesCount = await File.getInstance().countDocuments(query);
 
     return callback(null, { result: JSON.stringify({ files, filesCount }) });
   }

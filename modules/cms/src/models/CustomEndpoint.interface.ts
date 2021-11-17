@@ -1,4 +1,4 @@
-export interface CustomEndpoint {
+export interface ICustomEndpoint {
   _id?: any;
   name: string;
   enabled?: boolean;
