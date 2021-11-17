@@ -89,11 +89,9 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     const dataToSave = {
       active: data.active,
       providerName: data.providerName,
-      [data.providerName]: {
-        projectId: data.projectId,
-        privateKey: data.privateKey,
-        clientEmail: data.clientEmail,
-      },
+      projectId: data.projectId,
+      privateKey: data.privateKey,
+      clientEmail: data.clientEmail,
     };
 
     handleSave(dataToSave);

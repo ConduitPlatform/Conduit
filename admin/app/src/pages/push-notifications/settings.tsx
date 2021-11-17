@@ -14,7 +14,7 @@ const Settings = () => {
     dispatch(asyncSaveNotificationConfig(data));
   };
 
-  return <NotificationSettings handleSave={handleConfigSave} config={config ? config : null} />;
+  return <NotificationSettings handleSave={handleConfigSave} config={config} />;
 };
 
 Settings.getLayout = function getLayout(page: ReactElement) {
