@@ -1,8 +1,7 @@
 import React from 'react';
-import { Box, Container, Grid } from '@material-ui/core';
+import { Box, Container, Grid, Button, Paper } from '@material-ui/core';
 import Image from 'next/dist/client/image';
 import FormsImage from '../../assets/svgs/forms.svg';
-import { Button, Paper } from '@material-ui/core';
 import { FormsModel } from '../../models/forms/FormsModels';
 import sharedClasses from '../common/sharedClasses';
 import EditableForm from './EditableForm';
