@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Box, Button, Paper, TextField } from '@material-ui/core';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
+import { Box, Button, Paper } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import {
@@ -63,11 +61,11 @@ const ChatRooms: React.FC = () => {
     getChatRooms();
   }, [getChatRooms]);
 
-  const handleChange = (newValue: number) => {
-    if (newValue === selected) return;
-    setSelected(newValue);
-    dispatch(clearChatMessages());
-  };
+  // const handleChange = (newValue: number) => {
+  //   if (newValue === selected) return;
+  //   setSelected(newValue);
+  //   dispatch(clearChatMessages());
+  // };
 
   const handleCreateChatRoom = (inputData: { name: string; participants: string[] }) => {
     const params = {
@@ -76,6 +74,16 @@ const ChatRooms: React.FC = () => {
     };
     dispatch(asyncPostCreateChatRoom(params));
     setDrawerOpen(false);
+  };
+
+  const onPress = (index: number) => {
+    if (index === selected) return;
+    setSelected(index);
+    dispatch(clearChatMessages());
+  };
+
+  const onLongPress = (index: number) => {
+    console.log('onLongPress', index);
   };
 
   return (
@@ -101,22 +109,12 @@ const ChatRooms: React.FC = () => {
           {/*    setSearch(event.target.value);*/}
           {/*  }}*/}
           {/*/>*/}
-          {/*<Tabs*/}
-          {/*  scrollButtons="off"*/}
-          {/*  orientation="vertical"*/}
-          {/*  variant="scrollable"*/}
-          {/*  value={selected}*/}
-          {/*  onChange={(event, value) => handleChange(value)}*/}
-          {/*  className={classes.tabs}>*/}
-          {/*  {data.map((item, index) => (*/}
-          {/*    <Tab label={item.name} key={index} />*/}
-          {/*  ))}*/}
-          {/*</Tabs>*/}
           <ChatRoomTabs
             chatRooms={data}
             chatRoomCount={count}
-            onPress={() => console.log('press')}
-            onLongPress={() => console.log('on long press')}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            selectedTab={selected}
           />
         </Box>
         {data.map((item, index) => {

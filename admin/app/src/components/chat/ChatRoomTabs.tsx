@@ -12,13 +12,7 @@ import { IChatRoom } from '../../models/chat/ChatModels';
 import ChatRoomTab from './ChatRoomTab';
 
 const useStyles = makeStyles((theme) => ({
-  bubble: {
-    marginBottom: theme.spacing(0.5),
-    padding: theme.spacing(1, 1),
-    borderRadius: theme.spacing(1),
-    display: 'flex',
-    alignItems: 'center',
-  },
+  bubble: {},
   bubbleSelected: {
     backgroundColor: `${theme.palette.grey[700]}80`,
   },
@@ -31,10 +25,10 @@ const timeoutAmount = 750;
 let tabsStatusMap: ItemStatus = {};
 
 const Row = ({ data, index, style }: ListChildComponentProps) => {
-  const { messages, messagesCount, onPress, onLongPress, classes } = data;
+  const { messages, onPress, onLongPress, selectedTab, classes } = data;
   const rowItem = messages[index];
   const loading = !(tabsStatusMap[index] === 'LOADED' && rowItem);
-  // const isSelected = rowItem && selectedMessages.includes(rowItem._id);
+  const isSelected = selectedTab === index;
 
   return (
     <div style={style as CSSProperties}>
@@ -42,31 +36,21 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
         <div>loading...</div>
       ) : (
         <ChatRoomTab
-          onPress={() => console.log('onPress')}
-          onLongPress={() => console.log('onLongPress')}
+          onPress={() => onPress(index)}
+          onLongPress={() => onLongPress(index)}
           data={rowItem}
+          className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}
         />
       )}
-
-      {/*{loading ? (*/}
-      {/*  <ChatRoomBubbleSkeleton className={classes.bubble} />*/}
-      {/*) : (*/}
-      {/*  <ChatRoomBubble*/}
-      {/*    data={rowItem}*/}
-      {/*    className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}*/}
-      {/*    onLongPress={onLongPress}*/}
-      {/*    onPress={onPress}*/}
-      {/*  />*/}
-      {/*)}*/}
     </div>
   );
 };
 
-const createItemData = memoize((messages, messagesCount, onPress, onLongPress, classes) => ({
+const createItemData = memoize((messages, onPress, onLongPress, selectedTab, classes) => ({
   messages,
-  messagesCount,
   onPress,
   onLongPress,
+  selectedTab,
   classes,
 }));
 
@@ -75,16 +59,16 @@ const isItemLoaded = (index: number) => !!tabsStatusMap[index];
 interface Props {
   chatRooms: IChatRoom[];
   chatRoomCount: number;
-  // selectedPanel: number;
+  selectedTab: number;
   // selectedMessages: string[];
-  onPress: (id: string) => void;
-  onLongPress: (id: string) => void;
+  onPress: (index: number) => void;
+  onLongPress: (index: number) => void;
 }
 
 const ChatRoomTabs: FC<Props> = ({
   chatRooms,
   chatRoomCount,
-  // selectedPanel,
+  selectedTab,
   // selectedMessages,
   onPress,
   onLongPress,
@@ -135,7 +119,7 @@ const ChatRoomTabs: FC<Props> = ({
     });
   };
 
-  const itemData = createItemData(chatRooms, chatRoomCount, onPress, onLongPress, classes);
+  const itemData = createItemData(chatRooms, onPress, onLongPress, selectedTab, classes);
 
   return (
     <AutoSizer>

@@ -16,6 +16,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
+    padding: theme.spacing(1),
   },
   contentContainer: {
     backgroundColor: theme.palette.grey[700],
@@ -33,26 +34,18 @@ const useStyles = makeStyles((theme) => ({
 interface Props {
   data: IChatRoom;
   className?: string;
-  onPress: (id: string) => void;
-  onLongPress: (id: string) => void;
+  onPress: () => void;
+  onLongPress: () => void;
 }
 
 const ChatRoomTab: FC<Props> = ({ data, className, onPress, onLongPress, ...rest }) => {
   const classes = useStyles();
 
-  const handleLongPress = () => {
-    onLongPress(data._id);
-  };
-
-  const handlePress = () => {
-    onPress(data._id);
-  };
-
   const defaultOptions = {
     shouldPreventDefault: false,
     delay: 500,
   };
-  const longPressEvent = useLongPress(handleLongPress, handlePress, defaultOptions);
+  const longPressEvent = useLongPress(onLongPress, onPress, defaultOptions);
 
   return (
     <div className={clsx(classes.root, className)} {...longPressEvent} {...rest}>
