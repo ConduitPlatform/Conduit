@@ -25,8 +25,8 @@ const timeoutAmount = 750;
 let tabsStatusMap: ItemStatus = {};
 
 const Row = ({ data, index, style }: ListChildComponentProps) => {
-  const { messages, onPress, onLongPress, selectedTab, classes } = data;
-  const rowItem = messages[index];
+  const { rooms, onPress, onLongPress, selectedTab, classes } = data;
+  const rowItem = rooms[index];
   const loading = !(tabsStatusMap[index] === 'LOADED' && rowItem);
   const isSelected = selectedTab === index;
 
@@ -46,8 +46,8 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
   );
 };
 
-const createItemData = memoize((messages, onPress, onLongPress, selectedTab, classes) => ({
-  messages,
+const createItemData = memoize((rooms, onPress, onLongPress, selectedTab, classes) => ({
+  rooms,
   onPress,
   onLongPress,
   selectedTab,
@@ -60,7 +60,6 @@ interface Props {
   chatRooms: IChatRoom[];
   chatRoomCount: number;
   selectedTab: number;
-  // selectedMessages: string[];
   onPress: (index: number) => void;
   onLongPress: (index: number) => void;
 }
@@ -69,7 +68,6 @@ const ChatRoomTabs: FC<Props> = ({
   chatRooms,
   chatRoomCount,
   selectedTab,
-  // selectedMessages,
   onPress,
   onLongPress,
 }) => {
