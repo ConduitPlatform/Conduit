@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs';
+import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
+import { ConduitMiddleware } from '../interfaces/Middleware';
+import { ConduitRoute, ConduitRouteParameters } from '../interfaces/Route';
 import {
-  ConduitMiddleware,
-  ConduitRoute,
-  ConduitRouteParameters,
   ConduitSocket,
   ConduitSocketEvent,
   ConduitSocketParameters,
@@ -11,8 +11,7 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   SocketProtoDescription,
-} from '@quintessential-sft/conduit-commons';
-import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
+} from '../interfaces/Socket';
 
 let protoLoader = require('@grpc/proto-loader');
 
