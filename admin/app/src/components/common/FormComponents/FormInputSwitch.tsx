@@ -4,7 +4,7 @@ import { Switch, SwitchProps } from '@material-ui/core';
 
 interface FormSwitchProps {
   name: string;
-  disabled: boolean;
+  disabled?: boolean;
   rules?: ControllerProps['rules'];
   switchProps?: SwitchProps;
 }
@@ -15,10 +15,7 @@ export const FormInputSwitch: React.FC<FormSwitchProps> = ({
   rules,
   switchProps,
 }) => {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext();
+  const { control } = useFormContext();
   return (
     <Controller
       name={name}

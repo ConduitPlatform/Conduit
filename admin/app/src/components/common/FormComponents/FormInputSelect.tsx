@@ -6,7 +6,7 @@ import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 interface FormSelectProps {
   name: string;
   label: string;
-  options: { name: string; label: string }[];
+  options: { label: string; value: string }[];
   disabled?: boolean;
   rules?: ControllerProps['rules'];
 }
@@ -19,9 +19,9 @@ export const FormInputSelect: React.FC<FormSelectProps> = ({
   rules,
 }) => {
   const generateSingleOptions = () => {
-    return options.map((option: { name: string; label: string }) => {
+    return options.map((option: { label: string; value: string }) => {
       return (
-        <MenuItem key={option.name} value={option.name}>
+        <MenuItem key={option.value} value={option.value}>
           {option.label}
         </MenuItem>
       );

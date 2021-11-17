@@ -152,8 +152,8 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                         label={'Provider name'}
                         name="providerName"
                         options={providers?.map((provider) => ({
-                          name: provider.name,
                           label: provider.name,
+                          value: provider.name,
                         }))}
                       />
                     </Grid>
