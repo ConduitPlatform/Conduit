@@ -104,8 +104,8 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
         body: data.body,
       };
     }
-    console.log('email', email);
-    // dispatch(asyncSendEmail(email));
+
+    dispatch(asyncSendEmail(email));
   };
 
   useEffect(() => {
@@ -154,8 +154,8 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                   label={'Template name'}
                   name="templateName"
                   options={templates?.map((template) => ({
-                    name: template.name,
                     label: template.name,
+                    value: template.name,
                   }))}
                 />
               </Grid>
