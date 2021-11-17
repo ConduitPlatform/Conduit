@@ -1,5 +1,5 @@
-import React, { FC, useCallback, useEffect, useRef } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import React, { CSSProperties, FC, useCallback, useEffect, useRef } from 'react';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { debounce } from 'lodash';
@@ -7,7 +7,8 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetChatMessages } from '../../redux/slices/chatSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
-import Row from './ChatRoomMessage';
+import ChatRoomBubble, { ChatRoomBubbleSkeleton } from './ChatRoomBubble';
+import clsx from 'clsx';
 
 const useStyles = makeStyles((theme) => ({
   bubble: {
@@ -28,6 +29,43 @@ interface ItemStatus {
 const timeoutAmount = 750;
 let itemStatusMap: ItemStatus = {};
 
+const Row = ({ data, index, style }: ListChildComponentProps) => {
+  const { messages, messagesCount, selectedMessages, onPress, onLongPress, classes } = data;
+  const rowItem = messages[messagesCount - index - 1];
+  const loading = !(itemStatusMap[index] === 'LOADED' && rowItem);
+  const isSelected = rowItem && selectedMessages.includes(rowItem._id);
+
+  return (
+    <div style={style as CSSProperties}>
+      {loading ? (
+        <ChatRoomBubbleSkeleton className={classes.bubble} />
+      ) : (
+        <ChatRoomBubble
+          data={rowItem}
+          className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}
+          onLongPress={onLongPress}
+          onPress={onPress}
+        />
+      )}
+    </div>
+  );
+};
+
+const createItemData = memoize(
+  (messages, messagesCount, selectedMessages, onPress, onLongPress, classes) => ({
+    messages,
+    messagesCount,
+    selectedMessages,
+    onPress,
+    onLongPress,
+    classes,
+  })
+);
+
+const isItemLoaded = (index: number) => {
+  return !!itemStatusMap[index];
+};
+
 interface Props {
   roomId: string;
   selectedPanel: number;
@@ -35,18 +73,6 @@ interface Props {
   onPress: (id: string) => void;
   onLongPress: (id: string) => void;
 }
-
-const createItemData = memoize(
-  (messages, messagesCount, selectedMessages, onPress, onLongPress, classes, itemStatusMap) => ({
-    messages,
-    messagesCount,
-    selectedMessages,
-    onPress,
-    onLongPress,
-    classes,
-    itemStatusMap,
-  })
-);
 
 const ChatRoomMessages: FC<Props> = ({
   roomId,
@@ -72,11 +98,7 @@ const ChatRoomMessages: FC<Props> = ({
     hasMountedRef.current = true;
   }, [selectedPanel, count]);
 
-  const isItemLoaded = (index: number) => {
-    return !!itemStatusMap[index];
-  };
-
-  const getApiItems = useCallback(
+  const getChatMessages = useCallback(
     (skip: number, limit: number) => {
       const params = {
         skip: skip,
@@ -89,11 +111,11 @@ const ChatRoomMessages: FC<Props> = ({
   );
 
   useEffect(() => {
-    getApiItems(0, 20);
-  }, [getApiItems]);
+    getChatMessages(0, 20);
+  }, [getChatMessages]);
 
   const debouncedGetApiItems = debounce(
-    (skip: number, limit: number) => getApiItems(skip, limit),
+    (skip: number, limit: number) => getChatMessages(skip, limit),
     timeoutAmount
   );
 
@@ -112,15 +134,7 @@ const ChatRoomMessages: FC<Props> = ({
     });
   };
 
-  const itemData = createItemData(
-    data,
-    count,
-    selectedMessages,
-    onPress,
-    onLongPress,
-    classes,
-    itemStatusMap
-  );
+  const itemData = createItemData(data, count, selectedMessages, onPress, onLongPress, classes);
 
   return (
     <AutoSizer>
