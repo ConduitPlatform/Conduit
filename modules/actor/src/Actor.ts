@@ -97,15 +97,16 @@ export default class ActorModule extends ConduitServiceModule {
   private async enableModule() {
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider;
-      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
+      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.isRunning = true;
     }
   }
 
   private registerSchemas() {
     const promises = Object.values(models).map((model) => {
-      return this.database.createSchemaFromAdapter(model);
+      let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
+      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

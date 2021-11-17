@@ -11,9 +11,9 @@ import { ServiceAdmin } from './service';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
-import { constructSortObj } from '../utils';
 
 let paths = require('./admin.json').functions;
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private database: DatabaseProvider;
@@ -46,11 +46,7 @@ export class AdminHandlers {
   }
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, isActive, provider, identifier } = call.request.params;
-    let sortObj: any = null;
-    if (call.request.params.sort && call.request.params.sort.length > 0) {
-      sortObj = constructSortObj(call.request.params.sort);
-    }
+    const { skip, limit, isActive, provider, search, sort } = call.request.params;
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -72,8 +68,10 @@ export class AdminHandlers {
         query[provider] = { $exists: true, $ne: null };
       }
     }
-    if (!isNil(identifier)) {
-      query['email'] = { $regex: identifier };
+    let identifier;
+    if (!isNil(search)) {
+      identifier = escapeStringRegexp(search);
+      query['email'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
 
     const users: User[] = await User.getInstance().findMany(
@@ -81,7 +79,7 @@ export class AdminHandlers {
       undefined,
       skipNumber,
       limitNumber,
-      sortObj
+      sort
     );
     const count: number = await User.getInstance().countDocuments(query);
 

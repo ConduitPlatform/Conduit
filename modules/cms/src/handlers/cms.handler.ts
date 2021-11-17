@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { SchemaDefinitions } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
@@ -18,8 +19,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -32,8 +33,7 @@ export class CmsHandlers {
     }
 
     let skipNumber = 0,
-      limitNumber = 25,
-      sortObj: any = null;
+      limitNumber = 25;
 
     if (!isNil(skip)) {
       skipNumber = Number.parseInt(skip as string);
@@ -42,25 +42,13 @@ export class CmsHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    if (!isNil(sort) && sort.length > 0) {
-      sortObj = {};
-      sort.forEach((sortVal: string) => {
-        sortVal = sortVal.trim();
-        if (sortVal.indexOf('-') !== -1) {
-          sortObj[sortVal.substr(1)] = -1;
-        } else {
-          sortObj[sortVal] = 1;
-        }
-      });
-    }
-
     const documentsPromise = this.database?.findMany(
       schemaName,
       {},
       undefined,
       skipNumber,
       limitNumber,
-      sortObj,
+      sort,
       populate
     );
     const countPromise = this.database?.countDocuments(schemaName, {});
@@ -84,8 +72,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -117,8 +105,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -144,8 +132,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -173,8 +161,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -207,8 +195,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -239,8 +227,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -271,8 +259,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -303,8 +291,8 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
 
     let errorMessage: any = null;
-    const schema = await this.database
-      ?.findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      ?.findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

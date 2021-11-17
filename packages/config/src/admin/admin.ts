@@ -114,7 +114,7 @@ export class AdminHandlers {
           });
         finalConfig = dbConfig.moduleConfigs.sms;
         break;
-      case 'push-notifications':
+      case 'pushNotifications':
         if (!registeredModules.has(module))
           return res.status(400).json({
             name: 'INVALID_PARAMS',
@@ -223,7 +223,7 @@ export class AdminHandlers {
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
-      case 'push-notifications':
+      case 'pushNotifications':
         if (!registeredModules.has(moduleName) || isNil(this.grpcSdk.pushNotifications))
           return res.status(400).json({
             name: 'INVALID_PARAMS',

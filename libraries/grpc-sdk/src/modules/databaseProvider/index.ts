@@ -73,16 +73,13 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  processQuery(query: any) {
-    if (typeof query === 'string') {
-      query = JSON.parse(query);
-    }
+  processQuery(query: { [key: string]: any }) {
     return JSON.stringify(query);
   }
 
   findOne<T>(
     schemaName: string,
-    query: any,
+    query: { [key: string]: any },
     select?: string,
     populate?: string | string[]
   ): Promise<T | any | undefined> {
@@ -109,17 +106,36 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
+  constructSortObj(sort: string[]) {
+    let sortObj: any = {};
+    sort.forEach((sortVal: string) => {
+      sortVal = sortVal.trim();
+      if (sortVal.indexOf('-') !== -1) {
+        sortObj[sortVal.substr(1)] = -1;
+      } else {
+        sortObj[sortVal] = 1;
+      }
+    });
+    return sortObj;
+  }
+
   findMany<T>(
     schemaName: string,
-    query: any,
+    query: { [key: string]: any },
     select?: string,
     skip?: number,
     limit?: number,
-    sort?: { [key: string]: number },
+    sort?: { [key: string]: number } | string[],
     populate?: string | string[]
   ): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
-      const sortStr = sort ? JSON.stringify(sort) : undefined;
+      let sortStr;
+      if (Array.isArray(sort)) {
+        sortStr = JSON.stringify(this.constructSortObj(sort));
+      } else {
+        sortStr = sort ? JSON.stringify(sort) : undefined;
+      }
+
       let populateArray = populate;
       if (populate && !Array.isArray(populate)) {
         populateArray = [populate];
@@ -131,7 +147,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
           select: select === null ? undefined : select,
           skip,
           limit,
-          sort: sortStr === null ? undefined : sortStr,
+          sort: sortStr,
           populate: (populateArray as string[]) ?? [],
         },
         (err: any, res: any) => {
@@ -145,7 +161,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  create<T>(schemaName: string, query: any): Promise<T | any> {
+  create<T>(schemaName: string, query: { [key: string]: any }): Promise<T | any> {
     return new Promise((resolve, reject) => {
       this.client?.create(
         { schemaName, query: this.processQuery(query) },
@@ -160,7 +176,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  createMany<T>(schemaName: string, query: any): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: { [key: string]: any }): Promise<T[] | any[]> {
     return new Promise((resolve, reject) => {
       this.client?.createMany(
         { schemaName, query: this.processQuery(query) },
@@ -178,12 +194,22 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
   findByIdAndUpdate<T>(
     schemaName: string,
     id: string,
-    document: any,
-    updateProvidedOnly: boolean = false
+  document: { [key: string]: any },
+  updateProvidedOnly: boolean = false,
+  populate?: string | string[],
   ): Promise<T | any> {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
     return new Promise((resolve, reject) => {
       this.client?.findByIdAndUpdate(
-        { schemaName, id, query: this.processQuery(document), updateProvidedOnly },
+        { schemaName,
+          id,
+          query: this.processQuery(document),
+          updateProvidedOnly,
+          populate: (populateArray as string[]) ?? [],
+        },
         (err: any, res: any) => {
           if (err || !res) {
             reject(err || 'Something went wrong');
@@ -197,8 +223,8 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
 
   updateMany(
     schemaName: string,
-    filterQuery: any,
-    query: any,
+    filterQuery: { [key: string]: any },
+    query: { [key: string]: any },
     updateProvidedOnly: boolean = false
   ) {
     return new Promise((resolve, reject) => {
@@ -220,7 +246,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  deleteOne(schemaName: string, query: any) {
+  deleteOne(schemaName: string, query: { [key: string]: any }) {
     return new Promise((resolve, reject) => {
       this.client?.deleteOne(
         { schemaName, query: this.processQuery(query) },
@@ -235,7 +261,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  deleteMany(schemaName: string, query: any) {
+  deleteMany(schemaName: string, query: { [key: string]: any }) {
     return new Promise((resolve, reject) => {
       this.client?.deleteMany(
         { schemaName, query: this.processQuery(query) },
@@ -250,7 +276,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
-  countDocuments(schemaName: string, query: any): Promise<number> {
+  countDocuments(schemaName: string, query: { [key: string]: any }): Promise<number> {
     return new Promise((resolve, reject) => {
       this.client?.countDocuments(
         { schemaName, query: this.processQuery(query) },

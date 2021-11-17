@@ -128,8 +128,9 @@ export default class FormsModule extends ConduitServiceModule {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model) => {
-      return this.database.createSchemaFromAdapter(model);
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

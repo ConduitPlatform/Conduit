@@ -1,5 +1,5 @@
 {
-  "name": "@conduit/core",
+  "name": "@quintessential-sft/core",
   "version": "1.0.1",
   "main": "dist/bin/www.js",
   "types": "dist/bin/www.d.ts",

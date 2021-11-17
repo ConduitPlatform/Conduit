@@ -50,7 +50,6 @@ const defaultValues = {
 const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   const classes = useStyles();
   const methods = useForm<NewUserInputs>({ defaultValues: defaultValues });
-  const { handleSubmit, control } = methods;
 
   const onSubmit = (data: { password: string; email: string }) => {
     handleNewUserDispatch(data);
@@ -67,7 +66,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
                 <FormInputText
                   name="email"
                   label="Username/Email"
-                  rules={{ required: 'email/name is required!' }}
+                  rules={{ required: 'Username/mail is required' }}
                   typeOfInput={'text'}
                 />
               </Grid>
@@ -75,10 +74,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
                 <FormInputText
                   name="password"
                   label="Password"
-                  rules={{
-                    required: 'password is required!',
-                    minLength: { value: 5, message: 'The minimum length is 5 characters' },
-                  }}
+                  rules={{ required: 'Password is required' }}
                   typeOfInput={'password'}
                 />
               </Grid>

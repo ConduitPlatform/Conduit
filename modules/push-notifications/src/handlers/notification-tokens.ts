@@ -4,18 +4,9 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { NotificationToken } from '../models';
 
 export class NotificationTokensHandler {
-  private database: any;
-
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    this.initDb(grpcSdk);
-  }
-
-  async initDb(grpcSdk: ConduitGrpcSdk) {
-    await grpcSdk.waitForExistence('database-provider');
-    this.database = grpcSdk.databaseProvider;
-  }
 
   async setNotificationToken(call: RouterRequest, callback: RouterResponse) {
     const { token, platform } = JSON.parse(call.request.params);
@@ -31,18 +22,18 @@ export class NotificationTokensHandler {
     const userId = context.user._id;
 
     let errorMessage = null;
-    this.database
-      .findOne('NotificationToken', { userId, platform })
+    NotificationToken.getInstance()
+      .findOne({ userId, platform })
       .then((oldToken: any) => {
         if (!isNil(oldToken))
-          return this.database.deleteOne('NotificationToken', oldToken);
+          return NotificationToken.getInstance().deleteOne(oldToken);
       })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const newTokenDocument = await this.database
-      .create('NotificationToken', {
+    const newTokenDocument = await NotificationToken.getInstance()
+      .create({
         userId,
         token,
         platform,

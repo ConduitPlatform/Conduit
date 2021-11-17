@@ -45,7 +45,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   async findByIdAndUpdate(
     id: string,
     query: string,
-    updateProvidedOnly: boolean = false
+    updateProvidedOnly: boolean = false,
+    populate?: string[]
   ): Promise<any> {
     let parsedQuery: any = EJSON.parse(query);
     parsedQuery['updatedAt'] = new Date();
@@ -55,7 +56,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         $set: parsedQuery,
       };
     }
-    return this.model.findByIdAndUpdate(id, parsedQuery, { new: true }).lean().exec();
+    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true })
+    if (populate !== undefined && populate !== null) {
+      finalQuery = this.calculatePopulates(finalQuery, populate);
+    }
+    return finalQuery.lean().exec();
   }
 
   async updateMany(
