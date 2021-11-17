@@ -33,6 +33,7 @@
     "formik": "^2.1.4",
     "js-cookie": "^2.2.1",
     "lodash": "^4.17.15",
+    "memoize-one": "^6.0.0",
     "moment": "^2.24.0",
     "next": "^11.1.2",
     "next-redux-wrapper": "^5.0.0",

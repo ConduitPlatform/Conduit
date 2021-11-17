@@ -1,22 +1,16 @@
-import React, { FC, useCallback, useEffect, useRef, useState } from 'react';
+import React, { FC, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import { BoxProps } from '@material-ui/core/Box/Box';
 import { makeStyles } from '@material-ui/core/styles';
-import ChatRoomBubble from './ChatRoomBubble';
-import { IChatMessage, IChatRoom } from '../../models/chat/ChatModels';
-import {
-  addChatMessagesSkip,
-  asyncDeleteChatMessages,
-  asyncGetChatMessages,
-} from '../../redux/slices/chatSlice';
-import { useAppDispatch, useAppSelector } from '../../redux/store';
+import { IChatRoom } from '../../models/chat/ChatModels';
+import { asyncDeleteChatMessages } from '../../redux/slices/chatSlice';
+import { useAppDispatch } from '../../redux/store';
 import { IconButton, Paper, Typography } from '@material-ui/core';
 import { InfoOutlined } from '@material-ui/icons';
 import DeleteIcon from '@material-ui/icons/Delete';
-import clsx from 'clsx';
 import ChatInfoDialog from './ChatInfoDialog';
 import ConfirmationDialog from '../common/ConfirmationDialog';
-import ChatRoomInfiniteLoader from './ChatRoomInfiniteLoader';
+import ChatRoomMessages from './ChatRoomMessages';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -72,12 +66,9 @@ interface Props extends BoxProps {
   selectedPanel: number;
 }
 
-const ChatRoomPanel: FC<Props> = ({ panelData, selectedPanel, ...rest }) => {
+const ChatRoomPanel: FC<Props> = ({ panelData, selectedPanel }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
-  const {
-    chatMessages: { data, skip, hasMore, loading },
-  } = useAppSelector((state) => state.chatSlice.data);
 
   const [infoDialog, setInfoDialog] = useState<boolean>(false);
   const [deleteDialog, setDeleteDialog] = useState<boolean>(false);
@@ -123,22 +114,6 @@ const ChatRoomPanel: FC<Props> = ({ panelData, selectedPanel, ...rest }) => {
     setDeleteDialog(false);
   };
 
-  const getChatBubble = (item: IChatMessage, index?: number) => {
-    return (
-      <ChatRoomBubble
-        data={item}
-        className={
-          selected.includes(item._id)
-            ? clsx(classes.bubble, classes.bubbleSelected)
-            : classes.bubble
-        }
-        onLongPress={onLongPress}
-        onPress={onPress}
-        key={index}
-      />
-    );
-  };
-
   return (
     <Box className={classes.root}>
       <Paper className={classes.infoContainer} elevation={6}>
@@ -160,7 +135,13 @@ const ChatRoomPanel: FC<Props> = ({ panelData, selectedPanel, ...rest }) => {
         )}
       </Paper>
       <Box className={classes.contentContainer}>
-        <ChatRoomInfiniteLoader roomId={panelData._id} selectedPanel={selectedPanel} />
+        <ChatRoomMessages
+          roomId={panelData._id}
+          selectedPanel={selectedPanel}
+          selectedMessages={selected}
+          onPress={onPress}
+          onLongPress={onLongPress}
+        />
       </Box>
       <ChatInfoDialog data={panelData} open={infoDialog} onClose={handleCloseModal} />
       <ConfirmationDialog

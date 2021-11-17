@@ -1,13 +1,13 @@
-import React, { CSSProperties, FC, useCallback, useEffect, useRef } from 'react';
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import React, { FC, useCallback, useEffect, useRef } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { debounce } from 'lodash';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetChatMessages } from '../../redux/slices/chatSlice';
-import clsx from 'clsx';
-import ChatRoomBubble, { ChatRoomBubbleSkeleton } from './ChatRoomBubble';
 import { makeStyles } from '@material-ui/core/styles';
+import memoize from 'memoize-one';
+import Row from './ChatRoomMessage';
 
 const useStyles = makeStyles((theme) => ({
   bubble: {
@@ -23,19 +23,38 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 interface ItemStatus {
-  [key: string]: number;
+  [key: string]: string;
 }
-// const LOADING = 1;
 const timeoutAmount = 750;
-const LOADED = 2;
 let itemStatusMap: ItemStatus = {};
 
 interface Props {
   roomId: string;
   selectedPanel: number;
+  selectedMessages: string[];
+  onPress: (id: string) => void;
+  onLongPress: (id: string) => void;
 }
 
-const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
+const createItemData = memoize(
+  (messages, messagesCount, selectedMessages, onPress, onLongPress, classes, itemStatusMap) => ({
+    messages,
+    messagesCount,
+    selectedMessages,
+    onPress,
+    onLongPress,
+    classes,
+    itemStatusMap,
+  })
+);
+
+const ChatRoomMessages: FC<Props> = ({
+  roomId,
+  selectedPanel,
+  selectedMessages,
+  onPress,
+  onLongPress,
+}) => {
   const dispatch = useAppDispatch();
   const classes = useStyles();
   const {
@@ -54,13 +73,11 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   }, [selectedPanel, count]);
 
   const isItemLoaded = (index: number) => {
-    // console.log('isItemLoaded', !!itemStatusMap[index]);
     return !!itemStatusMap[index];
   };
 
   const getApiItems = useCallback(
     (skip: number, limit: number) => {
-      console.log(`get API items with skip ${skip} and limit ${limit}`);
       const params = {
         skip: skip,
         limit: limit,
@@ -81,15 +98,12 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   );
 
   const loadMoreItems = async (startIndex: number, stopIndex: number) => {
-    // for (let index = startIndex; index <= stopIndex; index++) {
-    //   itemStatusMap[index] = LOADING;
-    // }
     const limit = count - startIndex - data.length;
     debouncedGetApiItems(data.length, limit);
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         for (let index = startIndex; index <= stopIndex; index++) {
-          itemStatusMap[index] = LOADED;
+          itemStatusMap[index] = 'LOADED';
         }
         resolve(undefined);
         clearTimeout(timeout);
@@ -98,37 +112,15 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
     });
   };
 
-  const Row = ({ index, style }: ListChildComponentProps) => {
-    const rowItem = data[count - index - 1];
-    const loading = !(itemStatusMap[index] === LOADED && rowItem);
-    return (
-      <div style={style as CSSProperties}>
-        {loading ? (
-          <ChatRoomBubbleSkeleton
-            className={
-              classes.bubble
-              // selected.includes(item._id)
-              //   ? clsx(classes.bubble, classes.bubbleSelected)
-              //   : classes.bubble
-            }
-          />
-        ) : (
-          <ChatRoomBubble
-            data={rowItem}
-            className={
-              classes.bubble
-              // selected.includes(item._id)
-              //   ? clsx(classes.bubble, classes.bubbleSelected)
-              //   : classes.bubble
-            }
-            onLongPress={() => console.log('onLongPress')}
-            onPress={() => console.log('onPress')}
-            // key={index}
-          />
-        )}
-      </div>
-    );
-  };
+  const itemData = createItemData(
+    data,
+    count,
+    selectedMessages,
+    onPress,
+    onLongPress,
+    classes,
+    itemStatusMap
+  );
 
   return (
     <AutoSizer>
@@ -149,6 +141,7 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
                   onItemsRendered={onItemsRendered}
                   ref={ref}
                   initialScrollOffset={count * 56}
+                  itemData={itemData}
                   width={width}>
                   {Row}
                 </List>
@@ -161,4 +154,4 @@ const ChatRoomInfiniteLoader: FC<Props> = ({ roomId, selectedPanel }) => {
   );
 };
 
-export default ChatRoomInfiniteLoader;
+export default ChatRoomMessages;
