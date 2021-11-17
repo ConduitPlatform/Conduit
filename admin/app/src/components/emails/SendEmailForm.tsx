@@ -164,7 +164,7 @@ const SendEmailForm: React.FC<Props> = ({ templates }) => {
                   name="body"
                   control={control}
                   defaultValue=""
-                  render={({ field: { onChange, value }, fieldState: {} }) => (
+                  render={({ field: { onChange, value } }) => (
                     <TemplateEditor
                       disabled={withTemplate ? true : false}
                       value={value}
