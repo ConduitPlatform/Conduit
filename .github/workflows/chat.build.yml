@@ -1,5 +1,7 @@
 on:
   push:
+    branches:
+      - master
     paths:
       - "modules/chat/**"
       - "libraries/grpc-sdk/**"

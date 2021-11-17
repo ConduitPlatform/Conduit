@@ -1,5 +1,7 @@
 on:
   push:
+    branches:
+      - master
     paths:
       - "modules/storage/**"
       - "providers/storage-provider/**"

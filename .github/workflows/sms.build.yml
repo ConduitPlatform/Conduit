@@ -1,5 +1,7 @@
 on:
   push:
+    branches:
+      - master
     paths:
       - "modules/sms/**"
       - "libraries/grpc-sdk/**"
