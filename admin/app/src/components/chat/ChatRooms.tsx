@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Box, Button, Paper } from '@material-ui/core';
+import { Box, Button, Paper, TextField } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import {
@@ -19,22 +19,24 @@ const useStyles = makeStyles((theme) => ({
     height: '75vh',
     padding: theme.spacing(1),
   },
+  innerRoot: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: theme.spacing(30),
+  },
   topContainer: {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: theme.spacing(2),
   },
-  tabs: {
-    minWidth: theme.spacing(25),
-  },
   search: {
     marginBottom: theme.spacing(1),
   },
   tabContainer: {
-    padding: theme.spacing(0, 1),
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    width: 300,
+    width: '100%',
   },
 }));
 
@@ -60,12 +62,6 @@ const ChatRooms: React.FC = () => {
   useEffect(() => {
     getChatRooms();
   }, [getChatRooms]);
-
-  // const handleChange = (newValue: number) => {
-  //   if (newValue === selected) return;
-  //   setSelected(newValue);
-  //   dispatch(clearChatMessages());
-  // };
 
   const handleCreateChatRoom = (inputData: { name: string; participants: string[] }) => {
     const params = {
@@ -99,23 +95,25 @@ const ChatRooms: React.FC = () => {
         </Button>
       </Box>
       <Paper className={classes.root}>
-        <Box className={classes.tabContainer}>
-          {/*<TextField*/}
-          {/*  className={classes.search}*/}
-          {/*  label={'Search'}*/}
-          {/*  variant={'outlined'}*/}
-          {/*  value={search}*/}
-          {/*  onChange={(event) => {*/}
-          {/*    setSearch(event.target.value);*/}
-          {/*  }}*/}
-          {/*/>*/}
-          <ChatRoomTabs
-            chatRooms={data}
-            chatRoomCount={count}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            selectedTab={selected}
+        <Box className={classes.innerRoot}>
+          <TextField
+            className={classes.search}
+            label={'Search'}
+            variant={'outlined'}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
           />
+          <Box className={classes.tabContainer}>
+            <ChatRoomTabs
+              chatRooms={data}
+              chatRoomCount={count}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              selectedTab={selected}
+            />
+          </Box>
         </Box>
         {data.map((item, index) => {
           if (index === selected) {

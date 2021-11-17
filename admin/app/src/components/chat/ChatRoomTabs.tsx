@@ -16,7 +16,37 @@ const useStyles = makeStyles((theme) => ({
   bubbleSelected: {
     backgroundColor: `${theme.palette.grey[700]}80`,
   },
+  noScrollbars: {
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'transparent transparent',
+    '&::-webkit-scrollbar': {
+      display: 'none',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: 'transparent',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: 'transparent',
+    },
+  },
 }));
+
+// &::-webkit-scrollbar {
+//   width: 1px;
+// }
+//
+// &::-webkit-scrollbar-track {
+//   background: transparent;
+// }
+//
+// &::-webkit-scrollbar-thumb {
+//   background-color: transparent;
+// }
+// }
+//
+// .no-scrollbars::-webkit-scrollbar {
+//   display: none;  /* Safari and Chrome */
+// }
 
 interface ItemStatus {
   [key: string]: string;
@@ -138,6 +168,8 @@ const ChatRoomTabs: FC<Props> = ({
                   onItemsRendered={onItemsRendered}
                   ref={ref}
                   itemData={itemData}
+                  className={classes.noScrollbars}
+                  // style={{ overflow: 'hidden' }}
                   width={width}>
                   {Row}
                 </List>
