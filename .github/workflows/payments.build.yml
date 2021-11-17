@@ -1,0 +1,56 @@
+on:
+  push:
+    paths:
+      - "modules/payments/**"
+      - "libraries/grpc-sdk/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-18.04
+    name: Build payments
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Docker Login
+        uses: docker/login-action@v1.6.0
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build conduit payments
+        run: |
+          DEV=TRUE make modules/payments
+
+  rollout-proxy:
+    runs-on: ubuntu-latest
+    name: Redeploy payments
+    needs: [deploy]
+    steps:
+      - uses: fjogeleit/http-request-action@master
+        with:
+          url: "http://20.101.9.248/payments/conduit-grp/"
+          method: "POST"
+          username: admin
+          password: ${{ secrets.KUBECTLPROXY_PASSWORD }}
+
+  document:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+      - name: Cache dependencies
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - run: yarn install --frozen-lockfile
+      - run: yarn run docz:build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GIT_TOKEN }}
+          publish_dir: ./docs

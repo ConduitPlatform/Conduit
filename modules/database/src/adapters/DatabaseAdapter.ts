@@ -1,5 +1,6 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
+import { DeclaredSchema } from '../models';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -24,12 +25,10 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   ): { model: SchemaAdapter<any>; relations: any };
 
   async checkModelOwnership(schema: ConduitSchema) {
-    if (schema.name === '_declaredSchema') return true;
-    let model = await this.models!['_declaredSchema'].findOne(
-      JSON.stringify({ name: schema.name })
-    );
+    if (schema.name === '_DeclaredSchema') return true;
+    let model = await DeclaredSchema.getInstance().findOne({ name: schema.name });
 
-    if (model && model.ownerModule === schema.owner) {
+    if (model && (model as any).ownerModule === schema.owner) {
       return true;
     } else if (model) {
       return false;
@@ -38,35 +37,33 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async saveSchemaToDatabase(schema: ConduitSchema) {
-    if (schema.name === '_declaredSchema') return;
+    if (schema.name === '_DeclaredSchema') return;
 
-    let model = await this.models!['_declaredSchema'].findOne(
-      JSON.stringify({ name: schema.name })
-    );
+    let model = await DeclaredSchema.getInstance().findOne({ name: schema.name });
     if (model) {
-      await this.models!['_declaredSchema'].findByIdAndUpdate(
-        model._id,
-        JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          modelOptions: JSON.stringify(schema.modelOptions),
-          ownerModule: schema.owner,
-        })
-      );
+      await DeclaredSchema.getInstance()
+        .findByIdAndUpdate(
+          model._id,
+          {
+            name: schema.name,
+            fields: schema.fields,
+            modelOptions: JSON.stringify(schema.modelOptions),
+            ownerModule: schema.owner,
+          }
+        );
     } else {
-      await this.models!['_declaredSchema'].create(
-        JSON.stringify({
+      await DeclaredSchema.getInstance()
+        .create({
           name: schema.name,
           fields: schema.fields,
           modelOptions: JSON.stringify(schema.modelOptions),
           ownerModule: schema.owner,
-        })
-      );
+        });
     }
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models = await this.models!['_declaredSchema'].findMany('{}');
+    let models: any = await DeclaredSchema.getInstance().findMany({});
     models = models
       .map((model: any) => {
         let schema = new ConduitSchema(

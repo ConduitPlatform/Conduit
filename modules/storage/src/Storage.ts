@@ -16,9 +16,7 @@ import { FileHandlers } from './handlers/file';
 import { FileRoutes } from './routes/router';
 import { AdminRoutes } from './admin/admin';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
-import Container from './models/Container';
-import File from './models/File';
-import Folder from './models/Folder';
+import * as models from './models';
 import { ConfigController } from './config/Config.controller';
 
 export class StorageModule extends ConduitServiceModule {
@@ -178,7 +176,7 @@ export class StorageModule extends ConduitServiceModule {
     const { provider, storagePath, google, azure } = storageConfig;
 
     if (!this.isRunning) {
-      await this.registerModels();
+      await this.registerSchemas();
       await migrateFoldersToContainers(this.grpcSdk);
       this.isRunning = true;
     }
@@ -190,10 +188,12 @@ export class StorageModule extends ConduitServiceModule {
     this._fileHandlers.updateProvider(this.storageProvider);
   }
 
-  private async registerModels() {
-    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(Container);
-    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(File);
-    await this.grpcSdk.databaseProvider!.createSchemaFromAdapter(Folder);
+  private registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
+      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
   }
 
   private async updateConfig(config?: any) {

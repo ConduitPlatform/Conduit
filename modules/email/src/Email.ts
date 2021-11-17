@@ -1,6 +1,6 @@
-import { emailTemplateSchema } from './models/EmailTemplate';
 import { EmailProvider } from '@quintessential-sft/email-provider';
 import { EmailService } from './services/email.service';
+import * as models from './models';
 import { AdminHandlers } from './admin/AdminHandlers';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
@@ -37,6 +37,7 @@ type SendEmailRequest = GrpcRequest<{
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
 export default class EmailModule extends ConduitServiceModule {
+  private database: any;
   private emailProvider: EmailProvider;
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
@@ -55,7 +56,7 @@ export default class EmailModule extends ConduitServiceModule {
       }
     );
     this.grpcServer.start();
-    this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk);
+    console.log('Grpc server is online');
   }
 
   async activate() {
@@ -173,9 +174,11 @@ export default class EmailModule extends ConduitServiceModule {
 
   private async enableModule(newConfig?: any) {
     if (!this.isRunning) {
-      this.registerModels();
+      this.database = this.grpcSdk.databaseProvider;
+      this.registerSchemas();
       await this.initEmailProvider();
       this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
+      this.adminHandlers = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.adminHandlers.setEmailService(this.emailService);
       this.isRunning = true;
       this.grpcSdk.bus?.publish('email-provider', 'enabled');
@@ -185,9 +188,12 @@ export default class EmailModule extends ConduitServiceModule {
     }
   }
 
-  private registerModels() {
-    const database = this.grpcSdk.databaseProvider;
-    database!.createSchemaFromAdapter(emailTemplateSchema);
+  private registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
   }
 
   private async initEmailProvider(newConfig?: any) {

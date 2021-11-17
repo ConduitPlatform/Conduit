@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import schema from '../../models/schemaDefinitions.schema';
+import { SchemaDefinitions } from '../../models';
 import { CmsRoutes } from '../../routes/Routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
@@ -28,8 +28,8 @@ export class SchemaController {
   }
 
   refreshRoutes() {
-    this._adapter
-      .findMany('SchemaDefinitions', { enabled: true })
+    SchemaDefinitions.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         if (r) {
           let routeSchemas: any = {};
@@ -73,9 +73,9 @@ export class SchemaController {
   }
 
   private async loadExistingSchemas() {
-    let schemaDefinitions = await this._adapter.createSchemaFromAdapter(schema);
-    this._adapter
-      .findMany('SchemaDefinitions', { enabled: true })
+    await this._adapter.createSchemaFromAdapter(SchemaDefinitions.getInstance(this._adapter));
+    SchemaDefinitions.getInstance()
+      .findMany({ enabled: true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');

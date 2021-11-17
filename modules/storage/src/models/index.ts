@@ -1,3 +1,3 @@
-export * from './Container';
-export * from './File';
-export * from './Folder';
+export * from './Container.schema';
+export * from './File.schema';
+export * from './Folder.schema';

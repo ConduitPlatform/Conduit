@@ -1,4 +1,3 @@
-import File from '../models/File';
 import { FileHandlers } from '../handlers/file';
 import ConduitGrpcSdk, {
   ConduitRoute,

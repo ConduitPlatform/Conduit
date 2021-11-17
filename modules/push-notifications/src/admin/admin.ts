@@ -6,12 +6,12 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
+import { NotificationToken } from '../models'
 
 let paths = require('./admin.json').functions;
 
-export class AdminHandler {
+export class AdminHandlers {
   private provider: IPushNotificationsProvider;
-  private databaseAdapter: any;
   private readonly conduit: ConduitGrpcSdk;
 
   constructor(
@@ -21,10 +21,6 @@ export class AdminHandler {
   ) {
     this.conduit = conduit;
     this.provider = provider;
-    const self = this;
-    conduit.waitForExistence('database-provider').then(() => {
-      self.databaseAdapter = conduit.databaseProvider;
-    });
 
     this.conduit.admin
       .registerAdmin(server, paths, {
@@ -64,7 +60,7 @@ export class AdminHandler {
 
     let errorMessage = null;
     await this.provider
-      .sendToDevice(params, this.databaseAdapter)
+      .sendToDevice(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -96,7 +92,7 @@ export class AdminHandler {
 
     let errorMessage = null;
     await this.provider
-      .sendMany(params, this.databaseAdapter)
+      .sendMany(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -127,7 +123,7 @@ export class AdminHandler {
 
     let errorMessage = null;
     await this.provider
-      .sendToManyDevices(params, this.databaseAdapter)
+      .sendToManyDevices(params)
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -145,8 +141,8 @@ export class AdminHandler {
     }
 
     let errorMessage = null;
-    const tokenDocuments = await this.databaseAdapter
-      .findMany('NotificationToken', { userId })
+    const tokenDocuments = await NotificationToken.getInstance()
+      .findMany({ userId })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
