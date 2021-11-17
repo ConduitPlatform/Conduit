@@ -62,6 +62,7 @@ message UpdateRequest {
     string id = 2;
     string query = 3;
     optional bool updateProvidedOnly = 4;
+    repeated string populate = 5;
 }
 
 message UpdateManyRequest {

@@ -11,7 +11,7 @@ import {
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AdminHandler } from './admin/admin';
+import { AdminHandlers } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/Routes';
 import * as models from './models';
 import {
@@ -22,9 +22,10 @@ import {
 } from './types';
 
 export default class PushNotificationsModule extends ConduitServiceModule {
+  private database: any;
   private _provider: IPushNotificationsProvider | undefined;
   private isRunning: boolean = false;
-  private adminHandler?: AdminHandler;
+  private adminHandlers?: AdminHandlers;
 
   private _routes!: any[];
 
@@ -111,23 +112,23 @@ export default class PushNotificationsModule extends ConduitServiceModule {
     const { token, platform, userId } = call.request;
 
     let errorMessage: any = null;
-    this.grpcSdk
-      .databaseProvider!.findOne('NotificationToken', { userId, platform })
+    models.NotificationToken.getInstance()
+      .findOne({ userId, platform })
       .then((oldToken) => {
         if (!isNil(oldToken))
-          return this.grpcSdk.databaseProvider!.deleteOne('NotificationToken', oldToken);
+          return models.NotificationToken.getInstance().deleteOne(oldToken);
       })
       .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const newTokenDocument = await this.grpcSdk
-      .databaseProvider!.create('NotificationToken', {
+    const newTokenDocument = await models.NotificationToken.getInstance()
+      .create({
         userId,
         token,
         platform,
       })
-      .catch((e) => (errorMessage = e.message));
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
@@ -141,9 +142,9 @@ export default class PushNotificationsModule extends ConduitServiceModule {
     const userId = call.request.userId;
 
     let errorMessage = null;
-    const tokenDocuments: any = await this.grpcSdk
-      .databaseProvider!.findMany('NotificationToken', { userId })
-      .catch((e) => (errorMessage = e.message));
+    const tokenDocuments: any = await models.NotificationToken.getInstance()
+      .findMany({ userId })
+      .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
@@ -152,9 +153,10 @@ export default class PushNotificationsModule extends ConduitServiceModule {
 
   private async enableModule() {
     if (!this.isRunning) {
+      this.database = this.grpcSdk.databaseProvider;
       await this.initProvider();
       await this.registerSchemas();
-      this.adminHandler = new AdminHandler(
+      this.adminHandlers = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
         this._provider!
@@ -162,7 +164,7 @@ export default class PushNotificationsModule extends ConduitServiceModule {
       this.isRunning = true;
     } else {
       await this.initProvider();
-      this.adminHandler!.updateProvider(this._provider!);
+      this.adminHandlers!.updateProvider(this._provider!);
     }
   }
 
@@ -180,8 +182,9 @@ export default class PushNotificationsModule extends ConduitServiceModule {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model) => {
-      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(model);
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

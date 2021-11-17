@@ -1,5 +1,6 @@
 import { isNil } from 'lodash';
 import { EmailService } from '../services/email.service';
+import { EmailTemplate } from '../models';
 import ConduitGrpcSdk, {
   GrpcServer,
   RouterRequest,
@@ -13,14 +14,9 @@ let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private database: any;
   private emailService: EmailService;
 
   constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         getTemplates: this.getTemplates.bind(this),
@@ -55,8 +51,8 @@ export class AdminHandlers {
       });
     }
     let errorMessage;
-    const templateDocument = await this.database
-      .findOne('EmailTemplate', { _id: _id })
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ _id: _id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
@@ -81,8 +77,8 @@ export class AdminHandlers {
     if(templateDocument){
       templateDocument['externalManaged'] = true;
       templateDocument['externalId'] =  created.id;
-      await this.database
-        .findByIdAndUpdate('EmailTemplate',_id,templateDocument)
+      await EmailTemplate.getInstance()
+        .findByIdAndUpdate(_id,templateDocument)
         .catch((e: any) => (errorMessage = e.message));
 
       if (!isNil(errorMessage))
@@ -103,8 +99,8 @@ export class AdminHandlers {
     let totalCount = 0;
     for ( let element of externalTemplates){
 
-      const templateDocument = await this.database
-      .findOne('EmailTemplate', { externalId: element.id })
+      const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ externalId: element.id })
       .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage))
         return callback({
@@ -121,8 +117,8 @@ export class AdminHandlers {
           body: element.versions[0].body,
         }
 
-        const updatedTemplate = await this.database
-        .findByIdAndUpdate('EmailTemplate', templateDocument._id,synchronized)
+        const updatedTemplate = await EmailTemplate.getInstance()
+        .findByIdAndUpdate(templateDocument._id,synchronized)
         .catch((e: any) => (errorMessage = e.message));
         if (!isNil(errorMessage))
           return callback({
@@ -147,8 +143,8 @@ export class AdminHandlers {
     }
     let errorMessage;
     let totalCount = ids.length;
-    const templateDocuments = await this.database
-      .findMany('EmailTemplate',{ _id: { $in: ids } })
+    const templateDocuments = await EmailTemplate.getInstance()
+      .findMany({ _id: { $in: ids } })
       .catch((e:any) => (errorMessage = e.message));
 
     if(!isNil(errorMessage)) {
@@ -179,8 +175,8 @@ export class AdminHandlers {
         }
       }
     }
-    const deletedDocuments = await this.database
-      .deleteMany('EmailTemplate',{ _id: { $in: ids } })
+    const deletedDocuments = await EmailTemplate.getInstance()
+      .deleteMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
     if(!isNil(errorMessage)){
@@ -242,14 +238,13 @@ export class AdminHandlers {
       query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
 
-    const templateDocumentsPromise = this.database.findMany(
-      'EmailTemplate',
+    const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
-    const totalCountPromise = this.database.countDocuments('EmailTemplate', {});
+    const totalCountPromise = EmailTemplate.getInstance().countDocuments({});
 
     let errorMessage: string | null = null;
     const [templateDocuments, totalCount] = await Promise.all([
@@ -309,8 +304,8 @@ export class AdminHandlers {
       }
     }
     let errorMessage: string | null = null;
-    const newTemplate = await this.database
-      .create('EmailTemplate', {
+    const newTemplate = await EmailTemplate.getInstance()
+      .create({
         name,
         subject,
         body,
@@ -348,8 +343,8 @@ export class AdminHandlers {
     // });
 
     let errorMessage: string | null = null;
-    const templateDocument = await this.database
-      .findOne('EmailTemplate', { _id: id })
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
@@ -377,8 +372,8 @@ export class AdminHandlers {
     templateDocument['variables'] = templateDocument['variables'].filter(
       (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
     );
-    const updatedTemplate = await this.database
-      .findByIdAndUpdate('EmailTemplate', id, templateDocument)
+    const updatedTemplate = await EmailTemplate.getInstance()
+      .findByIdAndUpdate(id, templateDocument)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
@@ -421,8 +416,8 @@ export class AdminHandlers {
     const id = params.id;
 
     let errorMessage: string | null = null;
-    const templateDocument = await this.database
-      .findOne('EmailTemplate', { _id: id })
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ _id: id })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       return callback({
@@ -430,8 +425,8 @@ export class AdminHandlers {
         message: errorMessage,
       });
     }
-    await this.database
-      .deleteOne('EmailTemplate',{_id:id})
+    await EmailTemplate.getInstance()
+      .deleteOne({ _id: id })
       .catch((e:any) => (errorMessage = e.message));
 
     if (!isNil(errorMessage)) {

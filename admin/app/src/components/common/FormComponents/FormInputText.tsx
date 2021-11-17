@@ -35,7 +35,7 @@ export const FormInputText: FC<FormInputTextProps> = ({
       render={({ field }) => (
         <TextField
           {...field}
-          multiline={rows !== undefined && true}
+          multiline={rows !== undefined}
           rows={rows}
           disabled={disabled}
           type={typeOfInput}
