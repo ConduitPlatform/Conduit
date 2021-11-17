@@ -19,7 +19,6 @@ import { enqueueInfoNotification } from '../../utils/useNotifier';
 import { FormInputText } from '../common/FormComponents/FormInputText';
 import { FormsModel } from '../../models/forms/FormsModels';
 import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
-import { string } from 'prop-types';
 
 interface PropsForInputFields {
   id: string;
