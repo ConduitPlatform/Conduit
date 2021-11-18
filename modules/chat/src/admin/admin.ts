@@ -106,7 +106,7 @@ export class AdminHandlers{
         message: 'name/participants are required to create a chat room'
       })
     }
-    if(participants.length === 0 ){
+    if(participants.length === 0 ){  // if participants array is empty throw error
       return callback({
         code: status.INTERNAL,
         message: 'can not create chat room with no participants'
