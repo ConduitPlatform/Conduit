@@ -122,7 +122,9 @@ export const asyncPostCreateChatRoom = createAsyncThunk(
     try {
       await createChatRoom(params);
       params.getChatRooms();
-      thunkAPI.dispatch(enqueueSuccessNotification(`Successfully created chat room ${name}`));
+      thunkAPI.dispatch(
+        enqueueSuccessNotification(`Successfully created chat room ${params.name}`)
+      );
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));

@@ -41,6 +41,13 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
   const loading = !(tabsStatusMap[index] === 'LOADED' && rowItem);
   const isSelected = selectedTab === index;
 
+  const getClassName = () => {
+    if (isSelected) {
+      return classes.tabSelected;
+    }
+    return;
+  };
+
   return (
     <div style={style as CSSProperties}>
       {loading ? (
@@ -50,7 +57,7 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
           onPress={() => onPress(index)}
           onLongPress={() => onLongPress(index)}
           data={rowItem}
-          className={isSelected ? classes.tabSelected : {}}
+          className={getClassName()}
         />
       )}
     </div>

@@ -35,6 +35,13 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
   const loading = !(messagesStatusMap[index] === 'LOADED' && rowItem);
   const isSelected = rowItem && selectedMessages.includes(rowItem._id);
 
+  const getClassName = () => {
+    if (isSelected) {
+      return clsx(classes.bubble, classes.bubbleSelected);
+    }
+    return classes.bubble;
+  };
+
   return (
     <div style={style as CSSProperties}>
       {loading ? (
@@ -42,7 +49,7 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
       ) : (
         <ChatRoomBubble
           data={rowItem}
-          className={isSelected ? clsx(classes.bubble, classes.bubbleSelected) : classes.bubble}
+          className={getClassName()}
           onLongPress={onLongPress}
           onPress={onPress}
         />

@@ -11,7 +11,6 @@ const useStyles = makeStyles((theme) =>
     navBar: {
       marginBottom: theme.spacing(2),
     },
-    content: {},
     swaggerButton: {
       textDecoration: 'none',
       marginLeft: theme.spacing(8),
@@ -40,9 +39,9 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
     setValue(index);
   }, [router.pathname, pathNames]);
 
-  const handleChange = async (value: number) => {
-    await router.push(`${labels[value].id}`);
-    setValue(value);
+  const handleChange = async (eventValue: number) => {
+    await router.push(`${labels[eventValue].id}`);
+    setValue(eventValue);
   };
 
   return (
@@ -63,13 +62,13 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
         <Tabs
           value={value}
           className={classes.navContent}
-          onChange={(event, value) => handleChange(value)}>
+          onChange={(event, eventValue) => handleChange(eventValue)}>
           {labels.map((label: { name: string; id: string }, index: number) => (
             <Tab key={index} label={label.name} id={label.id} />
           ))}
         </Tabs>
       </Box>
-      <Box className={classes.content}>{children}</Box>
+      <Box>{children}</Box>
     </Box>
   );
 };
