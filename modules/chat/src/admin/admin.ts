@@ -81,7 +81,7 @@ export class AdminHandlers{
         undefined,
         populates,
       );
-    const totalCountPromise = ChatRoom.getInstance().countDocuments({});
+    const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
     let errorMessage: string | null = null;
     const [chatRoomDocuments, totalCount] = await Promise.all([
