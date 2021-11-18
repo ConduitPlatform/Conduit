@@ -35,7 +35,7 @@ endif
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest$@
+	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest $@
 	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest
 else
 	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
