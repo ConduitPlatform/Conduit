@@ -15,7 +15,7 @@ const NotificationLayout: React.FC = ({ children }) => {
       title={'Notifications'}
       labels={labels}
       pathNames={pathNames}
-      swagger={'cms'}
+      swagger={'pushNotifications'}
       icon={<Notifications />}>
       {children}
     </SharedLayout>
