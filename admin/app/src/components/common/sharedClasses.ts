@@ -5,7 +5,6 @@ export default makeStyles((theme) =>
     root: {
       backgroundColor: theme.palette.background.paper,
       display: 'flex',
-      flexGrow: 6,
       alignItems: 'center',
       justifyContent: 'center',
       justifyItems: 'center',
@@ -59,6 +58,9 @@ export default makeStyles((theme) =>
       alignItems: 'center',
       width: '80%',
       justifyContent: 'center',
+    },
+    marginRight: {
+      marginRight: theme.spacing(2),
     },
   })
 );

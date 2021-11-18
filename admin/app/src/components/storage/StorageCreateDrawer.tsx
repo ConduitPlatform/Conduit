@@ -85,7 +85,9 @@ const StorageCreateDrawer: FC<Props> = ({
                   Create {data.type}
                 </Typography>
               </Grid>
-              <FormInputText name="name" label="Name" />
+              <Grid item sm={12}>
+                <FormInputText name="name" label="Name" />
+              </Grid>
               {data.type === CreateFormSelected.folder && (
                 <Grid item sm={12}>
                   <FormInputSelect
@@ -99,15 +101,15 @@ const StorageCreateDrawer: FC<Props> = ({
                 <Typography variant="subtitle1">Is Public</Typography>
                 <FormInputSwitch name="isPublic" />
               </Grid>
-              <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-                <Grid item>
-                  <Button variant="contained" color="primary" type="submit">
-                    Save
+              <Grid container item>
+                <Grid item className={classes.marginRight}>
+                  <Button variant="outlined" onClick={() => handleCancel()}>
+                    Cancel
                   </Button>
                 </Grid>
                 <Grid item>
-                  <Button variant="outlined" onClick={() => handleCancel()}>
-                    Cancel
+                  <Button variant="contained" color="primary" type="submit">
+                    Save
                   </Button>
                 </Grid>
               </Grid>

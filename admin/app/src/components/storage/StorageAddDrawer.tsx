@@ -90,12 +90,14 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
       <Container maxWidth="lg">
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(handleAdd)}>
-            <Typography variant="h6" className={classes.marginTop}>
-              Add File
-            </Typography>
-            <Dropzone file={fileData.data} setFile={handleSetFile} />
             <Grid container alignItems="center" className={classes.root} spacing={2}>
-              <Grid item sm={12} className={classes.marginTop}>
+              <Grid item sm={12}>
+                <Typography variant="h6">Add File</Typography>
+              </Grid>
+              <Grid item sm={12}>
+                <Dropzone file={fileData.data} setFile={handleSetFile} />
+              </Grid>
+              <Grid item sm={12}>
                 <FormInputText name="name" label="File name" />
               </Grid>
               <Grid item sm={12}>
@@ -108,15 +110,15 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
                 <Typography variant="subtitle1">Public</Typography>
                 <FormInputSwitch name="isPublic" />
               </Grid>
-              <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-                <Grid item>
-                  <Button variant="contained" color="primary" type="submit">
-                    Add
+              <Grid container item>
+                <Grid item className={classes.marginRight}>
+                  <Button variant="outlined" onClick={() => handleCancel()}>
+                    Cancel
                   </Button>
                 </Grid>
                 <Grid item>
-                  <Button variant="outlined" onClick={() => handleCancel()}>
-                    Cancel
+                  <Button variant="contained" color="primary" type="submit">
+                    Add
                   </Button>
                 </Grid>
               </Grid>

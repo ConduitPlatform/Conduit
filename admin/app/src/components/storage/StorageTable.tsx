@@ -28,6 +28,9 @@ const useStyles = makeStyles((theme) => ({
       textDecoration: 'underline',
     },
   },
+  tableRow: {
+    cursor: 'pointer',
+  },
 }));
 
 interface IContainerTable {
@@ -208,6 +211,9 @@ const StorageTable: FC<Props> = ({
         selectable={false}
         handleRowClick={(value) => onPathClick(value.Name)}
         headers={path === '/' ? containerHeaders : headers}
+        tableRowProps={{
+          className: classes.tableRow,
+        }}
       />
       <Grid container style={{ marginTop: '-8px' }}>
         <Grid item xs={7} />
