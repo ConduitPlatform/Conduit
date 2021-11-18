@@ -81,7 +81,7 @@ export class AdminHandlers{
         undefined,
         populates,
       );
-    const totalCountPromise = ChatRoom.getInstance().countDocuments({});
+    const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
     let errorMessage: string | null = null;
     const [chatRoomDocuments, totalCount] = await Promise.all([
@@ -138,7 +138,7 @@ export class AdminHandlers{
   }
 
   async getMessages(call: RouterRequest, callback: RouterResponse) {
-    const { skip,limit,senderId, roomId } = JSON.parse(call.request.params);
+    const { skip,limit,senderUser,roomId,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -149,10 +149,14 @@ export class AdminHandlers{
       limitNumber = Number.parseInt(limit as string);
     }
     let errorMessage,query:any = {};
-    if(!isNil(senderId) ) {
-      query['senderUser'] = senderId;
+    let populates;
+    if(!isNil(populate)){
+      populates = populateArray(populate);
+    }
+    if(!isNil(senderUser) ) {
+      query['senderUser'] = senderUser;
       const user = await User.getInstance()
-        .findOne({ _id: senderId })
+        .findOne({ _id: senderUser })
         .catch((err: any) => errorMessage = err);
       if (!isNil(errorMessage)) {
         return callback({
@@ -163,7 +167,7 @@ export class AdminHandlers{
       if(isNil(user)){
         return callback({
           code: status.INTERNAL,
-          message: 'User ' + senderId + ' does not exists'
+          message: 'User ' + senderUser + ' does not exists'
         });
       }
     }
@@ -190,7 +194,9 @@ export class AdminHandlers{
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
+      undefined,
+      populates,
     );
     const countPromise = ChatMessage.getInstance().countDocuments(query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
