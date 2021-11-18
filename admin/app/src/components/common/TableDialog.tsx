@@ -170,7 +170,7 @@ const TableDialog: React.FC<Props> = ({
           Cancel
         </Button>
         <Button
-          disabled={selectedElements.length < 1 ? true : false}
+          disabled={selectedElements.length < 1}
           onClick={() => handleAction()}
           color="secondary"
           variant="contained"

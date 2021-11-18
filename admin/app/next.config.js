@@ -79,6 +79,11 @@ module.exports = (phase) => {
         destination: '/payments/customers',
         permanent: true,
       },
+      {
+        source: '/chat',
+        destination: '/chat/rooms',
+        permanent: true,
+      },
     ];
   };
 

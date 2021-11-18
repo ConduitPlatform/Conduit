@@ -10,7 +10,14 @@ const PaymentsLayout: React.FC = ({ children }) => {
     '/payments/subscriptions',
     '/payments/settings',
   ];
-  const labels = ['customers', 'products', 'transactions', 'subscriptions', 'settings'];
+
+  const labels = [
+    { name: 'customers', id: 'customers' },
+    { name: 'products', id: 'products' },
+    { name: 'transactions', id: 'transactions' },
+    { name: 'subscriptions', id: 'subscriptions' },
+    { name: 'settings', id: 'settings' },
+  ];
 
   return (
     <SharedLayout

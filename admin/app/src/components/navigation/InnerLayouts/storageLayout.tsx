@@ -4,7 +4,11 @@ import { Cloud } from '@material-ui/icons';
 
 const StorageLayout: React.FC = ({ children }) => {
   const pathNames = ['/storage/files', '/storage/settings'];
-  const labels = ['files', 'settings'];
+
+  const labels = [
+    { name: 'files', id: 'files' },
+    { name: 'settings', id: 'settings' },
+  ];
 
   return (
     <SharedLayout

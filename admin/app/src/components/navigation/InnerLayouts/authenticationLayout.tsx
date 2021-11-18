@@ -9,7 +9,12 @@ const AuthenticationLayout: React.FC = ({ children }) => {
     '/authentication/serviceAccounts',
     '/authentication/settings',
   ];
-  const labels = ['users', 'signIn', 'serviceAccounts', 'settings'];
+  const labels = [
+    { name: 'users', id: 'users' },
+    { name: 'signIn', id: 'signIn' },
+    { name: 'serviceAccounts', id: 'serviceAccounts' },
+    { name: 'settings', id: 'settings' },
+  ];
 
   return (
     <SharedLayout

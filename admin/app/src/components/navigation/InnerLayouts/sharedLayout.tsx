@@ -4,16 +4,12 @@ import { useRouter } from 'next/router';
 
 const useStyles = makeStyles((theme) =>
   createStyles({
-    navBar: {
-      position: 'fixed',
-      top: 0,
-      backgroundColor: '#262840',
-      width: '100vw',
-      padding: theme.spacing(0.5),
-      zIndex: 10,
+    root: {
+      height: '100vh',
+      padding: theme.spacing(4),
     },
-    content: {
-      marginTop: '110px',
+    navBar: {
+      marginBottom: theme.spacing(2),
     },
     swaggerButton: {
       textDecoration: 'none',
@@ -26,11 +22,10 @@ const useStyles = makeStyles((theme) =>
 );
 
 interface Props {
-  children: any;
   pathNames: string[];
   swagger: string;
   icon: JSX.Element;
-  labels: { name: string; id: string }[] | string[];
+  labels: { name: string; id: string }[];
   title: string;
 }
 
@@ -44,23 +39,13 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
     setValue(index);
   }, [router.pathname, pathNames]);
 
-  const handleChange = (event: React.ChangeEvent<any>, newValue: number) => {
-    setValue(newValue);
-    router.push(`${event.currentTarget.id}`, undefined, { shallow: false });
-  };
-
-  const extractLabels = (labelsToExtract: Props['labels']) => {
-    return labelsToExtract.map((label: string | { name: string; id: string }, index: number) => (
-      <Tab
-        key={index}
-        label={typeof label === 'object' ? label.name : label}
-        id={typeof label === 'object' ? label.id : label}
-      />
-    ));
+  const handleChange = async (eventValue: number) => {
+    await router.push(`${labels[eventValue].id}`);
+    setValue(eventValue);
   };
 
   return (
-    <Box p={4}>
+    <Box className={classes.root}>
       <Box className={classes.navBar}>
         <Typography className={classes.navContent} variant={'h4'}>
           {title}
@@ -74,11 +59,16 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
             </Button>
           </a>
         </Typography>
-        <Tabs value={value} className={classes.navContent} onChange={handleChange}>
-          {extractLabels(labels)}
+        <Tabs
+          value={value}
+          className={classes.navContent}
+          onChange={(event, eventValue) => handleChange(eventValue)}>
+          {labels.map((label: { name: string; id: string }, index: number) => (
+            <Tab key={index} label={label.name} id={label.id} />
+          ))}
         </Tabs>
       </Box>
-      <Box className={classes.content}>{children}</Box>
+      <Box>{children}</Box>
     </Box>
   );
 };

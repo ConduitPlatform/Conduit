@@ -4,7 +4,11 @@ import { Sms } from '@material-ui/icons';
 
 const SMSLayout: React.FC = ({ children }) => {
   const pathNames = ['/sms/send', '/sms/provider-details'];
-  const labels = ['send', 'provider-details'];
+
+  const labels = [
+    { name: 'send', id: 'send' },
+    { name: 'provider-details', id: 'provider-details' },
+  ];
 
   return (
     <SharedLayout

@@ -4,7 +4,13 @@ import { Email } from '@material-ui/icons';
 
 const EmailsLayout: React.FC = ({ children }) => {
   const pathNames = ['/emails/templates', '/emails/send', '/emails/provider'];
-  const labels = ['templates', 'send', 'provider', 'settings'];
+
+  const labels = [
+    { name: 'templates', id: 'templates' },
+    { name: 'send', id: 'send' },
+    { name: 'provider', id: 'provider' },
+    { name: 'settings', id: 'settings' },
+  ];
 
   return (
     <SharedLayout

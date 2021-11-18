@@ -63,6 +63,8 @@ export const handleModuleNavigation = (moduleName: string) => {
       return '/payments/customers';
     case 'sms':
       return '/sms/send';
+    case 'chat':
+      return '/chat/rooms';
     default:
       return `/${moduleName}`;
   }
