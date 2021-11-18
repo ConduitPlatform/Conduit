@@ -30,17 +30,16 @@
   "license": "ISC",
   "devDependencies": {
     "copyfiles": "^2.2.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "docz": "^2.3.1",
     "lerna": "^3.13.1",
     "pm2": "^4.4.0",
-    "docz": "^2.3.1",
     "prettier": "^2.2.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "standard-version": "^9.3.0",
-    "cz-conventional-changelog": "^3.3.0"
+    "standard-version": "^9.3.0"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
