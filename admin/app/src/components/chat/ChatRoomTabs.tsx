@@ -45,7 +45,6 @@ const Row = ({ data, index, style }: ListChildComponentProps) => {
     if (isSelected) {
       return classes.tabSelected;
     }
-    return;
   };
 
   return (
