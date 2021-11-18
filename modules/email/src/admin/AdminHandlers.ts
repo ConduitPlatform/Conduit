@@ -233,9 +233,14 @@ export class AdminHandlers {
     let query:any = {};
     let identifier;
 
-    if(!isNil(search)){
-      identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    if (!isNil(search)) {
+      if (search.match(/^[a-fA-F0-9]{24}$/)) {
+        query = { _id : search }
+      }
+      else {
+        identifier = escapeStringRegexp(search);
+        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      }
     }
 
     const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
