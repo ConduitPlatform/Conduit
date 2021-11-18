@@ -68,6 +68,7 @@ interface Props {
   limit: number;
   page: number;
   count: number;
+  placeholder?: string;
 }
 
 const StorageTable: FC<Props> = ({
@@ -84,6 +85,7 @@ const StorageTable: FC<Props> = ({
   limit,
   page,
   count,
+  placeholder,
 }) => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
@@ -168,7 +170,7 @@ const StorageTable: FC<Props> = ({
             return (
               <Typography
                 variant="subtitle1"
-                className={item || index === 0 ? classes.pathItem : null}
+                className={item || index === 0 ? classes.pathItem : undefined}
                 onClick={() => onPathClick(item, index)}
                 key={index}>
                 {index === 0 ? '..' : `/${item}`}
@@ -214,19 +216,22 @@ const StorageTable: FC<Props> = ({
         tableRowProps={{
           className: classes.tableRow,
         }}
+        placeholder={placeholder}
       />
-      <Grid container style={{ marginTop: '-8px' }}>
-        <Grid item xs={7} />
-        <Grid item xs={5}>
-          <Paginator
-            handlePageChange={handlePageChange}
-            limit={limit}
-            handleLimitChange={handleLimitChange}
-            page={page}
-            count={count}
-          />
+      {!placeholder && (
+        <Grid container style={{ marginTop: '-8px' }}>
+          <Grid item xs={7} />
+          <Grid item xs={5}>
+            <Paginator
+              handlePageChange={handlePageChange}
+              limit={limit}
+              handleLimitChange={handleLimitChange}
+              page={page}
+              count={count}
+            />
+          </Grid>
         </Grid>
-      </Grid>
+      )}
     </>
   );
 };

@@ -36,10 +36,12 @@ interface IStorageSlice {
     containers: {
       containers: IContainer[];
       containersCount: number;
+      areContainersEmpty: boolean;
     };
     containerData: {
       data: ContainerDataProps[];
       totalCount: number;
+      areContainerDataEmpty: boolean;
     };
     selectedFileUrl: string;
   };
@@ -64,10 +66,12 @@ const initialState: IStorageSlice = {
     containers: {
       containers: [],
       containersCount: 0,
+      areContainersEmpty: false,
     },
     containerData: {
       totalCount: 0,
       data: [],
+      areContainerDataEmpty: false,
     },
     selectedFileUrl: '',
   },
@@ -354,6 +358,9 @@ const storageSlice = createSlice({
     clearStorageContainerData: (state) => {
       state.data.containerData.data = [];
     },
+    setContainerDataEmpty: (state, action) => {
+      state.data.containerData.areContainerDataEmpty = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(asyncGetStorageConfig.fulfilled, (state, action) => {
@@ -363,10 +370,21 @@ const storageSlice = createSlice({
       state.data.config = action.payload;
     });
     builder.addCase(asyncGetStorageContainers.fulfilled, (state, action) => {
-      state.data.containers = action.payload;
+      state.data.containers.containers = action.payload.containers;
+      state.data.containers.containersCount = action.payload.containersCount;
+      if (action.payload.containersCount < 1) {
+        state.data.containers.areContainersEmpty = true;
+        return;
+      }
+      state.data.containers.areContainersEmpty = false;
     });
     builder.addCase(asyncGetStorageContainerData.fulfilled, (state, action) => {
-      state.data.containerData = action.payload;
+      state.data.containerData.data = action.payload.data;
+      state.data.containerData.totalCount = action.payload.totalCount;
+      if (action.payload.totalCount < 1) {
+        state.data.containerData.areContainerDataEmpty = true;
+        return;
+      }
     });
     builder.addCase(asyncDeleteStorageFile.fulfilled, (state, action) => {
       const foundIndex = state.data.containerData.data.findIndex(
@@ -392,6 +410,7 @@ const storageSlice = createSlice({
   },
 });
 
-export const { clearStoragePageStore, clearStorageContainerData } = storageSlice.actions;
+export const { clearStoragePageStore, clearStorageContainerData, setContainerDataEmpty } =
+  storageSlice.actions;
 
 export default storageSlice.reducer;
