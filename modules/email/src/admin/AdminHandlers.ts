@@ -249,7 +249,7 @@ export class AdminHandlers {
       skipNumber,
       limitNumber
     );
-    const totalCountPromise = EmailTemplate.getInstance().countDocuments({});
+    const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
 
     let errorMessage: string | null = null;
     const [templateDocuments, totalCount] = await Promise.all([
