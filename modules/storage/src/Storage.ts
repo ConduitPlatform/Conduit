@@ -1,7 +1,3 @@
-import {
-  createStorageProvider,
-  IStorageProvider,
-} from '@quintessential-sft/storage-provider';
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
 import {
@@ -18,6 +14,7 @@ import { AdminRoutes } from './admin/admin';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import * as models from './models';
 import { ConfigController } from './config/Config.controller';
+import { createStorageProvider, IStorageProvider } from './storage-provider';
 
 export class StorageModule extends ConduitServiceModule {
   private storageProvider: IStorageProvider;

@@ -22,10 +22,6 @@ RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
     elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@quintessential-sft/conduit-admin \
     --scope=@quintessential-sft/conduit-commons --scope=@quintessential-sft/conduit-config \
     --scope=@quintessential-sft/core --scope=@quintessential-sft/conduit-router --scope=@quintessential-sft/conduit-security ; \
-    elif [ "$BUILDING_SERVICE" = "modules/email" ] ; then npx lerna run build --scope=@conduit/email \
-    --scope=@quintessential-sft/email-provider ; \
-    elif [ "$BUILDING_SERVICE" = "modules/storage" ] ; then npx lerna run build --scope=@conduit/storage \
-    --scope=@quintessential-sft/storage-provider ; \
     else cd /app/$BUILDING_SERVICE && yarn build && cd /app ; fi
 
 RUN npx lerna clean -y && rm -rf node_modules

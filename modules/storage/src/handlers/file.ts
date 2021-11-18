@@ -1,16 +1,12 @@
 import { isNil, isString } from 'lodash';
-import { IStorageProvider } from '@quintessential-sft/storage-provider';
 import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
-import {
-  _StorageContainer,
-  _StorageFolder,
-  File,
-} from '../models'
+import { _StorageContainer, _StorageFolder, File } from '../models';
+import { IStorageProvider } from '../storage-provider';
 
 export class FileHandlers {
   private storageProvider: IStorageProvider;
@@ -34,17 +30,16 @@ export class FileHandlers {
     const { name, data, folder, container, mimeType, isPublic } = JSON.parse(
       call.request.params
     );
-    let newFolder = (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
+    let newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
     let config = ConfigController.getInstance().config;
     let usedContainer = container;
     // the container is sent from the client
     if (isNil(usedContainer)) {
       usedContainer = config.defaultContainer;
     } else {
-      let container = await _StorageContainer.getInstance()
-        .findOne({
-          name: usedContainer,
-        });
+      let container = await _StorageContainer.getInstance().findOne({
+        name: usedContainer,
+      });
       if (!container) {
         if (!config.allowContainerCreation) {
           return callback({
@@ -56,33 +51,32 @@ export class FileHandlers {
         if (!exists) {
           await this.storageProvider.createContainer(usedContainer);
         }
-        await _StorageContainer.getInstance()
-          .create({
-            name: usedContainer,
-            isPublic,
-          });
+        await _StorageContainer.getInstance().create({
+          name: usedContainer,
+          isPublic,
+        });
       }
     }
     let exists;
     if (!isNil(folder)) {
-      exists = await this.storageProvider.container(usedContainer).folderExists(newFolder);
+      exists = await this.storageProvider
+        .container(usedContainer)
+        .folderExists(newFolder);
       if (!exists) {
-        await _StorageFolder.getInstance()
-          .create({
-            name: newFolder,
-            container: usedContainer,
-            isPublic,
-          });
+        await _StorageFolder.getInstance().create({
+          name: newFolder,
+          container: usedContainer,
+          isPublic,
+        });
         await this.storageProvider.container(usedContainer).createFolder(newFolder);
       }
     }
 
-    exists = await File.getInstance()
-      .findOne({
-        name,
-        container: usedContainer,
-        folder: newFolder,
-      });
+    exists = await File.getInstance().findOne({
+      name,
+      container: usedContainer,
+      folder: newFolder,
+    });
     if (exists) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -110,15 +104,14 @@ export class FileHandlers {
           .getPublicUrl((newFolder ?? '') + name);
       }
 
-      const newFile = await File.getInstance()
-        .create({
-          name,
-          mimeType,
-          folder: newFolder,
-          container: usedContainer,
-          isPublic,
-          url: publicUrl,
-        });
+      const newFile = await File.getInstance().create({
+        name,
+        mimeType,
+        folder: newFolder,
+        container: usedContainer,
+        isPublic,
+        url: publicUrl,
+      });
 
       return callback(null, {
         result: JSON.stringify({
@@ -315,10 +308,9 @@ export class FileHandlers {
       found.mimeType = mimeType ?? found.mimeType;
 
       if (newContainer !== found.container) {
-        let container = await _StorageContainer.getInstance()
-          .findOne({
-            name: newContainer,
-          });
+        let container = await _StorageContainer.getInstance().findOne({
+          name: newContainer,
+        });
         if (!container) {
           if (!config.allowContainerCreation) {
             return callback({
@@ -339,21 +331,19 @@ export class FileHandlers {
           .container(newContainer)
           .folderExists(newFolder);
         if (!exists) {
-          await _StorageFolder.getInstance()
-            .create({
-              name: newFolder,
-              container: newContainer,
-            });
+          await _StorageFolder.getInstance().create({
+            name: newFolder,
+            container: newContainer,
+          });
           await this.storageProvider.container(newContainer).createFolder(newFolder);
         }
       }
 
-      let exists = await File.getInstance()
-        .findOne({
-          name: name,
-          container: newContainer,
-          folder: newFolder,
-        });
+      let exists = await File.getInstance().findOne({
+        name: name,
+        container: newContainer,
+        folder: newFolder,
+      });
       if (exists) {
         return callback({
           code: status.INVALID_ARGUMENT,

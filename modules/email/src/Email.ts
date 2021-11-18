@@ -1,4 +1,3 @@
-import { EmailProvider } from '@quintessential-sft/email-provider';
 import { EmailService } from './services/email.service';
 import * as models from './models';
 import { AdminHandlers } from './admin/AdminHandlers';
@@ -14,6 +13,7 @@ import {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
+import { EmailProvider } from './email-provider';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;

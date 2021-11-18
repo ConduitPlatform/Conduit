@@ -22,8 +22,7 @@
     "packages/*",
     "libraries/*",
     "admin/*",
-    "modules/*",
-    "providers/*"
+    "modules/*"
   ],
   "keywords": [],
   "author": "",

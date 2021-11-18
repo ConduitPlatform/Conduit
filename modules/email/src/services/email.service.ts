@@ -1,11 +1,11 @@
 import { isNil } from 'lodash';
-import { EmailProvider } from '@quintessential-sft/email-provider';
 import { EmailTemplate } from '../models';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
-import { CreateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/CreateEmailTemplate';
-import { UpdateEmailTemplate } from '@quintessential-sft/email-provider/dist/interfaces/UpdateEmailTemplate';
 import handlebars from 'handlebars';
+import { EmailProvider } from '../email-provider';
+import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate';
+import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate';
 export class EmailService {
   private database: any;
 
@@ -26,10 +26,9 @@ export class EmailService {
 
   getExternalTemplate(id: string) {
     return this.emailer._transport?.getTemplateInfo(id);
-
   }
 
-  createExternalTemplate(data: CreateEmailTemplate){
+  createExternalTemplate(data: CreateEmailTemplate) {
     return this.emailer._transport?.createTemplate(data);
   }
 
@@ -37,12 +36,11 @@ export class EmailService {
     return this.emailer._transport?.updateTemplate(data);
   }
 
-  deleteExternalTemplate(id:string){
+  deleteExternalTemplate(id: string) {
     return this.emailer._transport?.deleteTemplate(id);
   }
 
-  async  registerTemplate(params: IRegisterTemplateParams) {
-
+  async registerTemplate(params: IRegisterTemplateParams) {
     const { name, body, subject, variables } = params;
 
     const existing = await EmailTemplate.getInstance().findOne({ name });
@@ -55,7 +53,6 @@ export class EmailService {
       variables,
     });
   }
-
 
   async sendEmail(template: string, params: ISendEmailParams) {
     const { email, body, subject, variables, sender } = params;
@@ -74,51 +71,43 @@ export class EmailService {
       }
     }
 
-    if(!isNil(sender)){
+    if (!isNil(sender)) {
       builder.setSender(sender);
-    }
-    else if(!isNil(templateFound!.sender) && isNil(sender) ){
+    } else if (!isNil(templateFound!.sender) && isNil(sender)) {
       builder.setSender(templateFound!.sender);
-    }
-    else{
+    } else {
       throw new Error(`Sender must be provided!`);
     }
 
-    if(templateFound!.externalManaged){
+    if (templateFound!.externalManaged) {
       builder.setTemplate({
         id: templateFound!._id,
         variables: variables as any,
-      })
-    }
-    else{
+      });
+    } else {
       let handled_body = handlebars.compile(templateFound!.body);
-      const bodyString = templateFound!
-      ? handled_body(variables)
-      : body!;
+      const bodyString = templateFound! ? handled_body(variables) : body!;
       builder.setContent(bodyString);
     }
     let handled_subject = handlebars.compile(templateFound!.subject);
 
-      const subjectString = templateFound!
-    ? handled_subject(variables)
-      : subject!;
+    const subjectString = templateFound! ? handled_subject(variables) : subject!;
 
-      builder.setSender(sender);
-      builder.setReceiver(email);
-      builder.setSubject(subjectString);
+    builder.setSender(sender);
+    builder.setReceiver(email);
+    builder.setSubject(subjectString);
 
-      if (params.cc) {
-        builder.setCC(params.cc);
-      }
+    if (params.cc) {
+      builder.setCC(params.cc);
+    }
 
-      if (params.replyTo) {
-        builder.setReplyTo(params.replyTo);
-      }
+    if (params.replyTo) {
+      builder.setReplyTo(params.replyTo);
+    }
 
-      if (params.attachments) {
-        builder.addAttachments(params.attachments as any);
-      }
+    if (params.attachments) {
+      builder.addAttachments(params.attachments as any);
+    }
     return this.emailer.sendEmail(builder);
   }
-
 }
