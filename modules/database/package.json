@@ -24,7 +24,7 @@
     "lodash": "^4.17.15",
     "mariadb": "^2.5.4",
     "mongodb-extended-json": "^1.11.0",
-    "mongoose": "^5.11.18",
+    "mongoose": "5.13.13",
     "mongoose-deep-populate": "^3.2.0",
     "mysql2": "^2.3.0",
     "pg": "^8.6.0",
