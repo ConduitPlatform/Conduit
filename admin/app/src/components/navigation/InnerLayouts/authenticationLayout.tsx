@@ -11,8 +11,8 @@ const AuthenticationLayout: React.FC = ({ children }) => {
   ];
   const labels = [
     { name: 'users', id: 'users' },
-    { name: 'signIn', id: 'signIn' },
-    { name: 'serviceAccounts', id: 'serviceAccounts' },
+    { name: 'sign in methods', id: 'signIn' },
+    { name: 'service Accounts', id: 'serviceAccounts' },
     { name: 'settings', id: 'settings' },
   ];
 
