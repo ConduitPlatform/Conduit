@@ -105,13 +105,13 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
         const jsonToObject = JSON.parse(event.target.result);
 
         if (
-          'projectId' in jsonToObject &&
-          'privateKey' in jsonToObject &&
-          'clientEmail' in jsonToObject
+          'project_id' in jsonToObject &&
+          'private_key' in jsonToObject &&
+          'client_email' in jsonToObject
         ) {
-          setValue('projectId', jsonToObject.projectId);
-          setValue('privateKey', jsonToObject.privateKey);
-          setValue('clientEmail', jsonToObject.clientEmail);
+          setValue('projectId', jsonToObject.project_id);
+          setValue('privateKey', jsonToObject.private_key);
+          setValue('clientEmail', jsonToObject.client_email);
         }
       }
     };

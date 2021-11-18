@@ -71,6 +71,8 @@ export const asyncSaveNotificationConfig = createAsyncThunk(
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const { data } = await putNotificationConfig({
+        active: settings.active,
+        providerName: settings.providerName,
         projectId: settings.projectId,
         privateKey: settings.privateKey,
         clientEmail: settings.clientEmail,

@@ -8,15 +8,15 @@ export const sendNotification = (data: NotificationData) =>
   });
 
 export const getNotificationConfig = () =>
-  axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
+  axios.get(`${CONDUIT_API}/admin/config/pushNotifications`);
 
 export const putNotificationConfig = (data: {
+  active: boolean;
+  providerName: string;
   projectId: string;
   privateKey: string;
   clientEmail: string;
 }) =>
-  axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
-    projectId: data.projectId,
-    privateKey: data.privateKey,
-    clientEmail: data.clientEmail,
+  axios.put(`${CONDUIT_API}/admin/config/pushNotifications`, {
+    ...data,
   });
