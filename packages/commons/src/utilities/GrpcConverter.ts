@@ -30,6 +30,7 @@ function getDescriptor(protofile: string): any {
 }
 
 export function grpcToConduitRoute(
+  routerName: string,
   request: any,
   moduleName?: string
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
@@ -39,7 +40,7 @@ export function grpcToConduitRoute(
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
   //this can break everything change it
-  while (Object.keys(routerDescriptor)[0] !== 'Router') {
+  while (Object.keys(routerDescriptor)[0] !== routerName) {
     routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];

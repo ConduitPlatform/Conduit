@@ -166,6 +166,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       | ConduitMiddleware
       | ConduitSocket
     )[] = grpcToConduitRoute(
+      'Router',
       {
         protoFile: protofile,
         routes: routes,
