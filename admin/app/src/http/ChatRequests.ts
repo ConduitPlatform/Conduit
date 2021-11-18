@@ -30,6 +30,7 @@ export const getChatMessages = (params: {
 }) =>
   axios.get(`${CONDUIT_API}/admin/chat/messages`, {
     params: {
+      populate: 'senderUser',
       ...params,
     },
   });

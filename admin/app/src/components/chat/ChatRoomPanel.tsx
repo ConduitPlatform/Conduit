@@ -58,6 +58,7 @@ const useStyles = makeStyles((theme) => ({
     position: 'absolute',
     top: theme.spacing(8),
     right: theme.spacing(2.5),
+    zIndex: 1,
   },
 }));
 
