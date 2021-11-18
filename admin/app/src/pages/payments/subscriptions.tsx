@@ -65,6 +65,12 @@ const Subscriptions = () => {
     dispatch(asyncGetSubscriptions({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
+  useEffect(() => {
+    setSkip(0);
+    setPage(0);
+    setLimit(10);
+  }, [debouncedSearch]);
+
   const { subscriptions, count } = useAppSelector(
     (state) => state.paymentsSlice.data.subscriptionData
   );

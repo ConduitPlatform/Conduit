@@ -110,6 +110,12 @@ const Users = () => {
     dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
+  useEffect(() => {
+    setSkip(0);
+    setPage(0);
+    setLimit(10);
+  }, [debouncedSearch, filter]);
+
   const handleLimitChange = (value: number) => {
     setLimit(value);
     setSkip(0);

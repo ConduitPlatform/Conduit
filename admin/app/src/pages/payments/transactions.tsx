@@ -98,6 +98,12 @@ const Transactions = () => {
     dispatch(asyncGetTransactions({ skip, limit, search }));
   }, [dispatch, limit, skip, search]);
 
+  useEffect(() => {
+    setSkip(0);
+    setPage(0);
+    setLimit(10);
+  }, [debouncedSearch]);
+
   const handleDeleteTitle = (transaction: Transaction) => {
     if (selectedTransaction._id === '') {
       return 'Delete selected transactions';
