@@ -5,6 +5,7 @@ import process from 'process';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+// register module
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'email');
 let email = new EmailModule(grpcSdk);
 email
