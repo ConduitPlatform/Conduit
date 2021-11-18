@@ -81,6 +81,12 @@ const Templates = () => {
     dispatch(asyncGetEmailTemplates({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
+  useEffect(() => {
+    setSkip(0);
+    setPage(0);
+    setLimit(10);
+  }, [debouncedSearch]);
+
   const { templateDocuments, totalCount } = useAppSelector((state) => state.emailsSlice.data);
 
   const newTemplate = () => {
