@@ -71,7 +71,7 @@ export class AdminHandlers {
   async sendManyNotifications(call: RouterRequest, callback: RouterResponse) {
     let requestParams = JSON.parse(call.request.params);
     const params = requestParams.map((param: any) => {
-      if (isNil(param.title) || isNil(param.userId))
+      if (isNil(param.title) || isNil(param.userId))  // title and userId are required
         return callback({
           code: status.INVALID_ARGUMENT,
           message: 'Required fields are missing',

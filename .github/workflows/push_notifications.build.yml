@@ -1,5 +1,7 @@
 on:
   push:
+    branches:
+      - master
     paths:
       - "modules/push-notifications/**"
       - "libraries/grpc-sdk/**"
@@ -31,26 +33,3 @@ jobs:
           method: "POST"
           username: admin
           password: ${{ secrets.KUBECTLPROXY_PASSWORD }}
-
-  document:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: "14.x"
-      - name: Cache dependencies
-        uses: actions/cache@v1
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: yarn install --frozen-lockfile
-      - run: yarn run docz:build
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GIT_TOKEN }}
-          publish_dir: ./docs

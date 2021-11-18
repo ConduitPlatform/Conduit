@@ -5,6 +5,7 @@ export default makeStyles((theme) =>
     root: {
       backgroundColor: theme.palette.background.paper,
       display: 'flex',
+      flexGrow: 6,
       alignItems: 'center',
       justifyContent: 'center',
       justifyItems: 'center',
@@ -61,6 +62,9 @@ export default makeStyles((theme) =>
     },
     marginRight: {
       marginRight: theme.spacing(2),
+    },
+    formFields: {
+      minWidth: 200,
     },
   })
 );
