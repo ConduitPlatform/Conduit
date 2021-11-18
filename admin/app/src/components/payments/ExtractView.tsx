@@ -31,7 +31,7 @@ const ExtractView: React.FC<Props> = ({ valuesToShow }) => {
   return (
     <>
       {Object.entries(valuesToShow).map(([key, value]) => {
-        while (key !== '__v')
+        if (key !== '__v')
           return (
             <Grid key={key} item xs={12}>
               <Typography variant="subtitle2">{startCase(camelCase(key))}:</Typography>
