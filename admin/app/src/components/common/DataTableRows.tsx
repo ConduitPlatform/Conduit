@@ -1,5 +1,12 @@
 import React, { isValidElement, useState } from 'react';
-import { Checkbox, IconButton, makeStyles, TableCell, TableRow } from '@material-ui/core';
+import {
+  Checkbox,
+  IconButton,
+  makeStyles,
+  TableCell,
+  TableRow,
+  TableRowProps,
+} from '@material-ui/core';
 import DataTableActions from './DataTableActions';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@material-ui/icons';
 import moment from 'moment';
@@ -39,6 +46,7 @@ interface Props {
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   selectable: boolean;
+  tableRowProps?: TableRowProps;
 }
 
 const DataTableRows: React.FC<Props> = ({
@@ -51,6 +59,7 @@ const DataTableRows: React.FC<Props> = ({
   selectedItems,
   actions,
   selectable,
+  tableRowProps,
 }) => {
   const classes = useStyles();
   const [open, setOpen] = useState(false);
@@ -96,7 +105,7 @@ const DataTableRows: React.FC<Props> = ({
 
   return (
     <>
-      <TableRow onClick={() => onRowClick(row)} key={index}>
+      <TableRow onClick={() => onRowClick(row)} key={index} {...tableRowProps}>
         <TableCell align="left" padding="none">
           {extractIcon()}
         </TableCell>

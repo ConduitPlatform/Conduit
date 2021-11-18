@@ -7,7 +7,7 @@ import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-comm
 import { EventEmitter } from 'events';
 import { AdminHandlers } from './admin/admin';
 import { NextFunction, Request, Response } from 'express';
-import * as request from 'request-promise';
+import axios from 'axios';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -432,7 +432,7 @@ export default class ConfigManager implements IConfigManager {
     );
     this.updateState(call.request.moduleName, call.request.url, call.getPeer());
     this.publishModuleData(
-      'mpdule-register',
+      'module-registered',
       call.request.moduleName,
       call.getPeer(),
       call.request.url
@@ -481,10 +481,10 @@ export default class ConfigManager implements IConfigManager {
     let dbInit = false;
     if (!fromGrpc) {
       let failed: any;
-      let success = await request.get('http://' + moduleUrl).catch((err: any) => {
+      let success = await axios.get('http://' + moduleUrl).catch((err: any) => {
         failed = err;
       });
-      if (failed && failed.message.indexOf('Error: Parse Error') === -1) {
+      if (failed && failed.message.indexOf('Parse Error') === -1) {
         throw new Error('Failed to register dead module');
       }
     }

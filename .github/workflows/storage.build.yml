@@ -1,0 +1,36 @@
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "modules/storage/**"
+      - "providers/storage-provider/**"
+      - "libraries/grpc-sdk/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-18.04
+    name: Build storage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Docker Login
+        uses: docker/login-action@v1.6.0
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build conduit storage
+        run: |
+          DEV=TRUE make modules/storage
+
+  rollout-proxy:
+    runs-on: ubuntu-latest
+    name: Redeploy storage
+    needs: [deploy]
+    steps:
+      - uses: fjogeleit/http-request-action@master
+        with:
+          url: "http://20.101.9.248/storage/conduit-grp/"
+          method: "POST"
+          username: admin
+          password: ${{ secrets.KUBECTLPROXY_PASSWORD }}

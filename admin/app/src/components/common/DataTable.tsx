@@ -14,6 +14,7 @@ import { NotificationData } from '../../models/notifications/NotificationModels'
 import Checkbox from '@material-ui/core/Checkbox';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 import DataTableRows from './DataTableRows';
+import { TableRowProps } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   table: {
@@ -68,6 +69,7 @@ interface Props extends PaperProps {
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   handleRowClick?: (data: any) => void;
+  tableRowProps?: TableRowProps;
 }
 
 const DataTable: React.FC<Props> = ({
@@ -84,6 +86,7 @@ const DataTable: React.FC<Props> = ({
   handleSelect,
   handleSelectAll,
   handleRowClick,
+  tableRowProps,
   ...rest
 }) => {
   const classes = useStyles();
@@ -173,6 +176,7 @@ const DataTable: React.FC<Props> = ({
               actions={actions}
               onRowClick={onRowClick}
               selectable={selectable}
+              tableRowProps={tableRowProps}
             />
           ))}
         </TableBody>

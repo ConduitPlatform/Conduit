@@ -1,23 +1,19 @@
 import ConduitGrpcSdk, {
   GrpcServer,
   RouterResponse,
-  RouterRequest, DatabaseProvider,
+  RouterRequest,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { ChatRoom, ChatMessage, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import {populateArray} from '../utils';
+import { populateArray } from '../utils';
 
 let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers{
-  private database: DatabaseProvider;
 
   constructor(server: GrpcServer, private readonly  grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database =  self.grpcSdk.databaseProvider!;
-    });
     this.grpcSdk.admin
       .registerAdmin(server, paths, {
         createRoom: this.createRoom.bind(this),
@@ -35,8 +31,8 @@ export class AdminHandlers{
   private async validateUsersInput(users: any[]) {
     const uniqueUsers = Array.from(new Set(users));
     let errorMessage: string | null = null;
-    const usersToBeAdded:any = await this.database
-      .findMany('User', { _id: { $in: uniqueUsers } })
+    const usersToBeAdded:any = await User.getInstance()
+      .findMany({ _id: { $in: uniqueUsers } })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -76,16 +72,16 @@ export class AdminHandlers{
       query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
 
-    const chatRoomDocumentsPromise = this.database.findMany(
-      'ChatRoom',
-      query,
-      undefined,
-      skipNumber,
-      limitNumber,
-      undefined,
-      populates,
-    );
-    const totalCountPromise = this.database.countDocuments('ChatRoom', {});
+    const chatRoomDocumentsPromise = ChatRoom.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skipNumber,
+        limitNumber,
+        undefined,
+        populates,
+      );
+    const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
     let errorMessage: string | null = null;
     const [chatRoomDocuments, totalCount] = await Promise.all([
@@ -110,10 +106,10 @@ export class AdminHandlers{
         message: 'name/participants are required to create a chat room'
       })
     }
-    if(participants.length === 0 ){
+    if(participants.length === 0 ){  // if participants array is empty throw error
       return callback({
         code: status.INTERNAL,
-        message: 'cant create chat room with zero participants'
+        message: 'can not create chat room with no participants'
       })
     }
     try {
@@ -123,8 +119,8 @@ export class AdminHandlers{
     }
 
     let errorMessage = null;
-    const room = await this.database
-      .create('ChatRoom', {
+    const room = await ChatRoom.getInstance()
+      .create({
         name: name,
         participants: Array.from(new Set([...participants])),
       })
@@ -142,7 +138,7 @@ export class AdminHandlers{
   }
 
   async getMessages(call: RouterRequest, callback: RouterResponse) {
-    const { skip,limit,senderId, roomId } = JSON.parse(call.request.params);
+    const { skip,limit,senderUser,roomId,populate } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -153,10 +149,14 @@ export class AdminHandlers{
       limitNumber = Number.parseInt(limit as string);
     }
     let errorMessage,query:any = {};
-    if(!isNil(senderId) ) {
-      query['senderUser'] = senderId;
-      const user = await this.database
-        .findOne('User', { _id: senderId })
+    let populates;
+    if(!isNil(populate)){
+      populates = populateArray(populate);
+    }
+    if(!isNil(senderUser) ) {
+      query['senderUser'] = senderUser;
+      const user = await User.getInstance()
+        .findOne({ _id: senderUser })
         .catch((err: any) => errorMessage = err);
       if (!isNil(errorMessage)) {
         return callback({
@@ -167,14 +167,14 @@ export class AdminHandlers{
       if(isNil(user)){
         return callback({
           code: status.INTERNAL,
-          message: 'User ' + senderId + ' does not exists'
+          message: 'User ' + senderUser + ' does not exists'
         });
       }
     }
     if(!isNil(roomId)){
       query['room'] =  roomId;
-      const room = await this.database
-        .findOne('ChatRoom', { _id: roomId })
+      const room = await ChatRoom.getInstance()
+        .findOne({ _id: roomId })
         .catch((err: any) => errorMessage = err);
       if (!isNil(errorMessage)) {
         return callback({
@@ -189,14 +189,16 @@ export class AdminHandlers{
         });
       }
     }
-    const messagesPromise = this.database.findMany(
-      'ChatMessage',
+    const messagesPromise = ChatMessage.getInstance()
+    .findMany(
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
+      undefined,
+      populates,
     );
-    const countPromise = this.database.countDocuments('ChatMessage', query);
+    const countPromise = ChatMessage.getInstance().countDocuments(query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
       (e: any) => (errorMessage = e.message)
     );
@@ -218,8 +220,8 @@ export class AdminHandlers{
       })
     }
     let errorMessage;
-    const deletedRooms:any = await this.database
-      .deleteMany('ChatRoom', { _id: { $in: ids } })
+    await ChatRoom.getInstance()
+      .deleteMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
 
     if(!isNil(errorMessage)){
@@ -229,8 +231,8 @@ export class AdminHandlers{
       });
     }
 
-    await this.database
-      .deleteMany('ChatMessage',{ room: { $in: ids } })
+    await ChatMessage.getInstance()
+      .deleteMany({ room: { $in: ids } })
       .catch((err:any) => errorMessage = err);
     if(!isNil(errorMessage)){
       return callback({
@@ -238,8 +240,7 @@ export class AdminHandlers{
         message: errorMessage
       })
     }
-    const totalCount = deletedRooms.deletedCount;
-    return callback(null, { result: JSON.stringify({ deletedRooms,totalCount }) });
+    return callback(null, { result: 'Done'});
   }
 
   async deleteMessages(call: RouterRequest, callback: RouterResponse){
@@ -251,8 +252,8 @@ export class AdminHandlers{
       })
     }
     let errorMessage;
-    const deletedMessages:any = await this.database
-      .deleteMany('ChatMessage', { _id: { $in: ids } })
+    await ChatMessage.getInstance()
+      .deleteMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if(!isNil(errorMessage)){
       return callback({
@@ -260,7 +261,6 @@ export class AdminHandlers{
         message: errorMessage,
       });
     }
-    const totalCount = deletedMessages.deletedCount;
-    return callback(null, { result: JSON.stringify({ deletedMessages,totalCount }) });
+    return callback(null, { result: 'Done'});
   }
 }

@@ -4,12 +4,6 @@ import { Box, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    cursor: 'pointer',
-    borderWidth: 1,
-    borderStyle: 'dotted',
-    borderColor: '#fff',
-  },
   dropContainer: {
     height: 240,
     padding: theme.spacing(0, 4),
@@ -19,6 +13,11 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: 'grey',
     textAlign: 'center',
     position: 'relative',
+
+    cursor: 'pointer',
+    borderWidth: 1,
+    borderStyle: 'dotted',
+    borderColor: '#fff',
   },
   fileName: {
     height: 'fit-content',
@@ -93,7 +92,7 @@ const Dropzone: FC<Props> = ({
   };
 
   return (
-    <Box className={classes.root} {...rootProps}>
+    <Box {...rootProps}>
       <input {...inputProps} />
       <Box className={classes.dropContainer}>
         {file ? (

@@ -1,11 +1,10 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { CustomEndpoints } from '../models';
 import { isNil } from 'lodash';
 
 
-export async function migrateCustomEndpoints(grpcSdk: ConduitGrpcSdk) {
-  await grpcSdk.waitForExistence('database-provider');
+export async function migrateCustomEndpoints() {
   let errorMessage: string | null = null;
-  const documents: any = await grpcSdk.databaseProvider!.findMany('CustomEndpoints', {})
+  const documents: any = await CustomEndpoints.getInstance().findMany({})
     .catch((e: Error) => (errorMessage = e.message));
   if (!isNil(errorMessage)) {
     return Promise.reject(errorMessage);
@@ -15,7 +14,7 @@ export async function migrateCustomEndpoints(grpcSdk: ConduitGrpcSdk) {
     if (!isNil(document.queries) && isNil(document.query)) {
       document.query = { AND: document.queries };
 
-      await grpcSdk.databaseProvider!.findByIdAndUpdate('CustomEndpoints', document._id, document)
+      await CustomEndpoints.getInstance().findByIdAndUpdate(document._id, document)
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return Promise.reject(errorMessage);

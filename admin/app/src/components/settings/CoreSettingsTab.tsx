@@ -1,8 +1,11 @@
 import { makeStyles } from '@material-ui/core/styles';
-import React, { ChangeEvent, useState } from 'react';
-import { Grid, Container, Select, Input, Switch, Button } from '@material-ui/core';
+import React from 'react';
+import { Grid, Container, Button } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
-import ConfirmationDialog from '../common/ConfirmationDialog';
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 
 const useStyles = makeStyles(() => ({
   textSpacing: {
@@ -11,11 +14,13 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const selectOptions = [
-  { value: 'development', title: 'development' },
-  { value: 'production', title: 'production' },
-  { value: 'test', title: 'test' },
-];
+interface CoreSettings {
+  selectedEnum: string;
+  url: string;
+  port: number;
+  toggleRest: boolean;
+  toggleGraphQL: boolean;
+}
 
 const initialStates = {
   selectedEnum: 'development',
@@ -28,26 +33,11 @@ const initialStates = {
 const CoreSettingsTab: React.FC = () => {
   const classes = useStyles();
   // const dispatch = useDispatch();
-  const [selectedEnum, setSelectedEnum] = useState<string>(initialStates.selectedEnum);
-  const [url, setUrl] = useState<string>(initialStates.url);
-  const [port, setPort] = useState<number>(initialStates.port);
-  const [toggleRest, setToggleRest] = useState<boolean>(initialStates.toggleRest);
-  const [toggleGraphQL, setToggleGraphQL] = useState<boolean>(initialStates.toggleGraphQL);
-  const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
+  const methods = useForm<CoreSettings>({ defaultValues: initialStates });
 
-  const onSelectChange = (event: ChangeEvent<any>) => {
-    setSelectedEnum(event.target.value);
-  };
+  const { reset } = methods;
 
-  const resetFields = () => {
-    setSelectedEnum(initialStates.selectedEnum);
-    setUrl(initialStates.url);
-    setPort(initialStates.port);
-    setToggleRest(initialStates.toggleRest);
-    setToggleGraphQL(initialStates.toggleGraphQL);
-  };
-
-  const onSaveClick = () => {
+  const onSaveClick = (data: CoreSettings) => {
     // const data = {
     //   port: port,
     //   hostUrl: url,
@@ -56,112 +46,85 @@ const CoreSettingsTab: React.FC = () => {
     //   env: selectedEnum,
     // };
     //dispatch(putCoreSettings(data));
-    //console.log(data);
+    console.log(data);
   };
+
+  const selectOptions = [
+    { value: 'development', label: 'development' },
+    { value: 'production', label: 'production' },
+    { value: 'test', label: 'test' },
+  ];
 
   return (
     <Container>
       <Grid container justify={'center'}>
-        <Grid item xs={12}>
-          <Typography variant={'h6'}>Core settings</Typography>
-          <Typography variant={'subtitle1'}>
-            Below you can see information about the Conduit location
-          </Typography>
-        </Grid>
-        <Grid item xs={12} container alignItems={'center'}>
-          <Typography variant={'subtitle2'} className={classes.textSpacing}>
-            Environment:
-          </Typography>
-          <Select value={selectedEnum} onChange={onSelectChange} native>
-            {selectOptions.map((option, i) => (
-              <option key={i} value={option.value}>
-                {option.title}
-              </option>
-            ))}
-          </Select>
-        </Grid>
-        <Grid item xs={12} style={{ marginTop: 16 }} container wrap={'nowrap'}>
-          <Grid
-            item
-            xs={8}
-            sm={4}
-            container
-            alignItems={'center'}
-            wrap={'nowrap'}
-            style={{ marginRight: 32 }}>
-            <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
-              Url:
-            </Typography>
-            <Input
-              fullWidth
-              value={url}
-              placeholder={'URL'}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-          </Grid>
-          <Grid item container alignItems={'center'} wrap={'nowrap'}>
-            <Typography component={'span'} variant={'subtitle2'} className={classes.textSpacing}>
-              Port:
-            </Typography>
-
-            <Input
-              value={port}
-              placeholder={'PORT'}
-              type={'number'}
-              onChange={(e) => {
-                const integer = parseInt(e.target.value, 10);
-                setPort(integer);
-              }}
-            />
-          </Grid>
-        </Grid>
-        <Grid item xs={12} style={{ marginTop: 32 }}>
-          <Typography variant={'h6'}>Transport section</Typography>
-        </Grid>
-        <Grid item xs={12} container alignItems={'center'}>
-          <Typography variant={'subtitle1'}>Toggle Rest:</Typography>
-          <Switch
-            checked={toggleRest}
-            onChange={() => setToggleRest(!toggleRest)}
-            color="primary"
-            name="checkedRest"
-          />
-        </Grid>
-        <Grid item xs={12} container alignItems={'center'}>
-          <Typography variant={'subtitle1'}>Toggle GraphQL:</Typography>
-          <Switch
-            checked={toggleGraphQL}
-            onChange={() => setToggleGraphQL(!toggleGraphQL)}
-            color="primary"
-            name="checkedGraphQL"
-          />
-        </Grid>
-        <Grid item xs={12} style={{ marginTop: 32 }}>
-          <Button
-            style={{ marginRight: 32 }}
-            placeholder={'Cancel'}
-            onClick={resetFields}
-            variant={'contained'}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!url || !port || !selectedEnum}
-            placeholder={'Save'}
-            variant={'contained'}
-            color={'primary'}
-            onClick={() => setOpenSaveDialog(true)}>
-            Save
-          </Button>
-        </Grid>
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSaveClick)}>
+            <Grid item xs={12}>
+              <Typography variant={'h6'}>Core settings</Typography>
+              <Typography variant={'subtitle1'}>
+                Below you can see information about the Conduit location
+              </Typography>
+            </Grid>
+            <Grid item xs={12} container alignItems={'center'}>
+              <Typography variant={'subtitle2'} className={classes.textSpacing}>
+                Environment:
+              </Typography>
+              <FormInputSelect name="selectedEnum" label="Environment" options={selectOptions} />
+            </Grid>
+            <Grid item xs={12} style={{ marginTop: 16 }} container wrap={'nowrap'}>
+              <Grid
+                item
+                xs={8}
+                sm={4}
+                container
+                alignItems={'center'}
+                wrap={'nowrap'}
+                style={{ marginRight: 32 }}>
+                <Typography
+                  component={'span'}
+                  variant={'subtitle2'}
+                  className={classes.textSpacing}>
+                  Url:
+                </Typography>
+                <FormInputText name="url" label="URL" />
+              </Grid>
+              <Grid item container alignItems={'center'} wrap={'nowrap'}>
+                <Typography
+                  component={'span'}
+                  variant={'subtitle2'}
+                  className={classes.textSpacing}>
+                  Port:
+                </Typography>
+                <FormInputText name="port" label="Port" />
+              </Grid>
+            </Grid>
+            <Grid item xs={12} style={{ marginTop: 32 }}>
+              <Typography variant={'h6'}>Transport section</Typography>
+            </Grid>
+            <Grid item xs={12} container alignItems={'center'}>
+              <Typography variant={'subtitle1'}>Toggle Rest:</Typography>
+              <FormInputSwitch name="toggleRest" />
+            </Grid>
+            <Grid item xs={12} container alignItems={'center'}>
+              <Typography variant={'subtitle1'}>Toggle GraphQL:</Typography>
+              <FormInputSwitch name="toggleGraphQL" />
+            </Grid>
+            <Grid item xs={12} style={{ marginTop: 32 }}>
+              <Button
+                style={{ marginRight: 32 }}
+                placeholder={'Cancel'}
+                onClick={() => reset()}
+                variant={'contained'}>
+                Cancel
+              </Button>
+              <Button placeholder={'Save'} variant={'contained'} color={'primary'} type="submit">
+                Save
+              </Button>
+            </Grid>
+          </form>
+        </FormProvider>
       </Grid>
-      <ConfirmationDialog
-        open={openSaveDialog}
-        handleClose={() => setOpenSaveDialog(false)}
-        title={'Are you sure you want to proceed?'}
-        description={'Core settings changed'}
-        buttonAction={onSaveClick}
-        buttonText={'Proceed'}
-      />
     </Container>
   );
 };

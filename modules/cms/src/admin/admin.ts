@@ -8,7 +8,6 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
-  private database: any;
 
   constructor(
     server: GrpcServer,
@@ -16,15 +15,13 @@ export class AdminHandlers {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    this.database = this.grpcSdk.databaseProvider;
-
     // @ts-ignore
     let schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
       this.schemaController,
       this.customEndpointController
     );
-    let documentsAdmin = new DocumentsAdmin(this.grpcSdk, this.schemaController);
+    let documentsAdmin = new DocumentsAdmin(this.grpcSdk);
     let customEndpointsAdmin = new CustomEndpointsAdmin(
       this.grpcSdk,
       this.customEndpointController
@@ -36,6 +33,7 @@ export class AdminHandlers {
         getById: schemaAdmin.getById.bind(schemaAdmin),
         createSchema: schemaAdmin.createSchema.bind(schemaAdmin),
         toggle: schemaAdmin.toggle.bind(schemaAdmin),
+        toggleMany: schemaAdmin.toggleMany.bind(schemaAdmin),
         editSchema: schemaAdmin.editSchema.bind(schemaAdmin),
         deleteSchema: schemaAdmin.deleteSchema.bind(schemaAdmin),
         getDocuments: documentsAdmin.getDocuments.bind(documentsAdmin),
@@ -45,6 +43,7 @@ export class AdminHandlers {
         editDocument: documentsAdmin.editDocument.bind(documentsAdmin),
         editManyDocuments: documentsAdmin.editManyDocuments.bind(documentsAdmin),
         deleteDocument: documentsAdmin.deleteDocument.bind(documentsAdmin),
+        deleteManySchemas: schemaAdmin.deleteManySchemas.bind(schemaAdmin),
         getCustomEndpoints: customEndpointsAdmin.getCustomEndpoints.bind(
           customEndpointsAdmin
         ),

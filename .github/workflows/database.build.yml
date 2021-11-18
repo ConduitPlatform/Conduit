@@ -1,0 +1,35 @@
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "modules/database/**"
+      - "libraries/grpc-sdk/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-18.04
+    name: Build database
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Docker Login
+        uses: docker/login-action@v1.6.0
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build conduit database
+        run: |
+          DEV=TRUE make modules/database
+
+  rollout-proxy:
+    runs-on: ubuntu-latest
+    name: Redeploy database
+    needs: [deploy]
+    steps:
+      - uses: fjogeleit/http-request-action@master
+        with:
+          url: "http://20.101.9.248/database-provider/conduit-grp/"
+          method: "POST"
+          username: admin
+          password: ${{ secrets.KUBECTLPROXY_PASSWORD }}

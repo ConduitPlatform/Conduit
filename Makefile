@@ -24,8 +24,13 @@ else
 endif
 
 conduit-builder:
+ifeq ($(MAKECMDGOALS), all)
 	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
+else
+	docker build --no-cache -t conduit-base:latest --build-arg BUILDING_SERVICE=$(MAKECMDGOALS) -f ./Dockerfile ./
+	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
+endif
 
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
@@ -47,5 +52,6 @@ modules/forms: conduit-builder
 modules/payments: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
+modules/push-notifications: conduit-builder
 conduit: conduit-builder
 admin: conduit-builder

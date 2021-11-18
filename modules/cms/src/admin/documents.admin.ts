@@ -1,27 +1,30 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  DatabaseProvider,
   RouterRequest,
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { SchemaController } from '../controllers/cms/schema.controller';
+import { SchemaDefinitions } from '../models';
 
 export class DocumentsAdmin {
-  private database: any;
+  private database!: DatabaseProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly schemaController: SchemaController
   ) {
-    this.database = this.grpcSdk.databaseProvider;
+    const self = this;
+    grpcSdk.waitForExistence('database-provider').then(() => {
+      self.database = self.grpcSdk.databaseProvider!;
+    });
   }
 
   async getDocuments(call: RouterRequest, callback: RouterResponse) {
     let { skip, limit, schemaName, query } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -50,7 +53,7 @@ export class DocumentsAdmin {
     const documentsPromise = this.database.findMany(
       schemaName,
       query,
-      null,
+      undefined,
       skipNumber,
       limitNumber
     );
@@ -74,8 +77,8 @@ export class DocumentsAdmin {
     const { schemaName, id } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -106,8 +109,8 @@ export class DocumentsAdmin {
     const { schemaName, inputDocument } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -132,8 +135,8 @@ export class DocumentsAdmin {
     const { schemaName, inputDocuments } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -158,8 +161,8 @@ export class DocumentsAdmin {
     const { schemaName, id, changedDocument } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -192,8 +195,8 @@ export class DocumentsAdmin {
     const { schemaName, changedDocuments } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -230,8 +233,8 @@ export class DocumentsAdmin {
     const { schemaName, id } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
-    const schema = await this.database
-      .findOne('SchemaDefinitions', { name: schemaName })
+    const schema = await SchemaDefinitions.getInstance()
+      .findOne({ name: schemaName })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
