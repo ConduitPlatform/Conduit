@@ -20,12 +20,10 @@ import {
   getStorageFolders,
   getStorageSettings,
   putStorageSettings,
-  updateStorageFile,
 } from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
-import { base64example } from '../../assets/svgs/ExampleBase64';
 import { concat } from 'lodash';
 import {
   ICreateStorageContainer,
@@ -243,13 +241,14 @@ export const asyncAddStorageContainer = createAsyncThunk(
 
 export const asyncDeleteStorageFile = createAsyncThunk(
   'storage/deleteStorageFile',
-  async (fileId: string, thunkAPI) => {
+  async (params: { id: string; getContainerData: () => void }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await deleteStorageFile(fileId);
+      await deleteStorageFile(params.id);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted file!'));
-      return fileId;
+      return params.id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -260,10 +259,14 @@ export const asyncDeleteStorageFile = createAsyncThunk(
 
 export const asyncDeleteStorageFolder = createAsyncThunk(
   'storage/deleteStorageFolder',
-  async (params: { id: string; name: string; container: string }, thunkAPI) => {
+  async (
+    params: { id: string; name: string; container: string; getContainerData: () => void },
+    thunkAPI
+  ) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteStorageFolder(params);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted folder!'));
       return params.id;
@@ -277,10 +280,11 @@ export const asyncDeleteStorageFolder = createAsyncThunk(
 
 export const asyncDeleteStorageContainer = createAsyncThunk(
   'storage/deleteStorageContainer',
-  async (params: { id: string; name: string }, thunkAPI) => {
+  async (params: { id: string; name: string; getContainers: () => void }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteStorageContainer(params);
+      params.getContainers();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted container!'));
       return params.id;

@@ -170,10 +170,16 @@ const StorageFiles = () => {
     setDialog(dialogInitialState);
     switch (dialog.type) {
       case 'container':
-        dispatch(asyncDeleteStorageContainer({ id: dialog.id, name: dialog.title }));
+        dispatch(
+          asyncDeleteStorageContainer({
+            id: dialog.id,
+            name: dialog.title,
+            getContainers: getContainers,
+          })
+        );
         break;
       case 'file':
-        dispatch(asyncDeleteStorageFile(dialog.id));
+        dispatch(asyncDeleteStorageFile({ id: dialog.id, getContainerData: getContainerData }));
         break;
       case 'folder':
         dispatch(
@@ -181,6 +187,7 @@ const StorageFiles = () => {
             id: dialog.id,
             name: `${dialog.title}`,
             container: dialog.container ? dialog.container : '',
+            getContainerData: getContainerData,
           })
         );
         break;
