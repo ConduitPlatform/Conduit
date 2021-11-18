@@ -108,8 +108,6 @@ const DataTable: React.FC<Props> = ({
     return value;
   };
 
-  console.log(sort);
-
   const onMenuItemSelectAll = () => {
     if (handleSelectAll) {
       handleSelectAll(dsData);
@@ -120,6 +118,13 @@ const DataTable: React.FC<Props> = ({
     if (handleRowClick) {
       handleRowClick(item);
     }
+  };
+
+  const handleDirection = (dir: boolean) => {
+    if (dir) {
+      return 'asc';
+    }
+    return 'desc';
   };
 
   return (
@@ -146,7 +151,7 @@ const DataTable: React.FC<Props> = ({
                 {header.sort && sort ? (
                   <TableSortLabel
                     active={sort?.index === header.sort}
-                    direction={sort?.asc ? 'asc' : 'desc'}
+                    direction={handleDirection(sort?.asc)}
                     onClick={() => onSelectedField(header.sort)}>
                     {getHeaderValues(header.title)}
                   </TableSortLabel>
