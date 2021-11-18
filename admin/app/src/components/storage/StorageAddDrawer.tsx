@@ -47,7 +47,7 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
     }
     setValue('folder', '');
     setValue('container', path[0]);
-  }, [path, setValue]);
+  }, [path, setValue, open]);
 
   const setInitialFileData = () => {
     reset();

@@ -30,11 +30,11 @@ const StorageFiles = () => {
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
-  const [drawerCreateOpen, setDrawerCreateOpen] = useState({
+  const [drawerCreate, setDrawerCreate] = useState({
     open: false,
     type: CreateFormSelected.container,
   });
-  const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
+  const [drawerAdd, setDrawerAdd] = useState<boolean>(false);
   const dialogInitialState = {
     open: false,
     title: '',
@@ -106,21 +106,21 @@ const StorageFiles = () => {
   };
 
   const onCreateContainer = () => {
-    setDrawerCreateOpen({
+    setDrawerCreate({
       open: true,
       type: CreateFormSelected.container,
     });
   };
 
   const onCreateFolder = () => {
-    setDrawerCreateOpen({
+    setDrawerCreate({
       open: true,
       type: CreateFormSelected.folder,
     });
   };
 
   const handleAddFile = () => {
-    setDrawerAddOpen(true);
+    setDrawerAdd(true);
   };
 
   const handleAddFileAction = (fileData: IStorageFile) => {
@@ -188,8 +188,8 @@ const StorageFiles = () => {
   };
 
   const handleCloseDrawer = () => {
-    setDrawerAddOpen(false);
-    setDrawerCreateOpen({
+    setDrawerAdd(false);
+    setDrawerCreate({
       open: false,
       type: CreateFormSelected.container,
     });
@@ -229,7 +229,7 @@ const StorageFiles = () => {
         count={path === '/' ? containersCount : totalCount}
       />
       <StorageCreateDrawer
-        data={drawerCreateOpen}
+        data={drawerCreate}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleCreateFolder={handleCreateFolder}
@@ -237,7 +237,7 @@ const StorageFiles = () => {
         path={filteredPath}
       />
       <StorageAddDrawer
-        open={drawerAddOpen}
+        open={drawerAdd}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleAddFile={handleAddFileAction}
