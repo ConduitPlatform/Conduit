@@ -1,35 +1,14 @@
-import React, { FC, useEffect, useState } from 'react';
-import { Box, Button, MenuItem, Switch, TextField } from '@material-ui/core';
+import React, { FC, useEffect, useMemo, useState } from 'react';
+import { Button, Container, Grid } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
-import { makeStyles } from '@material-ui/core/styles';
 import Dropzone from '../common/Dropzone';
 import { IContainer, IStorageFile } from '../../models/storage/StorageModels';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: theme.spacing(6),
-  },
-  title: {
-    marginBottom: theme.spacing(1),
-  },
-  input: {
-    marginTop: theme.spacing(2),
-  },
-  switch: {
-    display: 'flex',
-    alignItems: 'center',
-    marginTop: theme.spacing(2),
-  },
-  buttonContainer: {
-    marginTop: theme.spacing(2),
-  },
-  saveButton: {
-    marginRight: theme.spacing(1),
-  },
-}));
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormInputText } from '../common/FormComponents/FormInputText';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
+import sharedClasses from '../common/sharedClasses';
 
 interface Props {
   open: boolean;
@@ -39,53 +18,39 @@ interface Props {
   path: string[];
 }
 
-const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile, path }) => {
-  const classes = useStyles();
-  // const dispatch = useAppDispatch();
-  // const { selectedFile } = useAppSelector((state) => state.storageSlice.data);
-  // console.log('selectedFile', selectedFile);
+interface FormData {
+  name: string;
+  folder: string;
+  container: string;
+  isPublic: boolean;
+}
 
-  const initialFileData = {
-    name: '',
+const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddFile, path }) => {
+  const classes = sharedClasses();
+
+  const [fileData, setFileData] = useState<{ data: string; mimeType: string }>({
     data: '',
-    folder: '',
-    container: '',
-    isPublic: false,
     mimeType: '',
-  };
-  const [fileData, setFileData] = useState<IStorageFile>(initialFileData);
+  });
+  const methods = useForm<FormData>({
+    defaultValues: useMemo(() => {
+      return { name: '', folder: '', container: '', isPublic: false };
+    }, []),
+  });
+  const { reset, setValue } = methods;
 
   useEffect(() => {
     if (path.length < 1) return;
     if (path.length > 1) {
-      setFileData((prevState) => {
-        return {
-          ...prevState,
-          folder: path[path.length - 1],
-          container: path[0],
-        };
-      });
-      return;
+      setValue('folder', path[path.length - 1]);
+      setValue('container', path[0]);
     }
-    setFileData((prevState) => {
-      return {
-        ...prevState,
-        folder: '',
-        container: path[0],
-      };
-    });
-  }, [path]);
+    setValue('folder', '');
+    setValue('container', path[0]);
+  }, [path, setValue]);
 
   const setInitialFileData = () => {
-    setFileData((prevState) => {
-      return {
-        ...prevState,
-        name: '',
-        data: '',
-        isPublic: false,
-        mimeType: '',
-      };
-    });
+    reset();
   };
 
   const handleCancel = () => {
@@ -93,104 +58,74 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
     setInitialFileData();
   };
 
-  const handleAdd = () => {
+  const handleAdd = (data: FormData) => {
     closeDrawer();
     const sendFileData = {
-      name: fileData.name,
+      ...data,
+      folder: data.folder ? `${data.folder}/` : undefined,
       data: fileData.data,
-      folder: fileData.folder ? `${fileData.folder}/` : undefined,
-      container: fileData.container,
-      isPublic: fileData.isPublic,
       mimeType: fileData.mimeType,
     };
+
     setInitialFileData();
     handleAddFile(sendFileData);
   };
 
   const handleSetFile = (data: string, mimeType: string, name: string) => {
     setFileData({
-      ...fileData,
       data: data,
       mimeType: mimeType,
-      name: fileData.name ? fileData.name : name,
+    });
+    setValue('name', name);
+  };
+
+  const extractContainers = () => {
+    return containers.map((container) => {
+      return { label: container.name, value: container.name };
     });
   };
 
   return (
     <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={512}>
-      <Box className={classes.root}>
-        <Typography variant="h6" className={classes.title}>
-          Add File
-        </Typography>
-        <Dropzone file={fileData.data} setFile={handleSetFile} />
-        <TextField
-          variant="outlined"
-          label="File Name"
-          className={classes.input}
-          value={fileData.name}
-          onChange={(event) => {
-            setFileData({
-              ...fileData,
-              name: event.target.value,
-            });
-          }}
-        />
-        <TextField
-          select
-          label="Container"
-          className={classes.input}
-          value={fileData.container}
-          onChange={(event) => {
-            setFileData({
-              ...fileData,
-              container: event.target.value,
-            });
-          }}
-          variant="outlined">
-          {containers.map((container, index) => (
-            <MenuItem value={container.name} key={index}>
-              {container.name}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          variant="outlined"
-          label="Folder Name"
-          className={classes.input}
-          value={fileData.folder}
-          onChange={(event) => {
-            setFileData({
-              ...fileData,
-              folder: event.target.value,
-            });
-          }}
-        />
-        <Box className={classes.switch}>
-          <Typography variant="subtitle1">Public</Typography>
-          <Switch
-            color="primary"
-            value={fileData.isPublic}
-            onChange={(event) => {
-              setFileData({
-                ...fileData,
-                isPublic: event.target.checked,
-              });
-            }}
-          />
-        </Box>
-        <Box className={classes.buttonContainer}>
-          <Button
-            variant="contained"
-            color="primary"
-            className={classes.saveButton}
-            onClick={() => handleAdd()}>
-            Add
-          </Button>
-          <Button variant="outlined" onClick={() => handleCancel()}>
-            Cancel
-          </Button>
-        </Box>
-      </Box>
+      <Container maxWidth="lg">
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(handleAdd)}>
+            <Grid container alignItems="center" className={classes.root} spacing={2}>
+              <Grid item sm={12}>
+                <Typography variant="h6">Add File</Typography>
+              </Grid>
+              <Grid item sm={12}>
+                <Dropzone file={fileData.data} setFile={handleSetFile} />
+              </Grid>
+              <Grid item sm={12}>
+                <FormInputText name="name" label="File name" />
+              </Grid>
+              <Grid item sm={12}>
+                <FormInputSelect options={extractContainers()} label="Container" name="container" />
+              </Grid>
+              <Grid item sm={12}>
+                <FormInputText name="folder" label="Folder name" />
+              </Grid>
+              <Grid item sm={12}>
+                <Typography variant="subtitle1">Public</Typography>
+                <FormInputSwitch name="isPublic" />
+              </Grid>
+              <Grid container item>
+                <Grid item className={classes.marginRight}>
+                  <Button variant="outlined" onClick={() => handleCancel()}>
+                    Cancel
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button variant="contained" color="primary" type="submit">
+                    Add
+                  </Button>
+                </Grid>
+              </Grid>
+            </Grid>
+          </form>
+        </FormProvider>
+      </Container>
     </DrawerWrapper>
   );
 };

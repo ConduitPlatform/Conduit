@@ -60,6 +60,9 @@ export default makeStyles((theme) =>
       width: '80%',
       justifyContent: 'center',
     },
+    marginRight: {
+      marginRight: theme.spacing(2),
+    },
     formFields: {
       minWidth: 200,
     },

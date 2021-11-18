@@ -321,7 +321,7 @@ export const asyncDeleteStorageContainer = createAsyncThunk(
 export const asyncSetSelectedStorageFile = createAsyncThunk(
   'storage/setSelectedStorageFile',
   async (file: any, thunkAPI) => {
-    thunkAPI.dispatch(setAppLoading(true));
+    // thunkAPI.dispatch(setAppLoading(true));
     try {
       let url;
       if (!file.url) {
