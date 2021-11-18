@@ -70,8 +70,13 @@ export class AdminHandlers {
     }
     let identifier;
     if (!isNil(search)) {
-      identifier = escapeStringRegexp(search);
-      query['email'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      if (search.match(/^[a-fA-F0-9]{24}$/)) {
+        query = { _id : search }
+      }
+      else {
+        identifier = escapeStringRegexp(search);
+        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      }
     }
 
     const users: User[] = await User.getInstance().findMany(
