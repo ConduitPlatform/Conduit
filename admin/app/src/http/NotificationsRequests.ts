@@ -3,7 +3,7 @@ import { CONDUIT_API } from './requestsConfig';
 import { NotificationData } from '../models/notifications/NotificationModels';
 
 export const sendNotification = (data: NotificationData) =>
-  axios.post(`${CONDUIT_API}/admin/pushnotifications/sendToManyDevices`, {
+  axios.post(`${CONDUIT_API}/admin/pushNotifications/sendToManyDevices`, {
     ...data,
   });
 

@@ -93,7 +93,6 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
       privateKey: data.privateKey,
       clientEmail: data.clientEmail,
     };
-
     handleSave(dataToSave);
   };
 
@@ -149,6 +148,7 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                       <FormInputSelect
                         label={'Provider name'}
                         name="providerName"
+                        disabled={!edit}
                         options={providers?.map((provider) => ({
                           label: provider.name,
                           value: provider.name,
