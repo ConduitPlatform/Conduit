@@ -24,10 +24,11 @@ const initialState: INotificationSlice = {
     config: {
       active: false,
       providerName: '',
-      projectId: '',
-      privateKey: '',
-      clientEmail: '',
-      message: '',
+      firebase: {
+        projectId: '',
+        privateKey: '',
+        clientEmail: '',
+      },
     },
     notifications: [],
   },
@@ -70,13 +71,7 @@ export const asyncSaveNotificationConfig = createAsyncThunk(
   async (settings: INotificationSettings, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      const { data } = await putNotificationConfig({
-        active: settings.active,
-        providerName: settings.providerName,
-        projectId: settings.projectId,
-        privateKey: settings.privateKey,
-        clientEmail: settings.clientEmail,
-      });
+      const { data } = await putNotificationConfig(settings);
       thunkAPI.dispatch(setAppDefaults());
       return data;
     } catch (error) {

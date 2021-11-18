@@ -56,7 +56,15 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
   const [edit, setEdit] = useState<boolean>(false);
   const methods = useForm<INotificationSettings>({
     defaultValues: useMemo(() => {
-      return config;
+      return {
+        active: config.active,
+        providerName: config.providerName,
+        firebase: {
+          projectId: config.firebase.projectId,
+          privateKey: config.firebase.privateKey,
+          clientEmail: config.firebase.clientEmail,
+        },
+      };
     }, [config]),
   });
   const { reset, control, setValue } = methods;
@@ -89,10 +97,13 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
     const dataToSave = {
       active: data.active,
       providerName: data.providerName,
-      projectId: data.projectId,
-      privateKey: data.privateKey,
-      clientEmail: data.clientEmail,
+      firebase: {
+        projectId: data.firebase.projectId,
+        privateKey: data.firebase.privateKey,
+        clientEmail: data.firebase.clientEmail,
+      },
     };
+
     handleSave(dataToSave);
   };
 
@@ -108,9 +119,9 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
           'private_key' in jsonToObject &&
           'client_email' in jsonToObject
         ) {
-          setValue('projectId', jsonToObject.project_id);
-          setValue('privateKey', jsonToObject.private_key);
-          setValue('clientEmail', jsonToObject.client_email);
+          setValue('firebase.projectId', jsonToObject.project_id);
+          setValue('firebase.privateKey', jsonToObject.private_key);
+          setValue('firebase.clientEmail', jsonToObject.client_email);
         }
       }
     };
@@ -159,18 +170,22 @@ const NotificationSettings: FC<NotificationSettingsProps> = ({ config, handleSav
                     {hasProvider && (
                       <>
                         <Grid item xs={12}>
-                          <FormInputText name={'projectId'} label={'Project Id'} disabled={!edit} />
+                          <FormInputText
+                            name={'firebase.projectId'}
+                            label={'Project Id'}
+                            disabled={!edit}
+                          />
                         </Grid>
                         <Grid item xs={12}>
                           <FormInputText
-                            name={'privateKey'}
+                            name={'firebase.privateKey'}
                             label={'Private key'}
                             disabled={!edit}
                           />
                         </Grid>
                         <Grid item xs={12}>
                           <FormInputText
-                            name={'clientEmail'}
+                            name={'firebase.clientEmail'}
                             label={'Client Email'}
                             disabled={!edit}
                           />
