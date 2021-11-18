@@ -168,7 +168,7 @@ const StorageTable: FC<Props> = ({
             return (
               <Typography
                 variant="subtitle1"
-                className={classes.pathItem}
+                className={item || index === 0 ? classes.pathItem : null}
                 onClick={() => onPathClick(item, index)}
                 key={index}>
                 {index === 0 ? '..' : `/${item}`}
