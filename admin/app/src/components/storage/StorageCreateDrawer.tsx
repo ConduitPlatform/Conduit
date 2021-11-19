@@ -57,8 +57,11 @@ const StorageCreateDrawer: FC<Props> = ({
       return;
     }
     if (formData.container !== undefined) {
+      const pathCopy = [...path];
+      pathCopy.shift();
+      const folderParentName = pathCopy.join('/');
       const folderData = {
-        name: `${formData.name}/`,
+        name: folderParentName ? `${folderParentName}/${formData.name}/` : `${formData.name}/`,
         container: formData.container,
         isPublic: formData.isPublic,
       };

@@ -15,7 +15,7 @@ const FormsLayout: React.FC = ({ children }) => {
       title={'Forms'}
       labels={labels}
       pathNames={pathNames}
-      swagger={'cms'}
+      swagger={'forms'}
       icon={<FormatAlignLeft />}>
       {children}
     </SharedLayout>

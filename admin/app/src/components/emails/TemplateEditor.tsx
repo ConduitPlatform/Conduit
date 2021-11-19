@@ -18,7 +18,7 @@ const useStyles = makeStyles(() => ({
 
 interface Props {
   value: string;
-  setValue: (value: string) => void;
+  setValue?: (value: string) => void;
   disabled?: boolean;
 }
 

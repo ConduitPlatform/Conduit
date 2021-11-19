@@ -18,6 +18,7 @@ import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { EmailTemplateType } from '../../models/emails/EmailModels';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
 import { camelCase } from 'lodash';
+import TemplateEditor from './TemplateEditor';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -167,7 +168,7 @@ const ExternalTemplates: React.FC<Props> = ({ handleSave }) => {
           </Grid>
           <Grid item xs={12}>
             <Typography variant="body1">Body:</Typography>
-            <Typography variant="h6">{selectedTemplate.body}</Typography>
+            <TemplateEditor disabled value={selectedTemplate.body} />
           </Grid>
         </Grid>
       )}

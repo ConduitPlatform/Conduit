@@ -1,22 +1,19 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
-import { NotificationData } from '../models/notifications/NotificationModels';
+import {
+  INotificationSettings,
+  NotificationData,
+} from '../models/notifications/NotificationModels';
 
 export const sendNotification = (data: NotificationData) =>
-  axios.post(`${CONDUIT_API}/admin/pushnotifications/sendToManyDevices`, {
+  axios.post(`${CONDUIT_API}/admin/pushNotifications/sendToManyDevices`, {
     ...data,
   });
 
 export const getNotificationConfig = () =>
-  axios.get(`${CONDUIT_API}/admin/config/push-notifications`);
+  axios.get(`${CONDUIT_API}/admin/config/pushNotifications`);
 
-export const putNotificationConfig = (data: {
-  projectId: string;
-  privateKey: string;
-  clientEmail: string;
-}) =>
-  axios.put(`${CONDUIT_API}/admin/config/push-notifications`, {
-    projectId: data.projectId,
-    privateKey: data.privateKey,
-    clientEmail: data.clientEmail,
+export const putNotificationConfig = (data: INotificationSettings) =>
+  axios.put(`${CONDUIT_API}/admin/config/pushNotifications`, {
+    ...data,
   });

@@ -15,7 +15,7 @@ const StorageLayout: React.FC = ({ children }) => {
       title={'Storage'}
       labels={labels}
       pathNames={pathNames}
-      swagger={'cms'}
+      swagger={'storage'}
       icon={<Cloud />}>
       {children}
     </SharedLayout>

@@ -245,6 +245,7 @@ const Users = () => {
       open: false,
       multiple: false,
     });
+    setSelectedUsers([]);
   };
 
   return (

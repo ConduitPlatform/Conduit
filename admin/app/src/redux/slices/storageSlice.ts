@@ -20,12 +20,10 @@ import {
   getStorageFolders,
   getStorageSettings,
   putStorageSettings,
-  updateStorageFile,
 } from '../../http/StorageRequests';
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
-import { base64example } from '../../assets/svgs/ExampleBase64';
 import { concat } from 'lodash';
 import {
   ICreateStorageContainer,
@@ -38,10 +36,12 @@ interface IStorageSlice {
     containers: {
       containers: IContainer[];
       containersCount: number;
+      areContainersEmpty: boolean;
     };
     containerData: {
       data: ContainerDataProps[];
       totalCount: number;
+      areContainerDataEmpty: boolean;
     };
     selectedFileUrl: string;
   };
@@ -66,10 +66,12 @@ const initialState: IStorageSlice = {
     containers: {
       containers: [],
       containersCount: 0,
+      areContainersEmpty: false,
     },
     containerData: {
       totalCount: 0,
       data: [],
+      areContainerDataEmpty: false,
     },
     selectedFileUrl: '',
   },
@@ -243,13 +245,14 @@ export const asyncAddStorageContainer = createAsyncThunk(
 
 export const asyncDeleteStorageFile = createAsyncThunk(
   'storage/deleteStorageFile',
-  async (fileId: string, thunkAPI) => {
+  async (params: { id: string; getContainerData: () => void }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
-      await deleteStorageFile(fileId);
+      await deleteStorageFile(params.id);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted file!'));
-      return fileId;
+      return params.id;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
       thunkAPI.dispatch(enqueueErrorNotification(`${getErrorData(error)}`));
@@ -260,10 +263,14 @@ export const asyncDeleteStorageFile = createAsyncThunk(
 
 export const asyncDeleteStorageFolder = createAsyncThunk(
   'storage/deleteStorageFolder',
-  async (params: { id: string; name: string; container: string }, thunkAPI) => {
+  async (
+    params: { id: string; name: string; container: string; getContainerData: () => void },
+    thunkAPI
+  ) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteStorageFolder(params);
+      params.getContainerData();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted folder!'));
       return params.id;
@@ -277,10 +284,11 @@ export const asyncDeleteStorageFolder = createAsyncThunk(
 
 export const asyncDeleteStorageContainer = createAsyncThunk(
   'storage/deleteStorageContainer',
-  async (params: { id: string; name: string }, thunkAPI) => {
+  async (params: { id: string; name: string; getContainers: () => void }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       await deleteStorageContainer(params);
+      params.getContainers();
       thunkAPI.dispatch(setAppDefaults());
       thunkAPI.dispatch(enqueueSuccessNotification('Successfully deleted container!'));
       return params.id;
@@ -350,6 +358,9 @@ const storageSlice = createSlice({
     clearStorageContainerData: (state) => {
       state.data.containerData.data = [];
     },
+    setContainerDataEmpty: (state, action) => {
+      state.data.containerData.areContainerDataEmpty = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(asyncGetStorageConfig.fulfilled, (state, action) => {
@@ -359,10 +370,20 @@ const storageSlice = createSlice({
       state.data.config = action.payload;
     });
     builder.addCase(asyncGetStorageContainers.fulfilled, (state, action) => {
-      state.data.containers = action.payload;
+      state.data.containers.containers = action.payload.containers;
+      state.data.containers.containersCount = action.payload.containersCount;
+      if (action.payload.containersCount < 1) {
+        state.data.containers.areContainersEmpty = true;
+        return;
+      }
+      state.data.containers.areContainersEmpty = false;
     });
     builder.addCase(asyncGetStorageContainerData.fulfilled, (state, action) => {
-      state.data.containerData = action.payload;
+      state.data.containerData.data = action.payload.data;
+      state.data.containerData.totalCount = action.payload.totalCount;
+      if (action.payload.totalCount < 1) {
+        state.data.containerData.areContainerDataEmpty = true;
+      }
     });
     builder.addCase(asyncDeleteStorageFile.fulfilled, (state, action) => {
       const foundIndex = state.data.containerData.data.findIndex(
@@ -388,6 +409,7 @@ const storageSlice = createSlice({
   },
 });
 
-export const { clearStoragePageStore, clearStorageContainerData } = storageSlice.actions;
+export const { clearStoragePageStore, clearStorageContainerData, setContainerDataEmpty } =
+  storageSlice.actions;
 
 export default storageSlice.reducer;

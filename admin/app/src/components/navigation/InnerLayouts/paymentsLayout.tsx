@@ -24,7 +24,7 @@ const PaymentsLayout: React.FC = ({ children }) => {
       title={'Payments'}
       labels={labels}
       pathNames={pathNames}
-      swagger={'cms'}
+      swagger={'payments'}
       icon={<Payment />}>
       {children}
     </SharedLayout>

@@ -40,14 +40,12 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   const { reset, setValue } = methods;
 
   useEffect(() => {
-    if (path.length < 1) return;
-    if (path.length > 1) {
-      setValue('folder', path[path.length - 1]);
-      setValue('container', path[0]);
-    }
-    setValue('folder', '');
     setValue('container', path[0]);
-  }, [path, setValue]);
+    const pathCopy = [...path];
+    pathCopy.shift();
+    const folderParentName = pathCopy.join('/');
+    setValue('folder', folderParentName);
+  }, [path, setValue, open]);
 
   const setInitialFileData = () => {
     reset();
@@ -58,11 +56,20 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
     setInitialFileData();
   };
 
+  const handleFolderName = (folder: string) => {
+    const pathCopy = [...path];
+    pathCopy.shift();
+    const folderParentName = pathCopy.join('/');
+    if (folderParentName && folder) return `${folderParentName}/${folder}/`;
+    if (folderParentName) return `${folderParentName}/`;
+    return `${folder}/`;
+  };
+
   const handleAdd = (data: FormData) => {
     closeDrawer();
     const sendFileData = {
       ...data,
-      folder: data.folder ? `${data.folder}/` : undefined,
+      folder: handleFolderName(data.folder),
       data: fileData.data,
       mimeType: fileData.mimeType,
     };

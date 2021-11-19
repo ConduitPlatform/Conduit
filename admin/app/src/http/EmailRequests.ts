@@ -24,9 +24,8 @@ export const uploadTemplateRequest = (_id: string) =>
     _id,
   });
 
-export const syncExternalTemplates = () => {
+export const syncExternalTemplates = () =>
   axios.put(`${CONDUIT_API}/admin/email/syncExternalTemplates`);
-};
 
 export const getEmailSettingsRequest = () => axios.get(`${CONDUIT_API}/admin/config/email`);
 

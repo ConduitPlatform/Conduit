@@ -11,6 +11,7 @@ import {
   asyncGetStorageContainerData,
   asyncGetStorageContainers,
   clearStorageContainerData,
+  setContainerDataEmpty,
 } from '../../redux/slices/storageSlice';
 import StorageCreateDrawer from './StorageCreateDrawer';
 import StorageAddDrawer from './StorageAddDrawer';
@@ -21,8 +22,8 @@ const StorageFiles = () => {
   const dispatch = useAppDispatch();
 
   const {
-    containers: { containers, containersCount },
-    containerData: { data, totalCount },
+    containers: { containers, containersCount, areContainersEmpty },
+    containerData: { data, totalCount, areContainerDataEmpty },
   } = useAppSelector((state) => state.storageSlice.data);
 
   const [path, setPath] = useState<string>('/');
@@ -30,11 +31,11 @@ const StorageFiles = () => {
   const [page, setPage] = useState<number>(0);
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
-  const [drawerCreateOpen, setDrawerCreateOpen] = useState({
+  const [drawerCreate, setDrawerCreate] = useState({
     open: false,
     type: CreateFormSelected.container,
   });
-  const [drawerAddOpen, setDrawerAddOpen] = useState<boolean>(false);
+  const [drawerAdd, setDrawerAdd] = useState<boolean>(false);
   const dialogInitialState = {
     open: false,
     title: '',
@@ -44,6 +45,7 @@ const StorageFiles = () => {
     type: '',
   };
   const [dialog, setDialog] = useState(dialogInitialState);
+  const [placeholder, setPlaceholder] = useState<string>('');
 
   const getContainers = useCallback(() => {
     dispatch(asyncGetStorageContainers({ skip, limit }));
@@ -52,6 +54,7 @@ const StorageFiles = () => {
   const getContainerData = useCallback(() => {
     if (filteredPath.length < 1) {
       dispatch(clearStorageContainerData());
+      dispatch(setContainerDataEmpty(false));
       return;
     }
     dispatch(
@@ -63,6 +66,22 @@ const StorageFiles = () => {
       })
     );
   }, [dispatch, filteredPath, limit, skip]);
+
+  useEffect(() => {
+    if (filteredPath.length < 1) {
+      if (areContainersEmpty) {
+        setPlaceholder('No available containers');
+        return;
+      }
+      setPlaceholder('');
+      return;
+    }
+    if (areContainerDataEmpty) {
+      setPlaceholder('No available files');
+      return;
+    }
+    setPlaceholder('');
+  }, [areContainerDataEmpty, areContainersEmpty, filteredPath.length]);
 
   useEffect(() => {
     const splitPath = path.split('/');
@@ -106,21 +125,21 @@ const StorageFiles = () => {
   };
 
   const onCreateContainer = () => {
-    setDrawerCreateOpen({
+    setDrawerCreate({
       open: true,
       type: CreateFormSelected.container,
     });
   };
 
   const onCreateFolder = () => {
-    setDrawerCreateOpen({
+    setDrawerCreate({
       open: true,
       type: CreateFormSelected.folder,
     });
   };
 
   const handleAddFile = () => {
-    setDrawerAddOpen(true);
+    setDrawerAdd(true);
   };
 
   const handleAddFileAction = (fileData: IStorageFile) => {
@@ -170,10 +189,16 @@ const StorageFiles = () => {
     setDialog(dialogInitialState);
     switch (dialog.type) {
       case 'container':
-        dispatch(asyncDeleteStorageContainer({ id: dialog.id, name: dialog.title }));
+        dispatch(
+          asyncDeleteStorageContainer({
+            id: dialog.id,
+            name: dialog.title,
+            getContainers: getContainers,
+          })
+        );
         break;
       case 'file':
-        dispatch(asyncDeleteStorageFile(dialog.id));
+        dispatch(asyncDeleteStorageFile({ id: dialog.id, getContainerData: getContainerData }));
         break;
       case 'folder':
         dispatch(
@@ -181,6 +206,7 @@ const StorageFiles = () => {
             id: dialog.id,
             name: `${dialog.title}`,
             container: dialog.container ? dialog.container : '',
+            getContainerData: getContainerData,
           })
         );
         break;
@@ -188,8 +214,8 @@ const StorageFiles = () => {
   };
 
   const handleCloseDrawer = () => {
-    setDrawerAddOpen(false);
-    setDrawerCreateOpen({
+    setDrawerAdd(false);
+    setDrawerCreate({
       open: false,
       type: CreateFormSelected.container,
     });
@@ -227,9 +253,10 @@ const StorageFiles = () => {
         limit={limit}
         page={page}
         count={path === '/' ? containersCount : totalCount}
+        placeholder={placeholder}
       />
       <StorageCreateDrawer
-        data={drawerCreateOpen}
+        data={drawerCreate}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleCreateFolder={handleCreateFolder}
@@ -237,7 +264,7 @@ const StorageFiles = () => {
         path={filteredPath}
       />
       <StorageAddDrawer
-        open={drawerAddOpen}
+        open={drawerAdd}
         closeDrawer={handleCloseDrawer}
         containers={containers}
         handleAddFile={handleAddFileAction}
