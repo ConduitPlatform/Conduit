@@ -5,7 +5,7 @@ import { asyncGetEmailSettings, asyncUpdateEmailSettings } from '../../redux/sli
 import ProviderData from '../../components/emails/ProviderData';
 import { EmailSettings } from '../../models/emails/EmailModels';
 
-const SendEmail = () => {
+const Settings = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -19,8 +19,8 @@ const SendEmail = () => {
   return <ProviderData handleSave={saveSettings} />;
 };
 
-SendEmail.getLayout = function getLayout(page: ReactElement) {
+Settings.getLayout = function getLayout(page: ReactElement) {
   return <EmailsLayout>{page}</EmailsLayout>;
 };
 
-export default SendEmail;
+export default Settings;
