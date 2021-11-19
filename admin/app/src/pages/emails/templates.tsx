@@ -12,7 +12,6 @@ import {
 import DataTable from '../../components/common/DataTable';
 import { EmailTemplateType, EmailUI } from '../../models/emails/EmailModels';
 import {
-  Box,
   Button,
   Grid,
   Typography,

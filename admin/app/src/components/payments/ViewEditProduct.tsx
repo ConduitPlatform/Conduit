@@ -1,6 +1,5 @@
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
-import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import React from 'react';
 import { Button, Paper } from '@material-ui/core';
