@@ -100,11 +100,21 @@ const StorageTable: FC<Props> = ({
         };
       });
     return containerData.map((item: ContainerDataProps) => {
+      if ('isFile' in item && item.isFile) {
+        return {
+          icon: <DescriptionIcon />,
+          Name: item.name,
+          isPublic: item.isPublic,
+          mimeType: 'mimeType' in item ? item.mimeType : undefined,
+        };
+      }
+      const folderNameSplit = item.name.split('/');
+      const folderName = folderNameSplit[folderNameSplit.length - 2];
       return {
-        icon: 'isFile' in item && item.isFile ? <DescriptionIcon /> : <FolderIcon />,
-        Name: item.name,
+        icon: <FolderIcon />,
+        Name: folderName,
         isPublic: item.isPublic,
-        mimeType: 'mimeType' in item ? item.mimeType : undefined,
+        mimeType: undefined,
       };
     });
   };

@@ -62,7 +62,7 @@ const StorageFiles = () => {
         skip: skip,
         limit: limit,
         container: filteredPath[0],
-        folder: filteredPath.length > 1 ? `${filteredPath[filteredPath.length - 1]}/` : '',
+        folder: filteredPath.length > 1 ? filteredPath.slice(1).join('/') : '',
       })
     );
   }, [dispatch, filteredPath, limit, skip]);
