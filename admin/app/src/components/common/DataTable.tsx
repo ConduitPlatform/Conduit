@@ -120,8 +120,8 @@ const DataTable: React.FC<Props> = ({
     }
   };
 
-  const handleSortDirection = (asc: boolean) => {
-    if (asc) {
+  const handleDirection = (dir: boolean) => {
+    if (dir) {
       return 'asc';
     }
     return 'desc';
@@ -148,10 +148,10 @@ const DataTable: React.FC<Props> = ({
             </TableCell>
             {headers.map((header: any, idx: number) => (
               <TableCell className={classes.header} key={idx}>
-                {header.sort ? (
+                {header.sort && sort ? (
                   <TableSortLabel
                     active={sort?.index === header.sort}
-                    direction={handleSortDirection(header.sort?.asc)}
+                    direction={handleDirection(sort?.asc)}
                     onClick={() => onSelectedField(header.sort)}>
                     {getHeaderValues(header.title)}
                   </TableSortLabel>
