@@ -64,8 +64,6 @@ const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDraw
     });
   };
 
-  console.log(inputData.participants);
-
   const headers = [
     { title: '_id', sort: '_id' },
     { title: 'Email', sort: 'email' },
