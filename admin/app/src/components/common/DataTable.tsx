@@ -38,10 +38,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: '350px',
   },
   placeholder: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing(4),
+    textAlign: 'center',
   },
 }));
 
@@ -70,6 +67,7 @@ interface Props extends PaperProps {
   handleSelectAll?: (data: any) => void;
   handleRowClick?: (data: any) => void;
   tableRowProps?: TableRowProps;
+  placeholder?: string;
 }
 
 const DataTable: React.FC<Props> = ({
@@ -87,6 +85,7 @@ const DataTable: React.FC<Props> = ({
   handleSelectAll,
   handleRowClick,
   tableRowProps,
+  placeholder,
   ...rest
 }) => {
   const classes = useStyles();
@@ -163,23 +162,33 @@ const DataTable: React.FC<Props> = ({
             {actions && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
-        <TableBody>
-          {dsData.map((row: any, i: number) => (
-            <DataTableRows
-              collapsible={collapsible !== undefined ? collapsible[i] : null}
-              row={row}
-              index={i}
-              handleAction={handleAction}
-              handleSelect={handleSelect}
-              selectedItems={selectedItems}
-              key={i}
-              actions={actions}
-              onRowClick={onRowClick}
-              selectable={selectable}
-              tableRowProps={tableRowProps}
-            />
-          ))}
-        </TableBody>
+        {dsData.length < 1 && placeholder ? (
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={headers.length + 3} className={classes.placeholder}>
+                {placeholder}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        ) : (
+          <TableBody>
+            {dsData.map((row: any, i: number) => (
+              <DataTableRows
+                collapsible={collapsible !== undefined ? collapsible[i] : null}
+                row={row}
+                index={i}
+                handleAction={handleAction}
+                handleSelect={handleSelect}
+                selectedItems={selectedItems}
+                key={i}
+                actions={actions}
+                onRowClick={onRowClick}
+                selectable={selectable}
+                tableRowProps={tableRowProps}
+              />
+            ))}
+          </TableBody>
+        )}
       </Table>
     </TableContainer>
   );
