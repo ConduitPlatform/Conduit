@@ -106,7 +106,7 @@ const FormReplies: React.FC<Props> = ({ repliesForm }) => {
   // ];
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       {replies.length ? (
         replies.map((reply, index: number) => (
           <Accordion key={reply._id}>

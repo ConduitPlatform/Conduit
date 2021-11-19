@@ -208,11 +208,12 @@ const Subscriptions = () => {
           <Typography>No available subscription data</Typography>
         </Box>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={1400}>
+      <DrawerWrapper
+        title={'Subscription overview'}
+        open={drawer}
+        closeDrawer={() => handleClose()}
+        width={1400}>
         <Box>
-          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
-            Subscription overview
-          </Typography>
           <ViewSubscription subscription={selectedSubscription} />
         </Box>
       </DrawerWrapper>

@@ -338,11 +338,12 @@ const Products = () => {
           <Typography>No available products</Typography>
         </Box>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
+      <DrawerWrapper
+        title={!create ? 'Product overview' : 'Create a new product'}
+        open={drawer}
+        closeDrawer={() => handleClose()}
+        width={750}>
         <Box>
-          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
-            {!create ? 'Product overview' : 'Create a new product'}
-          </Typography>
           <ViewEditProduct
             handleCreate={createNewProduct}
             handleSave={saveProductChanges}

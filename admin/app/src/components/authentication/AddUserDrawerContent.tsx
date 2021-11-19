@@ -56,8 +56,7 @@ const NewUserModal: React.FC<Props> = ({ handleNewUserDispatch }) => {
   };
 
   return (
-    <div className={classes.root} style={{ marginTop: '150px' }}>
-      <h3 style={{ textAlign: 'center' }}>Add a new user</h3>
+    <div>
       <Container className={classes.root} maxWidth="sm">
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(onSubmit)}>

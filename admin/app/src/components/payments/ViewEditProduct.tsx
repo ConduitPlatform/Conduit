@@ -1,6 +1,5 @@
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
-import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
 import React from 'react';
 import { Button, Paper } from '@material-ui/core';
@@ -43,7 +42,7 @@ const ViewEditProduct: React.FC<Props> = ({
   };
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Grid container spacing={2} justify="space-around">
@@ -54,7 +53,7 @@ const ViewEditProduct: React.FC<Props> = ({
             )}
           </Grid>
         </Paper>
-        <Divider className={classes.divider} />
+
         {!edit && (
           <Grid container spacing={2} justify="center">
             <Grid item>

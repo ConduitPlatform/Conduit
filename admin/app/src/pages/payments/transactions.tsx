@@ -255,11 +255,12 @@ const Transactions = () => {
           <Typography>No available transactions</Typography>
         </Box>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
+      <DrawerWrapper
+        title={'Transaction overview'}
+        open={drawer}
+        closeDrawer={() => handleClose()}
+        width={750}>
         <Box>
-          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
-            Transaction overview
-          </Typography>
           <ViewTransaction transaction={selectedTransaction} />
         </Box>
       </DrawerWrapper>

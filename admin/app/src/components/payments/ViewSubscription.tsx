@@ -82,7 +82,7 @@ const ViewSubscription: React.FC<Props> = ({ subscription }) => {
   ];
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Typography style={{ marginBottom: '25px' }}>Transactions: </Typography>

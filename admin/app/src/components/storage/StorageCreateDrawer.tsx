@@ -1,5 +1,5 @@
 import React, { FC, useEffect } from 'react';
-import { Button, Container, Grid } from '@material-ui/core';
+import { Button, Grid } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import { CreateFormSelected, IContainer, ICreateForm } from '../../models/storage/StorageModels';
@@ -78,48 +78,41 @@ const StorageCreateDrawer: FC<Props> = ({
   };
 
   return (
-    <DrawerWrapper open={data.open} closeDrawer={() => closeDrawer()} width={256}>
-      <Container maxWidth="lg">
-        <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(handleSave)}>
-            <Grid container alignItems="center" className={classes.root} spacing={2}>
+    <DrawerWrapper
+      title={`Create ${data.type}`}
+      open={data.open}
+      closeDrawer={() => closeDrawer()}
+      width={256}>
+      <FormProvider {...methods}>
+        <form onSubmit={methods.handleSubmit(handleSave)}>
+          <Grid container spacing={2}>
+            <Grid item sm={12}>
+              <FormInputText name="name" label="Name" />
+            </Grid>
+            {data.type === CreateFormSelected.folder && (
               <Grid item sm={12}>
-                <Typography variant="h6" className={classes.marginTop}>
-                  Create {data.type}
-                </Typography>
+                <FormInputSelect options={extractContainers()} label="Container" name="container" />
               </Grid>
-              <Grid item sm={12}>
-                <FormInputText name="name" label="Name" />
+            )}
+            <Grid item sm={12}>
+              <Typography variant="subtitle1">Is Public</Typography>
+              <FormInputSwitch name="isPublic" />
+            </Grid>
+            <Grid container item>
+              <Grid item className={classes.marginRight}>
+                <Button variant="outlined" onClick={() => handleCancel()}>
+                  Cancel
+                </Button>
               </Grid>
-              {data.type === CreateFormSelected.folder && (
-                <Grid item sm={12}>
-                  <FormInputSelect
-                    options={extractContainers()}
-                    label="Container"
-                    name="container"
-                  />
-                </Grid>
-              )}
-              <Grid item sm={12}>
-                <Typography variant="subtitle1">Is Public</Typography>
-                <FormInputSwitch name="isPublic" />
-              </Grid>
-              <Grid container item>
-                <Grid item className={classes.marginRight}>
-                  <Button variant="outlined" onClick={() => handleCancel()}>
-                    Cancel
-                  </Button>
-                </Grid>
-                <Grid item>
-                  <Button variant="contained" color="primary" type="submit">
-                    Save
-                  </Button>
-                </Grid>
+              <Grid item>
+                <Button variant="contained" color="primary" type="submit">
+                  Save
+                </Button>
               </Grid>
             </Grid>
-          </form>
-        </FormProvider>
-      </Container>
+          </Grid>
+        </form>
+      </FormProvider>
     </DrawerWrapper>
   );
 };

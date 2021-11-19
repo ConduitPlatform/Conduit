@@ -17,7 +17,7 @@ const ViewTransaction: React.FC<Props> = ({ transaction }) => {
   const classes = sharedClasses();
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Grid container spacing={2} justify="space-around">

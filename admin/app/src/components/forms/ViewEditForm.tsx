@@ -39,7 +39,7 @@ const ViewEditForm: React.FC<Props> = ({
   };
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Grid container spacing={2}>
@@ -52,7 +52,6 @@ const ViewEditForm: React.FC<Props> = ({
             )}
           </Grid>
         </Paper>
-
         {!edit && (
           <>
             <Grid container spacing={2} justify="center">
