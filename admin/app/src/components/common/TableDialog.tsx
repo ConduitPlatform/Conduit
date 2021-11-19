@@ -39,8 +39,8 @@ interface Props {
   handleClose: () => void;
   data: { tableData: any[]; count: number };
   getData: any;
-  externalElements?: string[];
-  setExternalElements?: (values: string[]) => void;
+  externalElements?: any[];
+  setExternalElements?: (values: any[]) => void;
 }
 
 const TableDialog: React.FC<Props> = ({
