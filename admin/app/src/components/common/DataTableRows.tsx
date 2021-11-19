@@ -42,7 +42,7 @@ interface Props {
   onRowClick: (item: any) => void;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
-  selectedItems: string[];
+  selectedItems: any[];
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   selectable: boolean;
@@ -86,12 +86,19 @@ const DataTableRows: React.FC<Props> = ({
     }
   };
 
+  const isItemSelected = () => {
+    if (selectedItems?.includes(row._id)) return true;
+    const isItemFound = selectedItems.find((item) => item._id === row._id);
+    if (isItemFound) return true;
+    return false;
+  };
+
   const extractIcon = () => {
     if (!collapsible && selectable)
       return (
         <Checkbox
           color="primary"
-          checked={selectedItems?.includes(row._id)}
+          checked={isItemSelected()}
           onChange={() => onMenuItemSelect(row._id)}
         />
       );

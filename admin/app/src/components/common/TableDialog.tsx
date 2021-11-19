@@ -60,7 +60,7 @@ const TableDialog: React.FC<Props> = ({
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
-  const [selectedElements, setSelectedElements] = useState<string[]>([]);
+  const [selectedElements, setSelectedElements] = useState<any[]>([]);
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
@@ -79,31 +79,10 @@ const TableDialog: React.FC<Props> = ({
     }
   }, [externalElements]);
 
-  const handleSelect = (id: string) => {
-    const newSelectedElements = [...selectedElements];
-
-    if (selectedElements.includes(id)) {
-      const index = newSelectedElements.findIndex((newId) => newId === id);
-      newSelectedElements.splice(index, 1);
-    } else {
-      newSelectedElements.push(id);
-    }
-    setSelectedElements(newSelectedElements);
-  };
-
   const handleAction = () => {
     if (externalElements !== undefined && setExternalElements !== undefined)
       setExternalElements(selectedElements);
     handleClose();
-  };
-
-  const handleSelectAll = (elements: any) => {
-    if (selectedElements.length === elements.length) {
-      setSelectedElements([]);
-      return;
-    }
-    const newSelectedElements = elements.map((item: any) => item._id);
-    setSelectedElements(newSelectedElements);
   };
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, val: number) => {
@@ -115,6 +94,31 @@ const TableDialog: React.FC<Props> = ({
       setSkip(skip - limit);
     }
   };
+
+  const handleSelect = (id: string) => {
+    const newSelectedElements = [...selectedElements];
+    const foundTemplate = data.tableData.find((item) => item._id === id);
+    const templateChecked = selectedElements.find((template) => template._id === foundTemplate._id);
+
+    if (templateChecked) {
+      const index = newSelectedElements.findIndex((newId) => newId === foundTemplate._id);
+      newSelectedElements.splice(index, 1);
+    } else {
+      newSelectedElements.push(foundTemplate);
+    }
+    setSelectedElements(newSelectedElements);
+  };
+
+  console.log(selectedElements);
+
+  const handleSelectAll = (elements: any) => {
+    if (selectedElements.length === elements.length) {
+      setSelectedElements([]);
+      return;
+    }
+    setSelectedElements(data.tableData);
+  };
+
   return (
     <Dialog
       className={classes.paper}
