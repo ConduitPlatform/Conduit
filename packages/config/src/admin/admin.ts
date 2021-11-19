@@ -230,7 +230,7 @@ export class AdminHandlers {
             status: 400,
             message: 'Module not available',
           });
-        updatedConfig = this.grpcSdk.pushNotifications
+        updatedConfig = await this.grpcSdk.pushNotifications
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
@@ -241,7 +241,7 @@ export class AdminHandlers {
             status: 400,
             message: 'Module not available',
           });
-        updatedConfig = this.grpcSdk.storage
+        updatedConfig = await this.grpcSdk.storage
           .setConfig(newConfig)
           .catch((e: Error) => (errorMessage = e.message));
         break;
