@@ -220,9 +220,8 @@ export class AdminRoutes {
       container,
     };
     if (!isNil(parent)) {
-      query.name = { $regex: `${parent}\/\w+`, $options: 'i' };
+      query.name = { $regex: `${parent}\/([^\/]+)\/?$`, $options: 'i' };
     }
-
     let folders = await _StorageFolder.getInstance()
       .findMany(
         query,
