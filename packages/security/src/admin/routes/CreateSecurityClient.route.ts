@@ -1,0 +1,47 @@
+import {
+  ConduitRoute,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitRouteParameters,
+  ConduitError,
+  PlatformTypesEnum,
+  ConduitString,
+} from '@quintessential-sft/conduit-commons';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
+
+export function getCreateSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
+  return new ConduitRoute(
+    {
+      path: '/security/client',
+      action: ConduitRouteActions.POST,
+      bodyParams: {
+        platform: ConduitString.Required,
+      },
+    },
+    new ConduitRouteReturnDefinition('CreateSecurityClient', {
+      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+        id: ConduitString.Required,
+        clientId: ConduitString.Required,
+        clientSecret: ConduitString.Required,
+        platform: ConduitString.Required,
+      },
+    }),
+    async (params: ConduitRouteParameters) => {
+      const { platform } = params.params!;
+      if (!Object.values(PlatformTypesEnum).includes(platform)) {
+        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
+      }
+      let clientId = randomBytes(15).toString('hex');
+      let clientSecret = randomBytes(64).toString('hex');
+      let hash = await bcrypt.hash(clientSecret, 10);
+      let client = await grpcSdk.databaseProvider?.create('Client', {
+        clientId,
+        clientSecret: hash,
+        platform,
+      });
+      return { result: { id: client._id, clientId, clientSecret, platform } };
+    }
+  );
+}
