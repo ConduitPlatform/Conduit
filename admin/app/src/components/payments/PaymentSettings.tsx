@@ -67,6 +67,7 @@ const PaymentSettings: React.FC<Props> = ({ handleSave, settingsData }) => {
   });
 
   const handleCancel = () => {
+    setEdit(false);
     reset();
   };
 
