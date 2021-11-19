@@ -19,10 +19,12 @@ interface IChatSlice {
       data: IChatRoom[];
       count: number;
       search: string;
+      areEmpty: boolean;
     };
     chatMessages: {
       data: IChatMessage[];
       count: number;
+      areEmpty: boolean;
     };
   };
 }
@@ -38,10 +40,12 @@ const initialState: IChatSlice = {
       data: [],
       count: 0,
       search: '',
+      areEmpty: false,
     },
     chatMessages: {
       data: [],
       count: 0,
+      areEmpty: false,
     },
   },
 };
@@ -164,9 +168,14 @@ const chatSlice = createSlice({
     });
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
       state.data.chatRooms.count = action.payload.count;
-      if (action.payload.search && action.payload.search !== state.data.chatRooms.search) {
+      state.data.chatRooms.areEmpty = action.payload.count < 1;
+      if (action.payload.search !== state.data.chatRooms.search) {
         state.data.chatRooms.data = action.payload.chatRooms;
-        state.data.chatRooms.search = action.payload.search;
+        if (action.payload.search) {
+          state.data.chatRooms.search = action.payload.search;
+          return;
+        }
+        state.data.chatRooms.search = '';
         return;
       }
       state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
@@ -174,6 +183,7 @@ const chatSlice = createSlice({
     builder.addCase(asyncGetChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data = [...state.data.chatMessages.data, ...action.payload.messages];
       state.data.chatMessages.count = action.payload.count;
+      state.data.chatMessages.areEmpty = action.payload.count < 1;
     });
     builder.addCase(asyncDeleteChatMessages.fulfilled, (state, action) => {
       state.data.chatMessages.data.forEach((item, index) => {

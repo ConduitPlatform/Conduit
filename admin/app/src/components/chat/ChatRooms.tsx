@@ -45,7 +45,7 @@ const ChatRooms: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const {
-    chatRooms: { data, count },
+    chatRooms: { data, count, areEmpty },
   } = useAppSelector((state) => state.chatSlice.data);
 
   const [selected, setSelected] = useState(0);
@@ -113,6 +113,7 @@ const ChatRooms: React.FC = () => {
               onLongPress={onLongPress}
               selectedTab={selected}
               debouncedSearch={debouncedSearch}
+              areEmpty={areEmpty}
             />
           </Box>
         </Box>

@@ -9,6 +9,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
 import { IChatRoom } from '../../models/chat/ChatModels';
 import ChatRoomTab, { ChatRoomTabSkeleton } from './ChatRoomTab';
+import { Typography } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   tabSelected: {
@@ -26,6 +27,9 @@ const useStyles = makeStyles((theme) => ({
     '&::-webkit-scrollbar-thumb': {
       background: 'transparent',
     },
+  },
+  placeholder: {
+    whiteSpace: 'nowrap',
   },
 }));
 
@@ -80,6 +84,7 @@ interface Props {
   onPress: (index: number) => void;
   onLongPress: (index: number) => void;
   debouncedSearch: string;
+  areEmpty: boolean;
 }
 
 const ChatRoomTabs: FC<Props> = ({
@@ -89,6 +94,7 @@ const ChatRoomTabs: FC<Props> = ({
   onPress,
   onLongPress,
   debouncedSearch,
+  areEmpty,
 }) => {
   const dispatch = useAppDispatch();
   const classes = useStyles();
@@ -102,7 +108,7 @@ const ChatRoomTabs: FC<Props> = ({
       tabsStatusMap = {};
     }
     hasMountedRef.current = true;
-  }, []);
+  }, [debouncedSearch]);
 
   const getChatRooms = useCallback(
     (skip: number, limit: number) => {
@@ -141,7 +147,11 @@ const ChatRoomTabs: FC<Props> = ({
   return (
     <AutoSizer>
       {({ height, width }) => {
-        if (!chatRoomCount) return <div>Not available Rooms</div>;
+        if (!chatRoomCount) {
+          if (areEmpty)
+            return <Typography className={classes.placeholder}>No available Rooms</Typography>;
+          return <></>;
+        }
         return (
           <InfiniteLoader
             ref={infiniteLoaderRef}
