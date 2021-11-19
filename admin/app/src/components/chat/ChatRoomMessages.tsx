@@ -9,6 +9,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import memoize from 'memoize-one';
 import ChatRoomBubble, { ChatRoomBubbleSkeleton } from './ChatRoomBubble';
 import clsx from 'clsx';
+import { Typography } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   bubble: {
@@ -20,6 +21,9 @@ const useStyles = makeStyles((theme) => ({
   },
   bubbleSelected: {
     backgroundColor: `${theme.palette.grey[700]}80`,
+  },
+  placeholder: {
+    whiteSpace: 'nowrap',
   },
 }));
 
@@ -91,7 +95,7 @@ const ChatRoomMessages: FC<Props> = ({
   const dispatch = useAppDispatch();
   const classes = useStyles();
   const {
-    chatMessages: { data, count },
+    chatMessages: { data, count, areEmpty },
   } = useAppSelector((state) => state.chatSlice.data);
 
   const infiniteLoaderRef = useRef<any>(null);
@@ -146,7 +150,11 @@ const ChatRoomMessages: FC<Props> = ({
   return (
     <AutoSizer>
       {({ height, width }) => {
-        if (!count) return <div>Not available Messages</div>;
+        if (!count) {
+          if (areEmpty)
+            return <Typography className={classes.placeholder}>No available messages</Typography>;
+          return <></>;
+        }
         return (
           <InfiniteLoader
             ref={infiniteLoaderRef}
