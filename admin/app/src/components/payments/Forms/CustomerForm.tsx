@@ -5,7 +5,7 @@ import { Button, Grid } from '@material-ui/core';
 import { Customer } from '../../../models/payments/PaymentsModels';
 import { FormInputText } from '../../common/FormComponents/FormInputText';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
-import { AuthUser } from '../../../models/authentication/AuthModels';
+import { AuthUser, AuthUserUI } from '../../../models/authentication/AuthModels';
 import { asyncGetAuthUserData } from '../../../redux/slices/authenticationSlice';
 import TableDialog from '../../common/TableDialog';
 import SelectedElements from '../../common/SelectedElements';
@@ -32,7 +32,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const { reset } = methods;
 
   const [drawer, setDrawer] = useState<boolean>(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AuthUserUI[]>([]);
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
@@ -62,7 +62,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   };
 
   const onSubmit = (data: Customer) => {
-    handleSubmitData({ ...data, userId: selectedUsers[0] });
+    handleSubmitData({ ...data, userId: selectedUsers[0]._id });
     reset();
   };
 
@@ -84,7 +84,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
         <Grid container spacing={2}>
           <Grid item sm={12}>
             <SelectedElements
-              selectedElements={selectedUsers}
+              selectedElements={selectedUsers.map((user) => user.Email)}
               handleButtonAction={() => setDrawer(true)}
               removeSelectedElement={removeSelectedUser}
               buttonText={'Add user'}
