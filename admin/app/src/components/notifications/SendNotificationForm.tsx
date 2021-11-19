@@ -126,6 +126,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
       </Paper>
       <TableDialog
         open={drawer}
+        singleSelect
         title={'Select users'}
         headers={headers}
         getData={getData}

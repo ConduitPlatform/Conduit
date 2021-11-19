@@ -32,6 +32,7 @@ const useStyles = makeStyles((theme) => ({
 
 interface Props {
   open: boolean;
+  singleSelect?: boolean;
   title?: string;
   headers?: { title: string; sort: string }[];
   returnSelected?: string[];
@@ -45,6 +46,7 @@ interface Props {
 
 const TableDialog: React.FC<Props> = ({
   open,
+  singleSelect,
   title,
   headers,
   buttonText,
@@ -96,8 +98,13 @@ const TableDialog: React.FC<Props> = ({
   };
 
   const handleSelect = (id: string) => {
-    const newSelectedElements = [...selectedElements];
     const foundTemplate = data.tableData.find((item) => item._id === id);
+    const newSelectedElements = [...selectedElements];
+
+    if (singleSelect) {
+      setSelectedElements([foundTemplate]);
+      return;
+    }
     const templateChecked = selectedElements.find((template) => template._id === foundTemplate._id);
 
     if (templateChecked) {
@@ -112,6 +119,7 @@ const TableDialog: React.FC<Props> = ({
   console.log(selectedElements);
 
   const handleSelectAll = (elements: any) => {
+    if (singleSelect) return;
     if (selectedElements.length === elements.length) {
       setSelectedElements([]);
       return;
