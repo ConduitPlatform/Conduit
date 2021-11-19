@@ -80,42 +80,36 @@ const StorageCreateDrawer: FC<Props> = ({
       open={data.open}
       closeDrawer={() => closeDrawer()}
       width={256}>
-      <Container maxWidth="lg">
-        <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(handleSave)}>
-            <Grid container alignItems="center" className={classes.root} spacing={2}>
+      <FormProvider {...methods}>
+        <form onSubmit={methods.handleSubmit(handleSave)}>
+          <Grid container spacing={2}>
+            <Grid item sm={12}>
+              <FormInputText name="name" label="Name" />
+            </Grid>
+            {data.type === CreateFormSelected.folder && (
               <Grid item sm={12}>
-                <FormInputText name="name" label="Name" />
+                <FormInputSelect options={extractContainers()} label="Container" name="container" />
               </Grid>
-              {data.type === CreateFormSelected.folder && (
-                <Grid item sm={12}>
-                  <FormInputSelect
-                    options={extractContainers()}
-                    label="Container"
-                    name="container"
-                  />
-                </Grid>
-              )}
-              <Grid item sm={12}>
-                <Typography variant="subtitle1">Is Public</Typography>
-                <FormInputSwitch name="isPublic" />
+            )}
+            <Grid item sm={12}>
+              <Typography variant="subtitle1">Is Public</Typography>
+              <FormInputSwitch name="isPublic" />
+            </Grid>
+            <Grid container item>
+              <Grid item className={classes.marginRight}>
+                <Button variant="outlined" onClick={() => handleCancel()}>
+                  Cancel
+                </Button>
               </Grid>
-              <Grid container item>
-                <Grid item className={classes.marginRight}>
-                  <Button variant="outlined" onClick={() => handleCancel()}>
-                    Cancel
-                  </Button>
-                </Grid>
-                <Grid item>
-                  <Button variant="contained" color="primary" type="submit">
-                    Save
-                  </Button>
-                </Grid>
+              <Grid item>
+                <Button variant="contained" color="primary" type="submit">
+                  Save
+                </Button>
               </Grid>
             </Grid>
-          </form>
-        </FormProvider>
-      </Container>
+          </Grid>
+        </form>
+      </FormProvider>
     </DrawerWrapper>
   );
 };

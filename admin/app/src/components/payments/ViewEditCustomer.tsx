@@ -55,7 +55,7 @@ const ViewEditCustomer: React.FC<Props> = ({
   };
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Grid container spacing={2} justify="space-around">
@@ -66,7 +66,6 @@ const ViewEditCustomer: React.FC<Props> = ({
             )}
           </Grid>
         </Paper>
-        <Divider className={classes.divider} />
         <Grid container item xs={12} justify="space-around" style={{ marginTop: '15px' }}>
           {!edit && (
             <Button

@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme: Theme) =>
       minWidth: (props: any) => props.minWidth,
       maxWidth: (props: any) => props.maxWidth,
       width: (props: any) => props.width,
-      padding: theme.spacing(4),
+      padding: theme.spacing(3),
     },
     header: {
       textAlign: 'center',

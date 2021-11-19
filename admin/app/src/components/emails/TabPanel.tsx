@@ -44,7 +44,7 @@ const TabPanel: React.FC<Props> = ({
   };
 
   return (
-    <Container className={classes.marginTop}>
+    <Container>
       <Box>
         <Paper elevation={0} className={classes.paper}>
           <Grid container spacing={2} justify="space-around">
@@ -74,7 +74,6 @@ const TabPanel: React.FC<Props> = ({
             )}
           </Grid>
         </Paper>
-        <Divider className={classes.divider} />
         {!edit && (
           <>
             <Grid container spacing={2} justify="center">

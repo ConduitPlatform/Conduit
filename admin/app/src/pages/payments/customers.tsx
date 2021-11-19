@@ -346,18 +346,16 @@ const Customers = () => {
         open={drawer}
         closeDrawer={() => handleClose()}
         width={750}>
-        <Box>
-          <ViewEditCustomer
-            handleCreate={createNewCustomer}
-            handleSave={saveCustomerChanges}
-            customer={selectedCustomer}
-            edit={edit}
-            setEdit={setEdit}
-            create={create}
-            setCreate={setCreate}
-            handleClose={() => handleClose()}
-          />
-        </Box>
+        <ViewEditCustomer
+          handleCreate={createNewCustomer}
+          handleSave={saveCustomerChanges}
+          customer={selectedCustomer}
+          edit={edit}
+          setEdit={setEdit}
+          create={create}
+          setCreate={setCreate}
+          handleClose={() => handleClose()}
+        />
       </DrawerWrapper>
       <ConfirmationDialog
         open={openDeleteCustomers}

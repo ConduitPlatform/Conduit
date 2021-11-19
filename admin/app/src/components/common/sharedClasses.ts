@@ -66,5 +66,15 @@ export default makeStyles((theme) =>
     formFields: {
       minWidth: 200,
     },
+    noContent: {
+      textAlign: 'center',
+      marginTop: '200px',
+    },
+    saveButton: {
+      marginRight: theme.spacing(1),
+    },
+    selectedElements: {
+      margin: theme.spacing(2, 0),
+    },
   })
 );

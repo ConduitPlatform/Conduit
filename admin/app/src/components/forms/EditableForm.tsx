@@ -61,7 +61,7 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
     setInputFields(fieldsToDisplay);
   }, [preloadedValues]);
 
-  const handleCancel = () => {
+  const onCancel = () => {
     const fieldsToDisplay: PropsForInputFields[] = [];
     Object.entries(preloadedValues.fields).forEach(([key, value]) => {
       fieldsToDisplay.push({ id: uuidV4(), key: key, type: value as string });
@@ -110,100 +110,94 @@ const EditableForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   return (
     <FormProvider {...methods}>
       <form onSubmit={methods.handleSubmit(onSubmit)}>
-        <Container className={classes.root} maxWidth="xl">
-          <Grid container alignItems="center" className={classes.root} spacing={2}>
-            <Grid item sm={12}>
-              <FormInputText
-                name="name"
-                label="Name"
-                rules={{
-                  required: 'The form name is required',
-                  pattern: { value: /^S+$/, message: 'A form name should not have spaces' },
-                }}
-              />
+        <Grid container spacing={2}>
+          <Grid item sm={12}>
+            <FormInputText
+              name="name"
+              label="Name"
+              rules={{
+                required: 'The form name is required',
+                pattern: { value: /^S+$/, message: 'A form name should not have spaces' },
+              }}
+            />
+          </Grid>
+          <Grid item container xs={12}>
+            <Grid item xs={11}>
+              <Typography variant="subtitle2">Form fields:</Typography>
             </Grid>
-            <Grid item container xs={12}>
-              <Grid item xs={11}>
-                <Typography variant="subtitle2">Form fields:</Typography>
-              </Grid>
-              <Grid item xs={1}>
-                <IconButton color="primary" size="small" aria-label="add" onClick={handleAddField}>
-                  <Add />
-                </IconButton>
-              </Grid>
-            </Grid>
-            <Grid item sm={12}>
-              {inputFields.map((inputField, index: number) => {
-                return (
-                  <Grid key={index} container spacing={2}>
-                    <Grid item xs={5} className={classes.fields}>
-                      <TextField
-                        name="key"
-                        label="Key"
-                        variant="outlined"
-                        value={inputField.key}
-                        onChange={handleFieldsChange(inputField.id)}
-                      />
-                    </Grid>
-                    <Grid item xs={5} className={classes.fields}>
-                      <FormControl className={classes.formFields}>
-                        <Select
-                          variant="outlined"
-                          value={inputField.type}
-                          onChange={handleFieldsChange(inputField.id)}
-                          name="type">
-                          <MenuItem value={'String'}>String</MenuItem>
-                          <MenuItem value={'File'}>File</MenuItem>
-                          <MenuItem value={'Date'}>Date</MenuItem>
-                          <MenuItem value={'Number'}>Number</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={2} className={classes.fields}>
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        aria-label="delete"
-                        onClick={() => handleRemoveField(inputField.id)}>
-                        <Delete />
-                      </IconButton>
-                    </Grid>
-                  </Grid>
-                );
-              })}
-            </Grid>
-            <Grid item sm={12}>
-              <FormInputText name="forwardTo" label="Forward to" />
-            </Grid>
-            <Grid item sm={12}>
-              <FormInputText name="emailField" label="Email field" typeOfInput={'email'} />
-            </Grid>
-            <Grid item container xs={12}>
-              <Grid item xs={11}>
-                <Typography variant="subtitle2">Enabled form:</Typography>
-              </Grid>
-              <Grid item xs={1}>
-                <FormInputSwitch name="enabled" />
-              </Grid>
-            </Grid>
-            <Grid container item xs={12} justify="space-around" className={classes.marginTop}>
-              <Grid item>
-                <Button type="submit" variant="contained" color="primary" size="large">
-                  Save
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button
-                  onClick={() => handleCancel()}
-                  variant="contained"
-                  color="primary"
-                  size="large">
-                  Cancel
-                </Button>
-              </Grid>
+            <Grid item xs={1}>
+              <IconButton color="primary" size="small" aria-label="add" onClick={handleAddField}>
+                <Add />
+              </IconButton>
             </Grid>
           </Grid>
-        </Container>
+          <Grid item sm={12}>
+            {inputFields.map((inputField, index: number) => {
+              return (
+                <Grid key={index} container spacing={2}>
+                  <Grid item xs={5} className={classes.fields}>
+                    <TextField
+                      name="key"
+                      label="Key"
+                      variant="outlined"
+                      value={inputField.key}
+                      onChange={handleFieldsChange(inputField.id)}
+                    />
+                  </Grid>
+                  <Grid item xs={5} className={classes.fields}>
+                    <FormControl className={classes.formFields}>
+                      <Select
+                        variant="outlined"
+                        value={inputField.type}
+                        onChange={handleFieldsChange(inputField.id)}
+                        name="type">
+                        <MenuItem value={'String'}>String</MenuItem>
+                        <MenuItem value={'File'}>File</MenuItem>
+                        <MenuItem value={'Date'}>Date</MenuItem>
+                        <MenuItem value={'Number'}>Number</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={2} className={classes.fields}>
+                    <IconButton
+                      color="primary"
+                      size="small"
+                      aria-label="delete"
+                      onClick={() => handleRemoveField(inputField.id)}>
+                      <Delete />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              );
+            })}
+          </Grid>
+          <Grid item sm={12}>
+            <FormInputText name="forwardTo" label="Forward to" />
+          </Grid>
+          <Grid item sm={12}>
+            <FormInputText name="emailField" label="Email field" typeOfInput={'email'} />
+          </Grid>
+          <Grid item container xs={12}>
+            <Grid item xs={11}>
+              <Typography variant="subtitle2">Enabled form:</Typography>
+            </Grid>
+            <Grid item xs={1}>
+              <FormInputSwitch name="enabled" />
+            </Grid>
+          </Grid>
+          <Grid container item>
+            <Grid item className={classes.marginRight}>
+              <Button variant="outlined" onClick={() => onCancel()}>
+                Cancel
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button variant="contained" color="primary" type="submit">
+                Save
+              </Button>
+            </Grid>
+          </Grid>
+        </Grid>
       </form>
     </FormProvider>
   );

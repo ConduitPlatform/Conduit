@@ -1,36 +1,13 @@
 import React, { FC, useCallback, useState } from 'react';
-import { Box, Button, TextField } from '@material-ui/core';
-import Typography from '@material-ui/core/Typography';
+import { Button, Grid, TextField } from '@material-ui/core';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
-import { makeStyles } from '@material-ui/core/styles';
+
 import TableDialog from '../common/TableDialog';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser } from '../../models/authentication/AuthModels';
 import SelectedElements from '../common/SelectedElements';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: theme.spacing(6),
-  },
-  createContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    textAlign: 'start',
-    marginBottom: theme.spacing(2),
-  },
-  createTitle: {
-    marginRight: theme.spacing(1),
-  },
-  saveButton: {
-    marginRight: theme.spacing(1),
-  },
-  selectedElements: {
-    margin: theme.spacing(2, 0),
-  },
-}));
+import sharedClasses from '../common/sharedClasses';
 
 interface ICreateChatRoom {
   name: string;
@@ -44,7 +21,7 @@ interface Props {
 }
 
 const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDrawer }) => {
-  const classes = useStyles();
+  const classes = sharedClasses();
   const dispatch = useAppDispatch();
 
   const initialInputData = {
@@ -107,39 +84,43 @@ const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDraw
         open={open}
         closeDrawer={() => closeDrawer()}
         width={256}>
-        <Box className={classes.root}>
-          <TextField
-            variant="outlined"
-            label="Name"
-            value={inputData.name}
-            onChange={(event) => {
-              setInputData({
-                ...inputData,
-                name: event.target.value,
-              });
-            }}
-          />
-          <SelectedElements
-            selectedElements={inputData.participants}
-            handleButtonAction={() => setUsersDialog(true)}
-            removeSelectedElement={removeSelectedUser}
-            buttonText={'Add participants'}
-            header={'Selected participants'}
-            className={classes.selectedElements}
-          />
-          <Box>
-            <Button
-              variant="contained"
-              color="primary"
-              className={classes.saveButton}
-              onClick={() => handleSave()}>
-              Save
-            </Button>
-            <Button variant="outlined" onClick={() => handleCancel()}>
-              Cancel
-            </Button>
-          </Box>
-        </Box>
+        <Grid container spacing={2}>
+          <Grid item>
+            <TextField
+              variant="outlined"
+              label="Name"
+              value={inputData.name}
+              onChange={(event) => {
+                setInputData({
+                  ...inputData,
+                  name: event.target.value,
+                });
+              }}
+            />
+          </Grid>
+          <Grid item sm={12}>
+            <SelectedElements
+              selectedElements={inputData.participants}
+              handleButtonAction={() => setUsersDialog(true)}
+              removeSelectedElement={removeSelectedUser}
+              buttonText={'Add participants'}
+              header={'Selected participants'}
+              className={classes.selectedElements}
+            />
+          </Grid>
+          <Grid container item>
+            <Grid item className={classes.marginRight}>
+              <Button variant="outlined" onClick={() => handleCancel()}>
+                Cancel
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button variant="contained" color="primary" onClick={handleSave}>
+                Save
+              </Button>
+            </Grid>
+          </Grid>
+        </Grid>
       </DrawerWrapper>
       <TableDialog
         open={usersDialog}

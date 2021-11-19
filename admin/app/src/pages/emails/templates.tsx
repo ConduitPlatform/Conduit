@@ -379,21 +379,17 @@ const Templates = () => {
         closeDrawer={() => handleClose()}
         width={750}>
         {!importTemplate ? (
-          <Box>
-            <TabPanel
-              handleCreate={createNewTemplate}
-              handleSave={saveTemplateChanges}
-              template={selectedTemplate}
-              edit={edit}
-              setEdit={setEdit}
-              create={create}
-              setCreate={setCreate}
-            />
-          </Box>
+          <TabPanel
+            handleCreate={createNewTemplate}
+            handleSave={saveTemplateChanges}
+            template={selectedTemplate}
+            edit={edit}
+            setEdit={setEdit}
+            create={create}
+            setCreate={setCreate}
+          />
         ) : (
-          <Box>
-            <ExternalTemplates handleSave={createNewTemplate} />
-          </Box>
+          <ExternalTemplates handleSave={createNewTemplate} />
         )}
       </DrawerWrapper>
       <ConfirmationDialog

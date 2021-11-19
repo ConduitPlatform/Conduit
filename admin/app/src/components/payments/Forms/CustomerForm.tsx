@@ -1,7 +1,7 @@
 import React, { FC, useCallback, useState } from 'react';
 import sharedClasses from '../../common/sharedClasses';
 import { FormProvider, useForm } from 'react-hook-form';
-import { Button, Container, Grid } from '@material-ui/core';
+import { Button, Grid } from '@material-ui/core';
 import { Customer } from '../../../models/payments/PaymentsModels';
 import { FormInputText } from '../../common/FormComponents/FormInputText';
 import { useAppDispatch, useAppSelector } from '../../../redux/store';
@@ -81,41 +81,38 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   return (
     <FormProvider {...methods}>
       <form onSubmit={methods.handleSubmit(onSubmit)} style={{}}>
-        <Container className={classes.root} maxWidth="xl">
-          <Grid container alignItems="center" className={classes.root} spacing={2}>
-            <Grid item sm={12}>
-              <SelectedElements
-                selectedElements={selectedUsers}
-                handleButtonAction={() => setDrawer(true)}
-                removeSelectedElement={removeSelectedUser}
-                buttonText={'Add user'}
-                header={'Selected user'}
+        <Grid container spacing={2}>
+          <Grid item sm={12}>
+            <SelectedElements
+              selectedElements={selectedUsers}
+              handleButtonAction={() => setDrawer(true)}
+              removeSelectedElement={removeSelectedUser}
+              buttonText={'Add user'}
+              header={'Selected user'}
+            />
+          </Grid>
+          {inputs.map((input, index) => (
+            <Grid key={index} item sm={12}>
+              <FormInputText
+                name={input}
+                rules={{ required: `${input} is required` }}
+                label={startCase(camelCase(input))}
               />
             </Grid>
-            {inputs.map((input, index) => (
-              <Grid key={index} item sm={12}>
-                <FormInputText
-                  name={input}
-                  rules={{ required: `${input} is required` }}
-                  label={startCase(camelCase(input))}
-                />
-              </Grid>
-            ))}
-
-            <Grid container item xs={12} justify="space-around" style={{ marginTop: '35px' }}>
-              <Grid item>
-                <Button type="submit" variant="contained" color="primary" size="large">
-                  Save
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button onClick={() => onCancel()} variant="contained" color="primary" size="large">
-                  Cancel
-                </Button>
-              </Grid>
+          ))}
+          <Grid container item>
+            <Grid item className={classes.marginRight}>
+              <Button variant="outlined" onClick={() => onCancel()}>
+                Cancel
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button variant="contained" color="primary" type="submit">
+                Save
+              </Button>
             </Grid>
           </Grid>
-        </Container>
+        </Grid>
         <TableDialog
           open={drawer}
           title={'Select users'}
