@@ -116,8 +116,6 @@ const TableDialog: React.FC<Props> = ({
     setSelectedElements(newSelectedElements);
   };
 
-  console.log(selectedElements);
-
   const handleSelectAll = (elements: any) => {
     if (singleSelect) return;
     if (selectedElements.length === elements.length) {

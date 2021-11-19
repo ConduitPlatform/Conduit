@@ -115,6 +115,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
         </Grid>
         <TableDialog
           open={drawer}
+          singleSelect
           title={'Select users'}
           headers={headers}
           getData={getData}
