@@ -108,7 +108,7 @@ const ChatRoomTabs: FC<Props> = ({
       tabsStatusMap = {};
     }
     hasMountedRef.current = true;
-  }, []);
+  }, [debouncedSearch]);
 
   const getChatRooms = useCallback(
     (skip: number, limit: number) => {

@@ -169,9 +169,13 @@ const chatSlice = createSlice({
     builder.addCase(asyncGetChatRooms.fulfilled, (state, action) => {
       state.data.chatRooms.count = action.payload.count;
       state.data.chatRooms.areEmpty = action.payload.count < 1;
-      if (action.payload.search && action.payload.search !== state.data.chatRooms.search) {
+      if (action.payload.search !== state.data.chatRooms.search) {
         state.data.chatRooms.data = action.payload.chatRooms;
-        state.data.chatRooms.search = action.payload.search;
+        if (action.payload.search) {
+          state.data.chatRooms.search = action.payload.search;
+          return;
+        }
+        state.data.chatRooms.search = '';
         return;
       }
       state.data.chatRooms.data = [...state.data.chatRooms.data, ...action.payload.chatRooms];
