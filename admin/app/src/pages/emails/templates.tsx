@@ -278,6 +278,16 @@ const Templates = () => {
     { title: 'Updated At', sort: 'updatedAt' },
   ];
 
+  const extractTitle = () => {
+    if (!importTemplate && !create) {
+      return 'Edit your template';
+    }
+    if (!importTemplate) {
+      return 'Create an email template';
+    }
+    return 'Import an external template';
+  };
+
   return (
     <div>
       <Grid container item xs={12} justify="space-between" className={classes.actions}>
@@ -363,12 +373,13 @@ const Templates = () => {
       ) : (
         <Typography>No available templates</Typography>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
+      <DrawerWrapper
+        open={drawer}
+        title={extractTitle()}
+        closeDrawer={() => handleClose()}
+        width={750}>
         {!importTemplate ? (
           <Box>
-            <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
-              {!create ? 'Edit your template' : 'Create an email template'}
-            </Typography>
             <TabPanel
               handleCreate={createNewTemplate}
               handleSave={saveTemplateChanges}
@@ -381,12 +392,6 @@ const Templates = () => {
           </Box>
         ) : (
           <Box>
-            <Typography
-              variant="h6"
-              color="primary"
-              style={{ marginTop: '30px', textAlign: 'center' }}>
-              Import an external template
-            </Typography>
             <ExternalTemplates handleSave={createNewTemplate} />
           </Box>
         )}

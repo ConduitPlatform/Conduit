@@ -341,11 +341,12 @@ const Customers = () => {
           <Typography>No available customers</Typography>
         </Box>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleClose()} width={750}>
+      <DrawerWrapper
+        title={!create ? 'Customer overview' : 'Create a new customer'}
+        open={drawer}
+        closeDrawer={() => handleClose()}
+        width={750}>
         <Box>
-          <Typography variant="h6" style={{ marginTop: '30px', textAlign: 'center' }}>
-            {!create ? 'Customer overview' : 'Create a new customer'}
-          </Typography>
           <ViewEditCustomer
             handleCreate={createNewCustomer}
             handleSave={saveCustomerChanges}

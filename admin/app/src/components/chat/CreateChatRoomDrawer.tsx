@@ -102,13 +102,12 @@ const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDraw
 
   return (
     <>
-      <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={256}>
+      <DrawerWrapper
+        title=" Create chat room"
+        open={open}
+        closeDrawer={() => closeDrawer()}
+        width={256}>
         <Box className={classes.root}>
-          <Box className={classes.createContainer}>
-            <Typography variant="h6" className={classes.createTitle}>
-              Create chat room
-            </Typography>
-          </Box>
           <TextField
             variant="outlined"
             label="Name"

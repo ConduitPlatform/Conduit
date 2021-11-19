@@ -332,6 +332,7 @@ const Users = () => {
       <DrawerWrapper
         open={drawer}
         maxWidth={550}
+        title="Add a new user"
         closeDrawer={() => {
           setDrawer(false);
         }}>

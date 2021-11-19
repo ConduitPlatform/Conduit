@@ -86,14 +86,11 @@ const StorageAddDrawer: FC<Props> = ({ open, closeDrawer, containers, handleAddF
   };
 
   return (
-    <DrawerWrapper open={open} closeDrawer={() => closeDrawer()} width={512}>
+    <DrawerWrapper title={'Add File'} open={open} closeDrawer={() => closeDrawer()} width={512}>
       <Container maxWidth="lg">
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(handleAdd)}>
             <Grid container alignItems="center" className={classes.root} spacing={2}>
-              <Grid item sm={12}>
-                <Typography variant="h6">Add File</Typography>
-              </Grid>
               <Grid item sm={12}>
                 <Dropzone file={fileData.data} setFile={handleSetFile} />
               </Grid>

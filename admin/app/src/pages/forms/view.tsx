@@ -328,15 +328,13 @@ const Create = () => {
       ) : (
         <Typography className={classes.noAvailable}>No available forms </Typography>
       )}
-      <DrawerWrapper open={drawer} closeDrawer={() => handleCloseDrawer()} width={700}>
+      <DrawerWrapper
+        title={create ? 'Create a new form' : 'Edit form'}
+        open={drawer}
+        closeDrawer={() => handleCloseDrawer()}
+        width={700}>
         {repliesForm.name === '' ? (
           <>
-            <Typography
-              variant="h6"
-              color="primary"
-              style={{ marginTop: '30px', textAlign: 'center' }}>
-              {create ? 'Create a new form' : 'Edit form'}
-            </Typography>
             <ViewEditForm
               handleCreate={createNewForm}
               handleSave={saveFormChanges}

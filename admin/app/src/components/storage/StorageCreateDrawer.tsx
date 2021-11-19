@@ -75,16 +75,15 @@ const StorageCreateDrawer: FC<Props> = ({
   };
 
   return (
-    <DrawerWrapper open={data.open} closeDrawer={() => closeDrawer()} width={256}>
+    <DrawerWrapper
+      title={`Create ${data.type}`}
+      open={data.open}
+      closeDrawer={() => closeDrawer()}
+      width={256}>
       <Container maxWidth="lg">
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(handleSave)}>
             <Grid container alignItems="center" className={classes.root} spacing={2}>
-              <Grid item sm={12}>
-                <Typography variant="h6" className={classes.marginTop}>
-                  Create {data.type}
-                </Typography>
-              </Grid>
               <Grid item sm={12}>
                 <FormInputText name="name" label="Name" />
               </Grid>
