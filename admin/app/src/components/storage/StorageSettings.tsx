@@ -31,6 +31,9 @@ const useStyles = makeStyles((theme) => ({
   formControl: {
     minWidth: 250,
   },
+  actions: {
+    paddingTop: theme.spacing(3),
+  },
 }));
 
 interface Props {
@@ -41,9 +44,11 @@ interface Props {
 interface FormProps {
   active: boolean;
   provider: string;
-  bucketName: string;
-  serviceAccountKeyPath: string;
-  connectionString: string;
+  google: {
+    bucketName: string;
+    serviceAccountKeyPath: string;
+  };
+  azure: { connectionString: string };
 }
 
 const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
@@ -52,26 +57,24 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
 
   const methods = useForm<FormProps>({
     defaultValues: useMemo(() => {
-      if (config !== undefined)
-        return {
-          active: config.active,
-          provider: config.provider,
-          bucketName: config.google.bucketName,
-          serviceAccountKeyPath: config.google.serviceAccountKeyPath,
-          connectionString: config.azure.connectionString,
-        };
+      return {
+        active: config.active,
+        provider: config.provider,
+        google: config.google,
+        azure: config.azure,
+      };
     }, [config]),
   });
 
   const { control, reset } = methods;
 
   useEffect(() => {
-    methods.reset(config);
-  }, [methods, config]);
+    reset(config);
+  }, [config, reset]);
 
   const handleCancel = () => {
     setEdit(!edit);
-    reset();
+    reset(config);
   };
 
   const isActive = useWatch({
@@ -91,8 +94,8 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
       defaultContainer: 'conduit',
       provider: data.provider,
       storagePath: '/var/tmp',
-      google: { bucketName: data.bucketName, serviceAccountKeyPath: data.serviceAccountKeyPath },
-      azure: { connectionString: data.connectionString },
+      google: data.google,
+      azure: data.azure,
     };
 
     handleSave(dataToSave);
@@ -106,25 +109,6 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
     { name: 'Azure', value: 'azure' },
     { name: 'Google', value: 'google' },
   ];
-
-  const renderInputFields = () => {
-    return (
-      <Grid item xs={6}>
-        {watchProvider === 'azure' ? (
-          <FormInputText name="connectionString" label="Connection String" disabled={!edit} />
-        ) : (
-          <>
-            <FormInputText
-              name="serviceAccountKeyPath"
-              label="Service Account Key Path"
-              disabled={!edit}
-            />
-            <FormInputText name="bucketName" label="Bucket Name" disabled={!edit} />
-          </>
-        )}
-      </Grid>
-    );
-  };
 
   return (
     <Container>
@@ -159,12 +143,39 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
                       />
                     </Grid>
                     <Divider className={classes.divider} />
-                    {renderInputFields()}
+                    <Grid item spacing={1} container xs={12}>
+                      {watchProvider === 'azure' ? (
+                        <Grid item xs={6}>
+                          <FormInputText
+                            name="azure.connectionString"
+                            label="Connection String"
+                            disabled={!edit}
+                          />
+                        </Grid>
+                      ) : (
+                        <>
+                          <Grid item xs={6}>
+                            <FormInputText
+                              name="google.serviceAccountKeyPath"
+                              label="Service Account Key Path"
+                              disabled={!edit}
+                            />
+                          </Grid>
+                          <Grid item xs={6}>
+                            <FormInputText
+                              name="google.bucketName"
+                              label="Bucket Name"
+                              disabled={!edit}
+                            />
+                          </Grid>
+                        </>
+                      )}
+                    </Grid>
                   </>
                 )}
               </Grid>
               {edit && (
-                <Grid item container xs={12} justify={'flex-end'}>
+                <Grid item container xs={12} className={classes.actions} justify={'flex-end'}>
                   <Button
                     onClick={() => handleCancel()}
                     style={{ marginRight: 16 }}
