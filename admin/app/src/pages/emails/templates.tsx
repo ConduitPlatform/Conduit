@@ -33,7 +33,6 @@ import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { DeleteTwoTone } from '@material-ui/icons';
 import useDebounce from '../../hooks/useDebounce';
 import { enqueueInfoNotification } from '../../utils/useNotifier';
-import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -78,9 +77,7 @@ const Templates = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(
-      asyncGetEmailTemplates(sanitizeRequestParams({ skip, limit, search: debouncedSearch }))
-    );
+    dispatch(asyncGetEmailTemplates({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
   useEffect(() => {

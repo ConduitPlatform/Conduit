@@ -2,6 +2,7 @@ import axios from 'axios';
 import getConfig from 'next/config';
 import { getCurrentStore } from '../redux/store';
 import { asyncLogout } from '../redux/slices/appAuthSlice';
+import { sanitizeRequestParams } from '../utils/sanitizeRequestParams';
 import Router from 'next/router';
 
 const {
@@ -23,8 +24,13 @@ axios.interceptors.request.use(
   (config) => {
     const reduxStore = getCurrentStore();
     const token = reduxStore.getState().appAuthSlice.data.token;
+
     if (token) {
       config.headers = JWT_CONFIG(token);
+    }
+
+    if (config.params !== undefined) {
+      config.params = sanitizeRequestParams(config.params);
     }
     return config;
   },

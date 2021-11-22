@@ -12,7 +12,6 @@ import { asyncDeleteTransactions, asyncGetTransactions } from '../../redux/slice
 import { Transaction } from '../../models/payments/PaymentsModels';
 import ViewTransaction from '../../components/payments/ViewTransaction';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
-import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -61,13 +60,11 @@ const Transactions = () => {
 
   useEffect(() => {
     dispatch(
-      asyncGetTransactions(
-        sanitizeRequestParams({
-          skip,
-          limit,
-          search: debouncedSearch,
-        })
-      )
+      asyncGetTransactions({
+        skip,
+        limit,
+        search: debouncedSearch,
+      })
     );
   }, [dispatch, limit, skip, debouncedSearch]);
 

@@ -29,7 +29,6 @@ import {
 import { Customer } from '../../models/payments/PaymentsModels';
 import ViewEditCustomer from '../../components/payments/ViewEditCustomer';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
-import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -83,7 +82,7 @@ const Customers = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetCustomers(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
+    dispatch(asyncGetCustomers({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
   useEffect(() => {

@@ -29,7 +29,6 @@ import {
 import { Product, reccuringEnum } from '../../models/payments/PaymentsModels';
 import ViewEditProduct from '../../components/payments/ViewEditProduct';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
-import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -85,7 +84,7 @@ const Products = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetProducts(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
+    dispatch(asyncGetProducts({ skip, limit, search: debouncedSearch }));
   }, [dispatch, limit, skip, debouncedSearch]);
 
   useEffect(() => {
