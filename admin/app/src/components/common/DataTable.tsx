@@ -9,12 +9,10 @@ import {
   TableRow,
   TableSortLabel,
   Checkbox,
-  IconButton,
-  Box,
   TableRowProps,
 } from '@material-ui/core';
 import Paper, { PaperProps } from '@material-ui/core/Paper';
-import { AspectRatio, IndeterminateCheckBox } from '@material-ui/icons';
+import { IndeterminateCheckBox } from '@material-ui/icons';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
@@ -166,7 +164,7 @@ const DataTable: React.FC<Props> = ({
                 )}
               </TableCell>
             ))}
-            {actions && <TableCell className={classes.header}></TableCell>}
+            {actions && <TableCell className={classes.header} />}
           </TableRow>
         </TableHead>
         {dsData.length < 1 && placeholder ? (
