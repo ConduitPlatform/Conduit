@@ -5,13 +5,13 @@ import DrawerWrapper from '../navigation/SideDrawerWrapper';
 import TableDialog from '../common/TableDialog';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
-import { AuthUser } from '../../models/authentication/AuthModels';
+import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 import SelectedElements from '../common/SelectedElements';
 import sharedClasses from '../common/sharedClasses';
 
 interface ICreateChatRoom {
   name: string;
-  participants: string[];
+  participants: AuthUserUI[];
 }
 
 interface Props {
@@ -100,7 +100,7 @@ const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDraw
           </Grid>
           <Grid item sm={12}>
             <SelectedElements
-              selectedElements={inputData.participants}
+              selectedElements={inputData.participants.map((participant) => participant.Email)}
               handleButtonAction={() => setUsersDialog(true)}
               removeSelectedElement={removeSelectedUser}
               buttonText={'Add participants'}

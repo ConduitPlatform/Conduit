@@ -6,7 +6,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { useAppSelector } from '../../redux/store';
 import { useDispatch } from 'react-redux';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
-import { AuthUser } from '../../models/authentication/AuthModels';
+import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 import TableDialog from '../common/TableDialog';
 import SelectedElements from '../common/SelectedElements';
 import { FormInputText } from '../common/FormComponents/FormInputText';
@@ -52,7 +52,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const dispatch = useDispatch();
   const methods = useForm<NotificationInputs>({ defaultValues: defaultValues });
   const [drawer, setDrawer] = useState<boolean>(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AuthUserUI[]>([]);
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
@@ -82,7 +82,8 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   };
 
   const onSubmit = (data: NotificationInputs) => {
-    const dataToSend = { ...data, userIds: selectedUsers };
+    const selectedIds = selectedUsers.map((user) => user._id);
+    const dataToSend = { ...data, userIds: selectedIds };
     handleSend(dataToSend);
   };
 
@@ -102,7 +103,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
           <form noValidate autoComplete="off" onSubmit={methods.handleSubmit(onSubmit)}>
             <Grid container spacing={2}>
               <SelectedElements
-                selectedElements={selectedUsers}
+                selectedElements={selectedUsers.map((user) => user.Email)}
                 handleButtonAction={() => setDrawer(true)}
                 removeSelectedElement={removeSelectedUser}
                 buttonText={'Add users'}

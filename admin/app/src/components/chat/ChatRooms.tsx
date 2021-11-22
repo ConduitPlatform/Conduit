@@ -12,6 +12,7 @@ import AddCircleOutline from '@material-ui/icons/AddCircleOutline';
 import CreateChatRoomDrawer from './CreateChatRoomDrawer';
 import useDebounce from '../../hooks/useDebounce';
 import ChatRoomTabs from './ChatRoomTabs';
+import { AuthUserUI } from '../../models/authentication/AuthModels';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -63,9 +64,12 @@ const ChatRooms: React.FC = () => {
     getChatRooms();
   }, [getChatRooms]);
 
-  const handleCreateChatRoom = (inputData: { name: string; participants: string[] }) => {
+  const handleCreateChatRoom = (inputData: { name: string; participants: AuthUserUI[] }) => {
+    const participantIds = inputData.participants.map((participant) => participant._id);
+
     const params = {
-      ...inputData,
+      name: inputData.name,
+      participants: participantIds,
       getChatRooms: getChatRooms,
     };
     dispatch(asyncPostCreateChatRoom(params));

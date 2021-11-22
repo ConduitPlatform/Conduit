@@ -67,7 +67,7 @@ interface Props extends PaperProps {
   selectable?: boolean;
   actions?: Action[];
   handleAction?: (action: Action, data: any) => void;
-  selectedItems?: string[];
+  selectedItems?: any[];
   handleSelect?: (id: string) => void;
   handleSelectAll?: (data: any) => void;
   handleRowClick?: (data: any) => void;
