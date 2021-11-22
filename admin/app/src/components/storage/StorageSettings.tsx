@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { Container, MenuItem } from '@material-ui/core';
+import { Container } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import Box from '@material-ui/core/Box';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
+
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import { IStorageConfig } from '../../models/storage/StorageModels';
-import StorageProviderSettings from './StorageProviderSettings';
-import TextField from '@material-ui/core/TextField';
-import { FormProvider } from 'react-hook-form';
+
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
+import { FormInputSelect } from '../common/FormComponents/FormInputSelect';
+import { FormInputText } from '../common/FormComponents/FormInputText';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -38,36 +38,92 @@ interface Props {
   handleSave: (data: IStorageConfig) => void;
 }
 
+interface FormProps {
+  active: boolean;
+  provider: string;
+  bucketName: string;
+  serviceAccountKeyPath: string;
+  connectionString: string;
+}
+
 const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
+  const [edit, setEdit] = useState<boolean>(false);
   const classes = useStyles();
-  const initialSettingsState = {
-    active: false,
-    allowContainerCreation: true,
-    defaultContainer: 'conduit',
-    provider: 'azure',
-    storagePath: '/var/tmp',
-    google: { bucketName: '', serviceAccountKeyPath: '' },
-    azure: { connectionString: '' },
-  };
-  const [settingsState, setSettingsState] = useState<IStorageConfig>(initialSettingsState);
+
+  const methods = useForm<FormProps>({
+    defaultValues: useMemo(() => {
+      if (config !== undefined)
+        return {
+          active: config.active,
+          provider: config.provider,
+          bucketName: config.google.bucketName,
+          serviceAccountKeyPath: config.google.serviceAccountKeyPath,
+          connectionString: config.azure.connectionString,
+        };
+    }, [config]),
+  });
+
+  const { control, reset } = methods;
 
   useEffect(() => {
-    if (!config) {
-      return;
-    }
-    setSettingsState(config);
-  }, [config]);
+    methods.reset(config);
+  }, [methods, config]);
 
   const handleCancel = () => {
-    if (config) {
-      setSettingsState(config);
-    } else {
-      setSettingsState(initialSettingsState);
-    }
+    setEdit(!edit);
+    reset();
   };
 
-  const save = () => {
-    handleSave(settingsState);
+  const isActive = useWatch({
+    control,
+    name: 'active',
+  });
+
+  const watchProvider = useWatch({
+    control,
+    name: 'provider',
+  });
+
+  const onSubmit = (data: FormProps) => {
+    const dataToSave = {
+      active: data.active,
+      allowContainerCreation: true,
+      defaultContainer: 'conduit',
+      provider: data.provider,
+      storagePath: '/var/tmp',
+      google: { bucketName: data.bucketName, serviceAccountKeyPath: data.serviceAccountKeyPath },
+      azure: { connectionString: data.connectionString },
+    };
+
+    handleSave(dataToSave);
+  };
+
+  const handleEditClick = () => {
+    setEdit(true);
+  };
+
+  const providers = [
+    { name: 'Azure', value: 'azure' },
+    { name: 'Google', value: 'google' },
+  ];
+
+  const renderInputFields = () => {
+    return (
+      <Grid item xs={6}>
+        {watchProvider === 'azure' ? (
+          <FormInputText name="connectionString" label="Connection String" disabled={!edit} />
+        ) : (
+          <>
+            <FormInputText
+              name="serviceAccountKeyPath"
+              label="Service Account Key Path"
+              disabled={!edit}
+            />
+            <FormInputText name="bucketName" label="Bucket Name" disabled={!edit} />
+          </>
+        )}
+      </Grid>
+    );
   };
 
   return (
@@ -86,48 +142,54 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
               </Box>
               <Divider className={classes.divider} />
               <Grid container spacing={2} className={classes.innerGrid}>
-                {settingsState.active && (
+                {isActive && (
                   <>
                     <Grid item xs={12}>
                       <Typography variant={'h6'}>The provider to use for storage</Typography>
                     </Grid>
                     <Grid item xs={6}>
-                      <TextField
-                        select
-                        label=""
-                        value={settingsState.provider}
-                        onChange={(event) => {
-                          setSettingsState({
-                            ...settingsState,
-                            provider: event.target.value,
-                          });
-                        }}
-                        helperText="Select your storage provider"
-                        variant="outlined">
-                        <MenuItem value="azure">Azure</MenuItem>
-                        <MenuItem value="google">Google</MenuItem>
-                      </TextField>
+                      <FormInputSelect
+                        disabled={!edit}
+                        label={'Provider'}
+                        name="provider"
+                        options={providers?.map((template) => ({
+                          label: template.name,
+                          value: template.value,
+                        }))}
+                      />
                     </Grid>
                     <Divider className={classes.divider} />
-                    <StorageProviderSettings data={settingsState} onChange={setSettingsState} />
+                    {renderInputFields()}
                   </>
                 )}
               </Grid>
-              <Grid item container xs={12} justify={'flex-end'} style={{ marginTop: 16 }}>
-                <Button
-                  onClick={() => handleCancel()}
-                  style={{ marginRight: 16 }}
-                  color={'primary'}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ alignSelf: 'flex-end' }}
-                  onClick={() => save()}>
-                  Save
-                </Button>
-              </Grid>
+              {edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleCancel()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ alignSelf: 'flex-end' }}
+                    type="submit">
+                    Save
+                  </Button>
+                </Grid>
+              )}
+              {!edit && (
+                <Grid item container xs={12} justify={'flex-end'}>
+                  <Button
+                    onClick={() => handleEditClick()}
+                    style={{ marginRight: 16 }}
+                    color={'primary'}>
+                    Edit
+                  </Button>
+                </Grid>
+              )}
             </Grid>
           </form>
         </FormProvider>
