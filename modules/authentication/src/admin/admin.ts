@@ -75,7 +75,7 @@ export class AdminHandlers {
       }
       else {
         identifier = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+        query['email'] = { $regex: `.*${identifier}.*`, $options: 'i' };
       }
     }
 
