@@ -1,20 +1,22 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableContainer from '@material-ui/core/TableContainer';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Checkbox,
+  TableRowProps,
+} from '@material-ui/core';
 import Paper, { PaperProps } from '@material-ui/core/Paper';
-import TableSortLabel from '@material-ui/core/TableSortLabel';
+import { IndeterminateCheckBox } from '@material-ui/icons';
 import { AuthUserUI } from '../../models/authentication/AuthModels';
 import { SchemaUI } from '../cms/CmsModels';
 import { NotificationData } from '../../models/notifications/NotificationModels';
-import Checkbox from '@material-ui/core/Checkbox';
-import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 import DataTableRows from './DataTableRows';
-import { TableRowProps } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   table: {
@@ -39,6 +41,9 @@ const useStyles = makeStyles((theme) => ({
   },
   placeholder: {
     textAlign: 'center',
+  },
+  density: {
+    color: theme.palette.secondary.main,
   },
 }));
 
@@ -131,7 +136,7 @@ const DataTable: React.FC<Props> = ({
       className={!inner ? classes.tableContainer : classes.innerTableContainer}
       component={Paper}
       {...rest}>
-      <Table stickyHeader className={classes.table}>
+      <Table size="small" stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
@@ -141,7 +146,7 @@ const DataTable: React.FC<Props> = ({
                   onChange={onMenuItemSelectAll}
                   checked={selectedItems?.length === dsData.length}
                   indeterminate={selectedItems?.length > 0 && selectedItems?.length < dsData.length}
-                  indeterminateIcon={<IndeterminateCheckBoxIcon color="primary" />}
+                  indeterminateIcon={<IndeterminateCheckBox color="primary" />}
                 />
               )}
             </TableCell>
