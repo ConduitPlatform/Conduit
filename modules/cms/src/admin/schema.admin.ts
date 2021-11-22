@@ -25,7 +25,7 @@ export class SchemaAdmin {
   }
 
   async getAllSchemas(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit,search } = JSON.parse(call.request.params);
+    const { skip, limit, search, sort } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -45,7 +45,8 @@ export class SchemaAdmin {
         query,
         undefined,
         skipNumber,
-        limitNumber
+        limitNumber,
+        sort,
       );
     const documentsCountPromise = SchemaDefinitions.getInstance().countDocuments(query);
 
