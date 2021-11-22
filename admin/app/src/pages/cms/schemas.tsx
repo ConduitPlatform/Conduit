@@ -76,7 +76,7 @@ const Schemas = () => {
 
   const enabledActions = [
     { title: 'Edit', type: 'edit' },
-    { title: 'Disable', type: 'archive' },
+    { title: 'Archive', type: 'archive' },
   ];
   const disabledActions = [
     { title: 'Enable', type: 'enable' },

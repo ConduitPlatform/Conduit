@@ -6,6 +6,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
 import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { Checkbox, FormControlLabel, FormGroup } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   closeIcon: {
@@ -13,7 +14,7 @@ const useStyles = makeStyles((theme) => ({
     top: theme.spacing(2),
     right: theme.spacing(2),
   },
-  disableButton: {
+  deleteButton: {
     backgroundColor: theme.palette.error.main,
     color: theme.palette.common.white,
   },
@@ -21,7 +22,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.success.main,
     color: theme.palette.common.white,
   },
-  deleteButton: {
+  archiveButton: {
     backgroundColor: theme.palette.secondary.main,
     color: theme.palette.common.white,
   },
@@ -50,7 +51,7 @@ const DisableSchemaDialog: FC<Props> = ({
         return 'Enable CMS schema:';
       }
       case 'archive': {
-        return 'Disable CMS schema:';
+        return 'Archive CMS schema:';
       }
       case 'delete': {
         return 'Delete CMS schema:';
@@ -69,7 +70,18 @@ const DisableSchemaDialog: FC<Props> = ({
         return "This operation won't delete existing documents.";
       }
       case 'delete': {
-        return 'This operation will erase existing documents.';
+        return (
+          <>
+            <FormGroup>
+              <FormControlLabel
+                disabled
+                control={<Checkbox defaultChecked />}
+                label="Selected schema will be deleted"
+              />
+              <FormControlLabel control={<Checkbox />} label="Preserve schema data" />
+            </FormGroup>
+          </>
+        );
       }
       default:
         return '';
@@ -82,7 +94,7 @@ const DisableSchemaDialog: FC<Props> = ({
         return classes.enableButton;
       }
       case 'archive': {
-        return classes.disableButton;
+        return classes.archiveButton;
       }
       case 'delete': {
         return classes.deleteButton;
@@ -96,7 +108,7 @@ const DisableSchemaDialog: FC<Props> = ({
         return 'Enable';
       }
       case 'archive': {
-        return 'Disable';
+        return 'Archive';
       }
       case 'delete': {
         return 'Delete';
