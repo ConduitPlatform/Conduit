@@ -16,6 +16,7 @@ import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
 import { Pagination } from '../../http/types/Pagination';
 import { Search } from '../../http/types/Search';
+import { Provider } from '../../http/types/Provider';
 
 interface IAuthenticationSlice {
   data: {
@@ -73,7 +74,7 @@ const initialState: IAuthenticationSlice = {
 
 export const asyncGetAuthUserData = createAsyncThunk(
   'authentication/getUserData',
-  async (params: Pagination & Search, thunkAPI) => {
+  async (params: Pagination & Search & Provider, thunkAPI) => {
     try {
       const { data } = await getAuthUsersDataReq(params);
       thunkAPI.dispatch(setAppDefaults());

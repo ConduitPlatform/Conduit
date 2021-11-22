@@ -69,7 +69,7 @@ const Users = () => {
   const [skip, setSkip] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
     asc: false,
     index: null,
@@ -108,7 +108,11 @@ const Users = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(asyncGetAuthUserData(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
+    dispatch(
+      asyncGetAuthUserData(
+        sanitizeRequestParams({ skip, limit, search: debouncedSearch, provider: filter })
+      )
+    );
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   useEffect(() => {
@@ -174,7 +178,7 @@ const Users = () => {
   };
 
   const getUsersCallback = useCallback(() => {
-    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
+    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, provider: filter }));
   }, [debouncedSearch, dispatch, filter, limit, skip]);
 
   const handleNewUserDispatch = (values: { password: string; email: string }) => {

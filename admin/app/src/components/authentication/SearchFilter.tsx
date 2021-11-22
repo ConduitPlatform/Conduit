@@ -57,7 +57,7 @@ const SearchFilter: React.FC<Props> = ({ search, setSearch, filter, handleFilter
             label="Provider"
             value={filter}
             onChange={(event) => handleFilterChange(event.target.value)}>
-            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="">All</MenuItem>
             <MenuItem value="local">Local</MenuItem>
             <MenuItem value="google">Google</MenuItem>
             <MenuItem value="facebook">Facebook</MenuItem>

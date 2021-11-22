@@ -3,8 +3,9 @@ import { CONDUIT_API } from './requestsConfig';
 import { AuthUser } from '../models/authentication/AuthModels';
 import { Pagination } from './types/Pagination';
 import { Search } from './types/Search';
+import { Provider } from './types/Provider';
 
-export const getAuthUsersDataReq = (params: Pagination & Search) =>
+export const getAuthUsersDataReq = (params: Pagination & Search & Provider) =>
   axios.get(`${CONDUIT_API}/admin/authentication/users`, { params });
 
 export const createNewUsers = (values: { email: string; password: string }) =>
