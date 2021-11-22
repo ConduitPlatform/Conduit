@@ -11,6 +11,7 @@ import { validateSchemaInput } from '../utils/utilities';
 import { CustomEndpoints, SchemaDefinitions } from '../models';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class SchemaAdmin {
   private database: DatabaseProvider;
@@ -24,7 +25,7 @@ export class SchemaAdmin {
   }
 
   async getAllSchemas(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
+    const { skip, limit,search } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -34,15 +35,19 @@ export class SchemaAdmin {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-
+    let query : any = {},identifier;
+    if(!isNil(search)){
+      identifier = escapeStringRegexp(search)
+      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+    }
     const schemasPromise = SchemaDefinitions.getInstance()
       .findMany(
-        {},
+        query,
         undefined,
         skipNumber,
         limitNumber
       );
-    const documentsCountPromise = SchemaDefinitions.getInstance().countDocuments({});
+    const documentsCountPromise = SchemaDefinitions.getInstance().countDocuments(query);
 
     let errorMessage: string | null = null;
     const [schemas, documentsCount] = await Promise.all([
