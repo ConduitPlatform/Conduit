@@ -107,8 +107,6 @@ const DataTable: React.FC<Props> = ({
       });
   };
 
-  const [density, setDensity] = useState<'small' | 'medium'>('medium');
-
   const getHeaderValues = (value: string) => {
     if (value === 'icon') {
       return '';
@@ -135,20 +133,12 @@ const DataTable: React.FC<Props> = ({
     return 'desc';
   };
 
-  const changeDensity = () => {
-    if (density === 'small') {
-      setDensity('medium');
-      return;
-    }
-    setDensity('small');
-  };
-
   return (
     <TableContainer
       className={!inner ? classes.tableContainer : classes.innerTableContainer}
       component={Paper}
       {...rest}>
-      <Table size={density} stickyHeader className={classes.table}>
+      <Table size="small" stickyHeader className={classes.table}>
         <TableHead>
           <TableRow>
             <TableCell className={classes.header} align="left" padding="none">
@@ -176,15 +166,7 @@ const DataTable: React.FC<Props> = ({
                 )}
               </TableCell>
             ))}
-            {actions && (
-              <TableCell className={classes.header}>
-                <Box display="flex" justifyContent="flex-end">
-                  <IconButton onClick={() => changeDensity()}>
-                    <AspectRatio className={classes.density} />
-                  </IconButton>
-                </Box>
-              </TableCell>
-            )}
+            {actions && <TableCell className={classes.header}></TableCell>}
           </TableRow>
         </TableHead>
         {dsData.length < 1 && placeholder ? (
