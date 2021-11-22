@@ -133,14 +133,14 @@ export const asyncGetStorageContainers = createAsyncThunk(
 
 export const asyncGetStorageContainerData = createAsyncThunk(
   'storage/getStorageContainerData',
-  async (params: { skip: number; limit: number; container: string; folder: string }, thunkAPI) => {
+  async (params: { skip: number; limit: number; container: string; parent: string }, thunkAPI) => {
     thunkAPI.dispatch(setAppLoading(true));
     try {
       const folderParams = {
         skip: params.skip,
         limit: params.limit,
         container: params.container,
-        parent: params.folder ? params.folder : undefined,
+        parent: params.parent ? params.parent : undefined,
       };
       const { data: folderData } = await getStorageFolders(folderParams);
       const folderLength = folderData.folders.length;
@@ -157,7 +157,7 @@ export const asyncGetStorageContainerData = createAsyncThunk(
       const fileParams = {
         skip: fileSkip,
         limit: fileLimit,
-        folder: params.folder ? params.folder : undefined,
+        folder: params.parent ? params.parent : undefined,
         container: params.container,
       };
       const { data: fileData } = await getStorageFiles(fileParams);
