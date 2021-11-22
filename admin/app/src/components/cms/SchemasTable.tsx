@@ -84,12 +84,13 @@ const SchemasTable: FC<Props> = ({
     } else {
       displayedData = disabledSchemas.length > 0 ? (disabledSchemas as SchemaUI[]) : null;
     }
-    return displayedData.map((d) => ({
-      _id: d._id,
-      name: d.name,
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt,
-    }));
+    if (displayedData !== null)
+      return displayedData.map((d) => ({
+        _id: d._id,
+        name: d.name,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
   };
 
   const handleSelect = (id: string) => {
