@@ -33,6 +33,7 @@ import BlockIcon from '@material-ui/icons/Block';
 import { AddCircle } from '@material-ui/icons';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import { isString } from 'lodash';
+import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -107,7 +108,7 @@ const Users = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(asyncGetAuthUserData({ skip, limit, search: debouncedSearch, filter }));
+    dispatch(asyncGetAuthUserData(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
   }, [dispatch, filter, limit, skip, debouncedSearch]);
 
   useEffect(() => {

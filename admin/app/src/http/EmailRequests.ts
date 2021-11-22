@@ -1,13 +1,15 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 import { EmailData, EmailSettings, SendEmailData } from '../models/emails/EmailModels';
+import { Pagination } from './types/Pagination';
+import { Search } from './types/Search';
 
 export const getExternalTemplatesRequest = () =>
   axios.get(`${CONDUIT_API}/admin/email/externalTemplates`);
 
-export const getEmailTemplateRequest = (skip: number, limit: number, search?: string) =>
+export const getEmailTemplateRequest = (params: Pagination & Search) =>
   axios.get(`${CONDUIT_API}/admin/email/templates`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params,
   });
 
 export const postEmailTemplateRequest = (data: EmailData) =>

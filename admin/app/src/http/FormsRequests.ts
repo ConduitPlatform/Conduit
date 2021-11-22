@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { FormSettingsConfig, FormsModel } from '../models/forms/FormsModels';
 import { CONDUIT_API } from './requestsConfig';
+import { Pagination } from './types/Pagination';
+import { Search } from './types/Search';
 
-export const getForms = (skip: number, limit: number, search?: string) =>
+export const getForms = (params: Pagination & Search) =>
   axios.get(`${CONDUIT_API}/admin/forms/get`, {
-    params: { skip, limit, search: search !== '' ? search : undefined },
+    params,
   });
 
 export const createForm = (data: any) => axios.post(`${CONDUIT_API}/admin/forms/new`, data);

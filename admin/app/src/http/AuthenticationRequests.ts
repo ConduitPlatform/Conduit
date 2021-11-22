@@ -1,16 +1,11 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 import { AuthUser } from '../models/authentication/AuthModels';
+import { Pagination } from './types/Pagination';
+import { Search } from './types/Search';
 
-export const getAuthUsersDataReq = (skip: number, limit: number, search: string, filter: string) =>
-  axios.get(`${CONDUIT_API}/admin/authentication/users`, {
-    params: {
-      skip,
-      limit,
-      search: search ? search : undefined,
-      provider: filter !== 'all' ? filter : undefined,
-    },
-  });
+export const getAuthUsersDataReq = (params: Pagination & Search) =>
+  axios.get(`${CONDUIT_API}/admin/authentication/users`, { params });
 
 export const createNewUsers = (values: { email: string; password: string }) =>
   axios.post(`${CONDUIT_API}/admin/authentication/users`, {

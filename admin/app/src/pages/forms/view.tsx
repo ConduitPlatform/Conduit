@@ -28,6 +28,7 @@ import {
   asyncGetForms,
 } from '../../redux/slices/formsSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
+import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -75,11 +76,11 @@ const Create = () => {
   const { forms, count } = useAppSelector((state) => state.formsSlice.data);
 
   useEffect(() => {
-    dispatch(asyncGetForms({ skip, limit, search: debouncedSearch }));
+    dispatch(asyncGetForms(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
   }, [dispatch, skip, limit, debouncedSearch]);
 
   const getFormsCallback = useCallback(() => {
-    dispatch(asyncGetForms({ skip, limit, search: debouncedSearch }));
+    dispatch(asyncGetForms(sanitizeRequestParams({ skip, limit, search: debouncedSearch })));
   }, [dispatch, limit, skip, debouncedSearch]);
 
   useEffect(() => {

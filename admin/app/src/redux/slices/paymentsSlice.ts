@@ -10,6 +10,7 @@ import {
   getProductsRequest,
   getSubscriptionsRequest,
   getTransactionsRequest,
+  IRequest,
   postCustomerRequest,
   postProductsRequest,
   putCustomerRequest,
@@ -24,6 +25,8 @@ import {
   Subscription,
   Transaction,
 } from '../../models/payments/PaymentsModels';
+import { Pagination } from '../../http/types/Pagination';
+import { Search } from '../../http/types/Search';
 
 interface IPaymentsSlice {
   data: {
@@ -74,13 +77,9 @@ const initialState: IPaymentsSlice = {
 
 export const asyncGetCustomers = createAsyncThunk(
   'payments/getCustomers',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (params: Pagination & Search, thunkAPI) => {
     try {
-      const { data } = await getCustomersRequest({
-        skip: params.skip,
-        limit: params.limit,
-        search: params.search ? params.search : undefined,
-      });
+      const { data } = await getCustomersRequest(params);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -151,13 +150,9 @@ export const asyncDeleteCustomers = createAsyncThunk(
 
 export const asyncGetProducts = createAsyncThunk(
   'payments/getProducts',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (params: Pagination & Search, thunkAPI) => {
     try {
-      const { data } = await getProductsRequest({
-        skip: params.skip,
-        limit: params.limit,
-        search: params.search ? params.search : undefined,
-      });
+      const { data } = await getProductsRequest(params);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -228,24 +223,9 @@ export const asyncDeleteProducts = createAsyncThunk(
 
 export const asyncGetTransactions = createAsyncThunk(
   'payments/getTransactions',
-  async (
-    params: {
-      skip: number;
-      limit: number;
-      search?: string;
-      productId?: string;
-      customerId?: string;
-    },
-    thunkAPI
-  ) => {
+  async (params: IRequest, thunkAPI) => {
     try {
-      const { data } = await getTransactionsRequest({
-        skip: params.skip,
-        limit: params.limit,
-        search: params.search,
-        productId: params.productId,
-        customerId: params.customerId,
-      });
+      const { data } = await getTransactionsRequest(params);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));
@@ -276,13 +256,9 @@ export const asyncDeleteTransactions = createAsyncThunk(
 
 export const asyncGetSubscriptions = createAsyncThunk(
   'payments/getSubscriptions',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (params: Pagination & Search, thunkAPI) => {
     try {
-      const { data } = await getSubscriptionsRequest({
-        skip: params.skip,
-        limit: params.limit,
-        search: params.search,
-      });
+      const { data } = await getSubscriptionsRequest(params);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));

@@ -10,6 +10,7 @@ import { asyncGetSubscriptions } from '../../redux/slices/paymentsSlice';
 import { Subscription } from '../../models/payments/PaymentsModels';
 import DrawerWrapper from '../../components/navigation/SideDrawerWrapper';
 import ViewSubscription from '../../components/payments/ViewSubscription';
+import { sanitizeRequestParams } from '../../utils/sanitizeRequestParams';
 
 const useStyles = makeStyles((theme) => ({
   btnAlignment: {
@@ -62,7 +63,9 @@ const Subscriptions = () => {
   const debouncedSearch: string = useDebounce(search, 500);
 
   useEffect(() => {
-    dispatch(asyncGetSubscriptions({ skip, limit, search: debouncedSearch }));
+    dispatch(
+      asyncGetSubscriptions(sanitizeRequestParams({ skip, limit, search: debouncedSearch }))
+    );
   }, [dispatch, limit, skip, debouncedSearch]);
 
   useEffect(() => {
