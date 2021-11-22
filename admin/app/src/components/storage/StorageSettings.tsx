@@ -41,28 +41,13 @@ interface Props {
   handleSave: (data: IStorageConfig) => void;
 }
 
-interface FormProps {
-  active: boolean;
-  provider: string;
-  google: {
-    bucketName: string;
-    serviceAccountKeyPath: string;
-  };
-  azure: { connectionString: string };
-}
-
 const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
   const [edit, setEdit] = useState<boolean>(false);
   const classes = useStyles();
 
-  const methods = useForm<FormProps>({
+  const methods = useForm<IStorageConfig>({
     defaultValues: useMemo(() => {
-      return {
-        active: config.active,
-        provider: config.provider,
-        google: config.google,
-        azure: config.azure,
-      };
+      return config;
     }, [config]),
   });
 
@@ -87,18 +72,8 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
     name: 'provider',
   });
 
-  const onSubmit = (data: FormProps) => {
-    const dataToSave = {
-      active: data.active,
-      allowContainerCreation: true,
-      defaultContainer: 'conduit',
-      provider: data.provider,
-      storagePath: '/var/tmp',
-      google: data.google,
-      azure: data.azure,
-    };
-
-    handleSave(dataToSave);
+  const onSubmit = (data: IStorageConfig) => {
+    handleSave(data);
   };
 
   const handleEditClick = () => {
@@ -106,8 +81,8 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
   };
 
   const providers = [
-    { name: 'Azure', value: 'azure' },
-    { name: 'Google', value: 'google' },
+    { label: 'Azure', value: 'azure' },
+    { label: 'Google', value: 'google' },
   ];
 
   return (
@@ -137,14 +112,14 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
                         label={'Provider'}
                         name="provider"
                         options={providers?.map((template) => ({
-                          label: template.name,
+                          label: template.label,
                           value: template.value,
                         }))}
                       />
                     </Grid>
                     <Divider className={classes.divider} />
                     <Grid item spacing={1} container xs={12}>
-                      {watchProvider === 'azure' ? (
+                      {watchProvider === 'azure' && (
                         <Grid item xs={6}>
                           <FormInputText
                             name="azure.connectionString"
@@ -152,7 +127,8 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
                             disabled={!edit}
                           />
                         </Grid>
-                      ) : (
+                      )}
+                      {watchProvider === 'google' && (
                         <>
                           <Grid item xs={6}>
                             <FormInputText
