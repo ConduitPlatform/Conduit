@@ -12,6 +12,8 @@ import Button from '@material-ui/core/Button';
 import { IStorageConfig } from '../../models/storage/StorageModels';
 import StorageProviderSettings from './StorageProviderSettings';
 import TextField from '@material-ui/core/TextField';
+import { FormProvider } from 'react-hook-form';
+import { FormInputSwitch } from '../common/FormComponents/FormInputSwitch';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -71,69 +73,64 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
   return (
     <Container>
       <Paper className={classes.paper}>
-        <Grid container>
-          <Box
-            width={'100%'}
-            display={'inline-flex'}
-            justifyContent={'space-between'}
-            alignItems={'center'}>
-            <Typography variant={'h6'}>Activate Storage Module</Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settingsState.active}
-                  onChange={() =>
-                    setSettingsState({ ...settingsState, active: !settingsState.active })
-                  }
-                  value={'accountLinking'}
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <Grid container>
+              <Box
+                width={'100%'}
+                display={'inline-flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}>
+                <Typography variant={'h6'}>Activate Storage Module</Typography>
+                <FormInputSwitch name={'active'} disabled={!edit} />
+              </Box>
+              <Divider className={classes.divider} />
+              <Grid container spacing={2} className={classes.innerGrid}>
+                {settingsState.active && (
+                  <>
+                    <Grid item xs={12}>
+                      <Typography variant={'h6'}>The provider to use for storage</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        select
+                        label=""
+                        value={settingsState.provider}
+                        onChange={(event) => {
+                          setSettingsState({
+                            ...settingsState,
+                            provider: event.target.value,
+                          });
+                        }}
+                        helperText="Select your storage provider"
+                        variant="outlined">
+                        <MenuItem value="azure">Azure</MenuItem>
+                        <MenuItem value="google">Google</MenuItem>
+                      </TextField>
+                    </Grid>
+                    <Divider className={classes.divider} />
+                    <StorageProviderSettings data={settingsState} onChange={setSettingsState} />
+                  </>
+                )}
+              </Grid>
+              <Grid item container xs={12} justify={'flex-end'} style={{ marginTop: 16 }}>
+                <Button
+                  onClick={() => handleCancel()}
+                  style={{ marginRight: 16 }}
+                  color={'primary'}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
                   color="primary"
-                />
-              }
-              label={''}
-            />
-          </Box>
-          <Divider className={classes.divider} />
-          <Grid container spacing={2} className={classes.innerGrid}>
-            {settingsState.active && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant={'h6'}>The provider to use for storage</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    select
-                    label=""
-                    value={settingsState.provider}
-                    onChange={(event) => {
-                      setSettingsState({
-                        ...settingsState,
-                        provider: event.target.value,
-                      });
-                    }}
-                    helperText="Select your storage provider"
-                    variant="outlined">
-                    <MenuItem value="azure">Azure</MenuItem>
-                    <MenuItem value="google">Google</MenuItem>
-                  </TextField>
-                </Grid>
-                <Divider className={classes.divider} />
-                <StorageProviderSettings data={settingsState} onChange={setSettingsState} />
-              </>
-            )}
-          </Grid>
-          <Grid item container xs={12} justify={'flex-end'} style={{ marginTop: 16 }}>
-            <Button onClick={() => handleCancel()} style={{ marginRight: 16 }} color={'primary'}>
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ alignSelf: 'flex-end' }}
-              onClick={() => save()}>
-              Save
-            </Button>
-          </Grid>
-        </Grid>
+                  style={{ alignSelf: 'flex-end' }}
+                  onClick={() => save()}>
+                  Save
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </FormProvider>
       </Paper>
     </Container>
   );
