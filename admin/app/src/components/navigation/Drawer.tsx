@@ -4,12 +4,13 @@ import ListItem from '@material-ui/core/ListItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
 import { ExitToApp, Settings } from '@material-ui/icons';
-import Router, { useRouter } from 'next/router';
+import { useRouter } from 'next/router';
 import { asyncLogout } from '../../redux/slices/appAuthSlice';
 import { makeStyles } from '@material-ui/core/styles';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import Modules from '../modules/Modules';
 import CustomListItem from './CustomListItem';
+import Link from 'next/link';
 
 const useStyles = makeStyles((theme: Theme) => ({
   drawer: {
@@ -47,7 +48,7 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
 
   const handleLogout = async () => {
     dispatch(asyncLogout());
-    await Router.replace('/login');
+    await router.replace('/login');
   };
 
   return (
@@ -59,16 +60,17 @@ const CustomDrawer: React.FC<Props> = ({ itemSelected, ...rest }) => {
         <List component="nav">
           <Divider />
           <Modules modules={enabledModules} homeEnabled itemSelected={itemSelected} />
-          <CustomListItem
-            selected={itemSelected === 'settings'}
-            icon={<Settings color={'inherit'} />}
-            title="Settings"
-            onClick={() => router.replace('/settings/clientsdk')}
-          />
+          <Link href="/settings/clientsdk" passHref>
+            <CustomListItem
+              selected={itemSelected === 'settings'}
+              icon={<Settings color={'inherit'} />}
+              title="Settings"
+            />
+          </Link>
           <Divider />
           {disabledModules.length > 0 ? (
             <>
-              <Modules modules={disabledModules} itemSelected={itemSelected} />
+              <Modules modules={disabledModules} itemSelected={itemSelected} disabled />
               <Divider />
             </>
           ) : (

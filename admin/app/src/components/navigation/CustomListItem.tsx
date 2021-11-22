@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { forwardRef } from 'react';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import { makeStyles } from '@material-ui/core/styles';
@@ -9,7 +9,7 @@ const useStyles = makeStyles((theme: Theme) => ({
   listItem: {
     minHeight: theme.spacing(3),
     borderRadius: theme.spacing(0.5),
-    marginBottom: theme.spacing(1),
+    margin: theme.spacing(1, 0),
     color: theme.palette.secondary.main,
     borderWidth: 1,
     paddingLeft: theme.spacing(0.5),
@@ -47,29 +47,38 @@ const useStyles = makeStyles((theme: Theme) => ({
     margin: 0,
     paddingLeft: theme.spacing(1),
   },
+  link: {
+    textDecoration: 'none',
+  },
 }));
 
 interface Props {
   title: string;
   icon: React.ReactElement;
-  onClick: () => void;
+  href?: string;
+  onClick?: () => void;
   className?: string;
   selected?: boolean;
 }
 
-const CustomListItem: FC<Props> = ({ selected, title, icon, onClick, className, ...rest }) => {
-  const classes = useStyles();
-  return (
-    <ListItem
-      button
-      className={clsx(classes.listItem, className)}
-      selected={selected}
-      onClick={onClick}
-      {...rest}>
-      <ListItemIcon className={classes.listItemIcon}>{icon}</ListItemIcon>
-      <ListItemText primary={title} classes={{ primary: classes.listItemText }} />
-    </ListItem>
-  );
-};
+const CustomListItem = forwardRef<HTMLAnchorElement, Props>(
+  ({ selected, title, icon, onClick, className, href, ...rest }, ref) => {
+    const classes = useStyles();
+    return (
+      <a className={classes.link} href={href} onClick={onClick} ref={ref}>
+        <ListItem
+          button
+          className={clsx(classes.listItem, className)}
+          selected={selected}
+          {...rest}>
+          <ListItemIcon className={classes.listItemIcon}>{icon}</ListItemIcon>
+          <ListItemText primary={title} classes={{ primary: classes.listItemText }} />
+        </ListItem>
+      </a>
+    );
+  }
+);
+
+CustomListItem.displayName = 'CustomListItem';
 
 export default CustomListItem;
