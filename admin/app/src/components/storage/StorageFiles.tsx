@@ -62,7 +62,7 @@ const StorageFiles = () => {
         skip: skip,
         limit: limit,
         container: filteredPath[0],
-        folder: filteredPath.length > 1 ? filteredPath.slice(1).join('/') : '',
+        parent: filteredPath.length > 1 ? filteredPath.slice(1).join('/') : '',
       })
     );
   }, [dispatch, filteredPath, limit, skip]);
@@ -187,6 +187,7 @@ const StorageFiles = () => {
 
   const handleDeleteAction = () => {
     setDialog(dialogInitialState);
+    console.log('name', dialog.title);
     switch (dialog.type) {
       case 'container':
         dispatch(
