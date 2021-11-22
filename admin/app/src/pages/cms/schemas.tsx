@@ -76,7 +76,7 @@ const Schemas = () => {
 
   const enabledActions = [
     { title: 'Edit', type: 'edit' },
-    { title: 'Disable', type: 'disable' },
+    { title: 'Disable', type: 'archive' },
   ];
   const disabledActions = [
     { title: 'Enable', type: 'enable' },
@@ -96,8 +96,8 @@ const Schemas = () => {
           '/cms/build-types'
         );
         break;
-      case 'disable':
-        setSelectedSchemaForAction({ data, action: 'disable' });
+      case 'archive':
+        setSelectedSchemaForAction({ data, action: 'archive' });
         setOpenDisable(true);
         break;
       case 'enable':

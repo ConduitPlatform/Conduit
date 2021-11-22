@@ -44,12 +44,12 @@ const DisableSchemaDialog: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const createDialogTitle = (action: 'enable' | 'disable' | 'delete') => {
+  const createDialogTitle = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable CMS schema:';
       }
-      case 'disable': {
+      case 'archive': {
         return 'Disable CMS schema:';
       }
       case 'delete': {
@@ -60,12 +60,12 @@ const DisableSchemaDialog: FC<Props> = ({
     }
   };
 
-  const createDialogInfo = (action: 'enable' | 'disable' | 'delete') => {
+  const createDialogInfo = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'This operation with enable the schema.';
       }
-      case 'disable': {
+      case 'archive': {
         return "This operation won't delete existing documents.";
       }
       case 'delete': {
@@ -76,12 +76,12 @@ const DisableSchemaDialog: FC<Props> = ({
     }
   };
 
-  const generateButtonClass = (action: 'enable' | 'disable' | 'delete') => {
+  const generateButtonClass = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return classes.enableButton;
       }
-      case 'disable': {
+      case 'archive': {
         return classes.disableButton;
       }
       case 'delete': {
@@ -90,12 +90,12 @@ const DisableSchemaDialog: FC<Props> = ({
     }
   };
 
-  const generateButtonName = (action: 'enable' | 'disable' | 'delete') => {
+  const generateButtonName = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable';
       }
-      case 'disable': {
+      case 'archive': {
         return 'Disable';
       }
       case 'delete': {
@@ -109,7 +109,7 @@ const DisableSchemaDialog: FC<Props> = ({
   const handleClick = () => {
     switch (selectedSchema.action) {
       case 'enable':
-      case 'disable':
+      case 'archive':
         handleToggle();
         break;
       case 'delete':

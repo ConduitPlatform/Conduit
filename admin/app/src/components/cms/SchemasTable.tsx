@@ -112,7 +112,7 @@ const SchemasTable: FC<Props> = ({
                 Active Schemas
               </ToggleButton>
               <ToggleButton key={2} value={false} className={classes.toggleButtonDisabled}>
-                Disabled Schemas
+                Archived Schemas
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>

@@ -30,7 +30,7 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, 
         return <EditIcon color={editDisabled ? 'disabled' : 'primary'} />;
       case 'block/unblock':
         return <BlockIcon color={isBlocked ? 'error' : 'primary'} />;
-      case 'disable':
+      case 'archive':
         return <BlockIcon color="primary" />;
       case 'enable':
         return <CheckCircleIcon color="primary" />;
