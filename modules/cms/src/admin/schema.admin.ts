@@ -25,7 +25,7 @@ export class SchemaAdmin {
   }
 
   async getAllSchemas(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, search, sort } = JSON.parse(call.request.params);
+    const { skip, limit, search, sort, enabled } = JSON.parse(call.request.params);
     let skipNumber = 0,
       limitNumber = 25;
 
@@ -40,6 +40,11 @@ export class SchemaAdmin {
       identifier = escapeStringRegexp(search)
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
+    if(!isNil(enabled)){
+      query['enabled'] = enabled
+    }
+
+
     const schemasPromise = SchemaDefinitions.getInstance()
       .findMany(
         query,
@@ -173,7 +178,6 @@ export class SchemaAdmin {
     let nameExists = allSchemas.filter((schema: any) => {
       return schema.name === name;
     });
-
     if (nameExists && nameExists.length !== 0) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -392,11 +396,11 @@ export class SchemaAdmin {
   }
 
   async deleteSchema(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    if (isNil(id)) {
+    const { id, deleteData } = JSON.parse(call.request.params);
+    if (isNil(id) || isNil(deleteData)) {
       return callback({
         code: status.INVALID_ARGUMENT,
-        message: 'Path parameter "id" is missing',
+        message: 'Parameter id/deletedData is missing',
       });
     }
 
@@ -441,13 +445,20 @@ export class SchemaAdmin {
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
+    const message = await this.database
+      .deleteSchema(requestedSchema.name, deleteData)
+      .catch((e: Error) => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
-    return callback(null, { result: 'Schema successfully deleted' });
+    return callback(null, { result: message });
   }
 
   async deleteManySchemas(call: RouterRequest, callback: RouterResponse){
-    const { ids } = JSON.parse(call.request.params);
+    const { ids, deleteData } = JSON.parse(call.request.params);
     if (isNil(ids) || !isArray(ids)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -487,6 +498,12 @@ export class SchemaAdmin {
           code: status.INTERNAL,
           message: 'Can not delete schema because it is used by a custom endpoint',
         });
+      }
+      await this.database
+        .deleteSchema(schema.name, deleteData)
+        .catch((e: Error) => (errorMessage = e.message));
+      if (!isNil(errorMessage)) {
+        return callback({ code: status.INTERNAL, message: errorMessage });
       }
     }
     await SchemaDefinitions.getInstance()
