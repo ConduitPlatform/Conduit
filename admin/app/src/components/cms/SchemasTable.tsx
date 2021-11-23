@@ -59,7 +59,7 @@ const SchemasTable: FC<Props> = ({
   handleAdd,
 }) => {
   const classes = useStyles();
-  const [selectedSchemas, setSelectedSchemas] = useState<any>([]);
+  const [selectedSchemas, setSelectedSchemas] = useState<SchemaUI[]>([]);
   const [active, setActive] = useState(true);
   const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
     asc: false,
@@ -84,7 +84,7 @@ const SchemasTable: FC<Props> = ({
     } else {
       displayedData = disabledSchemas.length > 0 ? (disabledSchemas as SchemaUI[]) : null;
     }
-    if (displayedData !== null)
+    if (displayedData !== null && displayedData !== undefined)
       return displayedData.map((d) => ({
         _id: d._id,
         name: d.name,
@@ -96,14 +96,13 @@ const SchemasTable: FC<Props> = ({
   const handleSelect = (id: string) => {
     const foundTemplate = visibleData()?.find((item) => item._id === id);
     const newSelectedElements = [...selectedSchemas];
-    const templateChecked = selectedSchemas.find(
-      (template) => template?._id === foundTemplate?._id
-    );
-    if (templateChecked) {
-      const index = newSelectedElements.findIndex((newId) => newId === foundTemplate?._id);
-      newSelectedElements.splice(index, 2);
+    const schemaChecked = selectedSchemas.find((schema) => schema?._id === foundTemplate?._id);
+
+    if (schemaChecked) {
+      const index = newSelectedElements.findIndex((element) => element._id === foundTemplate?._id);
+      newSelectedElements.splice(index, 1);
     } else {
-      newSelectedElements.push(foundTemplate);
+      foundTemplate !== undefined && newSelectedElements.push(foundTemplate);
     }
     setSelectedSchemas(newSelectedElements);
   };
@@ -113,8 +112,7 @@ const SchemasTable: FC<Props> = ({
       setSelectedSchemas([]);
       return;
     }
-
-    visibleData() !== null && setSelectedSchemas(visibleData());
+    if (visibleData() !== null && visibleData() !== undefined) setSelectedSchemas(visibleData());
   };
 
   const headers = [
