@@ -12,9 +12,5 @@ export default {
       type: Number,
       default: 72000,
     },
-    masterkey: {
-      type: String,
-      default: 'M4ST3RK3Y',
-    },
   },
 };
