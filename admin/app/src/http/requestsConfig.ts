@@ -29,7 +29,7 @@ axios.interceptors.request.use(
       config.headers = JWT_CONFIG(token);
     }
 
-    if (config.params !== undefined) {
+    if (config.params) {
       config.params = sanitizeRequestParams(config.params);
     }
     return config;
