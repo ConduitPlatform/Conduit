@@ -1,13 +1,13 @@
 import React, { FC, useCallback, useState } from 'react';
 import { Button, Grid, TextField } from '@material-ui/core';
 import DrawerWrapper from '../navigation/SideDrawerWrapper';
-
 import TableDialog from '../common/TableDialog';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
 import { asyncGetAuthUserData } from '../../redux/slices/authenticationSlice';
 import { AuthUser, AuthUserUI } from '../../models/authentication/AuthModels';
 import SelectedElements from '../common/SelectedElements';
 import sharedClasses from '../common/sharedClasses';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 interface ICreateChatRoom {
   name: string;
@@ -46,7 +46,7 @@ const CreateChatRoomDrawer: FC<Props> = ({ open, handleCreateChatRoom, closeDraw
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
-    (params: { skip: number; limit: number; search: string; filter: string }) => {
+    (params: Pagination & Search & { provider: string }) => {
       dispatch(asyncGetAuthUserData(params));
     },
     [dispatch]

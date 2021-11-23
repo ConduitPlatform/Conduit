@@ -21,6 +21,7 @@ import {
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 interface IEmailSlice {
   data: {
@@ -68,9 +69,9 @@ const initialState: IEmailSlice = {
 
 export const asyncGetEmailTemplates = createAsyncThunk(
   'emails/getTemplates',
-  async (params: { skip: number; limit: number; search?: string }, thunkAPI) => {
+  async (params: Pagination & Search, thunkAPI) => {
     try {
-      const { data } = await getEmailTemplateRequest(params.skip, params.limit, params.search);
+      const { data } = await getEmailTemplateRequest(params);
       return data;
     } catch (error) {
       thunkAPI.dispatch(setAppLoading(false));

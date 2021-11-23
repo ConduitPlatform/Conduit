@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Customer, PaymentSettings, Product } from '../models/payments/PaymentsModels';
 import { CONDUIT_API } from './requestsConfig';
 
-interface IRequest {
+export interface IRequest {
   skip: number;
   limit: number;
   search?: string;
