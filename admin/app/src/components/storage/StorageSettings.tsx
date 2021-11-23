@@ -34,6 +34,15 @@ const useStyles = makeStyles((theme) => ({
   actions: {
     paddingTop: theme.spacing(3),
   },
+  buttonSpacing: {
+    marginRight: theme.spacing(3),
+  },
+  box: {
+    width: '100%',
+    display: 'inline-flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 }));
 
 interface Props {
@@ -91,11 +100,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(onSubmit)}>
             <Grid container>
-              <Box
-                width={'100%'}
-                display={'inline-flex'}
-                justifyContent={'space-between'}
-                alignItems={'center'}>
+              <Box className={classes.box}>
                 <Typography variant={'h6'}>Activate Storage Module</Typography>
                 <FormInputSwitch name={'active'} disabled={!edit} />
               </Box>
@@ -154,15 +159,11 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
                 <Grid item container xs={12} className={classes.actions} justify={'flex-end'}>
                   <Button
                     onClick={() => handleCancel()}
-                    style={{ marginRight: 16 }}
+                    className={classes.buttonSpacing}
                     color={'primary'}>
                     Cancel
                   </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    style={{ alignSelf: 'flex-end' }}
-                    type="submit">
+                  <Button variant="contained" color="primary" type="submit">
                     Save
                   </Button>
                 </Grid>
@@ -171,7 +172,7 @@ const StorageSettings: React.FC<Props> = ({ config, handleSave }) => {
                 <Grid item container xs={12} justify={'flex-end'}>
                   <Button
                     onClick={() => handleEditClick()}
-                    style={{ marginRight: 16 }}
+                    className={classes.buttonSpacing}
                     color={'primary'}>
                     Edit
                   </Button>
