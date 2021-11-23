@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import DataTable from '../common/DataTable';
 import Container from '@material-ui/core/Container';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
@@ -60,11 +60,30 @@ const SchemasTable: FC<Props> = ({
 }) => {
   const classes = useStyles();
   const [selectedSchemas, setSelectedSchemas] = useState<SchemaUI[]>([]);
+  const [dataToDisplay, setDataToDisplay] = useState<SchemaUI[]>([]);
   const [active, setActive] = useState(true);
   const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
     asc: false,
     index: null,
   });
+
+  useEffect(() => {
+    let displayedData;
+    if (active && activeSchemas.length > 0) {
+      displayedData = activeSchemas as SchemaUI[];
+    } else if (disabledSchemas.length > 0) {
+      displayedData = disabledSchemas as SchemaUI[];
+    }
+    if (displayedData !== undefined) {
+      displayedData = displayedData.map((d) => ({
+        _id: d._id,
+        name: d.name,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
+      setDataToDisplay(displayedData);
+    }
+  }, [activeSchemas, disabledSchemas, active]);
 
   const handleChange = (event: any, newValue: any) => {
     setActive(newValue);
@@ -77,24 +96,8 @@ const SchemasTable: FC<Props> = ({
     return disabledActions;
   };
 
-  const visibleData = () => {
-    let displayedData;
-    if (active) {
-      displayedData = activeSchemas.length > 0 ? (activeSchemas as SchemaUI[]) : null;
-    } else {
-      displayedData = disabledSchemas.length > 0 ? (disabledSchemas as SchemaUI[]) : null;
-    }
-    if (displayedData !== null && displayedData !== undefined)
-      return displayedData.map((d) => ({
-        _id: d._id,
-        name: d.name,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      }));
-  };
-
   const handleSelect = (id: string) => {
-    const foundTemplate = visibleData()?.find((item) => item._id === id);
+    const foundTemplate = dataToDisplay?.find((item) => item._id === id);
     const newSelectedElements = [...selectedSchemas];
     const schemaChecked = selectedSchemas.find((schema) => schema?._id === foundTemplate?._id);
 
@@ -112,7 +115,7 @@ const SchemasTable: FC<Props> = ({
       setSelectedSchemas([]);
       return;
     }
-    if (visibleData() !== null && visibleData() !== undefined) setSelectedSchemas(visibleData());
+    if (dataToDisplay !== null && dataToDisplay !== undefined) setSelectedSchemas(dataToDisplay);
   };
 
   const headers = [
@@ -150,12 +153,12 @@ const SchemasTable: FC<Props> = ({
           </Box>
         </Grid>
       </Grid>
-      {visibleData() && (
+      {dataToDisplay.length > 0 && (
         <DataTable
           headers={headers}
           sort={sort}
           setSort={setSort}
-          dsData={visibleData()}
+          dsData={dataToDisplay}
           actions={getActions()}
           selectedItems={selectedSchemas}
           handleSelect={handleSelect}
