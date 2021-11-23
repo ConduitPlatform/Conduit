@@ -11,6 +11,7 @@ import TableDialog from '../common/TableDialog';
 import SelectedElements from '../common/SelectedElements';
 import { FormInputText } from '../common/FormComponents/FormInputText';
 import { NotificationData } from '../../models/notifications/NotificationModels';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -56,7 +57,7 @@ const SendNotificationForm: FC<SendNotificationProps> = ({ handleSend }) => {
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
-    (params: { skip: number; limit: number; search: string; filter: string }) => {
+    (params: Pagination & Search & { provider: string }) => {
       dispatch(asyncGetAuthUserData(params));
     },
     [dispatch]

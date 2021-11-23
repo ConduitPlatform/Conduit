@@ -10,6 +10,7 @@ import { asyncGetAuthUserData } from '../../../redux/slices/authenticationSlice'
 import TableDialog from '../../common/TableDialog';
 import SelectedElements from '../../common/SelectedElements';
 import { camelCase, startCase } from 'lodash';
+import { Pagination, Search } from '../../../models/http/HttpModels';
 
 interface Props {
   preloadedValues: Customer;
@@ -36,7 +37,7 @@ const CustomerForm: FC<Props> = ({ preloadedValues, handleSubmitData }) => {
   const { users, count } = useAppSelector((state) => state.authenticationSlice.data.authUsers);
 
   const getData = useCallback(
-    (params: { skip: number; limit: number; search: string; filter: string }) => {
+    (params: Pagination & Search & { provider: string }) => {
       dispatch(asyncGetAuthUserData(params));
     },
     [dispatch]
