@@ -68,6 +68,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     });
   }
 
+  deleteSchema(schemaName: string,deleteData: boolean): string {
+    return '';
+  }
+
   getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
     if (this.models) {
       const self = this;

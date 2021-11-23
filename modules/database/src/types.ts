@@ -47,6 +47,15 @@ export type QueryRequest = GrpcRequest<{
   query: string;
 }>;
 
+export type DropCollectionResponse = GrpcResponse<{
+  result: string;
+}>
+
+export type DropCollectionRequest = GrpcRequest<{
+  schemaName: string;
+  deleteData: boolean;
+}>;
+
 export type QueryResponse = GrpcResponse<{
   result: string;
 }>;

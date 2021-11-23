@@ -23,6 +23,9 @@ message GetSchemasRequest {
 message GetSchemasResponse {
     repeated Schema schemas = 1;
 }
+message DropCollectionResponse{
+    string result = 1;
+}
 
 message Schema {
     string name = 1;
@@ -72,10 +75,16 @@ message UpdateManyRequest {
     optional bool updateProvidedOnly = 4;
 }
 
+message DropCollectionRequest{
+    string schemaName = 1;
+    bool deleteData = 2;
+}
+
 service DatabaseProvider {
-    rpc CreateSchemaFromAdapter (CreateSchemaRequest) returns (CreateSchemaResponse);
+    rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (CreateSchemaResponse);
     rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
+    rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
     // Database queries
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);

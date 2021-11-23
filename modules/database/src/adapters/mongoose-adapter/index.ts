@@ -136,14 +136,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  deleteSchema(schemaName: string) {
+  deleteSchema(schemaName: string, deleteData: boolean): string {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
     if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
+    if(deleteData){
+      this.models![schemaName].model.collection.drop()
+        .catch((e:any) => { throw new Error(e.message)});
+    }
     delete this.models![schemaName];
     delete this.mongoose.connection.models[schemaName];
+    return 'Schema deleted!'
     // TODO should we delete anything else?
   }
+
 }

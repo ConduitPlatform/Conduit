@@ -20,6 +20,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   abstract getSchemas(): ConduitSchema[];
 
+  abstract deleteSchema(schemaName: string, deleteData: boolean): string;
+
   abstract getSchemaModel(
     schemaName: string
   ): { model: SchemaAdapter<any>; relations: any };

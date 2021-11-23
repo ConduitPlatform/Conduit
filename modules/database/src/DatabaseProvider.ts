@@ -20,6 +20,8 @@ import {
   SchemasResponse,
   UpdateManyRequest,
   UpdateRequest,
+  DropCollectionResponse,
+  DropCollectionRequest,
 } from './types';
 import * as models from './models';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
@@ -64,6 +66,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
         getSchema: this.getSchema.bind(this),
         getSchemas: this.getSchemas.bind(this),
+        deleteSchema: this.deleteSchema.bind(this),
         findOne: this.findOne.bind(this),
         findMany: this.findMany.bind(this),
         create: this.create.bind(this),
@@ -204,6 +207,19 @@ export class DatabaseProvider extends ConduitServiceModule {
           };
         }),
       });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
+    }
+  }
+
+  deleteSchema(call: DropCollectionRequest, callback: DropCollectionResponse) {
+    try {
+      const schemas = this._activeAdapter.deleteSchema(call.request.schemaName,call.request.deleteData);
+      console.log(schemas)
+      callback(null, { result: schemas });
     } catch (err) {
       callback({
         code: status.INTERNAL,
