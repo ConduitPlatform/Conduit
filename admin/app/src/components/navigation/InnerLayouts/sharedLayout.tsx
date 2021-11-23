@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Typography, Tabs, Tab, createStyles, makeStyles } from '@material-ui/core';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 const useStyles = makeStyles((theme) =>
   createStyles({
@@ -17,6 +18,21 @@ const useStyles = makeStyles((theme) =>
     },
     navContent: {
       marginTop: '10px',
+    },
+    link: {
+      textDecoration: 'none',
+      color: 'inherit',
+    },
+    tab: {
+      '&:hover': {
+        textDecoration: 'none',
+      },
+    },
+    tabSelected: {
+      opacity: 1,
+      '&:hover': {
+        textDecoration: 'none',
+      },
     },
   })
 );
@@ -39,11 +55,6 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
     setValue(index);
   }, [router.pathname, pathNames]);
 
-  const handleChange = async (eventValue: number) => {
-    await router.push(`${labels[eventValue].id}`);
-    setValue(eventValue);
-  };
-
   return (
     <Box className={classes.root}>
       <Box className={classes.navBar}>
@@ -59,13 +70,20 @@ const SharedLayout: React.FC<Props> = ({ children, pathNames, swagger, icon, lab
             </Button>
           </a>
         </Typography>
-        <Tabs
-          value={value}
-          className={classes.navContent}
-          onChange={(event, eventValue) => handleChange(eventValue)}>
-          {labels.map((label: { name: string; id: string }, index: number) => (
-            <Tab key={index} label={label.name} id={label.id} />
-          ))}
+        <Tabs value={value} className={classes.navContent}>
+          {labels.map((label: { name: string; id: string }, index: number) => {
+            return (
+              <Link href={pathNames[index]} passHref key={index}>
+                <Tab
+                  label={label.name}
+                  id={label.id}
+                  classes={{
+                    root: value === index ? classes.tabSelected : classes.tab,
+                  }}
+                />
+              </Link>
+            );
+          })}
         </Tabs>
       </Box>
       <Box>{children}</Box>
