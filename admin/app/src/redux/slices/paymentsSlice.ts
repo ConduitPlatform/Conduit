@@ -25,8 +25,7 @@ import {
   Subscription,
   Transaction,
 } from '../../models/payments/PaymentsModels';
-import { Pagination } from '../../http/types/Pagination';
-import { Search } from '../../http/types/Search';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 interface IPaymentsSlice {
   data: {

@@ -12,8 +12,7 @@ import {
   updateFormsConfig,
 } from '../../http/FormsRequests';
 import { FormReplies, FormSettingsConfig, FormsModel } from '../../models/forms/FormsModels';
-import { Pagination } from '../../http/types/Pagination';
-import { Search } from '../../http/types/Search';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 export type FormsState = {
   data: {

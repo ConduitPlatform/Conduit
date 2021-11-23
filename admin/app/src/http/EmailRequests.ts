@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { CONDUIT_API } from './requestsConfig';
 import { EmailData, EmailSettings, SendEmailData } from '../models/emails/EmailModels';
-import { Pagination } from './types/Pagination';
-import { Search } from './types/Search';
+import { Pagination, Search } from '../models/http/HttpModels';
 
 export const getExternalTemplatesRequest = () =>
   axios.get(`${CONDUIT_API}/admin/email/externalTemplates`);

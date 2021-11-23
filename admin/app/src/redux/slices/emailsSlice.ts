@@ -21,8 +21,7 @@ import {
 import { setAppDefaults, setAppLoading } from './appSlice';
 import { getErrorData } from '../../utils/error-handler';
 import { enqueueErrorNotification, enqueueSuccessNotification } from '../../utils/useNotifier';
-import { Pagination } from '../../http/types/Pagination';
-import { Search } from '../../http/types/Search';
+import { Pagination, Search } from '../../models/http/HttpModels';
 
 interface IEmailSlice {
   data: {

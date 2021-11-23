@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { FormSettingsConfig, FormsModel } from '../models/forms/FormsModels';
 import { CONDUIT_API } from './requestsConfig';
-import { Pagination } from './types/Pagination';
-import { Search } from './types/Search';
+import { Pagination, Search } from '../models/http/HttpModels';
 
 export const getForms = (params: Pagination & Search) =>
   axios.get(`${CONDUIT_API}/admin/forms/get`, {
