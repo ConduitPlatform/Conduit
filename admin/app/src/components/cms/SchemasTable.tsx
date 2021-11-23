@@ -59,6 +59,7 @@ const SchemasTable: FC<Props> = ({
   handleAdd,
 }) => {
   const classes = useStyles();
+  const [selectedSchemas, setSelectedSchemas] = useState<SchemaUI[]>([]);
   const [active, setActive] = useState(true);
   const [sort, setSort] = useState<{ asc: boolean; index: string | null }>({
     asc: false,
@@ -83,15 +84,35 @@ const SchemasTable: FC<Props> = ({
     } else {
       displayedData = disabledSchemas.length > 0 ? (disabledSchemas as SchemaUI[]) : null;
     }
+    if (displayedData !== null && displayedData !== undefined)
+      return displayedData.map((d) => ({
+        _id: d._id,
+        name: d.name,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
+  };
 
-    return displayedData
-      ? displayedData.map((d) => ({
-          _id: d._id,
-          name: d.name,
-          createdAt: d.createdAt,
-          updatedAt: d.updatedAt,
-        }))
-      : null;
+  const handleSelect = (id: string) => {
+    const foundTemplate = visibleData()?.find((item) => item._id === id);
+    const newSelectedElements = [...selectedSchemas];
+    const schemaChecked = selectedSchemas.find((schema) => schema?._id === foundTemplate?._id);
+
+    if (schemaChecked) {
+      const index = newSelectedElements.findIndex((element) => element._id === foundTemplate?._id);
+      newSelectedElements.splice(index, 1);
+    } else {
+      foundTemplate !== undefined && newSelectedElements.push(foundTemplate);
+    }
+    setSelectedSchemas(newSelectedElements);
+  };
+
+  const handleSelectAll = (elements: any) => {
+    if (selectedSchemas.length === elements.length) {
+      setSelectedSchemas([]);
+      return;
+    }
+    if (visibleData() !== null && visibleData() !== undefined) setSelectedSchemas(visibleData());
   };
 
   const headers = [
@@ -112,7 +133,7 @@ const SchemasTable: FC<Props> = ({
                 Active Schemas
               </ToggleButton>
               <ToggleButton key={2} value={false} className={classes.toggleButtonDisabled}>
-                Disabled Schemas
+                Archived Schemas
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
@@ -136,6 +157,9 @@ const SchemasTable: FC<Props> = ({
           setSort={setSort}
           dsData={visibleData()}
           actions={getActions()}
+          selectedItems={selectedSchemas}
+          handleSelect={handleSelect}
+          handleSelectAll={handleSelectAll}
           handleAction={handleActions}
         />
       )}

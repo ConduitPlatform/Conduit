@@ -6,6 +6,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
 import React, { FC } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { Checkbox, FormControlLabel, FormGroup } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   closeIcon: {
@@ -13,7 +14,7 @@ const useStyles = makeStyles((theme) => ({
     top: theme.spacing(2),
     right: theme.spacing(2),
   },
-  disableButton: {
+  deleteButton: {
     backgroundColor: theme.palette.error.main,
     color: theme.palette.common.white,
   },
@@ -21,7 +22,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.success.main,
     color: theme.palette.common.white,
   },
-  deleteButton: {
+  archiveButton: {
     backgroundColor: theme.palette.secondary.main,
     color: theme.palette.common.white,
   },
@@ -44,13 +45,13 @@ const DisableSchemaDialog: FC<Props> = ({
 }) => {
   const classes = useStyles();
 
-  const createDialogTitle = (action: 'enable' | 'disable' | 'delete') => {
+  const createDialogTitle = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable CMS schema:';
       }
-      case 'disable': {
-        return 'Disable CMS schema:';
+      case 'archive': {
+        return 'Archive CMS schema:';
       }
       case 'delete': {
         return 'Delete CMS schema:';
@@ -60,29 +61,40 @@ const DisableSchemaDialog: FC<Props> = ({
     }
   };
 
-  const createDialogInfo = (action: 'enable' | 'disable' | 'delete') => {
+  const createDialogInfo = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'This operation with enable the schema.';
       }
-      case 'disable': {
+      case 'archive': {
         return "This operation won't delete existing documents.";
       }
       case 'delete': {
-        return 'This operation will erase existing documents.';
+        return (
+          <>
+            <FormGroup>
+              <FormControlLabel
+                disabled
+                control={<Checkbox defaultChecked />}
+                label="Selected schema will be deleted"
+              />
+              <FormControlLabel control={<Checkbox />} label="Preserve schema data" />
+            </FormGroup>
+          </>
+        );
       }
       default:
         return '';
     }
   };
 
-  const generateButtonClass = (action: 'enable' | 'disable' | 'delete') => {
+  const generateButtonClass = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return classes.enableButton;
       }
-      case 'disable': {
-        return classes.disableButton;
+      case 'archive': {
+        return classes.archiveButton;
       }
       case 'delete': {
         return classes.deleteButton;
@@ -90,13 +102,13 @@ const DisableSchemaDialog: FC<Props> = ({
     }
   };
 
-  const generateButtonName = (action: 'enable' | 'disable' | 'delete') => {
+  const generateButtonName = (action: 'enable' | 'archive' | 'delete') => {
     switch (action) {
       case 'enable': {
         return 'Enable';
       }
-      case 'disable': {
-        return 'Disable';
+      case 'archive': {
+        return 'Archive';
       }
       case 'delete': {
         return 'Delete';
@@ -109,7 +121,7 @@ const DisableSchemaDialog: FC<Props> = ({
   const handleClick = () => {
     switch (selectedSchema.action) {
       case 'enable':
-      case 'disable':
+      case 'archive':
         handleToggle();
         break;
       case 'delete':

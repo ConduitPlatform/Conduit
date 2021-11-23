@@ -8,6 +8,7 @@ import View from '@material-ui/icons/ViewDay';
 import Upload from '@material-ui/icons/CloudUpload';
 import Sync from '@material-ui/icons/Sync';
 import ReplyAll from '@material-ui/icons/ReplyAll';
+import ArchiveIcon from '@material-ui/icons/Archive';
 
 interface Action {
   title: string;
@@ -30,8 +31,8 @@ const DataTableActions: React.FC<Props> = ({ actions, onActionClick, isBlocked, 
         return <EditIcon color={editDisabled ? 'disabled' : 'primary'} />;
       case 'block/unblock':
         return <BlockIcon color={isBlocked ? 'error' : 'primary'} />;
-      case 'disable':
-        return <BlockIcon color="primary" />;
+      case 'archive':
+        return <ArchiveIcon color="primary" />;
       case 'enable':
         return <CheckCircleIcon color="primary" />;
       case 'view':
