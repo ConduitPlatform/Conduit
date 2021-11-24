@@ -10,6 +10,7 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
+  ConduitRouteActions,
 } from '@quintessential-sft/conduit-commons';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
@@ -63,13 +64,27 @@ export default class AdminModule extends IConduitAdmin {
     super(conduit);
     this.conduit = conduit;
     this.grpcSdk = grpcSdk;
-    
+
     this._app = app;
     this._restRouter = new RestController(this._app);
+
+    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
+    this._restRouter.registerRoute(
+      '*',
+      middleware.getAuthMiddleware(this.grpcSdk, this.conduit)
+    );
+    // Register Pre-Auth-Middleware routes
+    const preAuthMiddlewareRoutes: ConduitRoute[] = [];
+    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit, this.grpcSdk));
+    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
+    preAuthMiddlewareRoutes.forEach((route) => {
+      this._restRouter.registerConduitRoute(route);
+    }, this);
+
     this._routes = [];
     this._grpcRoutes = {};
     this._sdkRoutes = [];
-    
+
     let protoDescriptor = loadPackageDefinition(packageDefinition);
 
     // @ts-ignore
@@ -109,8 +124,8 @@ export default class AdminModule extends IConduitAdmin {
         moduleName = result!.moduleName;
       }
 
-      const error = await this._registerGrpcRoute(call);
-      if (error) return callback(error);
+      // const error = await this._registerGrpcRoute(call);
+      // if (error) return callback(error);
 
       this.internalRegisterRoute(
         call.request.protoFile,
@@ -125,7 +140,10 @@ export default class AdminModule extends IConduitAdmin {
       );
     } catch (err) {
       console.error(err);
-      return callback({ code: status.INTERNAL, message: 'Error when registering routes' });
+      return callback({
+        code: status.INTERNAL,
+        message: 'Error when registering routes',
+      });
     }
     callback(null, null);
   }
@@ -134,7 +152,7 @@ export default class AdminModule extends IConduitAdmin {
     // this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     // this._restRouter.registerConduitRoute(route);
     this._sdkRoutes.push(route);
-    this.refreshRouter();
+    this.cleanupRoutes();
   }
 
   private attachRouter() {
@@ -146,7 +164,7 @@ export default class AdminModule extends IConduitAdmin {
   private async highAvailability() {
     let r = await this.conduit.getState().getKey('admin');
     if (!r || r.length === 0) {
-      this.refreshRouter();
+      this.cleanupRoutes();
       return;
     }
     let state = JSON.parse(r);
@@ -160,7 +178,7 @@ export default class AdminModule extends IConduitAdmin {
       }, this);
       console.log('Recovered routes');
     }
-    this.refreshRouter();
+    this.cleanupRoutes();
 
     this.conduit.getBus().subscribe('admin', (message: string) => {
       let messageParsed = JSON.parse(message);
@@ -199,7 +217,7 @@ export default class AdminModule extends IConduitAdmin {
             url,
           });
         }
-        return this.conduit.getState().setKey('router', JSON.stringify(state));
+        return this.conduit.getState().setKey('admin', JSON.stringify(state));
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
@@ -247,11 +265,16 @@ export default class AdminModule extends IConduitAdmin {
       .catch(console.log);
   }
 
-  private internalRegisterRoute(protofile: any, routes: any[], url: any, moduleName?: string) {
+  private internalRegisterRoute(
+    protofile: any,
+    routes: any[],
+    url: any,
+    moduleName?: string
+  ) {
     let processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware // can go
-      | ConduitSocket     // can go
+      | ConduitSocket // can go
     )[] = grpcToConduitRoute(
       'Admin',
       {
@@ -265,7 +288,7 @@ export default class AdminModule extends IConduitAdmin {
     processedRoutes.forEach((r) => {
       if (r instanceof ConduitRoute) {
         console.log(
-          'New route registered: ' +
+          'New admin route registered: ' +
             r.input.action +
             ' ' +
             r.input.path +
@@ -291,66 +314,11 @@ export default class AdminModule extends IConduitAdmin {
     });
 
     // TODO: _sdkRoutes ??
-
+    routes.push(
+      { action: ConduitRouteActions.POST, path: '/login' },
+      { action: ConduitRouteActions.GET, path: '/modules' }
+    );
     this._restRouter.cleanupRoutes(routes);
-    this.refreshRouter();
-  }
-
-  private async _registerGrpcRoute(call: any) {
-    try {
-      let url = call.request.routerUrl;
-      let moduleName: string | undefined = undefined;
-      if (!url) {
-        let result = this.conduit
-          .getConfigManager()!
-          .getModuleUrlByInstance(call.getPeer());
-        if (!result) {
-          return {
-            code: status.INTERNAL,
-            message: 'Error when registering routes',
-          };
-        }
-        call.request.routerUrl = result.url;
-        moduleName = result!.moduleName;
-      }
-
-      this.internalRegisterRoute(
-        call.request.protoFile,
-        call.request.routes,
-        call.request.routerUrl,
-        moduleName
-      );
-      this.updateState(
-        call.request.protoFile,
-        call.request.routes,
-        call.request.routerUrl
-      );
-    } catch (err) {
-      console.error(err);
-      return { code: status.INTERNAL, message: 'Error when registering routes' };
-    }
-    return null;
-  }
-
-  private refreshRouter() {
-    this._restRouter = new RestController(this._app);
-    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
-    // Register Pre-Auth-Middleware routes
-    const preAuthMiddlewareRoutes: ConduitRoute[] = [];
-    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit, this.grpcSdk));
-    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
-    preAuthMiddlewareRoutes.forEach((route) => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
-    // TODO: Fix authMiddleware entering before above pre-auth-registered routes^
-    // this._restRouter.registerRoute('*', middleware.getAuthMiddleware(this.grpcSdk, this.conduit));
-    // Register Post-Auth-Middleware routes
-    this._routes.push(adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk));
-    this._routes.forEach((route) => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
-    this._sdkRoutes.forEach((route) => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
+    // this.refreshRouter();
   }
 }
