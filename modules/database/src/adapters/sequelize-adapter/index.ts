@@ -1,9 +1,10 @@
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { DeclaredSchema } from '../../models';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
@@ -68,19 +69,37 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     });
   }
 
-  deleteSchema(schemaName: string,deleteData: boolean): string {
-    return '';
+  async deleteSchema(schemaName: string,deleteData: boolean): Promise<string> {
+    if (!this.models?.[schemaName])
+      throw ConduitError.notFound('Requested schema not found');
+    if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
+      throw ConduitError.forbidden("Can't delete system required schema");
+    }
+    if (deleteData) {
+      await this.models![schemaName].model.drop()
+    }
+    DeclaredSchema.getInstance()
+      .findOne({ name: schemaName })
+      .then( model => {
+        if (model) {
+          DeclaredSchema.getInstance()
+            .deleteOne({name: schemaName})
+            .catch((err) => { throw new Error(err.message)})
+        }
+      });
+    delete this.models![schemaName];
+    delete this.sequelize.models[schemaName];
+    return 'Schema deleted!'
   }
 
   getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
     if (this.models) {
       const self = this;
       let relations: any = {};
-      for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] = self.models![
-          this.models[schemaName].relations[key]
-        ];
-      }
+        for (const key in this.models[schemaName].relations) {
+          relations[this.models[schemaName].relations[key]] = self.models![
+            this.models[schemaName].relations[key]];
+        }
       return { model: this.models[schemaName], relations };
     }
     throw new Error('Schema not defined yet');
