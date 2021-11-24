@@ -215,10 +215,9 @@ export class DatabaseProvider extends ConduitServiceModule {
     }
   }
 
-  deleteSchema(call: DropCollectionRequest, callback: DropCollectionResponse) {
+  async deleteSchema(call: DropCollectionRequest, callback: DropCollectionResponse) {
     try {
-      const schemas = this._activeAdapter.deleteSchema(call.request.schemaName,call.request.deleteData);
-      console.log(schemas)
+      const schemas = await  this._activeAdapter.deleteSchema(call.request.schemaName,call.request.deleteData);
       callback(null, { result: schemas });
     } catch (err) {
       callback({
