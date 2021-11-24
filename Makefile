@@ -3,7 +3,7 @@ IMAGE_TAG = ${shell git describe --tags `git rev-list --tags --max-count=1` 2> /
 
 IMAGE_DIRS = $(wildcard libraries/* modules/*)
 
-all: conduit admin ${IMAGE_DIRS}
+all: conduit ${IMAGE_DIRS}
 
 conduit:
 ifeq ($(DEV),TRUE)
@@ -12,15 +12,6 @@ ifeq ($(DEV),TRUE)
 else
 	docker build --no-cache -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
 	docker push quintessential.azurecr.io/conduit:${IMAGE_TAG}
-endif
-
-admin:
-ifeq ($(DEV),TRUE)
-	docker build --no-cache -t quintessential.azurecr.io/conduit-admin:latest ./admin/app
-	docker push quintessential.azurecr.io/conduit-admin:latest
-else
-	docker build --no-cache -t quintessential.azurecr.io/conduit-admin:${IMAGE_TAG} ./admin/app
-	docker push quintessential.azurecr.io/conduit-admin:${IMAGE_TAG}
 endif
 
 conduit-builder:
@@ -54,4 +45,3 @@ modules/sms: conduit-builder
 modules/storage: conduit-builder
 modules/push-notifications: conduit-builder
 conduit: conduit-builder
-admin: conduit-builder

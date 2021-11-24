@@ -294,13 +294,11 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async adminMiddleware(req: Request, res: Response, next: NextFunction) {
-    const adminConfig = await this.conduit.getConfigManager().get('admin');
-    return new Promise((resolve, reject) => {
-      const masterkey = req.headers.masterkey;
-      if (isNil(masterkey) || masterkey !== adminConfig.auth.masterkey)
-        return res.status(401).json({ error: 'Unauthorized' });
-      next();
-    });
+    const masterkey = req.headers.masterkey;
+    let master = process.env.masterkey ?? 'M4ST3RK3Y';
+    if (isNil(masterkey) || masterkey !== master)
+      return res.status(401).json({ error: 'Unauthorized' });
+    next();
   }
 
   // @ts-ignore
