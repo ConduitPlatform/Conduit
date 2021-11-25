@@ -8,7 +8,10 @@ import { User } from './User.model';
 
 const schema = {
   _id: TYPE.ObjectId,
-  message: TYPE.String,
+  message: {
+    type: TYPE.String,
+    required: true,
+  },
   senderUser: {
     type: TYPE.Relation,
     model: 'User'
@@ -20,7 +23,7 @@ const schema = {
   readBy: [{
     type: TYPE.Relation,
     model: 'User',
-    default: []
+    // required: true, // tmp: Swagger parser incompatibility
   }],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

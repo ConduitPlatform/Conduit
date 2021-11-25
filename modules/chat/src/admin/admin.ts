@@ -1,26 +1,44 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterResponse,
-  RouterRequest,
+  DatabaseProvider,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  ConduitString,
+  ConduitNumber,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { ChatRoom, ChatMessage, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils';
+import { ChatRoom, ChatMessage, User } from '../models';
 
-let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers{
+  private readonly database: DatabaseProvider;
 
-  constructor(server: GrpcServer, private readonly  grpcSdk: ConduitGrpcSdk) {
+  constructor(private readonly server: GrpcServer, private readonly  grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider!;
+    User.getInstance(this.database);
+    ChatRoom.getInstance(this.database);
+    ChatMessage.getInstance(this.database);
+    this.registerAdminRoutes();
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
+      .registerAdminAsync(this.server, paths, {
+        getManyRooms: this.getManyRooms.bind(this),
         createRoom: this.createRoom.bind(this),
-        getRooms: this.getRooms.bind(this),
-        deleteRooms: this.deleteRooms.bind(this),
-        getMessages: this.getMessages.bind(this),
-        deleteMessages: this.deleteMessages.bind(this)
+        deleteManyRooms: this.deleteManyRooms.bind(this),
+        getManyMessages: this.getManyMessages.bind(this),
+        // createMessage: this.createMessage.bind(this),
+        deleteManyMessages: this.deleteManyMessages.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -28,34 +46,101 @@ export class AdminHandlers{
       });
   }
 
+   private getRegisteredRoutes(): any[] {
+     return [
+       constructConduitRoute(
+         {
+           path: '/rooms',
+           action: ConduitRouteActions.GET,
+           queryParams: {
+             skip: ConduitNumber.Optional,
+             limit: ConduitNumber.Optional,
+             search: ConduitString.Optional,
+             populate: ConduitString.Optional,
+           },
+         },
+         new ConduitRouteReturnDefinition('GetManyRooms', {
+           chatRoomDocuments: [ChatRoom.getInstance().fields],
+           totalCount: ConduitNumber.Required,
+         }),
+         'getManyRooms'
+       ),
+       constructConduitRoute(
+         {
+           path: '/room',
+           action: ConduitRouteActions.POST,
+           bodyParams: {
+             name: ConduitString.Required,
+             participants: { type: [TYPE.String], required: true }, // handler array check is still required
+           },
+         },
+         new ConduitRouteReturnDefinition('CreateRoom', {
+           room: ChatRoom.getInstance().fields,
+         }),
+         'createRoom'
+       ),
+       constructConduitRoute(
+         {
+           path: '/rooms',
+           action: ConduitRouteActions.DELETE,
+           bodyParams: {
+             ids: { type: [TYPE.String], required: true },
+           },
+         },
+         new ConduitRouteReturnDefinition('DeleteManyRooms', 'String'),
+         'deleteManyRooms'
+       ),
+       constructConduitRoute(
+         {
+           path: '/messages',
+           action: ConduitRouteActions.GET,
+           queryParams: {
+             skip: ConduitNumber.Optional,
+             limit: ConduitNumber.Optional,
+             senderUser: ConduitString.Optional,
+             roomId: ConduitString.Optional,
+             search: ConduitString.Optional,
+             sort: ConduitString.Optional,
+           },
+         },
+         new ConduitRouteReturnDefinition('GetManyMessages', {
+           messages: [ChatMessage.getInstance().fields],
+           count: ConduitNumber.Required,
+         }),
+         'getManyMessages'
+       ),
+       constructConduitRoute(
+         {
+           path: '/messages',
+           action: ConduitRouteActions.DELETE,
+           bodyParams: {
+             ids: { type: [TYPE.String], required: true }, // handler array check is still required
+           },
+         },
+         new ConduitRouteReturnDefinition('DeleteManyMessages', 'String'),
+         'deleteManyMessages'
+       ),
+     ];
+   }
+
   private async validateUsersInput(users: any[]) {
     const uniqueUsers = Array.from(new Set(users));
-    let errorMessage: string | null = null;
-    const usersToBeAdded:any = await User.getInstance()
-      .findMany({ _id: { $in: uniqueUsers } })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return Promise.reject({ code: status.INTERNAL, message: errorMessage });
+    const usersToBeAdded: void | User[] = await User.getInstance().findMany({ _id: { $in: uniqueUsers } })
+    if (isNil(usersToBeAdded)) {
+      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
     }
-    if (usersToBeAdded.length != uniqueUsers.length) {
+    if (usersToBeAdded.length !== uniqueUsers.length) {
       const dbUserIds = usersToBeAdded.map((user: any) => user._id);
       const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
-      if (wrongIds.length != 0) {
-        return Promise.reject({
-          code: status.INVALID_ARGUMENT,
-          message: `users [${wrongIds}] do not exist`,
-        });
+      if (wrongIds.length !== 0) {
+        throw new GrpcError(status.INVALID_ARGUMENT, `users [${wrongIds}] do not exist`);
       }
     }
   }
 
-  async getRooms(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit,search,populate } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
+  async getManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit, search, populate } = call.request.params;
+    let skipNumber = 0, limitNumber = 25;
     if (!isNil(skip)) {
       skipNumber = Number.parseInt(skip as string);
     }
@@ -64,10 +149,10 @@ export class AdminHandlers{
     }
     let query:any = {},populates;
     let identifier;
-    if(!isNil(populate)){
+    if (!isNil(populate)) {
       populates = populateArray(populate);
     }
-    if(!isNil(search)){
+    if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
       query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
     }
@@ -83,112 +168,72 @@ export class AdminHandlers{
       );
     const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
-    let errorMessage: string | null = null;
     const [chatRoomDocuments, totalCount] = await Promise.all([
       chatRoomDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    ]).catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return callback(null, { result: JSON.stringify({ chatRoomDocuments, totalCount }) });
+    return { chatRoomDocuments, totalCount };
   }
 
-  async createRoom(call: RouterRequest, callback: RouterResponse){
-    const {name,participants} = JSON.parse(call.request.params);
-
-    if(isNil(name) || isNil(participants) || !Array.isArray(participants)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'name/participants are required to create a chat room'
-      })
+  async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { participants } = call.request.params;
+    if (isNil(participants) || !Array.isArray(participants) || participants.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'participants is required and must be a non-empty array');
     }
-    if(participants.length === 0 ){  // if participants array is empty throw error
-      return callback({
-        code: status.INTERNAL,
-        message: 'can not create chat room with no participants'
-      })
-    }
-    try {
-      await this.validateUsersInput(participants);
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-
-    let errorMessage = null;
+    await this.validateUsersInput(participants);
     const room = await ChatRoom.getInstance()
       .create({
-        name: name,
+        name: call.request.params.name,
         participants: Array.from(new Set([...participants])),
       })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage
-      })
-    }
-    return callback(null, { result: JSON.stringify(room)});
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { room };
   }
 
-  async getMessages(call: RouterRequest, callback: RouterResponse) {
-    const { skip,limit,senderUser,roomId,populate } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
+  async deleteManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (isNil(ids) || !Array.isArray((ids)) || ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    }
+    await ChatRoom.getInstance()
+      .deleteMany({ _id: { $in: ids } })
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    await ChatMessage.getInstance()
+      .deleteMany({ room: { $in: ids } })
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return 'Done';
+  }
 
+  async getManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit, senderUser, roomId, populate } = call.request.params;
+    let skipNumber = 0, limitNumber = 25;
     if (!isNil(skip)) {
       skipNumber = Number.parseInt(skip as string);
     }
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let errorMessage,query:any = {};
+    let query:any = {};
     let populates;
-    if(!isNil(populate)){
+    if (!isNil(populate)) {
       populates = populateArray(populate);
     }
-    if(!isNil(senderUser) ) {
+    if (!isNil(senderUser)) {
       query['senderUser'] = senderUser;
-      const user = await User.getInstance()
-        .findOne({ _id: senderUser })
-        .catch((err: any) => errorMessage = err);
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage
-        });
-      }
-      if(isNil(user)){
-        return callback({
-          code: status.INTERNAL,
-          message: 'User ' + senderUser + ' does not exists'
-        });
+      const user = await User.getInstance().findOne({ _id: senderUser })
+      if (isNil(user)) {
+        throw new GrpcError(status.NOT_FOUND, `User ${senderUser} does not exist`);
       }
     }
-    if(!isNil(roomId)){
+    if (!isNil(roomId)) {
       query['room'] =  roomId;
-      const room = await ChatRoom.getInstance()
-        .findOne({ _id: roomId })
-        .catch((err: any) => errorMessage = err);
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage
-        });
-      }
-      if(isNil(room)){
-        return callback({
-          code: status.INTERNAL,
-          message: 'Room ' + roomId + ' does not exists'
-        });
+      const room = await ChatRoom.getInstance().findOne({ _id: roomId })
+      if (isNil(room)) {
+        throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);
       }
     }
+
     const messagesPromise = ChatMessage.getInstance()
     .findMany(
       query,
@@ -199,68 +244,25 @@ export class AdminHandlers{
       populates,
     );
     const countPromise = ChatMessage.getInstance().countDocuments(query);
-    const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
-    );
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    const [messages, count] = await Promise.all([messagesPromise, countPromise])
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return callback(null, { result: JSON.stringify({ messages, count }) });
+    return { messages, count };
   }
 
-  async deleteRooms(call: RouterRequest, callback: RouterResponse){
-    const {ids} = JSON.parse(call.request.params);
-    if(isNil(ids) || !Array.isArray((ids))){
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids must be an array'
-      })
-    }
-    let errorMessage;
-    await ChatRoom.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: any) => (errorMessage = e.message));
+  // async createMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  //   // TODO: Implement createMessage handler
+  //   return { message };
+  // }
 
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+  async deleteManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (isNil(ids) || !Array.isArray((ids)) || ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
-
-    await ChatMessage.getInstance()
-      .deleteMany({ room: { $in: ids } })
-      .catch((err:any) => errorMessage = err);
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage
-      })
-    }
-    return callback(null, { result: 'Done'});
-  }
-
-  async deleteMessages(call: RouterRequest, callback: RouterResponse){
-    const {ids} = JSON.parse(call.request.params);
-    if(isNil(ids) || !Array.isArray((ids))){
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids must be an array'
-      })
-    }
-    let errorMessage;
     await ChatMessage.getInstance()
       .deleteMany({ _id: { $in: ids } })
-      .catch((e: any) => (errorMessage = e.message));
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    return callback(null, { result: 'Done'});
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return 'Done';
   }
 }
