@@ -11,6 +11,7 @@ import { validateSchemaInput } from '../utils/utilities';
 import { CustomEndpoints, SchemaDefinitions } from '../models';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
+
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class SchemaAdmin {
@@ -19,7 +20,7 @@ export class SchemaAdmin {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly schemaController: SchemaController,
-    private readonly customEndpointController: CustomEndpointController
+    private readonly customEndpointController: CustomEndpointController,
   ) {
     this.database = this.grpcSdk.databaseProvider!;
   }
@@ -35,13 +36,13 @@ export class SchemaAdmin {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-    let query : any = {},identifier;
-    if(!isNil(search)){
-      identifier = escapeStringRegexp(search)
+    let query: any = {}, identifier;
+    if (!isNil(search)) {
+      identifier = escapeStringRegexp(search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
-    if(!isNil(enabled)){
-      query['enabled'] = enabled
+    if (!isNil(enabled)) {
+      query['enabled'] = enabled;
     }
 
 
@@ -70,7 +71,7 @@ export class SchemaAdmin {
 
   async getSchemasRegisteredByOtherModules(
     call: RouterRequest,
-    callback: RouterResponse
+    callback: RouterResponse,
   ) {
     let errorMessage: string | null = null;
     const allSchemas = await this.database
@@ -205,7 +206,7 @@ export class SchemaAdmin {
     if (!isNil(modelOptions)) newSchema.modelOptions = JSON.parse(newSchema.modelOptions);
     if (newSchema.enabled) {
       this.schemaController.createSchema(
-        new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions)
+        new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions),
       );
     }
 
@@ -239,8 +240,8 @@ export class SchemaAdmin {
       new ConduitSchema(
         requestedSchema.name,
         requestedSchema.fields,
-        requestedSchema.modelOptions
-      )
+        requestedSchema.modelOptions,
+      ),
     );
 
     const updatedSchema = await SchemaDefinitions.getInstance()
@@ -252,7 +253,7 @@ export class SchemaAdmin {
     await CustomEndpoints.getInstance()
       .updateMany(
         { selectedSchema: id },
-        { enabled: requestedSchema.enabled }
+        { enabled: requestedSchema.enabled },
       )
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -268,8 +269,8 @@ export class SchemaAdmin {
     });
   }
 
-  async toggleMany(call: RouterRequest, callback: RouterResponse){
-    const { ids,enabled} = JSON.parse(call.request.params);
+  async toggleMany(call: RouterRequest, callback: RouterResponse) {
+    const { ids, enabled } = JSON.parse(call.request.params);
     let errorMessage = null;
     if (isNil(ids) || !isArray(ids) || isNil(enabled)) {
       return callback({
@@ -278,31 +279,37 @@ export class SchemaAdmin {
       });
     }
     await SchemaDefinitions.getInstance()
-      .findMany({ _id: { $in : ids }} )
+      .findMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
     const foundDocumentsCount = await SchemaDefinitions.getInstance()
-      .countDocuments({_id: {$in : ids} })
-      .catch((e:any) => { errorMessage = e.message});
+      .countDocuments({ _id: { $in: ids } })
+      .catch((e: any) => {
+        errorMessage = e.message;
+      });
     if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage })
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     if (foundDocumentsCount !== ids.length)
-      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found', })
+      return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found' });
 
     const updatedSchemas = await SchemaDefinitions.getInstance()
-      .updateMany({ _id: { $in: ids } }, {enabled: enabled})
-      .catch((e:any) => { errorMessage = e.message})
+      .updateMany({ _id: { $in: ids } }, { enabled: enabled })
+      .catch((e: any) => {
+        errorMessage = e.message;
+      });
     if (!isNil(errorMessage))
-      return callback({code: status.INTERNAL, message: errorMessage});
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     await CustomEndpoints.getInstance()
-      .updateMany( { selectedSchema: {$in: ids } },{enabled:enabled})
-      .catch((e:any) => { errorMessage = e.message});
-    if(!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage})
+      .updateMany({ selectedSchema: { $in: ids } }, { enabled: enabled })
+      .catch((e: any) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
@@ -317,7 +324,7 @@ export class SchemaAdmin {
 
   async editSchema(call: RouterRequest, callback: RouterResponse) {
     const { id, name, fields, modelOptions, authentication, crudOperations } = JSON.parse(
-      call.request.params
+      call.request.params,
     );
     if (isNil(id)) {
       return callback({
@@ -387,8 +394,8 @@ export class SchemaAdmin {
         new ConduitSchema(
           updatedSchema.name,
           updatedSchema.fields,
-          updatedSchema.modelOptions
-        )
+          updatedSchema.modelOptions,
+        ),
       );
     }
 
@@ -457,7 +464,7 @@ export class SchemaAdmin {
     return callback(null, { result: message });
   }
 
-  async deleteManySchemas(call: RouterRequest, callback: RouterResponse){
+  async deleteManySchemas(call: RouterRequest, callback: RouterResponse) {
     const { ids, deleteData } = JSON.parse(call.request.params);
     if (isNil(ids) || !isArray(ids)) {
       return callback({
@@ -468,29 +475,29 @@ export class SchemaAdmin {
 
     let errorMessage = null;
     const requestedSchemas = await SchemaDefinitions.getInstance()
-      .findMany({ _id: { $in : ids }})
+      .findMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
     const foundSchemas = await SchemaDefinitions.getInstance()
-      .countDocuments({ _id: { $in : ids }})
+      .countDocuments({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
-    if( foundSchemas !== requestedSchemas.length)
+    if (foundSchemas !== requestedSchemas.length)
       return callback({ code: status.NOT_FOUND, message: 'Some schemas were not found' });
 
 
-    for( let schema of requestedSchemas) { // for each schema find if it used by a custom endpoint.
+    for (let schema of requestedSchemas) { // for each schema find if it used by a custom endpoint.
       const endpoints = await CustomEndpoints.getInstance()
         .countDocuments({ selectedSchema: schema._id })
         .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         return callback({
           code: status.INTERNAL,
-          message: errorMessage
+          message: errorMessage,
         });
       }
       if (!isNil(endpoints) && endpoints > 0) { // if it is used , throw error.
@@ -507,13 +514,13 @@ export class SchemaAdmin {
       }
     }
     await SchemaDefinitions.getInstance()
-      .deleteMany({_id : { $in: ids } })
+      .deleteMany({ _id: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
     await CustomEndpoints.getInstance()
-      .deleteMany( { selectedSchema: { $in: ids } } )
+      .deleteMany({ selectedSchema: { $in: ids } })
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
