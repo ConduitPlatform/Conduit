@@ -6,7 +6,10 @@ import { ConduitCommons } from '@quintessential-sft/conduit-commons';
 
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
   return async function authMiddleware(req: Request, res: Response, next: NextFunction) {
-    if (req.path.indexOf('/login') === 0 || req.path.indexOf('/modules') === 0) {
+    if (
+      req.originalUrl.indexOf('/admin/login') === 0 ||
+      req.originalUrl.indexOf('/admin/modules') === 0
+    ) {
       return next();
     }
     const databaseAdapter = await grpcSdk.databaseProvider!;
