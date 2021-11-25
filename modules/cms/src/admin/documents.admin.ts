@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaDefinitions } from '../models';
+import { populateArray } from '../utils/utilities';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -80,8 +81,7 @@ export class DocumentsAdmin {
   }
 
   async getDocumentById(call: RouterRequest, callback: RouterResponse) {
-    const { schemaName, id } = JSON.parse(call.request.params);
-
+    const { schemaName, id, populate } = JSON.parse(call.request.params);
     let errorMessage: any = null;
     const schema = await SchemaDefinitions.getInstance()
       .findOne({ name: schemaName })
@@ -95,9 +95,18 @@ export class DocumentsAdmin {
         message: 'Requested cms schema not found',
       });
     }
+    let populates;
+    if (!isNil(populate)) {
+      populates = populateArray(populate);
+    }
 
     const document = await this.database
-      .findOne(schemaName, { _id: id })
+      .findOne(
+        schemaName,
+        { _id: id },
+        undefined,
+        populates,
+      )
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
