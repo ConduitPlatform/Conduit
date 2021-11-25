@@ -7,6 +7,8 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaDefinitions } from '../models';
 
+const escapeStringRegexp = require('escape-string-regexp');
+
 export class DocumentsAdmin {
   private database!: DatabaseProvider;
 
@@ -20,7 +22,7 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: RouterRequest, callback: RouterResponse) {
-    let { skip, limit, schemaName, query } = JSON.parse(call.request.params);
+    let { skip, limit, schemaName, query, search } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
     const schema = await SchemaDefinitions.getInstance()
@@ -49,13 +51,17 @@ export class DocumentsAdmin {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-
+    let identifier;
+    if (!isNil(search)) {
+      identifier = escapeStringRegexp(search);
+      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+    }
     const documentsPromise = this.database.findMany(
       schemaName,
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
     );
     const countPromise = this.database.countDocuments(schemaName, query);
 
