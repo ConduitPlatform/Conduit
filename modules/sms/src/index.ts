@@ -1,8 +1,6 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import SmsModule from './Sms';
 
-let paths = require('./admin/admin.json');
-
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
@@ -22,9 +20,6 @@ sms
   })
   .then(() => {
     return sms.activate();
-  })
-  .then(() => {
-    return grpcSdk.admin.register(paths.functions);
   })
   .catch((err: Error) => {
     console.log('Failed to active module');

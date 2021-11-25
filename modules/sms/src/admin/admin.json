@@ -1,9 +1,0 @@
-{
-  "functions": [
-    {
-      "path": "/send",
-      "method": "POST",
-      "protoName": "sendSms"
-    }
-  ]
-}
