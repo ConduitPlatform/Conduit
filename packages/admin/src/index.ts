@@ -18,33 +18,12 @@ import { hashPassword } from './utils/auth';
 import { AdminSchema } from './models/Admin';
 import AdminConfigSchema from './config';
 
-// TODO:
-// - fix authmiddleware entering before 2 pre-auth-routes
-// - cleanupRoutes() : sdkRoutes ?
-// - rename sdkRoutes to grpcRoutes or sth ?
-// - remove admin/authMiddleware from IConduitAdmin, then remove abstract implementations, call directly
-//
-// TODO (post-stable):
-// - Update security, config (break up AdminHandlers into routes), remove namespacing in route names
-// - Update registerRoute() calls in modules:
-//   - actor
-//   - authentication
-//   - chat
-//   - cms
-//   - email
-//   - forms
-//   - payments
-//   - push-notifications
-//   - sms
-//   - storage
-
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
   private readonly _app: Application;
   private _restRouter: RestController;
-  private _routes: ConduitRoute[]; //    post-Auth-Middleware internal routes
-  private _sdkRoutes: ConduitRoute[]; // post-Auth-Middleware module routes
+  private _sdkRoutes: ConduitRoute[];
   private _grpcRoutes: any = {};
 
   async adminMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -81,7 +60,6 @@ export default class AdminModule extends IConduitAdmin {
       this._restRouter.registerConduitRoute(route);
     }, this);
 
-    this._routes = [];
     this._grpcRoutes = {};
     this._sdkRoutes = [];
 
@@ -123,10 +101,6 @@ export default class AdminModule extends IConduitAdmin {
         call.request.routerUrl = result.url;
         moduleName = result!.moduleName;
       }
-
-      // const error = await this._registerGrpcRoute(call);
-      // if (error) return callback(error);
-
       this.internalRegisterRoute(
         call.request.protoFile,
         call.request.routes,
@@ -149,8 +123,6 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   registerRoute(route: ConduitRoute): void {
-    // this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
-    // this._restRouter.registerConduitRoute(route);
     this._sdkRoutes.push(route);
     this.cleanupRoutes();
   }
@@ -273,7 +245,7 @@ export default class AdminModule extends IConduitAdmin {
   ) {
     let processedRoutes: (
       | ConduitRoute
-      | ConduitMiddleware // can go
+      | ConduitMiddleware
       | ConduitSocket // can go
     )[] = grpcToConduitRoute(
       'Admin',
@@ -312,13 +284,10 @@ export default class AdminModule extends IConduitAdmin {
         })
       );
     });
-
-    // TODO: _sdkRoutes ??
     routes.push(
       { action: ConduitRouteActions.POST, path: '/login' },
       { action: ConduitRouteActions.GET, path: '/modules' }
     );
     this._restRouter.cleanupRoutes(routes);
-    // this.refreshRouter();
   }
 }
