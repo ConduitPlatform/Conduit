@@ -1,43 +1,54 @@
 import ConduitGrpcSdk, {
-  DatabaseProvider,
-  GrpcError,
   GrpcServer,
+  DatabaseProvider,
+  constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  ConduitNumber,
+  ConduitBoolean,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
 import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
-import { User } from '../models';
+import { User, Service } from '../models';
 
-let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private database: DatabaseProvider;
+  private readonly database: DatabaseProvider;
+  private readonly serviceAdmin: ServiceAdmin;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider!;
-    });
-    let serviceAdmin = new ServiceAdmin(this.grpcSdk);
+  constructor(private readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider!;
+    this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
+    User.getInstance(this.database);
+    this.registerAdminRoutes();
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdminAsync(server, paths, {
-        getUsers: this.getUsers.bind(this),
+      .registerAdminAsync(this.server, paths, {
+        getManyUsers: this.getManyUsers.bind(this),
         createUser: this.createUser.bind(this),
         editUser: this.editUser.bind(this),
         deleteUser: this.deleteUser.bind(this),
-        deleteUsers: this.deleteUsers.bind(this),
-        blockUnblockUsers: this.blockUnblockUsers.bind(this),
+        deleteManyUsers: this.deleteManyUsers.bind(this),
+        toggleManyUsers: this.toggleManyUsers.bind(this),
         blockUser: this.blockUser.bind(this),
         unblockUser: this.unblockUser.bind(this),
-        getServices: serviceAdmin.getServices.bind(serviceAdmin),
-        createService: serviceAdmin.createService.bind(serviceAdmin),
-        deleteService: serviceAdmin.deleteService.bind(serviceAdmin),
-        renewServiceToken: serviceAdmin.renewToken.bind(serviceAdmin),
+        getManyServices: this.serviceAdmin.getManyServices.bind(this),
+        createService: this.serviceAdmin.createService.bind(this),
+        deleteService: this.serviceAdmin.deleteService.bind(this),
+        renewServiceToken: this.serviceAdmin.renewToken.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -45,11 +56,196 @@ export class AdminHandlers {
       });
   }
 
-  async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, isActive, provider, search, sort } = call.request.params;
-    let skipNumber = 0,
-      limitNumber = 25;
+   private getRegisteredRoutes(): any[] {
+     return [
+       // User Routes
+       constructConduitRoute(
+         {
+           path: '/users',
+           action: ConduitRouteActions.GET,
+           queryParams: {
+             skip: ConduitNumber.Optional,
+             limit: ConduitNumber.Optional,
+             isActive: ConduitBoolean.Optional,
+             provider: ConduitString.Optional,
+             search: ConduitString.Optional,
+             sort: ConduitString.Optional,
+           },
+         },
+         new ConduitRouteReturnDefinition('GetManyUsers', {
+           users: [User.getInstance().fields],
+           count: ConduitNumber.Required,
+         }),
+         'getManyUsers'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users',
+           action: ConduitRouteActions.POST,
+           bodyParams: {
+             identification: ConduitString.Required,
+             password: ConduitString.Required,
+           },
+         },
+         new ConduitRouteReturnDefinition('CreateUser', {
+           message: ConduitString.Required,
+         }),
+         'createUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users/:id',
+           action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+           urlParams: {
+             id: { type: RouteOptionType.String, required: true },
+           },
+           bodyParams: {
+             email: ConduitString.Optional,
+             isVerified: ConduitString.Optional,
+             hasTwoFA: ConduitString.Optional,
+             phoneNumber: ConduitString.Optional,
+           },
+         },
+         new ConduitRouteReturnDefinition('EditUser', {
+           message: ConduitString.Required,
+         }),
+         'editUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users/:id',
+           action: ConduitRouteActions.DELETE,
+           urlParams: {
+             id: { type: RouteOptionType.String, required: true },
+           },
+         },
+         new ConduitRouteReturnDefinition('DeleteUser', {
+           message: ConduitString.Required,
+         }),
+         'deleteUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users',
+           action: ConduitRouteActions.DELETE,
+           bodyParams: {
+             ids: { type: [TYPE.String], required: true }, // handler array check is still required
+           },
+         },
+         new ConduitRouteReturnDefinition('DeleteManyUsers', {
+           message: ConduitString.Required,
+         }),
+         'deleteManyUsers'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users/:id/block',
+           action: ConduitRouteActions.POST,
+           urlParams: {
+             id: { type: RouteOptionType.String, required: true },
+           },
+         },
+         new ConduitRouteReturnDefinition('BlockUser', {
+           message: ConduitString.Required,
+         }),
+         'blockUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users/:id/unblock',
+           action: ConduitRouteActions.POST,
+           urlParams: {
+             id: { type: RouteOptionType.String, required: true },
+           },
+         },
+         new ConduitRouteReturnDefinition('UnblockUser', {
+           message: ConduitString.Required,
+         }),
+         'unblockUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users/toggle',
+           action: ConduitRouteActions.POST,
+           bodyParams: {
+             ids: { type: [TYPE.String], required: true }, // handler array check is still required
+             block: ConduitBoolean.Required,
+           },
+         },
+         new ConduitRouteReturnDefinition('ToggleManyUsers', {
+           message: ConduitString.Required,
+         }),
+         'toggleManyUsers'
+       ),
+       // Service Routes
+       constructConduitRoute(
+         {
+           path: '/services',
+           action: ConduitRouteActions.GET,
+           queryParams: {
+             skip: ConduitNumber.Optional,
+             limit: ConduitNumber.Optional,
+           },
+           name: 'GetServices',
+           description: 'Returns registered services',
+         },
+         new ConduitRouteReturnDefinition('GetManyServices', {
+           services: [Service.getInstance().fields],
+           count: ConduitNumber.Required,
+         }),
+         'getManyServices'
+       ),
+       constructConduitRoute(
+         {
+           path: '/services',
+           action: ConduitRouteActions.POST,
+           bodyParams: {
+             name: ConduitString.Required,
+           },
+           name: 'CreateService',
+           description: 'Registers a new service',
+         },
+         new ConduitRouteReturnDefinition('CreateService', {
+           name: ConduitString.Required,
+           token: ConduitString.Required,
+         }),
+         'createService'
+       ),
+       constructConduitRoute(
+         {
+           path: '/services/:id',
+           action: ConduitRouteActions.DELETE,
+           bodyParams: {
+             id: ConduitString.Required,
+           },
+           name: 'DeleteService',
+           description: 'Deletes a service',
+         },
+         new ConduitRouteReturnDefinition('DeleteService', 'String'),
+         'deleteService'
+       ),
+       constructConduitRoute(
+         {
+           path: '/services',
+           action: ConduitRouteActions.UPDATE,
+           bodyParams: {
+             serviceId: ConduitString.Required,
+           },
+           name: 'RenewServiceToken',
+           description: 'Renews a service token',
+         },
+         new ConduitRouteReturnDefinition('RenewServiceToken', {
+           name: ConduitString.Required,
+           token: ConduitString.Required,
+         }),
+         'renewServiceToken'
+       ),
+     ];
+   }
 
+  async getManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit, isActive, provider, search, sort } = call.request.params;
+    let skipNumber = 0, limitNumber = 25;
     if (!isNil(skip)) {
       skipNumber = Number.parseInt(skip as string);
     }
@@ -94,20 +290,10 @@ export class AdminHandlers {
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { identification, password } = call.request.params;
 
-    if (isNil(identification) || isNil(password)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Identification and password are required'
-      );
-    }
-
     const config = ConfigController.getInstance().config;
     if (config.local.identifier === 'email') {
       if (identification.indexOf('+') !== -1) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Email contains unsupported characters'
-        );
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Email contains unsupported characters');
       }
 
       identification = identification.toLowerCase();
@@ -132,18 +318,12 @@ export class AdminHandlers {
 
   async editUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
-    if (isNil(id)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
-    }
 
     let user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND,'User does not exist');
     } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Can not enable 2fa without a phone number'
-      );
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Can not enable 2fa without a phone number');
     }
 
     const query = {
@@ -159,35 +339,24 @@ export class AdminHandlers {
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-
-    if (isNil(id)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
-    }
-
-    let user: User | null = await User.getInstance().findOne({ _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(user)) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
-
-    let res = await User.getInstance().deleteOne({ _id: id });
+    let res = await User.getInstance().deleteOne({ _id: call.request.params.id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return { message: 'user was deleted' };
   }
 
-  async deleteUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-
-    if (isNil(ids) || ids.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be an array'
-      );
+    if (isNil(ids) || ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
     }
 
     let users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
 
     let res = await User.getInstance().deleteMany({ _id: { $in: ids } });
@@ -195,39 +364,14 @@ export class AdminHandlers {
     return { message: 'users were deleted' };
   }
 
-  async blockUnblockUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { ids, block } = call.request.params;
-
-    if (isNil(ids) || ids.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required');
-    }
-    if (isNil(block)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Block is required');
-    }
-    let users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
-
-    if (users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
-    }
-    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block }, true);
-    this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
-    return { message: 'users were blocked' };
-  }
-
   async blockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-
-    if (isNil(id)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
-    }
-    let user: User | null = await User.getInstance().findOne({ _id: id });
-
+    let user: User | null = await User.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
-    } else if (!user.active) {
+      throw new GrpcError(status.NOT_FOUND,'User does not exist');
+    }
+    if (!user.active) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'User is already blocked');
     }
-
     user.active = false;
     user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
@@ -235,24 +379,30 @@ export class AdminHandlers {
   }
 
   async unblockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-
-    if (isNil(id)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'id is required');
-    }
-
-    let user: User | null = await User.getInstance().findOne({ _id: id });
+    let user: User | null = await User.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new GrpcError(status.NOT_FOUND,'User does not exist');
     }
-
     if (user.active) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'user is not blocked');
     }
-
     user.active = true;
     user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
     return { message: 'user was unblocked' };
+  }
+
+  async toggleManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids, block } = call.request.params;
+    if (isNil(ids) || ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    }
+    let users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
+    if (users.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+    }
+    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block }, true);
+    this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
+    return { message: 'users were blocked' };
   }
 }
