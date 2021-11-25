@@ -1,33 +1,55 @@
-import { isNil } from 'lodash';
-import { EmailService } from '../services/email.service';
-import { EmailTemplate } from '../models';
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  DatabaseProvider,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  ConduitNumber,
+  ConduitBoolean,
+  ConduitJson,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';
+import { isNil } from 'lodash';
+import { getHBValues } from '../parse-test/getHBValues';
+import { EmailService } from '../services/email.service';
+import { EmailTemplate } from '../models';
 
-let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
+  private readonly database: DatabaseProvider;
   private emailService: EmailService;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(private readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.databaseProvider!;
+    EmailTemplate.getInstance(this.database);
+    this.registerAdminRoutes();
+  }
+
+  setEmailService(emailService: EmailService) {
+    this.emailService = emailService;
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
-        getTemplates: this.getTemplates.bind(this),
+      .registerAdminAsync(this.server, paths, {
+        getManyTemplates: this.getManyTemplates.bind(this),
         createTemplate: this.createTemplate.bind(this),
         editTemplate: this.editTemplate.bind(this),
-        sendEmail: this.sendEmail.bind(this),
-        getExternalTemplates: this.getExternalTemplates.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
-        syncExternalTemplates: this.syncExternalTemplates.bind(this),
         deleteManyTemplates: this.deleteManyTemplates.bind(this),
         uploadTemplate: this.uploadTemplate.bind(this),
+        getManyExternalTemplates: this.getManyExternalTemplates.bind(this),
+        syncExternalTemplates: this.syncExternalTemplates.bind(this),
+        sendEmail: this.sendEmail.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -35,174 +57,347 @@ export class AdminHandlers {
       });
   }
 
-  setEmailService(emailService: EmailService) {
-    this.emailService = emailService;
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/templates',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+             skip: ConduitNumber.Optional,
+             limit: ConduitNumber.Optional,
+             search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetManyTemplates', {
+          templateDocuments: [EmailTemplate.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getManyTemplates'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            _id: ConduitString.Optional, // externally managed
+            name: ConduitString.Required,
+            subject: ConduitString.Optional,
+            body: ConduitString.Required,
+            sender: ConduitString.Optional,
+            externalManaged: ConduitBoolean.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateTemplate', {
+          template: EmailTemplate.getInstance().fields,
+        }),
+        'createTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates/:id',
+          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+          bodyParams: {
+            id: ConduitString.Required,
+            name: ConduitString.Optional,
+            subject: ConduitString.Optional,
+            body: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('EditTemplate', {
+          template: EmailTemplate.getInstance().fields,
+        }),
+        'editTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates/:id',
+          action: ConduitRouteActions.DELETE,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('DeleteTemplate', {
+          deleted: ConduitJson.Required, // DeleteEmailTemplate
+        }),
+        'deleteTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates',
+          action: ConduitRouteActions.DELETE,
+          bodyParams: {
+            ids: { type: [TYPE.String], required: true }, // handler array check is still required
+          },
+        },
+        new ConduitRouteReturnDefinition('DeleteManyTemplates', {
+          template: [EmailTemplate.getInstance().fields],
+        }),
+        'deleteManyTemplates'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates/upload',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            _id: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('UploadTemplate', {
+          created: ConduitJson.Required, // Template
+        }),
+        'uploadTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/externalTemplates',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetManyExternalTemplates', {
+          templateDocuments: [EmailTemplate.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getManyExternalTemplates'
+      ),
+      constructConduitRoute(
+        {
+          path: '/syncExternalTemplates',
+          action: ConduitRouteActions.UPDATE,
+        },
+        new ConduitRouteReturnDefinition('SyncExternalTemplates', {
+          updated: [EmailTemplate.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'syncExternalTemplates'
+      ),
+      constructConduitRoute(
+        {
+          path: '/send',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            email: ConduitString.Required,
+            sender: ConduitString.Required,
+            variables: ConduitJson.Optional,
+            subject: ConduitString.Optional,
+            body: ConduitString.Optional,
+            templateName: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('SendEmail', {
+          message: ConduitString.Required,
+        }),
+        'sendEmail'
+      ),
+    ];
   }
 
-  async uploadTemplate(call: RouterRequest, callback: RouterResponse){
-    const { _id } = JSON.parse(
-      call.request.params
+  async getManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let skipNumber = 0, limitNumber = 25;
+    if (!isNil(call.request.params.skip)) {
+      skipNumber = Number.parseInt(call.request.params.skip as string);
+    }
+    if (!isNil(call.request.params.limit)) {
+      limitNumber = Number.parseInt(call.request.params.limit as string);
+    }
+    let query:any = {};
+    let identifier;
+    if (!isNil(call.request.params.search)) {
+      if (call.request.params.search.match(/^[a-fA-F0-9]{24}$/)) {
+        query = { _id : call.request.params.search }
+      }
+      else {
+        identifier = escapeStringRegexp(call.request.params.search);
+        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      }
+    }
+
+    const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
+      query,
+      undefined,
+      skipNumber,
+      limitNumber
+    );
+    const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
+    const [templateDocuments, totalCount] = await Promise.all([
+      templateDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+
+    return { result: { templateDocuments, totalCount } };
+  }
+
+  async createTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { _id, sender, externalManaged, name, subject, body } = call.request.params;
+
+    let externalId = undefined;
+    const body_vars = getHBValues(body);
+    const subject_vars = getHBValues(subject);
+
+    let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
+    variables = variables.filter(
+      (value: any, index: any) => variables.indexOf(value) === index
     );
 
-    if( isNil(_id)) {
-      return callback({
-        code: status.INTERNAL,
-        message: 'id must be provided!',
+    if (externalManaged) {
+      if (isNil(_id)) {
+        //that means that we want to create an external managed template
+        const [err, template] = await to(
+          this.emailService.createExternalTemplate({
+            name,
+            body,
+            subject,
+          }) as any
+        );
+        if (err) {
+          throw new GrpcError(status.INTERNAL, err.message);
+        }
+        externalId = (template as any)?.id;
+      } else {
+        externalId = _id;
+      }
+    }
+    const newTemplate = await EmailTemplate.getInstance()
+      .create({
+        name,
+        subject,
+        body,
+        variables,
+        externalManaged,
+        sender,
+        externalId,
+      })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+
+    return { template: newTemplate };
+  }
+
+  async editTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ _id: call.request.params.id })
+    if (isNil(templateDocument)) {
+      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+    }
+
+    ['name', 'subject', 'body'].forEach((key) => {
+      if (call.request.params[key]) {
+        // @ts-ignore
+        templateDocument[key] = call.request.params[key];
+      }
+    });
+
+    templateDocument['variables'] = Object.keys(getHBValues(call.request.params.body)).concat(
+      Object.keys(getHBValues(call.request.params.subject))
+    );
+    templateDocument['variables'] = templateDocument['variables'].filter(
+      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
+    );
+    const updatedTemplate = await EmailTemplate.getInstance()
+      .findByIdAndUpdate(call.request.params.id, templateDocument)
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+
+    if (templateDocument.externalManaged) {
+      const template = await this.emailService.getExternalTemplate(
+        updatedTemplate!.externalId
+      );
+      let versionId = undefined;
+      if (!isNil(template?.versions[0].id)) {
+        versionId = template?.versions[0].id;
+      }
+      const data = {
+        id: updatedTemplate!.externalId,
+        subject: updatedTemplate!.subject,
+        body: updatedTemplate!.body,
+        versionId: versionId,
+      };
+      await this.emailService.updateTemplate(data)?.catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    let errorMessage;
+
+    return { updatedTemplate };
+  }
+
+  async deleteTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: _id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+      .findOne({ _id: call.request.params.id })
+    if (!isNil(templateDocument)) {
+      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+    }
+
+    await EmailTemplate.getInstance()
+      .deleteOne({ _id: call.request.params.id })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    let deleted;
+    if (templateDocument!.externalManaged){
+      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId)
+        ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    }
+
+    return { deleted };
+  }
+
+  async deleteManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (isNil(ids) || ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    }
+    let totalCount = ids.length;
+    const templateDocuments = await EmailTemplate.getInstance().findMany({ _id: { $in: ids } })
+    const foundDocuments = templateDocuments.length;
+    if (foundDocuments !== totalCount) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids array contains invalid ids');
+    }
+
+    for (let template of templateDocuments) {
+      if( template.externalManaged){
+        await this.emailService.deleteExternalTemplate(template.externalId)
+          ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      }
+    }
+    const deletedDocuments = await EmailTemplate.getInstance()
+      .deleteMany({ _id: { $in: ids } })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+
+    return { deletedDocuments };
+  }
+
+  async uploadTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ _id: call.request.params._id })
+    if (isNil(templateDocument)) {
+      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+    }
 
     const template = {
       name: templateDocument.name,
       body: templateDocument.body,
     }
-
     const created = await (this.emailService.createExternalTemplate(template) as any)
-      .catch((e: any) => (errorMessage = e.message));
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    if(templateDocument){
+    if (templateDocument) {
       templateDocument['externalManaged'] = true;
       templateDocument['externalId'] =  created.id;
       await EmailTemplate.getInstance()
-        .findByIdAndUpdate(_id,templateDocument)
-        .catch((e: any) => (errorMessage = e.message));
-
-      if (!isNil(errorMessage))
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
+        .findByIdAndUpdate(call.request.params._id,templateDocument)
+        .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
 
-    return callback(null, { result: JSON.stringify({ created }) });
+    return { created };
   }
 
-  async syncExternalTemplates(call: RouterRequest, callback: RouterResponse){
-    let errorMessage: string | null = null;
-    const externalTemplates:any = await this.emailService.getExternalTemplates();
-
-    let updated = [];
-    let totalCount = 0;
-    for ( let element of externalTemplates){
-
-      const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ externalId: element.id })
-      .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-
-      if(!isNil(templateDocument)){ // if templateDocument exists
-        const synchronized = {
-          name: element.name,
-          subject: element.versions[0].subject,
-          externalId: element.id,
-          variables: element.versions[0].variables,
-          body: element.versions[0].body,
-        }
-
-        const updatedTemplate = await EmailTemplate.getInstance()
-        .findByIdAndUpdate(templateDocument._id,synchronized)
-        .catch((e: any) => (errorMessage = e.message));
-        if (!isNil(errorMessage))
-          return callback({
-            code: status.INTERNAL,
-            message: errorMessage,
-          });
-        updated.push(updatedTemplate);
-      }
-    }
-    totalCount = updated.length;
-    return callback(null, { result: JSON.stringify({ updated,totalCount }) });
-  }
-  async deleteManyTemplates(call: RouterRequest, callback: RouterResponse){
-    const { ids } = JSON.parse(
-      call.request.params
-    );
-    if (isNil(ids) || ids.length === 0) {
-      return callback({
-        code: status.INTERNAL,
-        message: 'ids is required and must be an array',
-      });
-    }
-    let errorMessage;
-    let totalCount = ids.length;
-    const templateDocuments = await EmailTemplate.getInstance()
-      .findMany({ _id: { $in: ids } })
-      .catch((e:any) => (errorMessage = e.message));
-
-    if(!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
-    const foundDocuments = templateDocuments.length;
-    if( foundDocuments !== totalCount){
-        return callback({
-          code: status.INTERNAL,
-          message: 'some ids were not found',
-        })
-    }
-
-    for( let template of templateDocuments){
-      if( template.externalManaged){
-        await this.emailService.deleteExternalTemplate(template.externalId)
-          ?.catch((e:any) => (errorMessage= e.message));
-
-        if(!isNil(errorMessage)){
-          return callback({
-            code: status.INTERNAL,
-            message: errorMessage,
-          });
-        }
-      }
-    }
-    const deletedDocuments = await EmailTemplate.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    return callback(null, { result: JSON.stringify({ deletedDocuments }) });
-  }
-
-  async getExternalTemplates(call: RouterRequest, callback: RouterResponse) {
+  async getManyExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse>  {
     const [err, externalTemplates] = await to(
       this.emailService.getExternalTemplates() as any
     );
     if (!isNil(err)) {
-      return callback({
-        code: status.INTERNAL,
-        message: err.message,
-      });
+      throw new GrpcError(status.INTERNAL, err.message);
     }
     if (isNil(externalTemplates)) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'Templates not found',
-      });
+      throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
     let templateDocuments: any = [];
     (externalTemplates as any).forEach((element: any) => {
@@ -216,257 +411,48 @@ export class AdminHandlers {
       });
     });
     const totalCount = templateDocuments.length;
-    return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
+    return { templateDocuments, totalCount };
   }
 
-  async getTemplates(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit,search } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
-    let query:any = {};
-    let identifier;
-
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id : search }
-      }
-      else {
-        identifier = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
-      }
-    }
-
-    const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
-      query,
-      undefined,
-      skipNumber,
-      limitNumber
-    );
-    const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
-
+  async syncExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let errorMessage: string | null = null;
-    const [templateDocuments, totalCount] = await Promise.all([
-      templateDocumentsPromise,
-      totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    const externalTemplates:any = await this.emailService.getExternalTemplates();
 
-    return callback(null, { result: JSON.stringify({ templateDocuments, totalCount }) });
-  }
+    let updated = [];
+    let totalCount = 0;
+    for (let element of externalTemplates) {
+      const templateDocument = await EmailTemplate.getInstance()
+      .findOne({ externalId: element.id })
 
-  async createTemplate(call: RouterRequest, callback: RouterResponse) {
-    const { _id, sender, externalManaged, name, subject, body } = JSON.parse(
-      call.request.params
-    );
-
-    let externalId = undefined;
-    const body_vars = getHBValues(body);
-    const subject_vars = getHBValues(subject);
-
-    let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
-    variables = variables.filter(
-      (value: any, index: any) => variables.indexOf(value) === index
-    );
-
-    if ((isNil(name) || isNil(subject) || isNil(body))) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-    }
-
-    if (externalManaged) {
-
-      if (isNil(_id)) {
-        //that means that we want to create an external managed template
-        const [err, template] = await to(
-          this.emailService.createExternalTemplate({
-            name,
-            body: body,
-            subject,
-          }) as any
-        );
-        if (err) {
-          return callback({
-            code: status.INTERNAL,
-            message: err.message,
-          });
-        }
-        externalId = (template as any)?.id;
-      } else {
-        externalId = _id;
-      }
-    }
-    let errorMessage: string | null = null;
-    const newTemplate = await EmailTemplate.getInstance()
-      .create({
-        name,
-        subject,
-        body,
-        variables,
-        externalManaged,
-        sender,
-        externalId,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    return callback(null, { result: JSON.stringify({ template: newTemplate }) });
-  }
-
-  async editTemplate(call: RouterRequest, callback: RouterResponse) {
-    const params = JSON.parse(call.request.params);
-    const id = params.id;
-
-    // WHY THE FUCK
-    // const allowedFields = ['name', 'subject', 'body', 'variables'];
-
-    // const flag = Object.keys(params).some(key => {
-    //     if (!allowedFields.includes(key)) {
-    //         return true;
-    //     }
-    // });
-    // if (flag) return callback({
-    //     code: status.INVALID_ARGUMENT,
-    //     message: "Invalid given parameters",
-    // });
-
-    let errorMessage: string | null = null;
-    const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
-    if (isNil(templateDocument)) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'Template not found',
-      });
-    }
-
-    ['name', 'subject', 'body'].forEach((key) => {
-      if (params[key]) {
-        templateDocument[key] = params[key];
-      }
-    });
-
-    templateDocument['variables'] = Object.keys(getHBValues(params.body)).concat(
-      Object.keys(getHBValues(params.subject))
-    );
-    templateDocument['variables'] = templateDocument['variables'].filter(
-      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
-    );
-    const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(id, templateDocument)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    if (templateDocument.externalManaged) {
-      const template = await this.emailService.getExternalTemplate(
-        updatedTemplate.externalId
-      );
-      let versionId = undefined;
-      if (!isNil(template?.versions[0].id)) {
-        versionId = template?.versions[0].id;
+      if (isNil(templateDocument)) {
+        throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
       }
 
-      const data = {
-        id: updatedTemplate.externalId,
-        subject: updatedTemplate.subject,
-        body: updatedTemplate.body,
-        versionId: versionId,
-      };
-
-      await this.emailService.updateTemplate(data)?.catch((e: any) => {
-        errorMessage = e.message;
-      });
-
+      const synchronized = {
+        name: element.name,
+        subject: element.versions[0].subject,
+        externalId: element.id,
+        variables: element.versions[0].variables,
+        body: element.versions[0].body,
+      }
+      const updatedTemplate = await EmailTemplate.getInstance()
+      .findByIdAndUpdate(templateDocument._id,synchronized)
+      .catch((e: any) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
+        throw new GrpcError(status.INTERNAL, errorMessage);
       }
+      updated.push(updatedTemplate);
     }
-    return callback(null, { result: JSON.stringify({ updatedTemplate }) });
-  }
 
-  async deleteTemplate(call: RouterRequest, callback: RouterResponse){
-    const params = JSON.parse(call.request.params);
-    const id = params.id;
-
-    let errorMessage: string | null = null;
-    const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    await EmailTemplate.getInstance()
-      .deleteOne({ _id: id })
-      .catch((e:any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    let deleted;
-    if(templateDocument.externalManaged){
-      deleted = await this.emailService.deleteExternalTemplate(templateDocument.externalId)
-        ?.catch((e:any) => (errorMessage= e.message));
-    }
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    return callback(null, { result: JSON.stringify({ deleted }) });
+    totalCount = updated.length;
+    return { updated, totalCount };
   }
   
-  async sendEmail(call: RouterRequest, callback: RouterResponse) {
-    let { templateName, body, subject, email, variables, sender } = JSON.parse(
-      call.request.params
-    );
-
+  async sendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let { templateName, body, subject, email, variables, sender } = call.request.params;
     if (!templateName && (!body || !subject)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: `Template/body+subject not provided`,
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Template/body+subject not provided');
     }
-
-    let errorMessage: string | null = null;
     if (!sender) {
       sender = 'conduit';
     }
@@ -486,13 +472,8 @@ export class AdminHandlers {
         variables,
         sender: sender ? sender : 'conduit',
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return callback(null, { result: JSON.stringify({ message: 'Email sent' }) });
+    return { message: 'Email sent' };
   }
 }
