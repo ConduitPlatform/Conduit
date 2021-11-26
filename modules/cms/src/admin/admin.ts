@@ -15,6 +15,7 @@ export class AdminHandlers {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController
   ) {
+    //why is this here?
     // @ts-ignore
     let schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
