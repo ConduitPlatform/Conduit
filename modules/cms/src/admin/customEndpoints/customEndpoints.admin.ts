@@ -8,6 +8,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isPlainObject } from 'lodash';
 import { CustomEndpoints, SchemaDefinitions } from '../../models';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
+import escapeStringRegexp from 'escape-string-regexp';
 
 const OperationsEnum = {
   GET: 0, //'FIND/GET'
@@ -32,9 +33,15 @@ export class CustomEndpointsAdmin {
 
   async getCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
     let errorMessage: string | null = null;
+    const { search } = JSON.parse(call.request.params);
+    let identifier, query : any = {};
+    if( !isNil(search)){
+      identifier = escapeStringRegexp(search);
+      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+    }
 
     const customEndpointsDocs = await CustomEndpoints.getInstance()
-      .findMany({})
+      .findMany(query)
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

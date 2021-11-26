@@ -6,6 +6,9 @@ import ConduitGrpcSdk, {
   RouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaDefinitions } from '../models';
+import { populateArray } from '../utils/utilities';
+
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class DocumentsAdmin {
   private database!: DatabaseProvider;
@@ -20,7 +23,7 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: RouterRequest, callback: RouterResponse) {
-    let { skip, limit, schemaName, query } = JSON.parse(call.request.params);
+    let { skip, limit, schemaName, query, search } = JSON.parse(call.request.params);
 
     let errorMessage: any = null;
     const schema = await SchemaDefinitions.getInstance()
@@ -49,13 +52,17 @@ export class DocumentsAdmin {
     if (!isNil(limit)) {
       limitNumber = Number.parseInt(limit as string);
     }
-
+    let identifier;
+    if (!isNil(search)) {
+      identifier = escapeStringRegexp(search);
+      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+    }
     const documentsPromise = this.database.findMany(
       schemaName,
       query,
       undefined,
       skipNumber,
-      limitNumber
+      limitNumber,
     );
     const countPromise = this.database.countDocuments(schemaName, query);
 
@@ -74,8 +81,7 @@ export class DocumentsAdmin {
   }
 
   async getDocumentById(call: RouterRequest, callback: RouterResponse) {
-    const { schemaName, id } = JSON.parse(call.request.params);
-
+    const { schemaName, id, populate } = JSON.parse(call.request.params);
     let errorMessage: any = null;
     const schema = await SchemaDefinitions.getInstance()
       .findOne({ name: schemaName })
@@ -89,9 +95,18 @@ export class DocumentsAdmin {
         message: 'Requested cms schema not found',
       });
     }
+    let populates;
+    if (!isNil(populate)) {
+      populates = populateArray(populate);
+    }
 
     const document = await this.database
-      .findOne(schemaName, { _id: id })
+      .findOne(
+        schemaName,
+        { _id: id },
+        undefined,
+        populates,
+      )
       .catch((e: any) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });

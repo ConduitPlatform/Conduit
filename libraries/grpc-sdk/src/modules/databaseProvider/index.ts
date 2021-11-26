@@ -46,6 +46,18 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
     });
   }
 
+  deleteSchema(schemaName: string, deleteData: boolean): Promise<any>{
+    return new Promise((resolve, reject) => {
+      this.client?.deleteSchema({schemaName,deleteData}, (err: any, res: any) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve(res.result)
+        }
+      });
+    });
+  }
+
   createSchemaFromAdapter(schema: ConduitSchema): Promise<any> {
     return new Promise((resolve, reject) => {
       this.client?.createSchemaFromAdapter(

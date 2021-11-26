@@ -4,7 +4,7 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-
+import { DeclaredSchema } from '../../models';
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -136,14 +136,31 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-  deleteSchema(schemaName: string) {
+   async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
     if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
+    if(deleteData){
+      await this.models![schemaName].model.collection
+        .drop()
+        .catch((e:any) => { throw new Error(e.message)});
+    }
+    DeclaredSchema.getInstance()
+      .findOne({ name: schemaName })
+      .then( model => {
+        if (model) {
+          DeclaredSchema.getInstance()
+            .deleteOne({name: schemaName})
+            .catch((err) => { throw new Error(err.message)})
+        }
+      });
+
     delete this.models![schemaName];
     delete this.mongoose.connection.models[schemaName];
+    return 'Schema deleted!'
     // TODO should we delete anything else?
   }
+
 }
