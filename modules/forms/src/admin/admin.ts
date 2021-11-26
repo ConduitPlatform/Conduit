@@ -1,29 +1,49 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  DatabaseProvider,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  ConduitNumber,
+  ConduitBoolean,
+  ConduitJson,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { Forms, FormReplies } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';
+import { Forms, FormReplies } from '../models';
+
 const escapeStringRegexp = require('escape-string-regexp');
-let paths = require('./admin.json').functions;
 
 export class AdminHandlers {
+  private readonly database: DatabaseProvider;
 
   constructor(
-    server: GrpcServer,
+    private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly formsController: FormsController
   ) {
+    this.database = this.grpcSdk.databaseProvider!;
+    Forms.getInstance(this.database);
+    FormReplies.getInstance(this.database);
+    this.registerAdminRoutes();
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
-        getForms: this.getForms.bind(this),
-        getRepliesByFormId: this.getRepliesByFormId.bind(this),
+      .registerAdminAsync(this.server, paths, {
+        getManyForms: this.getManyForms.bind(this),
         createForm: this.createForm.bind(this),
-        editFormById: this.editFormById.bind(this),
-        deleteForms: this.deleteForms.bind(this),
+        editForm: this.editForm.bind(this),
+        deleteManyForms: this.deleteManyForms.bind(this),
+        getManyFormReplies: this.getManyFormReplies.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -31,43 +51,104 @@ export class AdminHandlers {
       });
   }
 
-  async deleteForms(call: RouterRequest, callback: RouterResponse){
-    const { ids } = JSON.parse(call.request.params);
-    if(  ids.length === 0 || isNil(ids)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'There is not array of ids',
-      });
-    }
-    let errorMessage;
-    const forms = await Forms.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if(!isNil(errorMessage)){
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    const totalCount = (forms as any).deletedCount;
-    return callback(null, { result: JSON.stringify({ forms,totalCount }) });
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/get',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetManyForms', {
+          forms: [Forms.getInstance().fields],
+          count: ConduitNumber.Required,
+        }),
+        'getManyForms'
+      ),
+      constructConduitRoute(
+        {
+          path: '/new',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            name: ConduitString.Required,
+            fields: ConduitJson.Required,
+            forwardTo: ConduitString.Required,
+            emailField: ConduitString.Required,
+            enabled: ConduitBoolean.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateForm', 'String'),
+        'createForm'
+      ),
+      constructConduitRoute(
+        {
+          path: '/update/:formId',
+          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          urlParams: {
+            formId: { type: RouteOptionType.String, required: true },
+          },
+          bodyParams: {
+            name: ConduitString.Required,
+            fields: ConduitJson.Required,
+            forwardTo: ConduitString.Required,
+            emailField: ConduitString.Required,
+            enabled: ConduitBoolean.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('EditForm', 'String'),
+        'editForm'
+      ),
+      constructConduitRoute(
+        {
+          path: '/delete',
+          action: ConduitRouteActions.DELETE,
+          bodyParams: {
+            ids: { type: [TYPE.String], required: true }, // handler array check is still required
+          }
+        },
+        new ConduitRouteReturnDefinition('DeleteManyForms', {
+          forms: [Forms.getInstance().fields],
+          totalCount: ConduitString.Required,
+        }),
+        'deleteManyForms'
+      ),
+      constructConduitRoute(
+        {
+          path: '/replies/:formId',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            formId: { type: RouteOptionType.String, required: true },
+          },
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetManyFormReplies', {
+          replies: [FormReplies.getInstance().fields],
+          count: ConduitNumber.Required,
+        }),
+        'getManyFormReplies'
+      ),
+    ];
   }
-  async getForms(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit,search } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
 
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
+  async getManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let skipNumber = 0, limitNumber = 25;
+    if (!isNil(call.request.params.skip)) {
+      skipNumber = Number.parseInt(call.request.params.skip as string);
     }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
+    if (!isNil(call.request.params.limit)) {
+      limitNumber = Number.parseInt(call.request.params.limit as string);
     }
     let query:any = {}
     let identifier;
-    if(!isNil(search)){
-      identifier = escapeStringRegexp(search);
+    if (!isNil(call.request.params.search)) {
+      identifier = escapeStringRegexp(call.request.params.search);
       query['name'] =  { $regex: `.*${identifier}.*`, $options: 'i'};
     }
 
@@ -79,161 +160,88 @@ export class AdminHandlers {
         limitNumber
       );
     const countPromise = Forms.getInstance().countDocuments({});
-
-    let errorMessage: string | null = null;
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
 
-    return callback(null, { result: JSON.stringify({ forms, count }) });
+    return { forms, count };
   }
 
-  async getRepliesByFormId(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, formId } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
+  async createForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (Object.keys(call.request.params.fields).length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
     }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    Object.keys(call.request.params.fields).forEach((r) => {
+      if (['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object should contain fields that have their value as a type of: String, File, Date, Number');
+      }
+    });
+    Forms.getInstance()
+      .create({
+        name: call.request.params.name,
+        fields: call.request.params.fields,
+        forwardTo: call.request.params.forwardTo,
+        emailField: call.request.params.emailField,
+        enabled: call.request.params.enabled,
+      })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
+    this.formsController.refreshRoutes();
+    return 'Ok';
+  }
+
+  async editForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (Object.keys(call.request.params.fields).length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
+    }
+    Object.keys(call.request.params.fields).forEach((r) => {
+      if (['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object should contain fields that have their value as a type of: String, File, Date, Number');
+      }
+    });
+    Forms.getInstance()
+      .findByIdAndUpdate(call.request.params.formId, {
+        name: call.request.params.name,
+        fields: call.request.params.fields,
+        forwardTo: call.request.params.forwardTo,
+        emailField: call.request.params.emailField,
+        enabled: call.request.params.enabled,
+      })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    this.formsController.refreshRoutes();
+    return 'Ok';
+  }
+
+  async deleteManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (isNil(call.request.params.ids) || call.request.params.ids.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    }
+    const forms = await Forms.getInstance()
+      .deleteMany({ _id: { $in: call.request.params.ids } })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    const totalCount = (forms as any).deletedCount;
+    return { forms, totalCount };
+  }
+
+  async getManyFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let skipNumber = 0, limitNumber = 25;
+    if (!isNil(call.request.params.skip)) {
+      skipNumber = Number.parseInt(call.request.params.skip as string);
+    }
+    if (!isNil(call.request.params.limit)) {
+      limitNumber = Number.parseInt(call.request.params.limit as string);
+    }
     const repliesPromise = FormReplies.getInstance()
       .findMany(
-        { form: formId },
+        { form: call.request.params.formId },
         undefined,
         skipNumber,
         limitNumber
       );
-    const countPromise = FormReplies.getInstance().countDocuments({ form: formId });
-
-    let errorMessage: string | null = null;
+    const countPromise = FormReplies.getInstance().countDocuments({ form: call.request.params.formId });
     const [replies, count] = await Promise.all([repliesPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    return callback(null, { result: JSON.stringify({ replies, count }) });
-  }
-
-  async createForm(call: RouterRequest, callback: RouterResponse) {
-    const { name, fields, forwardTo, emailField, enabled } = JSON.parse(
-      call.request.params
-    );
-
-    if (
-      !name ||
-      !forwardTo ||
-      !emailField ||
-      isNil(enabled) ||
-      !fields ||
-      Object.keys(fields).length === 0
-    ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message:
-          'Required data not provided missing name, fields or fields is not a filled array',
-      });
-    }
-    let error = null;
-    Object.keys(fields).forEach((r) => {
-      if (['String', 'File', 'Date', 'Number'].indexOf(fields[r]) === -1) {
-        error = true;
-      }
-    });
-
-    if (error) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message:
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-      });
-    }
-    error = null;
-    Forms.getInstance()
-      .create({
-        name,
-        fields,
-        forwardTo,
-        emailField,
-        enabled,
-      })
-      .catch((e: any) => (error = e.message));
-    if (!isNil(error))
-      return callback({
-        code: status.INTERNAL,
-        message: error,
-      });
-
-    this.formsController.refreshRoutes();
-
-    return callback(null, { result: 'Ok' });
-  }
-
-  async editFormById(call: RouterRequest, callback: RouterResponse) {
-    const { formId, name, fields, forwardTo, emailField, enabled } = JSON.parse(
-      call.request.params
-    );
-
-    if (
-      !formId ||
-      !name ||
-      !forwardTo ||
-      !emailField ||
-      isNil(enabled) ||
-      !fields ||
-      Object.keys(fields).length === 0
-    ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message:
-          'Required data not provided missing name, fields or fields is not a filled array',
-      });
-    }
-
-    let error = null;
-    Object.keys(fields).forEach((r) => {
-      if (['String', 'File', 'Date', 'Number'].indexOf(fields[r]) === -1) {
-        error = true;
-      }
-    });
-
-    if (error) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message:
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-      });
-    }
-
-    error = null;
-    Forms.getInstance()
-      .findByIdAndUpdate(formId, {
-        name,
-        fields,
-        forwardTo,
-        emailField,
-        enabled,
-      })
-      .catch((e: any) => (error = e.message));
-    if (!isNil(error))
-      return callback({
-        code: status.INTERNAL,
-        message: error,
-      });
-    this.formsController.refreshRoutes();
-
-    return callback(null, { result: 'Ok' });
+    return { replies, count };
   }
 }
