@@ -38,7 +38,9 @@ export class Admin extends ConduitModule<AdminClient> {
     });
   }
 
-  async registerAdmin(
+  private async registerAdmin(
+    // [Deprecated]
+    // TODO: Merge this with registerAdminAsync()
     server: GrpcServer,
     paths: any[],
     functions: { [name: string]: Function }
