@@ -26,7 +26,7 @@ const schema = {
   inputs: [
     {
       type: TYPE.JSON,
-      required: true,
+      // required: true, // tmp: Swagger parser incompatibility
     },
   ],
   returns: {
