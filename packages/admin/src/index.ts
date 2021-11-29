@@ -61,7 +61,14 @@ export default class AdminModule extends IConduitAdmin {
     }, this);
 
     this._grpcRoutes = {};
-    this._sdkRoutes = [];
+    this._sdkRoutes = [
+      adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk)
+    ];
+
+    // Register Post-Auth-Middleware routes
+    this._sdkRoutes.forEach((route) => {
+      this._restRouter.registerConduitRoute(route);
+    }, this);
 
     let protoDescriptor = loadPackageDefinition(packageDefinition);
 
@@ -124,6 +131,7 @@ export default class AdminModule extends IConduitAdmin {
 
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push(route);
+    this._restRouter.registerConduitRoute(route);
     this.cleanupRoutes();
   }
 
@@ -276,6 +284,16 @@ export default class AdminModule extends IConduitAdmin {
 
   private cleanupRoutes() {
     let routes: { action: string; path: string }[] = [];
+    // Admin routes
+    routes.push(
+      { action: ConduitRouteActions.POST, path: '/login' },
+      { action: ConduitRouteActions.GET, path: '/modules' }
+    );
+    // Package routes
+    this._sdkRoutes.forEach((route: ConduitRoute) => {
+      routes.push({ action: route.input.action, path: route.input.path });
+    });
+    // Module routes
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       let routesArray = this._grpcRoutes[grpcRoute];
       routes.push(
@@ -284,10 +302,6 @@ export default class AdminModule extends IConduitAdmin {
         })
       );
     });
-    routes.push(
-      { action: ConduitRouteActions.POST, path: '/login' },
-      { action: ConduitRouteActions.GET, path: '/modules' }
-    );
     this._restRouter.cleanupRoutes(routes);
   }
 }
