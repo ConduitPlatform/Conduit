@@ -38,13 +38,15 @@ export class Admin extends ConduitModule<AdminClient> {
     });
   }
 
-  private async registerAdmin(
-    // [Deprecated]
-    // TODO: Merge this with registerAdminAsync()
+  async registerAdminAsync(
     server: GrpcServer,
     paths: any[],
-    functions: { [name: string]: Function }
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
   ): Promise<any> {
+    let modifiedFunctions: { [name: string]: Function } = {};
+    Object.keys(functions).forEach((key) => {
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
+    });
     let protoFunctions = '';
     paths.forEach((r) => {
       protoFunctions += `rpc ${
@@ -58,44 +60,25 @@ export class Admin extends ConduitModule<AdminClient> {
 
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protoFile);
-    await server.addService(protoPath, this.moduleName + '.admin.Admin', functions);
+    await server.addService(protoPath, this.moduleName + '.admin.Admin', modifiedFunctions);
     // fs.unlinkSync(protoPath);
 
     //added sleep as a precaution
-    // With this register process there is the chance that the config instances will
-    // not have the url of the service yet. In order to avoid this i've added the sleep period.
+    // With this register process there is a chance that the config instances will
+    // not have the url of the service yet. In order to avoid this I've added the sleep period.
     // One case is to register to config module X and the admin package to request the url from
-    // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it
+    // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it.
     return this.sleep(3000).then(() => this.register(paths, protoFile));
   }
 
-  async registerAdminAsync(
-    server: GrpcServer,
-    paths: any[],
-    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
-  ): Promise<any> {
-    let modifiedFunctions: { [name: string]: Function } = {};
-    Object.keys(functions).forEach((key) => {
-      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
-    });
-    return this.registerAdmin(server, paths, modifiedFunctions);
-  }
-
   register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
-    let grpcPathArray: any[] = [];
     let protoFunctions = '';
     paths.forEach((r) => {
-      let obj = {
-        path: r.path,
-        method: r.method,
-        grpcFunction: r.protoName,
-      };
       if (!protoFile) {
         protoFunctions += `rpc ${
           r.protoName.charAt(0).toUpperCase() + r.protoName.slice(1)
         }(AdminRequest) returns (AdminResponse);\n`;
       }
-      grpcPathArray.push(obj);
     });
     if (!protoFile) {
       protoFile = protofile_template
@@ -119,28 +102,5 @@ export class Admin extends ConduitModule<AdminClient> {
         }
       });
     });
-  }
-
-  // TODO
-  // - use createProtoFunctions in registerAdmin, registerAdminAsync
-
-   private createProtoFunctions(paths: any[]) {
-    let protoFunctions = '';
-    paths.forEach((r) => {
-        protoFunctions += this.createProtoFunctionForRoute(r, protoFunctions);
-    });
-    return protoFunctions;
-  }
-
-  private createProtoFunctionForRoute(path: any, protoFunctions: string) {
-    const newFunction = this.createGrpcFunctionName(path.grpcFunction);
-    if (protoFunctions.indexOf(newFunction) !== -1) {
-      return '';
-    }
-    return `rpc ${newFunction}(AdminRequest) returns (AdminResponse);\n`;
-  }
-
-  private createGrpcFunctionName(grpcFunction: string) {
-    return grpcFunction.charAt(0).toUpperCase() + grpcFunction.slice(1);
   }
 }
