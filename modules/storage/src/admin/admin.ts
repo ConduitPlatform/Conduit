@@ -64,7 +64,7 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetFile', {
+        new ConduitRouteReturnDefinition('File', {
           id: ConduitString.Required,
           name: ConduitString.Required,
           url: ConduitString.Required,
@@ -83,8 +83,8 @@ export class AdminRoutes {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetFiles', {
-          files: File.getInstance().fields,
+        new ConduitRouteReturnDefinition('Files', {
+          files: ['File'],
           filesCount: ConduitNumber.Required,
         }),
         'getFiles'
