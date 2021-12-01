@@ -77,7 +77,7 @@ export class SchemaAdmin {
     });
 
     return {
-      results: schemasFromOtherModules.map((schema: any) => { // TODO: unnest (frontend compat)
+      results: schemasFromOtherModules.map((schema: any) => { // TODO: rename to externalSchemas (frontend compat)
         return { name: schema.name, fields: schema.modelSchema };
       }),
     };

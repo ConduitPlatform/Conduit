@@ -103,7 +103,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
           results: { // TODO: unnest (frontend compat)
-            schemas: SchemaDefinitions.getInstance().fields,
+            schemas: [SchemaDefinitions.getInstance().fields],
             documentsCount: ConduitNumber.Required,
           }
         }),
@@ -115,10 +115,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetSchemasFromOtherModules', {
-          results: { // TODO: unnest (frontend compat)
-            name: ConduitString.Required,
-            fields: ConduitJson.Required,
-          },
+          results: [TYPE.JSON], // Swagger parser inconsistency // TODO: rename to externalSchemas (frontend compat)
         }),
         'getSchemasFromOtherModules'
       ),
