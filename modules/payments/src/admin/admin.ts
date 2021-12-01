@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -27,19 +26,12 @@ import {
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly stripeHandlers: StripeHandlers | null
   ) {
-    this.database = this.grpcSdk.databaseProvider!;
-    Product.getInstance(this.database);
-    PaymentsCustomer.getInstance(this.database);
-    Transaction.getInstance(this.database);
-    Subscription.getInstance(this.database);
-    User.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -197,13 +189,8 @@ export class AdminHandlers {
   }
 
   async getManyProducts(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
@@ -214,8 +201,8 @@ export class AdminHandlers {
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
+        skip,
+        limit,
       );
     const totalCountPromise = Product.getInstance().countDocuments(query);
 
@@ -288,13 +275,8 @@ export class AdminHandlers {
   }
 
   async getManyCustomers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
@@ -305,8 +287,8 @@ export class AdminHandlers {
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const totalCountPromise = PaymentsCustomer.getInstance().countDocuments(query);
     const [customerDocuments, totalCount] = await Promise.all([
@@ -342,13 +324,8 @@ export class AdminHandlers {
   }
 
   async getManyTransactions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     if (!isNil(call.request.params.customerId)) {
       query['customerId'] = call.request.params.customerId;
@@ -360,8 +337,8 @@ export class AdminHandlers {
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const totalCountPromise = Transaction.getInstance().countDocuments(query);
 
@@ -374,13 +351,8 @@ export class AdminHandlers {
   }
 
   async getManySubscriptions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {}, populates;
     if (!isNil(call.request.params.populate)) {
       populates = populateArray(call.request.params.populate);
@@ -389,8 +361,8 @@ export class AdminHandlers {
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
+        skip,
+        limit,
         undefined,
         populates
       );

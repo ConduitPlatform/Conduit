@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -19,13 +18,8 @@ import { ChatRoom, ChatMessage, User } from '../models';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers{
-  private readonly database: DatabaseProvider;
 
   constructor(private readonly server: GrpcServer, private readonly  grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider!;
-    User.getInstance(this.database);
-    ChatRoom.getInstance(this.database);
-    ChatMessage.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -139,14 +133,9 @@ export class AdminHandlers{
   }
 
   async getManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, search, populate } = call.request.params;
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    const { search, populate } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {},populates;
     let identifier;
     if (!isNil(populate)) {
@@ -161,8 +150,8 @@ export class AdminHandlers{
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
+        skip,
+        limit,
         undefined,
         populates,
       );
@@ -178,7 +167,7 @@ export class AdminHandlers{
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { participants } = call.request.params;
-    if (isNil(participants) || !Array.isArray(participants) || participants.length === 0) { // array check is required
+    if (participants.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'participants is required and must be a non-empty array');
     }
     await this.validateUsersInput(participants);
@@ -193,7 +182,7 @@ export class AdminHandlers{
 
   async deleteManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-    if (isNil(ids) || !Array.isArray((ids)) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     await ChatRoom.getInstance()
@@ -206,14 +195,9 @@ export class AdminHandlers{
   }
 
   async getManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, senderUser, roomId, populate } = call.request.params;
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    const { senderUser, roomId, populate } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     let populates;
     if (!isNil(populate)) {
@@ -238,8 +222,8 @@ export class AdminHandlers{
     .findMany(
       query,
       undefined,
-      skipNumber,
-      limitNumber,
+      skip,
+      limit,
       undefined,
       populates,
     );
@@ -257,7 +241,7 @@ export class AdminHandlers{
 
   async deleteManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-    if (isNil(ids) || !Array.isArray((ids)) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     await ChatMessage.getInstance()

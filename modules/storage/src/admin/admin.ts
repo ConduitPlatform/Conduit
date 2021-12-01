@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -22,17 +21,12 @@ import {
 } from '../models'
 
 export class AdminRoutes {
-  private readonly database: DatabaseProvider;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly fileHandlers: FileHandlers
   ) {
-    this.database = this.grpcSdk.databaseProvider!;
-    _StorageContainer.getInstance(this.database);
-    _StorageFolder.getInstance(this.database);
-    File.getInstance(this.database);
     this.registerAdminRoutes();
   }
 

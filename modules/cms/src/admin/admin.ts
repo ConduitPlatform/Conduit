@@ -28,8 +28,6 @@ export class AdminHandlers {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    SchemaDefinitions.getInstance(this.grpcSdk.databaseProvider!);
-    CustomEndpoints.getInstance(this.grpcSdk.databaseProvider!);
     this.schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
       this.schemaController,

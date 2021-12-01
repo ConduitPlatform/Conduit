@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -22,16 +21,12 @@ import { Forms, FormReplies } from '../models';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly formsController: FormsController
   ) {
-    this.database = this.grpcSdk.databaseProvider!;
-    Forms.getInstance(this.database);
-    FormReplies.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -138,32 +133,25 @@ export class AdminHandlers {
   }
 
   async getManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {}
     let identifier;
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
       query['name'] =  { $regex: `.*${identifier}.*`, $options: 'i'};
     }
-
     const formsPromise = Forms.getInstance()
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = Forms.getInstance().countDocuments({});
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(
       (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
-
     return { forms, count };
   }
 
@@ -213,7 +201,7 @@ export class AdminHandlers {
   }
 
   async deleteManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (isNil(call.request.params.ids) || call.request.params.ids.length === 0) { // array check is required
+    if (call.request.params.ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     const forms = await Forms.getInstance()
@@ -224,19 +212,14 @@ export class AdminHandlers {
   }
 
   async getManyFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const repliesPromise = FormReplies.getInstance()
       .findMany(
         { form: call.request.params.formId },
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = FormReplies.getInstance().countDocuments({ form: call.request.params.formId });
     const [replies, count] = await Promise.all([repliesPromise, countPromise]).catch(

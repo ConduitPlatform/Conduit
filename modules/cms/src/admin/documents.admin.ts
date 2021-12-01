@@ -44,7 +44,9 @@ export class DocumentsAdmin {
   }
 
   async getManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { schemaName, skip, limit, query, search } = call.request.params;
+    let { schemaName, query, search } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
 
     const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
@@ -53,13 +55,6 @@ export class DocumentsAdmin {
 
     if (!query || query.length === '') {
       query = {};
-    }
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
     }
     let identifier;
     if (!isNil(search)) {
@@ -71,8 +66,8 @@ export class DocumentsAdmin {
       schemaName,
       query,
       undefined,
-      skipNumber,
-      limitNumber,
+      skip,
+      limit,
     );
     const countPromise = this.database.countDocuments(schemaName, query);
 

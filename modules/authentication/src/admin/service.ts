@@ -1,5 +1,4 @@
 import ConduitGrpcSdk, {
-  DatabaseProvider,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
@@ -10,26 +9,17 @@ import { isNil } from 'lodash';
 import { Service } from '../models';
 
 export class ServiceAdmin {
-  private readonly database: DatabaseProvider;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider!;
-    Service.getInstance(this.database);
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async getManyServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const services: Service[] = await Service.getInstance().findMany(
       {},
       undefined,
-      skipNumber,
-      limitNumber
+      skip,
+      limit,
     );
     const count: number = await Service.getInstance().countDocuments({});
     return { services, count };

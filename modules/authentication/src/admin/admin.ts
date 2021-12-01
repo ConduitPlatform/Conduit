@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -23,13 +22,10 @@ import { User, Service } from '../models';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
   private readonly serviceAdmin: ServiceAdmin;
 
   constructor(private readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider!;
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
-    User.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -244,14 +240,9 @@ export class AdminHandlers {
    }
 
   async getManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, isActive, provider, search, sort } = call.request.params;
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    const { isActive, provider, search, sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
 
     let query: any = {};
     if (!isNil(isActive)) {
@@ -278,8 +269,8 @@ export class AdminHandlers {
     const users: User[] = await User.getInstance().findMany(
       query,
       undefined,
-      skipNumber,
-      limitNumber,
+      skip,
+      limit,
       sort
     );
     const count: number = await User.getInstance().countDocuments(query);
@@ -350,7 +341,7 @@ export class AdminHandlers {
 
   async deleteManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-    if (isNil(ids) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
     }
 
@@ -394,7 +385,7 @@ export class AdminHandlers {
 
   async toggleManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, block } = call.request.params;
-    if (isNil(ids) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     let users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });

@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -24,12 +23,9 @@ import { EmailTemplate } from '../models';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
   private emailService: EmailService;
 
   constructor(private readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    this.database = this.grpcSdk.databaseProvider!;
-    EmailTemplate.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -195,13 +191,8 @@ export class AdminHandlers {
   }
 
   async getManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
@@ -217,8 +208,8 @@ export class AdminHandlers {
     const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
       query,
       undefined,
-      skipNumber,
-      limitNumber
+      skip,
+      limit,
     );
     const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
     const [templateDocuments, totalCount] = await Promise.all([
@@ -341,7 +332,7 @@ export class AdminHandlers {
 
   async deleteManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-    if (isNil(ids) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     let totalCount = ids.length;

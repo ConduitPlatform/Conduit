@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -17,7 +16,6 @@ import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProv
 import { NotificationToken } from '../models'
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
   private provider: IPushNotificationsProvider;
 
   constructor(
@@ -25,9 +23,7 @@ export class AdminHandlers {
     private readonly grpcSdk: ConduitGrpcSdk,
     provider: IPushNotificationsProvider
   ) {
-    this.database = this.grpcSdk.databaseProvider!;
     this.provider = provider;
-    NotificationToken.getInstance(this.database);
     this.registerAdminRoutes();
   }
 
@@ -128,7 +124,7 @@ export class AdminHandlers {
   }
 
   async sendToManyDevices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (isNil(call.request.params.userIds) || call.request.params.userIds.length === 0) { // array check is required
+    if (call.request.params.userIds.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
     }
     const params = {

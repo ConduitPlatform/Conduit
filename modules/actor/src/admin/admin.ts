@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  DatabaseProvider,
   constructConduitRoute,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -23,16 +22,12 @@ import { ActorFlow, ActorRun } from '../models'
 const { readdirSync, readFileSync } = require('fs');
 
 export class AdminHandlers {
-  private readonly database: DatabaseProvider;
   private warden: FlowCreator;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
-    this.database = this.grpcSdk.databaseProvider!;
-    ActorFlow.getInstance(this.database);
-    ActorRun.getInstance(this.database);
     this.warden = new FlowCreator(grpcSdk, server);
     this.registerAdminRoutes();
   }
@@ -180,19 +175,14 @@ export class AdminHandlers {
   }
 
   async getManyFlows(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const flowsPromise = ActorFlow.getInstance()
       .findMany(
         {},
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = ActorFlow.getInstance().countDocuments({});
     const [flows, count] = await Promise.all([flowsPromise, countPromise]).catch(
@@ -202,13 +192,8 @@ export class AdminHandlers {
   }
 
   async getManyFlowRuns(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(call.request.params.skip)) {
-      skipNumber = Number.parseInt(call.request.params.skip as string);
-    }
-    if (!isNil(call.request.params.limit)) {
-      limitNumber = Number.parseInt(call.request.params.limit as string);
-    }
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
 
     const flow = await ActorFlow.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(flow)) {
@@ -218,8 +203,8 @@ export class AdminHandlers {
       .findMany(
         { flow: flow._id },
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = ActorRun.getInstance().countDocuments({});
     const [runs, count] = await Promise.all([flowRuns, countPromise]).catch(
@@ -231,7 +216,7 @@ export class AdminHandlers {
 
   async createFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, trigger, actors, enabled } = call.request.params;
-    if (isNil(actors) || actors.length === 0) { // array check is required
+    if (actors.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'Argument actors is required and must be a non-empty array!');
     }
 

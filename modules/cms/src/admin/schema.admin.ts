@@ -35,14 +35,9 @@ export class SchemaAdmin {
   }
 
   async getManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, search, sort, enabled } = call.request.params;
-    let skipNumber = 0, limitNumber = 25;
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    const { search, sort, enabled } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query: any = {}, identifier;
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
@@ -56,8 +51,8 @@ export class SchemaAdmin {
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
+        skip,
+        limit,
         sort,
       );
     const documentsCountPromise = SchemaDefinitions.getInstance().countDocuments(query);
@@ -214,7 +209,7 @@ export class SchemaAdmin {
 
   async deleteManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, deleteData } = call.request.params;
-    if (isNil(ids) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'Argument ids is required and must be a non-empty array!');
     }
 
@@ -286,7 +281,7 @@ export class SchemaAdmin {
 
   async toggleManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, enabled } = call.request.params;
-    if (isNil(ids) || ids.length === 0) { // array check is required
+    if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'Argument ids is required and must be a non-empty array!');
     }
 
