@@ -13,6 +13,7 @@ import {
   ConduitError,
   ConduitRoute,
   ConduitRouteActions,
+  TYPE,
 } from '@quintessential-sft/conduit-commons';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
@@ -55,6 +56,15 @@ export class RestController extends ConduitRouter {
       this.refreshRouter();
     } else {
       this.addConduitRoute(route);
+    }
+  }
+
+  private extractResult(returnTypeFields: String, result: any) {
+    switch (returnTypeFields) {
+      case TYPE.JSON:
+        return JSON.parse(result);
+      default:
+        return result;
     }
   }
 
@@ -149,11 +159,14 @@ export class RestController extends ConduitRouter {
               result = r.result ? r.result : r;
             }
             if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              if (typeof r.result === 'string') { // only grpc route data is stringified
+              if (typeof r.result === 'string') {
+                // only grpc route data is stringified
                 result = JSON.parse(result);
               }
             } else {
-              result = { result: result };
+              result = {
+                result: this.extractResult(route.returnTypeFields as string, result),
+              };
             }
             if (route.input.action === ConduitRouteActions.GET && caching) {
               this.storeInCache(hashKey, result, cacheAge!);
