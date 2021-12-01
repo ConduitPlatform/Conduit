@@ -7,11 +7,10 @@ import {
   ConduitRoute,
   ConduitSocket,
   IConduitRouter,
+  grpcToConduitRoute,
 } from '@quintessential-sft/conduit-commons';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-
-import { grpcToConduitRoute } from './utils/GrpcConverter';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -167,6 +166,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       | ConduitMiddleware
       | ConduitSocket
     )[] = grpcToConduitRoute(
+      'Router',
       {
         protoFile: protofile,
         routes: routes,
@@ -286,3 +286,4 @@ export class ConduitDefaultRouter implements IConduitRouter {
 }
 
 export * from './builders';
+export * from './controllers/Rest';

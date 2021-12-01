@@ -1,10 +1,10 @@
 import { ConduitCommons, IConduitSecurity } from '@quintessential-sft/conduit-commons';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { Admin } from './admin';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
 import { secretMigrate } from './migrations/Secret.migrate';
+import * as adminRoutes from './admin/routes';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
@@ -13,7 +13,7 @@ class SecurityModule extends IConduitSecurity {
   ) {
     super(conduit);
 
-    new Admin(conduit, grpcSdk);
+    this.registerAdminRoutes();
     const router = conduit.getRouter();
 
     let clientValidator: ClientValidator = new ClientValidator(
@@ -45,6 +45,12 @@ class SecurityModule extends IConduitSecurity {
       true
     );
     secretMigrate(grpcSdk);
+  }
+
+  private registerAdminRoutes() {
+    this.conduit.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute(this.grpcSdk));
+    this.conduit.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute(this.grpcSdk));
+    this.conduit.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute(this.grpcSdk));
   }
 }
 

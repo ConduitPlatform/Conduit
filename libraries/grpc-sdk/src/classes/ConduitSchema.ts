@@ -4,7 +4,7 @@ export class ConduitSchema {
   readonly name: string;
   readonly fields: ConduitModel;
   readonly collectionName: string;
-  readonly modelOptions: ConduitModelOptions;
+  modelOptions: ConduitModelOptions;
   private ownerModule?: string;
 
   constructor(

@@ -27,11 +27,31 @@ message RegisterAdminRouteRequest {
 
     repeated PathDefinition routes = 1;
     string protoFile = 2;
-    optional string adminUrl = 3;
+    optional string routerUrl = 3;
+
     message PathDefinition {
-        string path = 1;
-        string method = 2;
-        string grpcFunction = 3;
+        ConduitRouteOptions options = 1;
+        optional ConduitRouteReturnDefinition returns = 2;
+        optional string grpcFunction = 3;
+        optional bool isMiddleware = 4;
+        optional string events = 5;
+    }
+
+    message ConduitRouteOptions {
+        optional string queryParams = 1;
+        optional string bodyParams = 2;
+        optional string urlParams = 3;
+        optional string action = 4;
+        string path = 5;
+        optional string name = 6;
+        optional string description = 7;
+        repeated string middlewares = 8;
+        optional string cacheControl = 9;
+    }
+
+    message ConduitRouteReturnDefinition {
+        string name = 1;
+        string fields = 2;
     }
 }
 message RegisterConduitRouteRequest {

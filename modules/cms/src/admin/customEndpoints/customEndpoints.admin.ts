@@ -1,16 +1,17 @@
 import ConduitGrpcSdk, {
   DatabaseProvider,
-  RouterRequest,
-  RouterResponse,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  GrpcError,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { status } from '@grpc/grpc-js';
+import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { isNil, isPlainObject } from 'lodash';
-import { CustomEndpoints, SchemaDefinitions } from '../../models';
-import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import escapeStringRegexp from 'escape-string-regexp';
+import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
+import { SchemaDefinitions, CustomEndpoints } from '../../models';
 
-const OperationsEnum = {
+const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
   GET: 0, //'FIND/GET'
   POST: 1, //'CREATE'
   PUT: 2, //'UPDATE/EDIT'
@@ -19,257 +20,29 @@ const OperationsEnum = {
 };
 
 export class CustomEndpointsAdmin {
-  private database!: DatabaseProvider;
+  private readonly database!: DatabaseProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly customEndpointController: CustomEndpointController
   ) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider!;
-    });
+    this.database = this.grpcSdk.databaseProvider!;
   }
 
-  async getCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
-    let errorMessage: string | null = null;
-    const { search } = JSON.parse(call.request.params);
+  async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let identifier, query : any = {};
-    if( !isNil(search)){
-      identifier = escapeStringRegexp(search);
+    if (!isNil(call.request.params.search)) {
+      identifier = escapeStringRegexp(call.request.params.search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
-
-    const customEndpointsDocs = await CustomEndpoints.getInstance()
-      .findMany(query)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    return callback(null, { result: JSON.stringify({ results: customEndpointsDocs }) });
+    if (!isNil(call.request.params.operation)) {
+      query['operation'] = call.request.params.operation;
+    }
+    const customEndpointsDocs = await CustomEndpoints.getInstance().findMany(query);
+    return { results: customEndpointsDocs }; // TODO: unnest (frontend compat)
   }
 
-  async editCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
-    const params = JSON.parse(call.request.params);
-    const id = params.id;
-    const {
-      inputs,
-      query,
-      selectedSchema,
-      selectedSchemaName,
-      assignments,
-      paginated,
-      sorted,
-    } = params;
-    if (isNil(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'id must not be null',
-      });
-    }
-    let errorMessage: string | null = null;
-    delete params.id;
-    const found = await CustomEndpoints.getInstance()
-      .findOne({
-        _id: id,
-      })
-      .catch((e: any) => (errorMessage = e.message));
-    if (isNil(found) || !isNil(errorMessage)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Schema not found',
-      });
-    }
-    errorMessage = null;
-    let findSchema: any;
-    if (!isNil(selectedSchema)) {
-      findSchema = await SchemaDefinitions.getInstance()
-        .findOne({ _id: selectedSchema })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: errorMessage,
-        });
-      }
-    } else if (!isNil(selectedSchemaName)) {
-      if (found.operation !== OperationsEnum.GET) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Only get requests are allowed for schemas from other modules',
-        });
-      }
-
-      findSchema = await this.database
-        .getSchema(selectedSchemaName)
-        .catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
-
-      findSchema.fields = findSchema.modelSchema;
-    }
-
-    if (isNil(findSchema)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'SelectedSchema not found',
-      });
-    }
-
-    // todo checks for inputs & queries
-    if (!Array.isArray(inputs)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Inputs must be an array, even if empty!',
-      });
-    }
-    if (found.operation !== OperationsEnum.POST && !isPlainObject(query)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The query field must be an object',
-      });
-    }
-    if (
-      (found.operation === OperationsEnum.POST ||
-        found.operation === OperationsEnum.PUT ||
-        found.operation === OperationsEnum.PATCH) &&
-      (!Array.isArray(assignments) || assignments.length === 0)
-    ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The assignments field must be an array, and not empty!',
-      });
-    }
-
-    errorMessage = null;
-    inputs.forEach((r) => {
-      let error = inputValidation(r.name, r.type, r.location, r.array);
-      if (error !== true) {
-        return (errorMessage = error as string);
-      }
-    });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: errorMessage,
-      });
-    }
-
-    if (found.operation !== OperationsEnum.POST) {
-      errorMessage = null;
-      let error = queryValidation(query, findSchema, inputs);
-      if (error !== true) {
-        errorMessage = error as string;
-      }
-    }
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: errorMessage,
-      });
-    }
-
-    if (
-      found.operation === OperationsEnum.POST ||
-      found.operation === OperationsEnum.PUT ||
-      found.operation === OperationsEnum.PATCH
-    ) {
-      errorMessage = null;
-      assignments.forEach(
-        (r: {
-          schemaField: string;
-          action: number;
-          assignmentField: { type: string; value: any };
-        }) => {
-          let error = assignmentValidation(
-            findSchema,
-            inputs,
-            found.operation,
-            r.schemaField,
-            r.assignmentField,
-            r.action
-          );
-          if (error !== true) {
-            return (errorMessage = error as string);
-          }
-        }
-      );
-    }
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: errorMessage,
-      });
-    }
-
-    if (paginated && found.operation !== OperationsEnum.GET) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Cannot add pagination to a non-get endpoint',
-      });
-    }
-    if (sorted && found.operation !== OperationsEnum.GET) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Cannot add sorting to non-get endpoint',
-      });
-    }
-
-    Object.keys(params).forEach((key) => {
-      const value = params[key];
-      found[key] = value;
-    });
-    found.returns = findSchema.name;
-    found.selectedSchemaName = findSchema.name;
-
-    const updatedSchema = await CustomEndpoints.getInstance()
-      .findByIdAndUpdate(found._id, found)
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    this.customEndpointController.refreshEndpoints();
-    return callback(null, { result: JSON.stringify(updatedSchema) });
-  }
-
-  async deleteCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    if (isNil(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Id is missing',
-      });
-    }
-    if (id.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Id must not be empty',
-      });
-    }
-    let errorMessage: any = null;
-    const schema = await CustomEndpoints.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (isNil(schema)) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'Requested Custom Endpoint not found',
-      });
-    }
-
-    await CustomEndpoints.getInstance()
-      .deleteOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    this.customEndpointController.refreshEndpoints();
-    return callback(null, { result: 'Custom Endpoint deleted' });
-  }
-
-  async createCustomEndpoints(call: RouterRequest, callback: RouterResponse) {
+  async createCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       name,
       operation,
@@ -281,35 +54,19 @@ export class CustomEndpointsAdmin {
       assignments,
       sorted,
       paginated,
-    } = JSON.parse(call.request.params);
+    } = call.request.params;
 
-    if (
-      isNil(name) ||
-      isNil(operation) ||
-      (isNil(selectedSchema) && isNil(selectedSchemaName))
-    ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+    if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Either selectedSchema or selectedSchemaName must be specified');
     }
     if (name.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Name must not be empty',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'name must not be empty');
     }
     if (operation < 0 || operation > 3) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Operation is not valid',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'operation is not valid');
     }
     if (operation !== OperationsEnum.POST && isNil(query)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Specified operation requires that query field also be provided');
     }
     if (
       (operation === OperationsEnum.POST ||
@@ -317,74 +74,33 @@ export class CustomEndpointsAdmin {
         operation === OperationsEnum.PATCH) &&
       isNil(assignments)
     ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Specified operation requires that assignments field also be provided');
     }
 
     let findSchema: any;
-    let errorMessage: string | null = null;
     if (!isNil(selectedSchema)) {
+      // Find schema using selectedSchema
       if (selectedSchema.length === 0) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'SelectedSchema must not be empty',
-        });
+        throw new GrpcError(status.INVALID_ARGUMENT, 'selectedSchema must not be empty');
       }
-
-      findSchema = await SchemaDefinitions.getInstance()
-        .findOne({ _id: selectedSchema })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage,
-        });
-      }
+      findSchema = await SchemaDefinitions.getInstance().findOne({ _id: selectedSchema });
     } else {
+      // Find schema using selectedSchemaName
       if (selectedSchemaName.length === 0) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'SelectedSchemaName must not be empty',
-        });
+        throw new GrpcError(status.INVALID_ARGUMENT, 'selectedSchemaName must not be empty');
       }
-
       if (operation !== OperationsEnum.GET) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Only get requests are allowed for schemas from other modules',
-        });
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Only get requests are allowed for schemas from other modules');
       }
-
-      findSchema = await this.database
-        .getSchema(selectedSchemaName)
-        .catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
-
+      findSchema = await this.database.getSchema(selectedSchemaName)
       findSchema.fields = findSchema.modelSchema;
     }
 
     if (isNil(findSchema)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'SelectedSchema not found',
-      });
-    }
-
-    if (!isNil(inputs) && !Array.isArray(inputs)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Inputs must be an array, even if empty!',
-      });
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
     if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The query field must be an object',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'The query field must be an object');
     }
     if (
       (operation === OperationsEnum.POST ||
@@ -392,26 +108,15 @@ export class CustomEndpointsAdmin {
         operation === OperationsEnum.PATCH) &&
       (!Array.isArray(assignments) || assignments.length === 0)
     ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The assigment field must be an array, and not empty!',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Specified operation requires that assignments field be a non-empty array');
     }
-
     if (!isNil(inputs) && inputs.length > 0) {
-      errorMessage = null;
-      inputs.forEach((r) => {
+      inputs.forEach((r: any) => {
         let error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
-          return (errorMessage = error as string);
+          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
         }
       });
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: errorMessage,
-        });
-      }
     }
 
     let endpoint = {
@@ -429,40 +134,27 @@ export class CustomEndpointsAdmin {
     };
 
     if (paginated && operation !== OperationsEnum.GET) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Cannot add pagination to non-get endpoint',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot add pagination to non-get endpoint');
     } else if (paginated) {
       endpoint.paginated = paginated;
     }
-
     if (sorted && operation !== OperationsEnum.GET) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Cannot add sorting to non-get endpoint',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot add sorting to non-get endpoint');
     } else if (sorted) {
       endpoint.sorted = sorted;
     }
-
     if (operation !== OperationsEnum.POST) {
       let error = queryValidation(query, findSchema, inputs);
       if (error !== true) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: error as string,
-        });
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
       }
       endpoint.query = query;
     }
-
     if (
       operation === OperationsEnum.POST ||
       operation === OperationsEnum.PUT ||
       operation === OperationsEnum.PATCH
     ) {
-      errorMessage = null;
       assignments.forEach(
         (r: {
           schemaField: any;
@@ -478,30 +170,151 @@ export class CustomEndpointsAdmin {
             r.action
           );
           if (error !== true) {
-            return (errorMessage = error as string);
+            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
           }
         }
       );
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: errorMessage,
-        });
-      }
       endpoint.assignments = assignments;
     }
 
-    errorMessage = null;
-    const newSchema = await CustomEndpoints.getInstance()
-      .create(endpoint)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Endpoint Creation failed',
-      });
+    const customEndpoint = await CustomEndpoints.getInstance().create(endpoint);
+    if (isNil(customEndpoint)) {
+      throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
     }
     this.customEndpointController.refreshEndpoints();
-    return callback(null, { result: JSON.stringify(newSchema) });
+    return customEndpoint;
+  }
+
+  async editCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
+    const {
+      id,
+      selectedSchema,
+      selectedSchemaName,
+      query,
+      inputs,
+      assignments,
+      sorted,
+      paginated,
+    } = params;
+
+    if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Either selectedSchema or selectedSchemaName must be specified');
+    }
+
+    const found = await CustomEndpoints.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+
+    let findSchema: any;
+    if (!isNil(selectedSchema)) {
+      // Find schema using selectedSchema
+      findSchema = await SchemaDefinitions.getInstance().findOne({ _id: selectedSchema })
+      if (isNil(findSchema)) {
+        throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      }
+    } else if (!isNil(selectedSchemaName)) {
+      // Find schema using selectedSchemaName
+      if (found.operation !== OperationsEnum.GET) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Only get requests are allowed for schemas from other modules');
+      }
+      findSchema = await this.database.getSchema(selectedSchemaName)
+      findSchema.fields = findSchema.modelSchema;
+    }
+
+    if (isNil(findSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    if (found.operation !== OperationsEnum.POST && !isPlainObject(query)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'The query field must be an object');
+    }
+    if (
+      (found.operation === OperationsEnum.POST ||
+        found.operation === OperationsEnum.PUT ||
+        found.operation === OperationsEnum.PATCH) &&
+      (!Array.isArray(assignments) || assignments.length === 0)
+    ) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Custom endpoint\'s target operation requires that assignments field be a non-empty array');
+    }
+    if (!isNil(inputs) && inputs.length > 0) {
+      inputs.forEach((r: any) => {
+        let error = inputValidation(r.name, r.type, r.location, r.array);
+        if (error !== true) {
+          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        }
+      });
+    }
+
+    if (paginated && found.operation !== OperationsEnum.GET) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot add pagination to non-get endpoint');
+    }
+    if (sorted && found.operation !== OperationsEnum.GET) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot add sorting to non-get endpoint');
+    }
+    if (found.operation !== OperationsEnum.POST) {
+      let error = queryValidation(query, findSchema, inputs);
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+    }
+
+    if (
+      found.operation === OperationsEnum.POST ||
+      found.operation === OperationsEnum.PUT ||
+      found.operation === OperationsEnum.PATCH
+    ) {
+      assignments.forEach(
+        (r: {
+          schemaField: string;
+          action: number;
+          assignmentField: { type: string; value: any };
+        }) => {
+          let error = assignmentValidation(
+            findSchema,
+            inputs,
+            found.operation,
+            r.schemaField,
+            r.assignmentField,
+            r.action
+          );
+          if (error !== true) {
+            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+          }
+        }
+      );
+    }
+
+    delete params.id;
+    Object.keys(params).forEach((key) => {
+      // @ts-ignore
+      found[key] = params[key]; // todo: wtf
+    });
+    found.returns = findSchema.name;
+    found.selectedSchemaName = findSchema.name;
+
+    const customEndpoint = await CustomEndpoints.getInstance()
+      .findByIdAndUpdate(found._id, found)
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (isNil(customEndpoint)) {
+      throw new GrpcError(status.INTERNAL, 'Could not update schema')
+    }
+
+    this.customEndpointController.refreshEndpoints();
+    return customEndpoint;
+  }
+
+  async deleteCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (call.request.params.id.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
+    }
+    const customEndpoint = await CustomEndpoints.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(customEndpoint)) {
+      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
+    }
+    await CustomEndpoints.getInstance().deleteOne({ _id: call.request.params.id })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    this.customEndpointController.refreshEndpoints();
+    return 'Custom Endpoint deleted';
   }
 }

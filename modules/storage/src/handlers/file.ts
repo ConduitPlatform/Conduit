@@ -1,20 +1,27 @@
-import { isNil, isString } from 'lodash';
 import ConduitGrpcSdk, {
-  RouterRequest,
-  RouterResponse,
+  DatabaseProvider,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  GrpcError,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { isNil, isString } from 'lodash';
 import { ConfigController } from '../config/Config.controller';
-import { _StorageContainer, _StorageFolder, File } from '../models';
 import { IStorageProvider } from '../storage-provider';
+import { _StorageContainer, _StorageFolder, File } from '../models';
 
 export class FileHandlers {
+  private readonly database: DatabaseProvider;
   private storageProvider: IStorageProvider;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     storageProvider: IStorageProvider
   ) {
+    this.database = this.grpcSdk.databaseProvider!;
+    _StorageContainer.getInstance(this.database);
+    _StorageFolder.getInstance(this.database);
+    File.getInstance(this.database);
     this.storageProvider = storageProvider;
   }
 
@@ -26,10 +33,20 @@ export class FileHandlers {
     this.storageProvider = storageProvider;
   }
 
-  async createFile(call: RouterRequest, callback: RouterResponse) {
-    const { name, data, folder, container, mimeType, isPublic } = JSON.parse(
-      call.request.params
-    );
+  async getFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const file = await File.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(file)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    return {
+      id: file._id,
+      name: file.name,
+      url: file.url,
+    };
+  }
+
+  async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, data, folder, container, mimeType, isPublic } = call.request.params;
     let newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
     let config = ConfigController.getInstance().config;
     let usedContainer = container;
@@ -42,10 +59,7 @@ export class FileHandlers {
       });
       if (!container) {
         if (!config.allowContainerCreation) {
-          return callback({
-            code: status.PERMISSION_DENIED,
-            message: 'Container creation is not allowed!',
-          });
+          throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
         }
         let exists = await this.storageProvider.containerExists(usedContainer);
         if (!exists) {
@@ -78,17 +92,10 @@ export class FileHandlers {
       folder: newFolder,
     });
     if (exists) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'File already exists',
-      });
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
     }
-
     if (!isString(data)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Invalid data provided',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid data provided');
     }
 
     try {
@@ -113,179 +120,22 @@ export class FileHandlers {
         url: publicUrl,
       });
 
-      return callback(null, {
-        result: JSON.stringify({
-          id: newFile._id,
-          name: newFile.name,
-          url: newFile.url,
-        }),
-      });
+      return {
+        id: newFile._id,
+        name: newFile.name,
+        url: newFile.url,
+      };
     } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong',
-      });
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
     }
   }
 
-  async getFile(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    if (!isString(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The provided id is invalid',
-      });
-    }
-
-    try {
-      const file = await File.getInstance().findOne({ _id: id });
-      if (isNil(file))
-        return callback({
-          code: status.NOT_FOUND,
-          message: 'File not found',
-        });
-      return callback(null, {
-        result: JSON.stringify({
-          id: file._id,
-          name: file.name,
-          url: file.url,
-        }),
-      });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
-    }
-  }
-
-  async getFileData(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    if (!isString(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The provided id is invalid',
-      });
-    }
-
-    try {
-      const file = await File.getInstance().findOne({ _id: id });
-      if (isNil(file))
-        return callback({
-          code: status.NOT_FOUND,
-          message: 'File not found',
-        });
-
-      let data: Buffer;
-      if (file.folder) {
-        data = await this.storageProvider
-          .container(file.container)
-          .get(file.folder + file.name);
-      } else {
-        data = await this.storageProvider.container(file.container).get(file.name);
-      }
-      data.toString('base64');
-
-      return callback(null, {
-        result: JSON.stringify({
-          data: data.toString('base64'),
-        }),
-      });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
-    }
-  }
-
-  async getFileUrl(call: RouterRequest, callback: RouterResponse) {
-    const { id, redirect } = JSON.parse(call.request.params);
-    if (!isString(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The provided id is invalid',
-      });
-    }
-
+  async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, data, name, container, folder, mimeType } = call.request.params;
     try {
       const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
-        return callback({ code: status.NOT_FOUND, message: 'File not found' });
-      }
-      if (found.isPublic) {
-        return callback(null, { redirect: found.url });
-      }
-      let url = await this.storageProvider
-        .container(found.container)
-        .getSignedUrl((found.folder ?? '') + found.name);
-
-      if (!isNil(redirect) && (redirect === 'false' || !redirect)) {
-        return callback(null, {
-          result: url,
-        });
-      }
-      return callback(null, {
-        redirect: url,
-      });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
-    }
-  }
-
-  async deleteFile(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    if (!isString(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The provided id is invalid',
-      });
-    }
-
-    try {
-      let found = await File.getInstance().findOne({ _id: id });
-
-      if (isNil(found)) {
-        return callback({ code: status.NOT_FOUND, message: 'File not found' });
-      }
-      let success = await this.storageProvider
-        .container(found.container)
-        .delete((found.folder ?? '') + found.name);
-      if (!success) {
-        return callback({
-          code: status.INTERNAL,
-          message: 'File could not be deleted',
-        });
-      }
-      await File.getInstance().deleteOne({ _id: id });
-
-      return callback(null, { result: JSON.stringify({ success: true }) });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
-    }
-  }
-
-  async updateFile(call: RouterRequest, callback: RouterResponse) {
-    const { id, data, name, container, folder, mimeType } = JSON.parse(
-      call.request.params
-    );
-    if (!isString(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'The provided id is invalid',
-      });
-    }
-
-    try {
-      const found = await File.getInstance().findOne({ _id: id });
-      if (isNil(found)) {
-        return callback({ code: status.NOT_FOUND, message: 'File not found' });
+        throw new GrpcError(status.NOT_FOUND, 'File does not exist')
       }
       let config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
@@ -313,10 +163,7 @@ export class FileHandlers {
         });
         if (!container) {
           if (!config.allowContainerCreation) {
-            return callback({
-              code: status.PERMISSION_DENIED,
-              message: 'Container creation is not allowed!',
-            });
+            throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
           }
           let exists = await this.storageProvider.containerExists(newContainer);
           if (!exists) {
@@ -345,10 +192,7 @@ export class FileHandlers {
         folder: newFolder,
       });
       if (exists) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'File already exists',
-        });
+        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
       }
 
       await this.storageProvider
@@ -364,21 +208,86 @@ export class FileHandlers {
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
-
       const updatedFile = await File.getInstance().findByIdAndUpdate(found._id, found);
 
-      return callback(null, {
-        result: JSON.stringify({
-          id: updatedFile!._id,
-          name: updatedFile!.name,
-          url: updatedFile!.url,
-        }),
-      });
+      return {
+        id: updatedFile!._id,
+        name: updatedFile!.name,
+        url: updatedFile!.url,
+      };
     } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!')
+    }
+  }
+
+  async deleteFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!isString(call.request.params.id)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
+    }
+    try {
+      let found = await File.getInstance().findOne({ _id: call.request.params.id });
+      if (isNil(found)) {
+        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+      }
+      let success = await this.storageProvider
+        .container(found.container)
+        .delete((found.folder ?? '') + found.name);
+      if (!success) {
+        throw new GrpcError(status.INTERNAL, 'File could not be deleted');
+      }
+      await File.getInstance().deleteOne({ _id: call.request.params.id });
+
+      return { success: true };
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+    }
+  }
+
+  async getFileUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    try {
+      const found = await File.getInstance().findOne({ _id: call.request.params.id });
+      if (isNil(found)) {
+        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+      }
+      if (found.isPublic) {
+        return { redirect: found.url };
+      }
+      let url = await this.storageProvider
+        .container(found.container)
+        .getSignedUrl((found.folder ?? '') + found.name);
+
+      if (!isNil(call.request.params.redirect) && (call.request.params.redirect === 'false' || !call.request.params.redirect)) {
+        return { result: url };
+      }
+      return { redirect: url };
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+    }
+  }
+
+  async getFileData(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!isString(call.request.params.id)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
+    }
+    try {
+      const file = await File.getInstance().findOne({ _id: call.request.params.id });
+      if (isNil(file)) {
+        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+      }
+
+      let data: Buffer;
+      if (file.folder) {
+        data = await this.storageProvider
+          .container(file.container)
+          .get(file.folder + file.name);
+      } else {
+        data = await this.storageProvider.container(file.container).get(file.name);
+      }
+      data.toString('base64');
+
+      return { data: data.toString('base64') };
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }
 }

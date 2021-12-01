@@ -127,3 +127,4 @@ export * from './interfaces';
 export * from './modules';
 export * from './helpers';
 export * from './constants';
+export * from './utilities';

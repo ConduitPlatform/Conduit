@@ -4,6 +4,7 @@ import {
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteOptions,
+  TYPE,
 } from '@quintessential-sft/conduit-commons';
 import { extractTypes, findPopulation, ParseResult } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -277,6 +278,15 @@ export class GraphQLController extends ConduitRouter {
     });
   }
 
+  private extractResult(returnTypeFields: String, result: any) {
+    switch (returnTypeFields) {
+      case TYPE.JSON:
+        return JSON.parse(result);
+      default:
+        return result;
+    }
+  }
+
   private constructQuery(actionName: string, route: ConduitRoute) {
     if (!this.resolvers['Query']) {
       this.resolvers['Query'] = {};
@@ -335,7 +345,9 @@ export class GraphQLController extends ConduitRouter {
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
             result = JSON.parse(result);
           } else {
-            result = { result: result };
+            result = {
+              result: self.extractResult(route.returnTypeFields as string, result),
+            };
           }
           if (caching) {
             this.storeInCache(hashKey, result, cacheAge!);
@@ -373,7 +385,9 @@ export class GraphQLController extends ConduitRouter {
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
             result = JSON.parse(result);
           } else {
-            result = { result: result };
+            result = {
+              result: self.extractResult(route.returnTypeFields as string, result),
+            };
           }
           return result;
         })
