@@ -39,13 +39,13 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyProducts: this.getManyProducts.bind(this),
+        getProducts: this.getProducts.bind(this),
         createProduct: this.createProduct.bind(this),
         editProduct: this.editProduct.bind(this),
-        getManyCustomers: this.getManyCustomers.bind(this),
+        getCustomers: this.getCustomers.bind(this),
         createCustomer: this.createCustomer.bind(this),
-        getManyTransactions: this.getManyTransactions.bind(this),
-        getManySubscriptions: this.getManySubscriptions.bind(this),
+        getTransactions: this.getTransactions.bind(this),
+        getSubscriptions: this.getSubscriptions.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -65,11 +65,11 @@ export class AdminHandlers {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyProducts', {
+        new ConduitRouteReturnDefinition('GetProducts', {
           productDocuments: [Product.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManyProducts'
+        'getProducts'
       ),
       constructConduitRoute(
         {
@@ -124,11 +124,11 @@ export class AdminHandlers {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyCustomers', {
+        new ConduitRouteReturnDefinition('GetCustomers', {
           customerDocuments: [PaymentsCustomer.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManyCustomers'
+        'getCustomers'
       ),
       constructConduitRoute(
         {
@@ -162,11 +162,11 @@ export class AdminHandlers {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyTransactions', {
+        new ConduitRouteReturnDefinition('GetTransactions', {
           transactionDocuments: [Transaction.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManyTransactions'
+        'getTransactions'
       ),
       constructConduitRoute(
         {
@@ -179,16 +179,16 @@ export class AdminHandlers {
             populate: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManySubscriptions', {
+        new ConduitRouteReturnDefinition('GetSubscriptions', {
           subscriptionDocuments: [Subscription.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManySubscriptions'
+        'getSubscriptions'
       ),
     ];
   }
 
-  async getManyProducts(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getProducts(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {};
@@ -274,7 +274,7 @@ export class AdminHandlers {
     return { result: { updatedProduct } };
   }
 
-  async getManyCustomers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getCustomers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {};
@@ -323,7 +323,7 @@ export class AdminHandlers {
     return { createdCustomer };
   }
 
-  async getManyTransactions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getTransactions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {};
@@ -350,7 +350,7 @@ export class AdminHandlers {
     return { transactionDocuments, totalCount };
   }
 
-  async getManySubscriptions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getSubscriptions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {}, populates;

@@ -47,27 +47,27 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         // Schemas
         getSchema: this.schemaAdmin.getSchema.bind(this.schemaAdmin),
-        getManySchemas: this.schemaAdmin.getManySchemas.bind(this.schemaAdmin),
-        getManySchemasRegisteredByOtherModules: this.schemaAdmin.getManySchemasRegisteredByOtherModules.bind(this.schemaAdmin),
+        getSchemas: this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
+        getSchemasRegisteredByOtherModules: this.schemaAdmin.getSchemasRegisteredByOtherModules.bind(this.schemaAdmin),
         createSchema: this.schemaAdmin.createSchema.bind(this.schemaAdmin),
         editSchema: this.schemaAdmin.editSchema.bind(this.schemaAdmin),
         deleteSchema: this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),
-        deleteManySchemas: this.schemaAdmin.deleteManySchemas.bind(this.schemaAdmin),
+        deleteSchemas: this.schemaAdmin.deleteSchemas.bind(this.schemaAdmin),
         toggleSchema: this.schemaAdmin.toggleSchema.bind(this.schemaAdmin),
-        toggleManySchemas: this.schemaAdmin.toggleManySchemas.bind(this.schemaAdmin),
+        toggleSchemas: this.schemaAdmin.toggleSchemas.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
-        getManyDocuments: this.documentsAdmin.getManyDocuments.bind(this.documentsAdmin),
+        getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
         createDocument: this.documentsAdmin.createDocument.bind(this.documentsAdmin),
-        createManyDocuments: this.documentsAdmin.createManyDocuments.bind(this.documentsAdmin),
+        createDocuments: this.documentsAdmin.createDocuments.bind(this.documentsAdmin),
         editDocument: this.documentsAdmin.editDocument.bind(this.documentsAdmin),
-        editManyDocuments: this.documentsAdmin.editManyDocuments.bind(this.documentsAdmin),
+        editDocuments: this.documentsAdmin.editDocuments.bind(this.documentsAdmin),
         deleteDocument: this.documentsAdmin.deleteDocument.bind(this.documentsAdmin),
         // Custom Endpoints
-        getManyCustomEndpoints: this.customEndpointsAdmin.getManyCustomEndpoints.bind(this.customEndpointsAdmin),
-        createManyCustomEndpoints: this.customEndpointsAdmin.createManyCustomEndpoints.bind(this.customEndpointsAdmin),
+        getCustomEndpoints: this.customEndpointsAdmin.getCustomEndpoints.bind(this.customEndpointsAdmin),
+        createCustomEndpoints: this.customEndpointsAdmin.createCustomEndpoints.bind(this.customEndpointsAdmin),
         editCustomEndpoint: this.customEndpointsAdmin.editCustomEndpoint.bind(this.customEndpointsAdmin),
-        deleteManyCustomEndpoints: this.customEndpointsAdmin.deleteManyCustomEndpoints.bind(this.customEndpointsAdmin),
+        deleteCustomEndpoints: this.customEndpointsAdmin.deleteCustomEndpoints.bind(this.customEndpointsAdmin),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -103,26 +103,26 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Required,
           },
         },
-        new ConduitRouteReturnDefinition('GetManySchemas', {
+        new ConduitRouteReturnDefinition('GetSchemas', {
           results: { // TODO: unnest (frontend compat)
             schemas: SchemaDefinitions.getInstance().fields,
             documentsCount: ConduitNumber.Required,
           }
         }),
-        'getManySchemas'
+        'getSchemas'
       ),
       constructConduitRoute(
         {
           path: '/schemasFromOtherModules',
           action: ConduitRouteActions.GET,
         },
-        new ConduitRouteReturnDefinition('GetManySchemasFromOtherModules', {
+        new ConduitRouteReturnDefinition('GetSchemasFromOtherModules', {
           results: { // TODO: unnest (frontend compat)
             name: ConduitString.Required,
             fields: ConduitJson.Required,
           },
         }),
-        'getManySchemasFromOtherModules'
+        'getSchemasFromOtherModules'
       ),
       constructConduitRoute(
         {
@@ -187,8 +187,8 @@ export class AdminHandlers {
             ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
           },
         },
-        new ConduitRouteReturnDefinition('DeleteManySchemas', 'String'),
-        'deleteManySchemas'
+        new ConduitRouteReturnDefinition('DeleteSchemas', 'String'),
+        'deleteSchemas'
       ),
       constructConduitRoute(
         {
@@ -213,11 +213,11 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Required,
           }
         },
-        new ConduitRouteReturnDefinition('ToggleManySchemas', {
+        new ConduitRouteReturnDefinition('ToggleSchemas', {
           updatedSchemas: [SchemaDefinitions.getInstance().fields],
           enabled: ConduitBoolean.Required,
         }),
-        'toggleManySchemas'
+        'toggleSchemas'
       ),
       // Documents
       constructConduitRoute(
@@ -251,11 +251,11 @@ export class AdminHandlers {
             query: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyDocuments', {
+        new ConduitRouteReturnDefinition('GetDocuments', {
           documents: [TYPE.JSON], // Swagger parser inconsistency
           documentsCount: TYPE.Number,
         }),
-        'getManyDocuments'
+        'getDocuments'
       ),
       constructConduitRoute(
         {
@@ -284,10 +284,10 @@ export class AdminHandlers {
             inputDocuments: { type: [TYPE.JSON], required: true },
           },
         },
-        new ConduitRouteReturnDefinition('CreateManyDocuments', {
+        new ConduitRouteReturnDefinition('CreateDocuments', {
           newDocuments: [TYPE.JSON], // Swagger parser inconsistency
         }),
-        'createManyDocuments'
+        'createDocuments'
       ),
       constructConduitRoute(
         {
@@ -317,10 +317,10 @@ export class AdminHandlers {
             changedDocuments: { type: [TYPE.JSON], required: true },
           },
         },
-        new ConduitRouteReturnDefinition('EditManyDocuments', {
+        new ConduitRouteReturnDefinition('EditDocuments', {
           docs: [TYPE.JSON], // Swagger parser inconsistency
         }),
-        'editManyDocuments'
+        'editDocuments'
       ),
       constructConduitRoute(
         {
@@ -344,12 +344,12 @@ export class AdminHandlers {
             operation: ConduitString.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('GetManyCustomEndpoints', {
+        new ConduitRouteReturnDefinition('GetCustomEndpoints', {
           results: { // TODO: unnest (frontend compat)
             customEndpointsDocs: [CustomEndpoints.getInstance().fields],
           }
         }),
-        'getManyCustomEndpoints'
+        'getCustomEndpoints'
       ),
       constructConduitRoute(
         {
@@ -368,10 +368,10 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('CreateManyCustomEndpoints', {
+        new ConduitRouteReturnDefinition('CreateCustomEndpoints', {
           newSchema: CustomEndpoints.getInstance().fields,
         }),
-        'CreateManyCustomEndpoints'
+        'CreateCustomEndpoints'
       ),
       constructConduitRoute(
         {
@@ -404,8 +404,8 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('deleteManyCustomEndpoints', 'String'),
-        'deleteManyCustomEndpoints'
+        new ConduitRouteReturnDefinition('deleteCustomEndpoints', 'String'),
+        'deleteCustomEndpoints'
       ),
     ];
   }

@@ -36,8 +36,8 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         sendNotification: this.sendNotification.bind(this),
-        sendManyNotifications: this.sendManyNotifications.bind(this),
-        sendToManyDevices: this.sendToManyDevices.bind(this),
+        sendNotifications: this.sendNotifications.bind(this),
+        sendNotificationToManyDevices: this.sendNotificationToManyDevices.bind(this),
         getNotificationToken: this.getNotificationToken.bind(this),
       })
       .catch((err: Error) => {
@@ -70,8 +70,8 @@ export class AdminHandlers {
           action: ConduitRouteActions.POST, // unimplemented
           bodyParams: {},
         },
-        new ConduitRouteReturnDefinition('SendManyNotifications', {}),
-        'sendManyNotifications'
+        new ConduitRouteReturnDefinition('SendNotifications', {}),
+        'sendNotifications'
       ),
       constructConduitRoute(
         {
@@ -84,10 +84,10 @@ export class AdminHandlers {
             data: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('SendToManyDevices', {
+        new ConduitRouteReturnDefinition('SendNotificationToManyDevices', {
           message: ConduitString.Required,
         }),
-        'sendToManyDevices'
+        'sendNotificationToManyDevices'
       ),
       constructConduitRoute(
         {
@@ -118,12 +118,12 @@ export class AdminHandlers {
     return { message: 'Ok' };
   }
 
-  async sendManyNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async sendNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     // TODO: Implement this
     throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
-  async sendToManyDevices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async sendNotificationToManyDevices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.userIds.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
     }

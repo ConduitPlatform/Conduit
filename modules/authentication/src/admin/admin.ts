@@ -33,15 +33,15 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyUsers: this.getManyUsers.bind(this),
+        getUsers: this.getUsers.bind(this),
         createUser: this.createUser.bind(this),
         editUser: this.editUser.bind(this),
         deleteUser: this.deleteUser.bind(this),
-        deleteManyUsers: this.deleteManyUsers.bind(this),
-        toggleManyUsers: this.toggleManyUsers.bind(this),
+        deleteUsers: this.deleteUsers.bind(this),
+        toggleUsers: this.toggleUsers.bind(this),
         blockUser: this.blockUser.bind(this),
         unblockUser: this.unblockUser.bind(this),
-        getManyServices: this.serviceAdmin.getManyServices.bind(this),
+        getServices: this.serviceAdmin.getServices.bind(this),
         createService: this.serviceAdmin.createService.bind(this),
         deleteService: this.serviceAdmin.deleteService.bind(this),
         renewServiceToken: this.serviceAdmin.renewToken.bind(this),
@@ -68,11 +68,11 @@ export class AdminHandlers {
              sort: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('GetManyUsers', {
+         new ConduitRouteReturnDefinition('GetUsers', {
            users: [User.getInstance().fields],
            count: ConduitNumber.Required,
          }),
-         'getManyUsers'
+         'getUsers'
        ),
        constructConduitRoute(
          {
@@ -128,10 +128,10 @@ export class AdminHandlers {
              ids: { type: [TYPE.String], required: true }, // handler array check is still required
            },
          },
-         new ConduitRouteReturnDefinition('DeleteManyUsers', {
+         new ConduitRouteReturnDefinition('DeleteUsers', {
            message: ConduitString.Required,
          }),
-         'deleteManyUsers'
+         'deleteUsers'
        ),
        constructConduitRoute(
          {
@@ -168,10 +168,10 @@ export class AdminHandlers {
              block: ConduitBoolean.Required,
            },
          },
-         new ConduitRouteReturnDefinition('ToggleManyUsers', {
+         new ConduitRouteReturnDefinition('ToggleUsers', {
            message: ConduitString.Required,
          }),
-         'toggleManyUsers'
+         'toggleUsers'
        ),
        // Service Routes
        constructConduitRoute(
@@ -185,11 +185,11 @@ export class AdminHandlers {
            name: 'GetServices',
            description: 'Returns registered services',
          },
-         new ConduitRouteReturnDefinition('GetManyServices', {
+         new ConduitRouteReturnDefinition('GetServices', {
            services: [Service.getInstance().fields],
            count: ConduitNumber.Required,
          }),
-         'getManyServices'
+         'getServices'
        ),
        constructConduitRoute(
          {
@@ -239,7 +239,7 @@ export class AdminHandlers {
      ];
    }
 
-  async getManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { isActive, provider, search, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -339,7 +339,7 @@ export class AdminHandlers {
     return { message: 'user was deleted' };
   }
 
-  async deleteManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
@@ -383,7 +383,7 @@ export class AdminHandlers {
     return { message: 'user was unblocked' };
   }
 
-  async toggleManyUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async toggleUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, block } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');

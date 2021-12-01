@@ -12,7 +12,7 @@ export class ServiceAdmin {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  async getManyServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const services: Service[] = await Service.getInstance().findMany(

@@ -35,16 +35,16 @@ export class AdminRoutes {
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
-        getManyFiles: this.getManyFiles.bind(this),
+        getFiles: this.getFiles.bind(this),
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
         updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
         getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
-        getManyFolders: this.getManyFolders.bind(this),
+        getFolders: this.getFolders.bind(this),
         createFolder: this.createFolder.bind(this),
         deleteFolder: this.deleteFolder.bind(this),
-        getManyContainers: this.getManyContainers.bind(this),
+        getContainers: this.getContainers.bind(this),
         createContainer: this.createContainer.bind(this),
         deleteContainer: this.deleteContainer.bind(this),
       })
@@ -83,11 +83,11 @@ export class AdminRoutes {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyFiles', {
+        new ConduitRouteReturnDefinition('GetFiles', {
           files: File.getInstance().fields,
           filesCount: ConduitNumber.Required,
         }),
-        'getManyFiles'
+        'getFiles'
       ),
       constructConduitRoute(
         {
@@ -185,11 +185,11 @@ export class AdminRoutes {
             parent: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('getManyFolders', {
+        new ConduitRouteReturnDefinition('getFolders', {
           folders: [_StorageFolder.getInstance().fields],
           folderCount: ConduitNumber.Required,
         }),
-        'getManyFolders'
+        'getFolders'
       ),
       constructConduitRoute(
         {
@@ -230,11 +230,11 @@ export class AdminRoutes {
             limit: ConduitNumber.Required,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyContainers', {
+        new ConduitRouteReturnDefinition('GetContainers', {
           containers: [_StorageContainer.getInstance().fields],
           containersCount: ConduitNumber.Required,
         }),
-        'getManyContainers'
+        'getContainers'
       ),
       constructConduitRoute(
         {
@@ -269,7 +269,7 @@ export class AdminRoutes {
     ];
   }
 
-  async getManyFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, folder, search } = call.request.params;
     let query: { container: string; folder?: string | null; name?: any } = { container: call.request.params.container };
 
@@ -294,7 +294,7 @@ export class AdminRoutes {
     return { files, filesCount };
   }
 
-  async getManyFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let query: { container: string; name?: any } = {
       container: call.request.params.container,
     };
@@ -366,7 +366,7 @@ export class AdminRoutes {
     return 'OK';
   }
 
-  async getManyContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let containers = await _StorageContainer.getInstance()
       .findMany(
         {},

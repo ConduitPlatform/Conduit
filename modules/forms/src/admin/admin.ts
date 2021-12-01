@@ -34,11 +34,11 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyForms: this.getManyForms.bind(this),
+        getForms: this.getForms.bind(this),
         createForm: this.createForm.bind(this),
         editForm: this.editForm.bind(this),
-        deleteManyForms: this.deleteManyForms.bind(this),
-        getManyFormReplies: this.getManyFormReplies.bind(this),
+        deleteForms: this.deleteForms.bind(this),
+        getFormReplies: this.getFormReplies.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -58,11 +58,11 @@ export class AdminHandlers {
             search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyForms', {
+        new ConduitRouteReturnDefinition('GetForms', {
           forms: [Forms.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getManyForms'
+        'getForms'
       ),
       constructConduitRoute(
         {
@@ -105,11 +105,11 @@ export class AdminHandlers {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           }
         },
-        new ConduitRouteReturnDefinition('DeleteManyForms', {
+        new ConduitRouteReturnDefinition('DeleteForms', {
           forms: [Forms.getInstance().fields],
           totalCount: ConduitString.Required,
         }),
-        'deleteManyForms'
+        'deleteForms'
       ),
       constructConduitRoute(
         {
@@ -123,16 +123,16 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyFormReplies', {
+        new ConduitRouteReturnDefinition('GetFormReplies', {
           replies: [FormReplies.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getManyFormReplies'
+        'getFormReplies'
       ),
     ];
   }
 
-  async getManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {}
@@ -200,7 +200,7 @@ export class AdminHandlers {
     return 'Ok';
   }
 
-  async deleteManyForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
@@ -211,7 +211,7 @@ export class AdminHandlers {
     return { forms, totalCount };
   }
 
-  async getManyFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const repliesPromise = FormReplies.getInstance()

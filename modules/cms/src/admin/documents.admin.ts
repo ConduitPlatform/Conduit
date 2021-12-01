@@ -43,7 +43,7 @@ export class DocumentsAdmin {
     return { document };
   }
 
-  async getManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { schemaName, query, search } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -91,7 +91,7 @@ export class DocumentsAdmin {
     return { newDocument };
   }
 
-  async createManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, inputDocuments } = call.request.params;
     const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
@@ -120,7 +120,7 @@ export class DocumentsAdmin {
     return { updatedDocument };
   }
 
-  async editManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async editDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, changedDocuments } = call.request.params;
     const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {

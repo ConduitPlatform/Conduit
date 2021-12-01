@@ -34,7 +34,7 @@ export class SchemaAdmin {
     return { requestedSchema };
   }
 
-  async getManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { search, sort, enabled } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -65,7 +65,7 @@ export class SchemaAdmin {
     return { results: { schemas, documentsCount } }; // TODO: unnest (frontend compat)
   }
 
-  async getManySchemasRegisteredByOtherModules(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getSchemasRegisteredByOtherModules(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const allSchemas = await this.database
       .getSchemas()
       .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
@@ -207,7 +207,7 @@ export class SchemaAdmin {
     return { message };
   }
 
-  async deleteManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, deleteData } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'Argument ids is required and must be a non-empty array!');
@@ -279,7 +279,7 @@ export class SchemaAdmin {
     };
   }
 
-  async toggleManySchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async toggleSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, enabled } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'Argument ids is required and must be a non-empty array!');

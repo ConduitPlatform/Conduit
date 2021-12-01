@@ -37,13 +37,13 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyTemplates: this.getManyTemplates.bind(this),
+        getTemplates: this.getTemplates.bind(this),
         createTemplate: this.createTemplate.bind(this),
         editTemplate: this.editTemplate.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
-        deleteManyTemplates: this.deleteManyTemplates.bind(this),
+        deleteTemplates: this.deleteTemplates.bind(this),
         uploadTemplate: this.uploadTemplate.bind(this),
-        getManyExternalTemplates: this.getManyExternalTemplates.bind(this),
+        getExternalTemplates: this.getExternalTemplates.bind(this),
         syncExternalTemplates: this.syncExternalTemplates.bind(this),
         sendEmail: this.sendEmail.bind(this),
       })
@@ -65,11 +65,11 @@ export class AdminHandlers {
              search: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyTemplates', {
+        new ConduitRouteReturnDefinition('GetTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManyTemplates'
+        'getTemplates'
       ),
       constructConduitRoute(
         {
@@ -129,10 +129,10 @@ export class AdminHandlers {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
         },
-        new ConduitRouteReturnDefinition('DeleteManyTemplates', {
+        new ConduitRouteReturnDefinition('DeleteTemplates', {
           template: [EmailTemplate.getInstance().fields],
         }),
-        'deleteManyTemplates'
+        'deleteTemplates'
       ),
       constructConduitRoute(
         {
@@ -152,11 +152,11 @@ export class AdminHandlers {
           path: '/externalTemplates',
           action: ConduitRouteActions.GET,
         },
-        new ConduitRouteReturnDefinition('GetManyExternalTemplates', {
+        new ConduitRouteReturnDefinition('GetExternalTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
           totalCount: ConduitNumber.Required,
         }),
-        'getManyExternalTemplates'
+        'getExternalTemplates'
       ),
       constructConduitRoute(
         {
@@ -190,7 +190,7 @@ export class AdminHandlers {
     ];
   }
 
-  async getManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query:any = {};
@@ -330,7 +330,7 @@ export class AdminHandlers {
     return { deleted };
   }
 
-  async deleteManyTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
@@ -380,7 +380,7 @@ export class AdminHandlers {
     return { created };
   }
 
-  async getManyExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse>  {
+  async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse>  {
     const [err, externalTemplates] = await to(
       this.emailService.getExternalTemplates() as any
     );

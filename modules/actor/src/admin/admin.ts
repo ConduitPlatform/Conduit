@@ -36,11 +36,11 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyActors: this.getManyActors.bind(this),
-        getManyTriggers: this.getManyTriggers.bind(this),
+        getActors: this.getActors.bind(this),
+        getTriggers: this.getTriggers.bind(this),
         getFlow: this.getFlow.bind(this),
-        getManyFlows: this.getManyFlows.bind(this),
-        getManyFlowRuns: this.getManyFlowRuns.bind(this),
+        getFlows: this.getFlows.bind(this),
+        getFlowRuns: this.getFlowRuns.bind(this),
         createFlow: this.createFlow.bind(this),
         editFlow: this.editFlow.bind(this),
       })
@@ -57,20 +57,20 @@ export class AdminHandlers {
           path: '/actors',
           action: ConduitRouteActions.GET,
         },
-        new ConduitRouteReturnDefinition('GetManyActors', {
+        new ConduitRouteReturnDefinition('GetActors', {
           actors: ConduitJson.Required,
         }),
-        'getManyActors'
+        'getActors'
       ),
       constructConduitRoute(
         {
           path: '/triggers',
           action: ConduitRouteActions.GET,
         },
-        new ConduitRouteReturnDefinition('GetManyTriggers', {
+        new ConduitRouteReturnDefinition('GetTriggers', {
           triggers: ConduitJson.Required,
         }),
-        'getManyTriggers'
+        'getTriggers'
       ),
       constructConduitRoute(
         {
@@ -94,11 +94,11 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyFlows', {
+        new ConduitRouteReturnDefinition('GetFlows', {
           flows: [ActorFlow.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getManyFlows'
+        'getFlows'
       ),
       constructConduitRoute(
         {
@@ -112,11 +112,11 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetManyFlowRuns', {
+        new ConduitRouteReturnDefinition('GetFlowRuns', {
           runs: [ActorRun.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getManyFlowRuns'
+        'getFlowRuns'
       ),
       constructConduitRoute(
         {
@@ -158,12 +158,12 @@ export class AdminHandlers {
     ];
   }
 
-  async getManyActors(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getActors(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let actors = this._getActors();
     return { actors };
   }
 
-  async getManyTriggers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getTriggers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let triggers = this._getTriggers();
     return { triggers };
   }
@@ -174,7 +174,7 @@ export class AdminHandlers {
     return { flow };
   }
 
-  async getManyFlows(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getFlows(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const flowsPromise = ActorFlow.getInstance()
@@ -191,7 +191,7 @@ export class AdminHandlers {
     return { result: { flows, count } };
   }
 
-  async getManyFlowRuns(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getFlowRuns(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 

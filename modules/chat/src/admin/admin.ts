@@ -27,12 +27,12 @@ export class AdminHandlers{
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getManyRooms: this.getManyRooms.bind(this),
+        getRooms: this.getRooms.bind(this),
         createRoom: this.createRoom.bind(this),
-        deleteManyRooms: this.deleteManyRooms.bind(this),
-        getManyMessages: this.getManyMessages.bind(this),
+        deleteRooms: this.deleteRooms.bind(this),
+        getMessages: this.getMessages.bind(this),
         // createMessage: this.createMessage.bind(this),
-        deleteManyMessages: this.deleteManyMessages.bind(this)
+        deleteMessages: this.deleteMessages.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -53,11 +53,11 @@ export class AdminHandlers{
              populate: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('GetManyRooms', {
+         new ConduitRouteReturnDefinition('GetRooms', {
            chatRoomDocuments: [ChatRoom.getInstance().fields],
            totalCount: ConduitNumber.Required,
          }),
-         'getManyRooms'
+         'getRooms'
        ),
        constructConduitRoute(
          {
@@ -81,8 +81,8 @@ export class AdminHandlers{
              ids: { type: [TYPE.String], required: true },
            },
          },
-         new ConduitRouteReturnDefinition('DeleteManyRooms', 'String'),
-         'deleteManyRooms'
+         new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
+         'deleteRooms'
        ),
        constructConduitRoute(
          {
@@ -97,11 +97,11 @@ export class AdminHandlers{
              sort: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('GetManyMessages', {
+         new ConduitRouteReturnDefinition('GetMessages', {
            messages: [ChatMessage.getInstance().fields],
            count: ConduitNumber.Required,
          }),
-         'getManyMessages'
+         'getMessages'
        ),
        constructConduitRoute(
          {
@@ -111,8 +111,8 @@ export class AdminHandlers{
              ids: { type: [TYPE.String], required: true }, // handler array check is still required
            },
          },
-         new ConduitRouteReturnDefinition('DeleteManyMessages', 'String'),
-         'deleteManyMessages'
+         new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
+         'deleteMessages'
        ),
      ];
    }
@@ -132,7 +132,7 @@ export class AdminHandlers{
     }
   }
 
-  async getManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -180,7 +180,7 @@ export class AdminHandlers{
     return { room };
   }
 
-  async deleteManyRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
@@ -194,7 +194,7 @@ export class AdminHandlers{
     return 'Done';
   }
 
-  async getManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { senderUser, roomId, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -239,7 +239,7 @@ export class AdminHandlers{
   //   return { message };
   // }
 
-  async deleteManyMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
     if (ids.length === 0) { // array check is required
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');

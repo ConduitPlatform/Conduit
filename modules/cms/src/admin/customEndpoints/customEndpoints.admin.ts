@@ -29,7 +29,7 @@ export class CustomEndpointsAdmin {
     this.database = this.grpcSdk.databaseProvider!;
   }
 
-  async getManyCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let identifier, query : any = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
@@ -42,7 +42,7 @@ export class CustomEndpointsAdmin {
     return { results: customEndpointsDocs }; // TODO: unnest (frontend compat)
   }
 
-  async createManyCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async createCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       name,
       operation,
@@ -301,7 +301,7 @@ export class CustomEndpointsAdmin {
     return { updatedSchema };
   }
 
-  async deleteManyCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.id.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
     }
