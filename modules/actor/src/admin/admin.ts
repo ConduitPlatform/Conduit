@@ -80,7 +80,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetFlow', ActorFlow.getInstance().fields),
+        new ConduitRouteReturnDefinition('Flow', ActorFlow.getInstance().fields),
         'getFlow'
       ),
       constructConduitRoute(
@@ -92,8 +92,8 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetFlows', {
-          flows: [ActorFlow.getInstance().fields],
+        new ConduitRouteReturnDefinition('Flows', {
+          flows: ['Flow'],
           count: ConduitNumber.Required,
         }),
         'getFlows'
