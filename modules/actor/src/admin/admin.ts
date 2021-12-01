@@ -42,7 +42,7 @@ export class AdminHandlers {
         getFlows: this.getFlows.bind(this),
         getFlowRuns: this.getFlowRuns.bind(this),
         createFlow: this.createFlow.bind(this),
-        editFlow: this.editFlow.bind(this),
+        // editFlow: this.editFlow.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -131,24 +131,24 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('CreateFlow', ActorFlow.getInstance().fields),
         'createFlow'
       ),
-      constructConduitRoute(
-        {
-          path: '/flows/:id',
-          action: ConduitRouteActions.UPDATE, // unimplemented
-          urlParams: {
-             id: { type: RouteOptionType.String, required: true },
-          },
-          // bodyParams: {
-          //   name: ConduitString.Required,
-          //   trigger: ConduitJson.Required,
-          //   actors: ConduitJson.Required,
-          //   // actorPaths: , // unused
-          //   enabled:  ConduitBoolean.Required,
-          // },
-        },
-        new ConduitRouteReturnDefinition('EditFlow', ActorFlow.getInstance().fields),
-        'editFlow'
-      ),
+      // constructConduitRoute(
+      //   {
+      //     path: '/flows/:id',
+      //     action: ConduitRouteActions.UPDATE, // unimplemented
+      //     urlParams: {
+      //        id: { type: RouteOptionType.String, required: true },
+      //     },
+      //      bodyParams: { // TODO: Update these upon implementing the editFlow() handler
+      //       name: ConduitString.Required,
+      //       trigger: ConduitJson.Required,
+      //       actors: ConduitJson.Required,
+      //       // actorPaths: , // unused
+      //       enabled:  ConduitBoolean.Required,
+      //     },
+      //   },
+      //   new ConduitRouteReturnDefinition('EditFlow', ActorFlow.getInstance().fields),
+      //   'editFlow'
+      // ),
     ];
   }
 
