@@ -27,7 +27,7 @@ export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk, registeredModules: Ma
     async (params: ConduitRouteParameters) => {
       const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
       if (isNil(dbConfig)) {
-        return { config: {} };
+        return { result: { config: {} } };
       }
 
       let finalConfig: any;
