@@ -48,7 +48,7 @@ class SecurityModule extends IConduitSecurity {
   }
 
   private registerAdminRoutes() {
-    this.conduit.getAdmin().registerRoute(adminRoutes.getGetSecurityClientRoute(this.grpcSdk));
+    this.conduit.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute(this.grpcSdk));
     this.conduit.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute(this.grpcSdk));
     this.conduit.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute(this.grpcSdk));
   }

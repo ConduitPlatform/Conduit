@@ -8,14 +8,11 @@ import {
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { ClientModel } from '../../models/Client';
 
-export function getGetSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
+export function getGetSecurityClientsRoute(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(
     {
-      path: '/security/client/:id',
+      path: '/security/client',
       action: ConduitRouteActions.GET,
-      urlParams: {
-        id: { type: RouteOptionType.String, required: true },
-      },
     },
     new ConduitRouteReturnDefinition('GetSecurityClient', {
       result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
