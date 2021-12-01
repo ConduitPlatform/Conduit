@@ -37,7 +37,7 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         getFiles: this.getFiles.bind(this),
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
-        updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
+        editFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
         getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
@@ -124,12 +124,12 @@ export class AdminRoutes {
             mimeType: ConduitString.Required,
           }
         },
-        new ConduitRouteReturnDefinition('UpdateFile', {
+        new ConduitRouteReturnDefinition('EditFile', {
           id: ConduitString.Required,
           name: ConduitString.Required,
           url: ConduitString.Required,
         }),
-        'updateFile'
+        'editFile'
       ),
       constructConduitRoute(
         {
