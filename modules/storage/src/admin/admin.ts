@@ -201,9 +201,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateFolder', {
-          folder: _StorageFolder.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.getInstance().fields),
         'createFolder'
       ),
       constructConduitRoute(
@@ -245,9 +243,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateContainer', {
-          container: _StorageContainer.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateContainer', _StorageContainer.getInstance().fields),
         'createContainer'
       ),
       constructConduitRoute(
@@ -261,9 +257,7 @@ export class AdminRoutes {
             name: ConduitString.Required,
           }
         },
-        new ConduitRouteReturnDefinition('DeleteContainer', {
-          container: _StorageContainer.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.getInstance().fields),
         'deleteContainer'
       ),
     ];
@@ -336,7 +330,7 @@ export class AdminRoutes {
     } else {
       throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
     }
-    return { folder };
+    return folder;
   }
 
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -399,7 +393,7 @@ export class AdminRoutes {
       } else {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
-      return { container };
+      return container;
     } catch (e) {
       throw new GrpcError(e.status ?? status.INTERNAL, e.message ?? 'Something went wrong');
     }
@@ -429,7 +423,7 @@ export class AdminRoutes {
             container: name,
           });
       }
-      return { container };
+      return container;
     } catch (e) {
       throw new GrpcError(e.status ?? status.INTERNAL, e.message ?? 'Something went wrong');
     }

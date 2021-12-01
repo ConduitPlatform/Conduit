@@ -68,9 +68,7 @@ export class AdminHandlers{
              participants: { type: [TYPE.String], required: true }, // handler array check is still required
            },
          },
-         new ConduitRouteReturnDefinition('CreateRoom', {
-           room: ChatRoom.getInstance().fields,
-         }),
+         new ConduitRouteReturnDefinition('CreateRoom', ChatRoom.getInstance().fields),
          'createRoom'
        ),
        constructConduitRoute(
@@ -171,13 +169,12 @@ export class AdminHandlers{
       throw new GrpcError(status.INVALID_ARGUMENT, 'participants is required and must be a non-empty array');
     }
     await this.validateUsersInput(participants);
-    const room = await ChatRoom.getInstance()
+    return await ChatRoom.getInstance()
       .create({
         name: call.request.params.name,
         participants: Array.from(new Set([...participants])),
       })
       .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { room };
   }
 
   async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

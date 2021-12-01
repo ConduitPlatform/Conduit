@@ -84,9 +84,7 @@ export class AdminHandlers {
             recurringCount: ConduitNumber.Required,
           },
         },
-        new ConduitRouteReturnDefinition('CreateProduct', {
-          product: Product.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateProduct', Product.getInstance().fields),
         'createProduct'
       ),
       constructConduitRoute(
@@ -147,9 +145,7 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('CreateCustomer', {
-          createdCustomer: PaymentsCustomer.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateCustomer', PaymentsCustomer.getInstance().fields),
         'createCustomer'
       ),
       constructConduitRoute(
@@ -254,7 +250,7 @@ export class AdminHandlers {
       .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     this.grpcSdk.bus?.publish('payments:create:Product', JSON.stringify(productDoc));
 
-    return { product };
+    return product;
   }
 
   async editProduct(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -317,10 +313,9 @@ export class AdminHandlers {
     if (!isNil(customerExists)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Customer already exists');
     }
-    const createdCustomer = await PaymentsCustomer.getInstance()
+    return await PaymentsCustomer.getInstance()
       .create(customerDoc)
       .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { createdCustomer };
   }
 
   async getTransactions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

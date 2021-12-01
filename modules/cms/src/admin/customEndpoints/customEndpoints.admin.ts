@@ -42,7 +42,7 @@ export class CustomEndpointsAdmin {
     return { results: customEndpointsDocs }; // TODO: unnest (frontend compat)
   }
 
-  async createCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async createCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       name,
       operation,
@@ -177,12 +177,12 @@ export class CustomEndpointsAdmin {
       endpoint.assignments = assignments;
     }
 
-    const newSchema = await CustomEndpoints.getInstance().create(endpoint);
-    if (isNil(newSchema)) {
+    const customEndpoint = await CustomEndpoints.getInstance().create(endpoint);
+    if (isNil(customEndpoint)) {
       throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
     }
     this.customEndpointController.refreshEndpoints();
-    return { newSchema };
+    return customEndpoint;
   }
 
   async editCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -293,20 +293,23 @@ export class CustomEndpointsAdmin {
     found.returns = findSchema.name;
     found.selectedSchemaName = findSchema.name;
 
-    const updatedSchema = await CustomEndpoints.getInstance()
+    const customEndpoint = await CustomEndpoints.getInstance()
       .findByIdAndUpdate(found._id, found)
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (isNil(customEndpoint)) {
+      throw new GrpcError(status.INTERNAL, 'Could not update schema')
+    }
 
     this.customEndpointController.refreshEndpoints();
-    return { updatedSchema };
+    return customEndpoint;
   }
 
   async deleteCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.id.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
     }
-    const schema = await CustomEndpoints.getInstance().findOne({ _id: call.request.params.id });
-    if (isNil(schema)) {
+    const customEndpoint = await CustomEndpoints.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(customEndpoint)) {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
     await CustomEndpoints.getInstance().deleteOne({ _id: call.request.params.id })

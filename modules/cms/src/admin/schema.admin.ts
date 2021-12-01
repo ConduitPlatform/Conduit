@@ -31,7 +31,7 @@ export class SchemaAdmin {
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return { requestedSchema };
+    return requestedSchema;
   }
 
   async getSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -130,7 +130,7 @@ export class SchemaAdmin {
       );
     }
 
-    return { newSchema };
+    return newSchema;
   }
 
   async editSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -175,7 +175,7 @@ export class SchemaAdmin {
       );
     }
 
-    return { updatedSchema };
+    return updatedSchema;
   }
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

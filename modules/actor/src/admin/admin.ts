@@ -80,9 +80,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetFlow', {
-          flow: ActorFlow.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('GetFlow', ActorFlow.getInstance().fields),
         'getFlow'
       ),
       constructConduitRoute(
@@ -130,9 +128,7 @@ export class AdminHandlers {
             enabled:  ConduitBoolean.Required,
           },
         },
-        new ConduitRouteReturnDefinition('CreateFlow', {
-          flow: ActorFlow.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateFlow', ActorFlow.getInstance().fields),
         'createFlow'
       ),
       constructConduitRoute(
@@ -150,9 +146,7 @@ export class AdminHandlers {
           //   enabled:  ConduitBoolean.Required,
           // },
         },
-        new ConduitRouteReturnDefinition('EditFlow', {
-          flow: ActorFlow.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('EditFlow', ActorFlow.getInstance().fields),
         'editFlow'
       ),
     ];
@@ -170,8 +164,11 @@ export class AdminHandlers {
 
   async getFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const flow = await ActorFlow.getInstance()
-      .findOne({ _id: call.request.params.id })
-    return { flow };
+      .findOne({ _id: call.request.params.id });
+    if (isNil(flow)) {
+      throw new GrpcError(status.NOT_FOUND, 'Flow does not exist');
+    }
+    return flow;
   }
 
   async getFlows(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -246,7 +243,7 @@ export class AdminHandlers {
       (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
 
-    return { flow };
+    return flow;
   }
 
   //todo

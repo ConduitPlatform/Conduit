@@ -65,7 +65,7 @@ export class AdminHandlers {
         deleteDocument: this.documentsAdmin.deleteDocument.bind(this.documentsAdmin),
         // Custom Endpoints
         getCustomEndpoints: this.customEndpointsAdmin.getCustomEndpoints.bind(this.customEndpointsAdmin),
-        createCustomEndpoints: this.customEndpointsAdmin.createCustomEndpoints.bind(this.customEndpointsAdmin),
+        createCustomEndpoint: this.customEndpointsAdmin.createCustomEndpoint.bind(this.customEndpointsAdmin),
         editCustomEndpoint: this.customEndpointsAdmin.editCustomEndpoint.bind(this.customEndpointsAdmin),
         deleteCustomEndpoints: this.customEndpointsAdmin.deleteCustomEndpoints.bind(this.customEndpointsAdmin),
       })
@@ -86,9 +86,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetSchema', {
-          requestedSchema: SchemaDefinitions.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('GetSchema', SchemaDefinitions.getInstance().fields),
         'getSchema'
       ),
       constructConduitRoute(
@@ -137,9 +135,7 @@ export class AdminHandlers {
             crudOperations: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateSchema', {
-          newSchema: SchemaDefinitions.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('CreateSchema', SchemaDefinitions.getInstance().fields),
         'createSchema'
       ),
       constructConduitRoute(
@@ -158,9 +154,7 @@ export class AdminHandlers {
             crudOperations: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('EditSchema', {
-          updatedSchema: SchemaDefinitions.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('EditSchema', SchemaDefinitions.getInstance().fields),
         'editSchema'
       ),
       constructConduitRoute(
@@ -232,9 +226,7 @@ export class AdminHandlers {
             populate: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetDocument', {
-          document: ConduitJson.Required,
-        }),
+        new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
         'getDocument'
       ),
       constructConduitRoute(
@@ -268,9 +260,7 @@ export class AdminHandlers {
             inputDocument: ConduitJson.Required,
           },
         },
-        new ConduitRouteReturnDefinition('CreateDocument', {
-          newDocument: ConduitJson.Required,
-        }),
+        new ConduitRouteReturnDefinition('CreateDocument', TYPE.JSON),
         'createDocument'
       ),
       constructConduitRoute(
@@ -301,9 +291,7 @@ export class AdminHandlers {
             changedDocument: ConduitString.Required,
           },
         },
-        new ConduitRouteReturnDefinition('EditDocument', {
-          updatedDocument: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('EditDocument', TYPE.JSON),
         'editDocument'
       ),
       constructConduitRoute(
@@ -368,10 +356,8 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('CreateCustomEndpoints', {
-          newSchema: CustomEndpoints.getInstance().fields,
-        }),
-        'CreateCustomEndpoints'
+        new ConduitRouteReturnDefinition('CreateCustomEndpoint', CustomEndpoints.getInstance().fields),
+        'CreateCustomEndpoint'
       ),
       constructConduitRoute(
         {
@@ -391,9 +377,7 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('EditCustomEndpoint', {
-          updatedSchema: CustomEndpoints.getInstance().fields,
-        }),
+        new ConduitRouteReturnDefinition('EditCustomEndpoint', CustomEndpoints.getInstance().fields),
         'editCustomEndpoint'
       ),
       constructConduitRoute(

@@ -40,7 +40,7 @@ export class DocumentsAdmin {
     if (isNil(document)) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }
-    return { document };
+    return document;
   }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -85,10 +85,9 @@ export class DocumentsAdmin {
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    const newDocument = await this.database
+    return await this.database
       .create(schemaName, inputDocument)
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { newDocument };
   }
 
   async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -113,11 +112,9 @@ export class DocumentsAdmin {
       .findOne(schemaName, { _id: id })
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
     Object.assign(dbDocument, changedDocument);
-
-    const updatedDocument = await this.database
+    return await this.database
       .findByIdAndUpdate(schemaName, dbDocument._id, dbDocument)
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { updatedDocument };
   }
 
   async editDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
