@@ -21,12 +21,10 @@ export function getCreateSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
       },
     },
     new ConduitRouteReturnDefinition('CreateSecurityClient', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        id: ConduitString.Required,
-        clientId: ConduitString.Required,
-        clientSecret: ConduitString.Required,
-        platform: ConduitString.Required,
-      },
+      id: ConduitString.Required,
+      clientId: ConduitString.Required,
+      clientSecret: ConduitString.Required,
+      platform: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
       const { platform } = params.params!;
@@ -41,7 +39,7 @@ export function getCreateSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
         clientSecret: hash,
         platform,
       });
-      return { result: { id: client._id, clientId, clientSecret, platform } };
+      return { result: { id: client._id, clientId, clientSecret, platform } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

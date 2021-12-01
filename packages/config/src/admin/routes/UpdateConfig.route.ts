@@ -24,9 +24,7 @@ export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCo
       },
     },
     new ConduitRouteReturnDefinition('UpdateModuleConfig', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        config: TYPE.JSON,
-      },
+      config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
       const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
@@ -94,7 +92,7 @@ export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCo
           throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }
 
-      return { result: { config: updatedConfig } };
+      return { result: { config: updatedConfig } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

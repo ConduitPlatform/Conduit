@@ -13,9 +13,7 @@ export function getModulesRoute(conduit: ConduitCommons) {
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetModules', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        response: TYPE.JSON,
-      },
+      response: TYPE.JSON,
     }),
     async () => {
       let response: any[] = [];
@@ -25,7 +23,7 @@ export function getModulesRoute(conduit: ConduitCommons) {
         .forEach((val: any) => {
           response.push(val);
         });
-      return { result: response };
+      return { result: response }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

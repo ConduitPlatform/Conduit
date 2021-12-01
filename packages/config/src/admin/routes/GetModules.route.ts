@@ -13,14 +13,12 @@ export function getModulesRoute(registeredModules: Map<string, string>) {
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetModules', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        modules: [
-          {
-            moduleName: ConduitString.Required,
-            url: ConduitString.Required,
-          },
-        ],
-      },
+      modules: [
+        {
+          moduleName: ConduitString.Required,
+          url: ConduitString.Required,
+        },
+      ],
     }),
     async () => {
       if (registeredModules.size !== 0) {
@@ -31,7 +29,7 @@ export function getModulesRoute(registeredModules: Map<string, string>) {
             url: value,
           });
         });
-        return { result: { modules } };
+        return { result: { modules } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
       } else {
         throw new ConduitError('INVALID_ARGUMENTS', 404, 'Modules not available yet');
       }

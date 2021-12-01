@@ -24,9 +24,7 @@ export function getLoginRoute(conduit: ConduitCommons, grpcSdk: ConduitGrpcSdk) 
       },
     },
     new ConduitRouteReturnDefinition('Login', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        token: ConduitString.Required,
-      },
+      token: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
       const config: IConfigManager = conduit.getConfigManager();
@@ -56,7 +54,7 @@ export function getLoginRoute(conduit: ConduitCommons, grpcSdk: ConduitGrpcSdk) 
         tokenExpirationTime
       );
 
-      return { result: { token } };
+      return { result: { token } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

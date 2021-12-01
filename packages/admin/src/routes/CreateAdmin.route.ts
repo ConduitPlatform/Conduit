@@ -23,9 +23,7 @@ export function getCreateAdminRoute(conduit: ConduitCommons, grpcSdk: ConduitGrp
       },
     },
     new ConduitRouteReturnDefinition('Create', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        message: ConduitString.Required,
-      },
+      message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
       const database = grpcSdk.databaseProvider!;
@@ -44,7 +42,7 @@ export function getCreateAdminRoute(conduit: ConduitCommons, grpcSdk: ConduitGrp
       let pass = await hashPassword(password, hashRounds);
       await database.create('Admin', { username: username, password: pass });
 
-      return { result: { message: 'OK' } };
+      return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

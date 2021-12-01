@@ -18,15 +18,13 @@ export function getDeleteSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
       },
     },
     new ConduitRouteReturnDefinition('DeleteSecurityClient', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        message: ConduitString.Required,
-      },
+      message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
       await grpcSdk.databaseProvider?.deleteOne('Client', {
         _id: params.params!.id,
       });
-      return { message: 'Client deleted' };
+      return { result: { message: 'Client deleted' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

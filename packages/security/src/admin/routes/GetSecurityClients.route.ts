@@ -15,13 +15,11 @@ export function getGetSecurityClientsRoute(grpcSdk: ConduitGrpcSdk) {
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetSecurityClient', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        clients: [ClientModel.fields], // TODO: Update post-convert to ConduitActiveSchema
-      },
+      clients: [ClientModel.fields], // TODO: Update post-convert to ConduitActiveSchema
     }),
     async (params: ConduitRouteParameters) => {
-      let clients = grpcSdk.databaseProvider?.findMany('Client', {});
-      return { result: { clients } };
+      let clients = await grpcSdk.databaseProvider?.findMany('Client', {});
+      return { result: { clients } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }

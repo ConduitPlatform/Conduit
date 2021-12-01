@@ -20,14 +20,12 @@ export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk, registeredModules: Ma
       }
     },
     new ConduitRouteReturnDefinition('GetModuleConfig', {
-      result: { // unnested in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-        config: TYPE.JSON,
-      },
+      config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
       const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
       if (isNil(dbConfig)) {
-        return { result: { config: {} } };
+        return { result: { config: {} } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
       }
 
       let finalConfig: any;
@@ -88,7 +86,7 @@ export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk, registeredModules: Ma
           throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }
 
-      return { result: { config: finalConfig } };
+      return { result: { config: finalConfig } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );
 }
