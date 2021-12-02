@@ -140,8 +140,7 @@ export class AdminHandlers {
             address: ConduitString.Optional,
             postCode: ConduitString.Optional,
             stripe: {
-              subscriptionId: ConduitString.Required,
-              priceId: ConduitString.Required,
+                customerId: ConduitString.Optional,
             },
           },
         },
