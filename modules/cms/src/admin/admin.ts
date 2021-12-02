@@ -226,16 +226,17 @@ export class AdminHandlers {
       constructConduitRoute(
         {
           path: '/content/:schemaName',
-          action: ConduitRouteActions.GET,
+          action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
           },
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
-            search: ConduitString.Optional,
-            query: ConduitString.Optional,
           },
+          bodyParams: {
+            query: ConduitJson.Required,
+          }
         },
         new ConduitRouteReturnDefinition('GetDocuments', {
           documents: [TYPE.JSON], // Swagger parser inconsistency

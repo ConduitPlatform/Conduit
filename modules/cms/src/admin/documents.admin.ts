@@ -36,7 +36,7 @@ export class DocumentsAdmin {
         { _id: id },
         undefined,
         populates,
-      )
+      );
     if (isNil(document)) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }
@@ -44,10 +44,9 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { schemaName, query, search } = call.request.params;
+    let { schemaName, query } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-
     const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -55,11 +54,6 @@ export class DocumentsAdmin {
 
     if (!query || query.length === '') {
       query = {};
-    }
-    let identifier;
-    if (!isNil(search)) {
-      identifier = escapeStringRegexp(search);
-      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
 
     const documentsPromise = this.database.findMany(
@@ -74,7 +68,9 @@ export class DocumentsAdmin {
     const [documents, documentsCount] = await Promise.all([
       documentsPromise,
       countPromise,
-    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    ]).catch((e: any) => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
 
     return { documents, documentsCount };
   }
@@ -87,7 +83,9 @@ export class DocumentsAdmin {
     }
     return await this.database
       .create(schemaName, inputDocument)
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -98,7 +96,9 @@ export class DocumentsAdmin {
     }
     const newDocuments = await this.database
       .createMany(schemaName, inputDocuments)
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     return { docs: newDocuments };
   }
 
@@ -110,11 +110,15 @@ export class DocumentsAdmin {
     }
     const dbDocument = await this.database
       .findOne(schemaName, { _id: id })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     Object.assign(dbDocument, changedDocument);
     return await this.database
       .findByIdAndUpdate(schemaName, dbDocument._id, dbDocument)
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   async editDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -127,11 +131,15 @@ export class DocumentsAdmin {
     for (const doc of changedDocuments) {
       const dbDocument = await this.database
         .findOne(schemaName, { _id: doc._id })
-        .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+        .catch((e: any) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
       Object.assign(dbDocument, doc);
       const updatedDocument = await this.database
         .findByIdAndUpdate(schemaName, dbDocument._id, dbDocument)
-        .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+        .catch((e: any) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
       updatedDocuments.push(updatedDocument);
     }
     return { docs: updatedDocuments };
@@ -140,13 +148,15 @@ export class DocumentsAdmin {
   async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id } = call.request.params;
     const schema = await SchemaDefinitions.getInstance()
-      .findOne({ name: schemaName })
+      .findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
     await this.database
       .deleteOne(schemaName, { _id: id })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     return 'Ok';
   }
 }
