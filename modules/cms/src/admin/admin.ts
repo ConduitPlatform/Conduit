@@ -236,8 +236,10 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
-            search: ConduitString.Optional,
+            field: ConduitString.Optional,
+            value: ConduitString.Optional,
             query: ConduitString.Optional,
+
           },
         },
         new ConduitRouteReturnDefinition('GetDocuments', {
