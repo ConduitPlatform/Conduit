@@ -98,7 +98,7 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
             search: ConduitString.Optional,
             sort: ConduitString.Optional,
-            enabled: ConduitBoolean.Required,
+            enabled: ConduitBoolean.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
