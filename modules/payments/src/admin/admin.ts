@@ -172,7 +172,6 @@ export class AdminHandlers {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
             search: ConduitString.Optional,
-            populate: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetSubscriptions', {
