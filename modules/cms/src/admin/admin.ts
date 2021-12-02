@@ -219,9 +219,6 @@ export class AdminHandlers {
             schemaName: { type: RouteOptionType.String, required: true },
             id: { type: RouteOptionType.String, required: true },
           },
-          queryParams: {
-            populate: ConduitString.Optional,
-          },
         },
         new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
         'getDocument'
