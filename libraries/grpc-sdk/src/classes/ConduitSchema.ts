@@ -4,18 +4,18 @@ export class ConduitSchema {
   readonly name: string;
   readonly fields: ConduitModel;
   readonly collectionName: string;
-  modelOptions: ConduitModelOptions;
+  readonly schemaOptions: ConduitModelOptions;
   private ownerModule?: string;
 
   constructor(
     name: string,
     fields: ConduitModel,
-    modelOptions?: ConduitModelOptions,
+    schemaOptions?: ConduitModelOptions,
     collectionName?: string
   ) {
     this.name = name;
     this.fields = fields;
-    this.modelOptions = modelOptions ? modelOptions : {};
+    this.schemaOptions = schemaOptions ?? {};
     if (collectionName && collectionName !== '') {
       this.collectionName = collectionName;
     } else {

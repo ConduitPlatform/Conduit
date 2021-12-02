@@ -17,7 +17,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     private readonly adapter: MongooseAdapter
   ) {
     this.originalSchema = originalSchema;
-    let mongooseSchema = new Schema(schema.modelSchema as any, schema.modelOptions);
+    let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }

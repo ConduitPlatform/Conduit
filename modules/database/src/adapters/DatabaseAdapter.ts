@@ -49,7 +49,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           {
             name: schema.name,
             fields: schema.fields,
-            modelOptions: JSON.stringify(schema.modelOptions),
+            modelOptions: JSON.stringify(schema.schemaOptions),
             ownerModule: schema.owner,
           }
         );
@@ -58,7 +58,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         .create({
           name: schema.name,
           fields: schema.fields,
-          modelOptions: JSON.stringify(schema.modelOptions),
+          modelOptions: JSON.stringify(schema.schemaOptions),
           ownerModule: schema.owner,
         });
     }
