@@ -44,7 +44,7 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { schemaName, query, field, value } = call.request.params;
+    let { schemaName, query } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
@@ -54,11 +54,6 @@ export class DocumentsAdmin {
 
     if (!query || query.length === '') {
       query = {};
-    }
-    if (!isNil(field) && !isNil(value)) {
-      value = escapeStringRegexp(value);
-      field = escapeStringRegexp(field);
-      query[field] = { $regex: `.*${value}.*`, $options: 'i' };
     }
 
     const documentsPromise = this.database.findMany(

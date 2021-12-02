@@ -229,16 +229,14 @@ export class AdminHandlers {
       constructConduitRoute(
         {
           path: '/content/:schemaName',
-          action: ConduitRouteActions.GET,
+          action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
           },
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
-            field: ConduitString.Optional,
-            value: ConduitString.Optional,
-            query: ConduitString.Optional,
+            query: ConduitJson.Required,
 
           },
         },
