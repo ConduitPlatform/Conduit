@@ -65,7 +65,7 @@ export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
           schema: {
             name: schema.name,
             modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
-            modelOptions: JSON.stringify(schema.modelOptions),
+            modelOptions: JSON.stringify(schema.schemaOptions),
             collectionName: schema.collectionName,
           },
         },

@@ -126,7 +126,7 @@ export class SchemaAdmin {
 
     if (newSchema.enabled) {
       this.schemaController.createSchema(
-        new ConduitSchema(newSchema.name, newSchema.fields, newSchema.modelOptions),
+        new ConduitSchema(newSchema.name, newSchema.fields, newSchema.schemaOptions),
       );
     }
 
@@ -170,7 +170,7 @@ export class SchemaAdmin {
         new ConduitSchema(
           updatedSchema.name,
           updatedSchema.fields,
-          updatedSchema.modelOptions,
+          updatedSchema.schemaOptions,
         ),
       );
     }
@@ -256,7 +256,7 @@ export class SchemaAdmin {
       new ConduitSchema(
         requestedSchema.name,
         requestedSchema.fields,
-        requestedSchema.modelOptions,
+        requestedSchema.schemaOptions,
       ),
     );
 

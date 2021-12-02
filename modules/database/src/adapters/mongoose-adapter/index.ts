@@ -139,7 +139,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
    async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
-    if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
+    if (this.models![schemaName].originalSchema.schemaOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
     if(deleteData){
