@@ -236,9 +236,10 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
-            query: ConduitJson.Required,
-
           },
+          bodyParams: {
+            query: ConduitJson.Required,
+          }
         },
         new ConduitRouteReturnDefinition('GetDocuments', {
           documents: [TYPE.JSON], // Swagger parser inconsistency
