@@ -6,9 +6,9 @@ import {
   RouteOptionType,
   ConduitString,
 } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Client } from '../../models';
 
-export function getDeleteSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
+export function getDeleteSecurityClientRoute() {
   return new ConduitRoute(
     {
       path: '/security/client/:id',
@@ -21,7 +21,7 @@ export function getDeleteSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      await grpcSdk.databaseProvider?.deleteOne('Client', {
+      await Client.getInstance().deleteOne({
         _id: params.params!.id,
       });
       return { result: { message: 'Client deleted' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
