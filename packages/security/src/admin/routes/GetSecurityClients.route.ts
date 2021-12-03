@@ -3,22 +3,20 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitRouteParameters,
-  RouteOptionType,
 } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ClientModel } from '../../models/Client';
+import { Client } from '../../models';
 
-export function getGetSecurityClientsRoute(grpcSdk: ConduitGrpcSdk) {
+export function getGetSecurityClientsRoute() {
   return new ConduitRoute(
     {
       path: '/security/client',
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetSecurityClient', {
-      clients: [ClientModel.fields], // TODO: Update post-convert to ConduitActiveSchema
+      clients: [Client.getInstance().fields],
     }),
     async (params: ConduitRouteParameters) => {
-      let clients = await grpcSdk.databaseProvider?.findMany('Client', {});
+      let clients = await Client.getInstance().findMany({});
       return { result: { clients } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }
   );

@@ -7,11 +7,11 @@ import {
   PlatformTypesEnum,
   ConduitString,
 } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Client } from '../../models';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 
-export function getCreateSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
+export function getCreateSecurityClientRoute() {
   return new ConduitRoute(
     {
       path: '/security/client',
@@ -34,7 +34,7 @@ export function getCreateSecurityClientRoute(grpcSdk: ConduitGrpcSdk) {
       let clientId = randomBytes(15).toString('hex');
       let clientSecret = randomBytes(64).toString('hex');
       let hash = await bcrypt.hash(clientSecret, 10);
-      let client = await grpcSdk.databaseProvider?.create('Client', {
+      let client = await Client.getInstance().create({
         clientId,
         clientSecret: hash,
         platform,
