@@ -73,17 +73,17 @@ export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCo
         case 'pushNotifications':
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.pushNotifications))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = grpcSdk.pushNotifications.setConfig(newConfig);
+          updatedConfig = await grpcSdk.pushNotifications.setConfig(newConfig);
           break;
         case 'storage':
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.storage))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = grpcSdk.storage.setConfig(newConfig);
+          updatedConfig = await grpcSdk.storage.setConfig(newConfig);
           break;
         case 'sms':
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.sms))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = grpcSdk.sms.setConfig(newConfig);
+          updatedConfig = await grpcSdk.sms.setConfig(newConfig);
           break;
         case 'core':
           updatedConfig = await conduit.getConfigManager().set('core', newConfig);
