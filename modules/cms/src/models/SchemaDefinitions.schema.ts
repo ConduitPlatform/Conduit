@@ -17,8 +17,10 @@ const schema = {
     required: true,
     systemRequired: true,
   },
-  //todo The properties in JSON, replace adequetly
-  modelOptions: { type: TYPE.String, systemRequired: true },
+  modelOptions: { // TODO: The properties in JSON, replace adequetly
+    type: TYPE.String,
+    systemRequired: true
+  },
   enabled: {
     type: TYPE.Boolean,
     default: true,
@@ -46,6 +48,7 @@ export class SchemaDefinitions extends ConduitActiveSchema<SchemaDefinitions> {
   _id!: string;
   name!: string;
   fields!: any;
+  modelOptions!: string;
   enabled!: boolean;
   authentication!: boolean;
   crudOperations!: boolean;

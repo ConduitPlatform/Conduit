@@ -1,27 +1,38 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  ConduitString,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 
-let paths = require('./admin.json').functions;
-
 export class AdminHandlers {
   private provider: ISmsProvider | undefined;
 
   constructor(
-    server: GrpcServer,
+    private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     provider: ISmsProvider | undefined
   ) {
     this.provider = provider;
+    this.registerAdminRoutes();
+  }
 
+  updateProvider(provider: ISmsProvider) {
+    this.provider = provider;
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
-        sendSms: this.sendSms.bind(this),
+      .registerAdminAsync(this.server, paths, {
+        sendSms: this.sendSms.bind(this)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -29,27 +40,40 @@ export class AdminHandlers {
       });
   }
 
-  updateProvider(provider: ISmsProvider) {
-    this.provider = provider;
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/send',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            to: ConduitString.Required,
+            message: ConduitString.Required
+          },
+        },
+        new ConduitRouteReturnDefinition('SendSMS', { // could be 'String' (frontend compat)
+          message: ConduitString.Required,
+        }),
+        'sendSMS'
+      ),
+    ];
   }
 
-  async sendSms(call: RouterRequest, callback: RouterResponse) {
-    const { to, message } = JSON.parse(call.request.params);
+  async sendSms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { to, message } = call.request.params;
     let errorMessage: string | null = null;
 
     if (isNil(this.provider)) {
-      return callback({ code: status.INTERNAL, message: 'No sms provider' });
+      throw new GrpcError(status.INTERNAL, 'No SMS provider');
     }
 
     await this.provider
       .sendSms(to, message)
       .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    if (!isNil(errorMessage)) {
+      throw new GrpcError(status.INTERNAL, errorMessage);
+    }
 
-    return callback(null, { result: JSON.stringify({ message: 'SMS sent' }) });
+    return { message: 'SMS sent' };
   }
 }

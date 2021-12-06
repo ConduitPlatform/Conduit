@@ -1,32 +1,43 @@
-import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
 import { NotificationToken } from '../models'
 
-let paths = require('./admin.json').functions;
-
 export class AdminHandlers {
   private provider: IPushNotificationsProvider;
-  private readonly conduit: ConduitGrpcSdk;
 
   constructor(
-    server: GrpcServer,
-    conduit: ConduitGrpcSdk,
+    private readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
     provider: IPushNotificationsProvider
   ) {
-    this.conduit = conduit;
     this.provider = provider;
+    this.registerAdminRoutes();
+  }
 
-    this.conduit.admin
-      .registerAdmin(server, paths, {
+  updateProvider(provider: IPushNotificationsProvider) {
+    this.provider = provider;
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
+    this.grpcSdk.admin
+      .registerAdminAsync(this.server, paths, {
         sendNotification: this.sendNotification.bind(this),
-        sendManyNotifications: this.sendManyNotifications.bind(this),
-        sendToManyDevices: this.sendToManyDevices.bind(this),
+        sendNotifications: this.sendNotifications.bind(this),
+        sendNotificationToManyDevices: this.sendNotificationToManyDevices.bind(this),
         getNotificationToken: this.getNotificationToken.bind(this),
       })
       .catch((err: Error) => {
@@ -35,118 +46,104 @@ export class AdminHandlers {
       });
   }
 
-  updateProvider(provider: IPushNotificationsProvider) {
-    this.provider = provider;
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/send',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            userId: ConduitString.Required,
+            title: ConduitString.Required,
+            body: ConduitString.Optional,
+            data: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('SendNotification', {
+          message: ConduitString.Required, // could be 'String' (frontend compat)
+        }),
+        'sendNotification'
+      ),
+      constructConduitRoute(
+        {
+          path: '/sendMany',
+          action: ConduitRouteActions.POST, // unimplemented
+          bodyParams: {},
+        },
+        new ConduitRouteReturnDefinition('SendNotifications', {}),
+        'sendNotifications'
+      ),
+      constructConduitRoute(
+        {
+          path: '/sendToManyDevices',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            userIds: { type: [TYPE.String], required: true }, // handler array check is still required
+            title: ConduitString.Required,
+            body: ConduitString.Optional,
+            data: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('SendNotificationToManyDevices', {
+          message: ConduitString.Required,
+        }),
+        'sendNotificationToManyDevices'
+      ),
+      constructConduitRoute(
+        {
+          path: '/token/:userId',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            userId: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('GetNotificationToken', {
+          tokenDocuments: [NotificationToken.getInstance().fields],
+        }),
+        'getNotificationToken'
+      ),
+    ];
   }
 
-  async sendNotification(call: RouterRequest, callback: RouterResponse) {
-    const { title, body, data, userId } = JSON.parse(call.request.params);
-    if (isNil(title) || isNil(userId))
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+  async sendNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const params = {
-      title,
-      body,
-      data,
-      sendTo: userId,
+      sendTo: call.request.params.userIds,
+      title: call.request.params.title,
+      body: call.request.params.body,
+      data: call.request.params.data,
     };
-    if (isNil(params))
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-
-    let errorMessage = null;
     await this.provider
       .sendToDevice(params)
-      .catch((e) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { message: 'Ok' };
   }
 
-  async sendManyNotifications(call: RouterRequest, callback: RouterResponse) {
-    let requestParams = JSON.parse(call.request.params);
-    const params = requestParams.map((param: any) => {
-      if (isNil(param.title) || isNil(param.userId))  // title and userId are required
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Required fields are missing',
-        });
-
-      return {
-        sendTo: param.userId,
-        title: param.title,
-        body: param.body,
-        data: param.data,
-      };
-    });
-    if (isNil(params))
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-
-    let errorMessage = null;
-    await this.provider
-      .sendMany(params)
-      .catch((e) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
+  async sendNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    // TODO: Implement this
+    throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
-  async sendToManyDevices(call: RouterRequest, callback: RouterResponse) {
-    const { userIds, title, body, data } = JSON.parse(call.request.params);
-
-    if (isNil(title) || isNil(userIds) || isEmpty(userIds))
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-
+  async sendNotificationToManyDevices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (call.request.params.userIds.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
+    }
     const params = {
-      sendTo: userIds,
-      title,
-      body,
-      data,
+      sendTo: call.request.params.userIds,
+      title: call.request.params.title,
+      body: call.request.params.body,
+      data: call.request.params.data,
     };
-    if (isNil(params))
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
-
-    let errorMessage = null;
     await this.provider
       .sendToManyDevices(params)
-      .catch((e) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, { result: JSON.stringify({ message: 'Ok' }) });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { message: 'Ok' };
   }
 
-  async getNotificationToken(call: RouterRequest, callback: RouterResponse) {
-    const { userId } = JSON.parse(call.request.params);
-    if (isNil(userId)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'User id parameter was not provided',
-      });
+  async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const tokenDocuments = await NotificationToken.getInstance().findMany({ userId: call.request.params.userId });
+    if (isNil(tokenDocuments)) {
+      throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
     }
-
-    let errorMessage = null;
-    const tokenDocuments = await NotificationToken.getInstance()
-      .findMany({ userId })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, { result: JSON.stringify({ tokenDocuments }) });
+    return { tokenDocuments };
   }
 }

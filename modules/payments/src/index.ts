@@ -1,8 +1,6 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import PaymentsModule from './Payments';
 
-let paths = require('./admin/admin.json');
-
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
@@ -24,9 +22,6 @@ payments
   })
   .then(() => {
     return payments.activate();
-  })
-  .then(() => {
-    return grpcSdk.admin.register(paths.functions);
   })
   .catch((err: Error) => {
     console.log('Failed to active module');

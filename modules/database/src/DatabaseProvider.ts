@@ -112,7 +112,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
+    await this._activeAdapter.createSchemaFromAdapter(models._DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
     await this._activeAdapter.recoverSchemasFromDatabase();
   }
 
@@ -148,7 +148,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
           collectionName: schemaAdapter.originalSchema.collectionName,
         };
         this.publishSchema({
@@ -182,7 +182,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         schema: {
           name: schemaAdapter.name,
           modelSchema: JSON.stringify(schemaAdapter.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.modelOptions),
+          modelOptions: JSON.stringify(schemaAdapter.schemaOptions),
           collectionName: schemaAdapter.collectionName,
         },
       });
@@ -202,7 +202,7 @@ export class DatabaseProvider extends ConduitServiceModule {
           return {
             name: schema.name,
             modelSchema: JSON.stringify(schema.modelSchema),
-            modelOptions: JSON.stringify(schema.modelOptions),
+            modelOptions: JSON.stringify(schema.schemaOptions),
             collectionName: schema.collectionName,
           };
         }),

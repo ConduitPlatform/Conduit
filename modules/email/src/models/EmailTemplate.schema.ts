@@ -55,7 +55,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   variables: string[];
   sender: string;
   externalManaged: boolean;
-  extarnalId: string;
+  externalId: string;
   createdAt: Date;
   updatedAt: Date;
 

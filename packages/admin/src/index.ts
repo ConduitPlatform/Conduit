@@ -1,47 +1,77 @@
+import { Application, Request, Response, NextFunction } from 'express';
 import { isNil } from 'lodash';
-import { hashPassword, verifyToken } from './utils/auth';
-import { Handler, NextFunction, Request, Response, Router } from 'express';
-import { AuthHandlers } from './handlers/auth';
-import { AdminSchema } from './models/Admin';
+import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
+import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { RestController } from '@quintessential-sft/conduit-router';
 import {
   ConduitCommons,
-  ConduitError,
+  ConduitRoute,
+  ConduitMiddleware,
+  ConduitSocket,
   IConduitAdmin,
+  grpcToConduitRoute,
+  ConduitRouteActions,
 } from '@quintessential-sft/conduit-commons';
+import * as middleware from './middleware';
+import * as adminRoutes from './routes';
+import { hashPassword } from './utils/auth';
+import { AdminSchema } from './models/Admin';
 import AdminConfigSchema from './config';
-import fs from 'fs';
-import path from 'path';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { credentials, loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-
-let protoLoader = require('@grpc/proto-loader');
 
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
-  private router: Router;
-  private adminHandlers: AuthHandlers;
-  private _grpcRoutes: Record<string, { path: string; method: string }[]>;
-  private _sdkRoutes: string[];
-  private _registeredRoutes: Map<string, Handler>;
+  private readonly _app: Application;
+  private _restRouter: RestController;
+  private _sdkRoutes: ConduitRoute[];
+  private _grpcRoutes: any = {};
+
+  async adminMiddleware(req: Request, res: Response, next: NextFunction) {
+    return middleware.getAdminMiddleware(this.conduit)(req, res, next);
+  }
+  async authMiddleware(req: Request, res: Response, next: NextFunction) {
+    return middleware.getAuthMiddleware(this.grpcSdk, this.conduit)(req, res, next);
+  }
 
   constructor(
+    app: Application,
     grpcSdk: ConduitGrpcSdk,
     conduit: ConduitCommons,
-    server: Server,
-    packageDefinition: any
+    packageDefinition: any,
+    server: Server
   ) {
     super(conduit);
     this.conduit = conduit;
     this.grpcSdk = grpcSdk;
-    this.router = Router();
+
+    this._app = app;
+    this._restRouter = new RestController(this._app);
+
+    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
+    this._restRouter.registerRoute(
+      '*',
+      middleware.getAuthMiddleware(this.grpcSdk, this.conduit)
+    );
+    // Register Pre-Auth-Middleware routes
+    const preAuthMiddlewareRoutes: ConduitRoute[] = [];
+    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit, this.grpcSdk));
+    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
+    preAuthMiddlewareRoutes.forEach((route) => {
+      this._restRouter.registerConduitRoute(route);
+    }, this);
+
     this._grpcRoutes = {};
-    this._sdkRoutes = [];
-    this._registeredRoutes = new Map();
+    this._sdkRoutes = [
+      adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk)
+    ];
 
-    var protoDescriptor = loadPackageDefinition(packageDefinition);
+    // Register Post-Auth-Middleware routes
+    this._sdkRoutes.forEach((route) => {
+      this._restRouter.registerConduitRoute(route);
+    }, this);
 
-    //grpc stuff
+    let protoDescriptor = loadPackageDefinition(packageDefinition);
+
     // @ts-ignore
     let admin = protoDescriptor.conduit.core.Admin;
     server.addService(admin.service, {
@@ -54,87 +84,131 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     await this.handleDatabase().catch(console.log);
-    this.adminHandlers = new AuthHandlers(this.grpcSdk, this.conduit);
-    const self = this;
-
-    // todo fix the middlewares
-    //@ts-ignore
-
-    this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
-      this.router(req, res, next);
+    this.attachRouter();
+    this.highAvailability().catch(() => {
+      console.log('Failed to recover state');
     });
-    this.highAvailability();
   }
 
-  highAvailability() {
-    const self = this;
+  // grpc
+  async registerAdminRoute(call: any, callback: any) {
+    try {
+      let url = call.request.routerUrl;
+      let moduleName: string | undefined = undefined;
+      if (!url) {
+        let result = this.conduit
+          .getConfigManager()!
+          .getModuleUrlByInstance(call.getPeer());
+        if (!result) {
+          return callback({
+            code: status.INTERNAL,
+            message: 'Error when registering routes',
+          });
+        }
+        call.request.routerUrl = result.url;
+        moduleName = result!.moduleName;
+      }
+      this.internalRegisterRoute(
+        call.request.protoFile,
+        call.request.routes,
+        call.request.routerUrl,
+        moduleName
+      );
+      this.updateState(
+        call.request.protoFile,
+        call.request.routes,
+        call.request.routerUrl
+      );
+    } catch (err) {
+      console.error(err);
+      return callback({
+        code: status.INTERNAL,
+        message: 'Error when registering routes',
+      });
+    }
+    callback(null, null);
+  }
+
+  registerRoute(route: ConduitRoute): void {
+    this._sdkRoutes.push(route);
+    this._restRouter.registerConduitRoute(route);
+    this.cleanupRoutes();
+  }
+
+  private attachRouter() {
+    this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
+      this._restRouter.handleRequest(req, res, next);
+    });
+  }
+
+  private async highAvailability() {
+    let r = await this.conduit.getState().getKey('admin');
+    if (!r || r.length === 0) {
+      this.cleanupRoutes();
+      return;
+    }
+    let state = JSON.parse(r);
+    if (state.routes) {
+      state.routes.forEach((r: any) => {
+        try {
+          this.internalRegisterRoute(r.protofile, r.routes, r.url);
+        } catch (err) {
+          console.error(err);
+        }
+      }, this);
+      console.log('Recovered routes');
+    }
+    this.cleanupRoutes();
+
+    this.conduit.getBus().subscribe('admin', (message: string) => {
+      let messageParsed = JSON.parse(message);
+      try {
+        this.internalRegisterRoute(
+          messageParsed.protofile,
+          messageParsed.routes,
+          messageParsed.url
+        );
+      } catch (err) {
+        console.error(err);
+      }
+      this.cleanupRoutes();
+    });
+  }
+
+  private updateState(protofile: string, routes: any, url: string) {
     this.conduit
       .getState()
       .getKey('admin')
       .then((r: any) => {
-        if (!r || r.length === 0) {
-          self.refreshRouter();
-          return;
-        }
-        let state = JSON.parse(r);
-        if (state.routes) {
-          state.routes.forEach((r: any) => {
-            self
-              ._registerGprcRoute(r.protofile, r.routes, r.url)
-              .then()
-              .catch((err) => {
-                console.log('Failed to register recovered route');
-              });
-
-            self._grpcRoutes[r.url] = r.routes;
-          });
-        }
-        self.refreshRouter();
-      })
-      .catch((err) => {
-        console.log('Failed to recover state');
-      });
-
-    this.conduit.getBus().subscribe('admin', (message: string) => {
-      let messageParsed = JSON.parse(message);
-      self._grpcRoutes[messageParsed.url] = messageParsed.routes;
-
-      self
-        ._registerGprcRoute(
-          messageParsed.protofile,
-          messageParsed.routes,
-          messageParsed.url
-        )
-        .then(() => {
-          this.cleanupRoutes();
-        });
-    });
-  }
-
-  updateState(protofile: string, routes: any, url: string) {
-    this.conduit
-      .getState()
-      .getKey('admin')
-      .then((r) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
-        state.routes.push({
-          protofile,
-          routes,
-          url,
+        let index;
+        (state.routes as any[]).forEach((val, i) => {
+          if (val.url === url) {
+            index = i;
+          }
         });
+        if (index) {
+          state.routes[index] = { protofile, routes, url };
+        } else {
+          state.routes.push({
+            protofile,
+            routes,
+            url,
+          });
+        }
         return this.conduit.getState().setKey('admin', JSON.stringify(state));
       })
-      .then((r) => {
+      .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
         console.log('Updated state');
       })
-      .catch((err) => {
-        console.log('Failed to recover state');
+      .catch(() => {
+        console.log('Failed to update state');
       });
   }
 
-  publishAdminRouteData(protofile: string, routes: any, url: string) {
+  private publishAdminRouteData(protofile: string, routes: any, url: string) {
     this.conduit.getBus().publish(
       'admin',
       JSON.stringify({
@@ -145,163 +219,6 @@ export default class AdminModule extends IConduitAdmin {
     );
   }
 
-  findAdmin(object: any) {
-    let value;
-    const self = this;
-    Object.keys(object).some(function (k) {
-      if (k === 'Admin') {
-        value = object[k];
-        return true;
-      }
-      if (object[k] && typeof object[k] === 'object') {
-        value = self.findAdmin(object[k]);
-        return value !== undefined;
-      }
-    });
-    return value;
-  }
-
-  //grpc
-  async registerAdminRoute(call: any, callback: any) {
-    let protofile = call.request.protoFile;
-    let routes: [{ path: string; method: string; grpcFunction: string }] =
-      call.request.routes;
-    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, protofile);
-    var packageDefinition = protoLoader.loadSync(protoPath, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let adminDescriptor: any = loadPackageDefinition(packageDefinition);
-    adminDescriptor = this.findAdmin(adminDescriptor);
-    if (!adminDescriptor) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Did not receive proper .proto file - missing Admin service',
-      });
-    }
-    let error;
-    let url = call.request.adminUrl;
-    let moduleName = '';
-    if (!url) {
-      let result = this.conduit.getConfigManager().getModuleUrlByInstance(call.getPeer());
-      if (!result) {
-        return callback({
-          code: status.INTERNAL,
-          message: 'Error when registering routes',
-        });
-      }
-      url = result.url;
-      moduleName = result.moduleName;
-      routes.forEach((r) => {
-        // for backwards compatibility and fool-proofing
-        if (r.path.startsWith(`/${moduleName}/`)) return;
-        if (!r.path.startsWith(`/`)) r.path = `/${r.path}`;
-        r.path = `/${moduleName}${r.path}`;
-      });
-    }
-    let done = await this._registerGprcRoute(protofile, routes, url).catch(
-      (err) => (error = err)
-    );
-    if (error) {
-      callback({
-        code: status.INTERNAL,
-        message: 'Error when registering routes',
-      });
-    } else {
-      this._grpcRoutes[url] = routes;
-      this.cleanupRoutes();
-      this.updateState(protofile, routes, url);
-      callback(null, null);
-    }
-  }
-
-  registerRoute(method: string, route: string, handler: Handler) {
-    this._sdkRoutes.push(`${method}-${route}`);
-    this._registerRoute(method, route, handler);
-  }
-
-  _registerRoute(method: string, route: string, handler: Handler) {
-    const key = `${method}-${route}`;
-    const registered = this._registeredRoutes.has(key);
-    this._registeredRoutes.set(key, handler);
-    if (registered) {
-      this.refreshRouter();
-    } else {
-      switch (method) {
-        case 'GET':
-          this.router.get(route, handler);
-          break;
-        case 'POST':
-          this.router.post(route, handler);
-          break;
-        case 'PUT':
-          this.router.put(route, handler);
-          break;
-        case 'DELETE':
-          this.router.delete(route, handler);
-          break;
-        default:
-          this.router.get(route, handler);
-      }
-    }
-  }
-
-  async authMiddleware(req: Request, res: Response, next: NextFunction) {
-    const databaseAdapter = await this.grpcSdk.databaseProvider!;
-    const adminConfig = await this.conduit.getConfigManager().get('admin');
-
-    const tokenHeader = req.headers.authorization;
-    if (isNil(tokenHeader)) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const args = tokenHeader.split(' ');
-    if (args.length !== 2) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const [prefix, token] = args;
-    if (prefix !== 'JWT') {
-      return res
-        .status(401)
-        .json({ error: 'The authorization header must begin with JWT' });
-    }
-    let decoded;
-    try {
-      decoded = verifyToken(token, adminConfig.auth.tokenSecret);
-    } catch (error) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    const { id } = decoded;
-
-    databaseAdapter
-      .findOne('Admin', { _id: id })
-      .then((admin: any) => {
-        if (isNil(admin)) {
-          return res.status(401).json({ error: 'No such user exists' });
-        }
-        (req as any).admin = admin;
-        next();
-      })
-      .catch((error: Error) => {
-        console.log(error);
-        res.status(500).json({ error: 'Something went wrong' });
-      });
-  }
-
-  async adminMiddleware(req: Request, res: Response, next: NextFunction) {
-    const masterkey = req.headers.masterkey;
-    let master = process.env.masterkey ?? 'M4ST3RK3Y';
-    if (isNil(masterkey) || masterkey !== master)
-      return res.status(401).json({ error: 'Unauthorized' });
-    next();
-  }
-
-  // @ts-ignore
   private async handleDatabase() {
     if (!this.grpcSdk.databaseProvider) {
       await this.grpcSdk.waitForExistence('database-provider');
@@ -328,206 +245,63 @@ export default class AdminModule extends IConduitAdmin {
       .catch(console.log);
   }
 
-  private async _registerGprcRoute(adminProtofile: any, routes: any, serverIp: string) {
-    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, adminProtofile);
-    var packageDefinition = protoLoader.loadSync(protoPath, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    let adminDescriptor: any = loadPackageDefinition(packageDefinition);
-    adminDescriptor = this.findAdmin(adminDescriptor);
+  private internalRegisterRoute(
+    protofile: any,
+    routes: any[],
+    url: any,
+    moduleName?: string
+  ) {
+    let processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket // can go
+    )[] = grpcToConduitRoute(
+      'Admin',
+      {
+        protoFile: protofile,
+        routes: routes,
+        routerUrl: url,
+      },
+      moduleName
+    );
 
-    let client = new adminDescriptor(serverIp, credentials.createInsecure(), {
-      'grpc.max_receive_message_length': 1024 * 1024 * 100,
-      'grpc.max_send_message_length': 1024 * 1024 * 100,
+    processedRoutes.forEach((r) => {
+      if (r instanceof ConduitRoute) {
+        console.log(
+          'New admin route registered: ' +
+            r.input.action +
+            ' ' +
+            r.input.path +
+            ' handler url: ' +
+            url
+        );
+        this._restRouter.registerConduitRoute(r);
+      }
     });
-    routes.forEach((r: any) => {
-      let handler = (req: Request, res: Response, next: NextFunction) => {
-        const context = (req as any).conduit;
-        let params: any = {};
-        if (req.query) {
-          Object.assign(params, req.query);
-        }
-        if (req.body) {
-          Object.assign(params, req.body);
-        }
-        if (req.params) {
-          Object.assign(params, req.params);
-        }
-        if (params.populate) {
-          if (params.populate.includes(',')) {
-            params.populate = params.populate.split(',');
-          } else {
-            params.populate = [params.populate];
-          }
-        }
-        let request = {
-          params: JSON.stringify(params),
-          header: JSON.stringify(req.headers),
-          context: JSON.stringify(context),
-        };
-        client[r.grpcFunction](request, (err: any, result: any) => {
-          if (err) {
-            console.log(err);
-            if (err.hasOwnProperty('status')) {
-              return res.status((err as ConduitError).status).json({
-                name: err.name,
-                status: (err as ConduitError).status,
-                message: err.message,
-              });
-            } else if (err.hasOwnProperty('code')) {
-              let statusCode: number;
-              let name: string;
-              switch (err.code) {
-                case 3:
-                  name = 'INVALID_ARGUMENTS';
-                  statusCode = 400;
-                  break;
-                case 5:
-                  name = 'NOT_FOUND';
-                  statusCode = 404;
-                  break;
-                case 7:
-                  name = 'FORBIDDEN';
-                  statusCode = 403;
-                  break;
-                case 16:
-                  name = 'UNAUTHORIZED';
-                  statusCode = 401;
-                  break;
-                default:
-                  name = 'INTERNAL_SERVER_ERROR';
-                  statusCode = 500;
-              }
-              return res.status(statusCode).json({
-                name,
-                status: statusCode,
-                message: err.details,
-              });
-            } else {
-              return res.status(500).json({
-                name: 'INTERNAL_SERVER_ERROR',
-                status: 500,
-                message: 'Something went wrong',
-              });
-            }
-          }
-          if (result.result) {
-            let sendResult = result.result;
-            try {
-              sendResult = JSON.parse(result.result);
-            } catch (error) {}
-            res.status(200).json(sendResult);
-          } else if (result.redirect) {
-            res.redirect(result.redirect);
-          } else {
-            return res.status(500).json({
-              name: 'INTERNAL_SERVER_ERROR',
-              status: 500,
-              message: 'Something went wrong',
-            });
-          }
-        });
-      };
-      this._registerRoute(r.method, r.path, handler);
-    });
+    this._grpcRoutes[url] = routes;
+    this.cleanupRoutes();
   }
 
   private cleanupRoutes() {
-    const self = this;
-    let routes: { path: string; method: string }[] = [];
+    let routes: { action: string; path: string }[] = [];
+    // Admin routes
+    routes.push(
+      { action: ConduitRouteActions.POST, path: '/login' },
+      { action: ConduitRouteActions.GET, path: '/modules' }
+    );
+    // Package routes
+    this._sdkRoutes.forEach((route: ConduitRoute) => {
+      routes.push({ action: route.input.action, path: route.input.path });
+    });
+    // Module routes
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
-      routes.push(...self._grpcRoutes[grpcRoute]);
+      let routesArray = this._grpcRoutes[grpcRoute];
+      routes.push(
+        ...routesArray.map((route: any) => {
+          return { action: route.options.action, path: route.options.path };
+        })
+      );
     });
-
-    let newRegisteredRoutes: Map<string, any> = new Map();
-    routes.forEach((route: { path: string; method: string }) => {
-      const key = `${route.method}-${route.path}`;
-      if (self._registeredRoutes.has(key)) {
-        newRegisteredRoutes.set(key, this._registeredRoutes.get(key));
-      }
-    });
-
-    this._sdkRoutes.forEach((routeKey) => {
-      if (self._registeredRoutes.has(routeKey)) {
-        newRegisteredRoutes.set(routeKey, this._registeredRoutes.get(routeKey));
-      }
-    });
-
-    this._registeredRoutes.clear();
-    this._registeredRoutes = newRegisteredRoutes;
-    this.refreshRouter();
-  }
-
-  private refreshRouter() {
-    const self = this;
-    this.router = Router();
-    this.router.use((req, res, next) => this.adminMiddleware(req, res, next));
-    this.router.post('/login', (req: Request, res: Response, next: NextFunction) =>
-      self.adminHandlers.loginAdmin(req, res, next).catch(next)
-    );
-    this.router.get('/modules', (req: Request, res: Response, next: NextFunction) => {
-      let response: any[] = [];
-      // this is used here as such, because the config manager is simply the config package
-      // todo update the config manager interface so that we don't need these castings
-      ((this.conduit.getConfigManager() as any).registeredModules as Map<
-        string,
-        string
-      >).forEach((val: any, key: any) => {
-        response.push(val);
-      });
-      res.json(response);
-    });
-    // this.conduit
-    //   .getRouter()
-    //   .registerDirectRouter(
-    //     '/admin/login',
-    //     (req: Request, res: Response, next: NextFunction) =>
-    //       self.adminHandlers.loginAdmin(req, res, next).catch(next)
-    //   );
-    // this.conduit
-    //   .getRouter()
-    //   .registerDirectRouter(
-    //     '/admin/modules',
-    //     (req: Request, res: Response, next: NextFunction) => {
-    //       let response: any[] = [];
-    //       // this is used here as such, because the config manager is simply the config package
-    //       // todo update the config manager interface so that we don't need these castings
-    //       ((this.conduit.getConfigManager() as any).registeredModules as Map<
-    //         string,
-    //         string
-    //         >).forEach((val: any, key: any) => {
-    //         response.push(val);
-    //       });
-    //       res.json(response);
-    //     }
-    //   );
-    this.router.use((req, res, next) => this.authMiddleware(req, res, next));
-    this.router.post('/create', (req: Request, res: Response, next: NextFunction) =>
-      self.adminHandlers.createAdmin(req, res, next).catch(next)
-    );
-    this._registeredRoutes.forEach((route, key) => {
-      const [method, path] = key.split('-');
-      switch (method) {
-        case 'GET':
-          this.router.get(path, route);
-          break;
-        case 'POST':
-          this.router.post(path, route);
-          break;
-        case 'PUT':
-          this.router.put(path, route);
-          break;
-        case 'DELETE':
-          this.router.delete(path, route);
-          break;
-        default:
-          this.router.get(path, route);
-      }
-    });
+    this._restRouter.cleanupRoutes(routes);
   }
 }

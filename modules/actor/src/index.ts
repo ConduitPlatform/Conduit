@@ -1,8 +1,6 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import ActorModule from './Actor';
 
-let paths = require('./admin/admin.json');
-
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
@@ -21,9 +19,6 @@ actor
   })
   .then(() => {
     return actor.activate();
-  })
-  .then(() => {
-    return grpcSdk.admin.register(paths.functions);
   })
   .catch((err: Error) => {
     console.log('Failed to active module');

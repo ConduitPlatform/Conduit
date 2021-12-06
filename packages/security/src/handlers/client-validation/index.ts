@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
-import { ClientModel } from '../../models/Client';
-import * as bcrypt from 'bcrypt';
 import { DatabaseProvider } from '@quintessential-sft/conduit-grpc-sdk';
+import { Client } from '../../models';
+import * as bcrypt from 'bcrypt';
 
 export class ClientValidator {
   prod = false;
@@ -21,7 +21,6 @@ export class ClientValidator {
           self.prod = true;
         }
       });
-    this.database.createSchemaFromAdapter(ClientModel);
   }
 
   async middleware(req: Request, res: Response, next: NextFunction) {
@@ -58,8 +57,8 @@ export class ClientValidator {
       // for the possibility of a secret refresh
     }
     let _client: { clientId: string; clientSecret: string };
-    this.database
-      .findOne('Client', { clientId: clientid },'clientSecret')
+    Client.getInstance()
+      .findOne({ clientId: clientid },'clientSecret')
       .then((client: any) => {
         if (isNil(client)) {
           throw ConduitError.unauthorized();

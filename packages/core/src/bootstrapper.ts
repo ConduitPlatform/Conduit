@@ -56,7 +56,7 @@ export class CoreBootstrapper {
 
       app.conduit.registerConfigManager(manager);
       app.conduit.registerAdmin(
-        new AdminModule(grpcSdk, app.conduit, server, packageDefinition)
+        new AdminModule(app, grpcSdk, app.conduit, packageDefinition, server)
       );
       app.conduit.registerRouter(
         new ConduitDefaultRouter(app, grpcSdk, packageDefinition, server)

@@ -9,10 +9,10 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     dbInstance: DatabaseProvider,
     name: string,
     fields?: ConduitModel,
-    modelOptions?: ConduitModelOptions,
+    schemaOptions?: ConduitModelOptions,
     collectionName?: string
   ) {
-    super(name, fields ?? {}, modelOptions, collectionName);
+    super(name, fields ?? {}, schemaOptions, collectionName);
     this.dbInstance = dbInstance;
   }
 

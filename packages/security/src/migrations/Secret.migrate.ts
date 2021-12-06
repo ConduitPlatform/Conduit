@@ -1,12 +1,11 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Client } from '../models';
 import * as bcrypt from 'bcrypt';
 
-export async function secretMigrate(grpcSdk: ConduitGrpcSdk) {
+export async function secretMigrate() {
   let clients: {
     _id: string;
     clientSecret: string;
-  }[] = await grpcSdk.databaseProvider!.findMany(
-    'Client',
+  }[] = await Client.getInstance().findMany(
     {
       clientSecret: {
         $not: {
@@ -19,8 +18,7 @@ export async function secretMigrate(grpcSdk: ConduitGrpcSdk) {
   if (clients.length === 0) return;
   for (let client of clients) {
     let hash = await bcrypt.hash(client.clientSecret, 10);
-    await grpcSdk.databaseProvider!.findByIdAndUpdate(
-      'Client',
+    await Client.getInstance().findByIdAndUpdate(
       client._id,
       { clientSecret: hash },
       true

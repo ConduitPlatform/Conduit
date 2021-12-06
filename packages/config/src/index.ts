@@ -5,8 +5,7 @@ import { DatabaseConfigUtility } from './utils/config';
 import AppConfigSchema from './models/config.schema';
 import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
 import { EventEmitter } from 'events';
-import { AdminHandlers } from './admin/admin';
-import { NextFunction, Request, Response } from 'express';
+import * as adminRoutes from './admin/routes';
 import axios from 'axios';
 
 export default class ConfigManager implements IConfigManager {
@@ -503,43 +502,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   private registerAdminRoutes() {
-    const adminHandlers = new AdminHandlers(this.grpcSdk, this.sdk);
-    const adminModule = this.sdk.getAdmin();
-
-    adminModule.registerRoute(
-      'GET',
-      '/config/modules',
-      (req: Request, res: Response, next: NextFunction) => {
-        if (isNil((req as any).conduit)) {
-          (req as any).conduit = {};
-        }
-        (req as any).conduit.registeredModules = this.registeredModules;
-        return adminHandlers.getModules(req, res);
-      }
-    );
-
-    adminModule.registerRoute(
-      'GET',
-      '/config/:module?',
-      (req: Request, res: Response, next: NextFunction) => {
-        if (isNil((req as any).conduit)) {
-          (req as any).conduit = {};
-        }
-        (req as any).conduit.registeredModules = this.registeredModules;
-        return adminHandlers.getConfig(req, res);
-      }
-    );
-
-    adminModule.registerRoute(
-      'PUT',
-      '/config/:module?',
-      (req: Request, res: Response, next: NextFunction) => {
-        if (isNil((req as any).conduit)) {
-          (req as any).conduit = {};
-        }
-        (req as any).conduit.registeredModules = this.registeredModules;
-        return adminHandlers.setConfig(req, res);
-      }
-    );
+    this.sdk.getAdmin().registerRoute(adminRoutes.getModulesRoute(this.registeredModules));
+    this.sdk.getAdmin().registerRoute(adminRoutes.getGetConfigRoute(this.grpcSdk, this.registeredModules));
+    this.sdk.getAdmin().registerRoute(adminRoutes.getUpdateConfigRoute(this.grpcSdk, this.sdk, this.registeredModules));
   }
 }

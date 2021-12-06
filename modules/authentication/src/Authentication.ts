@@ -268,8 +268,8 @@ export default class AuthenticationModule extends ConduitServiceModule {
     await this.updateConfig();
     if (!this.isRunning) {
       this.database = this.grpcSdk.databaseProvider!;
-      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.registerSchemas();
+      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this._router = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
       this.isRunning = true;
     }

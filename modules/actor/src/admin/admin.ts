@@ -1,32 +1,48 @@
 import ConduitGrpcSdk, {
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  ConduitNumber,
+  ConduitBoolean,
+  ConduitJson,
+  TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isNil } from 'lodash';
-import { status } from '@grpc/grpc-js';
 import { FlowCreator } from '../controllers/flowCreator';
 import { ActorFlow, ActorRun } from '../models'
 
 const { readdirSync, readFileSync } = require('fs');
 
-let paths = require('./admin.json').functions;
-
 export class AdminHandlers {
   private warden: FlowCreator;
 
-  constructor(server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    private readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk
+  ) {
     this.warden = new FlowCreator(grpcSdk, server);
+    this.registerAdminRoutes();
+  }
+
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
+      .registerAdminAsync(this.server, paths, {
         getActors: this.getActors.bind(this),
         getTriggers: this.getTriggers.bind(this),
+        getFlow: this.getFlow.bind(this),
         getFlows: this.getFlows.bind(this),
-        getFlowById: this.getFlowById.bind(this),
         getFlowRuns: this.getFlowRuns.bind(this),
         createFlow: this.createFlow.bind(this),
-        editFlowById: this.editFlowById.bind(this),
+        // editFlow: this.editFlow.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -34,167 +50,186 @@ export class AdminHandlers {
       });
   }
 
-  async getActors(call: RouterRequest, callback: RouterResponse) {
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/actors',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetActors', {
+          actors: ConduitJson.Required,
+        }),
+        'getActors'
+      ),
+      constructConduitRoute(
+        {
+          path: '/triggers',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetTriggers', {
+          triggers: ConduitJson.Required,
+        }),
+        'getTriggers'
+      ),
+      constructConduitRoute(
+        {
+          path: '/flows/:id',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('Flow', ActorFlow.getInstance().fields),
+        'getFlow'
+      ),
+      constructConduitRoute(
+        {
+          path: '/flows',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('Flows', {
+          flows: ['Flow'],
+          count: ConduitNumber.Required,
+        }),
+        'getFlows'
+      ),
+      constructConduitRoute(
+        {
+          path: '/flows/:id/runs',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetFlowRuns', {
+          runs: [ActorRun.getInstance().fields],
+          count: ConduitNumber.Required,
+        }),
+        'getFlowRuns'
+      ),
+      constructConduitRoute(
+        {
+          path: '/flows',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            name: ConduitString.Required,
+            trigger: ConduitJson.Required,
+            actors: { type: [TYPE.JSON], required: true }, // handler array check is still required
+            // actorPaths: , // unused
+            enabled:  ConduitBoolean.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateFlow', ActorFlow.getInstance().fields),
+        'createFlow'
+      ),
+      // constructConduitRoute(
+      //   {
+      //     path: '/flows/:id',
+      //     action: ConduitRouteActions.UPDATE, // unimplemented
+      //     urlParams: {
+      //        id: { type: RouteOptionType.String, required: true },
+      //     },
+      //      bodyParams: { // TODO: Update these upon implementing the editFlow() handler
+      //       name: ConduitString.Required,
+      //       trigger: ConduitJson.Required,
+      //       actors: ConduitJson.Required,
+      //       // actorPaths: , // unused
+      //       enabled:  ConduitBoolean.Required,
+      //     },
+      //   },
+      //   new ConduitRouteReturnDefinition('EditFlow', ActorFlow.getInstance().fields),
+      //   'editFlow'
+      // ),
+    ];
+  }
+
+  async getActors(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let actors = this._getActors();
-
-    return callback(null, { result: JSON.stringify({ actors }) });
+    return { actors };
   }
 
-  async getTriggers(call: RouterRequest, callback: RouterResponse) {
+  async getTriggers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let triggers = this._getTriggers();
-    return callback(null, { result: JSON.stringify({ triggers }) });
+    return { triggers };
   }
 
-  async getFlows(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
+  async getFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const flow = await ActorFlow.getInstance()
+      .findOne({ _id: call.request.params.id });
+    if (isNil(flow)) {
+      throw new GrpcError(status.NOT_FOUND, 'Flow does not exist');
     }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+    return flow;
+  }
 
+  async getFlows(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const flowsPromise = ActorFlow.getInstance()
       .findMany(
         {},
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = ActorFlow.getInstance().countDocuments({});
-
-    let errorMessage: string | null = null;
     const [flows, count] = await Promise.all([flowsPromise, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    return callback(null, { result: JSON.stringify({ flows, count }) });
+    return { result: { flows, count } };
   }
 
-  async getFlowById(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
+  async getFlowRuns(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
 
-    if (isNil(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument id is required!',
-      });
+    const flow = await ActorFlow.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(flow)) {
+      throw new GrpcError(status.NOT_FOUND, 'Flow does not exist');
     }
-    let errorMessage = null;
-    const flow = await ActorFlow.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, { result: JSON.stringify({ flow }) });
-  }
-
-  async getFlowRuns(call: RouterRequest, callback: RouterResponse) {
-    const { id, skip, limit } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
-
-    if (isNil(id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument id is required!',
-      });
-    }
-    let errorMessage = null;
-    const flow = await ActorFlow.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
     const flowRuns = ActorRun.getInstance()
       .findMany(
         { flow: flow._id },
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const countPromise = ActorRun.getInstance().countDocuments({});
-
-    errorMessage = null;
     const [runs, count] = await Promise.all([flowRuns, countPromise]).catch(
-      (e: any) => (errorMessage = e.message)
+      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
 
-    return callback(null, { result: JSON.stringify({ runs, count }) });
+    return { runs, count };
   }
 
-  async createFlow(call: RouterRequest, callback: RouterResponse) {
-    const { name, trigger, actors, actorPaths, enabled } = JSON.parse(
-      call.request.params
-    );
-    if (!name) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument name is required!',
-      });
-    }
-    if (!trigger) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument trigger is required!',
-      });
+  async createFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, trigger, actors, enabled } = call.request.params;
+    if (actors.length === 0) { // array check is required
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Argument actors is required and must be a non-empty array!');
     }
 
-    if (!actors || !Array.isArray(actors) || actors.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument actors is required and must be a non-empty array!',
-      });
-    }
-    if (!actorPaths || !Array.isArray(actorPaths) || actorPaths.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Argument actorPaths is required and must be a non-empty array!',
-      });
-    }
     let triggers = this._getTriggers();
     let matchingTrigger = triggers.filter((trigr: any) => trigr.code === trigger.code);
     if (matchingTrigger.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: `Trigger ${trigger.code} is not a valid trigger code.`,
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, `Trigger ${trigger.code} is not a valid trigger code.`);
     }
-
     let availableActors = this._getActors();
     for (let actor of actors) {
       let matchingActor = availableActors.filter((actr: any) => actr.code === actor.code);
       if (matchingActor.length === 0) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: `Actor ${actor.code} is not a valid actor code.`,
-        });
+        throw new GrpcError(status.INVALID_ARGUMENT, `Actor ${actor.code} is not a valid actor code.`);
       }
     }
-    let errorMessage = null;
+
     const flow = await ActorFlow.getInstance()
       .create({
         name,
@@ -202,20 +237,18 @@ export class AdminHandlers {
         actors,
         enabled: enabled !== null ? enabled : true,
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    await this.warden.constructFlow(flow).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    await this.warden.constructFlow(flow).catch(
+      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
+    );
 
-    return callback(null, { result: JSON.stringify({ flow }) });
+    return flow;
   }
 
   //todo
-  async editFlowById(call: RouterRequest, callback: RouterResponse) {
-    return callback({ code: status.UNIMPLEMENTED, message: 'Not implemented yet' });
+  async editFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
   private _getActors() {

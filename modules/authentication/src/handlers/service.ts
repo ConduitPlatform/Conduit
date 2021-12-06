@@ -21,7 +21,7 @@ export class ServiceHandler {
       console.error('Service not active');
       throw ConduitError.forbidden('Service auth is deactivated');
     }
-    console.error('Service is active');
+    console.log('Service is active');
     this.initialized = true;
     return true;
   }

@@ -4,18 +4,18 @@ export class ConduitSchema {
   private readonly _name: string;
   private readonly _fields: ConduitModel;
   private readonly _collectionName: string;
-  private readonly _modelOptions: ConduitModelOptions;
+  private readonly _schemaOptions: ConduitModelOptions;
   private _ownerModule?: string;
 
   constructor(
     name: string,
     fields: ConduitModel,
-    modelOptions?: ConduitModelOptions,
+    schemaOptions?: ConduitModelOptions,
     collectionName?: string
   ) {
     this._name = name;
     this._fields = fields;
-    this._modelOptions = modelOptions ? modelOptions : {};
+    this._schemaOptions = schemaOptions ?? {};
     // todo should pluralize like mongoose
     if (collectionName && collectionName !== '') {
       this._collectionName = collectionName;
@@ -48,7 +48,7 @@ export class ConduitSchema {
     return this._collectionName;
   }
 
-  get modelOptions(): ConduitModelOptions {
-    return this._modelOptions;
+  get schemaOptions(): ConduitModelOptions {
+    return this._schemaOptions;
   }
 }

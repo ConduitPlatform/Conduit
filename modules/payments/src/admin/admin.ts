@@ -1,45 +1,51 @@
 import ConduitGrpcSdk, {
-  DatabaseProvider,
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  constructConduitRoute,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  RouteOptionType,
+  ConduitString,
+  ConduitNumber,
+  ConduitBoolean,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 import { populateArray } from '../utils/populateArray';
 import {
-  PaymentsCustomer,
   Product,
+  PaymentsCustomer,
   Transaction,
   Subscription,
   User,
 } from '../models';
 
-let paths = require('./admin.json').functions;
 const escapeStringRegexp = require('escape-string-regexp');
+
 export class AdminHandlers {
-  private database: DatabaseProvider;
 
   constructor(
-    server: GrpcServer,
+    private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly stripeHandlers: StripeHandlers | null
   ) {
-    const self = this;
-    grpcSdk.waitForExistence('database-provider').then(() => {
-      self.database = self.grpcSdk.databaseProvider!;
-    });
+    this.registerAdminRoutes();
+  }
 
+  private registerAdminRoutes() {
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
-      .registerAdmin(server, paths, {
-        createProduct: this.createProduct.bind(this),
-        createCustomer: this.createCustomer.bind(this),
-        getCustomers: this.getCustomers.bind(this),
+      .registerAdminAsync(this.server, paths, {
         getProducts: this.getProducts.bind(this),
+        createProduct: this.createProduct.bind(this),
         editProduct: this.editProduct.bind(this),
-        getSubscription: this.getSubscription.bind(this),
+        getCustomers: this.getCustomers.bind(this),
+        createCustomer: this.createCustomer.bind(this),
         getTransactions: this.getTransactions.bind(this),
+        getSubscriptions: this.getSubscriptions.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -47,362 +53,319 @@ export class AdminHandlers {
       });
   }
 
-  async getProducts(call: RouterRequest, callback:RouterResponse){
-    const { skip, limit,search } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
+  private getRegisteredRoutes(): any[] {
+    return [
+      constructConduitRoute(
+        {
+          path: '/products',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetProducts', {
+          productDocuments: [Product.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getProducts'
+      ),
+      constructConduitRoute(
+        {
+          path: '/products',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            name: ConduitString.Required,
+            currency: ConduitString.Required,
+            value: ConduitNumber.Required,
+            isSubscription: ConduitBoolean.Optional,
+            recurring: ConduitString.Required,
+            recurringCount: ConduitNumber.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateProduct', Product.getInstance().fields),
+        'createProduct'
+      ),
+      constructConduitRoute(
+        {
+          path: '/products/:id',
+          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+          bodyParams: {
+            name: ConduitString.Required,
+            currency: ConduitString.Required,
+            value: ConduitNumber.Required,
+            isSubscription: ConduitBoolean.Optional,
+            recurring: ConduitString.Required,
+            recurringCount: ConduitNumber.Required,
+            stripe: {
+              subscriptionId: ConduitString.Required,
+              priceId: ConduitString.Required,
+            },
+          },
+        },
+        new ConduitRouteReturnDefinition('EditProduct', {
+          updatedProduct: Product.getInstance().fields,
+        }),
+        'editProduct'
+      ),
+      constructConduitRoute(
+        {
+          path: '/customer',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetCustomers', {
+          customerDocuments: [PaymentsCustomer.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getCustomers'
+      ),
+      constructConduitRoute(
+        {
+          path: '/customer',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            userId: ConduitString.Required,
+            email: ConduitString.Required,
+            phoneNumber: ConduitString.Required,
+            buyerName: ConduitString.Optional,
+            address: ConduitString.Optional,
+            postCode: ConduitString.Optional,
+            stripe: {
+                customerId: ConduitString.Optional,
+            },
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateCustomer', PaymentsCustomer.getInstance().fields),
+        'createCustomer'
+      ),
+      constructConduitRoute(
+        {
+          path: '/transactions',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetTransactions', {
+          transactionDocuments: [Transaction.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getTransactions'
+      ),
+      constructConduitRoute(
+        {
+          path: '/subscriptions',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetSubscriptions', {
+          subscriptionDocuments: [Subscription.getInstance().fields],
+          totalCount: ConduitNumber.Required,
+        }),
+        'getSubscriptions'
+      ),
+    ];
+  }
 
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+  async getProducts(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
     let identifier;
-    if(!isNil(search)){
-      identifier = escapeStringRegexp(search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options:'i'};
+    if (!isNil(call.request.params.search)) {
+      identifier = escapeStringRegexp(call.request.params.search);
+      query['name'] = { $regex: `.*${identifier}.*`, $options:'i'};
     }
     const productDocumentsPromise = Product.getInstance()
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
+        skip,
+        limit,
       );
     const totalCountPromise = Product.getInstance().countDocuments(query);
 
-    let errorMessage;
     const [productDocuments, totalCount] = await Promise.all([
       productDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return callback(null, { result: JSON.stringify({ productDocuments, totalCount }) });
+    return { productDocuments, totalCount };
   }
 
-  async getCustomers(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit,search } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
-
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
-    let query:any = {};
-    let identifier;
-    if(!isNil(search)){
-      identifier = escapeStringRegexp(search);
-      query['email'] =  { $regex: `.*${identifier}.*`, $options:'i'};
-    }
-    const customerDocumentsPromise = PaymentsCustomer.getInstance()
-      .findMany(
-        query,
-        undefined,
-        skipNumber,
-        limitNumber
-      );
-    const totalCountPromise = PaymentsCustomer.getInstance().countDocuments(query);
-
-    let errorMessage;
-    const [customerDocuments, totalCount] = await Promise.all([
-      customerDocumentsPromise,
-      totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    return callback(null, { result: JSON.stringify({ customerDocuments, totalCount }) });
-  }
-
-  async editProduct(call:RouterRequest,callback:RouterResponse){
-    const params = JSON.parse(call.request.params);
-    const id = params.id;
-    let errorMessage: string | null = null;
-    const productDocument = await Product.getInstance()
-      .findOne({ _id: id })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-    if (isNil(productDocument)) {
-      return callback({
-        code: status.INTERNAL,
-        message: 'Product not found',
-      });
-    }
-    ['name', 'value', 'currency','isSubscription','recurring','recurringCount','stripe'].forEach((key) => {
-      if (params[key] ) {
-          productDocument[key] = params[key];
-      }
-    });
-    const updatedProduct = await Product.getInstance()
-      .findByIdAndUpdate(id, productDocument)
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-
-    return callback(null, { result: JSON.stringify({ updatedProduct }) });
-  }
-
-  async createCustomer(call: RouterRequest, callback: RouterResponse){
-    const {
-      userId,
-      email,
-      phoneNumber,
-      buyerName,
-      address,
-      postCode,
-      stripe
-    } = JSON.parse(call.request.params);
-
-    if(isNil(userId) || isNil(email) || isNil(phoneNumber) ){
-      return callback({
-        code: status.INTERNAL,
-        message: 'userId,  email, phoneNumber are required'
-      })
-    }
-    let errorMessage: string | null = null;
-    const user = await User.getInstance()
-      .findOne({_id: userId})
-      .catch( (err:any) => errorMessage = err);
-
-    if(isNil(user)){
-      return callback({
-        code: status.INTERNAL,
-        message: 'User with id: ' + userId + ' does not exists'
-      });
-    }
-
-    let  customerDoc = {
-      userId,
-      email,
-      phoneNumber,
-      buyerName,
-      address,
-      postCode,
-      stripe
-    };
-
-    const customerExists = await PaymentsCustomer.getInstance()
-      .findOne({ userId })
-      .catch((error:any) => errorMessage = error);
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage
-      })
-    }
-    if(isNil(customerExists)) {
-
-      const createdCustomer = await PaymentsCustomer.getInstance()
-        .create(customerDoc)
-        .catch((error: any) => errorMessage = error);
-
-      if (!isNil(errorMessage)) {
-        return callback({
-          code: status.INTERNAL,
-          message: errorMessage
-        })
-      }
-      return callback(null,{ result: JSON.stringify(createdCustomer) })
-    }
-    else{
-      return callback({
-        code: status.INTERNAL,
-        message: 'customer with userId ' +  userId + ' already exists'
-      })
-    }
-  }
-
-
-  async createProduct(call: RouterRequest, callback: RouterResponse) {
-    const {
-      name,
-      value,
-      currency,
-      isSubscription,
-      recurring,
-      recurringCount,
-    } = JSON.parse(call.request.params);
-
-    if (isNil(name) || isNil(value) || isNil(currency)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'product name, value and currency are required',
-      });
-    }
-    if(!isNil(isSubscription)){
-      if(isNil(recurring)){
-        return callback({
-          code: status.INTERNAL,
-          message: 'recurring  must be provided!'
-        })
-      }
-    }
-    let errorMessage: string | null = null;
-
+  async createProduct(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let productDoc: any = {
-      name,
-      value,
-      currency,
-      isSubscription,
-      recurring,
-      recurringCount,
+      name: call.request.params.name,
+      currency: call.request.params.currency,
+      value: call.request.params.value,
+      recurring: call.request.params.recurring,
+      recurringCount: call.request.params.recurringCount,
+      isSubscription: call.request.params.isSubscription,
     };
 
-    if (isSubscription) {
-      if (isNil(recurring)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'recurring is required for subscription products',
-        });
+    if (call.request.params.isSubscription) {
+      if (isNil(call.request.params.recurring)) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'recurring is required for subscription products');
       }
-      if (
-        recurring !== 'day' &&
-        recurring !== 'week' &&
-        recurring !== 'month' &&
-        recurring !== 'year'
-      ) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'recurring must be one of [day, week, month, year]',
-        });
+      if (!['day', 'week', 'month', 'year'].includes(call.request.params.recurring)) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'recurring must be one of [day, week, month, year]');
       }
-
       if (!isNil(this.stripeHandlers)) {
         try {
           const res = await this.stripeHandlers.createSubscriptionProduct(
-            name,
-            currency,
-            value,
-            recurring,
-            recurringCount
+            productDoc.name,
+            productDoc.currency,
+            productDoc.value,
+            productDoc.recurring,
+            productDoc.recurringCount
           );
-
           productDoc.stripe = {};
           productDoc.stripe.subscriptionId = res.subscriptionId;
           productDoc.stripe.priceId = res.priceId;
         } catch (e) {
-          return callback({ code: status.INTERNAL, message: e });
+          throw new GrpcError(status.INTERNAL, e.message);
         }
       }
     }
 
     const product = await Product.getInstance()
       .create(productDoc)
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     this.grpcSdk.bus?.publish('payments:create:Product', JSON.stringify(productDoc));
 
-    return callback(null, { result: JSON.stringify(product) });
+    return product;
   }
 
-  async getSubscription(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit,populate } = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
+  async editProduct(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const productDocument = await Product.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(productDocument)) {
+      throw new GrpcError(status.NOT_FOUND, 'Product does not exist');
+    }
+    ['name', 'value', 'currency', 'isSubscription', 'recurring', 'recurringCount', 'stripe'].forEach((key) => {
+      if (call.request.params[key]) {
+        // @ts-ignore
+        productDocument[key] = call.request.params[key];
+      }
+    });
+    const updatedProduct = await Product.getInstance()
+      .findByIdAndUpdate(call.request.params.id, productDocument)
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { result: { updatedProduct } };
+  }
 
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
+  async getCustomers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    let query:any = {};
+    let identifier;
+    if (!isNil(call.request.params.search)) {
+      identifier = escapeStringRegexp(call.request.params.search);
+      query['email'] = { $regex: `.*${identifier}.*`, $options:'i'};
     }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
-    let query:any = {},populates;
-    if(!isNil(populate)){
-      populates = populateArray(populate);
-    }
-    const subscriptionDocumentsPromise = Subscription.getInstance()
+    const customerDocumentsPromise = PaymentsCustomer.getInstance()
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber,
-        undefined,
-        populates
+        skip,
+        limit,
       );
-    const totalCountPromise = Subscription.getInstance().countDocuments(query);
-
-    let errorMessage;
-    const [subscriptionDocuments, totalCount] = await Promise.all([
-      subscriptionDocumentsPromise,
+    const totalCountPromise = PaymentsCustomer.getInstance().countDocuments(query);
+    const [customerDocuments, totalCount] = await Promise.all([
+      customerDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    return callback(null, { result: JSON.stringify({ subscriptionDocuments, totalCount }) });
-
+    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { customerDocuments, totalCount };
   }
 
-  async getTransactions(call: RouterRequest, callback: RouterResponse){
-    const { skip, limit,customerId,productId} = JSON.parse(call.request.params);
-    let skipNumber = 0,
-      limitNumber = 25;
+  async createCustomer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const user = await User.getInstance().findOne({ _id: call.request.params.userId })
+    if (isNil(user)) {
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    }
+    let customerDoc = {
+      userId: call.request.params.userId,
+      email: call.request.params.email,
+      phoneNumber: call.request.params.phoneNumber,
+      buyerName: call.request.params.buyerName,
+      address: call.request.params.address,
+      postCode: call.request.params.postCode,
+      stripe: call.request.params.stripe,
+    };
+    const customerExists = await PaymentsCustomer.getInstance()
+      .findOne({ userId: call.request.params.userId });
+    if (!isNil(customerExists)) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Customer already exists');
+    }
+    return await PaymentsCustomer.getInstance()
+      .create(customerDoc)
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+  }
 
-    if (!isNil(skip)) {
-      skipNumber = Number.parseInt(skip as string);
-    }
-    if (!isNil(limit)) {
-      limitNumber = Number.parseInt(limit as string);
-    }
+  async getTransactions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let query:any = {};
-
-    if(!isNil(customerId)){
-      query['customerId'] = customerId
+    if (!isNil(call.request.params.customerId)) {
+      query['customerId'] = call.request.params.customerId;
     }
-    if(!isNil(productId)){
-      query['product'] = productId
+    if (!isNil(call.request.params.productId)) {
+      query['product'] = call.request.params.productId;
     }
     const transactionDocumentsPromise = Transaction.getInstance()
       .findMany(
         query,
         undefined,
-        skipNumber,
-        limitNumber
+        skip,
+        limit,
       );
     const totalCountPromise = Transaction.getInstance().countDocuments(query);
 
-    let errorMessage;
     const [transactionDocuments, totalCount] = await Promise.all([
       transactionDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    return callback(null, { result: JSON.stringify({ transactionDocuments, totalCount }) });
+    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
+    return { transactionDocuments, totalCount };
+  }
+
+  async getSubscriptions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    let query:any = {}, populates;
+    if (!isNil(call.request.params.populate)) {
+      populates = populateArray(call.request.params.populate);
+    }
+    const subscriptionDocumentsPromise = Subscription.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit,
+        undefined,
+        populates
+      );
+    const totalCountPromise = Subscription.getInstance().countDocuments(query);
+
+    const [subscriptionDocuments, totalCount] = await Promise.all([
+      subscriptionDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+
+    return { subscriptionDocuments, totalCount };
   }
 }

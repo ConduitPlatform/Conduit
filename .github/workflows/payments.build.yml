@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: fjogeleit/http-request-action@master
         with:
-          url: "http://20.101.9.248/payments/conduit-grp/"
+          url: "http://20.101.9.248/payments-provider/conduit-grp/"
           method: "POST"
           username: admin
           password: ${{ secrets.KUBECTLPROXY_PASSWORD }}

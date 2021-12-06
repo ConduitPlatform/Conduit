@@ -4,7 +4,7 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { DeclaredSchema } from '../../models';
+import { _DeclaredSchema } from '../../models';
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -74,7 +74,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
-    const Schema = this.mongoose.Schema;
     if (!this.models) {
       this.models = {};
     }
@@ -139,7 +138,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
    async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
-    if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
+    if (this.models![schemaName].originalSchema.schemaOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
     if(deleteData){
@@ -147,11 +146,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         .drop()
         .catch((e:any) => { throw new Error(e.message)});
     }
-    DeclaredSchema.getInstance()
+    _DeclaredSchema.getInstance()
       .findOne({ name: schemaName })
       .then( model => {
         if (model) {
-          DeclaredSchema.getInstance()
+          _DeclaredSchema.getInstance()
             .deleteOne({name: schemaName})
             .catch((err) => { throw new Error(err.message)})
         }

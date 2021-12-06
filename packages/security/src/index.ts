@@ -1,10 +1,11 @@
 import { ConduitCommons, IConduitSecurity } from '@quintessential-sft/conduit-commons';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { Admin } from './admin';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
 import { secretMigrate } from './migrations/Secret.migrate';
+import * as adminRoutes from './admin/routes';
+import * as models from './models';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
@@ -12,10 +13,9 @@ class SecurityModule extends IConduitSecurity {
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(conduit);
-
-    new Admin(conduit, grpcSdk);
+    this.registerSchemas();
+    this.registerAdminRoutes();
     const router = conduit.getRouter();
-
     let clientValidator: ClientValidator = new ClientValidator(
       grpcSdk.databaseProvider!,
       conduit
@@ -44,7 +44,21 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true
     );
-    secretMigrate(grpcSdk);
+    secretMigrate();
+  }
+
+  private registerAdminRoutes() {
+    this.conduit.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
+    this.conduit.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
+    this.conduit.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+  }
+
+  private registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
+      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
   }
 }
 

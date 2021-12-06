@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs';
+import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
+import { ConduitMiddleware } from '../interfaces/Middleware';
+import { ConduitRoute, ConduitRouteParameters } from '../interfaces/Route';
 import {
-  ConduitMiddleware,
-  ConduitRoute,
-  ConduitRouteParameters,
   ConduitSocket,
   ConduitSocketEvent,
   ConduitSocketParameters,
@@ -11,8 +11,7 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   SocketProtoDescription,
-} from '@quintessential-sft/conduit-commons';
-import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
+} from '../interfaces/Socket';
 
 let protoLoader = require('@grpc/proto-loader');
 
@@ -31,6 +30,7 @@ function getDescriptor(protofile: string): any {
 }
 
 export function grpcToConduitRoute(
+  routerName: string,
   request: any,
   moduleName?: string
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
@@ -40,7 +40,7 @@ export function grpcToConduitRoute(
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
   //this can break everything change it
-  while (Object.keys(routerDescriptor)[0] !== 'Router') {
+  while (Object.keys(routerDescriptor)[0] !== routerName) {
     routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];

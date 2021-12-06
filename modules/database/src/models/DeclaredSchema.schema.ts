@@ -31,24 +31,25 @@ const schemaOptions = {
 };
 const collectionName = undefined;
 
-export class DeclaredSchema extends ConduitActiveSchema<DeclaredSchema> {
-  private static _instance: DeclaredSchema;
+export class _DeclaredSchema extends ConduitActiveSchema<_DeclaredSchema> {
+  private static _instance: _DeclaredSchema;
   _id!: string;
-  name = '_DeclaredSchema';
+  name!: string;
   fields!: any;
+  modelOptions!: string;
   createdAt!: Date;
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, DeclaredSchema.name, schema, schemaOptions, collectionName);
+    super(database, _DeclaredSchema.name, schema, schemaOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (DeclaredSchema._instance) return DeclaredSchema._instance;
+    if (_DeclaredSchema._instance) return _DeclaredSchema._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    DeclaredSchema._instance = new DeclaredSchema(database);
-    return DeclaredSchema._instance;
+    _DeclaredSchema._instance = new _DeclaredSchema(database);
+    return _DeclaredSchema._instance;
   }
 }
