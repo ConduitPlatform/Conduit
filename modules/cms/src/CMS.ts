@@ -20,7 +20,7 @@ export class CMS extends ConduitServiceModule {
   async activate() {
     const self = this;
 
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database_provider');
     await this.grpcSdk.initializeEventBus();
     let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk);
     let schemaController = new SchemaController(

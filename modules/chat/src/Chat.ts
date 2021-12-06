@@ -124,7 +124,7 @@ export default class ChatModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database_provider');
     await this.grpcSdk.initializeEventBus();
     this.grpcSdk.bus?.subscribe('chat', (message: string) => {
       if (message === 'config-update') {

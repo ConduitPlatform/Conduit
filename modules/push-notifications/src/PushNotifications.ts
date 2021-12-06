@@ -53,7 +53,7 @@ export default class PushNotificationsModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database_provider');
     try {
       await this.grpcSdk.config.get('pushNotifications');
     } catch (e) {

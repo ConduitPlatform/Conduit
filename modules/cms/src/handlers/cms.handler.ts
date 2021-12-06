@@ -314,7 +314,7 @@ export class CmsHandlers {
   }
 
   private async initDb(grpcSdk: ConduitGrpcSdk) {
-    await grpcSdk.waitForExistence('database-provider');
+    await grpcSdk.waitForExistence('database_provider');
     this.database = grpcSdk.databaseProvider!;
   }
 }
