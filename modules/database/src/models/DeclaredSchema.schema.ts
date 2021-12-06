@@ -36,6 +36,7 @@ export class DeclaredSchema extends ConduitActiveSchema<DeclaredSchema> {
   _id!: string;
   name!: string;
   fields!: any;
+  modelOptions!: string;
   createdAt!: Date;
   updatedAt!: Date;
 
