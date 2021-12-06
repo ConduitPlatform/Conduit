@@ -352,7 +352,7 @@ export class AdminHandlers {
           }
         },
         new ConduitRouteReturnDefinition('CreateCustomEndpoint', CustomEndpoints.getInstance().fields),
-        'CreateCustomEndpoint'
+        'createCustomEndpoint'
       ),
       constructConduitRoute(
         {
