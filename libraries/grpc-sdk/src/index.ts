@@ -25,7 +25,7 @@ export default class ConduitGrpcSdk {
   private readonly _router: Router;
   private readonly _modules: any = {};
   private readonly _availableModules: any = {
-    'database-provider': DatabaseProvider,
+    'database_provider': DatabaseProvider,
     storage: Storage,
     email: Email,
     pushNotifications: PushNotifications,
@@ -87,8 +87,8 @@ export default class ConduitGrpcSdk {
   }
 
   get databaseProvider(): DatabaseProvider | null {
-    if (this._modules['database-provider']) {
-      return this._modules['database-provider'];
+    if (this._modules['database_provider']) {
+      return this._modules['database_provider'];
     } else {
       console.warn('Database provider not up yet!');
       return null;

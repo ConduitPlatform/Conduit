@@ -33,7 +33,8 @@ export function addServiceToServer(
     enums: String,
     defaults: true,
     oneofs: true,
-  });
+  })
+  ;
   let protoDescriptor = loadPackageDefinition(packageDefinition);
   let objs = descriptorObject.split('.');
   let descObj: any = protoDescriptor;

@@ -27,11 +27,13 @@ import * as models from './models';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
+import { AdminHandlers } from './admin/admin';
 
 const MODULE_NAME = 'database';
 
 export class DatabaseProvider extends ConduitServiceModule {
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
+  private _admin: AdminHandlers;
 
   constructor(protected readonly grpcSdk: ConduitGrpcSdk) {
     super(grpcSdk)
@@ -57,9 +59,9 @@ export class DatabaseProvider extends ConduitServiceModule {
 
   async initialize() {
     await this._activeAdapter.ensureConnected();
-    let grpcServer = new GrpcServer(process.env.SERVICE_URL);
-    this._port = (await grpcServer.createNewServer()).toString();
-    await grpcServer.addService(
+    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this._port = (await this.grpcServer.createNewServer()).toString();
+    await this.grpcServer.addService(
       path.resolve(__dirname, './database-provider.proto'),
       'databaseprovider.DatabaseProvider',
       {
@@ -78,7 +80,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         countDocuments: this.countDocuments.bind(this),
       }
     );
-    await grpcServer.start();
+    await this.grpcServer.start();
   }
 
   async activate() {
@@ -114,6 +116,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     });
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
     await this._activeAdapter.recoverSchemasFromDatabase();
+    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
   }
 
   /**

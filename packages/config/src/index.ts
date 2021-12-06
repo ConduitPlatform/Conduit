@@ -315,7 +315,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database_provider');
     this.grpcSdk.databaseProvider!.findOne('Config', {}).then((dbConfig) => {
       if (isNil(dbConfig)) throw new Error('Config not found in the database');
       if (!dbConfig['moduleConfigs']) {
@@ -488,13 +488,13 @@ export default class ConfigManager implements IConfigManager {
       }
     }
     if (
-      moduleName === 'database-provider' &&
-      this.registeredModules.has('database-provider')
+      moduleName === 'database_provider' &&
+      this.registeredModules.has('database_provider')
     ) {
       dbInit = true;
     }
     this.registeredModules.set(moduleName, moduleUrl);
-    if (moduleName === 'database-provider' && !dbInit) {
+    if (moduleName === 'database_provider' && !dbInit) {
       this.databaseCallback();
     }
     this.updateModuleHealth(moduleName, instancePeer);

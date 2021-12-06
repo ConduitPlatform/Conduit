@@ -5,15 +5,15 @@ import process from 'process';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
-let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'database-provider');
+let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'database_provider');
 let databaseProvider = new DatabaseProvider(grpcSdk);
 databaseProvider
   .initialize()
   .then(() => {
     let url =
-      (process.env.REGISTER_NAME === 'true' ? 'database-provider:' : '0.0.0.0:') +
+      (process.env.REGISTER_NAME === 'true' ? 'database_provider:' : '0.0.0.0:') +
       databaseProvider.port;
-    return grpcSdk.config.registerModule('database-provider', url);
+    return grpcSdk.config.registerModule('database_provider', url);
   })
   .catch((err: Error) => {
     console.log('Failed to initialize server');
