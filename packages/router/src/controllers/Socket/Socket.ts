@@ -12,11 +12,9 @@ import {
 } from '@quintessential-sft/conduit-commons';
 import { isNil } from 'lodash';
 import { ConduitRouter } from '../Router';
+import { SocketPush } from '../../models/SocketPush.model';
 
 export class SocketController extends ConduitRouter {
-  protected refreshRouter(): void {
-    throw new Error('Method not implemented.');
-  }
   private readonly httpServer: httpServer;
   private io: IOServer;
   private readonly options: Partial<ServerOptions>;
@@ -146,6 +144,22 @@ export class SocketController extends ConduitRouter {
           });
       });
     });
+  }
+
+  handleSocketPush(push: SocketPush) {
+    if (isInstanceOfEventResponse(push)) {
+      if (isNil(push.receivers) || push.receivers!.length === 0) {
+        this.io.emit(push.event, push.data);
+      } else {
+        this.io.to(push.receivers).emit(push.event, push.data);
+      }
+    } else {
+      throw new Error('Cannot join room in this context');
+    }
+  }
+
+  protected refreshRouter(): void {
+    throw new Error('Method not implemented.');
   }
 
   private handleResponse(res: EventResponse | JoinRoomResponse, socket: Socket) {

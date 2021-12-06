@@ -21,6 +21,14 @@ service Admin {
 
 service Router {
     rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+    rpc SocketPush (SocketData) returns (Empty);
+}
+
+message SocketData {
+    string event = 1;
+    string data = 2;
+    repeated string receivers = 3;
+    repeated string rooms = 4;
 }
 
 message RegisterAdminRouteRequest {
