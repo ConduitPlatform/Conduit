@@ -11,6 +11,7 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { ChatRoutes } from './routes/Routes';
 import * as models from './models';
+import { ChatMessage, ChatRoom } from './models';
 import { AdminHandlers } from './admin/admin';
 import { validateUsersInput } from './utils';
 
@@ -30,6 +31,7 @@ export default class ChatModule extends ConduitServiceModule {
         setConfig: this.setConfig.bind(this),
         createRoom: this.createRoom.bind(this),
         deleteRoom: this.deleteRoom.bind(this),
+        sendMessage: this.sendMessage.bind(this),
       }
     );
     await this.grpcServer.start();
@@ -78,6 +80,50 @@ export default class ChatModule extends ConduitServiceModule {
         participants: (room as models.ChatRoom).participants,
       }),
     });
+  }
+
+  async sendMessage(call: any, callback: any) {
+    const userId = call.request.userId;
+    const [roomId, message] = call.request;
+
+    let errorMessage: string | null = null;
+    const room = await ChatRoom.getInstance()
+      .findOne({ _id: roomId })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
+    if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
+      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
+    }
+
+    ChatMessage.getInstance()
+      .create({
+        message,
+        senderUser: userId,
+        room: roomId,
+        readBy: [userId],
+      })
+      .then(() => {
+        return this.grpcSdk.router.socketPush({
+          event: 'message',
+          receivers: [roomId],
+          rooms: [],
+          data: JSON.stringify({ sender: userId, message, room: roomId }),
+        });
+      })
+      .then(() => {
+        callback(null, null);
+      })
+      .catch((e: Error) => {
+        callback({
+          code: status.INTERNAL,
+          message: e.message,
+        });
+      });
   }
 
   async deleteRoom(call: any, callback: any) {

@@ -8,6 +8,7 @@ import {
 } from '@quintessential-sft/conduit-commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
+import { SocketPush } from '../models/SocketPush.model';
 
 export class ConduitRoutingController {
   private _restRouter: RestController;
@@ -86,5 +87,9 @@ export class ConduitRoutingController {
   cleanupRoutes(routes: any[]) {
     this._graphQLRouter?.cleanupRoutes(routes);
     this._restRouter.cleanupRoutes(routes);
+  }
+
+  async socketPush(data: SocketPush) {
+    await this._socketRouter?.handleSocketPush(data);
   }
 }

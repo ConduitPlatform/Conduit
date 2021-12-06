@@ -11,6 +11,7 @@ import {
 } from '@quintessential-sft/conduit-commons';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { SocketPush } from './models/SocketPush.model';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -39,6 +40,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     var router = protoDescriptor.conduit.core.Router;
     server.addService(router.service, {
       registerConduitRoute: this.registerGrpcRoute.bind(this),
+      socketPush: this.socketPush.bind(this),
     });
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');
@@ -198,6 +200,25 @@ export class ConduitDefaultRouter implements IConduitRouter {
     });
     this._grpcRoutes[url] = routes;
     this.cleanupRoutes();
+  }
+
+  async socketPush(call: any, callback: any) {
+    try {
+      let socketData: SocketPush = {
+        event: call.request.event,
+        data: JSON.parse(call.request.data),
+        receivers: call.request.receivers,
+        rooms: call.request.rooms,
+      };
+      await this._internalRouter.socketPush(socketData);
+    } catch (err) {
+      console.error(err);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
+
+    //todo definitely missing an error handler here
+    //perhaps wrong(?) we send an empty response
+    callback(null, null);
   }
 
   cleanupRoutes() {

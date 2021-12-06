@@ -14,6 +14,12 @@ message CreateRoomRequest {
   repeated string participants = 2;
 }
 
+message SendMessageRequest {
+  string message = 1;
+  string userId = 2;
+  string roomId = 3;
+}
+
 message DeleteRoomRequest {
   string id = 1;
 }
@@ -27,9 +33,12 @@ message Room{
 message GetRoomResponse {
   repeated Room rooms = 1;
 }
+message Empty {
+}
 
 service Chat {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc CreateRoom(CreateRoomRequest) returns (GetRoomResponse);
   rpc DeleteRoom(DeleteRoomRequest) returns (GetRoomResponse);
+  rpc SendMessage(SendMessageRequest) returns (Empty);
 }

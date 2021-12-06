@@ -3,7 +3,7 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
 import fs from 'fs';
 import { SocketProtoDescription } from '../../interfaces';
-import { RouterClient } from '../../protoUtils/core';
+import { RouterClient, SocketData } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
@@ -112,6 +112,18 @@ export class Router extends ConduitModule<RouterClient> {
     };
     return new Promise((resolve, reject) => {
       this.client?.registerConduitRoute(request, (err: any, res: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve('OK');
+        }
+      });
+    });
+  }
+
+  socketPush(data: SocketData) {
+    return new Promise((resolve, reject) => {
+      this.client?.socketPush(data, (err: any, res: any) => {
         if (err) {
           reject(err);
         } else {
