@@ -62,7 +62,7 @@ export class CustomEndpointsAdmin {
     if (name.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'name must not be empty');
     }
-    if (operation < 0 || operation > 3) {
+    if (operation < 0 || operation > 4) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'operation is not valid');
     }
     if (operation !== OperationsEnum.POST && isNil(query)) {
