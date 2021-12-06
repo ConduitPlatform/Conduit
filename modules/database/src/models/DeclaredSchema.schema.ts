@@ -34,7 +34,7 @@ const collectionName = undefined;
 export class DeclaredSchema extends ConduitActiveSchema<DeclaredSchema> {
   private static _instance: DeclaredSchema;
   _id!: string;
-  name = '_DeclaredSchema';
+  name!: string;
   fields!: any;
   createdAt!: Date;
   updatedAt!: Date;
