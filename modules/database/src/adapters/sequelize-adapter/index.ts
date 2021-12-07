@@ -4,7 +4,7 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { DeclaredSchema } from '../../models';
+import { _DeclaredSchema } from '../../models';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
@@ -47,7 +47,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       this
     );
     await this.models[schema.name].sync();
-    await this.saveSchemaToDatabase(schema);
+    if (schema.name !== '_DeclaredSchema') {
+      await this.saveSchemaToDatabase(schema);
+    }
     return this.models![schema.name];
   }
 
@@ -78,11 +80,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (deleteData) {
       await this.models![schemaName].model.drop()
     }
-    DeclaredSchema.getInstance()
+    _DeclaredSchema.getInstance()
       .findOne({ name: schemaName })
       .then( model => {
         if (model) {
-          DeclaredSchema.getInstance()
+          _DeclaredSchema.getInstance()
             .deleteOne({name: schemaName})
             .catch((err) => { throw new Error(err.message)})
         }

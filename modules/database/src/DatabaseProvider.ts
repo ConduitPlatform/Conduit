@@ -114,7 +114,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
+    await this._activeAdapter.createSchemaFromAdapter(models._DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
     await this._activeAdapter.recoverSchemasFromDatabase();
     this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
   }

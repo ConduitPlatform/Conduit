@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ChatClient, GetRoomResponse, SetConfigResponse } from '../../protoUtils/chat';
+import {
+  ChatClient,
+  GetRoomResponse,
+  SendMessageRequest,
+  SetConfigResponse,
+} from '../../protoUtils/chat';
 import { ServiceError } from '@grpc/grpc-js';
 
 export class Chat extends ConduitModule<ChatClient> {
@@ -20,6 +25,18 @@ export class Chat extends ConduitModule<ChatClient> {
           }
         }
       );
+    });
+  }
+
+  sendMessage(messageData: SendMessageRequest): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.client?.sendMessage(messageData, (err: ServiceError | null, res) => {
+        if (err || !res) {
+          reject(err || 'Something went wrong');
+        } else {
+          resolve('Ok');
+        }
+      });
     });
   }
 
