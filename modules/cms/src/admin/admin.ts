@@ -19,7 +19,7 @@ import { SchemaDefinitions, CustomEndpoints } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
-  private readonly documentsAdmin: DocumentsAdmin;
+  private readonly  documentsAdmin: DocumentsAdmin;
   private readonly customEndpointsAdmin: CustomEndpointsAdmin;
 
   constructor(
@@ -225,7 +225,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/content/:schemaName',
+          path: '/content/:schemaName/get',
           action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
