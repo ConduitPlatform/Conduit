@@ -30,6 +30,8 @@ export class CustomEndpointsAdmin {
   }
 
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     let identifier, query : any = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
@@ -38,8 +40,16 @@ export class CustomEndpointsAdmin {
     if (!isNil(call.request.params.operation)) {
       query['operation'] = call.request.params.operation;
     }
-    const customEndpointsDocs = await CustomEndpoints.getInstance().findMany(query);
-    return { results: customEndpointsDocs }; // TODO: unnest (frontend compat)
+    const customEndpoints = await CustomEndpoints.getInstance()
+      .findMany(
+        query,
+        undefined,
+        skip,
+        limit,
+      );
+    const count: number = await CustomEndpoints.getInstance().countDocuments(query);
+
+    return { customEndpoints, count };
   }
 
   async createCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
