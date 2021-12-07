@@ -7,17 +7,17 @@ import { ConduitModel } from '@quintessential-sft/conduit-commons';
 // - Implement SwaggerParser
 // - Test SwaggerParser
 
-// TODO: Is this GraphQl-specific? Move into class or abstract
-function constructName(parent: string, child: string) {
-  let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
-  return parentName + child.slice(0, 1).toUpperCase() + child.slice(1);
-}
+export abstract class ConduitParser<ParseResult, ProcessingObject> {
+  result!: ParseResult;
 
-export abstract class ConduitParser<ParseResult> {
+  // -----------------------------------------------------
+  abstract extractTypes(
+    name: string,
+    fields: ConduitModel | string,
+    _input?: boolean
+  ): ParseResult;
 
   protected abstract getType(conduitType: any): string | any;
-  protected abstract getInitializedResult(): ParseResult; // provides an (empty) initialized object of generic type ParseResult
-  protected constructResolver(result: ParseResult, parent: string, fieldName: string, isRelation?: boolean) {} // overloaded in GraphQlParser
 
   // TODO: Refactor methods, removing GraphQl specificities
   // extractTypes():
@@ -36,156 +36,194 @@ export abstract class ConduitParser<ParseResult> {
   // extractTypesInternal():
   //  - return values are GraphQl-return-type-specific
   //  - ... TODO find more
-  // -----------------------------------------------------
-  extractTypes(
+
+  protected abstract getInitializedResult(): ParseResult; // provides an (empty) initialized object of generic type ParseResult
+  protected abstract getProcessingObject(
+    input: boolean,
     name: string,
-    fields: ConduitModel | string,
-    _input?: boolean
-  ): ParseResult {
-    let result = this.getInitializedResult();
-    let input = !!_input;
-    result.typeString = this.extractTypesInternal(result, input, name, fields); // TODO: GraphQl-return-type-specific assignment. Have extractTypesInternal update the entire result or sth.
-    return result;
-  }
+    isArray?: boolean
+  ): ProcessingObject; // provides an (empty) initialized object of generic type ParseResult
+  protected abstract finalizeProcessingObject(object: ProcessingObject): ProcessingObject; // provides an (empty) initialized object of generic type ParseResult
 
-  private addToRelation(result: ParseResult, name: string) {
-    if (result.relationTypes.indexOf(name) === -1) {
-      result.relationTypes.push(name);
-    }
-  }
+  protected abstract getResultFromString(
+    processingObject: ProcessingObject,
+    name: string,
+    value: any,
+    isRequired: boolean,
+    isArray?: boolean
+  ): void;
 
-  private arrayHandler(result: ParseResult, input: boolean, name: string, field: string, value: Array<any>) {
-    let typeString = '';
-    let finalString = '';
-    // if array contains simply a type
-    if (typeof value[0] === 'string') {
-      typeString += field + ': [' + this.getType(value[0]) + ']' + ' ';
-    } else if (value[0].type) {
-      // if array contains a model
-      if (value[0].type === 'Relation') {
-        this.addToRelation(result, value[0].model);
-        this.constructResolver(result, name, field, true);
-        typeString +=
-          field +
-          ': [' +
-          (input ? 'ID' : value[0].model) +
-          ']' +
-          (value[0].required ? '!' : '') +
-          ' ';
-      } else if (typeof value[0].type === 'string') {
-        typeString +=
-          field +
-          ': [' +
-          this.getType(value[0].type) +
-          (value[0].required ? '!' : '') +
-          '] ';
-      } else if (Array.isArray(value[0].type)) {
-        let parseResult = this.arrayHandler(result, input, name, field, value[0].type as Array<any>);
-        typeString +=
-          parseResult.typeString.slice(0, parseResult.typeString.length - 1) +
-          (value[0].required ? '!' : '') +
-          ' ';
-        finalString += parseResult.finalString;
-      }
-      // if the array has "type" but is an object
-      else {
-        let nestedName = constructName(name, field);
-        this.constructResolver(result, name, field);
-        typeString +=
-          field + ': [' + nestedName + ']' + ' ' + (value[0].required ? '!' : '') + ' ';
-        finalString += ' ' + this.extractTypesInternal(result, input, nestedName, value[0].type) + ' ';
-      }
-    }
-    // if array contains an object
-    else {
-      let nestedName = constructName(name, field);
-      this.constructResolver(result, name, field);
-      typeString += field + ': [' + nestedName + ']' + ' ';
-      finalString += ' ' + this.extractTypesInternal(result, input, nestedName, value[0]) + ' ';
-    }
-    return { typeString, finalString };
-  }
+  protected abstract getResultFromObject(
+    processingObject: ProcessingObject,
+    input: boolean,
+    name: string,
+    value: any,
+    isRequired: boolean,
+    isArray?: boolean
+  ): void;
 
-  private extractTypesInternal(result: ParseResult, input: boolean, name: string, fields: ConduitModel | string): string {
-    let finalString = '';
-    let typeString = ` ${input ? 'input' : 'type'} ${name} {`;
+  protected abstract getResultFromArray(
+    processingObject: ProcessingObject,
+    input: boolean,
+    resolverName: string,
+    name: string,
+    value: any[],
+    isRequired: boolean,
+    nestedType?: boolean
+  ): void;
+
+  protected abstract getResultFromRelation(
+    processingObject: ProcessingObject,
+    input: boolean,
+    resolverName: string,
+    name: string,
+    value: any,
+    isRequired: boolean,
+    isArray?: boolean
+  ): void;
+
+  protected extractTypesInternal(
+    input: boolean,
+    name: string,
+    fields: ConduitModel | string
+  ): ProcessingObject {
+    let processingObject: ProcessingObject = this.getProcessingObject(input, name);
     if (typeof fields === 'string') {
-      typeString += 'result: ' + this.getType(fields) + '!';
+      this.getResultFromString(processingObject, 'result', fields, false);
     } else {
       for (let field in fields) {
         if (!fields.hasOwnProperty(field)) continue;
         // if field is simply a type
         if (typeof fields[field] === 'string') {
-          typeString += field + ': ' + this.getType(fields[field]) + ' ';
+          this.getResultFromString(processingObject, field, fields[field], false);
         }
         // if field is an array
         else if (Array.isArray(fields[field])) {
-          let parseResult = this.arrayHandler(result, input, name, field, fields[field] as Array<any>);
-          typeString += parseResult.typeString;
-          finalString += parseResult.finalString;
+          this.getResultFromArray(
+            processingObject,
+            input,
+            name,
+            field,
+            fields[field] as Array<any>,
+            false
+          );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
           if ((fields[field] as any).type) {
             // if type is simply a type
             if (typeof (fields[field] as any).type === 'string') {
               if ((fields[field] as any).type === 'Relation') {
-                this.addToRelation(result, (fields[field] as any).model);
-                this.constructResolver(result, name, field, true);
-                typeString +=
-                  field +
-                  ': ' +
-                  (input ? 'ID' : (fields[field] as any).model) +
-                  ((fields[field] as any).required ? '!' : '') +
-                  ' ';
+                this.getResultFromRelation(
+                  processingObject,
+                  input,
+                  name,
+                  field,
+                  (fields[field] as any).model,
+                  (fields[field] as any).required
+                );
               } else {
-                typeString +=
-                  field +
-                  ': ' +
-                  this.getType((fields[field] as any).type) +
-                  ((fields[field] as any).required ? '!' : '') +
-                  ' ';
+                this.getResultFromString(
+                  processingObject,
+                  field,
+                  (fields[field] as any).type,
+                  (fields[field] as any).required
+                );
               }
             }
             // if type is an array
             else if (Array.isArray((fields[field] as any).type)) {
-              let parseResult = this.arrayHandler(
-                result,
+              this.getResultFromArray(
+                processingObject,
                 input,
                 name,
                 field,
-                (fields[field] as any).type as Array<any>
+                (fields[field] as any).type as Array<any>,
+                (fields[field] as any).required,
+                true
               );
-              typeString +=
-                parseResult.typeString.slice(0, parseResult.typeString.length - 1) +
-                ((fields[field] as any).required ? '!' : '') +
-                ' ';
-              finalString += parseResult.finalString;
             } else {
-              // object of some kind
-              let nestedName = constructName(name, field);
-              this.constructResolver(result, name, field);
-              typeString +=
-                field +
-                ': ' +
-                nestedName +
-                ((fields[field] as any).required ? '!' : '') +
-                ' ';
-              finalString +=
-                ' ' + this.extractTypesInternal(result, input, nestedName, (fields[field] as any).type) + ' ';
+              this.getResultFromObject(
+                processingObject,
+                input,
+                name,
+                (fields[field] as any).type,
+                (fields[field] as any).required
+              );
             }
           } else {
-            // object of some kind
-            let nestedName = constructName(name, field);
-            this.constructResolver(result, name, field);
-            typeString += field + ': ' + nestedName + ' ';
-            finalString +=
-              ' ' + this.extractTypesInternal(result, input, nestedName, fields[field] as any) + ' ';
+            this.getResultFromObject(
+              processingObject,
+              input,
+              name,
+              fields[field] as any,
+              false
+            );
           }
         }
       }
     }
-    typeString += '} \n';
-    finalString += typeString;
-    return finalString;
+
+    processingObject = this.finalizeProcessingObject(processingObject);
+    return processingObject;
+  }
+
+  protected arrayHandler(
+    input: boolean,
+    name: string,
+    field: string,
+    value: Array<any>
+  ): ProcessingObject {
+    let processingObject: ProcessingObject = this.getProcessingObject(input, name, true);
+    // if array contains simply a type
+    if (typeof value[0] === 'string') {
+      this.getResultFromString(processingObject, field, value[0], false, true);
+    } else if (value[0].type) {
+      // if array contains a model
+      if (value[0].type === 'Relation') {
+        this.getResultFromRelation(
+          processingObject,
+          input,
+          name,
+          field,
+          value[0].model,
+          value[0].required,
+          true
+        );
+      } else if (typeof value[0].type === 'string') {
+        this.getResultFromString(
+          processingObject,
+          field,
+          value[0].type,
+          value[0].required,
+          true
+        );
+      } else if (Array.isArray(value[0].type)) {
+        this.getResultFromArray(
+          processingObject,
+          input,
+          name,
+          field,
+          value[0].type as Array<any>,
+          value[0].required,
+          true
+        );
+      }
+      // if the array has "type" but is an object
+      else {
+        this.getResultFromObject(
+          processingObject,
+          input,
+          name,
+          value[0].type,
+          value[0].required,
+          true
+        );
+      }
+    }
+    // if array contains an object
+    else {
+      this.getResultFromObject(processingObject, input, name, value[0], false, true);
+    }
+    return processingObject;
   }
 }
