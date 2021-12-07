@@ -225,7 +225,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/content/:schemaName',
+          path: '/query/:schemaName',
           action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
