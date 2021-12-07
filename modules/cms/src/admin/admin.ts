@@ -19,7 +19,7 @@ import { SchemaDefinitions, CustomEndpoints } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
-  private readonly  documentsAdmin: DocumentsAdmin;
+  private readonly documentsAdmin: DocumentsAdmin;
   private readonly customEndpointsAdmin: CustomEndpointsAdmin;
 
   constructor(
