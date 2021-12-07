@@ -328,9 +328,8 @@ export class AdminHandlers {
           }
         },
         new ConduitRouteReturnDefinition('GetCustomEndpoints', {
-          results: { // TODO: unnest (frontend compat)
-            customEndpointsDocs: [CustomEndpoints.getInstance().fields],
-          }
+          customEndpoints: [CustomEndpoints.getInstance().fields],
+          count: ConduitNumber.Required,
         }),
         'getCustomEndpoints'
       ),
