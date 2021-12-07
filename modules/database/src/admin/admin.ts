@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest, 
   GrpcError,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { DeclaredSchema } from '../models';
+import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
 
 export class AdminHandlers {
@@ -44,7 +44,7 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemas', DeclaredSchema.getInstance().fields),
+        new ConduitRouteReturnDefinition('GetDeclaredSchemas', _DeclaredSchema.getInstance().fields),
         'getDeclaredSchemas',
       ),
     ];
@@ -54,7 +54,7 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: any = {};
-    const declaredSchemasDocumentsPromise = DeclaredSchema.getInstance()
+    const declaredSchemasDocumentsPromise = _DeclaredSchema.getInstance()
       .findMany(
         query,
         undefined,
@@ -62,7 +62,7 @@ export class AdminHandlers {
         limit,
         undefined,
       );
-    const totalCountPromise = DeclaredSchema.getInstance().countDocuments(query);
+    const totalCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
 
     const [DeclaredSchemasDocuments, totalCount] = await Promise.all([
       declaredSchemasDocumentsPromise,
