@@ -288,7 +288,7 @@ export class CustomEndpointsAdmin {
     delete params.id;
     Object.keys(params).forEach((key) => {
       // @ts-ignore
-      found[key] = params[key]; // todo: wtf
+      found[key] = params[key];
     });
     found.returns = findSchema.name;
     found.selectedSchemaName = findSchema.name;
