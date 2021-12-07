@@ -138,7 +138,7 @@ export class AdminHandlers {
       constructConduitRoute(
         {
           path: '/schemas/:id',
-          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -356,7 +356,7 @@ export class AdminHandlers {
       constructConduitRoute(
         {
           path: '/customEndpoints/:id',
-          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },

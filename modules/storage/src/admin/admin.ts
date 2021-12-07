@@ -112,7 +112,7 @@ export class AdminRoutes {
       constructConduitRoute(
         {
           path: '/file/:id',
-          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },

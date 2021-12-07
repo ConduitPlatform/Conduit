@@ -92,7 +92,7 @@ export class AdminHandlers {
       constructConduitRoute(
         {
           path: '/templates/:id',
-          action: ConduitRouteActions.UPDATE, // works as PATCH (frontend compat)
+          action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
