@@ -12,7 +12,8 @@ All notable changes to this project will be documented in this file. See [standa
 
 
 ### Bug Fixes
-
+* **security:** secret migration not using the proper regex ([c05843d7](https://github.com/Quintessential-SFT/conduit/pull/486/commits/c05843d761b8abcdf81f7e4de48bb309feb86df8))
+* **grpc-sdk:** chat not exporting send message ([7a80040](https://github.com/Quintessential-SFT/conduit/commit/7a80040945698e639c10382e006eef044ee44916))
 * **authentication:** searching with id now is supported ([c03fe4c](https://github.com/Quintessential-SFT/conduit/commit/c03fe4c06218c69f52153d11c09808f0ee7922ef))
 * **auth:** was searching by wrong field. ([512259a](https://github.com/Quintessential-SFT/conduit/commit/512259a05611b2c6960a34981c5f23be0c63aafc))
 * **build-errors:** fixed 3 build errors ([7cb467f](https://github.com/Quintessential-SFT/conduit/commit/7cb467fad68dc229e2281b3e0f687e4e8e629cdf))

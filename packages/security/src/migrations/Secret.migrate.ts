@@ -9,7 +9,8 @@ export async function secretMigrate() {
     {
       clientSecret: {
         $not: {
-          $regex: '$2b.*',
+          $regex: '^\\$2b.*',
+          $options: 'i',
         },
       },
     },
