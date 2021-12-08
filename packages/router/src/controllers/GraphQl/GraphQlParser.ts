@@ -19,7 +19,6 @@ export interface ProcessingObject {
 }
 
 export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> {
-  // TODO: Is this GraphQl-specific? Move into class or abstract
   constructName(parent: string, child: string) {
     let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
     return parentName + child.slice(0, 1).toUpperCase() + child.slice(1);
@@ -32,7 +31,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   ): ParseResult {
     this.result = this.getInitializedResult();
     let input = !!_input;
-    this.result.typeString = super.extractTypesInternal(input, name, fields).finalString; // TODO: GraphQl-return-type-specific assignment. Have extractTypesInternal update the entire result or sth.
+    this.result.typeString = super.extractTypesInternal(input, name, fields).finalString;
     return this.result;
   }
 

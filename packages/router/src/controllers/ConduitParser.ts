@@ -1,8 +1,6 @@
 import { ConduitModel } from '@quintessential-sft/conduit-commons';
 
 // TODO:
-// - Abstract GraphQL stuff into ConduitParser
-// - Implement GraphQlParser
 // - Test GraphQlParser
 // - Implement SwaggerParser
 // - Test SwaggerParser
@@ -10,7 +8,6 @@ import { ConduitModel } from '@quintessential-sft/conduit-commons';
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
 
-  // -----------------------------------------------------
   abstract extractTypes(
     name: string,
     fields: ConduitModel | string,
@@ -19,31 +16,15 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   protected abstract getType(conduitType: any): string | any;
 
-  // TODO: Refactor methods, removing GraphQl specificities
-  // extractTypes():
-  //  - Choose your poison:
-  //    a) result.typeString = this.extractTypesInternal() <-- update the latter to be result type agnostic, fixing the assignment
-  //     - pros: extractTypesInternal has to change either way
-  //     - cons: we preserve an initializer abstraction (getInitializedResult)
-  //    b) make entirely abstract
-  //     - pros: can now remove getInitializedResult() abstraction
-  //     - cons: this is our entry point, abstraction feels meh
-  // addToRelation():
-  //  - make entirely abstract
-  // arrayHandler():
-  //  - return values are GraphQl-return-type-specific
-  //  - ... TODO find more
-  // extractTypesInternal():
-  //  - return values are GraphQl-return-type-specific
-  //  - ... TODO find more
-
   protected abstract getInitializedResult(): ParseResult; // provides an (empty) initialized object of generic type ParseResult
+
   protected abstract getProcessingObject(
     input: boolean,
     name: string,
     isArray?: boolean
-  ): ProcessingObject; // provides an (empty) initialized object of generic type ParseResult
-  protected abstract finalizeProcessingObject(object: ProcessingObject): ProcessingObject; // provides an (empty) initialized object of generic type ParseResult
+  ): ProcessingObject;
+
+  protected abstract finalizeProcessingObject(object: ProcessingObject): ProcessingObject;
 
   protected abstract getResultFromString(
     processingObject: ProcessingObject,
@@ -162,7 +143,6 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
         }
       }
     }
-
     processingObject = this.finalizeProcessingObject(processingObject);
     return processingObject;
   }
