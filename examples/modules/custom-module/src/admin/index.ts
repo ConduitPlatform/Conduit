@@ -12,7 +12,7 @@ export class AdminHandlers {
     const self = this;
 
     // wait for the existence of the database module before setting the variable
-    grpcSdk.waitForExistence('database_provider').then(() => {
+    grpcSdk.waitForExistence('database').then(() => {
       self.database = self.grpcSdk.databaseProvider;
     });
     // load the proto file for the admin routes

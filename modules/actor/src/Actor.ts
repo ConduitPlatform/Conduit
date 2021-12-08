@@ -31,7 +31,7 @@ export default class ActorModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database_provider');
+    await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
     await this.grpcSdk.bus?.subscribe('actor', (message: string) => {
       if (message === 'config-update') {

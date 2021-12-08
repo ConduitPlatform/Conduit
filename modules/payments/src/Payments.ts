@@ -48,7 +48,7 @@ export default class PaymentsModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database_provider');
+    await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
     this.grpcSdk.bus?.subscribe('payments', (message: string) => {
       if (message === 'config-update') {

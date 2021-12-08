@@ -35,7 +35,7 @@ export default class FormsModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database_provider');
+    await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.waitForExistence('email');
     await this.grpcSdk.initializeEventBus();
 

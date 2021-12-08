@@ -53,7 +53,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
   publishSchema(schema: any) {
     let sendingSchema = JSON.stringify(schema);
-    this.grpcSdk.bus!.publish('database_provider', sendingSchema);
+    this.grpcSdk.bus!.publish('database', sendingSchema);
     console.log('Updated state');
   }
 
@@ -86,10 +86,10 @@ export class DatabaseProvider extends ConduitServiceModule {
   async activate() {
     const self = this;
     await this.grpcSdk.initializeEventBus();
-    self.grpcSdk.bus?.subscribe('database_provider', (message: string) => {
+    self.grpcSdk.bus?.subscribe('database', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
-          this.grpcSdk.bus!.publish('database_provider', JSON.stringify(k));
+          this.grpcSdk.bus!.publish('database', JSON.stringify(k));
         });
         return;
       }
