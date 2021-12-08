@@ -26,7 +26,7 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getDeclaredSchemas: this.getDeclaredSchemas.bind(this),
-        getDeclaredSchemaExtensions: this.getDeclaredSchemaExtensions.bind(this),
+        getDeclaredSchemasExtensions: this.getDeclaredSchemasExtensions.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -58,11 +58,11 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemaExtensions', {
+        new ConduitRouteReturnDefinition('GetDeclaredSchemasExtensions', {
           declaredSchemasExtensions: [TYPE.JSON], // Swagger parser inconsistency
           totalCount: ConduitNumber.Required,
         }),
-        'getDeclaredSchemaExtensions',
+        'getDeclaredSchemasExtensions',
       ),
     ];
   }
@@ -91,7 +91,7 @@ export class AdminHandlers {
     return { declaredSchemasDocuments, totalCount };
   }
 
-  async getDeclaredSchemaExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getDeclaredSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: any = {};
