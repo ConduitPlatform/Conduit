@@ -283,7 +283,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
           bodyParams: {
-            changedDocument: ConduitString.Required,
+            changedDocument: ConduitJson.Required,
           },
         },
         new ConduitRouteReturnDefinition('EditDocument', TYPE.JSON),
