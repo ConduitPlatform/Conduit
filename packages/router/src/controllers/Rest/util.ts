@@ -271,3 +271,17 @@ function extractReturnPropertiesFromType(returnDefinition: string) {
 
   return res;
 }
+
+// TEST
+import { ConduitNumber } from '@quintessential-sft/conduit-commons';
+console.log(extractRouteReturnProperties({
+  name: ConduitNumber.Required,
+  // testArray: [{type: 'Relation', model: 'User', required: true}],
+  // testArray2: [{type: 'Relation', model: 'User', required: false}],
+  // testArray3: [{type: [{type: TYPE.String, required: true}], required: true}],
+  likes: {type: [TYPE.String]},
+  testObj: {type: {paparia: TYPE.String, poutses: TYPE.Number}, required: true},
+  dislikes: {type: [{type: TYPE.Number, required: true}]}, // currently is interpreted as array required, when in reality the value inside is required
+  // // dislikes2: {type: [{type: TYPE.Number, required: true}], required: true}, //currently not supported properly
+  friends: [{username: TYPE.String, age: TYPE.Number, posts: {type: 'Relation', model: 'Posts'}}]
+}));

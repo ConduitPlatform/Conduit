@@ -1,8 +1,9 @@
 import { ConduitRoute, ConduitRouteActions } from '@quintessential-sft/conduit-commons';
-import { extractRouteReturnProperties } from './util';
+import { SwaggerParser } from './SwaggerParser';
 
 export class SwaggerGenerator {
   private _swaggerDoc: any;
+  private _parser: SwaggerParser;
 
   constructor() {
     this._swaggerDoc = {
@@ -32,6 +33,7 @@ export class SwaggerGenerator {
         },
       },
     };
+    this._parser = new SwaggerParser();
   }
 
   private _extractMethod(action: string) {
@@ -189,7 +191,7 @@ export class SwaggerGenerator {
 
     routeDoc.responses[200].content[
       'application/json'
-    ].schema = extractRouteReturnProperties(route.returnTypeFields);
+    ].schema = this._parser.extractTypes(route.returnTypeName, route.returnTypeFields);
 
     let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
