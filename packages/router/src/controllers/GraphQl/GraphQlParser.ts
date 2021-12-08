@@ -87,7 +87,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject.typeString +=
       `${name}: ${isArray ? '[' : ''}` +
       this.getType(value) +
-      `${isArray ? `] ${isRequired ? '!' : ''}` : ''} `;
+      `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
   }
 
   protected getResultFromObject(
@@ -105,9 +105,9 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject.typeString +=
       fieldName +
       ': ' +
-      ` ${isArray ? '[' : ''}` +
+      `${isArray ? '[' : ''}` +
       nestedName +
-      `${isArray ? `] ${isRequired ? '!' : ''}` : ''} `;
+      `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
     processingObject.finalString +=
       ' ' + this.extractTypesInternal(input, nestedName, value).finalString + ' ';
   }
@@ -147,9 +147,9 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject.typeString +=
       name +
       ': ' +
-      ` ${isArray ? '[' : ''}` +
+      `${isArray ? '[' : ''}` +
       (input ? 'ID' : value) +
-      ` ${isArray ? ']' : ''}` +
+      `${isArray ? ']' : ''}` +
       (isRequired ? '!' : '') +
       ' ';
   }
