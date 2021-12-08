@@ -10,7 +10,8 @@ export async function secretMigrate(grpcSdk: ConduitGrpcSdk) {
     {
       clientSecret: {
         $not: {
-          $regex: '$2b.*',
+          $regex: '^\\$2b.*',
+          $options: 'i',
         },
       },
     },
