@@ -38,6 +38,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     processingObject: ProcessingObject,
     input: boolean,
     name: string,
+    fieldName: string,
     value: any,
     isRequired: boolean,
     isArray?: boolean
@@ -127,6 +128,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 processingObject,
                 input,
                 name,
+                field,
                 (fields[field] as any).type,
                 (fields[field] as any).required
               );
@@ -136,6 +138,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               processingObject,
               input,
               name,
+              field,
               fields[field] as any,
               false
             );
@@ -194,6 +197,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           processingObject,
           input,
           name,
+          field,
           value[0].type,
           value[0].required,
           true
@@ -202,7 +206,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     }
     // if array contains an object
     else {
-      this.getResultFromObject(processingObject, input, name, value[0], false, true);
+      this.getResultFromObject(processingObject, input, name, field, value[0], false, true);
     }
     return processingObject;
   }

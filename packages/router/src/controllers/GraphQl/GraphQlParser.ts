@@ -94,15 +94,16 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     input: boolean,
     name: string,
+    fieldName: string,
     value: any,
     isRequired: boolean = false,
     isArray?: boolean
   ): void {
     // object of some kind
-    let nestedName = this.constructName(name, value);
+    let nestedName = this.constructName(name, fieldName);
     this.constructResolver(name, value);
     processingObject.typeString +=
-      value +
+      fieldName +
       ': ' +
       ` ${isArray ? '[' : ''}` +
       nestedName +
