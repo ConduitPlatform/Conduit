@@ -101,7 +101,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   ): void {
     // object of some kind
     let nestedName = this.constructName(name, fieldName);
-    this.constructResolver(name, value);
+    this.constructResolver(name, fieldName);
     processingObject.typeString +=
       fieldName +
       ': ' +
