@@ -64,11 +64,7 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('File', {
-          id: ConduitString.Required,
-          name: ConduitString.Required,
-          url: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('File', File.getInstance().fields),
         'getFile'
       ),
       constructConduitRoute(
@@ -102,11 +98,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('CreateFile', {
-          id: ConduitString.Required,
-          name: ConduitString.Required,
-          url: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
         'createFile'
       ),
       constructConduitRoute(
@@ -124,11 +116,7 @@ export class AdminRoutes {
             mimeType: ConduitString.Required,
           }
         },
-        new ConduitRouteReturnDefinition('EditFile', {
-          id: ConduitString.Required,
-          name: ConduitString.Required,
-          url: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('EditFile', File.getInstance().fields),
         'editFile'
       ),
       constructConduitRoute(

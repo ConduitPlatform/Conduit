@@ -1,4 +1,5 @@
 import { FileHandlers } from '../handlers/file';
+import { File } from '../models';
 import ConduitGrpcSdk, {
   ConduitRoute,
   ConduitRouteActions,
@@ -47,11 +48,7 @@ export class FileRoutes {
             path: '/storage/file',
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('File', {
-            _id: TYPE.String,
-            name: TYPE.String,
-            url: TYPE.String,
-          }),
+          new ConduitRouteReturnDefinition('File', File.getInstance().fields),
           'createFile'
         )
       )
@@ -67,11 +64,7 @@ export class FileRoutes {
             action: ConduitRouteActions.GET,
             path: '/storage/file/:id',
           },
-          new ConduitRouteReturnDefinition('File', {
-            _id: TYPE.String,
-            name: TYPE.String,
-            url: TYPE.String,
-          }),
+          new ConduitRouteReturnDefinition('File', File.getInstance().fields),
           'getFile'
         )
       )
@@ -152,11 +145,7 @@ export class FileRoutes {
             path: '/storage/file/:id',
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('FileUpdateResponse', {
-            _id: TYPE.String,
-            name: TYPE.String,
-            url: TYPE.String,
-          }),
+          new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
           'updateFile'
         )
       )
