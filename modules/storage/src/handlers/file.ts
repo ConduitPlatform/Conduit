@@ -16,7 +16,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider
+    storageProvider: IStorageProvider,
   ) {
     this.database = this.grpcSdk.databaseProvider!;
     _StorageContainer.getInstance(this.database);
@@ -43,7 +43,12 @@ export class FileHandlers {
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, data, folder, container, mimeType, isPublic } = call.request.params;
-    let newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    let newFolder;
+    if (isNil(folder)) {
+      newFolder = '/';
+    } else {
+      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    }
     let config = ConfigController.getInstance().config;
     let usedContainer = container;
     // the container is sent from the client
@@ -127,7 +132,7 @@ export class FileHandlers {
     try {
       const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
-        throw new GrpcError(status.NOT_FOUND, 'File does not exist')
+        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
       let config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
@@ -204,7 +209,7 @@ export class FileHandlers {
 
       return updatedFile;
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!')
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }
 
