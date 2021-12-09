@@ -38,11 +38,7 @@ export class FileHandlers {
     if (isNil(file)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
-    return {
-      id: file._id,
-      name: file.name,
-      url: file.url,
-    };
+    return file;
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -120,11 +116,7 @@ export class FileHandlers {
         url: publicUrl,
       });
 
-      return {
-        id: newFile._id,
-        name: newFile.name,
-        url: newFile.url,
-      };
+      return newFile;
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
     }
@@ -208,13 +200,9 @@ export class FileHandlers {
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
-      const updatedFile = await File.getInstance().findByIdAndUpdate(found._id, found);
+      const updatedFile = await File.getInstance().findByIdAndUpdate(found._id, found) as File;
 
-      return {
-        id: updatedFile!._id,
-        name: updatedFile!.name,
-        url: updatedFile!.url,
-      };
+      return updatedFile;
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!')
     }
