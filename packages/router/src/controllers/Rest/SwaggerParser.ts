@@ -154,6 +154,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
   ): void {
     // TODO: TEST ME ---------
     // add refs
+
+    // @ts-ignore
+    processingObject.properties[name] = {
+      $ref: `#/components/schemas/${value}`,
+    };
   }
 
   // TODO: Remove me
