@@ -1,6 +1,6 @@
 import { ConduitParser } from '../ConduitParser';
 import { ConduitModel } from '@quintessential-sft/conduit-commons';
-import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitNumber, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 export interface ParseResult {
   type: string;
@@ -12,40 +12,51 @@ export interface ParseResult {
   };
 }
 
+export interface SwaggerDefinition {
+  type?: 'object' | 'string' | 'array' | 'boolean' | 'number';
+  $ref?: string;
+}
+
+export interface SwaggerArray extends SwaggerDefinition {
+  type: 'array';
+  items: SwaggerDefinition;
+}
+
+export interface SwaggerString extends SwaggerDefinition {
+  type: 'string';
+  format?: 'date-time';
+}
+
+export interface SwaggerObject extends SwaggerDefinition {
+  type: 'object';
+  properties: { [key: string]: SwaggerDefinition };
+}
+
 export interface ProcessingObject {
-  type: string;
+  type: 'object' | 'string' | 'array' | 'boolean' | 'number' | undefined;
   format?: string;
   properties?: {};
-  items?: {
-    type: string;
-    properties: {};
-  };
+  items?: SwaggerDefinition | SwaggerObject | SwaggerString;
 }
 
 export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> {
-  extractTypes(
-    name: string,
-    fields: ConduitModel | string,
-  ): ParseResult {
+  extractTypes(name: string, fields: ConduitModel | string): ParseResult {
     return this._extractTypes(name, fields);
   }
 
-  protected _extractTypes(
-    name: string,
-    fields: ConduitModel | string,
-  ): ParseResult {
+  protected _extractTypes(name: string, fields: ConduitModel | string): ParseResult {
     this.result = this.getInitializedResult();
+    // @ts-ignore
     this.result = super.extractTypesInternal(name, fields);
     return this.result;
   }
 
   protected getType(conduitType: any) {
-    let res: { type: string; format?: string } = {
-      type: '',
-    };
+    let res: any = {};
     switch (conduitType) {
       case TYPE.JSON:
         res.type = 'object';
+        res.properties = {};
         break;
       case TYPE.Date:
         res.type = 'string';
@@ -68,34 +79,26 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     };
   }
 
-  protected getProcessingObject(
-    name: string,
-    isArray: boolean
-  ): ProcessingObject {
+  protected getProcessingObject(name: string, isArray: boolean): ProcessingObject {
     return {
-      type: '',
-      format: '',
+      type: 'object',
       properties: {},
-      items: {
-        type: '',
-        properties: {},
-      },
     };
   }
 
   protected finalizeProcessingObject(object: ProcessingObject): ProcessingObject {
-    // Remove unused fields
-    Object.keys(object).forEach((field: string) => {
-      if (
-        // @ts-ignore
-        (typeof object[field] === 'string' && object[field] === '') ||
-        // @ts-ignore
-        (typeof object[field] === 'object' && Object.keys(object).length === 0)
-      ) {
-        // @ts-ignore
-        delete object[field];
-      }
-    });
+    // // Remove unused fields
+    // Object.keys(object).forEach((field: string) => {
+    //   if (
+    //     // @ts-ignore
+    //     (typeof object[field] === 'string' && object[field] === '') ||
+    //     // @ts-ignore
+    //     (typeof object[field] === 'object' && Object.keys(object).length === 0)
+    //   ) {
+    //     // @ts-ignore
+    //     delete object[field];
+    //   }
+    // });
     return object;
   }
 
@@ -106,11 +109,8 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean
   ): void {
-    // TODO: TEST ME ---------
-    // this.getType(value);
-    // place this^ inside processingObject
-    // - 1. in .type
-    // - 2. in items.type
+    // @ts-ignore
+    processingObject.properties[name] = this.getType(value);
   }
 
   protected getResultFromObject(
@@ -121,7 +121,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean
   ): void {
-    // TODO: TEST ME ---------
+    // @ts-ignore
+    processingObject.properties[fieldName] = {
+      type: 'object',
+      properties: this._extractTypes(name, value).properties,
+    };
   }
 
   protected getResultFromArray(
@@ -132,7 +136,12 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     nestedType?: boolean
   ): void {
-    // TODO: TEST ME ---------
+    // @ts-ignore
+    processingObject.properties[name] = {
+      type: 'array',
+      // @ts-ignore
+      items: super.arrayHandler(resolverName, name, value).properties[name],
+    };
   }
 
   protected getResultFromRelation(
@@ -144,6 +153,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean
   ): void {
     // TODO: TEST ME ---------
+    // add refs
   }
 
   // TODO: Remove me
@@ -166,17 +176,21 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
 // TEST
 const parser = new SwaggerParser();
 // parser.TEST_finalize();
-
-import { ConduitNumber } from '@quintessential-sft/conduit-grpc-sdk';
-let resultObj = parser.extractTypes('User', {
+let resultObj = parser.extractTypes('schema', {
   name: ConduitNumber.Required,
   // testArray: [{type: 'Relation', model: 'User', required: true}],
   // testArray2: [{type: 'Relation', model: 'User', required: false}],
   // testArray3: [{type: [{type: TYPE.String, required: true}], required: true}],
-  likes: {type: [TYPE.String]},
-  testObj: {type: {paparia: TYPE.String, poutses: TYPE.Number}, required: true},
-  dislikes: {type: [{type: TYPE.Number, required: true}]}, // currently is interpreted as array required, when in reality the value inside is required
+  likes: { type: [TYPE.String] },
+  testObj: { type: { paparia: TYPE.String, poutses: TYPE.Number }, required: true },
+  dislikes: { type: [{ type: TYPE.Number, required: true }] }, // currently is interpreted as array required, when in reality the value inside is required
   // // dislikes2: {type: [{type: TYPE.Number, required: true}], required: true}, //currently not supported properly
-  friends: [{username: TYPE.String, age: TYPE.Number, posts: {type: 'Relation', model: 'Posts'}}]
+  friends: [
+    {
+      username: TYPE.String,
+      age: TYPE.Number,
+      posts: { type: 'Relation', model: 'Posts' },
+    },
+  ],
 });
-console.log(resultObj)
+console.log(resultObj);
