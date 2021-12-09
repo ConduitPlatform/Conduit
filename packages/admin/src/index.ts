@@ -26,6 +26,10 @@ export default class AdminModule extends IConduitAdmin {
   private _sdkRoutes: ConduitRoute[];
   private _grpcRoutes: any = {};
 
+  get registeredRoutes() {
+    return this._restRouter.registeredRoutes;
+  }
+
   async adminMiddleware(req: Request, res: Response, next: NextFunction) {
     return middleware.getAdminMiddleware(this.conduit)(req, res, next);
   }
@@ -62,7 +66,8 @@ export default class AdminModule extends IConduitAdmin {
 
     this._grpcRoutes = {};
     this._sdkRoutes = [
-      adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk)
+      adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk),
+      adminRoutes.getRoutes(this.conduit),
     ];
 
     // Register Post-Auth-Middleware routes

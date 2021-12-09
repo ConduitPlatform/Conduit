@@ -26,6 +26,10 @@ export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler>;
   private _swagger: SwaggerGenerator;
 
+  get registeredRoutes() {
+    return this._registeredRoutes;
+  }
+
   constructor(readonly app: Application) {
     super(app);
     this._registeredLocalRoutes = new Map();
