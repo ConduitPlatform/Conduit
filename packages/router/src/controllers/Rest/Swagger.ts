@@ -14,6 +14,7 @@ export class SwaggerGenerator {
       },
       paths: {},
       components: {
+        schemas: {},
         securitySchemes: {
           clientid: {
             type: 'apiKey',
@@ -189,10 +190,16 @@ export class SwaggerGenerator {
       routeDoc.security[0].tokenAuth = [];
     }
 
-    routeDoc.responses[200].content[
-      'application/json'
-    ].schema = this._parser.extractTypes(route.returnTypeName, route.returnTypeFields);
-
+    let returnDefinition = this._parser.extractTypes(
+      route.returnTypeName,
+      route.returnTypeFields
+    );
+    routeDoc.responses[200].content['application/json'].schema = {
+      $ref: `#/components/schemas/${route.returnTypeName}`,
+    };
+    if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
+      this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
+    }
     let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
