@@ -84,7 +84,7 @@ export default class ChatModule extends ConduitServiceModule {
 
   async sendMessage(call: any, callback: any) {
     const userId = call.request.userId;
-    const [roomId, message] = call.request;
+    const { roomId, message } = call.request;
 
     let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
