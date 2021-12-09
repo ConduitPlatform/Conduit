@@ -56,7 +56,7 @@ export class GraphQLController extends ConduitRouter {
       return;
     }
     const self = this;
-    let parseResult: ParseResult = this._parser.extractTypes(name, fields);
+    let parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
     this.types += parseResult.typeString;
     parseResult.relationTypes.forEach((type: string) => {
       if (self._relationTypes.indexOf(type) === -1) {

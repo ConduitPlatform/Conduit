@@ -19,6 +19,8 @@ export interface ProcessingObject {
 }
 
 export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> {
+  isInput = false; // always set in extractTypes()
+
   constructName(parent: string, child: string) {
     let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
     return parentName + child.slice(0, 1).toUpperCase() + child.slice(1);
@@ -27,11 +29,18 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   extractTypes(
     name: string,
     fields: ConduitModel | string,
-    _input?: boolean
+    isInput: boolean
+  ): ParseResult {
+    this.isInput = isInput;
+    return this._extractTypes(name, fields);
+  }
+
+  protected _extractTypes(
+    name: string,
+    fields: ConduitModel | string,
   ): ParseResult {
     this.result = this.getInitializedResult();
-    let input = !!_input;
-    this.result.typeString = super.extractTypesInternal(input, name, fields).finalString;
+    this.result.typeString = super.extractTypesInternal(name, fields).finalString;
     return this.result;
   }
 
@@ -42,13 +51,12 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   }
 
   protected getProcessingObject(
-    input: boolean,
     name: string,
     isArray: boolean
   ): ProcessingObject {
     return {
       finalString: '',
-      typeString: isArray ? '' : ` ${input ? 'input' : 'type'} ${name} {`,
+      typeString: isArray ? '' : ` ${this.isInput ? 'input' : 'type'} ${name} {`,
     };
   }
 
@@ -82,7 +90,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray?: boolean
+    isArray: boolean
   ): void {
     processingObject.typeString +=
       `${name}: ${isArray ? '[' : ''}` +
@@ -92,12 +100,11 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
 
   protected getResultFromObject(
     processingObject: ProcessingObject,
-    input: boolean,
     name: string,
     fieldName: string,
     value: any,
     isRequired: boolean = false,
-    isArray?: boolean
+    isArray: boolean
   ): void {
     // object of some kind
     let nestedName = this.constructName(name, fieldName);
@@ -109,19 +116,18 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
       nestedName +
       `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
     processingObject.finalString +=
-      ' ' + this.extractTypesInternal(input, nestedName, value).finalString + ' ';
+      ' ' + this.extractTypesInternal(nestedName, value).finalString + ' ';
   }
 
   protected getResultFromArray(
     processingObject: ProcessingObject,
-    input: boolean,
     resolverName: string,
     name: string,
     value: any[],
     isRequired: boolean = false,
     nestedType?: boolean
   ): void {
-    let arrayProcessing = super.arrayHandler(input, resolverName, name, value);
+    let arrayProcessing = super.arrayHandler(resolverName, name, value);
     if (nestedType) {
       processingObject.typeString +=
         arrayProcessing.typeString.slice(0, arrayProcessing.typeString.length - 1) +
@@ -135,12 +141,11 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
 
   protected getResultFromRelation(
     processingObject: ProcessingObject,
-    input: boolean,
     resolverName: string,
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray?: boolean
+    isArray: boolean
   ): void {
     this.addToRelation(this.result, value);
     this.constructResolver(resolverName, name, true);
@@ -148,7 +153,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
       name +
       ': ' +
       `${isArray ? '[' : ''}` +
-      (input ? 'ID' : value) +
+      (this.isInput ? 'ID' : value) +
       `${isArray ? ']' : ''}` +
       (isRequired ? '!' : '') +
       ' ';
@@ -158,7 +163,6 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     return {
       relationTypes: [],
       typeString: '',
-      finalString: '',
       parentResolve: {},
     };
   }
