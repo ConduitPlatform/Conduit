@@ -9,6 +9,7 @@ export class CmsRoutes {
   //while the conduit router handles duplicates we should clean them up on this end as well
   private crudRoutes: any[] = [];
   private customRoutes: any[] = [];
+  private _scheduledTimeout: any = null;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new CmsHandlers(grpcSdk);
@@ -25,8 +26,24 @@ export class CmsRoutes {
 
   requestRefresh() {
     if (this.crudRoutes && this.crudRoutes.length !== 0) {
-      this._refreshRoutes();
+      this._scheduleTimeout();
     }
+  }
+
+  private _scheduleTimeout() {
+    if (this._scheduledTimeout) {
+      clearTimeout(this._scheduledTimeout);
+      this._scheduledTimeout = null;
+    }
+
+    this._scheduledTimeout = setTimeout(() => {
+      try {
+        this._refreshRoutes();
+      } catch (err) {
+        console.error(err);
+      }
+      this._scheduledTimeout = null;
+    }, 3000);
   }
 
   private _refreshRoutes() {
