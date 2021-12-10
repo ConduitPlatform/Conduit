@@ -32,7 +32,7 @@ class SecurityModule extends IConduitSecurity {
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
     router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
       if (
-        (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
+        (req.url === '/graphql' || req.url.startsWith('/swagger') || req.url.startsWith('/admin/swagger')) &&
         req.method === 'GET'
       ) {
         res.removeHeader('Content-Security-Policy');
