@@ -2,10 +2,12 @@ import { ConduitModel } from '@quintessential-sft/conduit-commons';
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
+  isInput!: boolean;
 
-  protected abstract _extractTypes(
+  abstract extractTypes(
     name: string,
     fields: ConduitModel | string,
+    isInput: boolean
   ): ParseResult;
 
   protected abstract getType(conduitType: any): string | any;

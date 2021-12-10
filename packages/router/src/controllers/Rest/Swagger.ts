@@ -190,9 +190,10 @@ export class SwaggerGenerator {
       routeDoc.security[0].tokenAuth = [];
     }
 
-    let returnDefinition = this._parser.extractTypes(
+    const returnDefinition = this._parser.extractTypes(
       route.returnTypeName,
-      route.returnTypeFields
+      route.returnTypeFields,
+      false
     );
     routeDoc.responses[200].content['application/json'].schema = {
       $ref: `#/components/schemas/${route.returnTypeName}`,

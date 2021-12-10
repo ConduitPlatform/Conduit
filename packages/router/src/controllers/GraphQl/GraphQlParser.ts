@@ -19,8 +19,6 @@ export interface ProcessingObject {
 }
 
 export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> {
-  isInput = false; // always set in extractTypes()
-
   constructName(parent: string, child: string) {
     let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
     return parentName + child.slice(0, 1).toUpperCase() + child.slice(1);
@@ -32,13 +30,6 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isInput: boolean
   ): ParseResult {
     this.isInput = isInput;
-    return this._extractTypes(name, fields);
-  }
-
-  protected _extractTypes(
-    name: string,
-    fields: ConduitModel | string,
-  ): ParseResult {
     this.result = this.getInitializedResult();
     this.result.typeString = super.extractTypesInternal(name, fields).finalString;
     return this.result;
