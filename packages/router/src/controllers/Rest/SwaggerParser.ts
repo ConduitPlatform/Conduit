@@ -148,12 +148,23 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
   ): void {
     // @ts-ignore
     processingObject.properties[name] = {
-      $ref: `#/components/schemas/${value}`,
+      oneOf: [
+        {
+          $ref: `#/components/schemas/${value}`,
+        },
+        {
+          $ref: `#/components/schemas/ModelId`,
+        },
+      ],
     };
     this.addFieldToRequired(processingObject, name, isRequired);
   }
 
-  private addFieldToRequired(processingObject: ProcessingObject, name: string, isRequired: boolean) {
+  private addFieldToRequired(
+    processingObject: ProcessingObject,
+    name: string,
+    isRequired: boolean
+  ) {
     if (isRequired) {
       if (!processingObject.required) {
         processingObject.required = [];
