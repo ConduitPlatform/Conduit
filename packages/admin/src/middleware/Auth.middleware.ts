@@ -1,14 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
-import { verifyToken } from '../utils/auth';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { ConduitCommons } from '@quintessential-sft/conduit-commons';
+import { verifyToken } from '../utils/auth';
+import { isDev } from '../utils/middleware';
 
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
   return async function authMiddleware(req: Request, res: Response, next: NextFunction) {
-    if (
+    if ( // Excluded routes
       req.originalUrl.indexOf('/admin/login') === 0 ||
-      req.originalUrl.indexOf('/admin/modules') === 0
+      req.originalUrl.indexOf('/admin/modules') === 0 ||
+      (req.originalUrl.indexOf('/admin/swagger') === 0 && await isDev(conduit))
     ) {
       return next();
     }

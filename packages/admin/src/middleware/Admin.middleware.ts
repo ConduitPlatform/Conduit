@@ -1,9 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons } from '@quintessential-sft/conduit-commons';
+import { isDev } from '../utils/middleware';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
   return async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+    if ( // Excluded routes
+      (req.originalUrl.indexOf('/admin/swagger') === 0 && await isDev(conduit))
+    ) {
+      return next();
+    }
     const masterkey = req.headers.masterkey;
     let master = process.env.masterkey ?? 'M4ST3RK3Y';
     if (isNil(masterkey) || masterkey !== master)
