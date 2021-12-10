@@ -17,20 +17,21 @@ const schema = {
     required: true,
     systemRequired: true,
   },
-  extensions: [{
-    type: TYPE.JSON,
-    fields: {
-      type: TYPE.JSON,
-      required: true,
-      systemRequired: true,
+  extensions: [
+    {
+      fields: {
+        type: TYPE.JSON,
+        required: true,
+        systemRequired: true,
+      },
+      ownerModule: {
+        type: TYPE.String,
+        required: true,
+      },
+      createdAt: TYPE.Date,
+      updatedAt: TYPE.Date,
     },
-    ownerModule: {
-      type: TYPE.String,
-      required: true,
-    },
-    createdAt: TYPE.Date,
-    updatedAt: TYPE.Date,
-  }],
+  ],
   modelOptions: { type: TYPE.String, systemRequired: true },
   ownerModule: {
     type: TYPE.String,
