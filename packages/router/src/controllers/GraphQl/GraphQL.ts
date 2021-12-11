@@ -6,7 +6,8 @@ import {
   ConduitRouteOptions,
   TYPE,
 } from '@quintessential-sft/conduit-commons';
-import { extractTypes, findPopulation, ParseResult } from './utils/TypeUtils';
+import { GraphQlParser, ParseResult } from './GraphQlParser';
+import { findPopulation } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
 import 'apollo-cache-control';
@@ -17,7 +18,7 @@ import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
-const { ApolloServer, ApolloError } = require('apollo-server-express');
+const { ApolloServer } = require('apollo-server-express');
 
 export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
@@ -28,10 +29,12 @@ export class GraphQLController extends ConduitRouter {
   private _apollo?: any;
   private _relationTypes: string[] = [];
   private _scheduledTimeout: any = null;
+  private _parser: GraphQlParser;
 
   constructor(readonly app: Application) {
     super(app);
     this.initialize();
+    this._parser = new GraphQlParser();
   }
 
   refreshGQLServer() {
@@ -53,7 +56,7 @@ export class GraphQLController extends ConduitRouter {
       return;
     }
     const self = this;
-    let parseResult: ParseResult = extractTypes(name, fields);
+    let parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
     this.types += parseResult.typeString;
     parseResult.relationTypes.forEach((type: string) => {
       if (self._relationTypes.indexOf(type) === -1) {
@@ -112,7 +115,7 @@ export class GraphQLController extends ConduitRouter {
     let params = '';
     if (input.bodyParams || input.queryParams || input.urlParams) {
       if (input.bodyParams) {
-        let parseResult: ParseResult = extractTypes(
+        let parseResult: ParseResult = this._parser.extractTypes(
           name + 'Request',
           input.bodyParams,
           true
