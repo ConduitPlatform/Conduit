@@ -11,5 +11,5 @@
 **/protoUtils/**
 .vscode
 **/resourceRegistry.log
-
+.turbo
 .DS_Store
