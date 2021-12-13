@@ -27,8 +27,8 @@ message AdminResponse {
 `;
 
 export class Admin extends ConduitModule<AdminClient> {
-  constructor(url: string, private readonly moduleName: string) {
-    super(url);
+  constructor(private readonly moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(AdminClient);
   }
 
