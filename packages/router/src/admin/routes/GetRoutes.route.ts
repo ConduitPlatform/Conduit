@@ -1,12 +1,12 @@
 import {
-  ConduitCommons,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
 } from '@quintessential-sft/conduit-commons';
+import { ConduitDefaultRouter } from '../../index';
 
-export function getRoutes(conduit: ConduitCommons) {
+export function getRoutes(router: ConduitDefaultRouter) {
   return new ConduitRoute(
     {
       path: '/routes',
@@ -16,14 +16,18 @@ export function getRoutes(conduit: ConduitCommons) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response:any [] = [];
-      conduit.getAdmin().registeredRoutes.forEach( (route : any ) => {
-        response.push({
-          name: route._returnType.name,
-          action: route._input.action,
-          path: route._input.path,
-        })
-      })
+      let response: any [] = [];
+      const module = router.getGrpcRoutes();
+      console.log(module);
+      Object.keys(module).forEach((url: string) => {
+        module[url].forEach((item: any) => {
+          response.push({
+            name: item.grpcFunction,
+            action: item.options.action,
+            path: item.options.path,
+          });
+        });
+      });
       return { result: response }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );

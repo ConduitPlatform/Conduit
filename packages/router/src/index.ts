@@ -12,6 +12,7 @@ import {
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { SocketPush } from './models/SocketPush.model';
+import * as adminRoutes from './admin/routes';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -42,6 +43,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     });
+    this.registerAdminRoutes();
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');
     });
@@ -288,6 +290,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     return this._routes;
   }
 
+  getGrpcRoutes() {
+    return this._grpcRoutes;
+  }
+
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._registerRoute(route);
@@ -304,6 +310,12 @@ export class ConduitDefaultRouter implements IConduitRouter {
   registerSocket(socket: ConduitSocket): void {
     this._internalRouter.registerConduitSocket(socket);
   }
+
+  private registerAdminRoutes() {
+    let sdk: ConduitCommons = (this._app as any).conduit;
+    sdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+  }
+
 }
 
 export * from './builders';

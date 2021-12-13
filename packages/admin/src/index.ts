@@ -60,7 +60,6 @@ export default class AdminModule extends IConduitAdmin {
     this._grpcRoutes = {};
     this._sdkRoutes = [
       adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk),
-      adminRoutes.getRoutes(this.conduit),
     ];
 
     // Register Post-Auth-Middleware routes
