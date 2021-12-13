@@ -71,37 +71,42 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     });
   }
 
-  async deleteSchema(schemaName: string,deleteData: boolean): Promise<string> {
+  async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
     if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
       throw ConduitError.forbidden("Can't delete system required schema");
     }
     if (deleteData) {
-      await this.models![schemaName].model.drop()
+      await this.models![schemaName].model.drop();
     }
-    _DeclaredSchema.getInstance()
+    _DeclaredSchema
+      .getInstance()
       .findOne({ name: schemaName })
-      .then( model => {
+      .then((model) => {
         if (model) {
-          _DeclaredSchema.getInstance()
-            .deleteOne({name: schemaName})
-            .catch((err) => { throw new Error(err.message)})
+          _DeclaredSchema
+            .getInstance()
+            .deleteOne({ name: schemaName })
+            .catch((err) => {
+              throw new Error(err.message);
+            });
         }
       });
     delete this.models![schemaName];
     delete this.sequelize.models[schemaName];
-    return 'Schema deleted!'
+    return 'Schema deleted!';
   }
 
   getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
-    if (this.models) {
+    if (this.models && this.models![schemaName]) {
       const self = this;
       let relations: any = {};
-        for (const key in this.models[schemaName].relations) {
-          relations[this.models[schemaName].relations[key]] = self.models![
-            this.models[schemaName].relations[key]];
-        }
+      for (const key in this.models[schemaName].relations) {
+        relations[this.models[schemaName].relations[key]] = self.models![
+          this.models[schemaName].relations[key]
+        ];
+      }
       return { model: this.models[schemaName], relations };
     }
     throw new Error('Schema not defined yet');
