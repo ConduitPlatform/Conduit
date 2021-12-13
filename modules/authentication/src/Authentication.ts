@@ -46,7 +46,7 @@ export default class AuthenticationModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
     this.grpcSdk.bus!.subscribe('authentication', (message: string) => {
       if (message === 'config-update') {

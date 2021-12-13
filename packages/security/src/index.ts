@@ -13,7 +13,12 @@ class SecurityModule extends IConduitSecurity {
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(conduit);
-    this.registerSchemas();
+    this.registerSchemas().then(() => {
+      return secretMigrate();
+    })
+      .catch(err=>{
+        console.error(err);
+      });
     this.registerAdminRoutes();
     const router = conduit.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
@@ -32,7 +37,9 @@ class SecurityModule extends IConduitSecurity {
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
     router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
       if (
-        (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
+        (req.url === '/graphql' ||
+          req.url.startsWith('/swagger') ||
+          req.url.startsWith('/admin/swagger')) &&
         req.method === 'GET'
       ) {
         res.removeHeader('Content-Security-Policy');
@@ -44,7 +51,6 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true
     );
-    secretMigrate();
   }
 
   private registerAdminRoutes() {

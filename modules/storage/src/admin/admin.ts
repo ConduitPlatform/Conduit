@@ -75,7 +75,7 @@ export class AdminRoutes {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
             folder: ConduitString.Optional,
-            // container: ConduitString.Required,
+            container: ConduitString.Required,
             search: ConduitString.Optional,
           },
         },
@@ -92,9 +92,9 @@ export class AdminRoutes {
           bodyParams: {
             name: ConduitString.Required,
             data: ConduitString.Required,
-            folder: ConduitString.Required,
+            folder: ConduitString.Optional,
             container: ConduitString.Optional,
-            mimeType: ConduitString.Required,
+            mimeType: ConduitString.Optional,
             isPublic: ConduitBoolean.Optional,
           }
         },
@@ -109,11 +109,11 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
           bodyParams: {
-            name: ConduitString.Required,
-            data: ConduitString.Required,
-            folder: ConduitString.Required,
+            name: ConduitString.Optional,
+            data: ConduitString.Optional,
+            folder: ConduitString.Optional,
             container: ConduitString.Optional,
-            mimeType: ConduitString.Required,
+            mimeType: ConduitString.Optional,
           }
         },
         new ConduitRouteReturnDefinition('EditFile', File.getInstance().fields),
@@ -197,11 +197,7 @@ export class AdminRoutes {
           path: '/folder/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
-            id: { type: RouteOptionType.String, required: true }, // currently unused (unique: name, container)
-          },
-          bodyParams: {
-            name: ConduitString.Required,
-            container: ConduitString.Required,
+            id: { type: RouteOptionType.String, required: true },
           },
         },
         new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
@@ -239,11 +235,8 @@ export class AdminRoutes {
           path: '/container/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
-            id: { type: RouteOptionType.String, required: true }, // currently unused (unique: name)
+            id: { type: RouteOptionType.String, required: true },
           },
-          bodyParams: {
-            name: ConduitString.Required,
-          }
         },
         new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.getInstance().fields),
         'deleteContainer'
@@ -322,27 +315,25 @@ export class AdminRoutes {
   }
 
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, container } = call.request.params;
-    const newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
+    const { id } = call.request.params;
 
     let folder = await _StorageFolder.getInstance()
       .findOne({
-        name: newName,
-        container,
+        _id: id,
       });
     if (isNil(folder)) {
       throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
     } else {
-      await this.fileHandlers.storage.container(container).deleteFolder(name);
+      await this.fileHandlers.storage.container(folder.container).deleteFolder(folder.name);
       await _StorageFolder.getInstance()
       .deleteOne({
-        name: newName,
-        container,
+        name: folder.name,
+        container: folder.container,
       });
       await File.getInstance()
         .deleteMany({
-          folder: newName,
-          container,
+          folder: folder.name,
+          container: folder.container,
         });
     }
     return 'OK';
@@ -388,27 +379,27 @@ export class AdminRoutes {
   }
 
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name } = call.request.params;
+    const { id } = call.request.params;
     try {
       let container = await _StorageContainer.getInstance()
         .findOne({
-          name,
+          _id: id,
         });
       if (isNil(container)) {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       } else {
-        await this.fileHandlers.storage.deleteContainer(name);
+        await this.fileHandlers.storage.deleteContainer(container.name);
         await _StorageContainer.getInstance()
           .deleteOne({
-            name,
+            _id: id,
           });
         await File.getInstance()
           .deleteMany({
-            container: name,
+            container: container.name,
           });
         await _StorageFolder.getInstance()
           .deleteMany({
-            container: name,
+            container: container.name,
           });
       }
       return container;

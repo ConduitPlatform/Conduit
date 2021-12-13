@@ -1,4 +1,4 @@
-import { Application, Request, Response, NextFunction } from 'express';
+import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
@@ -30,13 +30,6 @@ export default class AdminModule extends IConduitAdmin {
     return this._restRouter.registeredRoutes;
   }
 
-  async adminMiddleware(req: Request, res: Response, next: NextFunction) {
-    return middleware.getAdminMiddleware(this.conduit)(req, res, next);
-  }
-  async authMiddleware(req: Request, res: Response, next: NextFunction) {
-    return middleware.getAuthMiddleware(this.grpcSdk, this.conduit)(req, res, next);
-  }
-
   constructor(
     app: Application,
     grpcSdk: ConduitGrpcSdk,
@@ -44,7 +37,7 @@ export default class AdminModule extends IConduitAdmin {
     packageDefinition: any,
     server: Server
   ) {
-    super(conduit);
+    super();
     this.conduit = conduit;
     this.grpcSdk = grpcSdk;
 
@@ -226,7 +219,7 @@ export default class AdminModule extends IConduitAdmin {
 
   private async handleDatabase() {
     if (!this.grpcSdk.databaseProvider) {
-      await this.grpcSdk.waitForExistence('database-provider');
+      await this.grpcSdk.waitForExistence('database');
     }
     const databaseAdapter = this.grpcSdk.databaseProvider!;
 

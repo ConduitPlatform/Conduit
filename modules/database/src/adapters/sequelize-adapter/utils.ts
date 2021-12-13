@@ -1,10 +1,8 @@
-import { Op } from 'sequelize';
-import _, { isArray, isObject } from 'lodash';
+import { Op, Sequelize } from 'sequelize';
+import _, { isArray, isObject, isString } from 'lodash';
 import { ConduitModel } from '@quintessential-sft/conduit-grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
-
-const deepdash = require('deepdash/standalone');
 
 function arrayHandler(value: any) {
   let newArray = [];
@@ -19,9 +17,19 @@ function matchOperation(operator: string, value: any) {
     case '$eq':
       return { [Op.eq]: value };
     case '$ne':
+      // replace the parsed query with the sequelize-native equivalent
+      if (value[Op.regexp]) {
+        return { [Op.notRegexp]: value[Op.regexp] };
+      }
       return { [Op.ne]: value };
     case '$gt':
       return { [Op.gt]: value };
+    case '$not':
+      // replace the parsed query with the sequelize-native equivalent
+      if (value[Op.regexp]) {
+        return { [Op.notRegexp]: value[Op.regexp] };
+      }
+      return { [Op.not]: value };
     case '$gte':
       return { [Op.gte]: value };
     case '$lt':
@@ -46,44 +54,35 @@ function matchOperation(operator: string, value: any) {
   }
 }
 
-function replaceInPath(parsed: any, path: any[], replacedValue: any) {
-  if (path.indexOf('$or') !== -1) {
-    path.splice(path.indexOf('$or'), 1);
-    path.push(Op.or);
-  } else if (path.indexOf('$and') !== -1) {
-    path.splice(path.indexOf('$and'), 1);
-    path.push(Op.and);
-  } else if (path.indexOf('$regex') !== -1) {
-    path.splice(path.indexOf('$regex'), 1);
-    path.push(Op.like);
-    replacedValue = replacedValue.replace('.*', '%');
-    replacedValue = replacedValue.replace('.*', '%');
-  }
-  return _.set(parsed, path, replacedValue);
-}
-
 export function parseQuery(query: any) {
   let parsed: any = {};
-
-  deepdash.eachDeep(query, (value: any, key: any, parentValue: any, context: any) => {
-    if (
-      !parentValue?.hasOwnProperty(key) ||
-      Array.isArray(parentValue) ||
-      context._item.strPath.indexOf('[') !== -1 ||
-      key === '$options'
-    ) {
-      return true;
+  if (isString(query)) return query;
+  for (let key in query) {
+    if (key === '$or') {
+      Object.assign(parsed, {
+        [Op.or]: query[key].map((operation: any) => {
+          return parseQuery(operation);
+        }),
+      });
+    } else if (key === '$and') {
+      Object.assign(parsed, {
+        [Op.and]: query[key].map((operation: any) => {
+          return parseQuery(operation);
+        }),
+      });
+    } else if (key === '$regex') {
+      Object.assign(parsed, { [Op.regexp]: query[key] });
+    } else if (key === '$options') {
+      continue;
+    } else {
+      let matched = matchOperation(key, parseQuery(query[key]));
+      if (key.indexOf('$') !== -1) {
+        Object.assign(parsed, matched);
+      } else {
+        parsed[key] = matched;
+      }
     }
-    let t = matchOperation(key, value);
-    let path = context._item.parentItem.path;
-    path = path ?? [key];
-    parsed = replaceInPath(parsed, path, t);
-
-    // console.log('Value: ', value);
-    // console.log('StringPath: ', path);
-    // console.log('Key: ', key);
-    // console.log('ParentValue: ', parentValue);
-  });
+  }
   console.log('Sequelize Parse Debug: ', parsed);
   return parsed;
 }

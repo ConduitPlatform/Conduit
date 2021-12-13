@@ -11,7 +11,7 @@ export class EmailService {
 
   constructor(private emailer: EmailProvider, private readonly grpcSdk: ConduitGrpcSdk) {
     const self = this;
-    this.grpcSdk.waitForExistence('database-provider').then((r) => {
+    this.grpcSdk.waitForExistence('database').then((r) => {
       self.database = self.grpcSdk.databaseProvider;
     });
   }

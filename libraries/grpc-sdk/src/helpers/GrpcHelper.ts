@@ -25,14 +25,14 @@ export function addServiceToServer(
   server: Server,
   protoFilePath: string,
   descriptorObject: string,
-  functions: { [name: string]: Function }
+  functions: { [name: string]: Function },
 ) {
   let packageDefinition = protoLoader.loadSync(protoFilePath, {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true,
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
   });
   let protoDescriptor = loadPackageDefinition(packageDefinition);
   let objs = descriptorObject.split('.');

@@ -1,8 +1,9 @@
 import { ConduitRoute, ConduitRouteActions } from '@quintessential-sft/conduit-commons';
-import { extractRouteReturnProperties } from './util';
+import { SwaggerParser } from './SwaggerParser';
+import { isNil } from 'lodash';
 
 export class SwaggerGenerator {
-  private _swaggerDoc: any;
+  private _parser: SwaggerParser;
 
   constructor() {
     this._swaggerDoc = {
@@ -13,6 +14,12 @@ export class SwaggerGenerator {
       },
       paths: {},
       components: {
+        schemas: {
+          ModelId: {
+            type: 'string',
+            format: 'uuid',
+          },
+        },
         securitySchemes: {
           clientid: {
             type: 'apiKey',
@@ -32,29 +39,13 @@ export class SwaggerGenerator {
         },
       },
     };
+    this._parser = new SwaggerParser();
   }
 
-  private _extractMethod(action: string) {
-    switch (action) {
-      case ConduitRouteActions.GET: {
-        return 'get';
-      }
-      case ConduitRouteActions.POST: {
-        return 'post';
-      }
-      case ConduitRouteActions.DELETE: {
-        return 'delete';
-      }
-      case ConduitRouteActions.UPDATE: {
-        return 'put';
-      }
-      case ConduitRouteActions.PATCH: {
-        return 'patch';
-      }
-      default: {
-        return 'get';
-      }
-    }
+  private _swaggerDoc: any;
+
+  get swaggerDoc() {
+    return this._swaggerDoc;
   }
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
@@ -86,7 +77,7 @@ export class SwaggerGenerator {
       ],
     };
 
-    if (route.input.urlParams !== undefined) {
+    if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
       for (const name in route.input.urlParams) {
         let type = '';
         if (typeof route.input.urlParams[name] === 'object') {
@@ -119,7 +110,7 @@ export class SwaggerGenerator {
       }
     }
 
-    if (route.input.queryParams !== undefined) {
+    if (!isNil(route.input.queryParams) && (route.input.queryParams as any) !== '') {
       for (const name in route.input.queryParams) {
         let type = '';
         if (typeof route.input.queryParams[name] === 'object') {
@@ -151,46 +142,33 @@ export class SwaggerGenerator {
       }
     }
 
-    if (route.input.bodyParams !== undefined) {
-      for (const name in route.input.bodyParams) {
-        let type = '';
-        if (typeof route.input.bodyParams[name] === 'object') {
-          // @ts-ignore
-          if (
-            route.input.bodyParams[name] &&
-            // @ts-ignore
-            route.input.bodyParams[name].type &&
-            // @ts-ignore
-            typeof route.input.bodyParams[name].type !== 'object'
-          ) {
-            // @ts-ignore
-            type = route.input.bodyParams[name].type.toLowerCase();
-          } else {
-            type = 'object';
-          }
-
-          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
-            type = 'string';
-          }
-        } else {
-          type = route.input.bodyParams[name].toString().toLowerCase();
-        }
-        routeDoc.parameters.push({
-          name,
-          in: 'body',
-          type,
-        });
-      }
+    if (!isNil(route.input.bodyParams) && (route.input.bodyParams as any) !== '') {
+      routeDoc['requestBody'] = {
+        description: route.input.description,
+        content: {
+          'application/json': {
+            schema: this._parser.extractTypes('body', route.input.bodyParams, true),
+          },
+        },
+        required: true,
+      };
     }
 
     if (route.input.middlewares?.includes('authMiddleware')) {
       routeDoc.security[0].tokenAuth = [];
     }
 
-    routeDoc.responses[200].content[
-      'application/json'
-    ].schema = extractRouteReturnProperties(route.returnTypeFields);
-
+    const returnDefinition = this._parser.extractTypes(
+      route.returnTypeName,
+      route.returnTypeFields,
+      false
+    );
+    routeDoc.responses[200].content['application/json'].schema = {
+      $ref: `#/components/schemas/${route.returnTypeName}`,
+    };
+    if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
+      this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
+    }
     let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
@@ -201,7 +179,26 @@ export class SwaggerGenerator {
     this._swaggerDoc.paths[path] = { ...this._swaggerDoc.paths[path], method };
   }
 
-  get swaggerDoc() {
-    return this._swaggerDoc;
+  private _extractMethod(action: string) {
+    switch (action) {
+      case ConduitRouteActions.GET: {
+        return 'get';
+      }
+      case ConduitRouteActions.POST: {
+        return 'post';
+      }
+      case ConduitRouteActions.DELETE: {
+        return 'delete';
+      }
+      case ConduitRouteActions.UPDATE: {
+        return 'put';
+      }
+      case ConduitRouteActions.PATCH: {
+        return 'patch';
+      }
+      default: {
+        return 'get';
+      }
+    }
   }
 }

@@ -84,7 +84,7 @@ export default class ChatModule extends ConduitServiceModule {
 
   async sendMessage(call: any, callback: any) {
     const userId = call.request.userId;
-    const [roomId, message] = call.request;
+    const { roomId, message } = call.request;
 
     let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
@@ -170,7 +170,7 @@ export default class ChatModule extends ConduitServiceModule {
   }
 
   async activate() {
-    await this.grpcSdk.waitForExistence('database-provider');
+    await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
     this.grpcSdk.bus?.subscribe('chat', (message: string) => {
       if (message === 'config-update') {
