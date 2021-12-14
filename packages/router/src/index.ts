@@ -294,6 +294,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     return this._grpcRoutes;
   }
 
+  getMiddlewares() {
+    return this._globalMiddlewares;
+  }
+
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._registerRoute(route);
@@ -314,6 +318,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private registerAdminRoutes() {
     let sdk: ConduitCommons = (this._app as any).conduit;
     sdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+    sdk.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
 
 }
