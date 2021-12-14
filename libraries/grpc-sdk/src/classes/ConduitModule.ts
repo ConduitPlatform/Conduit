@@ -2,11 +2,9 @@ import { ChannelCredentials, ChannelOptions, Client, credentials } from '@grpc/g
 import { getModuleNameInterceptor } from '../interceptors';
 
 export class ConduitModule<T extends Client> {
-  // protected descriptorObj?: string;
   active: boolean = false;
   constructorObj?: {
     new (
-      // name: string,
       address: string,
       credentials: ChannelCredentials,
       options?: Partial<ChannelOptions>
@@ -28,7 +26,6 @@ export class ConduitModule<T extends Client> {
 
   initializeClient(constObj?: {
     new (
-      // name: string,
       address: string,
       credentials: ChannelCredentials,
       options?: Partial<ChannelOptions>
@@ -41,7 +38,6 @@ export class ConduitModule<T extends Client> {
       throw new Error('Client cannot be initialized, both constructor objects are null!');
     }
     this.client = new this.constructorObj!(
-      // this._name,
       this._url,
       credentials.createInsecure(),
       {
