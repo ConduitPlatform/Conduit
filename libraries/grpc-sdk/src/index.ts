@@ -10,7 +10,7 @@ import {
   Router,
   SMS,
   Storage,
-  Forms
+  Forms,
 } from './modules';
 import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
@@ -185,7 +185,10 @@ export default class ConduitGrpcSdk {
       });
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](
+            this.name,
+            m.url
+          );
         } else if (this._availableModules[m.moduleName]) {
           this._modules[m.moduleName]?.initializeClient();
         }
@@ -219,7 +222,10 @@ export default class ConduitGrpcSdk {
         this.lastSearch = Date.now();
         r.forEach((m) => {
           if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](
+              this.name,
+              m.url
+            );
           }
         });
         return 'ok';

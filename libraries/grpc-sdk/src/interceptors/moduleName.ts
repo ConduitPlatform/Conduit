@@ -8,14 +8,17 @@ import { Metadata, InterceptingCall } from '@grpc/grpc-js';
 export function getModuleNameInterceptor(moduleName: string) {
   return (options: any, nextCall: Function) => {
     return new InterceptingCall(nextCall(options), {
-      start(metadata, _, next) {
-        next(metadata, {
-          onReceiveMetadata(metadata: Metadata, next: Function) {
-            // metadata.set('moduleName', moduleName);
-            metadata.add('moduleName', moduleName);
+      start: (metadata, _, next) => {
+        // outbound
+        metadata.set('moduleName', moduleName);
+        let newListener = {
+          // inbound
+          onReceiveMetadata: function (metadata: any, next: any) {
+            metadata.set('moduleName', moduleName);
             next(metadata);
-          }
-        });
+          },
+        };
+        next(metadata, newListener);
       },
     });
   };
