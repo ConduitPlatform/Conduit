@@ -48,7 +48,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           {
             name: schema.name,
             fields: schema.fields,
-            modelOptions: JSON.stringify(schema.schemaOptions),
+            modelOptions: schema.schemaOptions,
             ownerModule: schema.owner,
           }
         );
@@ -57,7 +57,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         .create({
           name: schema.name,
           fields: schema.fields,
-          modelOptions: JSON.stringify(schema.schemaOptions),
+          modelOptions: schema.schemaOptions,
           ownerModule: schema.owner,
         });
     }
@@ -70,7 +70,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         let schema = new ConduitSchema(
           model.name,
           model.fields,
-          JSON.parse(model.modelOptions)
+          model.modelOptions
         );
         schema.owner = model.ownerModule;
         return schema;

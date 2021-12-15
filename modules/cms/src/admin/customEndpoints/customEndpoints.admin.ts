@@ -9,7 +9,7 @@ import { inputValidation, queryValidation, assignmentValidation } from './utils'
 import { isNil, isPlainObject } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
-import { SchemaDefinitions, CustomEndpoints } from '../../models';
+import { _DeclaredSchema, CustomEndpoints } from '../../models';
 
 const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
   GET: 0, //'FIND/GET'
@@ -93,7 +93,7 @@ export class CustomEndpointsAdmin {
       if (selectedSchema.length === 0) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'selectedSchema must not be empty');
       }
-      findSchema = await SchemaDefinitions.getInstance().findOne({ _id: selectedSchema });
+      findSchema = await _DeclaredSchema.getInstance().findOne({ _id: selectedSchema });
     } else {
       // Find schema using selectedSchemaName
       if (selectedSchemaName.length === 0) {
@@ -220,7 +220,7 @@ export class CustomEndpointsAdmin {
     let findSchema: any;
     if (!isNil(selectedSchema)) {
       // Find schema using selectedSchema
-      findSchema = await SchemaDefinitions.getInstance().findOne({ _id: selectedSchema })
+      findSchema = await _DeclaredSchema.getInstance().findOne({ _id: selectedSchema })
       if (isNil(findSchema)) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
       }

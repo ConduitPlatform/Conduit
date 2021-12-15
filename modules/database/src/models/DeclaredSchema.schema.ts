@@ -1,6 +1,7 @@
 import {
   ConduitActiveSchema,
   DatabaseProvider,
+  ConduitModelOptions,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 
@@ -32,7 +33,7 @@ const schema = {
       updatedAt: TYPE.Date,
     },
   ],
-  modelOptions: { type: TYPE.String, systemRequired: true },
+  modelOptions: { type: TYPE.JSON, systemRequired: true },
   ownerModule: {
     type: TYPE.String,
     required: true,
@@ -52,7 +53,7 @@ export class _DeclaredSchema extends ConduitActiveSchema<_DeclaredSchema> {
   name!: string;
   fields!: any;
   extensions!: any[];
-  modelOptions!: string;
+  modelOptions!: ConduitModelOptions;
   createdAt!: Date;
   updatedAt!: Date;
 

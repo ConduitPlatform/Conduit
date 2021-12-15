@@ -1,2 +1,2 @@
 export * from './CustomEndpoints.schema';
-export * from './SchemaDefinitions.schema';
+export * from './DeclaredSchema.model';
