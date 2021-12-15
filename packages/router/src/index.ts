@@ -169,7 +169,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
-    )[] = grpcToConduitRoute(
+      )[] = grpcToConduitRoute(
       'Router',
       {
         protoFile: protofile,
@@ -191,11 +191,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
       } else {
         console.log(
           'New route registered: ' +
-            r.input.action +
-            ' ' +
-            r.input.path +
-            ' handler url: ' +
-            url
+          r.input.action +
+          ' ' +
+          r.input.path +
+          ' handler url: ' +
+          url
         );
         this._registerRoute(r);
       }
@@ -320,7 +320,6 @@ export class ConduitDefaultRouter implements IConduitRouter {
     sdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
     sdk.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
-
 }
 
 export * from './builders';
