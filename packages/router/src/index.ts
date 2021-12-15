@@ -12,6 +12,7 @@ import {
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { SocketPush } from './models/SocketPush.model';
+import * as adminRoutes from './admin/routes';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -42,6 +43,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     });
+    this.registerAdminRoutes();
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');
     });
@@ -167,7 +169,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
-    )[] = grpcToConduitRoute(
+      )[] = grpcToConduitRoute(
       'Router',
       {
         protoFile: protofile,
@@ -189,11 +191,11 @@ export class ConduitDefaultRouter implements IConduitRouter {
       } else {
         console.log(
           'New route registered: ' +
-            r.input.action +
-            ' ' +
-            r.input.path +
-            ' handler url: ' +
-            url
+          r.input.action +
+          ' ' +
+          r.input.path +
+          ' handler url: ' +
+          url
         );
         this._registerRoute(r);
       }
@@ -288,6 +290,14 @@ export class ConduitDefaultRouter implements IConduitRouter {
     return this._routes;
   }
 
+  getGrpcRoutes() {
+    return this._grpcRoutes;
+  }
+
+  getMiddlewares() {
+    return this._globalMiddlewares;
+  }
+
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._registerRoute(route);
@@ -303,6 +313,12 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   registerSocket(socket: ConduitSocket): void {
     this._internalRouter.registerConduitSocket(socket);
+  }
+
+  private registerAdminRoutes() {
+    let sdk: ConduitCommons = (this._app as any).conduit;
+    sdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+    sdk.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
 }
 
