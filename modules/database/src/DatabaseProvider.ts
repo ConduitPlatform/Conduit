@@ -124,7 +124,7 @@ export class DatabaseProvider extends ConduitServiceModule {
    * @param call
    * @param callback
    */
-  createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
+  async createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
     let schema = new ConduitSchema(
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
@@ -137,40 +137,32 @@ export class DatabaseProvider extends ConduitServiceModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    this.grpcSdk.config
-      .getModuleUrlByInstance((call as any).getPeer())
-      .then((res: { url: string; moduleName: string }) => {
-        schema.owner = res.moduleName;
-        return this._activeAdapter.createSchemaFromAdapter(schema);
-      })
-      .catch(() => {
-        schema.owner = 'unknown';
-        return this._activeAdapter.createSchemaFromAdapter(schema);
-      })
-      .then((schemaAdapter: SchemaAdapter<any>) => {
-        let originalSchema = {
-          name: schemaAdapter.originalSchema.name,
-          modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
-          collectionName: schemaAdapter.originalSchema.collectionName,
-        };
-        this.publishSchema({
-          name: call.request.schema.name,
-          modelSchema: JSON.parse(call.request.schema.modelSchema),
-          modelOptions: JSON.parse(call.request.schema.modelOptions),
-          collectionName: call.request.schema.collectionName,
-          owner: schemaAdapter.originalSchema.owner,
-        });
-        callback(null, {
-          schema: originalSchema,
-        });
-      })
-      .catch((err: any) => {
-        callback({
-          code: status.INTERNAL,
-          message: err.message,
-        });
+    schema.owner = (call as any).metadata.get('module-name')[0];
+    await this._activeAdapter.createSchemaFromAdapter(schema)
+    .then((schemaAdapter: SchemaAdapter<any>) => {
+      let originalSchema = {
+        name: schemaAdapter.originalSchema.name,
+        modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
+        modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
+        collectionName: schemaAdapter.originalSchema.collectionName,
+      };
+      this.publishSchema({
+        name: call.request.schema.name,
+        modelSchema: JSON.parse(call.request.schema.modelSchema),
+        modelOptions: JSON.parse(call.request.schema.modelOptions),
+        collectionName: call.request.schema.collectionName,
+        owner: schema.owner,
       });
+      callback(null, {
+        schema: originalSchema,
+      });
+    })
+    .catch((err: any) => {
+      callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
+    });
   }
 
   /**

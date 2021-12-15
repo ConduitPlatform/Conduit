@@ -126,10 +126,9 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   async registerGrpcRoute(call: any, callback: any) {
+    const moduleName = call.metadata.get('module-name')[0];
     try {
-      let url = call.request.routerUrl;
-      let moduleName: string | undefined = undefined;
-      if (!url) {
+      if (!call.request.routerUrl) {
         let result = ((this._app as any).conduit! as ConduitCommons)
           .getConfigManager()!
           .getModuleUrlByInstance(call.getPeer());
@@ -140,7 +139,6 @@ export class ConduitDefaultRouter implements IConduitRouter {
           });
         }
         call.request.routerUrl = result.url;
-        moduleName = result!.moduleName;
       }
 
       this.internalRegisterRoute(

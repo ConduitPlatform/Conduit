@@ -2,8 +2,8 @@ import { ConduitModule } from "../../classes/ConduitModule";
 import { FormsClient } from "../../protoUtils/forms";
 
 export class Forms extends ConduitModule<FormsClient>{
-    constructor(url: string) {
-        super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
         this.initializeClient(FormsClient);
     }
     setConfig(newConfig: any) {

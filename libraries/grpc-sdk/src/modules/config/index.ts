@@ -6,8 +6,8 @@ export class Config extends ConduitModule<ConfigClient> {
   private emitter = new EventEmitter();
   private coreLive = false;
 
-  constructor(url: string) {
-    super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(ConfigClient);
   }
 

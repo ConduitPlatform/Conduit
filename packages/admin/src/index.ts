@@ -85,10 +85,9 @@ export default class AdminModule extends IConduitAdmin {
 
   // grpc
   async registerAdminRoute(call: any, callback: any) {
+    const moduleName = call.metadata.get('module-name')[0];
     try {
-      let url = call.request.routerUrl;
-      let moduleName: string | undefined = undefined;
-      if (!url) {
+      if (!call.request.routerUrl) {
         let result = this.conduit
           .getConfigManager()!
           .getModuleUrlByInstance(call.getPeer());
@@ -99,7 +98,6 @@ export default class AdminModule extends IConduitAdmin {
           });
         }
         call.request.routerUrl = result.url;
-        moduleName = result!.moduleName;
       }
       this.internalRegisterRoute(
         call.request.protoFile,

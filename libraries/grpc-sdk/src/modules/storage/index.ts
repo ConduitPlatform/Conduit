@@ -3,8 +3,8 @@ import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageClient } f
 import { ServiceError } from '@grpc/grpc-js';
 
 export class Storage extends ConduitModule<StorageClient> {
-  constructor(url: string) {
-    super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(StorageClient);
   }
 

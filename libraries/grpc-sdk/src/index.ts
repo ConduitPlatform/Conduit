@@ -10,7 +10,7 @@ import {
   Router,
   SMS,
   Storage,
-  Forms
+  Forms,
 } from './modules';
 import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
@@ -25,7 +25,7 @@ export default class ConduitGrpcSdk {
   private readonly _router: Router;
   private readonly _modules: any = {};
   private readonly _availableModules: any = {
-    'database': DatabaseProvider,
+    database: DatabaseProvider,
     storage: Storage,
     email: Email,
     pushNotifications: PushNotifications,
@@ -35,7 +35,6 @@ export default class ConduitGrpcSdk {
     payments: Payments,
     chat: Chat,
     forms: Forms,
-
   };
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
@@ -49,9 +48,9 @@ export default class ConduitGrpcSdk {
       this.name = name;
     }
     this.serverUrl = serverUrl;
-    this._config = new Config(this.serverUrl);
-    this._admin = new Admin(this.serverUrl, this.name);
-    this._router = new Router(this.serverUrl, this.name);
+    this._config = new Config(this.name, this.serverUrl);
+    this._admin = new Admin(this.name, this.serverUrl);
+    this._router = new Router(this.name, this.serverUrl);
     this.initializeModules().then(() => {});
     this.watchModules();
   }
@@ -186,7 +185,10 @@ export default class ConduitGrpcSdk {
       });
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](
+            this.name,
+            m.url
+          );
         } else if (this._availableModules[m.moduleName]) {
           this._modules[m.moduleName]?.initializeClient();
         }
@@ -220,7 +222,10 @@ export default class ConduitGrpcSdk {
         this.lastSearch = Date.now();
         r.forEach((m) => {
           if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](
+              this.name,
+              m.url
+            );
           }
         });
         return 'ok';

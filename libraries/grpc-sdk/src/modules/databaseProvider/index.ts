@@ -3,8 +3,8 @@ import { DatabaseProviderClient } from '../../protoUtils/database-provider';
 import { ConduitSchema } from '../../classes';
 
 export class DatabaseProvider extends ConduitModule<DatabaseProviderClient> {
-  constructor(url: string) {
-    super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(DatabaseProviderClient);
   }
 
