@@ -1,17 +1,20 @@
 import { DatabaseProvider } from './DatabaseProvider';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import process from 'process';
 
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'database');
 let databaseProvider = new DatabaseProvider(grpcSdk);
 databaseProvider
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
     let url =
-      (process.env.REGISTER_NAME === 'true' ? 'database:' : '0.0.0.0:') +
+      (process.env.REGISTER_NAME === 'true' ? 'database:' : `${ serviceAddress }:`) +
       databaseProvider.port;
     return grpcSdk.config.registerModule('database', url);
   })

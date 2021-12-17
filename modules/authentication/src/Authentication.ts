@@ -27,8 +27,8 @@ export default class AuthenticationModule extends ConduitServiceModule {
   private isRunning: boolean = false;
   private _router: AuthenticationRoutes;
 
-  async initialize() {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+  async initialize(servicePort?: string) {
+    this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
     await this.grpcServer.addService(
       path.resolve(__dirname, './authentication.proto'),

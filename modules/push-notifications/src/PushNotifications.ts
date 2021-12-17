@@ -33,8 +33,8 @@ export default class PushNotificationsModule extends ConduitServiceModule {
     return this._routes;
   }
 
-  async initialize() {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+  async initialize(servicePort?: string) {
+    this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
     await this.grpcServer.addService(
       path.resolve(__dirname, './push-notifications.proto'),

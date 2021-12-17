@@ -4,15 +4,18 @@ import PaymentsModule from './Payments';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'payments');
 let payments = new PaymentsModule(grpcSdk);
 payments
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
     let url =
-      (process.env.REGISTER_NAME === 'true' ? 'payments-provider:' : '0.0.0.0:') +
+      (process.env.REGISTER_NAME === 'true' ? 'payments-provider:' : `${ serviceAddress }:`) +
       payments.port;
-
     return grpcSdk.config.registerModule('payments', url);
   })
   .catch((err: Error) => {

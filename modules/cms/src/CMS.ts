@@ -10,32 +10,30 @@ import { CustomEndpointController } from './controllers/customEndpoints/customEn
 export class CMS extends ConduitServiceModule {
   private stateActive = true;
 
-  async initialize() {
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+  async initialize(servicePort?: string) {
+    this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
     this.grpcServer.start();
     console.log('Grpc server is online');
   }
 
   async activate() {
-    const self = this;
-
     await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
-    let consumerRoutes = new CmsRoutes(self.grpcServer, self.grpcSdk);
+    let consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
     let schemaController = new SchemaController(
-      self.grpcSdk,
+      this.grpcSdk,
       consumerRoutes,
-      self.stateActive
+      this.stateActive
     );
     let customEndpointController = new CustomEndpointController(
-      self.grpcSdk,
+      this.grpcSdk,
       consumerRoutes,
-      self.stateActive
+      this.stateActive
     );
     new AdminHandlers(
-      self.grpcServer,
-      self.grpcSdk,
+      this.grpcServer,
+      this.grpcSdk,
       schemaController,
       customEndpointController
     );

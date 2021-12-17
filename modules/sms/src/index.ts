@@ -4,13 +4,18 @@ import SmsModule from './Sms';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'sms');
 let sms = new SmsModule(grpcSdk);
 sms
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
     let url =
-      (process.env.REGISTER_NAME === 'true' ? 'sms-provider:' : '0.0.0.0:') + sms.port;
+      (process.env.REGISTER_NAME === 'true' ? 'sms-provider:' : `${ serviceAddress }:`) +
+      sms.port;
     return grpcSdk.config.registerModule('sms', url);
   })
   .catch((err: Error) => {

@@ -4,12 +4,18 @@ import FormsModule from './Forms';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'forms');
 let forms = new FormsModule(grpcSdk);
 forms
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
-    let url = (process.env.REGISTER_NAME === 'true' ? 'forms:' : '0.0.0.0:') + forms.port;
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'forms:' : `${ serviceAddress }:`) +
+      forms.port;
     return grpcSdk.config.registerModule('forms', url);
   })
   .catch((err: Error) => {
