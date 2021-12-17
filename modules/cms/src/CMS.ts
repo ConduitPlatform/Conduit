@@ -6,6 +6,7 @@ import {
 import { CmsRoutes } from './routes/Routes';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
+import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migration';
 
 export class CMS extends ConduitServiceModule {
   private stateActive = true;
@@ -37,5 +38,6 @@ export class CMS extends ConduitServiceModule {
       schemaController,
       customEndpointController
     );
+    await migrateSchemaDefinitions(this.grpcSdk);
   }
 }
