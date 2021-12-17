@@ -13,8 +13,8 @@ export class GrpcServer {
     functions: { [name: string]: Function };
   }[] = [];
 
-  constructor(originalUrl?: string) {
-    this._url = originalUrl || '0.0.0.0:5000';
+  constructor(port?: string) {
+    this._url = `0.0.0.0:${ port ?? '5000' }`;
   }
 
   private _url: string;

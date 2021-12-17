@@ -10,7 +10,7 @@ WORKDIR /app/modules/chat
 
 ENV CONDUIT_SERVER conduit_server
 
-ENV SERVICE_URL 0.0.0.0:5000
+ENV SERVICE_IP 0.0.0.0:5000
 
 ENV REGISTER_NAME true
 

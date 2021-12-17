@@ -5,12 +5,17 @@ if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
 
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'chat');
 let chat = new ChatModule(grpcSdk);
 chat
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
-    let url = (process.env.REGISTER_NAME === 'true' ? 'chat:' : '0.0.0.0:') + chat.port;
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'chat:' : `${ serviceAddress }:`) +
+      chat.port;
     return grpcSdk.config.registerModule('chat', url);
   })
   .catch((err: Error) => {

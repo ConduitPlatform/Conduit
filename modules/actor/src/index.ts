@@ -4,12 +4,18 @@ import ActorModule from './Actor';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'actor');
 let actor = new ActorModule(grpcSdk);
 actor
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
-    let url = (process.env.REGISTER_NAME === 'true' ? 'actor:' : '0.0.0.0:') + actor.port;
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'actor:' : `${ serviceAddress }:`) +
+      actor.port;
     return grpcSdk.config.registerModule('actor', url);
   })
   .catch((err) => {

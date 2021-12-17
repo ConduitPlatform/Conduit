@@ -37,10 +37,8 @@ export class DatabaseProvider extends ConduitServiceModule {
 
   constructor(protected readonly grpcSdk: ConduitGrpcSdk) {
     super(grpcSdk)
-    const dbType = process.env.databaseType ? process.env.databaseType : 'mongodb';
-    const databaseUrl = process.env.databaseURL
-      ? process.env.databaseURL
-      : 'mongodb://localhost:27017';
+    const dbType = process.env.databaseType ?? 'mongodb';
+    const databaseUrl = process.env.databaseURL ?? 'mongodb://localhost:27017';
 
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(databaseUrl);
@@ -57,9 +55,9 @@ export class DatabaseProvider extends ConduitServiceModule {
     console.log('Updated state');
   }
 
-  async initialize() {
+  async initialize(servicePort?: string) {
     await this._activeAdapter.ensureConnected();
-    this.grpcServer = new GrpcServer(process.env.SERVICE_URL);
+    this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
     await this.grpcServer.addService(
       path.resolve(__dirname, './database-provider.proto'),
