@@ -175,7 +175,9 @@ export default class PaymentsModule extends ConduitServiceModule {
   private registerSchemas() {
     const promises = Object.values(models).map((model) => {
       let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
-      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+        return this.database.createSchemaFromAdapter(modelInstance);
+      }
     });
     return Promise.all(promises);
   }

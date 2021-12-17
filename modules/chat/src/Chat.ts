@@ -248,7 +248,9 @@ export default class ChatModule extends ConduitServiceModule {
   private registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       let modelInstance = model.getInstance(this.database);
-      return this.database.createSchemaFromAdapter(modelInstance);
+      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+        return this.database.createSchemaFromAdapter(modelInstance);
+      }
     });
     return Promise.all(promises);
   }
