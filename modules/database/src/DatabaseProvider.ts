@@ -28,6 +28,7 @@ import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { AdminHandlers } from './admin/admin';
+import { migrateModelOptions } from './migrations/modelOptions.migration';
 
 const MODULE_NAME = 'database';
 
@@ -113,6 +114,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       }
     });
     await this._activeAdapter.createSchemaFromAdapter(models._DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)));
+    await migrateModelOptions();
     await this._activeAdapter.recoverSchemasFromDatabase();
     this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
   }
