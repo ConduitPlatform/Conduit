@@ -48,7 +48,7 @@ export class AdminHandlers {
         // Schemas
         getSchema: this.schemaAdmin.getSchema.bind(this.schemaAdmin),
         getSchemas: this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
-        getSchemasRegisteredByOtherModules: this.schemaAdmin.getSchemasRegisteredByOtherModules.bind(this.schemaAdmin),
+        getSchemasFromOtherModules: this.schemaAdmin.getSchemasFromOtherModules.bind(this.schemaAdmin),
         createSchema: this.schemaAdmin.createSchema.bind(this.schemaAdmin),
         editSchema: this.schemaAdmin.editSchema.bind(this.schemaAdmin),
         deleteSchema: this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),

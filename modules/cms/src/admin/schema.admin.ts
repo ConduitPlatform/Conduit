@@ -72,7 +72,7 @@ export class SchemaAdmin {
     return { results: { schemas, documentsCount } }; // TODO: unnest (frontend compat)
   }
 
-  async getSchemasRegisteredByOtherModules(
+  async getSchemasFromOtherModules(
     call: ParsedRouterRequest
   ): Promise<UnparsedRouterResponse> {
     const allSchemas = await this.database.getSchemas().catch((e: Error) => {
