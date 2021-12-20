@@ -33,7 +33,6 @@ export interface ConduitModel {
 
 export interface ConduitModelOptions {
   timestamps?: boolean;
-  systemRequired?: boolean;
   _id?: boolean;
   conduit?: {
     [field: string]: any,

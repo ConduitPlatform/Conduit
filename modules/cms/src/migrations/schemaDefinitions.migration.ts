@@ -54,7 +54,7 @@ export async function migrateSchemaDefinitions(grpcSdk: ConduitGrpcSdk) {
       await grpcSdk.databaseProvider!.createSchemaFromAdapter(newSchema);
     }
 
-    // Delete SchemaDefinitions // TODO: Requires handling systemRequired check in adapters
-    // await grpcSdk.databaseProvider!.deleteSchema('SchemaDefinitions', true);
+    // Delete SchemaDefinitions
+    await grpcSdk.databaseProvider!.deleteSchema('SchemaDefinitions', true);
   }
 }

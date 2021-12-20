@@ -20,7 +20,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   abstract getSchemas(): ConduitSchema[];
 
-  abstract async deleteSchema(schemaName: string, deleteData: boolean): Promise<string>;
+  abstract async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
 
   abstract getSchemaModel(
     schemaName: string

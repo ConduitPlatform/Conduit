@@ -17,5 +17,5 @@ export const AdminSchema = new ConduitSchema(
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },
-  { timestamps: true, systemRequired: true }
+  { timestamps: true }
 );
