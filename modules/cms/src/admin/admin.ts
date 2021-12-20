@@ -15,7 +15,7 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { SchemaAdmin } from './schema.admin';
 import { DocumentsAdmin } from './documents.admin';
 import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin';
-import { SchemaDefinitions, CustomEndpoints } from '../models';
+import { _DeclaredSchema, CustomEndpoints } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -48,7 +48,7 @@ export class AdminHandlers {
         // Schemas
         getSchema: this.schemaAdmin.getSchema.bind(this.schemaAdmin),
         getSchemas: this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
-        getSchemasRegisteredByOtherModules: this.schemaAdmin.getSchemasRegisteredByOtherModules.bind(this.schemaAdmin),
+        getSchemasFromOtherModules: this.schemaAdmin.getSchemasFromOtherModules.bind(this.schemaAdmin),
         createSchema: this.schemaAdmin.createSchema.bind(this.schemaAdmin),
         editSchema: this.schemaAdmin.editSchema.bind(this.schemaAdmin),
         deleteSchema: this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),
@@ -86,7 +86,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetSchema', SchemaDefinitions.getInstance().fields),
+        new ConduitRouteReturnDefinition('GetSchema', _DeclaredSchema.getInstance().fields),
         'getSchema'
       ),
       constructConduitRoute(
@@ -103,7 +103,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
           results: { // TODO: unnest (frontend compat)
-            schemas: [SchemaDefinitions.getInstance().fields],
+            schemas: [_DeclaredSchema.getInstance().fields],
             documentsCount: ConduitNumber.Required,
           }
         }),
@@ -127,12 +127,12 @@ export class AdminHandlers {
             name: ConduitString.Required,
             fields: ConduitJson.Required,
             modelOptions: ConduitJson.Optional,
-            enabled: ConduitBoolean.Optional,
-            authentication: ConduitBoolean.Optional,
-            crudOperations: ConduitBoolean.Optional,
+            enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
           },
         },
-        new ConduitRouteReturnDefinition('CreateSchema', SchemaDefinitions.getInstance().fields),
+        new ConduitRouteReturnDefinition('CreateSchema', _DeclaredSchema.getInstance().fields),
         'createSchema'
       ),
       constructConduitRoute(
@@ -146,12 +146,12 @@ export class AdminHandlers {
             name: ConduitString.Optional,
             fields: ConduitJson.Optional,
             modelOptions: ConduitJson.Optional,
-            enabled: ConduitBoolean.Optional,
-            authentication: ConduitBoolean.Optional,
-            crudOperations: ConduitBoolean.Optional,
+            enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
           },
         },
-        new ConduitRouteReturnDefinition('EditSchema', SchemaDefinitions.getInstance().fields),
+        new ConduitRouteReturnDefinition('EditSchema', _DeclaredSchema.getInstance().fields),
         'editSchema'
       ),
       constructConduitRoute(
@@ -205,7 +205,7 @@ export class AdminHandlers {
           }
         },
         new ConduitRouteReturnDefinition('ToggleSchemas', {
-          updatedSchemas: [SchemaDefinitions.getInstance().fields],
+          updatedSchemas: [_DeclaredSchema.getInstance().fields],
           enabled: ConduitBoolean.Required,
         }),
         'toggleSchemas'

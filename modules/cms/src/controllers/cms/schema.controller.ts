@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import { SchemaDefinitions } from '../../models';
+import { _DeclaredSchema } from '../../models';
 import { CmsRoutes } from '../../routes/Routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
@@ -28,8 +28,9 @@ export class SchemaController {
   }
 
   refreshRoutes() {
-    SchemaDefinitions.getInstance()
-      .findMany({ enabled: true })
+    _DeclaredSchema
+      .getInstance(this.grpcSdk.databaseProvider!)
+      .findMany({ modelOptions: { conduit: { cms: { enabled: true } } } })
       .then((r: any) => {
         if (r) {
           let routeSchemas: any = {};
@@ -38,8 +39,9 @@ export class SchemaController {
               schema.modelOptions = JSON.parse(schema.modelOptions);
             }
             if (
-              schema.name !== 'SchemaDefinitions' &&
-              (schema.crudOperations || isNil(schema.crudOperations))
+              schema.name !== '_DeclaredSchemas' &&
+              (schema.modelOptions.conduit.cms.crudOperations ||
+                isNil(schema.modelOptions.conduit.cms.crudOperations))
             ) {
               routeSchemas[schema.name] = schema;
             }
@@ -57,25 +59,24 @@ export class SchemaController {
       });
   }
 
-  createSchema(schema: ConduitSchema): void {
-    this._adapter
+  async createSchema(schema: ConduitSchema): Promise<ConduitSchema> {
+    const createdSchema = await this._adapter
       .createSchemaFromAdapter(schema)
-      .then((r: any) => {
-        if (this.stateActive) {
-          this.grpcSdk.bus?.publish('cms', 'schema');
-        }
-        this.refreshRoutes();
-      })
       .catch((err: any) => {
         console.log('Failed to create schema for cms');
         console.log(err);
       });
+    if (this.stateActive) {
+      this.grpcSdk.bus?.publish('cms', 'schema');
+    }
+    this.refreshRoutes();
+    return createdSchema;
   }
 
   private async loadExistingSchemas() {
-    await this._adapter.createSchemaFromAdapter(SchemaDefinitions.getInstance(this._adapter));
-    SchemaDefinitions.getInstance()
-      .findMany({ enabled: true })
+    _DeclaredSchema
+      .getInstance(this.grpcSdk.databaseProvider!)
+      .findMany({ modelOptions: { conduit: { cms: { enabled: true } } } })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');
@@ -98,7 +99,8 @@ export class SchemaController {
               }
               if (
                 schema.name !== 'SchemaDefinitions' &&
-                (schema.crudOperations || isNil(schema.crudOperations))
+                (schema.modelOptions.conduit.cms.crudOperations ||
+                  isNil(schema.modelOptions.conduit.cms.crudOperations))
               ) {
                 routeSchemas[schema.name] = schema;
               }

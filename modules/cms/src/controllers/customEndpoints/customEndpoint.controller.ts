@@ -4,7 +4,7 @@ import { CustomEndpoints } from '../../models';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
 import { CmsRoutes } from '../../routes/Routes';
 import { createCustomEndpointRoute } from './utils';
-import { migrateCustomEndpoints } from '../../migrations/customEndpoint.schema.migrations';
+import { migrateCustomEndpoints } from '../../migrations/customEndpoint.migration';
 
 export class CustomEndpointController {
   private _adapter: any;

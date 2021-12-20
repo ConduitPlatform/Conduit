@@ -7,9 +7,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils/utilities';
-import { SchemaDefinitions } from '../models';
-
-const escapeStringRegexp = require('escape-string-regexp');
+import { _DeclaredSchema } from '../models';
 
 export class DocumentsAdmin {
   private database!: DatabaseProvider;
@@ -22,7 +20,7 @@ export class DocumentsAdmin {
 
   async getDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id, populate } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -47,7 +45,7 @@ export class DocumentsAdmin {
     let { schemaName, query } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -77,7 +75,7 @@ export class DocumentsAdmin {
 
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, inputDocument } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -90,7 +88,7 @@ export class DocumentsAdmin {
 
   async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, inputDocuments } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -104,7 +102,7 @@ export class DocumentsAdmin {
 
   async editDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id, changedDocument } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -123,7 +121,7 @@ export class DocumentsAdmin {
 
   async editDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, changedDocuments } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance().findOne({ name: schemaName });
+    const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -147,7 +145,7 @@ export class DocumentsAdmin {
 
   async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id } = call.request.params;
-    const schema = await SchemaDefinitions.getInstance()
+    const schema = await _DeclaredSchema.getInstance()
       .findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
