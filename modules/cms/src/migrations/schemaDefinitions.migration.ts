@@ -24,17 +24,21 @@ export async function migrateSchemaDefinitions(grpcSdk: ConduitGrpcSdk) {
       const declaredSchema = await _DeclaredSchema
         .getInstance()
         .findOne({ name: schema.name });
-      const cmsMetadata = {
-        cms: {
-          authentication: schema.authentication,
-          crudOperations: schema.crudOperations,
-          enabled: schema.enabled,
+      let modelOptions: ConduitModelOptions = {
+        conduit: {
+          cms: {
+            authentication: schema.authentication,
+            crudOperations: schema.crudOperations,
+            enabled: schema.enabled,
+          }
         }
       };
-      let modelOptions: ConduitModelOptions = merge(
-        JSON.parse(schema.modelOptions),
-        { conduit: cmsMetadata },
-      );
+      try {
+        modelOptions = merge(
+          JSON.parse(schema.modelOptions),
+          modelOptions,
+        );
+      } catch {}
       if ((declaredSchema) && (
         !declaredSchema.modelOptions ||
         !declaredSchema.modelOptions.conduit ||
