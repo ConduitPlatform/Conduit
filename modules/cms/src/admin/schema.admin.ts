@@ -195,7 +195,7 @@ export class SchemaAdmin {
 
     // Mongoose requires that schemas are re-created in order to update them
     if (enabled) {
-      this.schemaController.createSchema(
+      await this.schemaController.createSchema(
         new ConduitSchema(
           updatedSchema.name,
           updatedSchema.fields,
@@ -342,19 +342,10 @@ export class SchemaAdmin {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (requestedSchema.modelOptions.conduit.cms.enabled) {
-      this.schemaController.createSchema(
-        new ConduitSchema(
-          requestedSchema.name,
-          requestedSchema.fields,
-          requestedSchema.schemaOptions
-        )
-      );
-      this.customEndpointController.refreshEndpoints();
-    } else {
+    if (!requestedSchema.modelOptions.conduit.cms.enabled) {
       this.schemaController.refreshRoutes();
-      this.customEndpointController.refreshEndpoints();
     }
+    this.customEndpointController.refreshEndpoints();
 
     return {
       name: updatedSchema.name,
@@ -392,7 +383,7 @@ export class SchemaAdmin {
         ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
         _id: { $in: ids }
       },
-      { enabled: enabled }
+      { 'modelOptions.conduit.cms.enabled': enabled }
     );
     if (isNil(updatedSchemas)) {
       throw new GrpcError(
@@ -407,17 +398,10 @@ export class SchemaAdmin {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (enabled) {
-      requestedSchemas.forEach((schema) => {
-        this.schemaController.createSchema(
-          new ConduitSchema(schema.name, schema.fields, schema.schemaOptions)
-        );
-      });
-      this.customEndpointController.refreshEndpoints();
-    } else {
+    if (!enabled) {
       this.schemaController.refreshRoutes();
-      this.customEndpointController.refreshEndpoints();
     }
+    this.customEndpointController.refreshEndpoints();
 
     return {
       updatedSchemas,
