@@ -41,8 +41,8 @@ export class SchemaAdmin {
 
   async getSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { search, sort, enabled } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
     let query: any = { ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS } },
       identifier;
     if (!isNil(search)) {
@@ -50,7 +50,7 @@ export class SchemaAdmin {
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
     if (!isNil(enabled)) {
-      query['enabled'] = enabled;
+      query['modelOptions.conduit.cms.enabled'] = enabled;
     }
 
     const schemasPromise = _DeclaredSchema.getInstance().findMany(
