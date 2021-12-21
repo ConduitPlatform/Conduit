@@ -102,10 +102,8 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
-          results: { // TODO: unnest (frontend compat)
-            schemas: [_DeclaredSchema.getInstance().fields],
-            documentsCount: ConduitNumber.Required,
-          }
+          schemas: [_DeclaredSchema.getInstance().fields],
+          documentsCount: ConduitNumber.Required,
         }),
         'getSchemas'
       ),
