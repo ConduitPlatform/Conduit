@@ -69,7 +69,7 @@ export class SchemaAdmin {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { results: { schemas, documentsCount } }; // TODO: unnest (frontend compat)
+    return { schemas, documentsCount };
   }
 
   async getSchemasFromOtherModules(
