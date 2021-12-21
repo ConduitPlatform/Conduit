@@ -10,20 +10,16 @@ const schema = {
     type: TYPE.String,
     unique: true,
     required: true,
-    systemRequired: true,
   },
   subject: {
     type: TYPE.String,
-    systemRequired: true,
   },
   body: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   variables: {
     type: [TYPE.String],
-    systemRequired: true,
   },
   sender:{
     type: TYPE.String,
@@ -42,7 +38,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 

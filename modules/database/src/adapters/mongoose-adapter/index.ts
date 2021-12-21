@@ -93,6 +93,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new Error('Not authorized to modify model');
     }
 
+    this.addSchemaPermissions(schema);
+
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

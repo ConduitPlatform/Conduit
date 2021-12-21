@@ -36,7 +36,6 @@ const schema = {
   enabled: {
     type: TYPE.Boolean,
     default: true,
-    systemRequired: true,
   },
   authentication: {
     type: TYPE.Boolean,
@@ -58,6 +57,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 

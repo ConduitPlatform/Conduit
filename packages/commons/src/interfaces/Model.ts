@@ -34,6 +34,12 @@ export interface ConduitModel {
 export interface ConduitModelOptions {
   timestamps?: boolean;
   _id?: boolean;
+  permissions?: {
+    extendable: boolean,
+    canCreate: boolean,
+    canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
+    canDelete: boolean,
+  },
   conduit?: {
     [field: string]: any,
   };

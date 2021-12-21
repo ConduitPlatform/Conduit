@@ -8,7 +8,7 @@ export async function migrateModelOptions() {
   for (const schema of (documents as _DeclaredSchema[])) {
     let newModelOptions: any = { conduit: {} };
     try { // modelOptions could be {}
-      newModelOptions = { ...newModelOptions, ...JSON.parse((schema.modelOptions as string)) };
+      newModelOptions = { ...newModelOptions, ...JSON.parse((schema.modelOptions as unknown as string)) };
     } catch {
       newModelOptions = { ...newModelOptions, ...schema.modelOptions };
     }

@@ -10,23 +10,27 @@ const schema = {
     type: TYPE.String,
     unique: true,
     required: true,
-    systemRequired: true,
   },
   hashedToken: {
     type: TYPE.String,
-    systemRequired: true,
   },
   active: {
     type: TYPE.Boolean,
     default: true,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 export class Service extends ConduitActiveSchema<Service> {

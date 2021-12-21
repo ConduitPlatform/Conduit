@@ -20,7 +20,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 

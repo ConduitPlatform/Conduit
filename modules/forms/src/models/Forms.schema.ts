@@ -10,17 +10,14 @@ const schema = {
     type: TYPE.String,
     required: true,
     unique: true,
-    systemRequired: true,
   },
   fields: {
     type: TYPE.JSON,
     required: true,
-    systemRequired: true,
   },
   forwardTo: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   emailField: {
     type: TYPE.String,
@@ -34,7 +31,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 

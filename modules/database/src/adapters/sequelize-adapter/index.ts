@@ -37,6 +37,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (!owned) {
       throw new Error('Not authorized to modify model');
     }
+
+    this.addSchemaPermissions(schema);
+
     let newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

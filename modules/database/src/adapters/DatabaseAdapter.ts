@@ -83,4 +83,24 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   abstract ensureConnected(): Promise<any>;
+
+  protected addSchemaPermissions(schema: ConduitSchema) {
+    const defaultPermissions = {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    };
+    if (!schema.schemaOptions.hasOwnProperty('conduit')) schema.schemaOptions.conduit = {};
+    if (!schema.schemaOptions.conduit!.hasOwnProperty('permissions')) {
+      schema.schemaOptions.conduit!.permissions = defaultPermissions;
+    } else {
+      Object.keys(defaultPermissions).forEach((perm) => {
+        if (!schema.schemaOptions.conduit!.permissions.hasOwnProperty(perm)) {
+          schema.schemaOptions.conduit!.permissions[perm] = defaultPermissions[perm as keyof typeof defaultPermissions];
+        }
+      });
+    }
+    return schema;
+  }
 }

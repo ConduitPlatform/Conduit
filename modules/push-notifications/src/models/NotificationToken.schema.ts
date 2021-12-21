@@ -11,25 +11,29 @@ const schema = {
   userId: {
     type: TYPE.Relation,
     model: 'User',
-    systemRequired: true,
   },
   token: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   platform: {
     type: TYPE.String,
     enum: Object.values(PlatformTypesEnum),
     required: true,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 

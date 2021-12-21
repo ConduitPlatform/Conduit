@@ -10,7 +10,6 @@ const schema = {
     type: TYPE.String,
     required: true,
     unique: true,
-    systemRequired: true,
   },
   trigger: {
     type: {
@@ -20,7 +19,6 @@ const schema = {
       options: TYPE.JSON,
     },
     required: true,
-    systemRequired: true,
   },
   actors: {
     type: [
@@ -32,7 +30,6 @@ const schema = {
       },
     ],
     required: true,
-    systemRequired: true,
   },
   enabled: {
     type: TYPE.Boolean,
@@ -43,7 +40,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    },
+  },
 };
 const collectionName = undefined;
 
