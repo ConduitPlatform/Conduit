@@ -90,7 +90,7 @@ function _queryValidation(
   }
 
   if (comparisonField.type === 'Schema') {
-    if (!Object.keys(findSchema).includes(comparisonField.value)) {
+    if (!Object.keys(findSchema.fields).includes(comparisonField.value)) {
       return 'comparisonField value is not present in selected schema!';
     }
   } else if (comparisonField.type === 'Input') {
