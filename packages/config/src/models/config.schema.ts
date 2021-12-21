@@ -9,5 +9,5 @@ export default new ConduitSchema(
       default: {},
     },
   },
-  { systemRequired: true, timestamps: true }
+  { timestamps: true }
 );

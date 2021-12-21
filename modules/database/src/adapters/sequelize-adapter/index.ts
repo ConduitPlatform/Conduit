@@ -33,7 +33,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       }
       delete this.sequelize.models[schema.name];
     }
-    let owned = await this.checkModelOwnership(schema);
+    const owned = await this.checkModelOwnership(schema);
     if (!owned) {
       throw new Error('Not authorized to modify model');
     }
@@ -71,11 +71,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     });
   }
 
-  async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
+  async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
-    if (this.models![schemaName].originalSchema.modelOptions.systemRequired) {
-      throw ConduitError.forbidden("Can't delete system required schema");
+    if (
+      (this.models[schemaName].originalSchema.owner !== callerModule) &&
+      (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
+    ) {
+      throw ConduitError.forbidden('Not authorized to delete schema');
     }
     if (deleteData) {
       await this.models![schemaName].model.drop();

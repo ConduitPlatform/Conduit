@@ -88,7 +88,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
       delete this.mongoose.connection.models[schema.name];
     }
-    let owned = await this.checkModelOwnership(schema);
+    const owned = await this.checkModelOwnership(schema);
     if (!owned) {
       throw new Error('Not authorized to modify model');
     }
@@ -135,13 +135,16 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     throw new Error(`Schema ${schemaName} not defined yet`);
   }
 
-   async deleteSchema(schemaName: string, deleteData: boolean): Promise<string> {
+  async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {
     if (!this.models?.[schemaName])
       throw ConduitError.notFound('Requested schema not found');
-    if (this.models![schemaName].originalSchema.schemaOptions.systemRequired) {
-      throw ConduitError.forbidden("Can't delete system required schema");
+    if (
+      (this.models[schemaName].originalSchema.owner !== callerModule) &&
+      (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
+    ) {
+      throw ConduitError.forbidden('Not authorized to delete schema');
     }
-    if(deleteData){
+    if (deleteData) {
       await this.models![schemaName].model.collection
         .drop()
         .catch((e:any) => { throw new Error(e.message)});

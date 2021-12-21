@@ -15,7 +15,7 @@ import { CustomEndpoints, _DeclaredSchema } from '../models';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-const CMS_SYSTEM_SCHEMAS = ['CustomEndpoints', 'SchemaDefinitions']; // excluded DeclaredSchemas // TODO: Remove 'SchemaDefinitions' once schemaDefinitions.migration deletes it
+const CMS_SYSTEM_SCHEMAS = ['CustomEndpoints']; // excluded DeclaredSchemas
 
 export class SchemaAdmin {
   private readonly database: DatabaseProvider;
