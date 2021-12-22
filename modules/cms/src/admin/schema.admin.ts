@@ -408,4 +408,41 @@ export class SchemaAdmin {
       enabled,
     };
   }
+
+  async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
+    const canModifyOptions = ['Everything', 'Nothing', 'ExtensionOnly'];
+    if (canModify && !(canModifyOptions.includes(canModify))) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `canModify permission must be one of: ${canModifyOptions.join(', ')}`);
+    }
+
+    const requestedSchema = await _DeclaredSchema.getInstance().findOne({
+      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      _id: id,
+    });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+
+    (requestedSchema.modelOptions.conduit as any).permissions.extendable =
+      extendable ?? (requestedSchema.modelOptions.conduit as any).permissions.extendable;
+    (requestedSchema.modelOptions.conduit as any).permissions.canCreate =
+      canCreate ?? (requestedSchema.modelOptions.conduit as any).permissions.canCreate;
+    (requestedSchema.modelOptions.conduit as any).permissions.canModify =
+      canModify ?? (requestedSchema.modelOptions.conduit as any).permissions.canModify;
+    (requestedSchema.modelOptions.conduit as any).permissions.canDelete =
+      canDelete ?? (requestedSchema.modelOptions.conduit as any).permissions.canDelete;
+
+    const updatedSchema = await _DeclaredSchema.getInstance().findByIdAndUpdate(
+      requestedSchema._id,
+      requestedSchema,
+    );
+    if (isNil(updatedSchema)) {
+      throw new GrpcError(status.INTERNAL, 'Could not update schema permissions');
+    }
+
+    return 'Schema permissions updated successfully';
+  }
 }

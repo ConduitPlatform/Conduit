@@ -55,6 +55,7 @@ export class AdminHandlers {
         deleteSchemas: this.schemaAdmin.deleteSchemas.bind(this.schemaAdmin),
         toggleSchema: this.schemaAdmin.toggleSchema.bind(this.schemaAdmin),
         toggleSchemas: this.schemaAdmin.toggleSchemas.bind(this.schemaAdmin),
+        setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
@@ -207,6 +208,23 @@ export class AdminHandlers {
           enabled: ConduitBoolean.Required,
         }),
         'toggleSchemas'
+      ),
+      constructConduitRoute(
+        {
+          path: '/schemas/permissions/:id',
+          action: ConduitRouteActions.PATCH,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+          bodyParams: {
+            extendable: ConduitBoolean.Optional,
+            canCreate: ConduitBoolean.Optional,
+            canModify: ConduitString.Optional,
+            canDelete: ConduitBoolean.Optional,
+          }
+        },
+        new ConduitRouteReturnDefinition('ToggleSchemas', 'String'),
+        'setSchemaPerms'
       ),
       // Documents
       constructConduitRoute(
