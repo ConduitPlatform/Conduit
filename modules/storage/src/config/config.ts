@@ -7,10 +7,6 @@ export default {
     type: String,
     default: 'local',
   },
-  storagePath: {
-    type: String,
-    default: '/var/tmp',
-  },
   defaultContainer: {
     type: String,
     default: 'conduit',
@@ -28,4 +24,10 @@ export default {
   azure: {
     connectionString: { type: String, default: '' },
   },
+  local:{
+    storagePath: {
+      type: String,
+      default: '/var/tmp',
+    },
+  }
 };
