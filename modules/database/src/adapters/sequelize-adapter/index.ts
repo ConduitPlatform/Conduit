@@ -1,10 +1,11 @@
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, GrpcError } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { _DeclaredSchema } from '../../models';
+import { status} from '@grpc/grpc-js';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
@@ -35,7 +36,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
-      throw new Error('Not authorized to modify model');
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
     }
 
     this.addSchemaPermissions(schema);
@@ -60,7 +61,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (this.models && this.models![schemaName]) {
       return this.models[schemaName].originalSchema;
     }
-    throw new Error('Schema not defined yet');
+    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
   getSchemas(): ConduitSchema[] {
@@ -76,12 +77,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
   async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {
     if (!this.models?.[schemaName])
-      throw ConduitError.notFound('Requested schema not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (
       (this.models[schemaName].originalSchema.owner !== callerModule) &&
       (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
     ) {
-      throw ConduitError.forbidden('Not authorized to delete schema');
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
       await this.models![schemaName].model.drop();
@@ -94,9 +95,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           _DeclaredSchema
             .getInstance()
             .deleteOne({ name: schemaName })
-            .catch((err) => {
-              throw new Error(err.message);
-            });
+            .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
         }
       });
     delete this.models![schemaName];
@@ -115,7 +114,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       }
       return { model: this.models[schemaName], relations };
     }
-    throw new Error('Schema not defined yet');
+    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
   async ensureConnected(): Promise<any> {

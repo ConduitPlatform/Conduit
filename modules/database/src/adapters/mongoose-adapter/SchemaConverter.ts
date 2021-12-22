@@ -1,6 +1,6 @@
 import { Schema } from 'mongoose';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import { isNil, isObject, isArray, cloneDeep} from 'lodash';
+import { isNil, isObject, cloneDeep} from 'lodash';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -28,7 +28,6 @@ function convert(value: any, key: any, parentValue: any, context: any) {
     const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {
       _id: false,
       timestamps: false,
-      // TODO: Check this for perms
     });
     parentValue[key] = schemaConverter(typeSchema).modelSchema;
     return true;

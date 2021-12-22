@@ -28,7 +28,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
-    let model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
+    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
     if (model && ((model as any).ownerModule === schema.owner || (model as any).ownerModule === 'unknown')) {
       return true;
     } else if (model) {
@@ -37,7 +37,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     return true;
   }
 
-  async saveSchemaToDatabase(schema: ConduitSchema) {
+  protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
     const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });

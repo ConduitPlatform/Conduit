@@ -1,10 +1,12 @@
 import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, GrpcError } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { _DeclaredSchema } from '../../models';
+import { status} from '@grpc/grpc-js';
+
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -69,7 +71,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       })
       .catch((err: any) => {
         console.log(err);
-        throw new Error('Connection with Mongo not possible');
+        throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
       });
   }
 
@@ -90,7 +92,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
-      throw new Error('Not authorized to modify model');
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
     }
 
     this.addSchemaPermissions(schema);
@@ -116,7 +118,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (this.models && this.models![schemaName]) {
       return this.models![schemaName].originalSchema;
     }
-    throw new Error(`Schema ${schemaName} not defined yet`);
+    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
   getSchemas(): ConduitSchema[] {
@@ -134,22 +136,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (this.models && this.models![schemaName]) {
       return { model: this.models![schemaName], relations: null };
     }
-    throw new Error(`Schema ${schemaName} not defined yet`);
+    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
   async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {
     if (!this.models?.[schemaName])
-      throw ConduitError.notFound('Requested schema not found');
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (
       (this.models[schemaName].originalSchema.owner !== callerModule) &&
       (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
     ) {
-      throw ConduitError.forbidden('Not authorized to delete schema');
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
       await this.models![schemaName].model.collection
         .drop()
-        .catch((e:any) => { throw new Error(e.message)});
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
     _DeclaredSchema.getInstance()
       .findOne({ name: schemaName })
@@ -157,7 +159,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         if (model) {
           _DeclaredSchema.getInstance()
             .deleteOne({name: schemaName})
-            .catch((err) => { throw new Error(err.message)})
+            .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); })
         }
       });
 
@@ -166,5 +168,4 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Schema deleted!'
     // TODO should we delete anything else?
   }
-
 }
