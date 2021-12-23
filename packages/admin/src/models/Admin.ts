@@ -17,5 +17,15 @@ export const AdminSchema = new ConduitSchema(
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    conduit: {
+      permissions: {
+        extendable: true,
+        canCreate: false,
+        canModify: 'ExtensionOnly',
+        canDelete: false,
+      },
+    },
+  }
 );

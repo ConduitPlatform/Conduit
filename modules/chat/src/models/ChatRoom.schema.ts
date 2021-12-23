@@ -23,9 +23,9 @@ const schemaOptions = {
   conduit: {
     permissions: {
       extendable: true,
-      canCreate: true,
-      canModify: 'Everything',
-      canDelete: true,
+      canCreate: false,
+      canModify: 'ExtensionOnly',
+      canDelete: false,
     },
   },
 };

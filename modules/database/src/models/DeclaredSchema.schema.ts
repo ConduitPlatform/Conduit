@@ -42,10 +42,10 @@ const schemaOptions = {
   timestamps: true,
   conduit: {
     permissions: {
-      extendable: true,
-      canCreate: true,
-      canModify: 'Everything',
-      canDelete: true,
+      extendable: false,
+      canCreate: false,
+      canModify: 'Nothing',
+      canDelete: false,
     },
   },
 };

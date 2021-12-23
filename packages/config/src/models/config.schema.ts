@@ -9,5 +9,15 @@ export default new ConduitSchema(
       default: {},
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    conduit: {
+      permissions: {
+        extendable: true,
+        canCreate: false,
+        canModify: 'ExtensionOnly',
+        canDelete: false,
+      },
+    },
+  }
 );
