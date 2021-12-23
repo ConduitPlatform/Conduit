@@ -102,7 +102,7 @@ export class DatabaseProvider extends ConduitServiceModule {
             receivedSchema.modelOptions,
             receivedSchema.collectionName
           );
-          schema.owner = receivedSchema.owner;
+          schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
             .then(() => {})
@@ -140,7 +140,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    schema.owner = (call as any).metadata.get('module-name')[0];
+    schema.ownerModule = (call as any).metadata.get('module-name')[0];
     await this._activeAdapter.createSchemaFromAdapter(schema)
       .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
@@ -154,7 +154,7 @@ export class DatabaseProvider extends ConduitServiceModule {
           modelSchema: JSON.parse(call.request.schema.modelSchema),
           modelOptions: JSON.parse(call.request.schema.modelOptions),
           collectionName: call.request.schema.collectionName,
-          owner: schema.owner,
+          owner: schema.ownerModule,
         });
         callback(null, {
           schema: originalSchema,
@@ -278,16 +278,16 @@ export class DatabaseProvider extends ConduitServiceModule {
   async create(call: QueryRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const schemaName = call.request.schemaName;
-    if (!await canCreate(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      const doc = await schemaAdapter.model.create(call.request.query);
+      if (!await canCreate(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
+        });
+      }
 
+      const doc = await schemaAdapter.model.create(call.request.query);
       const docString = JSON.stringify(doc);
 
       this.grpcSdk.bus?.publish(
@@ -307,16 +307,16 @@ export class DatabaseProvider extends ConduitServiceModule {
   async createMany(call: QueryRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const schemaName = call.request.schemaName;
-    if (!await canCreate(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      const docs = await schemaAdapter.model.createMany(call.request.query);
+      if (!await canCreate(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
+        });
+      }
 
+      const docs = await schemaAdapter.model.createMany(call.request.query);
       const docsString = JSON.stringify(docs);
 
       this.grpcSdk.bus?.publish(
@@ -336,14 +336,15 @@ export class DatabaseProvider extends ConduitServiceModule {
   async findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const { schemaName } = call.request;
-    if (!await canModify(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!await canModify(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
+        });
+      }
+
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
@@ -351,7 +352,6 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.populate,
         schemaAdapter.relations,
       );
-
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(
@@ -371,20 +371,20 @@ export class DatabaseProvider extends ConduitServiceModule {
   async updateMany(call: UpdateManyRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const { schemaName } = call.request;
-    if (!await canModify(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!await canModify(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
+        });
+      }
+
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
         call.request.updateProvidedOnly
       );
-
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(
@@ -404,16 +404,16 @@ export class DatabaseProvider extends ConduitServiceModule {
   async deleteOne(call: QueryRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const { schemaName, query } = call.request;
-    if (!await canDelete(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      const result = await schemaAdapter.model.deleteOne(query);
+      if (!await canDelete(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
+        });
+      }
 
+      const result = await schemaAdapter.model.deleteOne(query);
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(
@@ -433,16 +433,16 @@ export class DatabaseProvider extends ConduitServiceModule {
   async deleteMany(call: QueryRequest, callback: QueryResponse) {
     const moduleName = (call as any).metadata.get('module-name')[0];
     const { schemaName, query } = call.request;
-    if (!await canDelete(moduleName, schemaName)) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
-      });
-    }
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      const result = await schemaAdapter.model.deleteMany(query);
+      if (!await canDelete(moduleName, schemaAdapter.model)) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
+        });
+      }
 
+      const result = await schemaAdapter.model.deleteMany(query);
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(

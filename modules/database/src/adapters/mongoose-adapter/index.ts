@@ -143,7 +143,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (
-      (this.models[schemaName].originalSchema.owner !== callerModule) &&
+      (this.models[schemaName].originalSchema.ownerModule !== callerModule) &&
       (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
     ) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');

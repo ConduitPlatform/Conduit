@@ -29,7 +29,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
     const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
-    if (model && ((model as any).ownerModule === schema.owner || (model as any).ownerModule === 'unknown')) {
+    if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
       return true;
     } else if (model) {
       return false;
@@ -49,7 +49,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
-            ownerModule: schema.owner,
+            ownerModule: schema.ownerModule,
           }
         );
     } else {
@@ -58,7 +58,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           name: schema.name,
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
-          ownerModule: schema.owner,
+          ownerModule: schema.ownerModule,
         });
     }
   }
@@ -72,7 +72,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           model.fields,
           model.modelOptions
         );
-        schema.owner = model.ownerModule;
+        schema.ownerModule = model.ownerModule;
         return schema;
       })
       .map((model: ConduitSchema) => {
