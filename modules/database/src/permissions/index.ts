@@ -12,10 +12,7 @@ export async function canExtend(moduleName: string, schema: SchemaAdapter<any>) 
 }
 
 export async function canCreate(moduleName: string, schema: SchemaAdapter<any>) {
-  if (
-    (moduleName === 'database' || moduleName === 'cms') &&
-    (schema.originalSchema.name === '_DeclaredSchema')
-  ) return true;
+  if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema') return true;
   if (schema.originalSchema.ownerModule === 'unknown') { // remove this at some point
     console.warn(`Deprecation Warning: Disabling permission check for ${schema.originalSchema.name} schema. Update schema ownership.`);
     return true;

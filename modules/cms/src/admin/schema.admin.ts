@@ -185,10 +185,15 @@ export class SchemaAdmin {
       );
     }
 
-    const updatedSchema = await _DeclaredSchema.getInstance().findByIdAndUpdate(
-      requestedSchema._id,
-      requestedSchema
-    );
+    const updatedSchema = await this.database
+      .createSchemaFromAdapter(
+        new ConduitSchema(
+          requestedSchema.name,
+          requestedSchema.fields,
+          requestedSchema.modelOptions,
+        )
+      )
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     if (isNil(updatedSchema)) {
       throw new GrpcError(status.INTERNAL, 'Could not update schema');
     }
