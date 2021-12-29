@@ -9,12 +9,10 @@ const schema = {
   name: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   container: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   isPublic: {
     type: TYPE.Boolean,
@@ -26,7 +24,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: false,
+      canModify: 'ExtensionOnly',
+      canDelete: false,
+    },
+  },
 };
 const collectionName = undefined;
 

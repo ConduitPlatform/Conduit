@@ -11,12 +11,10 @@ const schema = {
     type: TYPE.Relation,
     model: 'ActorFlow',
     required: true,
-    systemRequired: true,
   },
   data: {
     type: TYPE.JSON,
     required: false,
-    systemRequired: true,
   },
   status: {
     type: TYPE.String,
@@ -26,7 +24,14 @@ const schema = {
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: false,
+      canModify: 'ExtensionOnly',
+      canDelete: false,
+    },
+  },
 };
 const collectionName = undefined;
 

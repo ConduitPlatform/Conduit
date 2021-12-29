@@ -10,31 +10,34 @@ const schema = {
   userId: {
     type: TYPE.Relation,
     model: 'User',
-    systemRequired: true,
   },
   clientId: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   token: {
     type: TYPE.String,
-    systemRequired: true,
   },
   expiresOn: {
     type: TYPE.Date,
-    systemRequired: true,
   },
   securityDetails: {
-    macAddress: { type: TYPE.String, systemRequired: true },
-    userAgent: { type: TYPE.String, systemRequired: true },
+    macAddress: { type: TYPE.String },
+    userAgent: { type: TYPE.String },
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: false,
+      canModify: 'ExtensionOnly',
+      canDelete: false,
+    },
+  },
 };
 const collectionName = undefined;
 

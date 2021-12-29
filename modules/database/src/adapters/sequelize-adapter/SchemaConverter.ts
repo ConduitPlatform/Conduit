@@ -9,10 +9,9 @@ import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
   let copy = _.cloneDeep(jsonSchema) as any;
-  let actual: any = copy.modelSchema;
 
-  if (actual.hasOwnProperty('_id')) {
-    delete actual['_id'];
+  if (copy.modelSchema.hasOwnProperty('_id')) {
+    delete copy.modelSchema['_id'];
   }
 
   iterDeep(jsonSchema.modelSchema, copy.modelSchema);

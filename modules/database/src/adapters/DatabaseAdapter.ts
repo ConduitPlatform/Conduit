@@ -28,8 +28,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
-    let model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
-    if (model && ((model as any).ownerModule === schema.owner || (model as any).ownerModule === 'unknown')) {
+    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
+    if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
       return true;
     } else if (model) {
       return false;
@@ -37,7 +37,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     return true;
   }
 
-  async saveSchemaToDatabase(schema: ConduitSchema) {
+  protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
     const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
@@ -49,7 +49,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
-            ownerModule: schema.owner,
+            ownerModule: schema.ownerModule,
           }
         );
     } else {
@@ -58,7 +58,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           name: schema.name,
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
-          ownerModule: schema.owner,
+          ownerModule: schema.ownerModule,
         });
     }
   }
@@ -72,7 +72,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           model.fields,
           model.modelOptions
         );
-        schema.owner = model.ownerModule;
+        schema.ownerModule = model.ownerModule;
         return schema;
       })
       .map((model: ConduitSchema) => {
@@ -83,4 +83,24 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   abstract ensureConnected(): Promise<any>;
+
+  protected addSchemaPermissions(schema: ConduitSchema) {
+    const defaultPermissions = {
+      extendable: true,
+      canCreate: true,
+      canModify: 'Everything',
+      canDelete: true,
+    };
+    if (!schema.schemaOptions.hasOwnProperty('conduit')) schema.schemaOptions.conduit = {};
+    if (!schema.schemaOptions.conduit!.hasOwnProperty('permissions')) {
+      schema.schemaOptions.conduit!.permissions = defaultPermissions;
+    } else {
+      Object.keys(defaultPermissions).forEach((perm) => {
+        if (!schema.schemaOptions.conduit!.permissions.hasOwnProperty(perm)) {
+          schema.schemaOptions.conduit!.permissions[perm] = defaultPermissions[perm as keyof typeof defaultPermissions];
+        }
+      });
+    }
+    return schema;
+  }
 }

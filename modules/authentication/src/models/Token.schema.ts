@@ -9,27 +9,30 @@ const schema = {
   _id: TYPE.ObjectId,
   type: {
     type: TYPE.String,
-    systemRequired: true,
   },
   userId: {
     type: TYPE.Relation,
     model: 'User',
-    systemRequired: true,
   },
   token: {
     type: TYPE.String,
-    systemRequired: true,
   },
   data: {
     type: TYPE.JSON,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
 const schemaOptions = {
   timestamps: true,
-  systemRequired: true,
+  conduit: {
+    permissions: {
+      extendable: true,
+      canCreate: false,
+      canModify: 'ExtensionOnly',
+      canDelete: false,
+    },
+  },
 };
 const collectionName = undefined;
 

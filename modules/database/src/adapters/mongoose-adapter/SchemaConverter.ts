@@ -1,6 +1,6 @@
 import { Schema } from 'mongoose';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
-import { isNil, isObject, isArray, cloneDeep } from 'lodash';
+import { isNil, isObject, cloneDeep} from 'lodash';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -9,15 +9,13 @@ const deepdash = require('deepdash/standalone');
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
   let copy = cloneDeep(jsonSchema);
-  let actual: any = copy.modelSchema;
 
-  if (actual.hasOwnProperty('_id')) {
-    delete actual['_id'];
+  if (copy.modelSchema.hasOwnProperty('_id')) {
+    delete copy.modelSchema['_id'];
   }
-  deepdash.eachDeep(actual, convert);
 
-  // just to be sure
-  // jsonSchema.modelSchema = actual;
+  deepdash.eachDeep(copy.modelSchema, convert);
+
   return copy;
 }
 
@@ -27,19 +25,11 @@ function convert(value: any, key: any, parentValue: any, context: any) {
   }
 
   if (isObject(parentValue[key]?.type) && key !== 'database' && key !== 'variables') {
-    if (isArray(parentValue[key].type)) {
-      const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {
-        _id: false,
-        timestamps: false,
-      });
-      parentValue[key] = schemaConverter(typeSchema).modelSchema;
-    } else {
-      const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {
-        _id: false,
-        timestamps: false,
-      });
-      parentValue[key] = schemaConverter(typeSchema).modelSchema;
-    }
+    const typeSchema = new ConduitSchema(`${key}_type`, parentValue[key].type, {
+      _id: false,
+      timestamps: false,
+    });
+    parentValue[key] = schemaConverter(typeSchema).modelSchema;
     return true;
   }
 
@@ -58,7 +48,7 @@ function convert(value: any, key: any, parentValue: any, context: any) {
     parentValue[key] = Schema.Types.Mixed;
   }
 
-  if (parentValue[key]?.systemRequired) {
+  if (parentValue[key]?.systemRequired) { // Remove this after custom modules are updated
     delete parentValue[key].systemRequired;
   }
 }
