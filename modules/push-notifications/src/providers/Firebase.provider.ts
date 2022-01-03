@@ -20,8 +20,12 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     const firebaseOptions: firebase.AppOptions = {
       credential: firebase.credential.cert(serviceAccount),
     };
+    try {
+      this.fcm = firebase.app(serviceAccount.projectId).messaging();
+    } catch (e) {
+      this.fcm = firebase.initializeApp(firebaseOptions, serviceAccount.projectId).messaging();
+    }
 
-    this.fcm = firebase.initializeApp(firebaseOptions).messaging();
   }
 
   // TODO check for disabled notifications for users
