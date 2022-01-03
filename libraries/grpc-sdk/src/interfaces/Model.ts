@@ -31,13 +31,15 @@ export interface ConduitModel {
     | any[]; // removing this caused multiple issues
 }
 
+export const ConduitModelOptionsPermModifyType = ['Everything', 'Nothing', 'ExtensionOnly'] as const;
+
 export interface ConduitModelOptions {
   timestamps?: boolean;
   _id?: boolean;
   permissions?: {
     extendable: boolean,
     canCreate: boolean,
-    canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
+    canModify: typeof ConduitModelOptionsPermModifyType[number],
     canDelete: boolean,
   },
   conduit?: {

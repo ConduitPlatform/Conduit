@@ -129,6 +129,12 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
             authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
             crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            permissions: {
+              extendable: ConduitBoolean.Optional,
+              canCreate: ConduitBoolean.Optional,
+              canModify: ConduitString.Optional,
+              canDelete: ConduitBoolean.Optional,
+            },
           },
         },
         new ConduitRouteReturnDefinition('CreateSchema', _DeclaredSchema.getInstance().fields),
@@ -148,6 +154,12 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
             authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
             crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            permissions: {
+              extendable: ConduitBoolean.Optional,
+              canCreate: ConduitBoolean.Optional,
+              canModify: ConduitString.Optional,
+              canDelete: ConduitBoolean.Optional,
+            },
           },
         },
         new ConduitRouteReturnDefinition('EditSchema', _DeclaredSchema.getInstance().fields),
@@ -221,9 +233,9 @@ export class AdminHandlers {
             canCreate: ConduitBoolean.Optional,
             canModify: ConduitString.Optional,
             canDelete: ConduitBoolean.Optional,
-          }
+          },
         },
-        new ConduitRouteReturnDefinition('ToggleSchemas', 'String'),
+        new ConduitRouteReturnDefinition('SetSchemaPermissions', 'String'),
         'setSchemaPerms'
       ),
       // Documents
