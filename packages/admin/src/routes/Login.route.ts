@@ -8,12 +8,12 @@ import {
   ConduitRouteParameters,
   ConduitString,
 } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
 
 
-export function getLoginRoute(conduit: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
+export function getLoginRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
     {
       path: '/login',
@@ -28,14 +28,12 @@ export function getLoginRoute(conduit: ConduitCommons, grpcSdk: ConduitGrpcSdk) 
     }),
     async (params: ConduitRouteParameters) => {
       const config: IConfigManager = conduit.getConfigManager();
-      const database = grpcSdk.databaseProvider!;
-
       const { username, password } = params.params!;
       if (isNil(username) || isNil(password)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Both username and password must be provided');
       }
 
-      const admin = await database.findOne('Admin', { username });
+      const admin = await Admin.getInstance().findOne({ username });
       if (isNil(admin)) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
