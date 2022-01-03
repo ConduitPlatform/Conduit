@@ -194,7 +194,7 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(newContainer)
-        .store((newFolder ?? '') + name, fileData);
+        .store((newFolder ?? '') + name, fileData)
 
       if (shouldRemove) {
         await this.storageProvider

@@ -151,7 +151,7 @@ export class StorageModule extends ConduitServiceModule {
   private async enableModule(): Promise<any> {
     await this.updateConfig();
     const storageConfig = ConfigController.getInstance().config;
-    const { provider, storagePath, google, azure } = storageConfig;
+    const { provider, local, google, azure } = storageConfig;
 
     if (!this.isRunning) {
       await this.registerSchemas();
@@ -159,7 +159,7 @@ export class StorageModule extends ConduitServiceModule {
       this.isRunning = true;
     }
     this.storageProvider = createStorageProvider(provider, {
-      storagePath,
+      local,
       google,
       azure,
     });

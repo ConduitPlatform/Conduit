@@ -12,7 +12,7 @@ export function createStorageProvider(
   } else if (provider === 'azure') {
     return new AzureStorage(options);
   } else {
-    return new LocalStorage();
+    return new LocalStorage(options);
   }
 }
 

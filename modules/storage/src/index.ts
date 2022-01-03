@@ -4,13 +4,18 @@ import { StorageModule } from './Storage';
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
 let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'storage');
 let storage = new StorageModule(grpcSdk);
 storage
-  .initialize()
+  .initialize(servicePort)
   .then(() => {
     let url =
-      (process.env.REGISTER_NAME === 'true' ? 'storage:' : '0.0.0.0:') + storage.port;
+      (process.env.REGISTER_NAME === 'true' ? 'storage:' : `${ serviceAddress }:`) +
+      storage.port;
     return grpcSdk.config.registerModule('storage', url);
   })
   .catch((err: Error) => {
