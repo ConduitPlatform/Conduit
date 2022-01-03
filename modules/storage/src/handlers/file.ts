@@ -194,7 +194,10 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(newContainer)
-        .store((newFolder ?? '') + name, fileData);
+        .store((newFolder ?? '') + name, fileData)
+        .catch((err: Error) => {
+          console.log('edw',err);
+        });
 
       if (shouldRemove) {
         await this.storageProvider
