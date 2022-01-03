@@ -7,12 +7,12 @@ import {
   ConduitRouteParameters,
   ConduitString,
 } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { hashPassword } from '../utils/auth';
 
 
-export function getCreateAdminRoute(conduit: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
+export function getCreateAdminRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
     {
       path: '/create',
@@ -26,21 +26,19 @@ export function getCreateAdminRoute(conduit: ConduitCommons, grpcSdk: ConduitGrp
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      const database = grpcSdk.databaseProvider!;
-
       const { username, password } = params.params!;
       if (isNil(username) || isNil(password)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Both username and password must be provided');
       }
 
-      const admin = await database.findOne('Admin', { username });
+      const admin = await Admin.getInstance().findOne({ username });
       if (!isNil(admin)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
       }
       const adminConfig = await conduit.getConfigManager().get('admin');
       const hashRounds = adminConfig.auth.hashRounds;
       let pass = await hashPassword(password, hashRounds);
-      await database.create('Admin', { username: username, password: pass });
+      await Admin.getInstance().create({ username: username, password: pass });
 
       return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     }

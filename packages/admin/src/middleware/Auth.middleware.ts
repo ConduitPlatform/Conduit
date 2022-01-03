@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { ConduitCommons } from '@quintessential-sft/conduit-commons';
+import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 
@@ -14,7 +15,6 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     ) {
       return next();
     }
-    const databaseAdapter = await grpcSdk.databaseProvider!;
     const adminConfig = await conduit.getConfigManager().get('admin');
 
     const tokenHeader = req.headers.authorization;
@@ -41,8 +41,8 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     }
     const { id } = decoded;
 
-    databaseAdapter
-      .findOne('Admin', { _id: id })
+    Admin.getInstance()
+      .findOne({ _id: id })
       .then((admin: any) => {
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });

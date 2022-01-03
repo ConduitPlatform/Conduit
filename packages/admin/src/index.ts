@@ -15,8 +15,8 @@ import {
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import { hashPassword } from './utils/auth';
-import { AdminSchema } from './models/Admin';
 import AdminConfigSchema from './config';
+import * as models from './models';
 
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
@@ -47,7 +47,7 @@ export default class AdminModule extends IConduitAdmin {
     );
     // Register Pre-Auth-Middleware routes
     const preAuthMiddlewareRoutes: ConduitRoute[] = [];
-    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit, this.grpcSdk));
+    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit));
     preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
     preAuthMiddlewareRoutes.forEach((route) => {
       this._restRouter.registerConduitRoute(route);
@@ -55,7 +55,7 @@ export default class AdminModule extends IConduitAdmin {
 
     this._grpcRoutes = {};
     this._sdkRoutes = [
-      adminRoutes.getCreateAdminRoute(this.conduit, this.grpcSdk),
+      adminRoutes.getCreateAdminRoute(this.conduit),
     ];
 
     // Register Post-Auth-Middleware routes
@@ -214,12 +214,9 @@ export default class AdminModule extends IConduitAdmin {
     if (!this.grpcSdk.databaseProvider) {
       await this.grpcSdk.waitForExistence('database');
     }
-    const databaseAdapter = this.grpcSdk.databaseProvider!;
-
-    await databaseAdapter.createSchemaFromAdapter(AdminSchema);
-
-    databaseAdapter
-      .findOne('Admin', { username: 'admin' })
+    await this.registerSchemas();
+    models.Admin.getInstance()
+      .findOne({ username: 'admin' })
       .then(async (existing: any) => {
         if (isNil(existing)) {
           const adminConfig = await this.conduit.getConfigManager().get('admin');
@@ -230,7 +227,7 @@ export default class AdminModule extends IConduitAdmin {
       })
       .then((result: string | null) => {
         if (!isNil(result)) {
-          return databaseAdapter.create('Admin', { username: 'admin', password: result });
+          return models.Admin.getInstance().create({ username: 'admin', password: result });
         }
       })
       .catch(console.log);
@@ -294,5 +291,13 @@ export default class AdminModule extends IConduitAdmin {
       );
     });
     this._restRouter.cleanupRoutes(routes);
+  }
+
+  private registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
+      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
   }
 }
