@@ -68,7 +68,7 @@ export class CoreBootstrapper {
   private static async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk, app: ConduitApp) {
     await app.conduit.getConfigManager().registerAppConfig();
     let error;
-    let existingConfig = app.conduit
+    app.conduit
       .getConfigManager()
       .get('core')
       .catch((err: any) => (error = err));

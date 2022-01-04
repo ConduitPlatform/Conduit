@@ -20,7 +20,7 @@ export abstract class IConfigManager {
 }
 
 export abstract class IDatabaseConfigUtility {
-  abstract registerConfigSchemas(newConfig: string): Promise<any>;
+  abstract registerConfigSchemas(newConfig: any): Promise<any>;
 }
 
 export abstract class IAppConfig {

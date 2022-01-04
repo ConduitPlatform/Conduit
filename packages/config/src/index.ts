@@ -2,10 +2,10 @@ import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
-import AppConfigSchema from './models/config.schema';
 import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
+import * as models from './models';
 import axios from 'axios';
 
 export default class ConfigManager implements IConfigManager {
@@ -22,10 +22,10 @@ export default class ConfigManager implements IConfigManager {
     packageDefinition: any,
     databaseCallback: any
   ) {
-    var protoDescriptor = loadPackageDefinition(packageDefinition);
+    const protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
-    var config = protoDescriptor.conduit.core.Config;
+    const config = protoDescriptor.conduit.core.Config;
     server.addService(config.service, {
       get: this.getGrpc.bind(this),
       getServerConfig: this.getServerConfig.bind(this),
@@ -157,8 +157,8 @@ export default class ConfigManager implements IConfigManager {
 
   getServerConfig(call: any, callback: any) {
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      return this.grpcSdk
-        .databaseProvider!.findOne('Config', {})
+      return models.Config.getInstance()
+        .findOne({})
         .then(async (dbConfig: any) => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
           callback(null, {
@@ -188,7 +188,9 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerAppConfig() {
-    await this.getDatabaseConfigUtility().registerConfigSchemas(AppConfigSchema);
+    await this.grpcSdk.waitForExistence('database');
+    models.Config.getInstance(this.grpcSdk.databaseProvider!);
+    await this.getDatabaseConfigUtility().registerConfigSchemas(models.Config.getPlainSchema());
   }
 
   getDatabaseConfigUtility() {
@@ -210,8 +212,8 @@ export default class ConfigManager implements IConfigManager {
 
   async get(name: string) {
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      return this.grpcSdk
-        .databaseProvider!.findOne('Config', {})
+      return models.Config.getInstance()
+        .findOne({})
         .then(async (dbConfig: any) => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
           if (isNil(dbConfig['moduleConfigs'][name]))
@@ -230,16 +232,15 @@ export default class ConfigManager implements IConfigManager {
   updateConfig(call: any, callback: any) {
     const newConfig = JSON.parse(call.request.config);
     if (!isNil(this.grpcSdk.databaseProvider)) {
-      this.grpcSdk
-        .databaseProvider!.findOne('Config', {})
+      models.Config.getInstance()
+        .findOne({})
         .then((dbConfig) => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
           if (!dbConfig['moduleConfigs']) {
             dbConfig['moduleConfigs'] = {};
           }
           let modName = 'moduleConfigs.' + call.request.moduleName;
-          return this.grpcSdk
-            .databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
+          return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
               $set: { [modName]: newConfig },
             })
             .then((updatedConfig: any) => {
@@ -269,8 +270,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async addFieldsToModule(name: string, config: any) {
-    return this.grpcSdk
-      .databaseProvider!.findOne('Config', {})
+    return models.Config.getInstance()
+      .findOne({})
       .then((dbConfig) => {
         if (isNil(dbConfig)) throw new Error('Config not found in the database');
         if (!dbConfig['moduleConfigs']) {
@@ -280,7 +281,7 @@ export default class ConfigManager implements IConfigManager {
         // keep only new fields
         let existing = dbConfig.moduleConfigs[name];
         config = { ...config, ...existing };
-        return this.grpcSdk.databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
+        return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
           $set: { [modName]: config },
         });
       })
@@ -316,14 +317,13 @@ export default class ConfigManager implements IConfigManager {
 
   async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
     await this.grpcSdk.waitForExistence('database');
-    this.grpcSdk.databaseProvider!.findOne('Config', {}).then((dbConfig) => {
+    models.Config.getInstance().findOne({}).then((dbConfig) => {
       if (isNil(dbConfig)) throw new Error('Config not found in the database');
       if (!dbConfig['moduleConfigs']) {
         dbConfig['moduleConfigs'] = {};
       }
       let modName = 'moduleConfigs.' + name;
-      return this.grpcSdk
-        .databaseProvider!.findByIdAndUpdate('Config', dbConfig._id, {
+      return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
           $set: { [modName]: newModulesConfigSchemaFields },
         })
         .then((updatedConfig: any) => {
@@ -480,7 +480,7 @@ export default class ConfigManager implements IConfigManager {
     let dbInit = false;
     if (!fromGrpc) {
       let failed: any;
-      let success = await axios.get('http://' + moduleUrl).catch((err: any) => {
+      await axios.get('http://' + moduleUrl).catch((err: any) => {
         failed = err;
       });
       if (failed && failed.message.indexOf('Parse Error') === -1) {
