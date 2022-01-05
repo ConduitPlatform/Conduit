@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { populateArray } from '../utils/utilities';
+import { populateArray, wrongFields } from '../utils/utilities';
 import { _DeclaredSchema } from '../models';
 
 export class DocumentsAdmin {
@@ -105,6 +105,11 @@ export class DocumentsAdmin {
     const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    const currentFields = Object.keys(schema.fields);
+    const changedFields = Object.keys(changedDocument);
+    if (!wrongFields(currentFields, changedFields)) {
+      throw new GrpcError(status.NOT_FOUND, 'Wrong input fields!');
     }
     const dbDocument = await this.database
       .findOne(schemaName, { _id: id })
