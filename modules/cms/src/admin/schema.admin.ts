@@ -5,6 +5,8 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   TYPE,
   UnparsedRouterResponse,
+  ConduitModelOptions,
+  ConduitModelOptionsPermModifyType,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, merge } from 'lodash';
@@ -102,6 +104,7 @@ export class SchemaAdmin {
       name,
       fields,
       modelOptions,
+      permissions,
     } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
     const authentication = call.request.params.authentication ?? false;
@@ -116,6 +119,11 @@ export class SchemaAdmin {
     const errorMessage = validateSchemaInput(name, fields, modelOptions, enabled);
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INVALID_ARGUMENT, errorMessage);
+    }
+    if (permissions && permissions.canModify && !(ConduitModelOptionsPermModifyType.includes(permissions.canModify))) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
     }
 
     const existingSchema = await _DeclaredSchema.getInstance()
@@ -134,6 +142,8 @@ export class SchemaAdmin {
     const schemaOptions = isNil(modelOptions)
       ? { conduit: { cms: { enabled, authentication, crudOperations } } }
       : { ...modelOptions, conduit: { cms: { enabled, authentication, crudOperations } } }
+    schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
+
     return await this.schemaController
       .createSchema(
         new ConduitSchema(
@@ -150,6 +160,7 @@ export class SchemaAdmin {
       name,
       fields,
       modelOptions,
+      permissions,
     } = call.request.params;
 
     if (!isNil(name) && name !== '') {
@@ -171,6 +182,7 @@ export class SchemaAdmin {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }
 
+    this.patchSchemaPerms(requestedSchema, permissions);
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
     const enabled = call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
@@ -416,12 +428,6 @@ export class SchemaAdmin {
 
   async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
-    const canModifyOptions = ['Everything', 'Nothing', 'ExtensionOnly'];
-    if (canModify && !(canModifyOptions.includes(canModify))) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `canModify permission must be one of: ${canModifyOptions.join(', ')}`);
-    }
 
     const requestedSchema = await _DeclaredSchema.getInstance().findOne({
       ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
@@ -431,14 +437,10 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    (requestedSchema.modelOptions.conduit as any).permissions.extendable =
-      extendable ?? (requestedSchema.modelOptions.conduit as any).permissions.extendable;
-    (requestedSchema.modelOptions.conduit as any).permissions.canCreate =
-      canCreate ?? (requestedSchema.modelOptions.conduit as any).permissions.canCreate;
-    (requestedSchema.modelOptions.conduit as any).permissions.canModify =
-      canModify ?? (requestedSchema.modelOptions.conduit as any).permissions.canModify;
-    (requestedSchema.modelOptions.conduit as any).permissions.canDelete =
-      canDelete ?? (requestedSchema.modelOptions.conduit as any).permissions.canDelete;
+    this.patchSchemaPerms(
+      requestedSchema,
+      { extendable, canCreate, canModify, canDelete },
+    );
 
     const updatedSchema = await _DeclaredSchema.getInstance().findByIdAndUpdate(
       requestedSchema._id,
@@ -449,5 +451,24 @@ export class SchemaAdmin {
     }
 
     return 'Schema permissions updated successfully';
+  }
+
+  private patchSchemaPerms(
+    schema: _DeclaredSchema,
+    perms: ConduitModelOptions['permissions'],
+  ) {
+    if (perms!.canModify && !(ConduitModelOptionsPermModifyType.includes(perms!.canModify))) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
+    }
+    (schema.modelOptions.conduit as any).permissions.extendable =
+      perms!.extendable ?? (schema.modelOptions.conduit as any).permissions.extendable;
+    (schema.modelOptions.conduit as any).permissions.canCreate =
+      perms!.canCreate ?? (schema.modelOptions.conduit as any).permissions.canCreate;
+    (schema.modelOptions.conduit as any).permissions.canModify =
+      perms!.canModify ?? (schema.modelOptions.conduit as any).permissions.canModify;
+    (schema.modelOptions.conduit as any).permissions.canDelete =
+      perms!.canDelete ?? (schema.modelOptions.conduit as any).permissions.canDelete;
   }
 }
