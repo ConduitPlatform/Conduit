@@ -5,15 +5,14 @@ export class DatabaseConfigUtility {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async registerConfigSchemas(newConfig: any): Promise<any> {
-    await this.grpcSdk.waitForExistence('database'); // for some reason if we remove this line database is null
     const database = this.grpcSdk.databaseProvider;
     return database!
       .createSchemaFromAdapter(newConfig)
-      .then((r) => {
+      .then(() => {
         return database!.findOne('Config', {});
       })
       .then((r) => {
-        if (!r) database!.create('Config', {});
+        if (!r) return database!.create('Config', {});
       });
   }
 }

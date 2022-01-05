@@ -1,5 +1,5 @@
 import convict, { Config } from 'convict';
-import AppConfigSchema from '../../models/config.schema';
+import * as models from '../../models';
 import { isNil } from 'lodash';
 import { IAppConfig } from '@quintessential-sft/conduit-commons';
 
@@ -24,7 +24,7 @@ export class AppConfig implements IAppConfig {
   }
 
   private constructor() {
-    this.completeConfigSchema = AppConfigSchema;
+    this.completeConfigSchema = models.Config;
     this.convictConfig = convict(this.completeConfigSchema);
     this.validateConfig();
   }
