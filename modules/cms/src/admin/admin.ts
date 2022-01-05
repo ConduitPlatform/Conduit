@@ -176,9 +176,7 @@ export class AdminHandlers {
             deleteData: ConduitBoolean.Required,
           },
         },
-        new ConduitRouteReturnDefinition('DeleteSchema', { // could be 'String' (frontend compat)
-          message: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('DeleteSchema', 'String'),
         'deleteSchema'
       ),
       constructConduitRoute(

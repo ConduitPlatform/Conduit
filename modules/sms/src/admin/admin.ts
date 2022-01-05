@@ -51,9 +51,7 @@ export class AdminHandlers {
             message: ConduitString.Required
           },
         },
-        new ConduitRouteReturnDefinition('SendSMS', { // could be 'String' (frontend compat)
-          message: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('SendSMS', 'String'),
         'sendSMS'
       ),
     ];
@@ -74,6 +72,6 @@ export class AdminHandlers {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }
 
-    return { message: 'SMS sent' };
+    return 'SMS sent';
   }
 }

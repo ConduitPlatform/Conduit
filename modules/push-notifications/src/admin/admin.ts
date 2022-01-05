@@ -59,9 +59,7 @@ export class AdminHandlers {
             data: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('SendNotification', {
-          message: ConduitString.Required, // could be 'String' (frontend compat)
-        }),
+        new ConduitRouteReturnDefinition('SendNotification', 'String'),
         'sendNotification'
       ),
       constructConduitRoute(
@@ -84,9 +82,7 @@ export class AdminHandlers {
             data: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('SendNotificationToManyDevices', {
-          message: ConduitString.Required,
-        }),
+        new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
         'sendNotificationToManyDevices'
       ),
       constructConduitRoute(
@@ -115,7 +111,7 @@ export class AdminHandlers {
     await this.provider
       .sendToDevice(params)
       .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { message: 'Ok' };
+    return 'Ok';
   }
 
   async sendNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -136,7 +132,7 @@ export class AdminHandlers {
     await this.provider
       .sendToManyDevices(params)
       .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
-    return { message: 'Ok' };
+    return 'Ok';
   }
 
   async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
