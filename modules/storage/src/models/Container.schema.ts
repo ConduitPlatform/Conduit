@@ -14,6 +14,7 @@ const schema = {
   isPublic: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

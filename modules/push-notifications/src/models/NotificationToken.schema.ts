@@ -11,6 +11,7 @@ const schema = {
   userId: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
   token: {
     type: TYPE.String,

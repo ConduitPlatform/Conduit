@@ -23,16 +23,13 @@ const schema = {
   },
   sender:{
     type: TYPE.String,
-    required: false,
   },
   externalManaged: {
     type: TYPE.Boolean,
-    default:false,
+    default: false,
+    required: true,
   },
-  externalId:{
-    type:TYPE.String,
-    required: false,
-  },
+  externalId: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -56,7 +53,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   subject: string;
   body: string;
   variables: string[];
-  sender: string;
+  sender?: string;
   externalManaged: boolean;
   externalId: string;
   createdAt: Date;

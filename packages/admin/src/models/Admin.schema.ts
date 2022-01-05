@@ -9,12 +9,10 @@ const schema = {
   username: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   password: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -10,6 +10,7 @@ const schema = {
   userId: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
   email: {
     type: TYPE.String,
@@ -17,13 +18,23 @@ const schema = {
   },
   phoneNumber: {
     type: TYPE.String,
-    required: true
+    required: true,
   },
-  buyerName: TYPE.String,
-  address: TYPE.String,
-  postCode: TYPE.String,
+  buyerName: {
+    type: TYPE.String,
+    required: true,
+  },
+  address: {
+    type: TYPE.String,
+    required: true,
+  },
+  postCode: {
+    type: TYPE.String,
+    required: true,
+  },
   stripe: {
-    customerId: TYPE.String,
+    customerId: { type: TYPE.String, required: true },
+    // required: true, // cannot set #1zndxe5
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

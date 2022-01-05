@@ -9,6 +9,7 @@ const schema = {
   moduleConfigs: {
     type: TYPE.JSON,
     default: {},
+    required: true,
   },
 };
 const schemaOptions = {

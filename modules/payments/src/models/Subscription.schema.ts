@@ -11,16 +11,22 @@ const schema = {
   product: {
     type: TYPE.Relation,
     model: 'Product',
+    required: true,
   },
   customerId: {
     type: TYPE.Relation,
     model: 'PaymentsCustomer',
+    required: true,
   },
-  activeUntil: TYPE.Date,
+  activeUntil: {
+    type: TYPE.Date,
+    required: true,
+  },
   transactions: [
     {
       type: TYPE.Relation,
       model: 'Transaction',
+      required: true,
     },
   ],
   provider: TYPE.String,
@@ -47,6 +53,7 @@ export class Subscription extends ConduitActiveSchema<Subscription> {
   customerId!: string | PaymentsCustomer;
   activeUntil!: Date;
   transactions!: (string | Transaction) [];
+  provider!: string;
   createdAt!: Date;
   updatedAt!: Date;
 

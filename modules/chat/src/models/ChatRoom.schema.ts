@@ -13,7 +13,8 @@ const schema = {
   },
   participants: [{
     type: TYPE.Relation,
-    model: 'User'
+    model: 'User',
+    required: true,
   }],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

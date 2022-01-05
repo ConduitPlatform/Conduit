@@ -21,18 +21,22 @@ const schema = {
   isSubscription: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   recurring: {
     type: TYPE.String,
     default: '',
+    required: true,
   },
   recurringCount: {
     type: TYPE.Number,
     default: 1,
+    required: true,
   },
   stripe: {
+    priceId: { type: TYPE.String, required: true },
     subscriptionId: TYPE.String,
-    priceId: TYPE.String,
+    // required: true, // cannot set #1zndxe5
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

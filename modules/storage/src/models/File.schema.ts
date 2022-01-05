@@ -12,6 +12,7 @@ const schema = {
   },
   folder: {
     type: TYPE.String,
+    required: true,
   },
   container: {
     type: TYPE.String,
@@ -20,9 +21,10 @@ const schema = {
   isPublic: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   url: TYPE.String,
-  mimeType: { type: TYPE.String },
+  mimeType: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
