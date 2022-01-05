@@ -29,15 +29,16 @@ export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCo
     async (params: ConduitRouteParameters) => {
       const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
       if (isNil(dbConfig)) {
-        throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
+        throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
       }
 
       const newConfig = params.params!.config;
       const moduleName = params.params!.module;
       let updatedConfig: any;
 
-      if (newConfig.active === false)
-        throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
+      if (newConfig.active === false) {
+        throw new ConduitError('NOT_IMPLEMENTED', 501, 'Modules cannot be deactivated');
+      }
 
       await grpcSdk
         .initializeModules()
