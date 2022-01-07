@@ -153,11 +153,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         .drop()
         .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
-    _DeclaredSchema.getInstance()
+    this.models!['_DeclaredSchema'].model
       .findOne({ name: schemaName })
       .then( model => {
         if (model) {
-          _DeclaredSchema.getInstance()
+          this.models!['_DeclaredSchema'].model
             .deleteOne({name: schemaName})
             .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); })
         }
