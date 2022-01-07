@@ -6,10 +6,34 @@ import {
   isObject,
   isPlainObject,
   isString,
+  isEqual,
 } from 'lodash';
 import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
+
+export function wrongFields(schemaFields: any, updateFields: any): boolean {
+  const blackList = ['updatedAt', 'createdAt', '_id', '__v'];
+  for (const element of blackList) {
+    let index1 = schemaFields.indexOf(element);
+    let index2 = updateFields.indexOf(element);
+    if (index1 > -1) {
+      schemaFields.splice(index1, 1);
+    }
+    if (index2 > -1) {
+      updateFields.splice(index2, 1);
+    }
+  }
+
+  if (!isEqual(schemaFields, updateFields)) {
+    for (const element of updateFields) {
+      if (!schemaFields.includes(element))
+        return false;
+    }
+  }
+
+  return true;
+}
 
 export function validateSchemaInput(
   name: any,
