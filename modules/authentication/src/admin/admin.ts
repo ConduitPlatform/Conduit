@@ -95,8 +95,8 @@ export class AdminHandlers {
            },
            bodyParams: {
              email: ConduitString.Optional,
-             isVerified: ConduitString.Optional,
-             hasTwoFA: ConduitString.Optional,
+             isVerified: ConduitBoolean.Optional,
+             hasTwoFA: ConduitBoolean.Optional,
              phoneNumber: ConduitString.Optional,
            },
          },
