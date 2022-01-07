@@ -264,7 +264,7 @@ export class SchemaAdmin {
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
-    return { message };
+    return message;
   }
 
   async deleteSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

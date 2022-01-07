@@ -83,9 +83,7 @@ export class AdminHandlers {
              password: ConduitString.Required,
            },
          },
-         new ConduitRouteReturnDefinition('CreateUser', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('CreateUser', 'String'),
          'createUser'
        ),
        constructConduitRoute(
@@ -102,9 +100,7 @@ export class AdminHandlers {
              phoneNumber: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('EditUser', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('EditUser', 'String'),
          'editUser'
        ),
        constructConduitRoute(
@@ -115,9 +111,7 @@ export class AdminHandlers {
              id: { type: RouteOptionType.String, required: true },
            },
          },
-         new ConduitRouteReturnDefinition('DeleteUser', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('DeleteUser', 'String'),
          'deleteUser'
        ),
        constructConduitRoute(
@@ -128,9 +122,7 @@ export class AdminHandlers {
              ids: { type: [TYPE.String], required: true }, // handler array check is still required
            },
          },
-         new ConduitRouteReturnDefinition('DeleteUsers', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
          'deleteUsers'
        ),
        constructConduitRoute(
@@ -141,9 +133,7 @@ export class AdminHandlers {
              id: { type: RouteOptionType.String, required: true },
            },
          },
-         new ConduitRouteReturnDefinition('BlockUser', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('BlockUser', 'String'),
          'blockUser'
        ),
        constructConduitRoute(
@@ -154,9 +144,7 @@ export class AdminHandlers {
              id: { type: RouteOptionType.String, required: true },
            },
          },
-         new ConduitRouteReturnDefinition('UnblockUser', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('UnblockUser', 'String'),
          'unblockUser'
        ),
        constructConduitRoute(
@@ -168,9 +156,7 @@ export class AdminHandlers {
              block: ConduitBoolean.Required,
            },
          },
-         new ConduitRouteReturnDefinition('ToggleUsers', {
-           message: ConduitString.Required,
-         }),
+         new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
          'toggleUsers'
        ),
        // Service Routes
@@ -304,7 +290,7 @@ export class AdminHandlers {
       isVerified: true,
     });
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
-    return { message: 'Registration was successful' };
+    return 'Registration was successful';
   }
 
   async editUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -326,7 +312,7 @@ export class AdminHandlers {
 
     let res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
-    return { message: 'user updated' };
+    return 'User updated';
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -336,7 +322,7 @@ export class AdminHandlers {
     }
     let res = await User.getInstance().deleteOne({ _id: call.request.params.id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
-    return { message: 'user was deleted' };
+    return 'User was deleted';
   }
 
   async deleteUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -352,7 +338,7 @@ export class AdminHandlers {
 
     let res = await User.getInstance().deleteMany({ _id: { $in: ids } });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
-    return { message: 'users were deleted' };
+    return 'Users were deleted';
   }
 
   async blockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -366,7 +352,7 @@ export class AdminHandlers {
     user.active = false;
     user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
-    return { message: 'user was blocked' };
+    return 'User was blocked';
   }
 
   async unblockUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -380,7 +366,7 @@ export class AdminHandlers {
     user.active = true;
     user = await User.getInstance().findByIdAndUpdate(user._id, user);
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
-    return { message: 'user was unblocked' };
+    return 'User was unblocked';
   }
 
   async toggleUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -393,7 +379,12 @@ export class AdminHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
     }
     await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block }, true);
-    this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
-    return { message: 'users were blocked' };
+    if (block) {
+      this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
+      return 'Users were blocked';
+    } else {
+      this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(users));
+      return 'Users were unblocked';
+    }
   }
 }
