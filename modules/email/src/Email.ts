@@ -1,6 +1,6 @@
 import { EmailService } from './services/email.service';
 import * as models from './models';
-import { AdminHandlers } from './admin/AdminHandlers';
+import { AdminHandlers } from './admin/admin';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
 import {
