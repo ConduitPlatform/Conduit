@@ -31,7 +31,6 @@ export class AdminHandlers{
         createRoom: this.createRoom.bind(this),
         deleteRooms: this.deleteRooms.bind(this),
         getMessages: this.getMessages.bind(this),
-        // createMessage: this.createMessage.bind(this),
         deleteMessages: this.deleteMessages.bind(this)
       })
       .catch((err: Error) => {
@@ -229,11 +228,6 @@ export class AdminHandlers{
 
     return { messages, count };
   }
-
-  // async createMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-  //   // TODO: Implement createMessage handler
-  //   return { message };
-  // }
 
   async deleteMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
