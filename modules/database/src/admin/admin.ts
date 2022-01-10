@@ -11,16 +11,12 @@ import ConduitGrpcSdk, {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 
 export class AdminHandlers {
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>
   ) {
     this.registerAdminRoutes();
   }
@@ -50,8 +46,7 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemas', this._activeAdapter.models!['_DeclaredSchema'].originalSchema.fields),
-
+        new ConduitRouteReturnDefinition('GetDeclaredSchemas', _DeclaredSchema.getInstance().fields),
         'getDeclaredSchemas',
       ),
       constructConduitRoute(
@@ -76,8 +71,7 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: any = {};
-    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
-    const declaredSchemasDocumentsPromise = schemaAdapter.model
+    const declaredSchemasDocumentsPromise = _DeclaredSchema.getInstance()
       .findMany(
         query,
         undefined,
@@ -85,7 +79,7 @@ export class AdminHandlers {
         limit,
         undefined,
       );
-    const totalCountPromise = schemaAdapter.model.countDocuments(query);
+    const totalCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
 
     const [declaredSchemasDocuments, totalCount] = await Promise.all([
       declaredSchemasDocumentsPromise,
@@ -101,18 +95,15 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: any = {};
-    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
-    const declaredSchemasExtensionsPromise = schemaAdapter.model
+    const declaredSchemasExtensionsPromise = _DeclaredSchema.getInstance()
       .findMany(
         query,
+        'name extensions',
         skip,
         limit,
-        'name extensions',
-        undefined,
-        undefined,
         undefined,
       );
-    const totalCountPromise = schemaAdapter.model.countDocuments(query);
+    const totalCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
 
     const [declaredSchemasExtensions, totalCount] = await Promise.all([
       declaredSchemasExtensionsPromise,

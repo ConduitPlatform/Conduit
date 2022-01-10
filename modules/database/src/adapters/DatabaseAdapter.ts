@@ -23,13 +23,12 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   abstract async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
 
   abstract getSchemaModel(
-    schemaName: string,
+    schemaName: string
   ): { model: SchemaAdapter<any>; relations: any };
 
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
-
-    const model = await this.models!['_DeclaredSchema'].model.findOne({ name: schema.name });
+    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
     if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
       return true;
     } else if (model) {
@@ -41,9 +40,9 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
-    const model = await this.models!['_DeclaredSchema'].findMany('{}');
+    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
     if (model) {
-      await this.models!['_DeclaredSchema'].model
+      await _DeclaredSchema.getInstance()
         .findByIdAndUpdate(
           model._id,
           {
@@ -51,10 +50,10 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
-          },
+          }
         );
     } else {
-      await this.models!['_DeclaredSchema'].model
+      await _DeclaredSchema.getInstance()
         .create({
           name: schema.name,
           fields: schema.fields,
@@ -65,13 +64,13 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models: any = await this.models!['_DeclaredSchema'].findMany('{}');
+    let models: any = await _DeclaredSchema.getInstance().findMany({});
     models = models
       .map((model: any) => {
         let schema = new ConduitSchema(
           model.name,
           model.fields,
-          model.modelOptions,
+          model.modelOptions
         );
         schema.ownerModule = model.ownerModule;
         return schema;
