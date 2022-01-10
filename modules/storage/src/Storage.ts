@@ -7,7 +7,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
-import { FileRoutes } from './routes/router';
+import { StorageRoutes } from './routes/router';
 import { AdminRoutes } from './admin/admin';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import * as models from './models';
@@ -19,6 +19,7 @@ export class StorageModule extends ConduitServiceModule {
   private _fileHandlers: FileHandlers;
   private _routes: any[];
   private isRunning: boolean = false;
+  private _router: StorageRoutes;
 
   get routes() {
     return this._routes;
@@ -164,9 +165,10 @@ export class StorageModule extends ConduitServiceModule {
       azure,
     });
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    this._router = new StorageRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     this._fileHandlers.updateProvider(this.storageProvider);
+    await this._router.registerRoutes();
   }
 
   private registerSchemas() {
