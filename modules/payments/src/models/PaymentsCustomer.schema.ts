@@ -34,7 +34,6 @@ const schema = {
   },
   stripe: {
     customerId: { type: TYPE.String, required: true },
-    // required: true, // cannot set #1zndxe5
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -394,7 +394,7 @@ export class AdminRoutes {
     }
   }
 
-  private async _createContainer(name: string, isPublic: boolean) {
+  private async _createContainer(name: string, isPublic: boolean | undefined) {
     try {
       let container = await _StorageContainer.getInstance()
         .findOne({

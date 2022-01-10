@@ -35,7 +35,6 @@ const schema = {
   enabled: {
     type: TYPE.Boolean,
     default: true,
-    required: true,
   },
   authentication: {
     type: TYPE.Boolean,

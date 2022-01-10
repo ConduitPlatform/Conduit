@@ -40,7 +40,7 @@ export class _StorageFolder extends ConduitActiveSchema<_StorageFolder> {
   _id!: string;
   name!: string;
   container!: string;
-  isPublic!: boolean;
+  isPublic?: boolean;
   url!: string;
   createdAt!: Date;
   updatedAt!: Date;

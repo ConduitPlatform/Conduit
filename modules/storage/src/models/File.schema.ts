@@ -21,7 +21,6 @@ const schema = {
   isPublic: {
     type: TYPE.Boolean,
     default: false,
-    required: true,
   },
   url: TYPE.String,
   mimeType: TYPE.String,
@@ -47,7 +46,7 @@ export class File extends ConduitActiveSchema<File> {
   name!: string;
   folder!: string;
   container!: string;
-  isPublic!: boolean;
+  isPublic?: boolean;
   url!: string;
   mimeType!: string;
   createdAt!: Date;

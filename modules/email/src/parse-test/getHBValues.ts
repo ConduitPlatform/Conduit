@@ -1,6 +1,6 @@
-import  _  from 'lodash';
+import _ from 'lodash';
 
-export  function  getHBValues(text:any){
+export function getHBValues(text:any){
     const re = /{{[{]?(.*?)[}]?}}/g;
     const tags = [];
     let matches;
@@ -9,7 +9,7 @@ export  function  getHBValues(text:any){
             tags.push(matches[1]);
         }
     }
-    const root:any  = {};
+    const root:any = {};
     let context = root;
     const stack = [];
     const setVar = (variable:any, val:any) => {

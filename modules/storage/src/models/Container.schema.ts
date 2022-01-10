@@ -14,7 +14,6 @@ const schema = {
   isPublic: {
     type: TYPE.Boolean,
     default: false,
-    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -36,7 +35,7 @@ export class _StorageContainer extends ConduitActiveSchema<_StorageContainer> {
   private static _instance: _StorageContainer;
   _id!: string;
   name!: string;
-  isPublic!: boolean;
+  isPublic?: boolean;
   createdAt!: Date;
   updatedAt!: Date;
 
