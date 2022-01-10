@@ -38,7 +38,7 @@ export class DatabaseProvider extends ConduitServiceModule {
   private _admin: AdminHandlers;
 
   constructor(protected readonly grpcSdk: ConduitGrpcSdk) {
-    super(grpcSdk);
+    super(grpcSdk)
     const dbType = process.env.databaseType ?? 'mongodb';
     const databaseUrl = process.env.databaseURL ?? 'mongodb://localhost:27017';
 
@@ -78,11 +78,10 @@ export class DatabaseProvider extends ConduitServiceModule {
         deleteOne: this.deleteOne.bind(this),
         deleteMany: this.deleteMany.bind(this),
         countDocuments: this.countDocuments.bind(this),
-      },
+      }
     );
     await this.grpcServer.start();
   }
-
 
   async activate() {
     const self = this;
@@ -101,13 +100,12 @@ export class DatabaseProvider extends ConduitServiceModule {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName,
+            receivedSchema.collectionName
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
-            .then(() => {
-            })
+            .then(() => {})
             .catch(() => {
               console.log('Failed to create/update schema');
             });
@@ -117,11 +115,11 @@ export class DatabaseProvider extends ConduitServiceModule {
       }
     });
     await this._activeAdapter.createSchemaFromAdapter(
-      models._DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!)),
+      models._DeclaredSchema.getInstance((this.grpcSdk.databaseProvider!))
     );
     await migrateModelOptions();
     await this._activeAdapter.recoverSchemasFromDatabase();
-    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter);
+    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
   }
 
   /**
@@ -134,7 +132,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
       JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName,
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -217,7 +215,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
   async deleteSchema(call: DropCollectionRequest, callback: DropCollectionResponse) {
     try {
-      const schemas = await this._activeAdapter.deleteSchema(
+      const schemas = await  this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
         (call as any).metadata.get('module-name')[0],
@@ -238,7 +236,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -266,7 +264,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         select,
         sort,
         populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -285,7 +283,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canCreate(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
         });
       }
 
@@ -294,7 +292,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:create:${schemaName}`,
-        docString,
+        docString
       );
 
       callback(null, { result: docString });
@@ -314,7 +312,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canCreate(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`
         });
       }
 
@@ -323,7 +321,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:createMany:${schemaName}`,
-        docsString,
+        docsString
       );
 
       callback(null, { result: docsString });
@@ -343,7 +341,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canModify(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
         });
       }
 
@@ -358,7 +356,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:update:${schemaName}`,
-        resultString,
+        resultString
       );
 
       callback(null, { result: resultString });
@@ -378,20 +376,20 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canModify(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`
         });
       }
 
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.updateProvidedOnly
       );
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:updateMany:${schemaName}`,
-        resultString,
+        resultString
       );
 
       callback(null, { result: resultString });
@@ -411,7 +409,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canDelete(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
         });
       }
 
@@ -420,7 +418,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:delete:${schemaName}`,
-        resultString,
+        resultString
       );
 
       callback(null, { result: resultString });
@@ -440,7 +438,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       if (!await canDelete(moduleName, schemaAdapter.model)) {
         return callback({
           code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
+          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`
         });
       }
 
@@ -449,7 +447,7 @@ export class DatabaseProvider extends ConduitServiceModule {
 
       this.grpcSdk.bus?.publish(
         `${MODULE_NAME}:delete:${schemaName}`,
-        resultString,
+        resultString
       );
 
       callback(null, { result: resultString });

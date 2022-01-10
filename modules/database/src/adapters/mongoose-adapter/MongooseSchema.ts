@@ -3,7 +3,6 @@ import { SchemaAdapter } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { createWithPopulations } from './utils';
-
 const EJSON = require('mongodb-extended-json');
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
@@ -15,7 +14,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     schema: ConduitSchema,
     originalSchema: any,
     deepPopulate: any,
-    private readonly adapter: MongooseAdapter,
+    private readonly adapter: MongooseAdapter
   ) {
     this.originalSchema = originalSchema;
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
@@ -47,7 +46,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     id: string,
     query: string,
     updateProvidedOnly: boolean = false,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any> {
     let parsedQuery: any = EJSON.parse(query);
     parsedQuery['updatedAt'] = new Date();
@@ -57,7 +56,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         $set: parsedQuery,
       };
     }
-    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true });
+    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true })
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
@@ -67,7 +66,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   async updateMany(
     filterQuery: string,
     query: string,
-    updateProvidedOnly: boolean = false,
+    updateProvidedOnly: boolean = false
   ): Promise<any> {
     let parsedFilter: any = EJSON.parse(filterQuery);
     let parsedQuery: any = EJSON.parse(query);
@@ -100,7 +99,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
           if (this.originalSchema.modelSchema[r[0]]) {
             controlBool = false;
           } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
-            throw new Error('Failed populating \'' + final + '\'');
+            throw new Error("Failed populating '" + final + "'");
           } else {
             r.splice(0, 1);
           }
@@ -115,19 +114,14 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   findMany(
-    query: string | any,
+    query: string,
     skip?: number,
     limit?: number,
     select?: string,
     sort?: string,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any> {
-    let parsedQuery;
-    if (typeof query === 'string'){
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    let parsedQuery: any = EJSON.parse(query);
     let finalQuery = this.model.find(this.parseQuery(parsedQuery), select);
     if (skip !== null) {
       finalQuery = finalQuery.skip(skip!);
