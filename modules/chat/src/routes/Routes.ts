@@ -121,7 +121,7 @@ export class ChatRoutes {
       .findOne({ _id: roomId })
       .catch((e: Error) => {
         errorMessage = e.message;
-      });
+      }) as ChatRoom;
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -132,11 +132,11 @@ export class ChatRoutes {
 
     const index = (room as ChatRoom).participants.indexOf(user._id);
     if (index > -1) {
-      (room as ChatRoom).participants.splice(index, 1);
+      room.participants = room.participants.splice(index, 1);
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
           (room as ChatRoom)._id,
-          { room }
+          room,
         )
         .catch((e: Error) => {
           errorMessage = e.message;
