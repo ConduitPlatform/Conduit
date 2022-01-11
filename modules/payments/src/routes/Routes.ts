@@ -265,7 +265,6 @@ export class PaymentsRoutes {
                 product: TYPE.JSON,
                 userId: TYPE.Number,
                 customerId: TYPE.String,
-                iamport: TYPE.JSON,
                 activeUntil: TYPE.Date,
                 transactions: TYPE.JSON,
                 provider: TYPE.String,

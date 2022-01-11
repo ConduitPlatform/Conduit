@@ -65,10 +65,12 @@ const schema = {
   active: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   isVerified: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   hasTwoFA: {
     type: TYPE.Boolean,

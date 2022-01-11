@@ -9,13 +9,16 @@ const schema = {
   _id: TYPE.ObjectId,
   type: {
     type: TYPE.String,
+    required: true,
   },
   userId: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
   token: {
     type: TYPE.String,
+    required: true,
   },
   data: {
     type: TYPE.JSON,

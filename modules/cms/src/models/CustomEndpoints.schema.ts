@@ -26,7 +26,6 @@ const schema = {
   inputs: [
     {
       type: TYPE.JSON,
-      // required: true, // tmp: Swagger parser incompatibility
     },
   ],
   returns: {
@@ -49,8 +48,13 @@ const schema = {
     type: TYPE.Boolean,
     default: false,
   },
-  queries: [TYPE.JSON],
-  query: TYPE.JSON,
+  queries: { // succeeded by 'query'
+    type: [TYPE.JSON],
+  },
+  query: {
+    type: TYPE.JSON,
+    required: true,
+  },
   assignments: [TYPE.JSON],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -81,7 +85,7 @@ export class CustomEndpoints extends ConduitActiveSchema<CustomEndpoints> {
   authentication!: boolean;
   paginated!: boolean;
   sorted!: boolean;
-  queries!: any[];
+  queries?: any[]; // succeeded by 'query'
   query!: any;
   assignments!: any[];
   createdAt!: Date;

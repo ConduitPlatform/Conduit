@@ -279,26 +279,29 @@ export class AdminHandlers {
       }
     });
 
-    templateDocument['variables'] = Object.keys(getHBValues(call.request.params.body)).concat(
+    templateDocument.variables = Object.keys(getHBValues(call.request.params.body)).concat(
       Object.keys(getHBValues(call.request.params.subject))
     );
-    templateDocument['variables'] = templateDocument['variables'].filter(
-      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
-    );
+    if (templateDocument.variables) {
+      templateDocument.variables = templateDocument.variables.filter(
+        (value: any, index: any) => templateDocument.variables!.indexOf(value) === index
+      );
+    }
+
     const updatedTemplate = await EmailTemplate.getInstance()
       .findByIdAndUpdate(call.request.params.id, templateDocument)
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     if (templateDocument.externalManaged) {
       const template = await this.emailService.getExternalTemplate(
-        updatedTemplate!.externalId
+        updatedTemplate!.externalId!
       );
       let versionId = undefined;
       if (!isNil(template?.versions[0].id)) {
         versionId = template?.versions[0].id;
       }
       const data = {
-        id: updatedTemplate!.externalId,
+        id: updatedTemplate!.externalId!,
         subject: updatedTemplate!.subject,
         body: updatedTemplate!.body,
         versionId: versionId,
@@ -323,7 +326,7 @@ export class AdminHandlers {
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
     let deleted;
     if (templateDocument!.externalManaged){
-      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId)
+      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId!)
         ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
 
@@ -344,7 +347,7 @@ export class AdminHandlers {
 
     for (let template of templateDocuments) {
       if( template.externalManaged){
-        await this.emailService.deleteExternalTemplate(template.externalId)
+        await this.emailService.deleteExternalTemplate(template.externalId!)
           ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
       }
     }

@@ -10,6 +10,7 @@ const schema = {
   userId: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
   clientId: {
     type: TYPE.String,
@@ -17,9 +18,11 @@ const schema = {
   },
   token: {
     type: TYPE.String,
+    required: true,
   },
   expiresOn: {
     type: TYPE.Date,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

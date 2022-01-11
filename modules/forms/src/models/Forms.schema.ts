@@ -21,10 +21,12 @@ const schema = {
   },
   emailField: {
     type: TYPE.String,
+    required: true,
   },
   enabled: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

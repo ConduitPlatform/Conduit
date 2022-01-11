@@ -102,7 +102,7 @@ export class AdminHandlers {
             recurring: ConduitString.Required,
             recurringCount: ConduitNumber.Required,
             stripe: {
-              subscriptionId: ConduitString.Required,
+              subscriptionId: ConduitString.Optional,
               priceId: ConduitString.Required,
             },
           },

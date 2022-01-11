@@ -31,8 +31,8 @@ const schema = {
     default: 1,
   },
   stripe: {
+    priceId: { type: TYPE.String, required: true },
     subscriptionId: TYPE.String,
-    priceId: TYPE.String,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -56,9 +56,9 @@ export class Product extends ConduitActiveSchema<Product> {
   name!: string;
   value!: number;
   currency!: string;
-  isSubscription!: boolean;
-  recurring!: boolean;
-  recurringCount!: number;
+  isSubscription?: boolean;
+  recurring?: boolean;
+  recurringCount?: number;
   stripe!: {
     subscriptionId: string;
     priceId: string;

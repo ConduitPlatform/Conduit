@@ -14,16 +14,18 @@ const schema = {
   },
   senderUser: {
     type: TYPE.Relation,
-    model: 'User'
+    model: 'User',
+    required: true,
   },
   room: {
     type: TYPE.Relation,
-    model: 'ChatRoom'
+    model: 'ChatRoom',
+    required: true,
   },
   readBy: [{
     type: TYPE.Relation,
     model: 'User',
-    // required: true, // tmp: Swagger parser incompatibility
+    required: true,
   }],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

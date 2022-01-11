@@ -12,6 +12,7 @@ const schema = {
   },
   folder: {
     type: TYPE.String,
+    required: true,
   },
   container: {
     type: TYPE.String,
@@ -22,7 +23,7 @@ const schema = {
     default: false,
   },
   url: TYPE.String,
-  mimeType: { type: TYPE.String },
+  mimeType: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -45,7 +46,7 @@ export class File extends ConduitActiveSchema<File> {
   name!: string;
   folder!: string;
   container!: string;
-  isPublic!: boolean;
+  isPublic?: boolean;
   url!: string;
   mimeType!: string;
   createdAt!: Date;

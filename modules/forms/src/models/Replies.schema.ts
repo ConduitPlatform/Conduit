@@ -11,16 +11,15 @@ const schema = {
     type: TYPE.Relation,
     model: 'Forms',
     required: true,
-    systemRequired: true,
   },
   data: {
     type: TYPE.JSON,
     required: true,
-    systemRequired: true,
   },
   possibleSpam: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -30,7 +30,10 @@ const schema = {
       updatedAt: TYPE.Date,
     },
   ],
-  modelOptions: { type: TYPE.JSON, systemRequired: true },
+  modelOptions: {
+    type: TYPE.JSON,
+    required: true
+  },
   ownerModule: {
     type: TYPE.String,
     required: true,

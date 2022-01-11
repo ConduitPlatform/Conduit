@@ -11,17 +11,26 @@ const schema = {
   customerId: {
     type: TYPE.Relation,
     model: 'PaymentsCustomer',
+    required: true,
   },
-  provider: TYPE.String,
+  provider: {
+    type: TYPE.String,
+    required: true,
+  },
   product: {
     type: TYPE.Relation,
     model: 'Product',
+    required: true,
   },
   quantity: {
     type: TYPE.Number,
     default: 1,
+    required: true,
   },
-  data: TYPE.JSON,
+  data: {
+    type: TYPE.JSON,
+    required: true,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };

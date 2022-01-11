@@ -34,6 +34,7 @@ const schema = {
   enabled: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
