@@ -54,7 +54,7 @@ export class StorageModule extends ConduitServiceModule {
             console.log('Updated storage configuration');
           })
           .catch((e: Error) => {
-            console.log('Failed to update email config');
+            console.log('Failed to update storage config');
           });
       }
     });

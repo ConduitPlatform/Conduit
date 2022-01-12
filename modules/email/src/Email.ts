@@ -66,7 +66,7 @@ export default class EmailModule extends ConduitServiceModule {
       if (message === 'config-update') {
         this.enableModule()
           .then(() => {
-            console.log('Update email configuration');
+            console.log('Updated email configuration');
           })
           .catch(() => {
             console.log('Failed to update email config');

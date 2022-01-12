@@ -50,7 +50,7 @@ export default class SmsModule extends ConduitServiceModule {
             console.log('Updated sms configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update sms config');
           });
       }
     });

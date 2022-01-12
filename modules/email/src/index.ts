@@ -29,6 +29,6 @@ email
   })
 
   .catch((err: Error) => {
-    console.log('Failed to active module');
+    console.log('Failed to activate module');
     console.error(err);
   });

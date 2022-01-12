@@ -55,7 +55,7 @@ export default class AuthenticationModule extends ConduitServiceModule {
             console.log('Updated authentication configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update authentication config');
           });
       }
     });
@@ -66,7 +66,7 @@ export default class AuthenticationModule extends ConduitServiceModule {
             console.log('Updated authentication configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update authentication config');
           });
       }
     });
