@@ -43,12 +43,9 @@
   "devDependencies": {
     "copyfiles": "^2.2.0",
     "cz-conventional-changelog": "^3.3.0",
-    "docz": "^2.3.1",
     "lerna": "^3.13.1",
     "pm2": "^4.4.0",
     "prettier": "^2.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
     "standard-version": "^9.3.0",
     "turbo": "^1.0.6"
   },
