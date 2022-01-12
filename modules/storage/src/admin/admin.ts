@@ -37,7 +37,7 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         getFiles: this.getFiles.bind(this),
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
-        editFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
+        patchFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
         getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
@@ -58,7 +58,7 @@ export class AdminRoutes {
     return [
       constructConduitRoute(
         {
-          path: '/file/:id',
+          path: '/files/:id',
           action: ConduitRouteActions.GET,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -69,7 +69,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/file',
+          path: '/files',
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: ConduitNumber.Required,
@@ -87,7 +87,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/file',
+          path: '/files',
           action: ConduitRouteActions.POST,
           bodyParams: {
             name: ConduitString.Required,
@@ -103,7 +103,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/file/:id',
+          path: '/files/:id',
           action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -116,12 +116,12 @@ export class AdminRoutes {
             mimeType: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('EditFile', File.getInstance().fields),
-        'editFile',
+        new ConduitRouteReturnDefinition('PatchFile', File.getInstance().fields),
+        'patchFile',
       ),
       constructConduitRoute(
         {
-          path: '/file/:id',
+          path: '/files/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -134,7 +134,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/getFileUrl/:id',
+          path: '/files/:id/url',
           action: ConduitRouteActions.GET,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -151,7 +151,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/file/:id/data',
+          path: '/files/:id/data',
           action: ConduitRouteActions.GET,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -164,7 +164,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/folder',
+          path: '/folders',
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: ConduitNumber.Required,
@@ -181,7 +181,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/folder',
+          path: '/folders',
           action: ConduitRouteActions.POST,
           bodyParams: {
             name: ConduitString.Required,
@@ -194,7 +194,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/folder/:id',
+          path: '/folders/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -205,7 +205,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/container',
+          path: '/containers',
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: ConduitNumber.Required,
@@ -220,7 +220,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/container',
+          path: '/containers',
           action: ConduitRouteActions.POST,
           bodyParams: {
             name: ConduitString.Required,
@@ -232,7 +232,7 @@ export class AdminRoutes {
       ),
       constructConduitRoute(
         {
-          path: '/container/:id',
+          path: '/containers/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },

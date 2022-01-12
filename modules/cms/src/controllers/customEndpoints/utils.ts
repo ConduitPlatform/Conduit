@@ -96,7 +96,7 @@ export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
     });
     returns = {
       documents: [endpoint.returns],
-      documentsCount: TYPE.Number,
+      count: TYPE.Number,
     };
   }
   if (endpoint.sorted) {

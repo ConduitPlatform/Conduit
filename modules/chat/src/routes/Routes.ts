@@ -328,7 +328,7 @@ export class ChatRoutes {
       });
   }
 
-  async editMessage(call: RouterRequest, callback: RouterResponse) {
+  async updateMessage(call: RouterRequest, callback: RouterResponse) {
     const { messageId, newMessage } = JSON.parse(call.request.params);
     const { user } = JSON.parse(call.request.context);
 
@@ -478,7 +478,7 @@ export class ChatRoutes {
         getRooms: this.getRooms.bind(this),
         getRoom: this.getRoom.bind(this),
         deleteMessage: this.deleteMessage.bind(this),
-        editMessage: this.editMessage.bind(this),
+        updateMessage: this.updateMessage.bind(this),
         onMessage: this.onMessage.bind(this),
         onMessagesRead: this.onMessagesRead.bind(this),
       })
@@ -676,8 +676,8 @@ export class ChatRoutes {
               },
               middlewares: ['authMiddleware'],
             },
-            new ConduitRouteReturnDefinition('EditMessageResponse', 'String'),
-            'editMessage'
+            new ConduitRouteReturnDefinition('UpdateMessageResponse', 'String'),
+            'updateMessage'
           )
         )
       );

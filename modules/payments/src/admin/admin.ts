@@ -41,7 +41,7 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         getProducts: this.getProducts.bind(this),
         createProduct: this.createProduct.bind(this),
-        editProduct: this.editProduct.bind(this),
+        patchProduct: this.patchProduct.bind(this),
         getCustomers: this.getCustomers.bind(this),
         createCustomer: this.createCustomer.bind(this),
         getTransactions: this.getTransactions.bind(this),
@@ -67,7 +67,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetProducts', {
           productDocuments: [Product.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getProducts'
       ),
@@ -107,14 +107,14 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('EditProduct', {
+        new ConduitRouteReturnDefinition('PatchProduct', {
           updatedProduct: Product.getInstance().fields,
         }),
-        'editProduct'
+        'patchProduct'
       ),
       constructConduitRoute(
         {
-          path: '/customer',
+          path: '/customers',
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: ConduitNumber.Optional,
@@ -124,13 +124,13 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetCustomers', {
           customerDocuments: [PaymentsCustomer.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getCustomers'
       ),
       constructConduitRoute(
         {
-          path: '/customer',
+          path: '/customers',
           action: ConduitRouteActions.POST,
           bodyParams: {
             userId: ConduitString.Required,
@@ -159,7 +159,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetTransactions', {
           transactionDocuments: [Transaction.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getTransactions'
       ),
@@ -175,7 +175,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetSubscriptions', {
           subscriptionDocuments: [Subscription.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getSubscriptions'
       ),
@@ -251,7 +251,7 @@ export class AdminHandlers {
     return product;
   }
 
-  async editProduct(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchProduct(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const productDocument = await Product.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(productDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Product does not exist');

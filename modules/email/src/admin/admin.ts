@@ -39,7 +39,7 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         getTemplates: this.getTemplates.bind(this),
         createTemplate: this.createTemplate.bind(this),
-        editTemplate: this.editTemplate.bind(this),
+        patchTemplate: this.patchTemplate.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
         deleteTemplates: this.deleteTemplates.bind(this),
         uploadTemplate: this.uploadTemplate.bind(this),
@@ -67,7 +67,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getTemplates'
       ),
@@ -103,10 +103,23 @@ export class AdminHandlers {
             body: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('EditTemplate', {
+        new ConduitRouteReturnDefinition('PatchTemplate', {
           template: EmailTemplate.getInstance().fields,
         }),
-        'editTemplate'
+        'patchTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates',
+          action: ConduitRouteActions.DELETE,
+          queryParams: {
+            ids: { type: [TYPE.String], required: true }, // handler array check is still required
+          },
+        },
+        new ConduitRouteReturnDefinition('DeleteTemplates', {
+          template: [EmailTemplate.getInstance().fields],
+        }),
+        'deleteTemplates'
       ),
       constructConduitRoute(
         {
@@ -120,19 +133,6 @@ export class AdminHandlers {
           deleted: ConduitJson.Required, // DeleteEmailTemplate
         }),
         'deleteTemplate'
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates',
-          action: ConduitRouteActions.DELETE,
-          bodyParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
-        },
-        new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: [EmailTemplate.getInstance().fields],
-        }),
-        'deleteTemplates'
       ),
       constructConduitRoute(
         {
@@ -154,7 +154,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getExternalTemplates'
       ),
@@ -165,7 +165,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
           updated: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'syncExternalTemplates'
       ),
@@ -265,7 +265,7 @@ export class AdminHandlers {
     return { template: newTemplate };
   }
 
-  async editTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
       .findOne({ _id: call.request.params.id })
     if (isNil(templateDocument)) {

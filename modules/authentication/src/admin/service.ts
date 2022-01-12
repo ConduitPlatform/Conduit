@@ -48,7 +48,7 @@ export class ServiceAdmin {
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token);
     let service: Service | null = await Service.getInstance().findByIdAndUpdate(
-      call.request.params.serviceId,
+      call.request.params.id,
       { hashedToken },
       true
     );

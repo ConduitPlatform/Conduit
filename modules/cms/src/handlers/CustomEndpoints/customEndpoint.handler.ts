@@ -188,7 +188,7 @@ export class CustomEndpointHandler {
         } else if (endpoint.operation === 0 && endpoint.paginated) {
           r = {
             documents: r[0],
-            documentsCount: r[1],
+            count: r[1],
           };
           return callback(null, { result: JSON.stringify(r) });
         }

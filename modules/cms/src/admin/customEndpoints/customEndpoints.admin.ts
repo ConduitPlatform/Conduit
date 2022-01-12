@@ -195,7 +195,7 @@ export class CustomEndpointsAdmin {
     return customEndpoint;
   }
 
-  async editCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const params = call.request.params;
     const {
       id,
@@ -314,7 +314,7 @@ export class CustomEndpointsAdmin {
     return customEndpoint;
   }
 
-  async deleteCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.id.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
     }

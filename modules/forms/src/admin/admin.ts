@@ -36,7 +36,7 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         getForms: this.getForms.bind(this),
         createForm: this.createForm.bind(this),
-        editForm: this.editForm.bind(this),
+        updateForm: this.updateForm.bind(this),
         deleteForms: this.deleteForms.bind(this),
         getFormReplies: this.getFormReplies.bind(this),
       })
@@ -50,7 +50,7 @@ export class AdminHandlers {
     return [
       constructConduitRoute(
         {
-          path: '/get',
+          path: '/forms',
           action: ConduitRouteActions.GET,
           queryParams: {
             skip: ConduitNumber.Optional,
@@ -66,7 +66,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/new',
+          path: '/forms',
           action: ConduitRouteActions.POST,
           bodyParams: {
             name: ConduitString.Required,
@@ -81,7 +81,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/update/:formId',
+          path: '/forms/:formId',
           action: ConduitRouteActions.UPDATE,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
@@ -94,31 +94,29 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Required,
           },
         },
-        new ConduitRouteReturnDefinition('EditForm', 'String'),
-        'editForm'
+        new ConduitRouteReturnDefinition('UpdateForm', 'String'),
+        'updateForm'
       ),
       constructConduitRoute(
         {
-          path: '/delete',
+          path: '/forms',
           action: ConduitRouteActions.DELETE,
-          bodyParams: {
+          queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           }
         },
         new ConduitRouteReturnDefinition('DeleteForms', {
           forms: [Forms.getInstance().fields],
-          totalCount: ConduitString.Required,
+          count: ConduitString.Required,
         }),
         'deleteForms'
       ),
       constructConduitRoute(
         {
-          path: '/replies/:formId',
+          path: '/replies',
           action: ConduitRouteActions.GET,
-          urlParams: {
-            formId: { type: RouteOptionType.String, required: true },
-          },
           queryParams: {
+            formId: ConduitString.Required,
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
           },
@@ -178,7 +176,7 @@ export class AdminHandlers {
     return 'Ok';
   }
 
-  async editForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async updateForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (Object.keys(call.request.params.fields).length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
     }

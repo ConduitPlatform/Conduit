@@ -60,7 +60,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetDeclaredSchemasExtensions', {
           declaredSchemasExtensions: [TYPE.JSON], // Swagger parser inconsistency
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getDeclaredSchemasExtensions',
       ),

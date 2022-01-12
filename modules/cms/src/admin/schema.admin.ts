@@ -64,14 +64,14 @@ export class SchemaAdmin {
     );
     const documentsCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
 
-    const [schemas, documentsCount] = await Promise.all([
+    const [schemas, count] = await Promise.all([
       schemasPromise,
       documentsCountPromise,
     ]).catch((e) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { schemas, documentsCount };
+    return { schemas, count };
   }
 
   async getSchemasFromOtherModules(
@@ -92,8 +92,7 @@ export class SchemaAdmin {
     });
 
     return {
-      results: schemasFromOtherModules.map((schema: any) => {
-        // TODO: rename to externalSchemas (frontend compat)
+      externalSchemas: schemasFromOtherModules.map((schema: any) => {
         return { name: schema.name, fields: schema.modelSchema };
       }),
     };
@@ -154,7 +153,7 @@ export class SchemaAdmin {
       );
   }
 
-  async editSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       id,
       name,

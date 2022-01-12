@@ -53,7 +53,7 @@ export class CmsHandlers {
     );
     const countPromise = this.database?.countDocuments(schemaName, {});
 
-    const [documents, documentsCount] = await Promise.all([
+    const [documents, count] = await Promise.all([
       documentsPromise,
       countPromise,
     ]).catch((e: any) => (errorMessage = e.message));
@@ -64,7 +64,7 @@ export class CmsHandlers {
       });
     }
 
-    return callback(null, { result: JSON.stringify({ documents, documentsCount }) });
+    return callback(null, { result: JSON.stringify({ documents, count }) });
   }
 
   async getDocumentById(call: RouterRequest, callback: RouterResponse) {
@@ -154,7 +154,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify({ docs: newDocuments }) });
   }
 
-  async editDocument(call: RouterRequest, callback: RouterResponse) {
+  async updateDocument(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const id = params.id;
 
@@ -222,7 +222,7 @@ export class CmsHandlers {
     return callback(null, { result: JSON.stringify(updatedDocument) });
   }
 
-  async editManyDocuments(call: RouterRequest, callback: RouterResponse) {
+  async updateManyDocuments(call: RouterRequest, callback: RouterResponse) {
     const params = JSON.parse(call.request.params);
     const schemaName = call.request.path.split('/')[2];
 

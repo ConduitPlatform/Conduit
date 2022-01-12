@@ -42,7 +42,7 @@ export class AdminHandlers {
         getFlows: this.getFlows.bind(this),
         getFlowRuns: this.getFlowRuns.bind(this),
         createFlow: this.createFlow.bind(this),
-        // editFlow: this.editFlow.bind(this),
+        // updateFlow: this.updateFlow.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -138,7 +138,7 @@ export class AdminHandlers {
       //     urlParams: {
       //        id: { type: RouteOptionType.String, required: true },
       //     },
-      //      bodyParams: { // TODO: Update these upon implementing the editFlow() handler
+      //      bodyParams: { // TODO: Update these upon implementing the updateFlow() handler
       //       name: ConduitString.Required,
       //       trigger: ConduitJson.Required,
       //       actors: ConduitJson.Required,
@@ -146,8 +146,8 @@ export class AdminHandlers {
       //       enabled:  ConduitBoolean.Required,
       //     },
       //   },
-      //   new ConduitRouteReturnDefinition('EditFlow', ActorFlow.getInstance().fields),
-      //   'editFlow'
+      //   new ConduitRouteReturnDefinition('UpdateFlow', ActorFlow.getInstance().fields),
+      //   'updateFlow'
       // ),
     ];
   }
@@ -247,7 +247,7 @@ export class AdminHandlers {
   }
 
   //todo
-  async editFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async updateFlow(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 

@@ -103,7 +103,7 @@ export function getOps(schemaName: string, actualSchema: any) {
         },
         new ConduitRouteReturnDefinition(`get${schemaName}`, {
           documents: [actualSchema.fields],
-          documentsCount: TYPE.Number,
+          count: TYPE.Number,
         }),
         'getDocuments'
       )
@@ -167,7 +167,7 @@ export function getOps(schemaName: string, actualSchema: any) {
         new ConduitRouteReturnDefinition(`updateMany${schemaName}`, {
           docs: [actualSchema.fields],
         }),
-        'editManyDocuments'
+        'updateManyDocuments'
       )
     )
   );
@@ -215,7 +215,7 @@ export function getOps(schemaName: string, actualSchema: any) {
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
-        'editDocument'
+        'updateDocument'
       )
     )
   );
