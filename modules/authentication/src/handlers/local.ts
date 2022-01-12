@@ -227,7 +227,7 @@ export class LocalHandlers {
     const user: User | null = await User.getInstance().findOne({ email });
 
     if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
-      return { message: 'Ok' };
+      return 'Ok';
 
     let oldToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
@@ -250,7 +250,7 @@ export class LocalHandlers {
         link,
       },
     });
-    return { message: 'Ok' };
+    return 'Ok';
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -307,7 +307,7 @@ export class LocalHandlers {
       )
     );
 
-    return { message: 'Password reset successful' };
+    return 'Password reset successful';
   }
 
   async changePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -422,7 +422,7 @@ export class LocalHandlers {
       if (config.local.verification_redirect_uri) {
         return { redirect: config.local.verification_redirect_uri };
       } else {
-        return { message: 'Email verified' };
+        return 'Email verified';
       }
     }
 
@@ -445,7 +445,7 @@ export class LocalHandlers {
     if (config.local.verification_redirect_uri) {
       return { redirect: config.local.verification_redirect_uri };
     }
-    return { message: 'Email verified' };
+    return 'Email verified';
   }
 
   async verify(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -601,9 +601,7 @@ export class LocalHandlers {
       })
     );
 
-    return {
-      message: 'twofa enabled',
-    };
+    return 'twofa enabled';
   }
 
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -621,9 +619,7 @@ export class LocalHandlers {
       JSON.stringify({ id: context.user._id })
     );
 
-    return {
-      message: 'twofa disabled',
-    };
+    return 'twofa disabled';
   }
 
   private async initDbAndEmail() {

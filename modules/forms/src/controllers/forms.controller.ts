@@ -6,11 +6,11 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { Forms } from '../models';
-import { FormRoutes } from '../routes/Routes';
+import { FormsRoutes } from '../routes/routes';
 
 export class FormsController {
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: FormRoutes) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: FormsRoutes) {
     this.loadExistingForms();
     this.initializeState();
   }

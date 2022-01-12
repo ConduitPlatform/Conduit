@@ -10,7 +10,7 @@ import {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
-import { PaymentsRoutes } from './routes/Routes';
+import { PaymentsRoutes } from './routes/routes';
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import { StripeHandlers } from './handlers/stripe';

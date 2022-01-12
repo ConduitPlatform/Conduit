@@ -12,7 +12,7 @@ import {
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AdminHandlers } from './admin/admin';
-import { PushNotificationsRoutes } from './routes/Routes';
+import { PushNotificationsRoutes } from './routes/routes';
 import * as models from './models';
 import {
   GetNotificationTokensRequest,

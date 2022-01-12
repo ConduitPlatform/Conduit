@@ -7,8 +7,9 @@ import ConduitGrpcSdk, {
   constructRoute,
   constructSocket,
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
   SocketRequest,
   SocketResponse,
   TYPE,
@@ -22,73 +23,48 @@ export class ChatRoutes {
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  async createRoom(call: RouterRequest, callback: RouterResponse) {
-    const { roomName, users } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
+  async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomName, users } = call.request.params;
+    const { user } = call.request.context;
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'users array is required and cannot be empty',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'users array is required and cannot be empty');
     }
-
     try {
       await validateUsersInput(this.grpcSdk, users);
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
+    } catch (e) { throw new GrpcError(status.INTERNAL, e.message); }
 
-    let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
       .create({
         name: roomName,
         participants: Array.from(new Set([user._id, ...users])),
       })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
       JSON.stringify({ name: roomName, participants: (room as ChatRoom).participants })
     );
-    callback(null, { result: JSON.stringify({ roomId: (room as ChatRoom)._id }) });
+    return { roomId: room._id };
   }
 
-  async addUserToRoom(call: RouterRequest, callback: RouterResponse) {
-    const { roomId, users } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
+  async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId, users } = call.request.params;
+    const { user } = call.request.context;
     if (isNil(roomId) || isNil(users) || !isArray(users) || users.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'roomId and users array are required',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId and users array are required');
     }
 
-    let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'Room does not exist' });
+      throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
     try {
       await validateUsersInput(this.grpcSdk, users);
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
+    } catch (e) { throw new GrpcError(status.INTERNAL, e.message); }
 
     (room as ChatRoom).participants = Array.from(new Set([...(room as ChatRoom).participants, ...users]));
     await ChatRoom.getInstance()
@@ -96,54 +72,36 @@ export class ChatRoutes {
         (room as ChatRoom)._id,
         { room }
       )
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
-
-    callback(null, { result: 'users added successfully' });
+    return 'User added successfully';
   }
 
-  async leaveRoom(call: RouterRequest, callback: RouterResponse) {
-    const { roomId } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
+  async leaveRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.params;
+    const { user } = call.request.context;
     if (isNil(roomId)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'roomId is required' });
+      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId is required');
     }
 
-    let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      }) as ChatRoom;
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    if (isNil(room)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'Room does not exist' });
+    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+      throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
     const index = (room as ChatRoom).participants.indexOf(user._id);
     if (index > -1) {
-      room.participants = room.participants.splice(index, 1);
+      room.participants.splice(index, 1);
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
           (room as ChatRoom)._id,
           room,
         )
-        .catch((e: Error) => {
-          errorMessage = e.message;
-        });
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
 
     this.grpcSdk.bus?.publish(
@@ -151,23 +109,18 @@ export class ChatRoutes {
       JSON.stringify({ roomId, user: user._id })
     );
 
-    callback(null, { result: 'ok' });
+    return 'Ok';
   }
 
-  async getMessages(call: RouterRequest, callback: RouterResponse) {
-    const { roomId, skip, limit } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
+  async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId, skip, limit } = call.request.params;
+    const { user } = call.request.context;
     let messagesPromise;
     let countPromise;
-    let errorMessage: string | null = null;
     if (isNil(roomId)) {
       const rooms = await ChatRoom.getInstance()
         .findMany({ participants: user._id })
-        .catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
       const query = { room: { $in: (rooms as ChatRoom[]).map((room: any) => room._id) } };
       messagesPromise = ChatMessage.getInstance()
         .findMany(
@@ -181,15 +134,9 @@ export class ChatRoutes {
     } else {
       const room = await ChatRoom.getInstance()
         .findOne({ _id: roomId })
-        .catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
       if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'room does not exist',
-        });
+        throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
       }
       messagesPromise = ChatMessage.getInstance()
         .findMany(
@@ -200,56 +147,39 @@ export class ChatRoutes {
           skip,
           limit,
           { createdAt: -1 }
-        );
+        )
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
       countPromise = ChatMessage.getInstance().countDocuments({ room: roomId });
     }
 
-    Promise.all([messagesPromise, countPromise])
-      .then((res) => {
-        callback(null, { result: JSON.stringify({ messages: res[0], count: res[1] }) });
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
-      });
+    const [messages, count] = await Promise.all([messagesPromise, countPromise])
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { messages, count };
   }
 
-  async getMessage(call: RouterRequest, callback: RouterResponse) {
-    const { id } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-    try {
-      let message = await ChatMessage.getInstance()
-        .findOne(
-          { _id: id },
-          undefined,
-          ['room']
-        );
-      if (!message) {
-        return callback({ code: status.NOT_FOUND, message: 'Message not found!' });
-      }
-      if (message && (message.room as ChatRoom).participants.indexOf(user._id) === -1) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: 'You do not have access to that message',
-        });
-      }
-
-      callback(null, { result: JSON.stringify(message) });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
+  async getMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const { user } = call.request.context;
+    const message = await ChatMessage.getInstance()
+      .findOne(
+        { _id: id },
+        undefined,
+        ['room']
+      )
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (
+      !message ||
+      (message.room as ChatRoom).participants.indexOf(user._id) === -1
+    ) {
+      throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
+    return message;
   }
 
-  async getRooms(call: RouterRequest, callback: RouterResponse) {
-    const { skip, limit, populate } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-    try {
-      let rooms = await ChatRoom.getInstance()
+  async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip, limit, populate } = call.request.params;
+    const { user } = call.request.context;
+    const rooms = await ChatRoom.getInstance()
         .findMany(
           { participants: user._id },
           undefined,
@@ -257,145 +187,93 @@ export class ChatRoutes {
           limit,
           undefined,
           populate
-        );
-
-      let roomsCount = await ChatRoom.getInstance().countDocuments({
-        participants: user._id,
-      });
-
-      callback(null, { result: JSON.stringify({ rooms, count: roomsCount }) });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
-    }
+        )
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    const roomsCount = await ChatRoom.getInstance()
+      .countDocuments({ participants: user._id })
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return { rooms, count: roomsCount };
   }
 
-  async getRoom(call: RouterRequest, callback: RouterResponse) {
-    const { id, populate } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-    try {
-      let room = await ChatRoom.getInstance()
+  async getRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, populate } = call.request.params;
+    const { user } = call.request.context;
+    const room = await ChatRoom.getInstance()
         .findOne(
           { _id: id, participants: user._id },
           undefined,
           populate
-        );
-      if (!room) {
-        return callback({
-          code: status.NOT_FOUND,
-          message: "Room doesn't exist or you don't have access",
-        });
-      }
-
-      callback(null, { result: JSON.stringify(room) });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong!',
-      });
+        )
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (!room) {
+      throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
+    return room;
   }
 
-  async deleteMessage(call: RouterRequest, callback: RouterResponse) {
-    const { messageId } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
-    let errorMessage: string | null = null;
+  async deleteMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { messageId } = call.request.params;
+    const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
       .findOne({ _id: messageId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid message id' });
+      throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
-
-    ChatMessage.getInstance()
+    await ChatMessage.getInstance()
       .deleteOne({ _id: messageId })
-      .then(() => {
-        this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
-        callback(null, { result: 'message deleted successfully' });
-      })
-      .catch((e: Error) => {
-        callback({ code: status.INTERNAL, message: e.message });
-      });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
+    return 'Message deleted successfully';
   }
 
-  async updateMessage(call: RouterRequest, callback: RouterResponse) {
-    const { messageId, newMessage } = JSON.parse(call.request.params);
-    const { user } = JSON.parse(call.request.context);
-
-    let errorMessage: string | null = null;
+  async patchMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { messageId, newMessage } = call.request.params;
+    const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
       .findOne({ _id: messageId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid message id' });
+      throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
-
-    (message as ChatMessage).message = newMessage;
-    ChatMessage.getInstance()
+    message.message = newMessage;
+    await ChatMessage.getInstance()
       .findByIdAndUpdate(
         (message as ChatMessage)._id,
         { message }
       )
-      .then(() => {
-        this.grpcSdk.bus?.publish(
-          'chat:edit:ChatMessage',
-          JSON.stringify({ id: messageId, newMessage: message })
-        );
-        callback(null, { result: 'message changed successfully' });
-      })
-      .catch((e: Error) => {
-        callback({ code: status.INTERNAL, message: e.message });
-      });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    this.grpcSdk.bus?.publish(
+      'chat:edit:ChatMessage',
+      JSON.stringify({ id: messageId, newMessage: message })
+    );
+    return 'Message updated successfully';
   }
 
   async connect(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
-    let errorMessage: string | null = null;
     const rooms = await ChatRoom.getInstance()
       .findMany({ participants: user._id })
       .catch((e: Error) => {
-        errorMessage = e.message;
+        return callback({ code: status.INTERNAL, message: e.message });
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
     callback(null, { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) });
   }
 
   async onMessage(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
     const [roomId, message] = JSON.parse(call.request.params);
-
-    let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
       .catch((e: Error) => {
-        errorMessage = e.message;
+        return callback({ code: status.INTERNAL, message: e.message });
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
 
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Room does not exist or you don\'t have access'
+      });
     }
 
     ChatMessage.getInstance()
@@ -423,22 +301,15 @@ export class ChatRoutes {
   async onMessagesRead(call: SocketRequest, callback: SocketResponse) {
     const { user } = JSON.parse(call.request.context);
     const [roomId] = JSON.parse(call.request.params);
-
-    let errorMessage: string | null = null;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
+      .catch((e: Error) => {
+        return callback({ code: status.INTERNAL, message: e.message });
       });
-    }
-
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
       return callback({
         code: status.INVALID_ARGUMENT,
-        message: 'invalid room',
+        message: 'Room does not exist or you don\'t have access'
       });
     }
 
@@ -468,7 +339,7 @@ export class ChatRoutes {
     const activeRoutes = await this.getRegisteredRoutes();
 
     this.grpcSdk.router
-      .registerRouter(this.server, activeRoutes, {
+      .registerRouterAsync(this.server, activeRoutes, {
         connect: this.connect.bind(this),
         createRoom: this.createRoom.bind(this),
         addUserToRoom: this.addUserToRoom.bind(this),
@@ -478,7 +349,7 @@ export class ChatRoutes {
         getRooms: this.getRooms.bind(this),
         getRoom: this.getRoom.bind(this),
         deleteMessage: this.deleteMessage.bind(this),
-        updateMessage: this.updateMessage.bind(this),
+        patchMessage: this.patchMessage.bind(this),
         onMessage: this.onMessage.bind(this),
         onMessagesRead: this.onMessagesRead.bind(this),
       })
@@ -559,16 +430,7 @@ export class ChatRoutes {
             action: ConduitRouteActions.GET,
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('ChatRoom', {
-            _id: TYPE.ObjectId,
-            name: {
-              type: TYPE.String,
-              required: true,
-            },
-            participants: ['User'],
-            createdAt: TYPE.Date,
-            updatedAt: TYPE.Date,
-          }),
+          new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
           'getRoom'
         )
       )
@@ -605,15 +467,7 @@ export class ChatRoutes {
             action: ConduitRouteActions.GET,
             middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('ChatMessage', {
-            _id: TYPE.String,
-            message: TYPE.String,
-            senderUser: TYPE.String,
-            room: TYPE.String,
-            readBy: [TYPE.String],
-            createdAt: TYPE.Date,
-            updatedAt: TYPE.Date,
-          }),
+          new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
           'getMessage'
         )
       )
@@ -676,8 +530,8 @@ export class ChatRoutes {
               },
               middlewares: ['authMiddleware'],
             },
-            new ConduitRouteReturnDefinition('UpdateMessageResponse', 'String'),
-            'updateMessage'
+            new ConduitRouteReturnDefinition('PatchMessageResponse', 'String'),
+            'patchMessage'
           )
         )
       );

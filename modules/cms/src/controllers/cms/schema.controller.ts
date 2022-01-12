@@ -1,6 +1,6 @@
 import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { _DeclaredSchema } from '../../models';
-import { CmsRoutes } from '../../routes/Routes';
+import { CmsRoutes } from '../../routes/routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 

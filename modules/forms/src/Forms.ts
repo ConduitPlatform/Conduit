@@ -9,7 +9,7 @@ import {
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import { FormRoutes } from './routes/Routes';
+import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';
 import { FormSubmissionTemplate } from './templates';
 import { status } from '@grpc/grpc-js';
@@ -18,7 +18,7 @@ export default class FormsModule extends ConduitServiceModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private _router: FormRoutes;
+  private _router: FormsRoutes;
   private _formController: FormsController;
 
   async initialize(servicePort?: string) {
@@ -116,7 +116,7 @@ export default class FormsModule extends ConduitServiceModule {
       this.database = this.grpcSdk.databaseProvider;
       await this.registerSchemas();
       await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this._router = new FormRoutes(this.grpcServer, this.grpcSdk);
+      this._router = new FormsRoutes(this.grpcServer, this.grpcSdk);
       this._formController = new FormsController(this.grpcSdk, this._router);
       this._admin = new AdminHandlers(
         this.grpcServer,

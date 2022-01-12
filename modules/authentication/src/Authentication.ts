@@ -11,7 +11,7 @@ import {
   SetConfigResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
-import { AuthenticationRoutes } from './routes/Routes';
+import { AuthenticationRoutes } from './routes/routes';
 import { ConfigController } from './config/Config.controller';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';

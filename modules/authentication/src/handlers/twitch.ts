@@ -2,7 +2,6 @@ import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
   ParsedRouterRequest,
-  RouterRequest,
   UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
@@ -39,17 +38,13 @@ export class TwitchHandlers {
     return true;
   }
 
-  async beginAuth(call: RouterRequest) {
+  async beginAuth(call: ParsedRouterRequest) {
     const config = ConfigController.getInstance().config;
 
-    let serverConfig = await this.grpcSdk.config.getServerConfig();
-    let redirect = serverConfig.url + '/hook/authentication/twitch';
-    const context = JSON.parse(call.request.context);
-    const clientId = context.clientId;
-    let originalUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${config.twitch.clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
-    return {
-      result: originalUrl,
-    };
+    const serverConfig = await this.grpcSdk.config.getServerConfig();
+    const redirect = serverConfig.url + '/hook/authentication/twitch';
+    const clientId = call.request.context.clientId;
+    return `https://id.twitch.tv/oauth2/authorize?client_id=${config.twitch.clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

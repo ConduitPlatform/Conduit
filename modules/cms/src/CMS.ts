@@ -3,7 +3,7 @@ import {
   ConduitServiceModule,
   GrpcServer,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { CmsRoutes } from './routes/Routes';
+import { CmsRoutes } from './routes/routes';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migration';

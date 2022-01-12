@@ -8,7 +8,7 @@ import { Forms, FormReplies } from '../models';
 import { isNil } from 'lodash';
 import axios from 'axios';
 
-export class FormRoutes {
+export class FormsRoutes {
   private forms: any[] = [];
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -47,7 +47,7 @@ export class FormRoutes {
     errorMessage = null;
     if (form.emailField && data[form.emailField]) {
       const response = await axios
-        .get('http://api.stopforumspam.org/api', {
+        .get('https://api.stopforumspam.org/api', {
           params: {
             json: true,
             email: data[form.emailField],
