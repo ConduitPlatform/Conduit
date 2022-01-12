@@ -1,19 +1,32 @@
 import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import * as process from 'process';
-import { ExampleRouter } from './router/Routes';
+import CustomModule from './CustomModule';
 
-if (process.env.CONDUIT_URL) {
-  let grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_URL, 'my-custom-service');
-  let exampleRouter = new ExampleRouter(grpcSdk);
-  let url = exampleRouter.url;
-  if (process.env.REGISTER_NAME === 'true') {
-    url = 'my-custom-service:' + url.split(':')[1];
-  }
-  console.log('Registering url: ' + url);
-  grpcSdk.config.registerModule('my-custom-service', url).catch((err) => {
-    console.error(err);
-    process.exit(-1);
-  });
-} else {
+if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
 }
+
+const serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
+const servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+
+const grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'customModule');
+const module = new CustomModule(grpcSdk);
+module
+  .initialize(servicePort)
+  .then(() => {
+    let url =
+      (process.env.REGISTER_NAME === 'true' ? 'custom-module:' : `${ serviceAddress }:`) +
+      module.port;
+    return grpcSdk.config.registerModule('custom-module', url);
+  })
+  .catch((err: Error) => {
+    console.log('Failed to initialize server');
+    console.error(err);
+    process.exit(-1);
+  })
+  .then(() => {
+    return module.activate();
+  })
+  .catch((err: Error) => {
+    console.log('Failed to active module');
+    console.error(err);
+  });

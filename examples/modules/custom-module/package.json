@@ -1,6 +1,6 @@
 {
   "name": "my-conduit-module",
-  "version": "1.0.0",
+  "version": "0.10.6",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "private": true,
@@ -14,10 +14,11 @@
   "license": "ISC",
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
-    "@quintessential-sft/conduit-grpc-sdk": "0.9.6",
+    "@quintessential-sft/conduit-grpc-sdk": "^0.10.6",
     "grpc": "^1.24.2",
     "lodash": "4.17.20",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "escape-string-regexp": "^4.0.0"
   },
   "directories": {
     "lib": "src"
@@ -31,6 +32,6 @@
     "@types/uuid": "^8.3.0",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.3"
   }
 }
