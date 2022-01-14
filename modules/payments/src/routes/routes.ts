@@ -4,11 +4,9 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  constructRoute,
-  GrpcServer,
-  RouterRequest,
-  RouterResponse,
-  TYPE,
+  constructRoute, GrpcError,
+  GrpcServer, ParsedRouterRequest,
+  TYPE, UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
@@ -22,44 +20,24 @@ export class PaymentsRoutes {
   }
 
   async getStripe(): Promise<StripeHandlers | null> {
-    let errorMessage = null;
-    let paymentsActive = await this.stripeHandlers
+    const paymentsActive = await this.stripeHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
-    if (!errorMessage && paymentsActive) {
-      return Promise.resolve(this.stripeHandlers);
-    }
+      .catch(() => { if (paymentsActive) return Promise.resolve(this.stripeHandlers); });
     return Promise.resolve(null);
   }
 
-  async getProducts(call: RouterRequest, callback: RouterResponse) {
-    let errorMessage: string | null = null;
-    const products = await Product.getInstance()
+  async getProducts(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return Product.getInstance()
       .findMany({})
-      .catch((e: Error) => { errorMessage = e.message; });
-    if (!isNil(errorMessage)) {
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
-    }
-
-    return callback(null, { result: JSON.stringify({ products }) });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
   }
 
-  async getSubscriptions(call: RouterRequest, callback: RouterResponse) {
-    const context = JSON.parse(call.request.context);
-
+  async getSubscriptions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
     if (isNil(context)) {
-      return callback({
-        code: status.UNAUTHENTICATED,
-        message: 'No headers provided',
-      });
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
-
-    let errorMessage: string | null = null;
-
-    const subscriptions = await Subscription.getInstance()
+   return Subscription.getInstance()
       .findMany(
         {
           userId: context.user._id,
@@ -71,19 +49,14 @@ export class PaymentsRoutes {
         undefined,
         ['product']
       )
-      .catch((e: Error) => { errorMessage = e.message; });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { result: JSON.stringify({ subscriptions }) });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
   }
 
   async registerRoutes() {
     let activeRoutes = await this.getRegisteredRoutes();
 
     this.grpcSdk.router
-      .registerRouter(this.server, activeRoutes, {
+      .registerRouterAsync(this.server, activeRoutes, {
         getProducts: this.getProducts.bind(this),
         getSubscriptions: this.getSubscriptions.bind(this),
         createStripePayment: this.stripeHandlers.createPayment.bind(this.stripeHandlers),
@@ -234,16 +207,7 @@ export class PaymentsRoutes {
             action: ConduitRouteActions.GET,
           },
           new ConduitRouteReturnDefinition('GetProductsResponse', {
-            products: [
-              {
-                _id: TYPE.String,
-                name: TYPE.String,
-                value: TYPE.Number,
-                currency: TYPE.String,
-                isSubscription: TYPE.Boolean,
-                renewEvery: ConduitString.Optional,
-              },
-            ],
+            products: [Product.getInstance().fields],
           }),
           'getProducts'
         )
@@ -259,16 +223,7 @@ export class PaymentsRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('GetProductsResponse', {
-            subscriptions: [
-              {
-                _id: TYPE.String,
-                product: TYPE.JSON,
-                customerId: TYPE.String,
-                activeUntil: TYPE.Date,
-                transactions: TYPE.JSON,
-                provider: TYPE.String,
-              },
-            ],
+            subscriptions: [Subscription.getInstance().fields],
           }),
           'getSubscriptions'
         )

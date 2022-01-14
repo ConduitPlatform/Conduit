@@ -5,7 +5,6 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-  wrapCallbackFunctionForRouter,
   wrapCallObjectForRouter,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import path from 'path';
@@ -125,11 +124,7 @@ export default class PaymentsModule extends ConduitServiceModule {
     if (isNil(this.stripeHandlers)) {
       return callback({ code: status.INTERNAL, message: 'Stripe is deactivated' });
     }
-
-    await this.stripeHandlers.createPayment(
-      wrapCallObjectForRouter(call),
-      wrapCallbackFunctionForRouter(callback)
-    );
+    await this.stripeHandlers.createPayment(wrapCallObjectForRouter(call));
   }
 
   async cancelStripePayment(
@@ -139,11 +134,7 @@ export default class PaymentsModule extends ConduitServiceModule {
     if (isNil(this.stripeHandlers)) {
       return callback({ code: status.INTERNAL, message: 'Stripe is deactivated' });
     }
-
-    await this.stripeHandlers.cancelPayment(
-      wrapCallObjectForRouter(call),
-      wrapCallbackFunctionForRouter(callback)
-    );
+    await this.stripeHandlers.cancelPayment(wrapCallObjectForRouter(call));
   }
 
   async refundStripePayment(
@@ -153,11 +144,7 @@ export default class PaymentsModule extends ConduitServiceModule {
     if (isNil(this.stripeHandlers)) {
       return callback({ code: status.INTERNAL, message: 'Stripe is deactivated' });
     }
-
-    await this.stripeHandlers.refundPayment(
-      wrapCallObjectForRouter(call),
-      wrapCallbackFunctionForRouter(callback)
-    );
+    await this.stripeHandlers.refundPayment(wrapCallObjectForRouter(call));
   }
 
   private async enableModule() {

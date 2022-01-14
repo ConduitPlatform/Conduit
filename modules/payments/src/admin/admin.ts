@@ -136,11 +136,11 @@ export class AdminHandlers {
             userId: ConduitString.Required,
             email: ConduitString.Required,
             phoneNumber: ConduitString.Required,
-            buyerName: ConduitString.Optional,
-            address: ConduitString.Optional,
-            postCode: ConduitString.Optional,
+            buyerName: ConduitString.Required,
+            address: ConduitString.Required,
+            postCode: ConduitString.Required,
             stripe: {
-                customerId: ConduitString.Optional,
+                customerId: ConduitString.Required,
             },
           },
         },
@@ -297,7 +297,7 @@ export class AdminHandlers {
     if (isNil(user)) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
-    let customerDoc = {
+    const customerDoc = {
       userId: call.request.params.userId,
       email: call.request.params.email,
       phoneNumber: call.request.params.phoneNumber,
