@@ -76,7 +76,7 @@ export class SchemaController {
   private async loadExistingSchemas() {
     _DeclaredSchema
       .getInstance(this.grpcSdk.databaseProvider!)
-      .findMany({ modelOptions: { conduit: { cms: { enabled: true } } } })
+      .findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');
