@@ -19,7 +19,7 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  emailField: {
+  emailField: { // name of dynamically specified email field in Forms.fields
     type: TYPE.String,
     required: true,
   },

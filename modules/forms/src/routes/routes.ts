@@ -1,8 +1,9 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  GrpcError,
   GrpcServer,
-  RouterRequest,
-  RouterResponse,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { Forms, FormReplies } from '../models';
 import { isNil } from 'lodash';
@@ -13,24 +14,16 @@ export class FormsRoutes {
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  async submitForm(call: RouterRequest, callback: RouterResponse) {
-    const formName = call.request.path.split('/')[2];
-
-    let errorMessage: any = null;
-    let form = await Forms.getInstance()
-      .findOne({ name: formName })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (isNil(form)) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'Requested form not found',
-      });
+  async submitForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const formId = call.request.path.split('/')[2];
+    const form = await Forms.getInstance()
+      .findOne({ _id: formId })
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (!form) {
+      throw new GrpcError(status.NOT_FOUND, 'Form does not exist');
     }
 
-    let data = JSON.parse(call.request.params);
+    const data = call.request.params;
     let fileData: any = {};
     let honeyPot: boolean = false;
     let possibleSpam: boolean = false;
@@ -43,8 +36,6 @@ export class FormsRoutes {
         honeyPot = true;
       }
     });
-
-    errorMessage = null;
     if (form.emailField && data[form.emailField]) {
       const response = await axios
         .get('https://api.stopforumspam.org/api', {
@@ -53,13 +44,11 @@ export class FormsRoutes {
             email: data[form.emailField],
           },
         })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!errorMessage && response.data?.email?.blacklisted === 1) {
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      if (response.data?.email?.blacklisted === 1) {
         possibleSpam = true;
       }
     }
-
-    errorMessage = null;
     if (honeyPot && possibleSpam) {
       await FormReplies.getInstance()
         .create({
@@ -67,30 +56,22 @@ export class FormsRoutes {
           data,
           possibleSpam: true,
         })
-        .catch((e: any) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
-        return callback({ code: status.INTERNAL, message: errorMessage });
+        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
       // we respond OK, but we don't send the email
-      return callback(null, { result: 'OK' });
+      return 'Ok';
     }
 
-    errorMessage = null;
     await FormReplies.getInstance()
       .create({
         form: form._id,
         data,
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    errorMessage = null;
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     let text = '';
-
     Object.keys(data).forEach((r) => {
       text += `</br>${r}: ${data[r]}`;
     });
-
     await this.grpcSdk
       .emailProvider!.sendEmail('FormSubmission', {
         email: form.forwardTo,
@@ -101,11 +82,9 @@ export class FormsRoutes {
         },
         attachments: Object.values(fileData),
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return callback(null, { result: 'OK' });
+    return 'Ok';
   }
 
   addRoutes(routes: any[]) {
@@ -120,7 +99,7 @@ export class FormsRoutes {
 
   private _refreshRoutes() {
     this.grpcSdk.router
-      .registerRouter(this.server, this.forms, {
+      .registerRouterAsync(this.server, this.forms, {
         submitForm: this.submitForm.bind(this),
       })
       .catch((err: Error) => {

@@ -1,7 +1,6 @@
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import FormsConfigSchema from './config';
-import { isNil } from 'lodash';
 import {
   ConduitServiceModule,
   GrpcServer,
@@ -66,7 +65,7 @@ export default class FormsModule extends ConduitServiceModule {
     } catch (e) {
       await this.grpcSdk.config.updateConfig(FormsConfigSchema.getProperties(), 'forms');
     }
-    let config = await this.grpcSdk.config.addFieldstoConfig(
+    const config = await this.grpcSdk.config.addFieldstoConfig(
       FormsConfigSchema.getProperties(),
       'forms'
     );
@@ -87,25 +86,24 @@ export default class FormsModule extends ConduitServiceModule {
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
       .updateConfig(newConfig, 'forms')
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
+      .catch((e: Error) => { errorMessage = e.message; });
+    if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const formsConfig = await this.grpcSdk.config.get('forms');
     if (formsConfig.active) {
-      await this.enableModule().catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
+      await this.enableModule()
+        .catch((e: Error) => { errorMessage = e.message; });
+      if (errorMessage) {
         return callback({ code: status.INTERNAL, message: errorMessage });
+      }
       this.grpcSdk.bus?.publish('forms', 'config-update');
     } else {
       return callback({
         code: status.FAILED_PRECONDITION,
         message: 'Module is not active',
       });
-    }
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });

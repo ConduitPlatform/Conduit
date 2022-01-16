@@ -162,6 +162,12 @@ export class AdminHandlers {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object should contain fields that have their value as a type of: String, File, Date, Number');
       }
     });
+    const formExists = await Forms.getInstance()
+      .findOne({ name: call.request.params.name })
+      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    if (formExists) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Form name already taken');
+    }
     Forms.getInstance()
       .create({
         name: call.request.params.name,
