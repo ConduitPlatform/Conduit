@@ -1,15 +1,13 @@
 import { NotificationTokensHandler } from '../handlers/notification-tokens';
 import ConduitGrpcSdk, {
-  ConduitDate,
-  ConduitObjectId,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   constructRoute,
   GrpcServer,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
+import { NotificationToken } from '../models';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
@@ -17,7 +15,7 @@ export class PushNotificationsRoutes {
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new NotificationTokensHandler();
     this.grpcSdk.router
-      .registerRouter(server, this.registeredRoutes, {
+      .registerRouterAsync(server, this.registeredRoutes, {
         setNotificationToken: this.handlers.setNotificationToken.bind(this.handlers),
       })
       .catch((err: Error) => {
@@ -42,13 +40,7 @@ export class PushNotificationsRoutes {
           },
           new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
             message: TYPE.String,
-            newTokenDocument: {
-              _id: ConduitObjectId.Required,
-              userId: ConduitObjectId.Required,
-              token: ConduitString.Required,
-              createdAt: ConduitDate.Required,
-              updatedAt: ConduitDate.Required,
-            },
+            newTokenDocument: NotificationToken.getInstance().fields,
           }),
           'setNotificationToken'
         )
