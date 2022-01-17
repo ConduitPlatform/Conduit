@@ -51,10 +51,7 @@ const schema = {
   queries: { // succeeded by 'query'
     type: [TYPE.JSON],
   },
-  query: {
-    type: TYPE.JSON,
-    required: true,
-  },
+  query: TYPE.JSON,
   assignments: [TYPE.JSON],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -86,7 +83,7 @@ export class CustomEndpoints extends ConduitActiveSchema<CustomEndpoints> {
   paginated!: boolean;
   sorted!: boolean;
   queries?: any[]; // succeeded by 'query'
-  query!: any;
+  query?: any;
   assignments!: any[];
   createdAt!: Date;
   updatedAt!: Date;

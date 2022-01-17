@@ -7,6 +7,7 @@ import {
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
+import { isNil } from 'lodash';
 
 function getOperation(op: number) {
   switch (op) {
@@ -108,7 +109,9 @@ export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
       array: true,
     });
   }
-  Object.assign(input, extractParams(endpoint.inputs));
+  if (!isNil(endpoint.inputs) && endpoint.inputs.length > 0) {
+    Object.assign(input, extractParams(endpoint.inputs));
+  }
   return constructRoute(
     new ConduitRoute(
       input,

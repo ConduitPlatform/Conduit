@@ -11,7 +11,7 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import { _DeclaredSchema, CustomEndpoints } from '../../models';
 
-const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
+export const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
   GET: 0, //'FIND/GET'
   POST: 1, //'CREATE'
   PUT: 2, //'UPDATE/EDIT'

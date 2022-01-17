@@ -180,21 +180,21 @@ export class SchemaAdmin {
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }
-
-    this.patchSchemaPerms(requestedSchema, permissions);
+    if (permissions) {
+      this.patchSchemaPerms(requestedSchema, permissions);
+    }
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
     const enabled = call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
 
-    if (modelOptions) {
-      const authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
-      const crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
-      requestedSchema.modelOptions = merge(
-        requestedSchema.modelOptions,
-        modelOptions,
-        { conduit: { cms: { enabled, authentication, crudOperations } } },
-      );
-    }
+    const authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
+    const crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
+    requestedSchema.modelOptions = merge(
+      requestedSchema.modelOptions,
+      modelOptions,
+      { conduit: { cms: { enabled, authentication, crudOperations } } },
+    );
+
 
     const updatedSchema = await this.database
       .createSchemaFromAdapter(

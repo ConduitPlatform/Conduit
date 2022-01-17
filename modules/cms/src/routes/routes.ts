@@ -48,7 +48,7 @@ export class CmsRoutes {
 
   private _refreshRoutes() {
     this.grpcSdk.router
-      .registerRouter(this.server, this.crudRoutes.concat(this.customRoutes), {
+      .registerRouterAsync(this.server, this.crudRoutes.concat(this.customRoutes), {
         getDocuments: this.handlers.getDocuments.bind(this.handlers),
         getDocumentById: this.handlers.getDocumentById.bind(this.handlers),
         createDocument: this.handlers.createDocument.bind(this.handlers),
