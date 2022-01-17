@@ -552,9 +552,7 @@ export class LocalHandlers {
       },
     });
 
-    return {
-      message: 'Verification code sent',
-    };
+    return 'Verification code sent';
   }
 
   async verifyPhoneNumber(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
