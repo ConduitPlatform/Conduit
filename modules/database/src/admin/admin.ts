@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ParsedRouterRequest,
   GrpcError,
-  TYPE,
+  ConduitJson,
 } from '@quintessential-sft/conduit-grpc-sdk';
 import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
@@ -59,7 +59,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetDeclaredSchemasExtensions', {
-          declaredSchemasExtensions: [TYPE.JSON], // Swagger parser inconsistency
+          declaredSchemasExtensions: [ConduitJson.Required],
           count: ConduitNumber.Required,
         }),
         'getDeclaredSchemasExtensions',

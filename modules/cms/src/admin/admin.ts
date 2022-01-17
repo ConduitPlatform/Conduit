@@ -114,7 +114,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetSchemasFromOtherModules', {
-          externalSchemas: [TYPE.JSON], // Swagger parser inconsistency
+          externalSchemas: [ConduitJson.Required],
         }),
         'getSchemasFromOtherModules'
       ),
@@ -265,7 +265,7 @@ export class AdminHandlers {
           }
         },
         new ConduitRouteReturnDefinition('GetDocuments', {
-          documents: [TYPE.JSON], // Swagger parser inconsistency
+          documents: ConduitJson.Required,
           count: ConduitNumber.Required,
         }),
         'getDocuments'
@@ -296,7 +296,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('CreateDocuments', {
-          newDocuments: [TYPE.JSON], // Swagger parser inconsistency
+          docs: [ConduitJson.Required],
         }),
         'createDocuments'
       ),
@@ -312,7 +312,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('UpdateDocuments', {
-          docs: [TYPE.JSON], // Swagger parser inconsistency
+          docs: [ConduitJson.Required],
         }),
         'updateDocuments'
       ),
