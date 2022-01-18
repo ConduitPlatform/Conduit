@@ -153,9 +153,6 @@ export function getOps(schemaName: string, actualSchema: any) {
         {
           path: `/${schemaName}/many`,
           action: ConduitRouteActions.UPDATE,
-          queryParams: {
-            updateProvidedOnly: TYPE.Boolean,
-          },
           bodyParams: {
             docs: {
               type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
@@ -207,9 +204,6 @@ export function getOps(schemaName: string, actualSchema: any) {
           action: ConduitRouteActions.UPDATE,
           urlParams: {
             id: { type: TYPE.String, required: true },
-          },
-          queryParams: {
-            updateProvidedOnly: TYPE.Boolean,
           },
           bodyParams: assignableFields,
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
