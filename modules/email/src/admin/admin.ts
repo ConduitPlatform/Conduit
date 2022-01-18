@@ -97,7 +97,6 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
           bodyParams: {
-            id: ConduitString.Required,
             name: ConduitString.Optional,
             subject: ConduitString.Optional,
             body: ConduitString.Optional,
