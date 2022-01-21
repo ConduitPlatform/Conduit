@@ -38,9 +38,7 @@ modules/cms: conduit-builder
 modules/database: conduit-builder
 modules/email: conduit-builder
 modules/chat: conduit-builder
-modules/actor: conduit-builder
 modules/forms: conduit-builder
-modules/payments: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
 modules/push-notifications: conduit-builder
