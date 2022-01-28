@@ -52,7 +52,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('SendSMS', 'String'),
-        'sendSMS'
+        'sendSms'
       ),
     ];
   }
