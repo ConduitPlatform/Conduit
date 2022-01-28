@@ -466,7 +466,10 @@ export class AdminHandlers {
         variables,
         sender: sender ? sender : 'conduit',
       })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        console.log(e);
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return { message: 'Email sent' };
   }
