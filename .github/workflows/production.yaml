@@ -3,9 +3,15 @@ on:
     types:
       - created
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   deploy:
     runs-on: ubuntu-18.04
+    permissions:
+      contents: read
+      packages: write
     name: Deploy Conduit
     steps:
       - name: Checkout
