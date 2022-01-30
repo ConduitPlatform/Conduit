@@ -5,9 +5,16 @@ on:
     paths:
       - "modules/database/**"
       - "libraries/grpc-sdk/**"
+
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   deploy:
     runs-on: ubuntu-18.04
+    permissions:
+      contents: read
+      packages: write
     name: Build database
     steps:
       - name: Checkout

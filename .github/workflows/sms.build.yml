@@ -5,9 +5,16 @@ on:
     paths:
       - "modules/sms/**"
       - "libraries/grpc-sdk/**"
+
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   deploy:
     runs-on: ubuntu-18.04
+    permissions:
+      contents: read
+      packages: write
     name: Build sms
     steps:
       - name: Checkout
