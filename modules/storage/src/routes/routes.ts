@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   constructRoute,
   GrpcServer,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 export class StorageRoutes {
   constructor(

@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { SchemaAdmin } from './schema.admin';

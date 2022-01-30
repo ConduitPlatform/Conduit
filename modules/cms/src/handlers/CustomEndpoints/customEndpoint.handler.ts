@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';

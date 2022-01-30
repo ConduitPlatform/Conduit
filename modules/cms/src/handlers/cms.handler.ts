@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   DatabaseProvider, GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { _DeclaredSchema } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

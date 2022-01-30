@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { EmailTemplate } from '../models';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider';

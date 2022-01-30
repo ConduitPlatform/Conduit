@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { ConduitError, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitError, TYPE } from '@conduitplatform/conduit-grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 export function extractRequestData(req: Request) {

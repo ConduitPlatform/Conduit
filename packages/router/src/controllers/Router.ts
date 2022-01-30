@@ -3,7 +3,7 @@ import {
   ConduitMiddleware,
   ConduitRoute,
   ConduitRouteParameters,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { Application, NextFunction, Request, Response, Router } from 'express';
 
 export abstract class ConduitRouter {

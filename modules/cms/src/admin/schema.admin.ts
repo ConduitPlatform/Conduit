@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
   ConduitModelOptions,
   ConduitModelOptionsPermModifyType,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, merge } from 'lodash';
 import { validateSchemaInput } from '../utils/utilities';

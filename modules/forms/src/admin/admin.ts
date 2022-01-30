@@ -12,7 +12,7 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';

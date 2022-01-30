@@ -16,15 +16,13 @@ maximum flexibility to add custom functionality.
   add custom logic through the "custom endpoints" functionality
 - Swagger docs and GraphQL explorer with full route documentation
 - Authentication system with JWT and 2FA, supporting ServiceAccounts/API keys as well as
-local(username/password or email/password), oAuth(Facebook, Google, Twitch, KakaoTalk)
+local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - Basic security built-in with Client Id/secret for all requests, rate limiting and helmet.
 - Emails with template support
 - SMS for 2FA or plain SMS send
 - Storage using either GCS or Azure Blob Storage (S3 coming soon)
 - Chat(alpha)
 - Forms for basic form submission and forwarding to email
-- Payments with Stripe
-- Custom workflows with "Actor" (WIP)
 - Conduit SDK can be used to add new modules or custom services
 - so much more
 
@@ -40,7 +38,16 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch, Kaka
 - npx lerna run build
 - cd ./packages/core && yarn start
 - cd ./modules/database && yarn start
-- repeat for every module you need to bring online
+- repeat for every module you need to bring online (Don't forget your env variables)
+
+### Environment Variables:
+Core: REDIS_HOST, REDIS_PORT
+Database: databaseURL, databaseType(sql or leave empty for mongo) + general module variables
+General Module:
+SERVICE_URL=0.0.0.0:55190; (used only in versions older than  0.11, otherwise the same as SERVICE_IP) 
+REGISTER_NAME=false; (set to true if running in k8s)
+CONDUIT_SERVER=0.0.0.0:55152; (the core module's IP and port)
+SERVICE_IP=0.0.0.0:55190 (always 0.0.0.0 and a port numer)
 
 
 ## Info
@@ -48,3 +55,8 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch, Kaka
 - Core HTTP Server runs at: http://localhost:3000
 - Core Grpc Server runs at: localhost:55152
 - Core Socket Server runs at: localhost:3001
+
+## Roadmap
+* Payments module to facilitate payments with Stripe, BrainTree etc
+* Custom workflows with "Actor"
+* Performance improvements all around

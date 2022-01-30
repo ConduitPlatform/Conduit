@@ -1,5 +1,5 @@
 {
-  "name": "@quintessential-sft/conduit-grpc-sdk",
+  "name": "@conduitplatform/conduit-grpc-sdk",
   "version": "1.1.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

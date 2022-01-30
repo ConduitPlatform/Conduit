@@ -6,7 +6,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
 import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';

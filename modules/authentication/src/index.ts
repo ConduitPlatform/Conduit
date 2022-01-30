@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import AuthenticationModule from './Authentication';
 
 if (!process.env.CONDUIT_SERVER) {

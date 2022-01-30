@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { Forms } from '../models';
 import { FormsRoutes } from '../routes/routes';
 

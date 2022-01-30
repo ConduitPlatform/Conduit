@@ -1,6 +1,6 @@
 import { CmsHandlers } from '../handlers/cms.handler';
 import { CustomEndpointHandler } from '../handlers/CustomEndpoints/customEndpoint.handler';
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
 
 export class CmsRoutes {
   private readonly handlers: CmsHandlers;

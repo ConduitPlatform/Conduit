@@ -4,7 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   ConduitError,
   ConduitString,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 
 export function getModulesRoute(registeredModules: Map<string, string>) {
   return new ConduitRoute(

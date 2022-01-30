@@ -1,4 +1,4 @@
-import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { TYPE } from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 
 /**

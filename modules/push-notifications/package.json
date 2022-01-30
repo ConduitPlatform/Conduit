@@ -13,7 +13,7 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepare": "npm run build",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit-push-notifications:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-push-notifications:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-push-notifications:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-push-notifications:latest"
   },
   "author": "",
   "license": "ISC",
@@ -27,7 +27,7 @@
     "src"
   ],
   "dependencies": {
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
     "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
     "firebase-admin": "^8.10.0",

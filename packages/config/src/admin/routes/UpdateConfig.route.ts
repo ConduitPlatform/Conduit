@@ -7,8 +7,8 @@ import {
   RouteOptionType,
   TYPE,
   ConduitError,
-} from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 
 export function getUpdateConfigRoute(

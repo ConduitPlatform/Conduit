@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
 import { CommonHandlers } from '../handlers/common';

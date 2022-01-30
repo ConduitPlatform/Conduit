@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';

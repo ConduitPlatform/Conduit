@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import axios from 'axios';
 import moment from 'moment';

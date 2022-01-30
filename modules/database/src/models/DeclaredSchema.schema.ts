@@ -3,7 +3,7 @@ import {
   DatabaseProvider,
   ConduitModelOptions,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,

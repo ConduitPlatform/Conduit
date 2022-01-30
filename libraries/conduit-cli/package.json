@@ -1,5 +1,5 @@
 {
-  "name": "@quintessential-sft/conduit-cli",
+  "name": "@conduitplatform/conduit-cli",
   "description": "The CLI to help you when developing conduit",
   "version": "0.0.2",
   "author": "Quintessential SFT",
@@ -13,7 +13,7 @@
     "@oclif/command": "^1",
     "@oclif/config": "^1",
     "@oclif/plugin-help": "^3",
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
     "axios": "^0.21.4",
     "fs-extra": "^10.0.0",
     "tslib": "^1"

@@ -1,8 +1,8 @@
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
-import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
+import { ConduitCommons, IConfigManager } from '@conduitplatform/conduit-commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';

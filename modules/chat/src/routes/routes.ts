@@ -13,7 +13,7 @@ import ConduitGrpcSdk, {
   SocketRequest,
   SocketResponse,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { ChatRoom, ChatMessage } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

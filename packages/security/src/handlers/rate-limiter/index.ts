@@ -1,6 +1,6 @@
 import { RedisClient } from 'redis';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { ConduitError } from '@quintessential-sft/conduit-commons';
+import { ConduitError } from '@conduitplatform/conduit-commons';
 
 export class RateLimiter {
   private _limiter: any;

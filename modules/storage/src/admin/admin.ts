@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   ConduitNumber,
   ConduitBoolean,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';

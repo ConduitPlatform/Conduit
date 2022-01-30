@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons } from '@quintessential-sft/conduit-commons';
+import { ConduitCommons } from '@conduitplatform/conduit-commons';
 import { isDev } from '../utils/middleware';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {

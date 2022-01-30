@@ -3,7 +3,7 @@ import {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { NotificationToken } from '../models';
 
