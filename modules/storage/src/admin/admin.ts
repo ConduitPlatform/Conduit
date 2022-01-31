@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   RouterRequest,
   RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import {

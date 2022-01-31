@@ -2,7 +2,7 @@ import { AdminHandlers } from './admin/admin';
 import {
   ConduitServiceModule,
   GrpcServer,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { CmsRoutes } from './routes/Routes';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';

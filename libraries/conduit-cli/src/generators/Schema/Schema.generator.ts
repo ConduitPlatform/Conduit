@@ -6,7 +6,7 @@ const MODEL_TEMPLATE = `
 import {
   ConduitActiveSchema,
   DatabaseProvider,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 IMPORTS_PLACEHOLDER
 

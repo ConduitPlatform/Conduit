@@ -4,7 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 export function compareFunction(schemaA: any, schemaB: any): number {
   let hasA = [];

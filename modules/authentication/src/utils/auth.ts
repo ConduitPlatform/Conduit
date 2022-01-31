@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import moment from 'moment';
 
 export namespace AuthUtils {

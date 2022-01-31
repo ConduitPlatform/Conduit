@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import * as bcrypt from 'bcrypt';
 
 export async function secretMigrate(grpcSdk: ConduitGrpcSdk) {

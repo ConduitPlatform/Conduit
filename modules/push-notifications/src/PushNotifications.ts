@@ -9,7 +9,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AdminHandlers } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/Routes';

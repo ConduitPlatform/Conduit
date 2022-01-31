@@ -11,7 +11,7 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   SocketProtoDescription,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
 
 let protoLoader = require('@grpc/proto-loader');

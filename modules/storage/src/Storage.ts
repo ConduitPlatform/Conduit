@@ -5,7 +5,7 @@ import {
   GrpcServer,
   wrapCallbackFunctionForRouter,
   wrapCallObjectForRouter,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';

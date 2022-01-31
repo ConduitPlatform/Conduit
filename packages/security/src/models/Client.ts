@@ -2,7 +2,7 @@ import {
   ConduitSchema,
   PlatformTypesEnum,
   TYPE,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 
 export const ClientModel = new ConduitSchema(
   'Client',

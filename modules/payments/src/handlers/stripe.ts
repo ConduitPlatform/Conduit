@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitError,
   RouterRequest,
   RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   PaymentsCustomer,

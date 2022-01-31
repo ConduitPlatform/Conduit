@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 import { StripeHandlers } from '../handlers/stripe';
 import { Product, Subscription } from '../models';

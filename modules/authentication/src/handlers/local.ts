@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   SMS,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import * as templates from '../templates';
 import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, Token, User } from '../models';

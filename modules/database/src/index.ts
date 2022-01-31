@@ -1,5 +1,5 @@
 import { DatabaseProvider } from './DatabaseProvider';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import process from 'process';
 
 if (!process.env.CONDUIT_SERVER) {

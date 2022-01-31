@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   RouterRequest,
   RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { status } from '@grpc/grpc-js';
 import { isNil, isPlainObject } from 'lodash';

@@ -1,4 +1,4 @@
-import { GrpcRequest, GrpcResponse } from '@quintessential-sft/conduit-grpc-sdk';
+import { GrpcRequest, GrpcResponse } from '@conduitplatform/conduit-grpc-sdk';
 
 export type SendSmsRequest = GrpcRequest<{
   to: string;

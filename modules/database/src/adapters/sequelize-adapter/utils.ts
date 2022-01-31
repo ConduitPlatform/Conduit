@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import _, { isArray, isObject } from 'lodash';
-import { ConduitModel } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitModel } from '@conduitplatform/conduit-grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
 

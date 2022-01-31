@@ -1,4 +1,4 @@
-import { ConduitRoute, ConduitRouteActions } from '@quintessential-sft/conduit-commons';
+import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/conduit-commons';
 import { extractRouteReturnProperties } from './util';
 
 export class SwaggerGenerator {

@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   RouterRequest,
   RouterResponse,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateSchemaInput } from '../utils/utilities';

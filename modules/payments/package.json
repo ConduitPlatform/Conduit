@@ -11,7 +11,7 @@
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit-payments:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-payments:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-payments:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-payments:latest"
   },
   "directories": {
     "lib": "src"
@@ -21,7 +21,7 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
     "@grpc/proto-loader": "^0.5.4",
     "axios": "^0.21.1",
     "convict": "^6.0.0",

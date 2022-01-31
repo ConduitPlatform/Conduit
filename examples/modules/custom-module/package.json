@@ -14,7 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
-    "@quintessential-sft/conduit-grpc-sdk": "0.9.6",
+    "@conduitplatform/conduit-grpc-sdk": "0.9.6",
     "grpc": "^1.24.2",
     "lodash": "4.17.20",
     "uuid": "^8.3.2"

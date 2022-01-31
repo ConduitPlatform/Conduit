@@ -1,5 +1,5 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitCommons, PlatformTypesEnum } from '@quintessential-sft/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitCommons, PlatformTypesEnum } from '@conduitplatform/conduit-commons';
 import { NextFunction, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';

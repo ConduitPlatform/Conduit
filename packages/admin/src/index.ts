@@ -7,11 +7,11 @@ import {
   ConduitCommons,
   ConduitError,
   IConduitAdmin,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import AdminConfigSchema from './config';
 import fs from 'fs';
 import path from 'path';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { credentials, loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 
 let protoLoader = require('@grpc/proto-loader');

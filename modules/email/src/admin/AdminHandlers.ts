@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   RouterRequest,
   RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { getHBValues } from '../parse-test/getHBValues';
 import to from 'await-to-js';

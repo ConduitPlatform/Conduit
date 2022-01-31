@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 
 export interface SchemaAdapter<T> {
   /**

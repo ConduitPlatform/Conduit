@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { SchemaAdmin } from './schema.admin';
 import { DocumentsAdmin } from './documents.admin';

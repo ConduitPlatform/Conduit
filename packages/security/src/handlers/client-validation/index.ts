@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
+import { ConduitCommons, ConduitError } from '@conduitplatform/conduit-commons';
 import { ClientModel } from '../../models/Client';
 import * as bcrypt from 'bcrypt';
-import { DatabaseProvider } from '@quintessential-sft/conduit-grpc-sdk';
+import { DatabaseProvider } from '@conduitplatform/conduit-grpc-sdk';
 
 export class ClientValidator {
   prod = false;

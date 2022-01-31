@@ -1,4 +1,4 @@
-import { ConduitError, ConduitSchema } from "@quintessential-sft/conduit-grpc-sdk";
+import { ConduitError, ConduitSchema } from "@conduitplatform/conduit-grpc-sdk";
 import { cloneDeep, isArray, isEmpty, isObject, isString, merge } from "lodash";
 
 const deepdash = require("deepdash/standalone");

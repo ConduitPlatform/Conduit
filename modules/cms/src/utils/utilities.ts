@@ -7,7 +7,7 @@ import {
   isPlainObject,
   isString,
 } from 'lodash';
-import { TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { TYPE } from '@conduitplatform/conduit-grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 

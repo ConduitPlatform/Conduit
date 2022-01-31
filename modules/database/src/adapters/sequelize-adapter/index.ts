@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitError, ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitError, ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { DeclaredSchema } from '../../models';

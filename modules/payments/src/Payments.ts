@@ -7,7 +7,7 @@ import {
   SetConfigResponse,
   wrapCallbackFunctionForRouter,
   wrapCallObjectForRouter,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { PaymentsRoutes } from './routes/Routes';

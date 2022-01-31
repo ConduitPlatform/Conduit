@@ -15,11 +15,11 @@ The CLI to help you when developing conduit
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g @quintessential-sft/conduit-cli
+$ npm install -g @conduitplatform/conduit-cli
 $ conduit COMMAND
 running command...
 $ conduit (-v|--version|version)
-@quintessential-sft/conduit-cli/0.0.2 darwin-x64 node-v14.16.0
+@conduitplatform/conduit-cli/0.0.2 darwin-x64 node-v14.16.0
 $ conduit --help [COMMAND]
 USAGE
   $ conduit COMMAND

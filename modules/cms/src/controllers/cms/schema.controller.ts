@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaDefinitions } from '../../models';
 import { CmsRoutes } from '../../routes/Routes';
 import { sortAndConstructRoutes } from './utils';

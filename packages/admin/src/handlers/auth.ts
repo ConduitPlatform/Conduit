@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { comparePasswords, hashPassword, signToken } from '../utils/auth';
-import { ConduitCommons, IConfigManager } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitCommons, IConfigManager } from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 
 export class AuthHandlers {
   private readonly conduit: ConduitCommons;

@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   RouterRequest,
   RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaDefinitions } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

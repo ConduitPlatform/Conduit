@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
 import Queue from 'bull';
 import { ActorFlow } from '../models';
 import path from 'path';

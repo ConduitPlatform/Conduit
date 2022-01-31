@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   RouterResponse,
   RouterRequest,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { ChatRoom, ChatMessage, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';

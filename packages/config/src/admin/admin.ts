@@ -1,5 +1,5 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { ConduitCommons } from '@quintessential-sft/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitCommons } from '@conduitplatform/conduit-commons';
 import { Request, Response } from 'express';
 import { isEmpty, isNil } from 'lodash';
 

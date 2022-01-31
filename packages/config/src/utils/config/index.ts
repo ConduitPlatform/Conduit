@@ -1,7 +1,7 @@
 import convict, { Config } from 'convict';
 import AppConfigSchema from '../../models/config.schema';
 import { isNil } from 'lodash';
-import { IAppConfig } from '@quintessential-sft/conduit-commons';
+import { IAppConfig } from '@conduitplatform/conduit-commons';
 
 export class AppConfig implements IAppConfig {
   private static instance: AppConfig;

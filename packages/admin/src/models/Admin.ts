@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@conduitplatform/conduit-grpc-sdk';
 
 export const AdminSchema = new ConduitSchema(
   'Admin',

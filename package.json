@@ -13,8 +13,8 @@
     "docz:build": "docz build",
     "docz:serve": "docz build && docz serve",
     "build:bootstrap": "lerna run build",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit .",
-    "push:docker": "docker push quintessential.azurecr.io/conduit",
+    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit .",
+    "push:docker": "docker push ghcr.io/conduitplatform/conduit",
     "deploy:docker": "npm run build:docker && npm run push:docker",
     "release": "standard-version"
   },

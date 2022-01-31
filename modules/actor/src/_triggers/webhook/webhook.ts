@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   constructRoute,
   GrpcServer,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 
 export class Webhook implements Trigger<WebhookInterface> {
