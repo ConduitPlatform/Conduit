@@ -3,19 +3,25 @@ on:
     types:
       - created
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   deploy:
     runs-on: ubuntu-18.04
+    permissions:
+      contents: read
+      packages: write
     name: Deploy Conduit
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Docker Login
-        uses: docker/login-action@v1.6.0
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
-          registry: ${{ secrets.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build conduit modules
         run: |
           make all
@@ -29,7 +35,7 @@ jobs:
         with:
           node-version: 14
           registry-url: https://npm.pkg.github.com
-          scope: '@quintessential-sft'
+          scope: '@conduitplatform'
           always-auth: true
       - name: Cache dependencies
         uses: actions/cache@v1
@@ -42,7 +48,7 @@ jobs:
       - name: Authenticate with GitHub package registry
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > .npmrc
-          echo "@quintessential-sft:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "@conduitplatform:registry=https://npm.pkg.github.com/" >> .npmrc
           echo "always-auth: true" >> .npmrc
         working-directory: ./libraries/grpc-sdk
       - name: Install Protoc
@@ -54,26 +60,3 @@ jobs:
         working-directory: ./libraries/grpc-sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
-
-  document:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: "14.x"
-      - name: Cache dependencies
-        uses: actions/cache@v1
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: yarn install --frozen-lockfile
-      - run: yarn run docz:build
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GIT_TOKEN }}
-          publish_dir: ./docs
