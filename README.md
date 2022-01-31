@@ -61,19 +61,19 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 
 |  Variable        |  Description   | Required |  Example        |  Default                    |
 | :--------------: | :------------- | :------: | :-------------: | :-------------------------: |
-| `databaseURL`    | database URL   |  False   | `localhost`     | `mongodb://localhost:27017` |         |
+| `databaseURL`    | database URL   |  False   | `localhost`     | `mongodb://localhost:27017` |
 | `databaseType`   | db engine type |  False   | `sql`           | `mongodb`                   |
 
 Generic module env variables are also supported, with required ones being obligatory.
 
 ## General Module
 
-|  Variable        |  Description                              | Required |  Example        |
-| :--------------: | :---------------------------------------- | :------: | :-------------: |
-| `CONDUIT_SERVER` | Conduit Core's address and port           |   True   | `0.0.0.0:55152` |
-| `SERVICE_IP`     | Always 0.0.0.0 and a port numer           |   True   | `0.0.0.0:55190` |
-| `SERVICE_URL`    | Deprecated in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
-| `REGISTER_NAME`  | Set to `true` if running in Kubernetes    |   False  | `true`          |
+|  Variable        |  Description                                  | Required |  Example        |
+| :--------------: | :-------------------------------------------- | :------: | :-------------: |
+| `CONDUIT_SERVER` | Conduit Core's address and port               |   True   | `0.0.0.0:55152` |
+| `SERVICE_IP`     | Always 0.0.0.0 and a port numer               |   True   | `0.0.0.0:55190` |
+| `SERVICE_URL`    | **Deprecated** in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
+| `REGISTER_NAME`  | Set to `true` if running in Kubernetes        |   False  | `true`          |
 
 # Information ℹ️
 
