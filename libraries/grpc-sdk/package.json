@@ -16,11 +16,11 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.4",
     "@types/google-protobuf": "^3.15.5",
-    "@types/ioredis": "^4.22.0",
+    "@types/ioredis": "^4.28.7",
     "@types/lodash": "^4.14.150",
     "@grpc/grpc-js": "^1.3.4",
     "ioredis": "^4.23.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "protobufjs": "^6.11.2"
   },
   "directories": {
