@@ -14,7 +14,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@grpc/proto-loader": "^0.5.4",
+    "@grpc/proto-loader": "^0.6.9",
     "@types/google-protobuf": "^3.2.7",
     "@types/ioredis": "^4.22.0",
     "@types/lodash": "^4.14.150",
@@ -39,7 +39,7 @@
     "directory": "libraries/grpc-sdk"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "^0.5.4",
+    "@grpc/proto-loader": "^0.6.9",
     "@types/node": "^13.9.8",
     "copyfiles": "^2.2.0",
     "ts-proto": "^1.82.0",
