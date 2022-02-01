@@ -7,14 +7,17 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
-import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
 import axios, { AxiosRequestConfig } from 'axios';
+import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
+import { Payload } from './interfaces/Payload';
 
-export class FacebookHandlers {
+export class FacebookHandlers extends AuthenticationProviderClass {
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super(grpcSdk, 'facebook');
+  }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -58,50 +61,21 @@ export class FacebookHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
 
+
     let user: User | null = await User.getInstance().findOne({
       email: facebookResponse.data.email,
     });
 
-    if (!isNil(user)) {
-      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!config.facebook.accountLinking) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'User with this email already exists'
-        );
-      }
-      if (isNil(user.facebook)) {
-        user.facebook = {
-          id: facebookResponse.data.id as string,
-          token: access_token,
-        };
-        // TODO look into this again, as the email the user has registered will still not be verified
-        if (!user.isVerified) user.isVerified = true;
-        user = await User.getInstance().findByIdAndUpdate(user._id, user);
-      }
-    } else {
-      user = await User.getInstance().create({
-        email: facebookResponse.data.email,
-        facebook: {
-          id: facebookResponse.data.id,
-        },
-        isVerified: true,
-      });
-    }
-
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: user!._id,
-        clientId: context.clientId,
-        config,
-      }
-    );
-
-    return {
-      userId: user!._id.toString(),
-      accessToken: (accessToken as any).token,
-      refreshToken: (refreshToken as any).token,
+    const payload: Payload = {
+      user: user!,
+      config: config,
+      data: {
+        id: facebookResponse.data.id,
+        token: access_token,
+      },
+      email: facebookResponse.data.email,
+      clientId: context.clientId,
     };
+    return await this.createTokens(payload);
   }
 }

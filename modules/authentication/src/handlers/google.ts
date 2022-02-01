@@ -8,15 +8,16 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
-import { AuthUtils } from '../utils/auth';
 import { User } from '../models';
-import moment = require('moment');
+import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
+import { Payload } from './interfaces/Payload';
 
-export class GoogleHandlers {
+export class GoogleHandlers extends AuthenticationProviderClass {
   private readonly client: OAuth2Client;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super(grpcSdk,'google');
     this.client = new OAuth2Client();
   }
 
@@ -61,53 +62,18 @@ export class GoogleHandlers {
     if (!payload.email_verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
-
     let user: User | null = await User.getInstance().findOne({ email: payload.email });
-
-    if (!isNil(user)) {
-      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!config.google.accountLinking) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'User with this email already exists'
-        );
-      }
-      if (isNil(user.google)) {
-        user.google = {
-          id: payload.sub,
-          token: access_token,
-          tokenExpires: moment()
-            .add(expires_in as number, 'milliseconds')
-            .toDate(),
-        };
-        if (!user.isVerified) user.isVerified = true;
-        user = await User.getInstance().findByIdAndUpdate(user._id, user);
-      }
-    } else {
-      user = await User.getInstance().create({
-        email: payload.email,
-        google: {
-          id: payload.sub,
-          token: access_token,
-          tokenExpires: moment().add(expires_in).format(),
-        },
-        isVerified: true,
-      });
+    let googlePayload: Payload = {
+      user: user,
+      email: payload.email!,
+      data: {
+        id: payload.sub,
+        token: access_token,
+        tokenExpires: expires_in
+      },
+      config: config,
+      clientId: config.google.clientId,
     }
-
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: user!._id,
-        clientId: context.clientId,
-        config,
-      }
-    );
-
-    return {
-      userId: user!._id.toString(),
-      accessToken: (accessToken as any).token,
-      refreshToken: (refreshToken as any).token,
-    };
+    return await this.createTokens(googlePayload);
   }
 }
