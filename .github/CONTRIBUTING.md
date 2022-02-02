@@ -59,40 +59,53 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 
 Commit messages should follow the [commit message convention](https://github.com/ConduitPlatform/Conduit/blob/master/.github/COMMIT_CONVENTION.md) so that changelogs can be automatically generated.
 
-### Commonly used scripts
+### Commonly Used Commands
 
-TODO:
+``` bash
+# Building Everything
+npx lerna run build
 
-There are some other scripts available in the `scripts` section of the `package.json` file.
+# Building Individual Modules (eg: Database)
+npx lerna run build --scope=@conduit/database-provider
+
+# Running a module with env vars
+CONDUIT_SERVER="0.0.0.0:55152" SERVICE_IP="0.0.0.0:55183" \
+npx lerna run start --scope=@conduit/database-provider
+```
+
+Find out more about [Lerna](https://lerna.js.org/).
+
+You may find additional scripts in the `scripts` section of the `package.json` file.
 
 ## Project Structure
 
-- **`scripts`**:
+- **`packages`**: contains *core modules* built into the "Core" package
+    - `admin`: handles admin routes (using *router*)
+    - `commons`: SDK for *core module* intracommunication
+    - `config`: handles configuration of Conduit modules
+    - `core`: just the base entrypoint
+    - `router`: handles user routes, REST, GraphQL, WebSockets
+    - `security`: handles security clients, bot detection etc
 
-- **`packages`**:
-    - `packages/admin`:
-    - `packages/commons`:
-    - `packages/config`:
-    - `packages/core`:
-    - `packages/router`:
-    - `packages/security`:
+- **`modules`**: contains *non-core modules*
+    - `authentication`: provides user authentication
+    - `chat`: chat room functionality
+    - `cms`: custom schema, data and functional endpoint generation
+    - `database`: database engine communication using adapters
+    - `email`: email sending with templates support
+    - `forms`: form generation and submission
+    - `push-notifications`: provides support for push notifications
+    - `sms`: provides support for SMS communication
+    - `storage`: consistent storage
 
-- **`modules`**:
-    - `modules/authentication`:
-    - `modules/chat`:
-    - `modules/cms`:
-    - `modules/database`:
-    - `modules/email`:
-    - `modules/forms`:
-    - `modules/push-notifications`:
-    - `modules/sms`:
-    - `modules/storage`:
+- **`libraries`**: contains shared libraries
+    - `grpc-sdk`: SDK for gRPC communication used by both *core* and *non-core* modules
 
-- **`libraries`**:
+- **`scripts`**: contains build-related utility scripts
 
-- **`docker`**:
+- **`docker`**: contains OCI-container related utilities
 
-- **`benchmarks`**:
+- **`benchmarks`**: contains benchmarking utilities
     
 ## Credits
 
