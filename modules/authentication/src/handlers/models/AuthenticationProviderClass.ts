@@ -1,14 +1,16 @@
 import ConduitGrpcSdk, {
-  GrpcError,
+  GrpcError, ParsedRouterRequest, UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { Payload } from '../interfaces/Payload';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import moment = require('moment');
+import { ConnectionCredentials } from '../interfaces/ConnectionCredentials';
+import { ConfigController } from '../../config/Config.controller';
 
-export abstract class AuthenticationProviderClass {
+export abstract class AuthenticationProviderClass<T extends Payload> {
   private providerName: string;
   grpcSdk: ConduitGrpcSdk;
 
@@ -19,55 +21,55 @@ export abstract class AuthenticationProviderClass {
 
   abstract async validate(): Promise<Boolean>;
 
-  async createTokens(payload: Payload): Promise<any> {
+  abstract async connectWithProvider(options: ConnectionCredentials): Promise<any>;
 
-    if (!isNil(payload.user)) {
-      if (!payload.user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!payload.config[this.providerName].accountLinking) {
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
+    if (isNil(context) || isEmpty(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+
+    let options: ConnectionCredentials = {
+      id_token: call.request.params.id_token,
+      access_token: call.request.params.access_token,
+      expires_in: call.request.params.expires_in,
+      context: call.request.context,
+    };
+    const config = ConfigController.getInstance().config;
+    let { payload, user } = await this.connectWithProvider(options);
+    if (!isNil(user)) {
+      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+      if (!config[this.providerName].accountLinking) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User with this email already exists',
         );
       }
-      if (isNil(payload.user[this.providerName])) {
-        payload.user[this.providerName] = {
-          id: payload.data.id as string,
-          token: payload.data.token,
-          tokenExpires: moment()
-            .add(payload.data.tokenExpires! as number, 'milliseconds')
-            .toDate(),
-        };
+      if (isNil(user[this.providerName])) {
+        user[this.providerName] = payload;
         // TODO look into this again, as the email the user has registered will still not be verified
-        if (!payload.user.isVerified) payload.user.isVerified = true;
-        payload.user = await User.getInstance().findByIdAndUpdate(payload.user._id, payload.user);
+        if (!user.isVerified) user.isVerified = true;
+        user = await User.getInstance().findByIdAndUpdate(user._id, user);
       }
     } else {
-      payload.user = await User.getInstance().create({
+      user = await User.getInstance().create({
         email: payload.email,
-        [this.providerName]: {
-          id: payload.data.id,
-          token: payload.data.token,
-          tokenExpires: moment().add(payload.data.tokenExpires!).format(),
-        },
+        [this.providerName]: { payload },
         isVerified: true,
       });
     }
-
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
-        userId: payload.user!._id,
-        clientId: payload.clientId!,
-        config: payload.config,
+        userId: user!._id,
+        clientId: config[this.providerName].clientId!,
+        config: config,
       },
     );
-
-    return {
-      userId: payload.user!._id.toString(),
+    let retObject: any = {
+      userId: user!._id.toString(),
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };
+    return retObject;
   }
-
-
 }

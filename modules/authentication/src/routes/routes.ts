@@ -20,6 +20,7 @@ import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
+import { AuthenticationProviderClass } from '../handlers/models/AuthenticationProviderClass';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -28,7 +29,6 @@ export class AuthenticationRoutes {
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly twitchHandlers: TwitchHandlers;
-
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
@@ -48,19 +48,19 @@ export class AuthenticationRoutes {
         resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
         changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
         verifyChangePassword: this.localHandlers.verifyChangePassword.bind(
-          this.localHandlers
+          this.localHandlers,
         ),
         verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
         verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
         verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
-        authenticateFacebook: this.facebookHandlers.authenticate.bind(
-          this.facebookHandlers
-        ),
+
+        authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
+
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-        authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
+        authenticateTwitch: this.twitchHandlers.connectWithProvider.bind(this.twitchHandlers),
         beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
@@ -107,8 +107,8 @@ export class AuthenticationRoutes {
           new ConduitRouteReturnDefinition('RegisterResponse', {
             userId: ConduitString.Optional,
           }),
-          'register'
-        )
+          'register',
+        ),
       );
 
       routesArray.push(
@@ -130,8 +130,8 @@ export class AuthenticationRoutes {
             refreshToken: ConduitString.Optional,
             message: ConduitString.Optional,
           }),
-          'authenticateLocal'
-        )
+          'authenticateLocal',
+        ),
       );
 
       if (authConfig.local.identifier !== 'username') {
@@ -145,8 +145,8 @@ export class AuthenticationRoutes {
               },
             },
             new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
-            'forgotPassword'
-          )
+            'forgotPassword',
+          ),
         );
 
         routesArray.push(
@@ -162,8 +162,8 @@ export class AuthenticationRoutes {
               },
             },
             new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
-            'resetPassword'
-          )
+            'resetPassword',
+          ),
         );
 
         routesArray.push(
@@ -180,8 +180,8 @@ export class AuthenticationRoutes {
               middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-            'changePassword'
-          )
+            'changePassword',
+          ),
         );
 
         routesArray.push(
@@ -196,8 +196,8 @@ export class AuthenticationRoutes {
               middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-            'verifyChangePassword'
-          )
+            'verifyChangePassword',
+          ),
         );
 
         routesArray.push(
@@ -211,8 +211,8 @@ export class AuthenticationRoutes {
               },
             },
             new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
-            'verifyEmail'
-          )
+            'verifyEmail',
+          ),
         );
       }
 
@@ -234,8 +234,8 @@ export class AuthenticationRoutes {
               refreshToken: ConduitString.Optional,
               message: ConduitString.Optional,
             }),
-            'verifyTwoFa'
-          )
+            'verifyTwoFa',
+          ),
         );
 
         routesArray.push(
@@ -251,8 +251,8 @@ export class AuthenticationRoutes {
               },
             },
             new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
-            'enableTwoFa'
-          )
+            'enableTwoFa',
+          ),
         );
 
         routesArray.push(
@@ -267,8 +267,8 @@ export class AuthenticationRoutes {
               },
             },
             new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
-            'verifyPhoneNumber'
-          )
+            'verifyPhoneNumber',
+          ),
         );
 
         routesArray.push(
@@ -280,8 +280,8 @@ export class AuthenticationRoutes {
               middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
-            'disableTwoFa'
-          )
+            'disableTwoFa',
+          ),
         );
       }
       enabled = true;
@@ -306,8 +306,8 @@ export class AuthenticationRoutes {
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,
           }),
-          'authenticateFacebook'
-        )
+          'authenticateFacebook',
+        ),
       );
 
       enabled = true;
@@ -335,8 +335,8 @@ export class AuthenticationRoutes {
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,
           }),
-          'authenticateGoogle'
-        )
+          'authenticateGoogle',
+        ),
       );
 
       enabled = true;
@@ -363,8 +363,8 @@ export class AuthenticationRoutes {
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,
           }),
-          'authenticateService'
-        )
+          'authenticateService',
+        ),
       );
 
       enabled = true;
@@ -390,8 +390,8 @@ export class AuthenticationRoutes {
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,
           }),
-          'authenticateTwitch'
-        )
+          'authenticateTwitch',
+        ),
       );
       routesArray.push(
         constructConduitRoute(
@@ -401,8 +401,8 @@ export class AuthenticationRoutes {
             action: ConduitRouteActions.GET,
           },
           new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
-          'beginAuthTwitch'
-        )
+          'beginAuthTwitch',
+        ),
       );
       enabled = true;
     }
@@ -417,8 +417,8 @@ export class AuthenticationRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('User', User.getInstance().fields),
-          'getUser'
-        )
+          'getUser',
+        ),
       );
       routesArray.push(
         constructConduitRoute(
@@ -429,8 +429,8 @@ export class AuthenticationRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
-          'deleteUser'
-        )
+          'deleteUser',
+        ),
       );
       routesArray.push(
         constructConduitRoute(
@@ -447,8 +447,8 @@ export class AuthenticationRoutes {
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,
           }),
-          'renewAuth'
-        )
+          'renewAuth',
+        ),
       );
 
       routesArray.push(
@@ -459,12 +459,12 @@ export class AuthenticationRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-          'logOut'
-        )
+          'logOut',
+        ),
       );
 
       routesArray.push(
-        constructMiddleware(new ConduitMiddleware({ path: '/' }, 'authMiddleware'))
+        constructMiddleware(new ConduitMiddleware({ path: '/' }, 'authMiddleware')),
       );
     }
     return routesArray;
@@ -491,13 +491,13 @@ export class AuthenticationRoutes {
     if (isNil(accessToken) || moment().isAfter(moment(accessToken.expiresOn))) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid'
+        'Token is expired or otherwise not valid',
       );
     }
     if (!accessToken.userId) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid'
+        'Token is expired or otherwise not valid',
       );
     }
 

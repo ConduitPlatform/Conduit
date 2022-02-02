@@ -10,9 +10,10 @@ import { ConfigController } from '../config/Config.controller';
 import { User } from '../models';
 import axios, { AxiosRequestConfig } from 'axios';
 import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import { Payload } from './interfaces/Payload';
+import { FacebookPayload } from './interfaces/facebook/FacebookPayload';
+import { ConnectionCredentials } from './interfaces/ConnectionCredentials';
 
-export class FacebookHandlers extends AuthenticationProviderClass {
+export class FacebookHandlers extends AuthenticationProviderClass<FacebookPayload> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk) {
@@ -35,47 +36,37 @@ export class FacebookHandlers extends AuthenticationProviderClass {
     return true;
   }
 
-  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async connectWithProvider(options: ConnectionCredentials) {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const { access_token } = call.request.params;
 
     const config = ConfigController.getInstance().config;
-
-    const context = call.request.context;
-    if (isNil(context) || isEmpty(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
       params: {
-        access_token,
+        access_token: options.access_token,
         fields: 'id,email',
       },
     };
 
     const facebookResponse = await axios(facebookOptions);
-
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
-
-
     let user: User | null = await User.getInstance().findOne({
       email: facebookResponse.data.email,
     });
-
-    const payload: Payload = {
-      user: user!,
-      config: config,
-      data: {
-        id: facebookResponse.data.id,
-        token: access_token,
-      },
+    let payload: FacebookPayload = {
+      id: facebookResponse.data.id,
       email: facebookResponse.data.email,
-      clientId: context.clientId,
+      access_token: options.access_token,
     };
-    return await this.createTokens(payload);
+
+    return {
+      payload: payload,
+      user: user,
+    };
   }
 }
