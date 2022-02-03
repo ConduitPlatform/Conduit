@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   GrpcError, ParsedRouterRequest, UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { Payload } from '../interfaces/Payload';
-import { isEmpty, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
