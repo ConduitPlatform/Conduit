@@ -20,7 +20,6 @@ import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import { AuthenticationProviderClass } from '../handlers/models/AuthenticationProviderClass';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -60,7 +59,7 @@ export class AuthenticationRoutes {
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
 
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-        authenticateTwitch: this.twitchHandlers.connectWithProvider.bind(this.twitchHandlers),
+        authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
         beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),

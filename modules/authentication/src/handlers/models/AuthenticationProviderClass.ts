@@ -6,8 +6,6 @@ import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
-import moment = require('moment');
-import { ConnectionCredentials } from '../interfaces/ConnectionCredentials';
 import { ConfigController } from '../../config/Config.controller';
 
 export abstract class AuthenticationProviderClass<T extends Payload> {
@@ -21,21 +19,22 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
 
   abstract async validate(): Promise<Boolean>;
 
-  abstract async connectWithProvider(options: ConnectionCredentials): Promise<any>;
+  abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
 
-  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    if (isNil(context) || isEmpty(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
-    let options: ConnectionCredentials = {
-      id_token: call.request.params.id_token,
-      access_token: call.request.params.access_token,
-      expires_in: call.request.params.expires_in,
-      context: call.request.context,
-    };
+  async authenticate(call: ParsedRouterRequest,redirect: boolean): Promise<UnparsedRouterResponse> {
+    let payload = await this.connectWithProvider(call);
     const config = ConfigController.getInstance().config;
-    let { payload, user } = await this.connectWithProvider(options);
+    let user: User | null | any = null;
+    if (payload.hasOwnProperty('email')) {
+      user = await User.getInstance().findOne({
+        email: payload.email,
+      });
+    }
+    else if (payload.hasOwnProperty('id') && !payload.hasOwnProperty('email')) {
+      user = await User.getInstance().findOne({
+        [this.providerName]: { id: payload.id },
+      });
+    }
     if (!isNil(user)) {
       if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!config[this.providerName].accountLinking) {
@@ -44,6 +43,7 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
           'User with this email already exists',
         );
       }
+
       if (isNil(user[this.providerName])) {
         user[this.providerName] = payload;
         // TODO look into this again, as the email the user has registered will still not be verified
@@ -53,7 +53,7 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
     } else {
       user = await User.getInstance().create({
         email: payload.email,
-        [this.providerName]: { payload },
+        [this.providerName]:  payload,
         isVerified: true,
       });
     }
@@ -65,11 +65,19 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
         config: config,
       },
     );
+
     let retObject: any = {
       userId: user!._id.toString(),
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };
+    if(redirect) {
+      retObject['redirect'] = config.twitch.redirect_uri +
+          '?accessToken=' +
+          (accessToken as any).token +
+          '&refreshToken=' +
+          (refreshToken as any).token
+    }
     return retObject;
   }
 }

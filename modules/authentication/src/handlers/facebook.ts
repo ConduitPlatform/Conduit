@@ -3,17 +3,14 @@ import ConduitGrpcSdk, {
   ConduitError,
   GrpcError,
   ParsedRouterRequest,
-  UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
-import { User } from '../models';
 import axios, { AxiosRequestConfig } from 'axios';
 import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import { FacebookPayload } from './interfaces/facebook/FacebookPayload';
-import { ConnectionCredentials } from './interfaces/ConnectionCredentials';
+import {Payload} from "./interfaces/Payload";
 
-export class FacebookHandlers extends AuthenticationProviderClass<FacebookPayload> {
+export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk) {
@@ -36,17 +33,18 @@ export class FacebookHandlers extends AuthenticationProviderClass<FacebookPayloa
     return true;
   }
 
-  async connectWithProvider(options: ConnectionCredentials) {
+  async connectWithProvider(call: ParsedRouterRequest) {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-
-    const config = ConfigController.getInstance().config;
-
+    const { access_token } = call.request.params;
+    const context = call.request.context;
+    if (isNil(context) || isEmpty(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
       params: {
-        access_token: options.access_token,
+        access_token: access_token,
         fields: 'id,email',
       },
     };
@@ -55,18 +53,11 @@ export class FacebookHandlers extends AuthenticationProviderClass<FacebookPayloa
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
-    let user: User | null = await User.getInstance().findOne({
-      email: facebookResponse.data.email,
-    });
-    let payload: FacebookPayload = {
+    let payload: Payload = {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
-      access_token: options.access_token,
+      access_token: access_token,
     };
-
-    return {
-      payload: payload,
-      user: user,
-    };
+    return payload;
   }
 }
