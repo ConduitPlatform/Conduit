@@ -1,5 +1,4 @@
 [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
-![.github/workflows/development.yml](https://github.com/Quintessential-SFT/conduit/workflows/.github/workflows/development.yml/badge.svg?branch=master)
 
 # Conduit Platform
 
