@@ -1,3 +1,3 @@
 #!/bin/sh
 
-make setup
+make zero-to-hero

@@ -1,48 +1,53 @@
-.PHONY: setup start-conduit start-all stop-all clean mrproper build-conduit-base build-conduit-builder rmi-conduit-deps \
-				build-core start-core stop-core rm-core rmi-core \
-				build-authentication start-authentication stop-authentication rm-authentication rmi-authentication \
-				build-cms start-cms stop-cms rm-cms rmi-cms \
-				build-chat start-chat stop-chat rm-chat rmi-chat \
-				build-database start-database stop-database rm-database rmi-database \
-				build-email start-email stop-email rm-email rmi-email \
-				build-forms start-forms stop-forms rm-forms rmi-forms \
-				build-push-notifications start-push-notifications stop-push-notifications rm-push-notifications rmi-push-notifications \
-				build-sms start-sms stop-sms rm-sms rmi-sms \
-				build-storage start-storage stop-storage rm-storage rmi-storage \
-				build-ui start-ui stop-ui rm-ui rmi-ui \
+.PHONY: zero-to-hero setup start-conduit start-all stop-all clean mrproper \
+				pull-core start-core stop-core rm-core rmi-core \
+				pull-authentication start-authentication stop-authentication rm-authentication rmi-authentication \
+				pull-cms start-cms stop-cms rm-cms rmi-cms \
+				pull-chat start-chat stop-chat rm-chat rmi-chat \
+				pull-database start-database stop-database rm-database rmi-database \
+				pull-email start-email stop-email rm-email rmi-email \
+				pull-forms start-forms stop-forms rm-forms rmi-forms \
+				pull-push-notifications start-push-notifications stop-push-notifications rm-push-notifications rmi-push-notifications \
+				pull-sms start-sms stop-sms rm-sms rmi-sms \
+				pull-storage start-storage stop-storage rm-storage rmi-storage \
+				pull-ui start-ui stop-ui rm-ui rmi-ui \
 				start-redis stop-redis rm-redis rmi-redis \
 				start-mongo stop-mongo rm-mongo rmi-mongo \
 				start-postgres stop-postgres rm-postgres rmi-postgres
-
-CWD    := $(abspath $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST))))))
-UI_ARCHIVE_URL = "https://github.com/ConduitPlatform/Conduit-UI/archive/refs/tags/${TAG}.zip"
 
 # ------ Default Values ------ #
 
 TAG        ?= v0.10.6
 DOCKER     ?= sudo docker
-CONDUIT_EXT_BUILD_PATH ?= "/tmp/conduit"
 CONTAINER_NETWORK_NAME ?= "conduit"
 DB_TYPE    ?= "mongodb"
 DB_URL     ?= "mongodb://conduit-mongo:27017"
+CONDUIT_CORE_NETWORK_NAME = conduit
 CONDUIT_URL = "http://localhost:3000"
 
 # ------ Common Targets ------ #
 
+zero-to-hero:
+	@$(MAKE) --no-print-directory setup
+	@$(MAKE) --no-print-directory start-conduit
+	@echo -e "\nModules Being Brought Up ⚙️"
+	@echo      "---------------------------"
+	@echo "- database"
+	@echo "- authentication"
+	@echo "- cms"
+	@echo -e "\n\nLog into your admin panel in http://localhost:8080"
+	@echo "Credentials: admin:admin"
+
 setup:
 	@echo -e "\nInitializing Conduit Container Environment 🔨"
 	@echo -e "This may take a while. Better bring up Reddit 😅"
-	@echo -e "------------------------------------------------\n"
+	@echo -e "------------------------------------------------"
 	@${DOCKER} network create ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || true
-	@$(MAKE) --no-print-directory build-conduit-base
-	@$(MAKE) --no-print-directory build-conduit-builder
-	@echo -e "\n"
-	@$(MAKE) --no-print-directory build-ui
-	@$(MAKE) --no-print-directory build-core
-	@$(MAKE) --no-print-directory build-database
-	@$(MAKE) --no-print-directory build-authentication
-	@$(MAKE) --no-print-directory build-cms
-	@echo -e "\n\nBuild Successful ✔️\n"
+	@$(MAKE) --no-print-directory pull-core
+	@$(MAKE) --no-print-directory pull-database
+	@$(MAKE) --no-print-directory pull-authentication
+	@$(MAKE) --no-print-directory pull-cms
+	@$(MAKE) --no-print-directory pull-ui
+	@echo -e "\n\nInstallation was successful ✔️\n"
 
 start-conduit:
 	@$(MAKE) --no-print-directory start-core
@@ -98,14 +103,6 @@ clean:
 	@$(MAKE) --no-print-directory rm-push-notifications
 	@$(MAKE) --no-print-directory rm-sms
 	@$(MAKE) --no-print-directory rm-storage
-	@echo -e "\n\nRemoving Container Network 📡"
-	@echo        "-----------------------------"
-	@if ${DOCKER} network ls | grep ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; then \
-		${DOCKER} network rm ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; \
-		echo "Removed \"${CONTAINER_NETWORK_NAME}\" network."; \
-	else \
-		echo "Network already removed"; \
-	fi
 
 mrproper:
 	@$(MAKE) --no-print-directory clean
@@ -125,28 +122,28 @@ mrproper:
 	@$(MAKE) --no-print-directory rmi-push-notifications
 	@$(MAKE) --no-print-directory rmi-sms
 	@$(MAKE) --no-print-directory rmi-storage
-	@$(MAKE) --no-print-directory rmi-conduit-deps
+	@echo -e "\n\nRemoving Container Network 📡"
+	@echo        "-----------------------------"
+	@if ${DOCKER} network ls | grep ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; then \
+		${DOCKER} network rm ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; \
+		echo "Removed \"${CONTAINER_NETWORK_NAME}\" network."; \
+	else \
+		echo "Network already removed"; \
+	fi
 
 # ----- Docker Functions ----- #
 
-# Params: Name, image-name, path/to/Dockerfile
-define build_base
-	@if ${DOCKER} image ls | grep ${2} > /dev/null 2>&1; then \
+# Params: module name, project, image-name, tag
+define pull
+	@if [[ `${DOCKER} images -q ${3}:${4}` ]]; then \
 		echo -e "\n${1} image already exists"; \
 	else \
-		echo -e "\nBulding ${1} image"; \
-		${DOCKER} build -t ${2} -f ${3} `dirname ${3}`; \
+		echo -e "\nPulling ${1} image"; \
+		${DOCKER} pull ghcr.io/${2}/${3}:${4}; \
 	fi
 endef
 
-# Params: Name, image-name, path/to/Dockerfile
-define build
-	@${DOCKER} image ls | grep conduit-base > /dev/null 2>&1 || make build-conduit-base
-	@${DOCKER} image ls | grep conduit-builder > /dev/null 2>&1 || make build-conduit-builder
-	$(call build_base,${1},${2},${3})
-endef
-
-# Params: Name, container-name, image-name, image-tag, docker args (optional)
+# Params: module name, container-name, image-name, tag, network-name, docker args (optional)
 define start
 	@if ${DOCKER} container ls | grep ${2} > /dev/null 2>&1; then \
 		echo -e "\n${1} container already running"; \
@@ -155,13 +152,14 @@ define start
 		${DOCKER} start ${2}; \
 	else \
 		${DOCKER} image ls | grep ${2} > /dev/null 2>&1 || \
-			$(MAKE) --no-print-directory `echo ${2} | sed 's/^[^-]*-/build-/g'`; \
+			$(MAKE) --no-print-directory `echo ${2} | sed 's/^[^-]*-/pull-/g'`; \
 		echo -e "\nStarting ${1} container"; \
-		${DOCKER} run --name ${2} --network-alias `echo ${2} | sed 's/^[^-]*-//g'` --network ${CONTAINER_NETWORK_NAME} -h ${2} ${5} ${3}:${4}; \
+		echo ${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
+		${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
 	fi
 endef
 
-# Params: Name, container-name
+# Params: module name, container-name
 define stop
 	@if ${DOCKER} container ls | grep ${2} > /dev/null 2>&1; then \
 		echo -e "\nStopping ${1} container"; \
@@ -171,7 +169,7 @@ define stop
 	fi
 endef
 
-# Params: Name, container-name
+# Params: module name, container-name
 define rm
 	@if ${DOCKER} container ls -a | grep ${2} > /dev/null 2>&1; then \
 		echo -e "\nRemoving ${1} container"; \
@@ -181,9 +179,9 @@ define rm
 	fi
 endef
 
-# Params: Name, image-name
+# Params: module name, image-name, tag
 define rmi
-	@if ${DOCKER} image ls | grep ${2} > /dev/null 2>&1; then \
+	@if [[ `${DOCKER} images -q ${2}:${3}` ]]; then \
 		echo -e "\nRemoving ${1} image"; \
 		${DOCKER} image rm ${2}; \
 	else \
@@ -193,106 +191,101 @@ endef
 
 # ------- Base Targets ------- #
 
-build-core:
-	$(call build,Conduit Core,conduit-core,${CWD}/../packages/Dockerfile)
+pull-core:
+	$(call pull,Conduit Core,conduitplatform,conduit,${TAG})
 
-build-authentication:
-	$(call build,Authentication,conduit-authentication,${CWD}/../modules/authentication/Dockerfile)
+pull-authentication:
+	$(call pull,Authentication,conduitplatform,conduit-authentication,${TAG})
 
-build-chat:
-	$(call build,Chat,conduit-chat,${CWD}/../modules/chat/Dockerfile)
+pull-chat:
+	$(call pull,Chat,conduitplatform,conduit-chat,${TAG})
 
-build-cms:
-	$(call build,CMS,conduit-cms,${CWD}/../modules/cms/Dockerfile)
+pull-cms:
+	$(call pull,CMS,conduitplatform,conduit-cms,${TAG})
 
-build-database:
+pull-database:
+	$(call pull,Database,conduitplatform,conduit-database,${TAG})
+
+pull-email:
+	$(call pull,Email,conduitplatform,conduit-email,${TAG})
+
+pull-forms:
+	$(call pull,Forms,conduitplatform,conduit-forms,${TAG})
+
+pull-push-notifications:
+	$(call pull,PushNotifications,conduitplatform,conduit-push-notifications,${TAG})
+
+pull-sms:
+	$(call pull,SMS,conduitplatform,conduit-sms,${TAG})
+
+pull-storage:
+	$(call pull,Storage,conduitplatform,conduit-storage,${TAG})
+
+pull-ui:
+	$(call pull,Storage,conduitplatform,conduit-ui,${TAG})
+
+start-core:
+	@$(MAKE) --no-print-directory start-redis
+	$(call start,Core,conduit-core,conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME}, \
+         -d -p 55152:55152 -p 3000:3000 -p 3001:3001 -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379")
+
+start-authentication:
+	$(call start,Authentication,conduit-authentication,conduit-authentication,${TAG},authentication, \
+         -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
+
+start-chat:
+	$(call start,Chat,conduit-chat,conduit-chat,${TAG},chat, \
+	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
+
+start-cms:
+	$(call start,CMS,conduit-cms,conduit-cms,${TAG},cms, \
+	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
+
+start-database:
 	@if [ ${DB_TYPE} == "mongodb" ]; then \
 		make start-mongo; \
 	elif [ ${DB_TYPE} == "sql" ]; then \
 		make start-postgres; \
 	else \
 		echo -e "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'sql' (default: mongodb)"; \
+		exit 1; \
 	fi
-	$(call build,Database,conduit-database,${CWD}/../modules/database/Dockerfile)
-
-build-email:
-	$(call build,Email,conduit-email,${CWD}/../modules/email/Dockerfile)
-
-build-forms:
-	$(call build,Forms,conduit-forms,${CWD}/../modules/forms/Dockerfile)
-
-build-push-notifications:
-	$(call build,PushNotifications,conduit-push-notifications,${CWD}/../modules/push-notifications/Dockerfile)
-
-build-sms:
-	$(call build,SMS,conduit-sms,${CWD}/../modules/sms/Dockerfile)
-
-build-storage:
-	$(call build,Storage,conduit-storage,${CWD}/../modules/storage/Dockerfile)
-
-build-ui:
-	@mkdir -p ${CONDUIT_EXT_BUILD_PATH}
-	@curl -L ${UI_ARCHIVE_URL} > ${CONDUIT_EXT_BUILD_PATH}/conduit-ui.zip
-	@unzip -o ${CONDUIT_EXT_BUILD_PATH}/conduit-ui.zip -d ${CONDUIT_EXT_BUILD_PATH}
-	@rm -rf ${CONDUIT_EXT_BUILD_PATH}/Conduit-UI
-	@mv ${CONDUIT_EXT_BUILD_PATH}/Conduit-UI-`echo ${TAG} | sed -r 's/^.//'` ${CONDUIT_EXT_BUILD_PATH}/Conduit-UI
-	$(call build_base,Conduit Admin Panel,conduit-ui,${CONDUIT_EXT_BUILD_PATH}/Conduit-UI/Dockerfile)
-	@rm -rf ${CONDUIT_EXT_BUILD_PATH}
-
-start-core:
-	@$(MAKE) --no-print-directory start-redis
-	$(call start,Core,conduit-core,conduit-core,latest, \
-         -d -p 55152:55152 -p 3000:3000 -p 3001:3001 -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379")
-
-start-authentication:
-	$(call start,Authentication,conduit-authentication,conduit-authentication,latest, \
-         -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
-
-start-chat:
-	$(call start,Chat,conduit-chat,conduit-chat,latest, \
-	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
-
-start-cms:
-	$(call start,CMS,conduit-cms,conduit-cms,latest, \
-	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
-
-start-database:
-	$(call start,Database,conduit-database,conduit-database,latest, \
+	$(call start,Database,conduit-database,conduitplatform/conduit-database,${TAG},database --network-alias database-provider, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
 	       -e databaseType=${DB_TYPE} -e databaseURL=${DB_URL})
 
 start-email:
-	$(call start,Email,conduit-email,conduit-email,latest, \
+	$(call start,Email,conduit-email,conduit-email,${TAG},email, \
          -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-forms:
-	$(call start,Forms,conduit-forms,conduit-forms,latest, \
+	$(call start,Forms,conduit-forms,conduit-forms,${TAG},forms, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-push-notifications:
-	$(call start,PushNotifications,conduit-push-notifications,conduit-push-notifications,latest, \
+	$(call start,PushNotifications,conduit-push-notifications,conduit-push-notifications,${TAG},push-notifications, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-sms:
-	$(call start,SMS,conduit-sms,conduit-sms,latest, \
+	$(call start,SMS,conduit-sms,conduit-sms,${TAG},sms, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-storage:
-	$(call start,Storage,conduit-storage,conduit-storage,latest, \
+	$(call start,Storage,conduit-storage,conduit-storage,${TAG},storage, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-ui:
-	$(call start,Conduit Admin Panel,conduit-ui,conduit-ui,latest, \
+	$(call start,Conduit Admin Panel,conduit-ui,conduit-ui,${TAG},conduit-ui, \
 	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL})
 
 start-redis:
-	$(call start,Redis,conduit-redis,redis,latest,-d -p 6379:6379)
+	$(call start,Redis,conduit-redis,redis,latest,redis,-d -p 6379:6379)
 
 start-mongo:
-	$(call start,MongoDB,conduit-mongo,mongo,latest,-d -p 27017:27017)
+	$(call start,MongoDB,conduit-mongo,mongo,latest,mongo,-d -p 27017:27017)
 
 start-postgres:
-	$(call start,PostgreSQL,conduit-postgres,postgres,latest,-d -p 5432:5432)
+	$(call start,PostgreSQL,conduit-postgres,postgres,latest,postgres,-d -p 5432:5432)
 
 stop-core:
 	$(call stop,Conduit Core,conduit-core)
@@ -379,65 +372,43 @@ rm-postgres:
 	$(call rm,PostgreSQL,conduit-postgres)
 
 rmi-core:
-	$(call rmi,Conduit Core,conduit-core)
+	$(call rmi,Conduit Core,conduit,${TAG})
 
 rmi-authentication:
-	$(call rmi,Authentication,conduit-authentication)
+	$(call rmi,Authentication,conduit-authentication,${TAG})
 
 rmi-chat:
-	$(call rmi,Chat,conduit-chat)
+	$(call rmi,Chat,conduit-chat,${TAG})
 
 rmi-cms:
-	$(call rmi,CMS,conduit-cms)
+	$(call rmi,CMS,conduit-cms,${TAG})
 
 rmi-database:
-	$(call rmi,Database,conduit-database)
+	$(call rmi,Database,conduit-database,${TAG})
 
 rmi-email:
-	$(call rmi,Email,conduit-email)
+	$(call rmi,Email,conduit-email,${TAG})
 
 rmi-forms:
-	$(call rmi,Forms,conduit-forms)
+	$(call rmi,Forms,conduit-forms,${TAG})
 
 rmi-push-notifications:
-	$(call rmi,PushNotifications,conduit-push-notifications)
+	$(call rmi,PushNotifications,conduit-push-notifications,${TAG})
 
 rmi-sms:
-	$(call rmi,SMS,conduit-sms)
+	$(call rmi,SMS,conduit-sms,${TAG})
 
 rmi-storage:
-	$(call rmi,Storage,conduit-storage)
+	$(call rmi,Storage,conduit-storage,${TAG})
 
 rmi-ui:
-	$(call rmi,Conduit Admin Panel,conduit-ui)
+	$(call rmi,Conduit Admin Panel,conduit-ui,${TAG})
 
 rmi-redis:
-	$(call rmi,Redis,conduit-redis)
+	$(call rmi,Redis,conduit-redis,${TAG})
 
 rmi-mongo:
-	$(call rmi,MongoDB,conduit-mongo)
+	$(call rmi,MongoDB,conduit-mongo,${TAG})
 
 rmi-postgres:
-	$(call rmi,PostgreSQL,conduit-postgres)
-
-# ------- Dependencies ------- #
-
-# Params: image-name, path/to/Dockerfile, path
-define build_dep
-	@if ${DOCKER} image ls | grep ${1} > /dev/null 2>&1; then \
-		echo -e "\n${1} dependency image already exists"; \
-	else \
-		echo -e "\nBulding ${1} dependency image"; \
-		${DOCKER} build -t ${1} -f ${2} `dirname ${2}`; \
-	fi
-endef
-
-build-conduit-base:
-	$(call build_dep,conduit-base,${CWD}/../Dockerfile)
-
-build-conduit-builder:
-	$(call build_dep,conduit-builder,${CWD}/../scripts/Dockerfile.builder)
-
-rmi-conduit-deps:
-	$(call rmi,Conduit Base (Dependency),conduit-base)
-	$(call rmi,Conduit Builder (Dependency),conduit-builder)
+	$(call rmi,PostgreSQL,conduit-postgres,${TAG})
