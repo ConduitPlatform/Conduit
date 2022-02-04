@@ -77,7 +77,8 @@ export class TwitchHandlers extends AuthenticationProviderClass<any> {
       id: id,
       email: email,
       clientId: params.state,
-    }
+    };
+
     return payload;
   }
 }

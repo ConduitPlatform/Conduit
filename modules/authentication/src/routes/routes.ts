@@ -20,7 +20,8 @@ import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import {RedirectOptions} from "../handlers/interfaces/RedirectOptions";
+import { OIDCSettings } from "../handlers/interfaces/OIDCSettings";
+import { ConfigController } from "../config/Config.controller";
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -29,7 +30,7 @@ export class AuthenticationRoutes {
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly twitchHandlers: TwitchHandlers;
-  private options: RedirectOptions;
+  private options: OIDCSettings;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
@@ -63,7 +64,7 @@ export class AuthenticationRoutes {
 
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
         authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-        beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
+        beginAuthTwitch: this.twitchHandlers.beginAuth(this.grpcSdk,this.options).bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
         getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
@@ -293,6 +294,15 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+        const config = ConfigController.getInstance().config;
+        let serverConfig = await this.grpcSdk.config.getServerConfig();
+        // this.options = {
+        //     url: 'https://www.facebook.com/v12.0/dialog/oauth?',
+        //     client_id: config.facebook.clientId,
+        //     redirect_uri: serverConfig.url + '/hook/authentication/facebook',
+        //     response_type: 'code',
+        //     scope: 'user:read:email',
+        // };
       routesArray.push(
         constructConduitRoute(
           {
@@ -376,12 +386,17 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      this.options = {
-          url: "https://id.twitch.tv/oauth2/authorize",
-          redirect: authActive.redirect,
-          hookPath: '/hook/authentication/twitch'
+        const config = ConfigController.getInstance().config;
+        let serverConfig = await this.grpcSdk.config.getServerConfig();
+      const options = {
+          url: 'https://id.twitch.tv/oauth2/authorize?',
+          client_id: config.twitch.clientId,
+          redirect_uri: serverConfig.url + '/hook/authentication/twitch',
+          response_type: 'code',
+          scope: 'user:read:email',
+          //state: yourstate
       };
-      this.twitchHandlers.setRedirectOptions(this.options);
+      this.options = new OIDCSettings(options);
       routesArray.push(
         constructConduitRoute(
           {

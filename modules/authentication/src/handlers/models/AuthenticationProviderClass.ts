@@ -2,40 +2,41 @@ import ConduitGrpcSdk, {
   GrpcError, ParsedRouterRequest, UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { Payload } from '../interfaces/Payload';
-import {forEach, isNil} from 'lodash';
+import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import { ConfigController } from '../../config/Config.controller';
-import { RedirectOptions } from "../interfaces/RedirectOptions";
+import { OIDCSettings } from "../interfaces/OIDCSettings";
 
 export abstract class AuthenticationProviderClass<T extends Payload> {
   private providerName: string;
   grpcSdk: ConduitGrpcSdk;
-  private redirectOptions: RedirectOptions;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
-    this.redirectOptions = {};
   }
 
   abstract async validate(): Promise<Boolean>;
   abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
 
-  async setRedirectOptions(options: RedirectOptions) {
-    for (const element in options) {
-      this.redirectOptions[element] = options[element];
-    }
-  }
+  beginAuth(grpcSdk:  ConduitGrpcSdk,oidcSettings: OIDCSettings) {
 
-  async beginAuth(call: ParsedRouterRequest) {
-    const config = ConfigController.getInstance().config;
-    const serverConfig = await this.grpcSdk.config.getServerConfig();
-    const redirect = serverConfig.url + this.redirectOptions.hookPath;
-    const clientId = call.request.context.clientId;
-    let retUrl = this.redirectOptions.url;
-    return retUrl + `?client_id=${config[this.providerName].clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
+    return async function(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+      let options = oidcSettings.getOptions;
+      let retUrl = options.url;
+      let length = Object.keys(options).length;
+     //if (options.hasOwnProperty('state')) options['state'] = call.request.context.clientId;
+      Object.keys(options).forEach((k,i) => {
+        if (k !== 'url') {
+          retUrl += k + '=' + options[k]
+          if ( i !== length -1) retUrl += '&'
+        }
+      });
+
+      return retUrl;
+    }
   }
 
   async authenticate(call: ParsedRouterRequest,redirect: boolean): Promise<UnparsedRouterResponse> {
