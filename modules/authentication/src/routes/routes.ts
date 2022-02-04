@@ -20,6 +20,7 @@ import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
+import {RedirectOptions} from "../handlers/interfaces/RedirectOptions";
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -28,6 +29,8 @@ export class AuthenticationRoutes {
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly twitchHandlers: TwitchHandlers;
+  private options: RedirectOptions;
+
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
@@ -373,6 +376,12 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+      this.options = {
+          url: "https://id.twitch.tv/oauth2/authorize",
+          redirect: authActive.redirect,
+          hookPath: '/hook/authentication/twitch'
+      };
+      this.twitchHandlers.setRedirectOptions(this.options);
       routesArray.push(
         constructConduitRoute(
           {

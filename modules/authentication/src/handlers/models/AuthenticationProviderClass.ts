@@ -2,24 +2,41 @@ import ConduitGrpcSdk, {
   GrpcError, ParsedRouterRequest, UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { Payload } from '../interfaces/Payload';
-import { isNil } from 'lodash';
+import {forEach, isNil} from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import { ConfigController } from '../../config/Config.controller';
+import { RedirectOptions } from "../interfaces/RedirectOptions";
 
 export abstract class AuthenticationProviderClass<T extends Payload> {
   private providerName: string;
   grpcSdk: ConduitGrpcSdk;
+  private redirectOptions: RedirectOptions;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
+    this.redirectOptions = {};
   }
 
   abstract async validate(): Promise<Boolean>;
-
   abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
+
+  async setRedirectOptions(options: RedirectOptions) {
+    for (const element in options) {
+      this.redirectOptions[element] = options[element];
+    }
+  }
+
+  async beginAuth(call: ParsedRouterRequest) {
+    const config = ConfigController.getInstance().config;
+    const serverConfig = await this.grpcSdk.config.getServerConfig();
+    const redirect = serverConfig.url + this.redirectOptions.hookPath;
+    const clientId = call.request.context.clientId;
+    let retUrl = this.redirectOptions.url;
+    return retUrl + `?client_id=${config[this.providerName].clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
+  }
 
   async authenticate(call: ParsedRouterRequest,redirect: boolean): Promise<UnparsedRouterResponse> {
     let payload = await this.connectWithProvider(call);
@@ -61,7 +78,7 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
       this.grpcSdk,
       {
         userId: user!._id,
-        clientId: config[this.providerName].clientId!,
+        clientId: payload.clientId,
         config: config,
       },
     );
@@ -72,7 +89,7 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
       refreshToken: (refreshToken as any).token,
     };
     if(redirect) {
-      retObject['redirect'] = config.twitch.redirect_uri +
+      retObject['redirect'] = config[this.providerName].redirect_uri +
           '?accessToken=' +
           (accessToken as any).token +
           '&refreshToken=' +

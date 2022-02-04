@@ -66,6 +66,7 @@ export class GoogleHandlers extends AuthenticationProviderClass<Payload> {
       id: payload.sub,
       token: access_token,
       email: payload.email,
+      clientId: context.clientId,
     }
 
     return googlePayload;

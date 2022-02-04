@@ -57,6 +57,7 @@ export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
       access_token: access_token,
+      clientId: context.clientId,
     };
     return payload;
   }

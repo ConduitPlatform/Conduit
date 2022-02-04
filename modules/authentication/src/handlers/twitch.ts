@@ -35,15 +35,6 @@ export class TwitchHandlers extends AuthenticationProviderClass<any> {
     return true;
   }
 
-  async beginAuth(call: ParsedRouterRequest) {
-    const config = ConfigController.getInstance().config;
-
-    const serverConfig = await this.grpcSdk.config.getServerConfig();
-    const redirect = serverConfig.url + '/hook/authentication/twitch';
-    const clientId = call.request.context.clientId;
-    return `https://id.twitch.tv/oauth2/authorize?client_id=${config.twitch.clientId}&redirect_uri=${redirect}&response_type=code&scope=user:read:email&state=${clientId}`;
-  }
-
   async connectWithProvider(call:ParsedRouterRequest ): Promise<any> {
     const params = call.request.params;
     const code = params.code;
@@ -85,6 +76,7 @@ export class TwitchHandlers extends AuthenticationProviderClass<any> {
     const payload: Payload = {
       id: id,
       email: email,
+      clientId: params.state,
     }
     return payload;
   }
