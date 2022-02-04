@@ -294,15 +294,6 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-        const config = ConfigController.getInstance().config;
-        let serverConfig = await this.grpcSdk.config.getServerConfig();
-        // this.options = {
-        //     url: 'https://www.facebook.com/v12.0/dialog/oauth?',
-        //     client_id: config.facebook.clientId,
-        //     redirect_uri: serverConfig.url + '/hook/authentication/facebook',
-        //     response_type: 'code',
-        //     scope: 'user:read:email',
-        // };
       routesArray.push(
         constructConduitRoute(
           {
@@ -388,7 +379,7 @@ export class AuthenticationRoutes {
     if (!errorMessage && authActive) {
         const config = ConfigController.getInstance().config;
         let serverConfig = await this.grpcSdk.config.getServerConfig();
-      const options = {
+        const options = {
           url: 'https://id.twitch.tv/oauth2/authorize?',
           client_id: config.twitch.clientId,
           redirect_uri: serverConfig.url + '/hook/authentication/twitch',

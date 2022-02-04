@@ -34,7 +34,6 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
           if ( i !== length -1) retUrl += '&'
         }
       });
-
       return retUrl;
     }
   }
