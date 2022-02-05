@@ -1,16 +1,14 @@
 import { LocalHandlers } from '../handlers/local';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
-  ConduitMiddleware,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  constructConduitRoute,
-  constructMiddleware,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  RoutingManager
 } from '@conduitplatform/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook';
 import { GoogleHandlers } from '../handlers/google';
@@ -28,8 +26,10 @@ export class AuthenticationRoutes {
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly twitchHandlers: TwitchHandlers;
+  private _routingController: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+    this._routingController = new RoutingManager(this.grpcSdk.router, server);
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk);
     this.googleHandlers = new GoogleHandlers(grpcSdk);
@@ -39,44 +39,7 @@ export class AuthenticationRoutes {
   }
 
   async registerRoutes() {
-    let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router
-      .registerRouterAsync(this.server, activeRoutes, {
-        register: this.localHandlers.register.bind(this.localHandlers),
-        authenticateLocal: this.localHandlers.authenticate.bind(this.localHandlers),
-        forgotPassword: this.localHandlers.forgotPassword.bind(this.localHandlers),
-        resetPassword: this.localHandlers.resetPassword.bind(this.localHandlers),
-        changePassword: this.localHandlers.changePassword.bind(this.localHandlers),
-        verifyChangePassword: this.localHandlers.verifyChangePassword.bind(
-          this.localHandlers
-        ),
-        verifyEmail: this.localHandlers.verifyEmail.bind(this.localHandlers),
-        verifyTwoFa: this.localHandlers.verify.bind(this.localHandlers),
-        enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
-        verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
-        disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
-        authenticateFacebook: this.facebookHandlers.authenticate.bind(
-          this.facebookHandlers
-        ),
-        authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
-        authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-        authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-        beginAuthTwitch: this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
-        renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
-        logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
-        getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
-        deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
-        authMiddleware: this.middleware.bind(this),
-      })
-      .catch((err: Error) => {
-        console.log('Failed to register routes for module');
-        console.log(err);
-      });
-  }
-
-  async getRegisteredRoutes(): Promise<any[]> {
-    let routesArray: any[] = [];
-
+    this._routingController.clear();
     let enabled = false;
 
     let errorMessage = null;
@@ -87,201 +50,177 @@ export class AuthenticationRoutes {
       const authConfig = await this.grpcSdk.config
         .get('authentication')
         .catch(console.error);
-
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/local/new',
-            action: ConduitRouteActions.POST,
-            description: `Creates a new user using either email/password or username/password.
+      this._routingController.route(
+        {
+          path: '/local/new',
+          action: ConduitRouteActions.POST,
+          description: `Creates a new user using either email/password or username/password.
                The combination depends on the provided configuration. 
                In the case of email/password the email module is required and 
                the user will receive an email before being able to login.`,
-            bodyParams: {
-              email: ConduitString.Required,
-              password: ConduitString.Required,
-            },
-            middlewares:
-              authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+          bodyParams: {
+            email: ConduitString.Required,
+            password: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('RegisterResponse', {
-            userId: ConduitString.Optional,
-          }),
-          'register'
-        )
-      );
+          middlewares:
+            authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+        },
+        new ConduitRouteReturnDefinition('RegisterResponse', {
+          userId: ConduitString.Optional,
+        }),
+        this.localHandlers.register.bind(this.localHandlers));
 
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/local',
-            action: ConduitRouteActions.POST,
-            description: `Login endpoint that can be used to authenticate. 
+      this._routingController.route(
+        {
+          path: '/local',
+          action: ConduitRouteActions.POST,
+          description: `Login endpoint that can be used to authenticate. 
               If 2FA is used for the user then instead of tokens 
               you will receive a message indicating the need for a token from the 2FA mechanism.`,
+          bodyParams: {
+            email: ConduitString.Required,
+            password: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('LoginResponse', {
+          userId: ConduitString.Optional,
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+          message: ConduitString.Optional,
+        }),
+        this.localHandlers.authenticate.bind(this.localHandlers),
+      );
+
+      if (authConfig.local.identifier !== 'username') {
+        this._routingController.route(
+          {
+            path: '/forgot-password',
+            action: ConduitRouteActions.POST,
             bodyParams: {
               email: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
+          this.localHandlers.forgotPassword.bind(this.localHandlers),
+        );
+
+        this._routingController.route(
+          {
+            path: '/reset-password',
+            action: ConduitRouteActions.POST,
+            description: `Used after the user clicks on the 'forgot password' link and
+                 requires the token from the url and the new password`,
+            bodyParams: {
+              passwordResetToken: ConduitString.Required,
               password: ConduitString.Required,
             },
           },
-          new ConduitRouteReturnDefinition('LoginResponse', {
+          new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+          this.localHandlers.resetPassword.bind(this.localHandlers),
+        );
+
+        this._routingController.route(
+          {
+            path: '/local/change-password',
+            action: ConduitRouteActions.POST,
+            description: `Changes the user's password but requires the old password first.
+                 If 2FA is enabled then a message will be returned asking for token input.`,
+            bodyParams: {
+              oldPassword: ConduitString.Required,
+              newPassword: ConduitString.Required,
+            },
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
+          this.localHandlers.changePassword.bind(this.localHandlers),
+        );
+
+        this._routingController.route(
+          {
+            path: '/local/change-password/verify',
+            action: ConduitRouteActions.POST,
+            description: `Used to provide the 2FA token for password change.`,
+            bodyParams: {
+              code: ConduitString.Required,
+            },
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+          this.localHandlers.verifyChangePassword.bind(this.localHandlers),
+        );
+
+        this._routingController.route(
+          {
+            path: '/hook/verify-email/:verificationToken',
+            action: ConduitRouteActions.GET,
+            description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+            urlParams: {
+              verificationToken: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
+          this.localHandlers.verifyEmail.bind(this.localHandlers),
+        );
+      }
+
+      if (authConfig?.twofa.enabled) {
+        this._routingController.route(
+          {
+            path: '/local/twofa',
+            action: ConduitRouteActions.POST,
+            description: `Verifies the 2FA token.`,
+            bodyParams: {
+              email: ConduitString.Required,
+              code: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
             userId: ConduitString.Optional,
             accessToken: ConduitString.Optional,
             refreshToken: ConduitString.Optional,
             message: ConduitString.Optional,
           }),
-          'authenticateLocal'
-        )
-      );
-
-      if (authConfig.local.identifier !== 'username') {
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/forgot-password',
-              action: ConduitRouteActions.POST,
-              bodyParams: {
-                email: ConduitString.Required,
-              },
-            },
-            new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
-            'forgotPassword'
-          )
+          this.localHandlers.verify.bind(this.localHandlers),
         );
 
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/reset-password',
-              action: ConduitRouteActions.POST,
-              description: `Used after the user clicks on the 'forgot password' link and
-                 requires the token from the url and the new password`,
-              bodyParams: {
-                passwordResetToken: ConduitString.Required,
-                password: ConduitString.Required,
-              },
-            },
-            new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
-            'resetPassword'
-          )
-        );
-
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/change-password',
-              action: ConduitRouteActions.POST,
-              description: `Changes the user's password but requires the old password first.
-                 If 2FA is enabled then a message will be returned asking for token input.`,
-              bodyParams: {
-                oldPassword: ConduitString.Required,
-                newPassword: ConduitString.Required,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-            'changePassword'
-          )
-        );
-
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/change-password/verify',
-              action: ConduitRouteActions.POST,
-              description: `Used to provide the 2FA token for password change.`,
-              bodyParams: {
-                code: ConduitString.Required,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-            'verifyChangePassword'
-          )
-        );
-
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/hook/verify-email/:verificationToken',
-              action: ConduitRouteActions.GET,
-              description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
-              urlParams: {
-                verificationToken: ConduitString.Required,
-              },
-            },
-            new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
-            'verifyEmail'
-          )
-        );
-      }
-
-      if (authConfig?.twofa.enabled) {
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/twofa',
-              action: ConduitRouteActions.POST,
-              description: `Verifies the 2FA token.`,
-              bodyParams: {
-                email: ConduitString.Required,
-                code: ConduitString.Required,
-              },
-            },
-            new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
-              userId: ConduitString.Optional,
-              accessToken: ConduitString.Optional,
-              refreshToken: ConduitString.Optional,
-              message: ConduitString.Optional,
-            }),
-            'verifyTwoFa'
-          )
-        );
-
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/enable-twofa',
-              action: ConduitRouteActions.UPDATE,
-              description: `Enables a phone based 2FA method for a user and 
+        this._routingController.route(
+          {
+            path: '/local/enable-twofa',
+            action: ConduitRouteActions.UPDATE,
+            description: `Enables a phone based 2FA method for a user and 
                 requires their phone number.`,
-              middlewares: ['authMiddleware'],
-              bodyParams: {
-                phoneNumber: ConduitString.Required,
-              },
+            middlewares: ['authMiddleware'],
+            bodyParams: {
+              phoneNumber: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
-            'enableTwoFa'
-          )
+          },
+          new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
+          this.localHandlers.enableTwoFa.bind(this.localHandlers),
         );
 
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/verifyPhoneNumber',
-              action: ConduitRouteActions.POST,
-              description: `Verifies the phone number provided for the 2FA mechanism.`,
-              middlewares: ['authMiddleware'],
-              bodyParams: {
-                code: ConduitString.Required,
-              },
+        this._routingController.route(
+          {
+            path: '/local/verifyPhoneNumber',
+            action: ConduitRouteActions.POST,
+            description: `Verifies the phone number provided for the 2FA mechanism.`,
+            middlewares: ['authMiddleware'],
+            bodyParams: {
+              code: ConduitString.Required,
             },
-            new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
-            'verifyPhoneNumber'
-          )
+          },
+          new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
+          this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         );
 
-        routesArray.push(
-          constructConduitRoute(
-            {
-              path: '/local/disable-twofa',
-              action: ConduitRouteActions.UPDATE,
-              description: `Disables the user's 2FA mechanism.`,
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
-            'disableTwoFa'
-          )
+        this._routingController.route(
+          {
+            path: '/local/disable-twofa',
+            action: ConduitRouteActions.UPDATE,
+            description: `Disables the user's 2FA mechanism.`,
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
+          this.localHandlers.disableTwoFa.bind(this.localHandlers),
         );
       }
       enabled = true;
@@ -291,23 +230,21 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/facebook',
-            action: ConduitRouteActions.POST,
-            description: `Login/register with Facebook by providing a token from the client.`,
-            bodyParams: {
-              access_token: ConduitString.Required,
-            },
+      this._routingController.route(
+        {
+          path: '/facebook',
+          action: ConduitRouteActions.POST,
+          description: `Login/register with Facebook by providing a token from the client.`,
+          bodyParams: {
+            access_token: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('FacebookResponse', {
-            userId: ConduitString.Required,
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          'authenticateFacebook'
-        )
+        },
+        new ConduitRouteReturnDefinition('FacebookResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.facebookHandlers.authenticate.bind(this.facebookHandlers),
       );
 
       enabled = true;
@@ -318,25 +255,23 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/google',
-            action: ConduitRouteActions.POST,
-            description: `Login/register with Google by providing a token from the client.`,
-            bodyParams: {
-              id_token: ConduitString.Required,
-              access_token: ConduitString.Required,
-              expires_in: ConduitString.Optional,
-            },
+      this._routingController.route(
+        {
+          path: '/google',
+          action: ConduitRouteActions.POST,
+          description: `Login/register with Google by providing a token from the client.`,
+          bodyParams: {
+            id_token: ConduitString.Required,
+            access_token: ConduitString.Required,
+            expires_in: ConduitString.Optional,
           },
-          new ConduitRouteReturnDefinition('GoogleResponse', {
-            userId: ConduitString.Required,
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          'authenticateGoogle'
-        )
+        },
+        new ConduitRouteReturnDefinition('GoogleResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.googleHandlers.authenticate.bind(this.googleHandlers),
       );
 
       enabled = true;
@@ -347,24 +282,22 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/service',
-            action: ConduitRouteActions.POST,
-            description: `Login with service account.`,
-            bodyParams: {
-              serviceName: ConduitString.Required,
-              token: ConduitString.Required,
-            },
+      this._routingController.route(
+        {
+          path: '/service',
+          action: ConduitRouteActions.POST,
+          description: `Login with service account.`,
+          bodyParams: {
+            serviceName: ConduitString.Required,
+            token: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('VerifyServiceResponse', {
-            serviceId: ConduitString.Required,
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          'authenticateService'
-        )
+        },
+        new ConduitRouteReturnDefinition('VerifyServiceResponse', {
+          serviceId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.serviceHandler.authenticate.bind(this.serviceHandler),
       );
 
       enabled = true;
@@ -374,100 +307,90 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/hook/twitch',
-            action: ConduitRouteActions.GET,
-            description: `Login/register with Twitch using redirection mechanism.`,
-            urlParams: {
-              code: ConduitString.Required,
-              state: ConduitString.Required,
-            },
+      this._routingController.route(
+        {
+          path: '/hook/twitch',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Twitch using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('TwitchResponse', {
-            userId: ConduitString.Required,
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          'authenticateTwitch'
-        )
+        },
+        new ConduitRouteReturnDefinition('TwitchResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.twitchHandlers.authenticate.bind(this.twitchHandlers),
       );
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/init/twitch',
-            description: `Begins the Twitch authentication.`,
-            action: ConduitRouteActions.GET,
-          },
-          new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
-          'beginAuthTwitch'
-        )
+      this._routingController.route(
+        {
+          path: '/init/twitch',
+          description: `Begins the Twitch authentication.`,
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
+        this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
       );
       enabled = true;
     }
 
     if (enabled) {
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/user',
-            description: `Returns the authenticated user.`,
-            action: ConduitRouteActions.GET,
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('User', User.getInstance().fields),
-          'getUser'
-        )
+      this._routingController.route(
+        {
+          path: '/user',
+          description: `Returns the authenticated user.`,
+          action: ConduitRouteActions.GET,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('User', User.getInstance().fields),
+        this.commonHandlers.getUser.bind(this.commonHandlers),
       );
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/user',
-            description: `Deletes the authenticated user.`,
-            action: ConduitRouteActions.DELETE,
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
-          'deleteUser'
-        )
+      this._routingController.route(
+        {
+          path: '/user',
+          description: `Deletes the authenticated user.`,
+          action: ConduitRouteActions.DELETE,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
+        this.commonHandlers.deleteUser.bind(this.commonHandlers),
       );
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/renew',
-            action: ConduitRouteActions.POST,
-            description: `Renews the access and refresh tokens 
+      this._routingController.route(
+        {
+          path: '/renew',
+          action: ConduitRouteActions.POST,
+          description: `Renews the access and refresh tokens 
               when provided with a valid refresh token.`,
-            bodyParams: {
-              refreshToken: ConduitString.Required,
-            },
-          },
-          new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-            accessToken: ConduitString.Required,
+          bodyParams: {
             refreshToken: ConduitString.Required,
-          }),
-          'renewAuth'
-        )
-      );
-
-      routesArray.push(
-        constructConduitRoute(
-          {
-            path: '/logout',
-            action: ConduitRouteActions.POST,
-            middlewares: ['authMiddleware'],
           },
-          new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-          'logOut'
-        )
+        },
+        new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.commonHandlers.renewAuth.bind(this.commonHandlers),
       );
 
-      routesArray.push(
-        constructMiddleware(new ConduitMiddleware({ path: '/' }, 'authMiddleware'))
+      this._routingController.route(
+        {
+          path: '/logout',
+          action: ConduitRouteActions.POST,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+        this.commonHandlers.logOut.bind(this.commonHandlers),
       );
+
+      this._routingController.middleware({ path: '/', name: 'authMiddleware' }, this.middleware.bind(this));
     }
-    return routesArray;
+    return this._routingController.registerRoutes()
+      .catch((err: Error) => {
+        console.log('Failed to register routes for module');
+        console.log(err);
+      });
   }
 
   async middleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -491,13 +414,13 @@ export class AuthenticationRoutes {
     if (isNil(accessToken) || moment().isAfter(moment(accessToken.expiresOn))) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid'
+        'Token is expired or otherwise not valid',
       );
     }
     if (!accessToken.userId) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid'
+        'Token is expired or otherwise not valid',
       );
     }
 

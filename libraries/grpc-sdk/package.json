@@ -42,7 +42,7 @@
     "@grpc/proto-loader": "^0.6.9",
     "@types/node": "^13.9.8",
     "copyfiles": "^2.2.0",
-    "ts-proto": "^1.82.0",
+    "ts-proto": "^1.104.0",
     "rimraf": "^3.0.2",
     "typescript": "^3.7.5"
   },
