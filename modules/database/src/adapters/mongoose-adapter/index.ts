@@ -36,27 +36,27 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return new Promise((resolve, reject) => {
       let db = this.mongoose.connection;
       db.on('connected', () => {
-        console.log('MongoDB dashboard is connected');
+        console.log('MongoDB: Database is connected');
         resolve();
       });
 
       db.on('error', (err: any) => {
-        console.error('Dashboard Connection error:', err.message);
+        console.error('MongoDB: Connection error:', err.message);
         reject();
       });
 
       db.once('open', function callback() {
-        console.info('Connected to Dashboard Database!');
+        console.info('MongoDB: Connection open!');
         resolve();
       });
 
       db.on('reconnected', function () {
-        console.log('Dashboard Database reconnected!');
+        console.log('MongoDB: Database reconnected!');
         resolve();
       });
 
       db.on('disconnected', function () {
-        console.log('Dashboard Database Disconnected');
+        console.log('MongoDB: Database Disconnected');
         reject();
       });
     });

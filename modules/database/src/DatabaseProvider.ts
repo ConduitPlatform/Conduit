@@ -76,15 +76,16 @@ export class DatabaseProvider extends ConduitServiceModule {
         countDocuments: this.countDocuments.bind(this),
       }
     );
+    await this._activeAdapter.createSchemaFromAdapter(models.default);
+    await migrateModelOptions(this._activeAdapter);
+    await this._activeAdapter.recoverSchemasFromDatabase();
+    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter);
+    await this.grpcServer.start();
   }
 
   async activate() {
     const self = this;
     await this.grpcSdk.initializeEventBus();
-
-    await this._activeAdapter.createSchemaFromAdapter(models.default);
-    await migrateModelOptions(this._activeAdapter);
-    await this._activeAdapter.recoverSchemasFromDatabase();
 
     self.grpcSdk.bus?.subscribe('database', (message: string) => {
       if (message === 'request') {
@@ -114,9 +115,6 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-
-    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter);
-    await this.grpcServer.start();
   }
 
   /**
