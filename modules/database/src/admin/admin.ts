@@ -104,9 +104,9 @@ export class AdminHandlers {
     const declaredSchemasExtensionsPromise = schemaAdapter.model
       .findMany(
         query,
-        'name extensions',
         skip,
         limit,
+        'name extensions',
         undefined,
       );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
