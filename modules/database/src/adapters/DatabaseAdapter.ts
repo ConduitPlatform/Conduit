@@ -1,6 +1,5 @@
 import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
-import { _DeclaredSchema } from '../models';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -29,7 +28,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
 
-    const model = await this.models!['_DeclaredSchema'].model.findOne({ name: schema.name });
+    const model = await this.models!['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
     if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
       return true;
     } else if (model) {
@@ -43,24 +42,24 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
     const model = await this.models!['_DeclaredSchema'].findMany('{}');
     if (model) {
-      await this.models!['_DeclaredSchema'].model
+      await this.models!['_DeclaredSchema']
         .findByIdAndUpdate(
           model._id,
-          {
+          JSON.stringify({
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
-          },
+          }),
         );
     } else {
       await this.models!['_DeclaredSchema'].model
-        .create({
+        .create( JSON.stringify({
           name: schema.name,
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
-        });
+        }));
     }
   }
 

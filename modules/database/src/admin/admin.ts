@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   TYPE,
 } from '@quintessential-sft/conduit-grpc-sdk';
-import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';

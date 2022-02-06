@@ -4,7 +4,6 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema, GrpcError } from '@quintessential-sft/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { _DeclaredSchema } from '../../models';
 import { status} from '@grpc/grpc-js';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
@@ -87,14 +86,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (deleteData) {
       await this.models![schemaName].model.drop();
     }
-    _DeclaredSchema
-      .getInstance()
-      .findOne({ name: schemaName })
+    this.models!['_DeclaredSchema']
+      .findOne(JSON.stringify({ name: schemaName }))
       .then((model) => {
         if (model) {
-          _DeclaredSchema
-            .getInstance()
-            .deleteOne({ name: schemaName })
+          this.models!['_DeclaredSchema']
+            .deleteOne(JSON.stringify({ name: schemaName }))
             .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
         }
       });
