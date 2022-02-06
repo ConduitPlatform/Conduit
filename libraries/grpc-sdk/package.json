@@ -18,7 +18,7 @@
     "@types/google-protobuf": "^3.15.5",
     "@types/ioredis": "^4.28.7",
     "@types/lodash": "^4.14.178",
-    "@grpc/grpc-js": "^1.5.0",
+    "@grpc/grpc-js": "^1.5.1",
     "ioredis": "^4.28.3",
     "lodash": "^4.17.21",
     "protobufjs": "^6.11.2"
