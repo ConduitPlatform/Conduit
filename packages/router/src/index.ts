@@ -8,9 +8,9 @@ import {
   ConduitSocket,
   IConduitRouter,
   grpcToConduitRoute,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { SocketPush } from './models/SocketPush.model';
 import * as adminRoutes from './admin/routes';
 

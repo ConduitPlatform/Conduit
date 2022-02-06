@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -26,7 +26,6 @@ const schema = {
   inputs: [
     {
       type: TYPE.JSON,
-      // required: true, // tmp: Swagger parser incompatibility
     },
   ],
   returns: {
@@ -49,7 +48,9 @@ const schema = {
     type: TYPE.Boolean,
     default: false,
   },
-  queries: [TYPE.JSON],
+  queries: { // succeeded by 'query'
+    type: [TYPE.JSON],
+  },
   query: TYPE.JSON,
   assignments: [TYPE.JSON],
   createdAt: TYPE.Date,
@@ -81,8 +82,8 @@ export class CustomEndpoints extends ConduitActiveSchema<CustomEndpoints> {
   authentication!: boolean;
   paginated!: boolean;
   sorted!: boolean;
-  queries!: any[];
-  query!: any;
+  queries?: any[]; // succeeded by 'query'
+  query?: any;
   assignments!: any[];
   createdAt!: Date;
   updatedAt!: Date;

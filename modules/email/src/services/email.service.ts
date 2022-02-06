@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { EmailTemplate } from '../models';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider';
@@ -63,7 +63,7 @@ export class EmailService {
       throw new Error(`Template/body+subject not provided`);
     }
 
-    let templateFound: EmailTemplate | null;
+    let templateFound: EmailTemplate | null = null;
     if (template) {
       templateFound = await EmailTemplate.getInstance().findOne({ name: template });
       if (isNil(templateFound)) {
@@ -79,20 +79,23 @@ export class EmailService {
       throw new Error(`Sender must be provided!`);
     }
 
-    if (templateFound!.externalManaged) {
-      builder.setTemplate({
-        id: templateFound!._id,
-        variables: variables as any,
-      });
-    } else {
-      let handled_body = handlebars.compile(templateFound!.body);
-      const bodyString = templateFound! ? handled_body(variables) : body!;
-      builder.setContent(bodyString);
+    let subjectString = subject!;
+    let bodyString = body!
+    if (template) {
+      if (templateFound && templateFound.externalManaged) {
+        builder.setTemplate({
+          id: templateFound._id,
+          variables: variables as any,
+        });
+      } else {
+        const handled_body = handlebars.compile(templateFound!.body);
+        bodyString = templateFound! ? handled_body(variables) : body!;
+      }
+
+      const handled_subject = handlebars.compile(templateFound!.subject);
+      subjectString = handled_subject(variables);
     }
-    let handled_subject = handlebars.compile(templateFound!.subject);
-
-    const subjectString = templateFound! ? handled_subject(variables) : subject!;
-
+    builder.setContent(bodyString);
     builder.setSender(sender);
     builder.setReceiver(email);
     builder.setSubject(subjectString);

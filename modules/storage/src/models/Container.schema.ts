@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -35,7 +35,7 @@ export class _StorageContainer extends ConduitActiveSchema<_StorageContainer> {
   private static _instance: _StorageContainer;
   _id!: string;
   name!: string;
-  isPublic!: boolean;
+  isPublic?: boolean;
   createdAt!: Date;
   updatedAt!: Date;
 

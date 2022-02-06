@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -19,12 +19,14 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  emailField: {
+  emailField: { // name of dynamically specified email field in Forms.fields
     type: TYPE.String,
+    required: true,
   },
   enabled: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -2,20 +2,23 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { User } from './User.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
   type: {
     type: TYPE.String,
+    required: true,
   },
   userId: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
   token: {
     type: TYPE.String,
+    required: true,
   },
   data: {
     type: TYPE.JSON,

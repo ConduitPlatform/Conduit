@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   GrpcError,
   ConduitString,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ISmsProvider } from '../interfaces/ISmsProvider';
@@ -52,7 +52,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('SendSMS', 'String'),
-        'sendSMS'
+        'sendSms'
       ),
     ];
   }

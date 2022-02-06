@@ -1,5 +1,5 @@
-import { ConduitCommons, IConduitSecurity } from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitCommons, IConduitSecurity } from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';

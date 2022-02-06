@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -13,10 +13,12 @@ const schema = {
   },
   hashedToken: {
     type: TYPE.String,
+    required: true,
   },
   active: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

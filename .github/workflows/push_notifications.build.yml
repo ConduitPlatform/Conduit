@@ -5,31 +5,26 @@ on:
     paths:
       - "modules/push-notifications/**"
       - "libraries/grpc-sdk/**"
+
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   deploy:
     runs-on: ubuntu-18.04
+    permissions:
+      contents: read
+      packages: write
     name: Build push-notifications
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Docker Login
-        uses: docker/login-action@v1.6.0
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
-          registry: ${{ secrets.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build conduit push-notifications
         run: |
           DEV=TRUE make modules/push-notifications
-
-  rollout-proxy:
-    runs-on: ubuntu-latest
-    name: Redeploy push-notifications
-    needs: [deploy]
-    steps:
-      - uses: fjogeleit/http-request-action@master
-        with:
-          url: "http://20.101.9.248/push-notifications/conduit-grp/"
-          method: "POST"
-          username: admin
-          password: ${{ secrets.KUBECTLPROXY_PASSWORD }}

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import FormsModule from './Forms';
 
 if (!process.env.CONDUIT_SERVER) {
@@ -27,6 +27,6 @@ forms
     return forms.activate();
   })
   .catch((err: Error) => {
-    console.log('Failed to active module');
+    console.log('Failed to activate module');
     console.error(err);
   });

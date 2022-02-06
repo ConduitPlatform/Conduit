@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
@@ -35,7 +35,7 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         getUsers: this.getUsers.bind(this),
         createUser: this.createUser.bind(this),
-        editUser: this.editUser.bind(this),
+        patchUser: this.patchUser.bind(this),
         deleteUser: this.deleteUser.bind(this),
         deleteUsers: this.deleteUsers.bind(this),
         toggleUsers: this.toggleUsers.bind(this),
@@ -95,13 +95,24 @@ export class AdminHandlers {
            },
            bodyParams: {
              email: ConduitString.Optional,
-             isVerified: ConduitString.Optional,
-             hasTwoFA: ConduitString.Optional,
+             isVerified: ConduitBoolean.Optional,
+             hasTwoFA: ConduitBoolean.Optional,
              phoneNumber: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('EditUser', 'String'),
-         'editUser'
+         new ConduitRouteReturnDefinition('PatchUser', 'String'),
+         'patchUser'
+       ),
+       constructConduitRoute(
+         {
+           path: '/users',
+           action: ConduitRouteActions.DELETE,
+           queryParams: {
+             ids: { type: [TYPE.String], required: true }, // handler array check is still required
+           },
+         },
+         new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
+         'deleteUsers'
        ),
        constructConduitRoute(
          {
@@ -113,17 +124,6 @@ export class AdminHandlers {
          },
          new ConduitRouteReturnDefinition('DeleteUser', 'String'),
          'deleteUser'
-       ),
-       constructConduitRoute(
-         {
-           path: '/users',
-           action: ConduitRouteActions.DELETE,
-           bodyParams: {
-             ids: { type: [TYPE.String], required: true }, // handler array check is still required
-           },
-         },
-         new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
-         'deleteUsers'
        ),
        constructConduitRoute(
          {
@@ -197,7 +197,7 @@ export class AdminHandlers {
          {
            path: '/services/:id',
            action: ConduitRouteActions.DELETE,
-           bodyParams: {
+           urlParams: {
              id: ConduitString.Required,
            },
            name: 'DeleteService',
@@ -208,9 +208,9 @@ export class AdminHandlers {
        ),
        constructConduitRoute(
          {
-           path: '/services',
-           action: ConduitRouteActions.UPDATE,
-           bodyParams: {
+           path: '/services/:serviceId/token',
+           action: ConduitRouteActions.GET,
+           urlParams: {
              serviceId: ConduitString.Required,
            },
            name: 'RenewServiceToken',
@@ -293,7 +293,7 @@ export class AdminHandlers {
     return 'Registration was successful';
   }
 
-  async editUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
 
     let user: User | null = await User.getInstance().findOne({ _id: id });

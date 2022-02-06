@@ -7,11 +7,15 @@ import {
   RouteOptionType,
   TYPE,
   ConduitError,
-} from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 
-export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons, registeredModules: Map<string, string>) {
+export function getUpdateConfigRoute(
+  grpcSdk: ConduitGrpcSdk,
+  conduit: ConduitCommons,
+  registeredModules: Map<string, string>
+) {
   return new ConduitRoute(
     {
       path: '/config/:module',
@@ -50,11 +54,6 @@ export function getUpdateConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCo
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.authentication))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           updatedConfig = await grpcSdk.authentication.setConfig(newConfig);
-          break;
-        case 'payments':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.payments))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.payments.setConfig(newConfig);
           break;
         case 'forms':
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.forms))

@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = new ConduitSchema(
   '_DeclaredSchema',
@@ -27,7 +27,10 @@ const schema = new ConduitSchema(
         updatedAt: TYPE.Date,
       },
     ],
-    modelOptions: { type: TYPE.JSON, systemRequired: true },
+  modelOptions: {
+    type: TYPE.JSON,
+    required: true
+  },
     ownerModule: {
       type: TYPE.String,
       required: true,

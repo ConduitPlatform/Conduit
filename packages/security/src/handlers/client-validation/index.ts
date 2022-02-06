@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons, ConduitError } from '@quintessential-sft/conduit-commons';
-import { DatabaseProvider } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitCommons, ConduitError } from '@conduitplatform/conduit-commons';
+import { DatabaseProvider } from '@conduitplatform/conduit-grpc-sdk';
 import { Client } from '../../models';
 import * as bcrypt from 'bcrypt';
 
@@ -48,7 +48,7 @@ export class ClientValidator {
 
     let key = await this.sdk.getState().getKey(`${clientid}`);
     if (key) {
-      let valid = await bcrypt.compare(clientsecret, key);
+      let valid = clientsecret === key;
       if (valid) {
         (req as any).conduit.clientId = clientid;
         return next();
@@ -58,7 +58,7 @@ export class ClientValidator {
     }
     let _client: { clientId: string; clientSecret: string };
     Client.getInstance()
-      .findOne({ clientId: clientid },'clientSecret')
+      .findOne({ clientId: clientid }, 'clientSecret')
       .then((client: any) => {
         if (isNil(client)) {
           throw ConduitError.unauthorized();
@@ -73,7 +73,7 @@ export class ClientValidator {
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}`, _client.clientSecret, 10000);
+        this.sdk.getState().setKey(`${clientid}`, clientsecret, 100000);
         next();
       })
       .catch(() => {

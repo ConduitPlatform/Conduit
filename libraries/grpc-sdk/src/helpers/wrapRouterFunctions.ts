@@ -1,35 +1,18 @@
 import {
   ParsedRouterRequest,
-  RouterRequest,
-  RouterResponse,
   UnparsedRouterResponse,
 } from '../types';
 
 import { status } from '@grpc/grpc-js';
 
-export function wrapCallObjectForRouter(call: any): RouterRequest {
+export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
   return {
     request: {
-      params: JSON.stringify(call.request),
+      params: call.request,
       path: '',
-      headers: '',
-      context: '',
+      headers: {},
+      context: {},
     },
-  };
-}
-
-export function wrapCallbackFunctionForRouter(callback: any): RouterResponse {
-  return (err, res) => {
-    if (err || !res) {
-      return callback(err);
-    }
-
-    if (res.hasOwnProperty('result')) {
-      // @ts-ignore
-      return callback(null, JSON.parse(res.result));
-    }
-
-    callback(null, null);
   };
 }
 

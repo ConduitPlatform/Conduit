@@ -1,7 +1,7 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
@@ -74,10 +74,9 @@ export class DatabaseProvider extends ConduitServiceModule {
         deleteOne: this.deleteOne.bind(this),
         deleteMany: this.deleteMany.bind(this),
         countDocuments: this.countDocuments.bind(this),
-      },
+      }
     );
   }
-
 
   async activate() {
     const self = this;
@@ -101,13 +100,12 @@ export class DatabaseProvider extends ConduitServiceModule {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName,
+            receivedSchema.collectionName
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
-            .then(() => {
-            })
+            .then(() => {})
             .catch(() => {
               console.log('Failed to create/update schema');
             });
@@ -131,7 +129,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
       JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName,
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -140,7 +138,8 @@ export class DatabaseProvider extends ConduitServiceModule {
       });
     }
     schema.ownerModule = (call as any).metadata.get('module-name')[0];
-    await this._activeAdapter.createSchemaFromAdapter(schema)
+    await this._activeAdapter
+      .createSchemaFromAdapter(schema)
       .then((schemaAdapter: SchemaAdapter<any>) => {
         let originalSchema = {
           name: schemaAdapter.originalSchema.name,
@@ -217,7 +216,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as any).metadata.get('module-name')[0],
+        (call as any).metadata.get('module-name')[0]
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -235,7 +234,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -263,7 +262,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         select,
         sort,
         populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -279,7 +278,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canCreate(moduleName, schemaAdapter.model)) {
+      if (!(await canCreate(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
@@ -289,10 +288,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const doc = await schemaAdapter.model.create(call.request.query);
       const docString = JSON.stringify(doc);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:create:${schemaName}`,
-        docString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:create:${schemaName}`, docString);
 
       callback(null, { result: docString });
     } catch (err) {
@@ -308,7 +304,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canCreate(moduleName, schemaAdapter.model)) {
+      if (!(await canCreate(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
@@ -318,10 +314,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const docs = await schemaAdapter.model.createMany(call.request.query);
       const docsString = JSON.stringify(docs);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:createMany:${schemaName}`,
-        docsString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:createMany:${schemaName}`, docsString);
 
       callback(null, { result: docsString });
     } catch (err) {
@@ -337,7 +330,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canModify(moduleName, schemaAdapter.model)) {
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -349,14 +342,11 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:update:${schemaName}`,
-        resultString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:update:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -372,7 +362,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canModify(moduleName, schemaAdapter.model)) {
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -382,14 +372,11 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.updateProvidedOnly
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:updateMany:${schemaName}`,
-        resultString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:updateMany:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -405,7 +392,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canDelete(moduleName, schemaAdapter.model)) {
+      if (!(await canDelete(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
@@ -415,10 +402,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.deleteOne(query);
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:delete:${schemaName}`,
-        resultString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:delete:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -434,7 +418,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!await canDelete(moduleName, schemaAdapter.model)) {
+      if (!(await canDelete(moduleName, schemaAdapter.model))) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
@@ -444,10 +428,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.deleteMany(query);
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
-        `${MODULE_NAME}:delete:${schemaName}`,
-        resultString,
-      );
+      this.grpcSdk.bus?.publish(`${MODULE_NAME}:delete:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {

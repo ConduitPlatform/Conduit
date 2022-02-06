@@ -6,7 +6,7 @@ import {
   ConduitError,
   PlatformTypesEnum,
   ConduitString,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { Client } from '../../models';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';

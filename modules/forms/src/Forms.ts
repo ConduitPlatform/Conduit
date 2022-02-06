@@ -1,15 +1,14 @@
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import FormsConfigSchema from './config';
-import { isNil } from 'lodash';
 import {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
-import { FormRoutes } from './routes/Routes';
+import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';
 import { FormSubmissionTemplate } from './templates';
 import { status } from '@grpc/grpc-js';
@@ -18,7 +17,7 @@ export default class FormsModule extends ConduitServiceModule {
   private database: any;
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
-  private _router: FormRoutes;
+  private _router: FormsRoutes;
   private _formController: FormsController;
 
   async initialize(servicePort?: string) {
@@ -66,7 +65,7 @@ export default class FormsModule extends ConduitServiceModule {
     } catch (e) {
       await this.grpcSdk.config.updateConfig(FormsConfigSchema.getProperties(), 'forms');
     }
-    let config = await this.grpcSdk.config.addFieldstoConfig(
+    const config = await this.grpcSdk.config.addFieldstoConfig(
       FormsConfigSchema.getProperties(),
       'forms'
     );
@@ -87,25 +86,24 @@ export default class FormsModule extends ConduitServiceModule {
     let errorMessage: string | null = null;
     const updateResult = await this.grpcSdk.config
       .updateConfig(newConfig, 'forms')
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
+      .catch((e: Error) => { errorMessage = e.message; });
+    if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     const formsConfig = await this.grpcSdk.config.get('forms');
     if (formsConfig.active) {
-      await this.enableModule().catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage))
+      await this.enableModule()
+        .catch((e: Error) => { errorMessage = e.message; });
+      if (errorMessage) {
         return callback({ code: status.INTERNAL, message: errorMessage });
+      }
       this.grpcSdk.bus?.publish('forms', 'config-update');
     } else {
       return callback({
         code: status.FAILED_PRECONDITION,
         message: 'Module is not active',
       });
-    }
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
     return callback(null, { updatedConfig: JSON.stringify(updateResult) });
@@ -116,7 +114,7 @@ export default class FormsModule extends ConduitServiceModule {
       this.database = this.grpcSdk.databaseProvider;
       await this.registerSchemas();
       await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this._router = new FormRoutes(this.grpcServer, this.grpcSdk);
+      this._router = new FormsRoutes(this.grpcServer, this.grpcSdk);
       this._formController = new FormsController(this.grpcSdk, this._router);
       this._admin = new AdminHandlers(
         this.grpcServer,

@@ -2,8 +2,8 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
-import { PlatformTypesEnum } from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-grpc-sdk';
+import { PlatformTypesEnum } from '@conduitplatform/conduit-commons';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -11,19 +11,16 @@ const schema = {
     type: TYPE.String,
     unique: true,
     required: true,
-    systemRequired: true,
   },
   clientSecret: {
     type: TYPE.String,
     required: true,
     select: false,
-    systemRequired: true,
   },
   platform: {
     type: TYPE.String,
     enum: Object.values(PlatformTypesEnum),
     required: true,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
   ConduitModelOptions,
   ConduitModelOptionsPermModifyType,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, merge } from 'lodash';
 import { validateSchemaInput } from '../utils/utilities';
@@ -64,14 +64,14 @@ export class SchemaAdmin {
     );
     const documentsCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
 
-    const [schemas, documentsCount] = await Promise.all([
+    const [schemas, count] = await Promise.all([
       schemasPromise,
       documentsCountPromise,
     ]).catch((e) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { schemas, documentsCount };
+    return { schemas, count };
   }
 
   async getSchemasFromOtherModules(
@@ -92,8 +92,7 @@ export class SchemaAdmin {
     });
 
     return {
-      results: schemasFromOtherModules.map((schema: any) => {
-        // TODO: rename to externalSchemas (frontend compat)
+      externalSchemas: schemasFromOtherModules.map((schema: any) => {
         return { name: schema.name, fields: schema.modelSchema };
       }),
     };
@@ -154,7 +153,7 @@ export class SchemaAdmin {
       );
   }
 
-  async editSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       id,
       name,
@@ -181,21 +180,21 @@ export class SchemaAdmin {
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }
-
-    this.patchSchemaPerms(requestedSchema, permissions);
+    if (permissions) {
+      this.patchSchemaPerms(requestedSchema, permissions);
+    }
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
     const enabled = call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
 
-    if (modelOptions) {
-      const authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
-      const crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
-      requestedSchema.modelOptions = merge(
-        requestedSchema.modelOptions,
-        modelOptions,
-        { conduit: { cms: { enabled, authentication, crudOperations } } },
-      );
-    }
+    const authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
+    const crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
+    requestedSchema.modelOptions = merge(
+      requestedSchema.modelOptions,
+      modelOptions,
+      { conduit: { cms: { enabled, authentication, crudOperations } } },
+    );
+
 
     const updatedSchema = await this.database
       .createSchemaFromAdapter(

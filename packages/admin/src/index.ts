@@ -1,8 +1,8 @@
 import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
-import { RestController } from '@quintessential-sft/conduit-router';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import { RestController } from '@conduitplatform/conduit-router';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -11,7 +11,7 @@ import {
   IConduitAdmin,
   grpcToConduitRoute,
   ConduitRouteActions,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import { hashPassword } from './utils/auth';

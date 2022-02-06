@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -65,10 +65,12 @@ const schema = {
   active: {
     type: TYPE.Boolean,
     default: true,
+    required: true,
   },
   isVerified: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   hasTwoFA: {
     type: TYPE.Boolean,

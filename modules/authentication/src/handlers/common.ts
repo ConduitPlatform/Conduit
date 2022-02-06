@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, User } from '../models';
@@ -83,7 +83,7 @@ export class CommonHandlers {
       })
     );
 
-    return { message: 'Logged out' };
+    return 'Logged out';
   }
 
   async getUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -101,6 +101,6 @@ export class CommonHandlers {
         userId: user._id,
       })
     ).catch((e: any) => console.log('Failed to delete all access tokens'));
-    return 'done';
+    return 'Done';
   }
 }

@@ -2,19 +2,17 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
   username: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   password: {
     type: TYPE.String,
     required: true,
-    systemRequired: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -6,18 +6,21 @@ import {
   RouteOptionType,
   TYPE,
   ConduitError,
-} from '@quintessential-sft/conduit-commons';
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { isNil } from 'lodash';
 
-export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk, registeredModules: Map<string, string>) {
+export function getGetConfigRoute(
+  grpcSdk: ConduitGrpcSdk,
+  registeredModules: Map<string, string>
+) {
   return new ConduitRoute(
     {
       path: '/config/:module',
       action: ConduitRouteActions.GET,
       urlParams: {
         module: RouteOptionType.String,
-      }
+      },
     },
     new ConduitRouteReturnDefinition('GetModuleConfig', {
       config: TYPE.JSON,
@@ -58,11 +61,6 @@ export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk, registeredModules: Ma
           if (!registeredModules.has(module))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           finalConfig = dbConfig.moduleConfigs.storage;
-          break;
-        case 'payments':
-          if (!registeredModules.has(module))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          finalConfig = dbConfig.moduleConfigs.payments;
           break;
         case 'chat':
           if (!registeredModules.has(module))

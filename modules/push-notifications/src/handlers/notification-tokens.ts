@@ -1,52 +1,43 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
-  RouterRequest,
-  RouterResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+import {
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { NotificationToken } from '../models';
 
 export class NotificationTokensHandler {
-
-  async setNotificationToken(call: RouterRequest, callback: RouterResponse) {
-    const { token, platform } = JSON.parse(call.request.params);
-    if (isNil(token) || isNil(platform)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Required fields are missing',
-      });
+  async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
+    const { token, platform } = call.request.params;
+    if (isNil(context) || isNil(context.user)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
-    const context = JSON.parse(call.request.context);
-    if (isNil(context) || isNil(context.user))
-      return callback({ code: status.UNAUTHENTICATED, message: 'Unauthorized' });
+    if (isNil(token)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'token is required');
+    }
+    if (isNil(platform)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'platform is required');
+    }
     const userId = context.user._id;
-
-    let errorMessage = null;
     NotificationToken.getInstance()
       .findOne({ userId, platform })
       .then((oldToken: any) => {
         if (!isNil(oldToken))
           return NotificationToken.getInstance().deleteOne(oldToken);
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     const newTokenDocument = await NotificationToken.getInstance()
       .create({
         userId,
         token,
         platform,
       })
-      .catch((e: any) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    return callback(null, {
-      result: JSON.stringify({
-        message: 'Push notification token created',
-        newTokenDocument,
-      }),
-    });
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return {
+      message: 'Push notification token created',
+      newTokenDocument,
+    }
   }
 }

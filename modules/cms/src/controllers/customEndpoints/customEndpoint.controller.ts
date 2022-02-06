@@ -1,8 +1,8 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
 import { CustomEndpoints } from '../../models';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
-import { CmsRoutes } from '../../routes/Routes';
+import { CmsRoutes } from '../../routes/routes';
 import { createCustomEndpointRoute } from './utils';
 import { migrateCustomEndpoints } from '../../migrations/customEndpoint.migration';
 

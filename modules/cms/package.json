@@ -11,11 +11,11 @@
     "prepare": "npm run build",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit-cms:latest -f ./Dockerfile ../../ && docker push quintessential.azurecr.io/conduit-cms:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-cms:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-cms:latest"
   },
   "license": "ISC",
   "dependencies": {
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
     "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
     "deepdash": "^5.0.3",

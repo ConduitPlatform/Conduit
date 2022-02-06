@@ -7,8 +7,8 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ParsedRouterRequest,
   GrpcError,
-  TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+  ConduitJson,
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
@@ -63,8 +63,8 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetDeclaredSchemasExtensions', {
-          declaredSchemasExtensions: [TYPE.JSON], // Swagger parser inconsistency
-          totalCount: ConduitNumber.Required,
+          declaredSchemasExtensions: [ConduitJson.Required],
+          count: ConduitNumber.Required,
         }),
         'getDeclaredSchemasExtensions',
       ),
@@ -104,11 +104,9 @@ export class AdminHandlers {
     const declaredSchemasExtensionsPromise = schemaAdapter.model
       .findMany(
         query,
+        'name extensions',
         skip,
         limit,
-        'name extensions',
-        undefined,
-        undefined,
         undefined,
       );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);

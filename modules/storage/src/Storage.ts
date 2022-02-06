@@ -3,11 +3,11 @@ import { isNil } from 'lodash';
 import {
   ConduitServiceModule,
   GrpcServer,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';
-import { FileRoutes } from './routes/router';
+import { StorageRoutes } from './routes/routes';
 import { AdminRoutes } from './admin/admin';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import * as models from './models';
@@ -54,7 +54,7 @@ export class StorageModule extends ConduitServiceModule {
             console.log('Updated storage configuration');
           })
           .catch((e: Error) => {
-            console.log('Failed to update email config');
+            console.log('Failed to update storage config');
           });
       }
     });
@@ -164,9 +164,11 @@ export class StorageModule extends ConduitServiceModule {
       azure,
     });
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    new FileRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    const router = new StorageRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     this._fileHandlers.updateProvider(this.storageProvider);
+    await router.registerRoutes();
+    this._routes = await router.getRegisteredRoutes();
   }
 
   private registerSchemas() {

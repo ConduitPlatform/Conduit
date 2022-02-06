@@ -3,7 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { ConduitDefaultRouter } from '../../index';
 
 export function getMiddlewares(router: ConduitDefaultRouter) {

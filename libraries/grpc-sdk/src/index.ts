@@ -5,7 +5,6 @@ import {
   Config,
   DatabaseProvider,
   Email,
-  Payments,
   PushNotifications,
   Router,
   SMS,
@@ -32,7 +31,6 @@ export default class ConduitGrpcSdk {
     authentication: Authentication,
     cms: CMS,
     sms: SMS,
-    payments: Payments,
     chat: Chat,
     forms: Forms,
   };
@@ -153,15 +151,6 @@ export default class ConduitGrpcSdk {
       return this._modules['sms'];
     } else {
       console.warn('SMS module not up yet!');
-      return null;
-    }
-  }
-
-  get payments(): Payments | null {
-    if (this._modules['payments']) {
-      return this._modules['payments'];
-    } else {
-      console.warn('Payments module not up yet!');
       return null;
     }
   }

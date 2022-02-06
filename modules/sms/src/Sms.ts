@@ -8,7 +8,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import {
@@ -50,7 +50,7 @@ export default class SmsModule extends ConduitServiceModule {
             console.log('Updated sms configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update sms config');
           });
       }
     });

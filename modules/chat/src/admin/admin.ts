@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   ConduitNumber,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils';
@@ -31,7 +31,6 @@ export class AdminHandlers{
         createRoom: this.createRoom.bind(this),
         deleteRooms: this.deleteRooms.bind(this),
         getMessages: this.getMessages.bind(this),
-        // createMessage: this.createMessage.bind(this),
         deleteMessages: this.deleteMessages.bind(this)
       })
       .catch((err: Error) => {
@@ -54,7 +53,7 @@ export class AdminHandlers{
          },
          new ConduitRouteReturnDefinition('GetRooms', {
            chatRoomDocuments: [ChatRoom.getInstance().fields],
-           totalCount: ConduitNumber.Required,
+           count: ConduitNumber.Required,
          }),
          'getRooms'
        ),
@@ -74,7 +73,7 @@ export class AdminHandlers{
          {
            path: '/rooms',
            action: ConduitRouteActions.DELETE,
-           bodyParams: {
+           queryParams: {
              ids: { type: [TYPE.String], required: true },
            },
          },
@@ -104,7 +103,7 @@ export class AdminHandlers{
          {
            path: '/messages',
            action: ConduitRouteActions.DELETE,
-           bodyParams: {
+           queryParams: {
              ids: { type: [TYPE.String], required: true }, // handler array check is still required
            },
          },
@@ -154,12 +153,12 @@ export class AdminHandlers{
       );
     const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
-    const [chatRoomDocuments, totalCount] = await Promise.all([
+    const [chatRoomDocuments, count] = await Promise.all([
       chatRoomDocumentsPromise,
       totalCountPromise,
     ]).catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
 
-    return { chatRoomDocuments, totalCount };
+    return { chatRoomDocuments, count };
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -229,11 +228,6 @@ export class AdminHandlers{
 
     return { messages, count };
   }
-
-  // async createMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-  //   // TODO: Implement createMessage handler
-  //   return { message };
-  // }
 
   async deleteMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;

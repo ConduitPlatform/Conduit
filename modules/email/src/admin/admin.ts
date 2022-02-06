@@ -12,7 +12,7 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
 import { isNil } from 'lodash';
@@ -39,7 +39,7 @@ export class AdminHandlers {
       .registerAdminAsync(this.server, paths, {
         getTemplates: this.getTemplates.bind(this),
         createTemplate: this.createTemplate.bind(this),
-        editTemplate: this.editTemplate.bind(this),
+        patchTemplate: this.patchTemplate.bind(this),
         deleteTemplate: this.deleteTemplate.bind(this),
         deleteTemplates: this.deleteTemplates.bind(this),
         uploadTemplate: this.uploadTemplate.bind(this),
@@ -67,7 +67,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getTemplates'
       ),
@@ -97,16 +97,28 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
           bodyParams: {
-            id: ConduitString.Required,
             name: ConduitString.Optional,
             subject: ConduitString.Optional,
             body: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('EditTemplate', {
+        new ConduitRouteReturnDefinition('PatchTemplate', {
           template: EmailTemplate.getInstance().fields,
         }),
-        'editTemplate'
+        'patchTemplate'
+      ),
+      constructConduitRoute(
+        {
+          path: '/templates',
+          action: ConduitRouteActions.DELETE,
+          queryParams: {
+            ids: { type: [TYPE.String], required: true }, // handler array check is still required
+          },
+        },
+        new ConduitRouteReturnDefinition('DeleteTemplates', {
+          template: [EmailTemplate.getInstance().fields],
+        }),
+        'deleteTemplates'
       ),
       constructConduitRoute(
         {
@@ -120,19 +132,6 @@ export class AdminHandlers {
           deleted: ConduitJson.Required, // DeleteEmailTemplate
         }),
         'deleteTemplate'
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates',
-          action: ConduitRouteActions.DELETE,
-          bodyParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
-        },
-        new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: [EmailTemplate.getInstance().fields],
-        }),
-        'deleteTemplates'
       ),
       constructConduitRoute(
         {
@@ -154,7 +153,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getExternalTemplates'
       ),
@@ -165,7 +164,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
           updated: [EmailTemplate.getInstance().fields],
-          totalCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'syncExternalTemplates'
       ),
@@ -265,7 +264,7 @@ export class AdminHandlers {
     return { template: newTemplate };
   }
 
-  async editTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
       .findOne({ _id: call.request.params.id })
     if (isNil(templateDocument)) {
@@ -279,26 +278,29 @@ export class AdminHandlers {
       }
     });
 
-    templateDocument['variables'] = Object.keys(getHBValues(call.request.params.body)).concat(
+    templateDocument.variables = Object.keys(getHBValues(call.request.params.body)).concat(
       Object.keys(getHBValues(call.request.params.subject))
     );
-    templateDocument['variables'] = templateDocument['variables'].filter(
-      (value: any, index: any) => templateDocument['variables'].indexOf(value) === index
-    );
+    if (templateDocument.variables) {
+      templateDocument.variables = templateDocument.variables.filter(
+        (value: any, index: any) => templateDocument.variables!.indexOf(value) === index
+      );
+    }
+
     const updatedTemplate = await EmailTemplate.getInstance()
       .findByIdAndUpdate(call.request.params.id, templateDocument)
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     if (templateDocument.externalManaged) {
       const template = await this.emailService.getExternalTemplate(
-        updatedTemplate!.externalId
+        updatedTemplate!.externalId!
       );
       let versionId = undefined;
       if (!isNil(template?.versions[0].id)) {
         versionId = template?.versions[0].id;
       }
       const data = {
-        id: updatedTemplate!.externalId,
+        id: updatedTemplate!.externalId!,
         subject: updatedTemplate!.subject,
         body: updatedTemplate!.body,
         versionId: versionId,
@@ -323,7 +325,7 @@ export class AdminHandlers {
       .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
     let deleted;
     if (templateDocument!.externalManaged){
-      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId)
+      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId!)
         ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
     }
 
@@ -344,7 +346,7 @@ export class AdminHandlers {
 
     for (let template of templateDocuments) {
       if( template.externalManaged){
-        await this.emailService.deleteExternalTemplate(template.externalId)
+        await this.emailService.deleteExternalTemplate(template.externalId!)
           ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
       }
     }
@@ -463,7 +465,10 @@ export class AdminHandlers {
         variables,
         sender: sender ? sender : 'conduit',
       })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: any) => {
+        console.log(e);
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return { message: 'Email sent' };
   }

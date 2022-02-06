@@ -4,7 +4,7 @@ services:
     image: redis
 
   core:
-    image: "quintessential.azurecr.io/conduit:${IMAGE_TAG}"
+    image: "ghcr.io/conduitplatform/conduit:${IMAGE_TAG}"
     ports:
       - "55152:55152"
       - "3000:3000"
@@ -16,7 +16,7 @@ services:
       REDIS_PORT: "6379"
 
   database-provider:
-    image: "quintessential.azurecr.io/conduit-database:${IMAGE_TAG}"
+    image: "ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}"
     ports:
       - "55153:55153"
     links:
@@ -30,7 +30,7 @@ services:
       CONDUIT_SERVER: core:55152
 
   authentication:
-    image: "quintessential.azurecr.io/conduit-authentication:${_IMAGE_TAG}"
+    image: "ghcr.io/conduitplatform/conduit-authentication:${_IMAGE_TAG}"
     ports:
       - "5000:5000"
     depends_on:
@@ -41,7 +41,7 @@ services:
       CONDUIT_SERVER: core:55152
 
   # admin:
-  #   image: quintessential.azurecr.io/conduit-admin:${__IMAGE_tAG}
+  #   image: ghcr.io/conduitplatform/conduit-admin:${__IMAGE_tAG}
   #   links:
   #     - core
   #   ports:

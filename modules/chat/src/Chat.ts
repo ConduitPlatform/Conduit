@@ -4,12 +4,12 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import ChatConfigSchema from './config';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
-import { ChatRoutes } from './routes/Routes';
+import { ChatRoutes } from './routes/routes';
 import * as models from './models';
 import { ChatMessage, ChatRoom } from './models';
 import { AdminHandlers } from './admin/admin';

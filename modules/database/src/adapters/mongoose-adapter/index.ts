@@ -1,7 +1,7 @@
 import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, GrpcError } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { status} from '@grpc/grpc-js';

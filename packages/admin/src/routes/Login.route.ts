@@ -7,7 +7,7 @@ import {
   ConduitRouteReturnDefinition,
   ConduitRouteParameters,
   ConduitString,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';

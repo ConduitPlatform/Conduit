@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
@@ -22,7 +22,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   abstract async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
 
   abstract getSchemaModel(
-    schemaName: string,
+    schemaName: string
   ): { model: SchemaAdapter<any>; relations: any };
 
   async checkModelOwnership(schema: ConduitSchema) {
@@ -70,7 +70,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         let schema = new ConduitSchema(
           model.name,
           model.fields,
-          model.modelOptions,
+          model.modelOptions
         );
         schema.ownerModule = model.ownerModule;
         return schema;

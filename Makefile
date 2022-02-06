@@ -7,11 +7,11 @@ all: conduit ${IMAGE_DIRS}
 
 conduit:
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t quintessential.azurecr.io/conduit:latest ./packages
-	docker push quintessential.azurecr.io/conduit:latest
+	docker build --no-cache -t ghcr.io/conduitplatform/conduit:latest ./packages
+	docker push ghcr.io/conduitplatform/conduit:latest
 else
-	docker build --no-cache -t quintessential.azurecr.io/conduit:${IMAGE_TAG} ./packages
-	docker push quintessential.azurecr.io/conduit:${IMAGE_TAG}
+	docker build --no-cache -t ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ./packages
+	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
 endif
 
 conduit-builder:
@@ -26,11 +26,11 @@ endif
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest $@
-	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:latest
+	docker build --no-cache -t ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:latest $@
+	docker push ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:latest
 else
-	docker build --no-cache -t quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker push quintessential.azurecr.io/conduit-${IMAGE_NAME}:${IMAGE_TAG}
+	docker build --no-cache -t ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
+	docker push ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:${IMAGE_TAG}
 endif
 
 modules/authentication: conduit-builder
@@ -38,9 +38,7 @@ modules/cms: conduit-builder
 modules/database: conduit-builder
 modules/email: conduit-builder
 modules/chat: conduit-builder
-modules/actor: conduit-builder
 modules/forms: conduit-builder
-modules/payments: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
 modules/push-notifications: conduit-builder

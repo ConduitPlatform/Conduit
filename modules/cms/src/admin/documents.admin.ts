@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray, wrongFields } from '../utils/utilities';
@@ -63,14 +63,14 @@ export class DocumentsAdmin {
     );
     const countPromise = this.database.countDocuments(schemaName, query);
 
-    const [documents, documentsCount] = await Promise.all([
+    const [documents, count] = await Promise.all([
       documentsPromise,
       countPromise,
     ]).catch((e: any) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { documents, documentsCount };
+    return { documents, count };
   }
 
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -100,7 +100,7 @@ export class DocumentsAdmin {
     return { docs: newDocuments };
   }
 
-  async editDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async updateDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id, changedDocument } = call.request.params;
     const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {
@@ -124,7 +124,7 @@ export class DocumentsAdmin {
       });
   }
 
-  async editDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async updateDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, changedDocuments } = call.request.params;
     const schema = await _DeclaredSchema.getInstance().findOne({ name: schemaName });
     if (isNil(schema)) {

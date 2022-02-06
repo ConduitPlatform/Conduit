@@ -2,8 +2,8 @@ import { AdminHandlers } from './admin/admin';
 import {
   ConduitServiceModule,
   GrpcServer,
-} from '@quintessential-sft/conduit-grpc-sdk';
-import { CmsRoutes } from './routes/Routes';
+} from '@conduitplatform/conduit-grpc-sdk';
+import { CmsRoutes } from './routes/routes';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migration';
@@ -21,13 +21,13 @@ export class CMS extends ConduitServiceModule {
   async activate() {
     await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.initializeEventBus();
-    let consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
-    let schemaController = new SchemaController(
+    const consumerRoutes = new CmsRoutes(this.grpcServer, this.grpcSdk);
+    const schemaController = new SchemaController(
       this.grpcSdk,
       consumerRoutes,
       this.stateActive
     );
-    let customEndpointController = new CustomEndpointController(
+    const customEndpointController = new CustomEndpointController(
       this.grpcSdk,
       consumerRoutes,
       this.stateActive

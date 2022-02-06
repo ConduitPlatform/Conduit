@@ -3,7 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitRouteParameters,
-} from '@quintessential-sft/conduit-commons';
+} from '@conduitplatform/conduit-commons';
 import { Client } from '../../models';
 
 export function getGetSecurityClientsRoute() {

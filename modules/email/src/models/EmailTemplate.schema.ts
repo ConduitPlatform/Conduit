@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -23,16 +23,13 @@ const schema = {
   },
   sender:{
     type: TYPE.String,
-    required: false,
   },
   externalManaged: {
     type: TYPE.Boolean,
-    default:false,
+    default: false,
+    required: true,
   },
-  externalId:{
-    type:TYPE.String,
-    required: false,
-  },
+  externalId: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -53,12 +50,12 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   private static _instance: EmailTemplate;
   _id: string;
   name: string;
-  subject: string;
+  subject?: string;
   body: string;
-  variables: string[];
-  sender: string;
+  variables?: string[];
+  sender?: string;
   externalManaged: boolean;
-  externalId: string;
+  externalId?: string;
   createdAt: Date;
   updatedAt: Date;
 

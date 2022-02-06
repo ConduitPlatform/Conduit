@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { SchemaAdmin } from './schema.admin';
@@ -50,7 +50,7 @@ export class AdminHandlers {
         getSchemas: this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
         getSchemasFromOtherModules: this.schemaAdmin.getSchemasFromOtherModules.bind(this.schemaAdmin),
         createSchema: this.schemaAdmin.createSchema.bind(this.schemaAdmin),
-        editSchema: this.schemaAdmin.editSchema.bind(this.schemaAdmin),
+        patchSchema: this.schemaAdmin.patchSchema.bind(this.schemaAdmin),
         deleteSchema: this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),
         deleteSchemas: this.schemaAdmin.deleteSchemas.bind(this.schemaAdmin),
         toggleSchema: this.schemaAdmin.toggleSchema.bind(this.schemaAdmin),
@@ -61,14 +61,14 @@ export class AdminHandlers {
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
         createDocument: this.documentsAdmin.createDocument.bind(this.documentsAdmin),
         createDocuments: this.documentsAdmin.createDocuments.bind(this.documentsAdmin),
-        editDocument: this.documentsAdmin.editDocument.bind(this.documentsAdmin),
-        editDocuments: this.documentsAdmin.editDocuments.bind(this.documentsAdmin),
+        updateDocument: this.documentsAdmin.updateDocument.bind(this.documentsAdmin),
+        updateDocuments: this.documentsAdmin.updateDocuments.bind(this.documentsAdmin),
         deleteDocument: this.documentsAdmin.deleteDocument.bind(this.documentsAdmin),
         // Custom Endpoints
         getCustomEndpoints: this.customEndpointsAdmin.getCustomEndpoints.bind(this.customEndpointsAdmin),
         createCustomEndpoint: this.customEndpointsAdmin.createCustomEndpoint.bind(this.customEndpointsAdmin),
-        editCustomEndpoint: this.customEndpointsAdmin.editCustomEndpoint.bind(this.customEndpointsAdmin),
-        deleteCustomEndpoints: this.customEndpointsAdmin.deleteCustomEndpoints.bind(this.customEndpointsAdmin),
+        patchCustomEndpoint: this.customEndpointsAdmin.patchCustomEndpoint.bind(this.customEndpointsAdmin),
+        deleteCustomEndpoint: this.customEndpointsAdmin.deleteCustomEndpoint.bind(this.customEndpointsAdmin),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -104,7 +104,7 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
           schemas: [_DeclaredSchema.getInstance().fields],
-          documentsCount: ConduitNumber.Required,
+          count: ConduitNumber.Required,
         }),
         'getSchemas'
       ),
@@ -114,7 +114,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetSchemasFromOtherModules', {
-          results: [TYPE.JSON], // Swagger parser inconsistency // TODO: rename to externalSchemas (frontend compat)
+          externalSchemas: [ConduitJson.Required],
         }),
         'getSchemasFromOtherModules'
       ),
@@ -162,8 +162,19 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('EditSchema', _DeclaredSchema.getInstance().fields),
-        'editSchema'
+        new ConduitRouteReturnDefinition('PatchSchema', _DeclaredSchema.getInstance().fields),
+        'patchSchema'
+      ),
+      constructConduitRoute(
+        {
+          path: '/schemas',
+          action: ConduitRouteActions.DELETE,
+          queryParams: {
+            ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
+          },
+        },
+        new ConduitRouteReturnDefinition('DeleteSchemas', 'String'),
+        'deleteSchemas'
       ),
       constructConduitRoute(
         {
@@ -181,33 +192,8 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/schemas',
-          action: ConduitRouteActions.DELETE,
-          bodyParams: {
-            ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
-          },
-        },
-        new ConduitRouteReturnDefinition('DeleteSchemas', 'String'),
-        'deleteSchemas'
-      ),
-      constructConduitRoute(
-        {
-          path: '/schemas/toggle/:id',
-          action: ConduitRouteActions.UPDATE,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-        },
-        new ConduitRouteReturnDefinition('ToggleSchema', {
-          name: ConduitString.Required,
-          enabled: ConduitBoolean.Required,
-        }),
-        'toggleSchema'
-      ),
-      constructConduitRoute(
-        {
           path: '/schemas/toggle',
-          action: ConduitRouteActions.UPDATE,
+          action: ConduitRouteActions.POST,
           bodyParams: {
             ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
             enabled: ConduitBoolean.Required,
@@ -221,7 +207,21 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/schemas/permissions/:id',
+          path: '/schemas/:id/toggle',
+          action: ConduitRouteActions.POST,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('ToggleSchema', {
+          name: ConduitString.Required,
+          enabled: ConduitBoolean.Required,
+        }),
+        'toggleSchema'
+      ),
+      constructConduitRoute(
+        {
+          path: '/schemas/:id/permissions',
           action: ConduitRouteActions.PATCH,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
@@ -239,7 +239,7 @@ export class AdminHandlers {
       // Documents
       constructConduitRoute(
         {
-          path: '/content/:schemaName/:id',
+          path: '/schemas/:schemaName/docs/:id',
           action: ConduitRouteActions.GET,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -251,7 +251,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/query/:schemaName',
+          path: '/schemas/:schemaName/query',
           action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -265,14 +265,14 @@ export class AdminHandlers {
           }
         },
         new ConduitRouteReturnDefinition('GetDocuments', {
-          documents: [TYPE.JSON], // Swagger parser inconsistency
-          documentsCount: TYPE.Number,
+          documents: ConduitJson.Required,
+          count: ConduitNumber.Required,
         }),
         'getDocuments'
       ),
       constructConduitRoute(
         {
-          path: '/content/:schemaName',
+          path: '/schemas/:schemaName/docs',
           action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -286,7 +286,7 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/content/:schemaName/many',
+          path: '/schemas/:schemaName/docs/many',
           action: ConduitRouteActions.POST,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -296,13 +296,29 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('CreateDocuments', {
-          newDocuments: [TYPE.JSON], // Swagger parser inconsistency
+          docs: [ConduitJson.Required],
         }),
         'createDocuments'
       ),
       constructConduitRoute(
         {
-          path: '/schemas/:schemaName/:id',
+          path: '/schemas/:schemaName/docs',
+          action: ConduitRouteActions.UPDATE,
+          urlParams: {
+            schemaName: { type: RouteOptionType.String, required: true },
+          },
+          bodyParams: {
+            changedDocuments: { type: [TYPE.JSON], required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('UpdateDocuments', {
+          docs: [ConduitJson.Required],
+        }),
+        'updateDocuments'
+      ),
+      constructConduitRoute(
+        {
+          path: '/schemas/:schemaName/docs/:id',
           action: ConduitRouteActions.UPDATE,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -312,28 +328,12 @@ export class AdminHandlers {
             changedDocument: ConduitJson.Required,
           },
         },
-        new ConduitRouteReturnDefinition('EditDocument', TYPE.JSON),
-        'editDocument'
+        new ConduitRouteReturnDefinition('UpdateDocument', TYPE.JSON),
+        'UpdateDocument'
       ),
       constructConduitRoute(
         {
-          path: '/schemas/:schemaName/many',
-          action: ConduitRouteActions.UPDATE,
-          urlParams: {
-            schemaName: { type: RouteOptionType.String, required: true },
-          },
-          bodyParams: {
-            changedDocuments: { type: [TYPE.JSON], required: true },
-          },
-        },
-        new ConduitRouteReturnDefinition('EditDocuments', {
-          docs: [TYPE.JSON], // Swagger parser inconsistency
-        }),
-        'editDocuments'
-      ),
-      constructConduitRoute(
-        {
-          path: '/schemas/:schemaName/:id',
+          path: '/schemas/:schemaName/docs/:id',
           action: ConduitRouteActions.DELETE,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
@@ -397,8 +397,8 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           }
         },
-        new ConduitRouteReturnDefinition('EditCustomEndpoint', CustomEndpoints.getInstance().fields),
-        'editCustomEndpoint'
+        new ConduitRouteReturnDefinition('PatchCustomEndpoint', CustomEndpoints.getInstance().fields),
+        'patchCustomEndpoint'
       ),
       constructConduitRoute(
         {
@@ -408,8 +408,8 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('deleteCustomEndpoints', 'String'),
-        'deleteCustomEndpoints'
+        new ConduitRouteReturnDefinition('deleteCustomEndpoint', 'String'),
+        'deleteCustomEndpoint'
       ),
     ];
   }

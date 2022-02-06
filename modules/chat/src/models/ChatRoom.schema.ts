@@ -2,7 +2,7 @@ import {
   ConduitActiveSchema,
   DatabaseProvider,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { User } from './User.model'
 
 const schema = {
@@ -13,7 +13,8 @@ const schema = {
   },
   participants: [{
     type: TYPE.Relation,
-    model: 'User'
+    model: 'User',
+    required: true,
   }],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

@@ -14,8 +14,8 @@
     "docz:build": "docz build",
     "docz:serve": "docz build && docz serve",
     "build:bootstrap": "lerna run build",
-    "build:docker": "docker build -t quintessential.azurecr.io/conduit .",
-    "push:docker": "docker push quintessential.azurecr.io/conduit",
+    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit .",
+    "push:docker": "docker push ghcr.io/conduitplatform/conduit",
     "deploy:docker": "npm run build:docker && npm run push:docker",
     "release": "standard-version"
   },
@@ -43,12 +43,9 @@
   "devDependencies": {
     "copyfiles": "^2.2.0",
     "cz-conventional-changelog": "^3.3.0",
-    "docz": "^2.3.1",
     "lerna": "^3.13.1",
     "pm2": "^4.4.0",
     "prettier": "^2.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
     "standard-version": "^9.3.0",
     "turbo": "^1.0.6"
   },

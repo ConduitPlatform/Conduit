@@ -1,6 +1,6 @@
-import ConduitGrpcSdk, { ConduitSchema } from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 import { _DeclaredSchema } from '../../models';
-import { CmsRoutes } from '../../routes/Routes';
+import { CmsRoutes } from '../../routes/routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 
@@ -30,7 +30,7 @@ export class SchemaController {
   refreshRoutes() {
     _DeclaredSchema
       .getInstance(this.grpcSdk.databaseProvider!)
-      .findMany({ modelOptions: { conduit: { cms: { enabled: true } } } })
+      .findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then((r: any) => {
         if (r) {
           let routeSchemas: any = {};
@@ -76,7 +76,7 @@ export class SchemaController {
   private async loadExistingSchemas() {
     _DeclaredSchema
       .getInstance(this.grpcSdk.databaseProvider!)
-      .findMany({ modelOptions: { conduit: { cms: { enabled: true } } } })
+      .findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then((r: any) => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');

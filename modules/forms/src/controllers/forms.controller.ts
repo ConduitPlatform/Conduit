@@ -4,13 +4,13 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { Forms } from '../models';
-import { FormRoutes } from '../routes/Routes';
+import { FormsRoutes } from '../routes/routes';
 
 export class FormsController {
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: FormRoutes) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private router: FormsRoutes) {
     this.loadExistingForms();
     this.initializeState();
   }
@@ -39,7 +39,7 @@ export class FormsController {
   refreshRoutes() {
     Forms.getInstance()
       .findMany({ enabled: true })
-      .then((r: any) => {
+      .then((r: Forms[]) => {
         this._registerRoutes(r);
         this.router.requestRefresh();
       })
@@ -49,9 +49,9 @@ export class FormsController {
       });
   }
 
-  private _registerRoutes(forms: { [name: string]: any }) {
+  private _registerRoutes(forms: Forms[]) {
     let routesArray: any = [];
-    forms.forEach((r: any) => {
+    forms.forEach((r: Forms) => {
       Object.keys(r.fields).forEach((key) => {
         r.fields[key] = TYPE.String;
       });
@@ -59,11 +59,11 @@ export class FormsController {
         constructRoute(
           new ConduitRoute(
             {
-              path: `/${r.name}`,
+              path: `/${r._id}`,
               action: ConduitRouteActions.POST,
               bodyParams: r.fields,
             },
-            new ConduitRouteReturnDefinition(`submitForm${r.name}`, 'String'),
+            new ConduitRouteReturnDefinition(`SubmitForm${r.name}`, 'String'),
             'submitForm'
           )
         )

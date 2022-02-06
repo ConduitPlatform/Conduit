@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/auth';
 import { isNil } from 'lodash';
@@ -48,7 +48,7 @@ export class ServiceAdmin {
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token);
     let service: Service | null = await Service.getInstance().findByIdAndUpdate(
-      call.request.params.serviceId,
+      call.request.params.id,
       { hashedToken },
       true
     );

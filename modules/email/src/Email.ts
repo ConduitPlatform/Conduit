@@ -10,7 +10,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { EmailProvider } from './email-provider';
@@ -66,7 +66,7 @@ export default class EmailModule extends ConduitServiceModule {
       if (message === 'config-update') {
         this.enableModule()
           .then(() => {
-            console.log('Update email configuration');
+            console.log('Updated email configuration');
           })
           .catch(() => {
             console.log('Failed to update email config');

@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { isNil, isPlainObject } from 'lodash';
@@ -11,7 +11,7 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import { _DeclaredSchema, CustomEndpoints } from '../../models';
 
-const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
+export const OperationsEnum = { // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
   GET: 0, //'FIND/GET'
   POST: 1, //'CREATE'
   PUT: 2, //'UPDATE/EDIT'
@@ -195,7 +195,7 @@ export class CustomEndpointsAdmin {
     return customEndpoint;
   }
 
-  async editCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const params = call.request.params;
     const {
       id,
@@ -314,7 +314,7 @@ export class CustomEndpointsAdmin {
     return customEndpoint;
   }
 
-  async deleteCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async deleteCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.id.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
     }

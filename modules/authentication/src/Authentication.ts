@@ -9,9 +9,9 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 import path from 'path';
-import { AuthenticationRoutes } from './routes/Routes';
+import { AuthenticationRoutes } from './routes/routes';
 import { ConfigController } from './config/Config.controller';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
@@ -55,7 +55,7 @@ export default class AuthenticationModule extends ConduitServiceModule {
             console.log('Updated authentication configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update authentication config');
           });
       }
     });
@@ -66,7 +66,7 @@ export default class AuthenticationModule extends ConduitServiceModule {
             console.log('Updated authentication configuration');
           })
           .catch(() => {
-            console.log('Failed to update email config');
+            console.log('Failed to update authentication config');
           });
       }
     });

@@ -1,5 +1,5 @@
 {
-  "name": "@quintessential-sft/conduit-security",
+  "name": "@conduitplatform/conduit-security",
   "version": "1.0.1",
   "description": "This will be added as a required middleware, configurable on how strict is should be",
   "main": "dist/index.js",
@@ -24,8 +24,8 @@
   },
   "dependencies": {
     "bcrypt": "^5.0.1",
-    "@quintessential-sft/conduit-grpc-sdk": "^1.0.1",
-    "@quintessential-sft/conduit-commons": "^1.0.0",
+    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/conduit-commons": "^1.0.0",
     "helmet": "^4.3.1",
     "@grpc/grpc-js": "^1.3.4",
     "lodash": "^4.17.15",

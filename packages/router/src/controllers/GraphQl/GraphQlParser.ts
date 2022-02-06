@@ -1,5 +1,5 @@
 import { ConduitParser } from '../ConduitParser';
-import { ConduitModel } from '@quintessential-sft/conduit-commons';
+import { ConduitModel } from '@conduitplatform/conduit-commons';
 
 export interface ResolverDefinition {
   [key: string]: {

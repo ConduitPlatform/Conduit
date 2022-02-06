@@ -4,7 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from '@quintessential-sft/conduit-grpc-sdk';
+} from '@conduitplatform/conduit-grpc-sdk';
 
 export function compareFunction(schemaA: any, schemaB: any): number {
   let hasA = [];
@@ -103,7 +103,7 @@ export function getOps(schemaName: string, actualSchema: any) {
         },
         new ConduitRouteReturnDefinition(`get${schemaName}`, {
           documents: [actualSchema.fields],
-          documentsCount: TYPE.Number,
+          count: TYPE.Number,
         }),
         'getDocuments'
       )
@@ -153,9 +153,6 @@ export function getOps(schemaName: string, actualSchema: any) {
         {
           path: `/${schemaName}/many`,
           action: ConduitRouteActions.UPDATE,
-          queryParams: {
-            updateProvidedOnly: TYPE.Boolean,
-          },
           bodyParams: {
             docs: {
               type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
@@ -167,7 +164,7 @@ export function getOps(schemaName: string, actualSchema: any) {
         new ConduitRouteReturnDefinition(`updateMany${schemaName}`, {
           docs: [actualSchema.fields],
         }),
-        'editManyDocuments'
+        'updateManyDocuments'
       )
     )
   );
@@ -208,14 +205,11 @@ export function getOps(schemaName: string, actualSchema: any) {
           urlParams: {
             id: { type: TYPE.String, required: true },
           },
-          queryParams: {
-            updateProvidedOnly: TYPE.Boolean,
-          },
           bodyParams: assignableFields,
           middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
         },
         new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
-        'editDocument'
+        'updateDocument'
       )
     )
   );

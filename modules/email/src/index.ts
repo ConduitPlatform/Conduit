@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@quintessential-sft/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import EmailModule from './Email';
 import process from 'process';
 
@@ -29,6 +29,6 @@ email
   })
 
   .catch((err: Error) => {
-    console.log('Failed to active module');
+    console.log('Failed to activate module');
     console.error(err);
   });
