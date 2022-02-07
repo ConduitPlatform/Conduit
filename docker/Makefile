@@ -265,13 +265,13 @@ start-ui:
 	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL} -e MASTER_KEY=${MASTER_KEY})
 
 start-redis:
-	$(call start,Redis,conduit-redis,redis,latest,redis,-d -p 6379:6379)
+	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,-d -p 6379:6379)
 
 start-mongo:
-	$(call start,MongoDB,conduit-mongo,mongo,latest,mongo,-d -p 27017:27017)
+	$(call start,MongoDB,conduit-mongo,docker.io/library/mongo,latest,mongo,-d -p 27017:27017)
 
 start-postgres:
-	$(call start,PostgreSQL,conduit-postgres,postgres,latest,postgres,-d -p 5432:5432)
+	$(call start,PostgreSQL,conduit-postgres,docker.io/library/postgres,latest,postgres,-d -p 5432:5432)
 
 stop-core:
 	$(call stop,Conduit Core,conduit-core)
