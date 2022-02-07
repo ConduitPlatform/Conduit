@@ -2,9 +2,9 @@ import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
 import fs from 'fs';
-import { SocketProtoDescription } from '../../interfaces';
 import { RouterClient, SocketData } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
+import { createProtoFunctions } from '../../helpers/RoutingUtilities';
 
 let protofile_template = `
 syntax = "proto3";
@@ -40,6 +40,7 @@ message SocketResponse {
   repeated string rooms = 4;
 }
 `;
+
 export class Router extends ConduitModule<RouterClient> {
   constructor(private readonly moduleName: string, url: string) {
     super(moduleName, url);
@@ -59,9 +60,9 @@ export class Router extends ConduitModule<RouterClient> {
   async registerRouter(
     server: GrpcServer,
     paths: any[],
-    functions: { [name: string]: Function }
+    functions: { [name: string]: Function },
   ): Promise<any> {
-    const protoFunctions = this.createProtoFunctions(paths);
+    const protoFunctions = createProtoFunctions(paths);
     let protoFile = protofile_template
       .toString()
       .replace('MODULE_FUNCTIONS', protoFunctions);
@@ -72,7 +73,7 @@ export class Router extends ConduitModule<RouterClient> {
     await server.addService(
       protoPath,
       this.getFormattedModuleName() + '.router.Router',
-      functions
+      functions,
     );
     // fs.unlinkSync(protoPath);
 
@@ -84,10 +85,13 @@ export class Router extends ConduitModule<RouterClient> {
     return this.sleep(3000).then(() => this.register(paths, protoFile));
   }
 
+  /**
+   * @Deprecated
+   */
   async registerRouterAsync(
     server: GrpcServer,
     paths: any[],
-    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> },
   ): Promise<any> {
     let modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach((key) => {
@@ -98,7 +102,7 @@ export class Router extends ConduitModule<RouterClient> {
 
   register(paths: any[], protoFile?: string, url?: string): Promise<any> {
     if (!protoFile) {
-      const protoFunctions = this.createProtoFunctions(paths);
+      const protoFunctions = createProtoFunctions(paths);
 
       protoFile = protofile_template
         .toString()
@@ -131,52 +135,5 @@ export class Router extends ConduitModule<RouterClient> {
         }
       });
     });
-  }
-
-  private createProtoFunctions(paths: any[]) {
-    let protoFunctions = '';
-
-    paths.forEach((r) => {
-      if (r.hasOwnProperty('events')) {
-        protoFunctions += this.createProtoFunctionsForSocket(r, protoFunctions);
-      } else {
-        protoFunctions += this.createProtoFunctionForRoute(r, protoFunctions);
-      }
-    });
-
-    return protoFunctions;
-  }
-
-  private createProtoFunctionsForSocket(
-    path: SocketProtoDescription,
-    protoFunctions: string
-  ) {
-    let newFunctions = '';
-    const events = JSON.parse(path.events);
-    Object.keys(events).forEach((event) => {
-      const newFunction = this.createGrpcFunctionName(events[event].grpcFunction);
-
-      if (protoFunctions.indexOf(newFunction) !== -1) {
-        return;
-      }
-
-      newFunctions += `rpc ${newFunction}(SocketRequest) returns (SocketResponse);\n`;
-    });
-
-    return newFunctions;
-  }
-
-  private createProtoFunctionForRoute(path: any, protoFunctions: string) {
-    const newFunction = this.createGrpcFunctionName(path.grpcFunction);
-
-    if (protoFunctions.indexOf(newFunction) !== -1) {
-      return '';
-    }
-
-    return `rpc ${newFunction}(RouterRequest) returns (RouterResponse);\n`;
-  }
-
-  private createGrpcFunctionName(grpcFunction: string) {
-    return grpcFunction.charAt(0).toUpperCase() + grpcFunction.slice(1);
   }
 }
