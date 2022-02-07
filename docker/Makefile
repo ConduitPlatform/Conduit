@@ -8,7 +8,7 @@
 				start-forms stop-forms rm-forms rmi-forms \
 				start-push-notifications stop-push-notifications rm-push-notifications rmi-push-notifications \
 				start-sms stop-sms rm-sms rmi-sms \
-				rage start-storage stop-storage rm-storage rmi-storage \
+				start-storage stop-storage rm-storage rmi-storage \
 				start-ui stop-ui rm-ui rmi-ui \
 				start-redis stop-redis rm-redis rmi-redis \
 				start-mongo stop-mongo rm-mongo rmi-mongo \
@@ -29,7 +29,7 @@ MASTER_KEY  = "M4ST3RK3Y"
 
 zero-to-hero:
 	@$(MAKE) --no-print-directory setup
-	$(call pre-v0.11-workaround)
+	@$(call pre-v0.11-workaround)
 	@$(MAKE) --no-print-directory start-conduit
 	@printf "\nModules Being Brought Up ⚙️\n"
 	@echo     "--------------------------"
