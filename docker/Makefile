@@ -192,14 +192,13 @@ define rmi
 endef
 
 define pre-v0.11-workaround
-	@if [[ `echo ${TAG} | sed 's/^v\(.*\)/\1/; s/.[^.]*//2g'` -eq 0 ]]; then \
-		if [[ `echo ${TAG} | sed 's/v0.//g; s/.[^.]*//2g'` -lt 11 ]]; then \
+	@if [[ `echo ${TAG} | sed 's/^v\(.*\)/\1/; s/\..*//'` -eq 0 ]]; then \
+		if [[ `echo ${TAG} | sed 's/v0.//g; s/\..*//'` -lt 11 ]]; then \
 			echo 'Running pre-0.11 workaround...'; \
 			$(MAKE) --no-print-directory start-core; \
 			sleep 3; \
 			$(MAKE) --no-print-directory start-database; \
 			sleep 5; \
-			echo "wolololo --------------------------------"; \
 			$(MAKE) --no-print-directory stop-core; \
 			$(MAKE) --no-print-directory stop-database; \
 		fi \
