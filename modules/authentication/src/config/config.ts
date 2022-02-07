@@ -47,6 +47,16 @@ export default {
       default: '',
       nullable: true,
     },
+    clientSecret: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
     accountLinking: {
       doc:
         'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',

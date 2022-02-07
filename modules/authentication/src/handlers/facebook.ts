@@ -9,8 +9,8 @@ import { Payload } from './interfaces/Payload';
 export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
   private initialized: boolean = false;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    super(grpcSdk, 'facebook');
+  constructor(grpcSdk: ConduitGrpcSdk, url: string) {
+    super(grpcSdk, 'facebook', url);
   }
 
   async validate(): Promise<Boolean> {

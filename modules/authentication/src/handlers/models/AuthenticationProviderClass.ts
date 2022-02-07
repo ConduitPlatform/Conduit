@@ -14,23 +14,27 @@ import axios, { AxiosRequestConfig } from 'axios';
 
 export abstract class AuthenticationProviderClass<T extends Payload> {
   private providerName: string;
+  private accessTokenUrl: string;
   grpcSdk: ConduitGrpcSdk;
 
-  constructor(grpcSdk: ConduitGrpcSdk, providerName: string) {
+  constructor(grpcSdk: ConduitGrpcSdk, providerName: string, url: string) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
+    this.accessTokenUrl = url;
   }
 
   abstract async validate(): Promise<Boolean>;
   abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
+
+
   async redirect(call: ParsedRouterRequest) {
     const params = call.request.params;
     const config = ConfigController.getInstance().config;
     let serverConfig = await this.grpcSdk.config.getServerConfig();
     let url = serverConfig.url;
-    const facebookOptions: AxiosRequestConfig = {
+    const providerOptions: AxiosRequestConfig = {
       method: 'GET',
-      url: 'https://graph.facebook.com/v12.0/oauth/access_token?',
+      url: this.accessTokenUrl,
       params: {
         client_id: config[this.providerName].clientId,
         client_secret: config[this.providerName].clientSecret,
@@ -38,14 +42,13 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
         redirect_uri: url + call.request.path,
       },
     };
-    const facebookResponse: any = await axios(facebookOptions);
-    let access_token = facebookResponse.data.access_token;
+    const providerResponse: any = await axios(providerOptions);
+    let access_token = providerResponse.data.access_token;
     let clientId = params.state;
-    return { access_token, clientId }
+    return { access_token, clientId };
   }
 
   beginAuth(grpcSdk:  ConduitGrpcSdk,oidcSettings: OIDCSettings) {
-
     return async function(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
       let options = oidcSettings.getOptions;
       let retUrl = options.url;

@@ -34,8 +34,8 @@ export class AuthenticationRoutes {
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.localHandlers = new LocalHandlers(grpcSdk);
-    this.facebookHandlers = new FacebookHandlers(grpcSdk);
-    this.googleHandlers = new GoogleHandlers(grpcSdk);
+    this.facebookHandlers = new FacebookHandlers(grpcSdk,"https://graph.facebook.com/v12.0/oauth/access_token?");
+    this.googleHandlers = new GoogleHandlers(grpcSdk, '');
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
@@ -62,6 +62,7 @@ export class AuthenticationRoutes {
         beginAuthFacebook: this.facebookHandlers.beginAuth(this.grpcSdk,this.options).bind(this.facebookHandlers),
         authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
 
+        beginAuthGoogle: this.googleHandlers.beginAuth(this.grpcSdk,this.options).bind(this.googleHandlers),
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
 
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
@@ -363,6 +364,18 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+      const config = ConfigController.getInstance().config;
+      let serverConfig = await this.grpcSdk.config.getServerConfig();
+      const options = {
+        url: 'https://accounts.google.com/o/oauth2/v2/auth?',
+        include_granted_scopes: true,
+        client_id: config.google.clientId,
+        redirect_uri: serverConfig.url + '/hook/authentication/google',
+        response_type: 'token',
+        scope: 'https%3A//www.googleapis.com/auth/drive.metadata.readonly',
+        //state: yourstate
+      };
+      this.options = new OIDCSettings(options);
       routesArray.push(
         constructConduitRoute(
           {
@@ -381,6 +394,36 @@ export class AuthenticationRoutes {
             refreshToken: ConduitString.Required,
           }),
           'authenticateGoogle',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/google',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Google using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('FacebookResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateGoogle',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/google',
+            description: `Begins the Google authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
+          'beginAuthGoogle',
         ),
       );
 
