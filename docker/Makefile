@@ -1,15 +1,15 @@
 .PHONY: zero-to-hero setup start-conduit start-all stop-all clean mrproper \
-				pull-core start-core stop-core rm-core rmi-core \
-				pull-authentication start-authentication stop-authentication rm-authentication rmi-authentication \
-				pull-cms start-cms stop-cms rm-cms rmi-cms \
-				pull-chat start-chat stop-chat rm-chat rmi-chat \
-				pull-database start-database stop-database rm-database rmi-database \
-				pull-email start-email stop-email rm-email rmi-email \
-				pull-forms start-forms stop-forms rm-forms rmi-forms \
-				pull-push-notifications start-push-notifications stop-push-notifications rm-push-notifications rmi-push-notifications \
-				pull-sms start-sms stop-sms rm-sms rmi-sms \
-				pull-storage start-storage stop-storage rm-storage rmi-storage \
-				pull-ui start-ui stop-ui rm-ui rmi-ui \
+				start-core stop-core rm-core rmi-core \
+				start-authentication stop-authentication rm-authentication rmi-authentication \
+				start-cms stop-cms rm-cms rmi-cms \
+				start-chat stop-chat rm-chat rmi-chat \
+				start-database stop-database rm-database rmi-database \
+				start-email stop-email rm-email rmi-email \
+				start-forms stop-forms rm-forms rmi-forms \
+				start-push-notifications stop-push-notifications rm-push-notifications rmi-push-notifications \
+				start-sms stop-sms rm-sms rmi-sms \
+				rage start-storage stop-storage rm-storage rmi-storage \
+				start-ui stop-ui rm-ui rmi-ui \
 				start-redis stop-redis rm-redis rmi-redis \
 				start-mongo stop-mongo rm-mongo rmi-mongo \
 				start-postgres stop-postgres rm-postgres rmi-postgres
@@ -44,11 +44,11 @@ setup:
 	@echo     "This may take a while. Better bring up Reddit 😅"
 	@echo     "------------------------------------------------"
 	@${DOCKER} network create ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || true
-	@$(MAKE) --no-print-directory pull-core
-	@$(MAKE) --no-print-directory pull-database
-	@$(MAKE) --no-print-directory pull-authentication
-	@$(MAKE) --no-print-directory pull-cms
-	@$(MAKE) --no-print-directory pull-ui
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit-database:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit-authentication:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit-cms:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit-ui:v0.10.7;
 	@printf "\n\nInstallation was successful ✔️\n\n"
 
 start-conduit:
