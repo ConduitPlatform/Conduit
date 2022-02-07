@@ -20,8 +20,8 @@ import { TwitchHandlers } from '../handlers/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import { OIDCSettings } from "../handlers/interfaces/OIDCSettings";
-import { ConfigController } from "../config/Config.controller";
+import { OIDCSettings } from '../handlers/interfaces/OIDCSettings';
+import { ConfigController } from '../config/Config.controller';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -59,7 +59,9 @@ export class AuthenticationRoutes {
         verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
 
+        beginAuthFacebook: this.facebookHandlers.beginAuth(this.grpcSdk,this.options).bind(this.facebookHandlers),
         authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
+
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
 
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
@@ -294,6 +296,17 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+      const config = ConfigController.getInstance().config;
+      let serverConfig = await this.grpcSdk.config.getServerConfig();
+      const options = {
+        url: 'https://www.facebook.com/v11.0/dialog/oauth?',
+        client_id: config.facebook.clientId,
+        redirect_uri: serverConfig.url + '/hook/authentication/facebook',
+        response_type: 'code',
+        scope: 'email,public_profile',
+        //state: yourstate
+      };
+      this.options = new OIDCSettings(options);
       routesArray.push(
         constructConduitRoute(
           {
@@ -312,7 +325,36 @@ export class AuthenticationRoutes {
           'authenticateFacebook',
         ),
       );
-
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/facebook',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Facebook using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('FacebookResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authenticateFacebook',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/facebook',
+            description: `Begins the Facebook authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
+          'beginAuthFacebook',
+        ),
+      );
       enabled = true;
     }
 

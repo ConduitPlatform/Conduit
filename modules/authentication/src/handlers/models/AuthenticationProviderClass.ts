@@ -1,5 +1,7 @@
 import ConduitGrpcSdk, {
-  GrpcError, ParsedRouterRequest, UnparsedRouterResponse,
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
 import { Payload } from '../interfaces/Payload';
 import { isNil } from 'lodash';
@@ -7,7 +9,8 @@ import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import { ConfigController } from '../../config/Config.controller';
-import { OIDCSettings } from "../interfaces/OIDCSettings";
+import { OIDCSettings } from '../interfaces/OIDCSettings';
+import axios, { AxiosRequestConfig } from 'axios';
 
 export abstract class AuthenticationProviderClass<T extends Payload> {
   private providerName: string;
@@ -20,6 +23,26 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
 
   abstract async validate(): Promise<Boolean>;
   abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
+  async redirect(call: ParsedRouterRequest) {
+    const params = call.request.params;
+    const config = ConfigController.getInstance().config;
+    let serverConfig = await this.grpcSdk.config.getServerConfig();
+    let url = serverConfig.url;
+    const facebookOptions: AxiosRequestConfig = {
+      method: 'GET',
+      url: 'https://graph.facebook.com/v12.0/oauth/access_token?',
+      params: {
+        client_id: config[this.providerName].clientId,
+        client_secret: config[this.providerName].clientSecret,
+        code: params.code,
+        redirect_uri: url + call.request.path,
+      },
+    };
+    const facebookResponse: any = await axios(facebookOptions);
+    let access_token = facebookResponse.data.access_token;
+    let clientId = params.state;
+    return { access_token, clientId }
+  }
 
   beginAuth(grpcSdk:  ConduitGrpcSdk,oidcSettings: OIDCSettings) {
 
@@ -38,9 +61,16 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
     }
   }
 
-  async authenticate(call: ParsedRouterRequest,redirect: boolean): Promise<UnparsedRouterResponse> {
-    let payload = await this.connectWithProvider(call);
+  async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let payload: any;
     const config = ConfigController.getInstance().config;
+    if (call.request.path.startsWith('/hook')) {
+      payload = await this.redirect(call);
+      call.request.params['access_token'] = payload.access_token;
+      call.request.context['clientId'] = payload.clientId;
+    }
+    payload = await this.connectWithProvider(call);
+
     let user: User | null | any = null;
     if (payload.hasOwnProperty('email')) {
       user = await User.getInstance().findOne({
@@ -88,7 +118,7 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };
-    if(redirect) {
+    if (call.request.path.startsWith('/hook')) {
       retObject['redirect'] = config[this.providerName].redirect_uri +
           '?accessToken=' +
           (accessToken as any).token +

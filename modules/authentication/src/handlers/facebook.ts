@@ -1,14 +1,10 @@
 import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, {
-  ConduitError,
-  GrpcError,
-  ParsedRouterRequest,
-} from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../config/Config.controller';
 import axios, { AxiosRequestConfig } from 'axios';
 import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import {Payload} from "./interfaces/Payload";
+import { Payload } from './interfaces/Payload';
 
 export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
   private initialized: boolean = false;
@@ -36,9 +32,9 @@ export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
   async connectWithProvider(call: ParsedRouterRequest) {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const { access_token } = call.request.params;
+    let { access_token } = call.request.params;
     const context = call.request.context;
-    if (isNil(context) || isEmpty(context))
+    if (( isNil(context) || isEmpty(context)) && !call.request.path.startsWith('/hook'))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
@@ -49,7 +45,7 @@ export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
       },
     };
 
-    const facebookResponse = await axios(facebookOptions);
+    const facebookResponse:any = await axios(facebookOptions);
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
