@@ -31,25 +31,25 @@ zero-to-hero:
 	@$(MAKE) --no-print-directory setup
 	$(call pre-v0.11-workaround)
 	@$(MAKE) --no-print-directory start-conduit
-	@echo -e "\nModules Being Brought Up ⚙️"
-	@echo      "---------------------------"
+	@printf "\nModules Being Brought Up ⚙️\n"
+	@echo     "--------------------------"
 	@echo "- database"
 	@echo "- authentication"
 	@echo "- cms"
-	@echo -e "\n\nLog into your admin panel in http://localhost:8080"
+	@printf "\n\nLog into your admin panel in http://localhost:8080\n"
 	@echo "Credentials: admin:admin"
 
 setup:
-	@echo -e "\nInitializing Conduit Container Environment 🔨"
-	@echo -e "This may take a while. Better bring up Reddit 😅"
-	@echo -e "------------------------------------------------"
+	@printf "\nInitializing Conduit Container Environment 🔨\n"
+	@echo     "This may take a while. Better bring up Reddit 😅"
+	@echo     "------------------------------------------------"
 	@${DOCKER} network create ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || true
 	@$(MAKE) --no-print-directory pull-core
 	@$(MAKE) --no-print-directory pull-database
 	@$(MAKE) --no-print-directory pull-authentication
 	@$(MAKE) --no-print-directory pull-cms
 	@$(MAKE) --no-print-directory pull-ui
-	@echo -e "\n\nInstallation was successful ✔️\n"
+	@printf "\n\nInstallation was successful ✔️\n\n"
 
 start-conduit:
 	@$(MAKE) --no-print-directory start-core
@@ -100,8 +100,8 @@ stop-all:
 	-@$(MAKE) --no-print-directory stop-postgres
 
 clean:
-	@echo -e "\n\nRemoving Containers 📦"
-	@echo        "----------------------"
+	@printf "\n\nRemoving Containers 📦\n"
+	@echo       "----------------------"
 	@$(MAKE) --no-print-directory stop-all
 	@$(MAKE) --no-print-directory rm-redis
 	@$(MAKE) --no-print-directory rm-mongo
@@ -120,8 +120,8 @@ clean:
 
 mrproper:
 	@$(MAKE) --no-print-directory clean
-	@echo -e "\n\nRemoving Container Images 💽"
-	@echo         "----------------------------"
+	@printf "\n\nRemoving Container Images 💽\n"
+	@echo       "----------------------------"
 	@$(MAKE) --no-print-directory rmi-redis
 	@$(MAKE) --no-print-directory rmi-mongo
 	@$(MAKE) --no-print-directory rmi-postgres
@@ -136,8 +136,8 @@ mrproper:
 	@$(MAKE) --no-print-directory rmi-push-notifications
 	@$(MAKE) --no-print-directory rmi-sms
 	@$(MAKE) --no-print-directory rmi-storage
-	@echo -e "\n\nRemoving Container Network 📡"
-	@echo        "-----------------------------"
+	@printf "\n\nRemoving Container Network 📡\n"
+	@echo       "-----------------------------"
 	@if ${DOCKER} network ls | grep ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; then \
 		${DOCKER} network rm ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1; \
 		echo "Removed \"${CONTAINER_NETWORK_NAME}\" network."; \
@@ -150,12 +150,12 @@ mrproper:
 # Params: module name, container-name, image-name, tag, network-alias, docker args (optional)
 define start
 	@if ${DOCKER} container ls | grep ${2} > /dev/null 2>&1; then \
-		echo -e "\n${1} container already running"; \
+		printf "\n${1} container already running\n"; \
 	elif ${DOCKER} container ls -a | grep ${2} > /dev/null 2>&1; then \
-		echo -e "\nStarting ${1} container"; \
+		printf "\nStarting ${1} container\n"; \
 		${DOCKER} start ${2}; \
 	else \
-		echo -e "\nStarting ${1} container"; \
+		printf "\nStarting ${1} container\n"; \
 		echo ${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
 		${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
 	fi
@@ -164,30 +164,30 @@ endef
 # Params: module name, container-name
 define stop
 	@if ${DOCKER} container ls | grep ${2} > /dev/null 2>&1; then \
-		echo -e "\nStopping ${1} container"; \
+		printf "\nStopping ${1} container\n"; \
 		${DOCKER} stop ${2}; \
 	else \
-		echo -e "\n${1} container not running"; \
+		printf "\n${1} container not running\n"; \
 	fi
 endef
 
 # Params: module name, container-name
 define rm
 	@if ${DOCKER} container ls -a | grep ${2} > /dev/null 2>&1; then \
-		echo -e "\nRemoving ${1} container"; \
+		printf "\nRemoving ${1} container\n"; \
 		${DOCKER} container rm ${2}; \
 	else \
-		echo -e "\n${1} does not have an available container"; \
+		printf "\n${1} does not have an available container\n"; \
 	fi
 endef
 
 # Params: module name, image-name, tag
 define rmi
 	@if [[ `${DOCKER} images -q ${2}:${3}` ]]; then \
-		echo -e "\nRemoving ${1} image"; \
+		printf "\nRemoving ${1} image\n"; \
 		${DOCKER} image rm ${2}:${3}; \
 	else \
-		echo -e "\n${1} does not have an available image"; \
+		printf "\n${1} does not have an available image\n"; \
 	fi
 endef
 
@@ -231,7 +231,7 @@ start-database:
 	elif [ ${DB_TYPE} == "sql" ]; then \
 		make start-postgres; \
 	else \
-		echo -e "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'sql' (default: mongodb)"; \
+		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'sql' (default: mongodb)\n"; \
 		exit 1; \
 	fi
 	$(call start,Database,conduit-database,ghcr.io/conduitplatform/conduit-database,${TAG},database --network-alias database-provider, \
