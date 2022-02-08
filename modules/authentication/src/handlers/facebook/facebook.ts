@@ -1,16 +1,16 @@
 import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { ConfigController } from '../config/Config.controller';
+import { ConfigController } from '../../config/Config.controller';
 import axios, { AxiosRequestConfig } from 'axios';
-import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import { Payload } from './interfaces/Payload';
+import { OAuth2 } from '../models/OAuth2';
+import { Payload } from '../interfaces/Payload';
 
-export class FacebookHandlers extends AuthenticationProviderClass<Payload> {
+export class FacebookHandlers extends OAuth2<Payload> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, url: string) {
-    super(grpcSdk, 'facebook', url);
+    super(grpcSdk, 'facebook');
   }
 
   async validate(): Promise<Boolean> {

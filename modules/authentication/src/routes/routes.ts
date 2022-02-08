@@ -12,16 +12,18 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
-import { FacebookHandlers } from '../handlers/facebook';
-import { GoogleHandlers } from '../handlers/google';
+import { FacebookHandlers } from '../handlers/facebook/facebook';
+import { GoogleHandlers } from '../handlers/google/google';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
-import { TwitchHandlers } from '../handlers/twitch';
+import { TwitchHandlers } from '../handlers/twitch/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import { OIDCSettings } from '../handlers/interfaces/OIDCSettings';
 import { ConfigController } from '../config/Config.controller';
+import { GoogleOAuth2 } from '../handlers/google/GoogleOAuth2';
+import { FacebookOAuth2Settings } from '../handlers/facebook/FacebookOAuth2Settings';
+import { TwitchOAuth2Settings } from '../handlers/twitch/TwitchOAuth2Settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -30,12 +32,12 @@ export class AuthenticationRoutes {
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly twitchHandlers: TwitchHandlers;
-  private options: OIDCSettings;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.facebookHandlers = new FacebookHandlers(grpcSdk,"https://graph.facebook.com/v12.0/oauth/access_token?");
-    this.googleHandlers = new GoogleHandlers(grpcSdk, '');
+    this.googleHandlers = new GoogleHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
@@ -59,15 +61,15 @@ export class AuthenticationRoutes {
         verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
 
-        beginAuthFacebook: this.facebookHandlers.beginAuth(this.grpcSdk,this.options).bind(this.facebookHandlers),
+        beginAuthFacebook: this.facebookHandlers.beginAuth(this.grpcSdk,this.facebookHandlers.OAuth2Settings).bind(this.facebookHandlers),
         authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
 
-        beginAuthGoogle: this.googleHandlers.beginAuth(this.grpcSdk,this.options).bind(this.googleHandlers),
+        beginAuthGoogle: this.googleHandlers.beginAuth(this.grpcSdk,{} as any).bind(this.googleHandlers),
         authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
 
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
         authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-        beginAuthTwitch: this.twitchHandlers.beginAuth(this.grpcSdk,this.options).bind(this.twitchHandlers),
+        beginAuthTwitch: this.twitchHandlers.beginAuth(this.grpcSdk,this.twitchHandlers.OAuth2Settings).bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
         getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
@@ -299,15 +301,20 @@ export class AuthenticationRoutes {
     if (!errorMessage && authActive) {
       const config = ConfigController.getInstance().config;
       let serverConfig = await this.grpcSdk.config.getServerConfig();
-      const options = {
-        url: 'https://www.facebook.com/v11.0/dialog/oauth?',
-        client_id: config.facebook.clientId,
-        redirect_uri: serverConfig.url + '/hook/authentication/facebook',
+      const options: FacebookOAuth2Settings = {
+        providerName: 'facebook',
+        authorizeUrl: 'https://www.facebook.com/v11.0/dialog/oauth?',
+        appId: config.facebook.clientId,
+        callbackUrl: serverConfig.url + '/hook/authentication/facebook',
         response_type: 'code',
         scope: 'email,public_profile',
-        //state: yourstate
+        tokenUrl: "https://graph.facebook.com/v12.0/oauth/access_token?",
+        appSecret: config.facebook.clientSecret,
+        state: 'yourstate',
+        accessTokenMethod: 'GET'
       };
-      this.options = new OIDCSettings(options);
+
+      this.facebookHandlers.setOAuth2(options);
       routesArray.push(
         constructConduitRoute(
           {
@@ -366,16 +373,23 @@ export class AuthenticationRoutes {
     if (!errorMessage && authActive) {
       const config = ConfigController.getInstance().config;
       let serverConfig = await this.grpcSdk.config.getServerConfig();
-      const options = {
-        url: 'https://accounts.google.com/o/oauth2/v2/auth?',
+      const options: GoogleOAuth2 = {
+        providerName:'google',
+        authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?',
         include_granted_scopes: true,
-        client_id: config.google.clientId,
-        redirect_uri: serverConfig.url + '/hook/authentication/google',
+        appId: config.google.clientId,
+        callbackUrl: serverConfig.url + '/hook/authentication/google',
         response_type: 'token',
         scope: 'https%3A//www.googleapis.com/auth/drive.metadata.readonly',
+        appSecret: config.google.clientSecret,
+        tokenUrl: '',
         //state: yourstate
+
+        accessTokenMethod: ''
       };
-      this.options = new OIDCSettings(options);
+
+      this.googleHandlers.setOAuth2(options);
+
       routesArray.push(
         constructConduitRoute(
           {
@@ -464,15 +478,20 @@ export class AuthenticationRoutes {
     if (!errorMessage && authActive) {
         const config = ConfigController.getInstance().config;
         let serverConfig = await this.grpcSdk.config.getServerConfig();
-        const options = {
-          url: 'https://id.twitch.tv/oauth2/authorize?',
-          client_id: config.twitch.clientId,
-          redirect_uri: serverConfig.url + '/hook/authentication/twitch',
+        const options: TwitchOAuth2Settings = {
+          providerName: 'twitch',
+          authorizeUrl: 'https://id.twitch.tv/oauth2/authorize?',
+          appId: config.twitch.clientId,
+          callbackUrl: serverConfig.url + '/hook/authentication/twitch',
           response_type: 'code',
           scope: 'user:read:email',
-          //state: yourstate
+          grant_type: 'authentication_code',
+          appSecret: config.twitch.clientSecret,
+          tokenUrl: 'https://id.twitch.tv/oauth2/token',
+          state: 'yourstate',
+          accessTokenMethod : 'POST'
       };
-      this.options = new OIDCSettings(options);
+      this.twitchHandlers.setOAuth2(options);
       routesArray.push(
         constructConduitRoute(
           {

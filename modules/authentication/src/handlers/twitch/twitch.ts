@@ -1,14 +1,14 @@
 import ConduitGrpcSdk, { ConduitError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
 import axios from 'axios';
-import { ConfigController } from '../config/Config.controller';
-import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import { Payload } from './interfaces/Payload';
+import { ConfigController } from '../../config/Config.controller';
+import { OAuth2 } from '../models/OAuth2';
+import { Payload } from '../interfaces/Payload';
 
-export class TwitchHandlers extends AuthenticationProviderClass<any> {
+export class TwitchHandlers extends OAuth2<any> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk) {
-    super(grpcSdk, 'twitch', '');
+    super(grpcSdk, 'twitch');
   }
 
   async validate(): Promise<Boolean> {

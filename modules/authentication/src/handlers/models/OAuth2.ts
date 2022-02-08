@@ -9,38 +9,48 @@ import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import { ConfigController } from '../../config/Config.controller';
-import { OIDCSettings } from '../interfaces/OIDCSettings';
 import axios, { AxiosRequestConfig } from 'axios';
+import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 
-export abstract class AuthenticationProviderClass<T extends Payload> {
+export abstract class OAuth2<T extends Payload> {
   private providerName: string;
-  private accessTokenUrl: string;
+  private settings: OAuth2Settings;
+
   grpcSdk: ConduitGrpcSdk;
 
-  constructor(grpcSdk: ConduitGrpcSdk, providerName: string, url: string) {
+  constructor(grpcSdk: ConduitGrpcSdk, providerName: string) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
-    this.accessTokenUrl = url;
+  }
+
+  get OAuth2Settings() {
+    return this.settings;
+  }
+
+  setOAuth2(settings:OAuth2Settings) {
+    this.settings = settings;
   }
 
   abstract async validate(): Promise<Boolean>;
   abstract async connectWithProvider(call: ParsedRouterRequest): Promise<any>;
 
 
-  async redirect(call: ParsedRouterRequest) {
+  async createTokens(call: ParsedRouterRequest) {
     const params = call.request.params;
-    const config = ConfigController.getInstance().config;
-    let serverConfig = await this.grpcSdk.config.getServerConfig();
-    let url = serverConfig.url;
-    const providerOptions: AxiosRequestConfig = {
-      method: 'GET',
-      url: this.accessTokenUrl,
-      params: {
-        client_id: config[this.providerName].clientId,
-        client_secret: config[this.providerName].clientSecret,
+    const myparams: any =  {
+        client_id: this.settings.appId,
+        client_secret: this.settings.appSecret,
         code: params.code,
-        redirect_uri: url + call.request.path,
-      },
+        redirect_uri: this.settings.callbackUrl,
+    };
+
+    if ((this.settings).hasOwnProperty('grant_type')) {
+      myparams['grant_type'] = this.settings.grant_type;
+    }
+    const providerOptions: AxiosRequestConfig = {
+      method: this.settings.accessTokenMethod as any,
+      url: this.settings.tokenUrl,
+      params: {myparams},
     };
     const providerResponse: any = await axios(providerOptions);
     let access_token = providerResponse.data.access_token;
@@ -48,10 +58,17 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
     return { access_token, clientId };
   }
 
-  beginAuth(grpcSdk:  ConduitGrpcSdk,oidcSettings: OIDCSettings) {
+  beginAuth(grpcSdk:  ConduitGrpcSdk,settings: OAuth2Settings) {
     return async function(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-      let options = oidcSettings.getOptions;
-      let retUrl = options.url;
+      let options: any = {
+        client_id: settings.appId,
+        redirect_uri: settings.callbackUrl,
+        state: settings.state,
+        response_type: settings.response_type,
+        scope: settings.scope,
+      }
+
+      let retUrl = settings.authorizeUrl;
       let length = Object.keys(options).length;
      //if (options.hasOwnProperty('state')) options['state'] = call.request.context.clientId;
       Object.keys(options).forEach((k,i) => {
@@ -66,12 +83,15 @@ export abstract class AuthenticationProviderClass<T extends Payload> {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let payload: any;
+    let credentials: any;
     const config = ConfigController.getInstance().config;
     if (call.request.path.startsWith('/hook')) {
-      payload = await this.redirect(call);
-      call.request.params['access_token'] = payload.access_token;
-      call.request.context['clientId'] = payload.clientId;
+
+      credentials  = await this.createTokens(call);
+      call.request.params['access_token'] = credentials.access_token;
+      call.request.context['clientId'] = credentials.clientId;
     }
+
     payload = await this.connectWithProvider(call);
 
     let user: User | null | any = null;

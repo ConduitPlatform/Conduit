@@ -1,17 +1,17 @@
 import { OAuth2Client } from 'google-auth-library';
 import { isEmpty, isNil } from 'lodash';
 import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
-import { ConfigController } from '../config/Config.controller';
-import { AuthenticationProviderClass } from './models/AuthenticationProviderClass';
-import { Payload } from './interfaces/Payload';
+import { ConfigController } from '../../config/Config.controller';
+import { OAuth2 } from '../models/OAuth2';
+import { Payload } from '../interfaces/Payload';
 import { status } from '@grpc/grpc-js';
 
-export class GoogleHandlers extends AuthenticationProviderClass<Payload> {
+export class GoogleHandlers extends OAuth2<Payload> {
   private readonly client: OAuth2Client;
   private initialized: boolean = false;
 
-  constructor(grpcSdk: ConduitGrpcSdk, url: string) {
-    super(grpcSdk,'google', url);
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super(grpcSdk,'google');
     this.client = new OAuth2Client();
   }
 
