@@ -1,6 +1,5 @@
 import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
-import { _DeclaredSchema } from '../models';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -28,7 +27,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   async checkModelOwnership(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return true;
-    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
+
+    const model = await this.models!['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
     if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
       return true;
     } else if (model) {
@@ -40,31 +40,31 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
-    const model = await _DeclaredSchema.getInstance().findOne({ name: schema.name });
+    const model = await this.models!['_DeclaredSchema'].findMany('{}');
     if (model) {
-      await _DeclaredSchema.getInstance()
+      await this.models!['_DeclaredSchema']
         .findByIdAndUpdate(
           model._id,
-          {
+          JSON.stringify({
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
-          }
+          }),
         );
     } else {
-      await _DeclaredSchema.getInstance()
-        .create({
+      await this.models!['_DeclaredSchema'].model
+        .create( JSON.stringify({
           name: schema.name,
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
-        });
+        }));
     }
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models: any = await _DeclaredSchema.getInstance().findMany({});
+    let models: any = await this.models!['_DeclaredSchema'].findMany('{}');
     models = models
       .map((model: any) => {
         let schema = new ConduitSchema(
