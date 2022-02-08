@@ -40,7 +40,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
-    const model = await this.models!['_DeclaredSchema'].findMany('{}');
+    const model = await this.models!['_DeclaredSchema'].findOne(JSON.stringify({name:schema.name}));
     if (model) {
       await this.models!['_DeclaredSchema']
         .findByIdAndUpdate(
@@ -53,7 +53,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           }),
         );
     } else {
-      await this.models!['_DeclaredSchema'].model
+      await this.models!['_DeclaredSchema']
         .create( JSON.stringify({
           name: schema.name,
           fields: schema.fields,
