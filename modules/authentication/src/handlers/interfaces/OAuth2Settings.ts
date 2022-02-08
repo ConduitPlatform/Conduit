@@ -5,9 +5,9 @@ export interface OAuth2Settings {
   callbackUrl: string;
   scope?: string;
   response_type?: string;
-  appId: string;
-  appSecret: string;
+  clientId: string;
+  clientSecret: string;
   state?: string;
-  grant_type?:string;
+  // grant_type?:string;
   accessTokenMethod: string;
 }
