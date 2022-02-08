@@ -41,8 +41,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@commitlint/cli": "^16.1.0",
+    "@commitlint/config-conventional": "^16.0.0",
+    "@commitlint/config-lerna-scopes": "^16.0.0",
     "copyfiles": "^2.2.0",
     "cz-conventional-changelog": "^3.3.0",
+    "husky": "^7.0.4",
     "lerna": "^3.13.1",
     "pm2": "^4.4.0",
     "prettier": "^2.2.1",
