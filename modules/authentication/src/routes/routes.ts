@@ -21,25 +21,19 @@ import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
 import { ConfigController } from '../config/Config.controller';
-import { GoogleOAuth2 } from '../handlers/google/GoogleOAuth2';
-import { FacebookOAuth2Settings } from '../handlers/facebook/FacebookOAuth2Settings';
-import { TwitchOAuth2Settings } from '../handlers/twitch/TwitchOAuth2Settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
-  private readonly facebookHandlers: FacebookHandlers;
-  private readonly googleHandlers: GoogleHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
-  private readonly twitchHandlers: TwitchHandlers;
+  private facebookHandlers: FacebookHandlers;
+  private googleHandlers: GoogleHandlers;
+  private twitchHandlers: TwitchHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
     this.localHandlers = new LocalHandlers(grpcSdk);
-    this.facebookHandlers = new FacebookHandlers(grpcSdk,"https://graph.facebook.com/v12.0/oauth/access_token?");
-    this.googleHandlers = new GoogleHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
-    this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
   }
 
@@ -60,21 +54,25 @@ export class AuthenticationRoutes {
         enableTwoFa: this.localHandlers.enableTwoFa.bind(this.localHandlers),
         verifyPhoneNumber: this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         disableTwoFa: this.localHandlers.disableTwoFa.bind(this.localHandlers),
-
-        beginAuthFacebook: this.facebookHandlers.beginAuth(this.grpcSdk,this.facebookHandlers.OAuth2Settings).bind(this.facebookHandlers),
-        authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
-
-        beginAuthGoogle: this.googleHandlers.beginAuth(this.grpcSdk,{} as any).bind(this.googleHandlers),
-        authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
-
         authenticateService: this.serviceHandler.authenticate.bind(this.serviceHandler),
-        authenticateTwitch: this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-        beginAuthTwitch: this.twitchHandlers.beginAuth(this.grpcSdk,this.twitchHandlers.OAuth2Settings).bind(this.twitchHandlers),
         renewAuth: this.commonHandlers.renewAuth.bind(this.commonHandlers),
         logOut: this.commonHandlers.logOut.bind(this.commonHandlers),
         getUser: this.commonHandlers.getUser.bind(this.commonHandlers),
         deleteUser: this.commonHandlers.deleteUser.bind(this.commonHandlers),
         authMiddleware: this.middleware.bind(this),
+
+        beginAuthFacebook: this.facebookHandlers.redirect.bind(this.facebookHandlers),
+        authorizeFacebook: this.facebookHandlers.authorize.bind(this.facebookHandlers),
+        authenticateFacebook: this.facebookHandlers.authenticate.bind(this.facebookHandlers),
+
+        beginAuthGoogle: this.googleHandlers.redirect.bind(this.googleHandlers),
+        authorizeGoogle: this.googleHandlers.authorize.bind(this.googleHandlers),
+        authenticateGoogle: this.googleHandlers.authenticate.bind(this.googleHandlers),
+
+
+        authenticateTwitch: this.twitchHandlers.authorize.bind(this.twitchHandlers),
+        beginAuthTwitch: this.twitchHandlers.redirect.bind(this.twitchHandlers),
+
       })
       .catch((err: Error) => {
         console.log('Failed to register routes for module');

@@ -3,11 +3,13 @@ export interface OAuth2Settings {
   authorizeUrl: string;
   tokenUrl: string;
   callbackUrl: string;
-  scope?: string;
-  response_type?: string;
+  finalRedirect: string;
+  accountLinking: boolean;
   clientId: string;
   clientSecret: string;
-  state?: string;
-  // grant_type?:string;
   accessTokenMethod: string;
+  grant_type?:string;
+  state?: string;
+  scope?: string;
+  response_type?: string;
 }

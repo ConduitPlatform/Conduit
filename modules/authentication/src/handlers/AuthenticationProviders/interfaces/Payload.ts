@@ -1,6 +1,5 @@
 export interface Payload {
   id: string;
   email?:string;
-  clientId: string;
-  [field: string]:any;
+  data: { [field: string]: any };
 }

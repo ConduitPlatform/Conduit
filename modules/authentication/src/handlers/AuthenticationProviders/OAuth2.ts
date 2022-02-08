@@ -3,27 +3,22 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/conduit-grpc-sdk';
-import { Payload } from '../interfaces/Payload';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { Payload } from './interfaces/Payload';
+import { OAuth2Settings } from './interfaces/OAuth2Settings';
 
-export abstract class OAuth2<T extends Payload> {
+export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
-  private settings: OAuth2Settings;
-  private config: any;
+  private settings: S;
 
-  constructor(grpcSdk: ConduitGrpcSdk, providerName: string) {
+  constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
-  }
-
-  setConfigs(authConfig: any, settings: OAuth2Settings) {
-    this.config = authConfig;
     this.settings = settings;
   }
 
@@ -31,14 +26,13 @@ export abstract class OAuth2<T extends Payload> {
     let options: any = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
-      state: this.settings.state,
       response_type: this.settings.response_type,
-      scope: this.settings.scope,
+      scope: call.request.params?.scopes,
     };
 
     let retUrl = this.settings.authorizeUrl;
     let length = Object.keys(options).length;
-    //if (options.hasOwnProperty('state')) options['state'] = call.request.context.clientId;
+    options['state'] = JSON.stringify({ clientId: call.request.context.clientId, scope: options.scope });
     Object.keys(options).forEach((k, i) => {
       if (k !== 'url') {
         retUrl += k + '=' + options[k];
@@ -67,13 +61,14 @@ export abstract class OAuth2<T extends Payload> {
     };
     const providerResponse: any = await axios(providerOptions);
     let access_token = providerResponse.data.access_token;
-    let clientId = params.state;
+    let state = JSON.parse(params.state);
+    let clientId = state.clientId;
 
-    let payload = this.connectWithProvider({ accessToken: access_token, clientId });
+    let payload = this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
     let user = await this.createOrUpdateUser(payload);
     let tokens = await this.createTokens(user._id, clientId, {});
     return {
-      redirect: this.config[this.providerName].redirect_uri +
+      redirect: this.settings.finalRedirect +
         '?accessToken=' +
         (tokens.accessToken as any).token +
         '&refreshToken=' +
@@ -86,6 +81,7 @@ export abstract class OAuth2<T extends Payload> {
     let payload = this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: call.request.params['clientId'],
+      scope: call.request.params?.scope,
     });
     let user = await this.createOrUpdateUser(payload);
     let tokens = await this.createTokens(user._id, call.request.params['clientId'], {});
@@ -109,7 +105,7 @@ export abstract class OAuth2<T extends Payload> {
     }
     if (!isNil(user)) {
       if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!this.config[this.providerName].accountLinking) {
+      if (!this.settings.accountLinking) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User with this email already exists',
@@ -151,44 +147,6 @@ export abstract class OAuth2<T extends Payload> {
 
   abstract async validate(): Promise<Boolean>;
 
-  abstract async connectWithProvider(details: { accessToken: string, clientId: string }): Promise<any>;
+  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 
-  //
-  // async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-  //   let payload: any;
-  //   let credentials: any;
-  //   const config = ConfigController.getInstance().config;
-  //   if (call.request.path.startsWith('/hook')) {
-  //
-  //     credentials = await this.createTokens(call);
-  //     call.request.params['access_token'] = credentials.access_token;
-  //     call.request.context['clientId'] = credentials.clientId;
-  //   }
-  //
-  //   payload = await this.connectWithProvider(call);
-  //
-  //
-  //   const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-  //     this.grpcSdk,
-  //     {
-  //       userId: user!._id,
-  //       clientId: payload.clientId,
-  //       config: config,
-  //     },
-  //   );
-  //
-  //   let retObject: any = {
-  //     userId: user!._id.toString(),
-  //     accessToken: (accessToken as any).token,
-  //     refreshToken: (refreshToken as any).token,
-  //   };
-  //   if (call.request.path.startsWith('/hook')) {
-  //     retObject['redirect'] = config[this.providerName].redirect_uri +
-  //       '?accessToken=' +
-  //       (accessToken as any).token +
-  //       '&refreshToken=' +
-  //       (refreshToken as any).token;
-  //   }
-  //   return retObject;
-  // }
 }

@@ -3,14 +3,16 @@ import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@c
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../../config/Config.controller';
 import axios, { AxiosRequestConfig } from 'axios';
-import { OAuth2 } from '../models/OAuth2';
-import { Payload } from '../interfaces/Payload';
+import { Payload } from '../AuthenticationProviders/interfaces/Payload';
+import { OAuth2 } from '../AuthenticationProviders/OAuth2';
+import { FacebookSettings } from './facebook.settings';
+import { FacebookUser } from './facebook.user';
 
-export class FacebookHandlers extends OAuth2<Payload> {
+export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
   private initialized: boolean = false;
 
-  constructor(grpcSdk: ConduitGrpcSdk, url: string) {
-    super(grpcSdk, 'facebook');
+  constructor(grpcSdk: ConduitGrpcSdk, settings: FacebookSettings) {
+    super(grpcSdk, 'facebook', settings);
   }
 
   async validate(): Promise<Boolean> {
@@ -29,19 +31,14 @@ export class FacebookHandlers extends OAuth2<Payload> {
     return true;
   }
 
-  async connectWithProvider(call: ParsedRouterRequest) {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    let { access_token } = call.request.params;
-    const context = call.request.context;
-    if (( isNil(context) || isEmpty(context)) && !call.request.path.startsWith('/hook'))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser>{
     const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',
       params: {
-        access_token: access_token,
-        fields: 'id,email',
+        access_token: details.accessToken,
+        fields: details.scope,
       },
     };
 
@@ -49,12 +46,16 @@ export class FacebookHandlers extends OAuth2<Payload> {
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
-    let payload: Payload = {
+
+
+    let payload: FacebookUser = {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
-      access_token: access_token,
-      clientId: context.clientId,
+      data: {}
     };
+    delete facebookResponse.data.id;
+    delete facebookResponse.data.email;
+    payload.data = facebookResponse.data;
     return payload;
   }
 }
