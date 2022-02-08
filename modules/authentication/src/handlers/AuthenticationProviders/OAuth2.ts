@@ -22,6 +22,10 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     this.settings = settings;
   }
 
+  get OAuthSettings() {
+    return this.settings;
+  }
+
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let options: any = {
       client_id: this.settings.clientId,

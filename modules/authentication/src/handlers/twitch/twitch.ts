@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/conduit-grpc-sdk';
 import axios from 'axios';
 import { ConfigController } from '../../config/Config.controller';
 import { TwitchUser } from './twitch.user';
@@ -33,37 +33,29 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
     return true;
   }
 
-  async connectWithProvider(call:ParsedRouterRequest ): Promise<any> {
-    const params = call.request.params;
-    const code = params.code;
-
-    const config = ConfigController.getInstance().config;
-
-    let serverConfig = await this.grpcSdk.config.getServerConfig();
-    let url = serverConfig.url;
-
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<TwitchUser> {
     let twitch_access_token = undefined;
     let expires_in = undefined;
     let id = undefined;
     let email = undefined;
     let profile_image_url = undefined;
 
-    const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
-      params: {
-        client_id: config.twitch.clientId,
-        client_secret: config.twitch.clientSecret,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: url + '/hook/authentication/twitch',
-      },
-    });
-    twitch_access_token = response.data.access_token;
-    expires_in = response.data.expires_in;
+    // const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
+    //   params: {
+    //     client_id: this.OAuthSettings.clientId,
+    //     client_secret: this.OAuthSettings.clientSecret,
+    //     code,
+    //     grant_type: 'authorization_code',
+    //     redirect_uri: url + '/hook/authentication/twitch',
+    //   },
+    // });
+    // twitch_access_token = response.data.access_token;
+    // expires_in = response.data.expires_in;
 
     const response2 = await axios.get('https://api.twitch.tv/helix/users', {
       headers: {
         Authorization: `Bearer ${twitch_access_token}`,
-        'Client-Id': config.twitch.clientId,
+        'Client-Id': this.OAuthSettings.clientId,
       },
     });
 
@@ -71,10 +63,10 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
     email = response2.data.data[0].email;
     //profile_image_url = response2.data.data[0].profile_image_url;
 
-    const payload: Payload = {
+    const payload: TwitchUser = {
       id: id,
       email: email,
-      clientId: params.state,
+      data: {},
     };
 
     return payload;

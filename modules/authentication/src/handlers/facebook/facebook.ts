@@ -1,5 +1,5 @@
-import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
+import { isNil } from 'lodash';
+import ConduitGrpcSdk, { ConduitError, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConfigController } from '../../config/Config.controller';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -33,6 +33,8 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
 
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser>{
+    if (!this.initialized)
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const facebookOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://graph.facebook.com/v5.0/me',

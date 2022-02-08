@@ -1,10 +1,9 @@
 import { OAuth2Client } from 'google-auth-library';
-import { isEmpty, isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitError, GrpcError, ParsedRouterRequest } from '@conduitplatform/conduit-grpc-sdk';
+import { isNil } from 'lodash';
+import ConduitGrpcSdk, { ConduitError, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { ConfigController } from '../../config/Config.controller';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
-import { Payload } from '../AuthenticationProviders/interfaces/Payload';
 import { GoogleSettings } from './google.settings';
 import { GoogleUser } from './google.user';
 
@@ -32,19 +31,14 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
     return true;
   }
 
-  async connectWithProvider(call: ParsedRouterRequest): Promise<any> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const { id_token, access_token, expires_in } = call.request.params;
 
     const config = ConfigController.getInstance().config;
 
-    const context = call.request.context;
-    if (isNil(context) || isEmpty(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
     const ticket = await this.client.verifyIdToken({
-      idToken: id_token,
+      idToken: 'id_token',
       audience: config.google.clientId,
     });
 
@@ -60,11 +54,12 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    let googlePayload: Payload = {
+    let googlePayload: GoogleUser = {
       id: payload.sub,
-      token: access_token,
+/*      token: access_token,*/
       email: payload.email,
-      clientId: context.clientId,
+      data: {},
+      // clientId: context.clientId,
     }
 
     return googlePayload;
