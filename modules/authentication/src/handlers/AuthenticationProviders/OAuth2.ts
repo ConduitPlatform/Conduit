@@ -14,16 +14,12 @@ import { OAuth2Settings } from './interfaces/OAuth2Settings';
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
-  private settings: S;
+  protected settings: S;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
     this.settings = settings;
-  }
-
-  get OAuthSettings() {
-    return this.settings;
   }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -36,11 +32,12 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
     let retUrl = this.settings.authorizeUrl;
     let length = Object.keys(options).length;
-    options['state'] = JSON.stringify({ clientId: call.request.context.clientId, scope: options.scope });
+    // options['state'] = JSON.stringify({ clientId: call.request.context.clientId, scope: options.scope });
+    options['state'] = call.request.context.clientId + "::"+options.scope;
     Object.keys(options).forEach((k, i) => {
       if (k !== 'url') {
         retUrl += k + '=' + options[k];
-        if (i !== length - 1) retUrl += '&';
+        if (i !== length) retUrl += '&';
       }
     });
     return retUrl;
@@ -52,7 +49,8 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
-      redirect_uri: '/hook/authentication/' + this.settings.providerName,
+      // add server config url here
+      redirect_uri: 'http://localhost:3000/hook/authentication/' + this.settings.providerName,
     };
 
     if ((this.settings).hasOwnProperty('grant_type')) {
@@ -61,11 +59,15 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     const providerOptions: AxiosRequestConfig = {
       method: this.settings.accessTokenMethod as any,
       url: this.settings.tokenUrl,
-      params: { myparams },
+      params: { ...myparams },
     };
     const providerResponse: any = await axios(providerOptions);
     let access_token = providerResponse.data.access_token;
-    let state = JSON.parse(params.state);
+    let state = params.state.split('::');
+    state = {
+      clientId: state[0],
+      scopes: state[1]
+    }
     let clientId = state.clientId;
 
     let payload = this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });

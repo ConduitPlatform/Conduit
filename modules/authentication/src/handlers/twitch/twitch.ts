@@ -55,7 +55,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
     const response2 = await axios.get('https://api.twitch.tv/helix/users', {
       headers: {
         Authorization: `Bearer ${twitch_access_token}`,
-        'Client-Id': this.OAuthSettings.clientId,
+        'Client-Id': this.settings.clientId,
       },
     });
 

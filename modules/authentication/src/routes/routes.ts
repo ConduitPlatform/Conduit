@@ -308,7 +308,7 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/facebook',
       response_type: 'code',
       scope: 'email,public_profile',
-      tokenUrl: "https://graph.facebook.com/v12.0/oauth/access_token?",
+      tokenUrl: "https://graph.facebook.com/v12.0/oauth/access_token",
       clientSecret: config.facebook.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'GET',
