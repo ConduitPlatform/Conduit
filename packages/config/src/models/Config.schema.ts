@@ -22,7 +22,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class Config extends ConduitActiveSchema<Config> {

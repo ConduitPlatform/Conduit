@@ -33,7 +33,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 export class Service extends ConduitActiveSchema<Service> {
   private static _instance: Service;

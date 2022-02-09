@@ -442,7 +442,8 @@ export class SchemaAdmin {
 
   private patchSchemaPerms(
     schema: _DeclaredSchema,
-    perms: ConduitModelOptions['permissions'],
+    // @ts-ignore
+    perms: ConduitModelOptions['conduit']['permissions'],
   ) {
     if (perms!.canModify && !(ConduitModelOptionsPermModifyType.includes(perms!.canModify))) {
       throw new GrpcError(

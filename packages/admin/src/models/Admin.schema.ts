@@ -27,7 +27,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class Admin extends ConduitActiveSchema<Admin> {
