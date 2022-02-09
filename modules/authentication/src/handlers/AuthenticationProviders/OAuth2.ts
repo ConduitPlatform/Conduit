@@ -10,6 +10,7 @@ import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
+import { ConfigController } from '../../config/Config.controller';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
@@ -33,9 +34,10 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let retUrl = this.settings.authorizeUrl;
     let length = Object.keys(options).length;
     // options['state'] = JSON.stringify({ clientId: call.request.context.clientId, scope: options.scope });
-    options['state'] = call.request.context.clientId + "::"+options.scope;
+
+    options['state'] = call.request.context.clientId + "::" + options.scope;
     Object.keys(options).forEach((k, i) => {
-      if (k !== 'url') {
+      if (k !== 'url' && !isNil(options[k])) {
         retUrl += k + '=' + options[k];
         if (i !== length) retUrl += '&';
       }
@@ -56,12 +58,14 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     if ((this.settings).hasOwnProperty('grant_type')) {
       myparams['grant_type'] = this.settings.grant_type;
     }
+
     const providerOptions: AxiosRequestConfig = {
       method: this.settings.accessTokenMethod as any,
       url: this.settings.tokenUrl,
       params: { ...myparams },
+      data: null,
     };
-    const providerResponse: any = await axios(providerOptions);
+    const providerResponse: any = await axios(providerOptions).catch((e:any) => console.log(e));
     let access_token = providerResponse.data.access_token;
     let state = params.state.split('::');
     state = {
@@ -69,32 +73,33 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       scopes: state[1]
     }
     let clientId = state.clientId;
-
-    let payload = this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
+    let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
     let user = await this.createOrUpdateUser(payload);
-    let tokens = await this.createTokens(user._id, clientId, {});
+    const config = ConfigController.getInstance().config;
+    let tokens = await this.createTokens(user._id, clientId, config);
     return {
       redirect: this.settings.finalRedirect +
         '?accessToken=' +
-        (tokens.accessToken as any).token +
+        (tokens.accessToken as any) +
         '&refreshToken=' +
-        (tokens.refreshToken as any).token,
+        (tokens.refreshToken as any)
     };
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
 
-    let payload = this.connectWithProvider({
+    let payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: call.request.params['clientId'],
       scope: call.request.params?.scope,
     });
     let user = await this.createOrUpdateUser(payload);
-    let tokens = await this.createTokens(user._id, call.request.params['clientId'], {});
+    const config = ConfigController.getInstance().config;
+    let tokens = await this.createTokens(user._id, call.request.params['clientId'], config);
     return {
       userId: user!._id.toString(),
-      accessToken: (tokens.accessToken as any).token,
-      refreshToken: (tokens.refreshToken as any).token,
+      accessToken: (tokens.accessToken as any),
+      refreshToken: (tokens.refreshToken as any),
     };
   }
 
@@ -140,7 +145,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       {
         userId: userId,
         clientId: clientId,
-        config: config,
+        config,
       },
     );
     return {
@@ -153,6 +158,6 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
   abstract async validate(): Promise<Boolean>;
 
-  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
+  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string}): Promise<T>;
 
 }

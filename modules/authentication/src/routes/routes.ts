@@ -380,14 +380,14 @@ export class AuthenticationRoutes {
       include_granted_scopes: true,
       clientId: config.google.clientId,
       callbackUrl: serverConfig.url + '/hook/authentication/google',
-      response_type: 'token',
-      scope: 'https%3A//www.googleapis.com/auth/drive.metadata.readonly',
+      response_type: 'code',
       clientSecret: config.google.clientSecret,
-      tokenUrl: '',
+      tokenUrl: 'https://oauth2.googleapis.com/token',
+      grant_type: "authorization_code",
       finalRedirect: config.google.redirect_uri,
       accountLinking: config.google.accountLinking,
-      //state: yourstate
-      accessTokenMethod: ''
+      state: 'yourstate',
+      accessTokenMethod: 'POST'
     };
     this.googleHandlers = new GoogleHandlers(this.grpcSdk,googleSettings);
     errorMessage = null;
@@ -479,6 +479,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     config = ConfigController.getInstance().config;
     serverConfig = await this.grpcSdk.config.getServerConfig();
+
     const twitchSettings: TwitchSettings = {
       providerName: 'twitch',
       authorizeUrl: 'https://id.twitch.tv/oauth2/authorize?',
@@ -486,7 +487,7 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/twitch',
       response_type: 'code',
       scope: 'user:read:email',
-      grant_type: 'authentication_code',
+      grant_type: 'authorization_code',
       clientSecret: config.twitch.clientSecret,
       tokenUrl: 'https://id.twitch.tv/oauth2/token',
       state: 'yourstate',
@@ -494,6 +495,7 @@ export class AuthenticationRoutes {
       finalRedirect: config.twitch.redirect_uri,
       accountLinking: config.twitch.accountLinking,
     };
+
     this.twitchHandlers = new TwitchHandlers(this.grpcSdk,twitchSettings);
     authActive = await this.twitchHandlers
       .validate()

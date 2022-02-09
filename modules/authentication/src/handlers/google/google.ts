@@ -1,11 +1,11 @@
 import { OAuth2Client } from 'google-auth-library';
-import { isNil } from 'lodash';
 import ConduitGrpcSdk, { ConduitError, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { ConfigController } from '../../config/Config.controller';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { GoogleSettings } from './google.settings';
 import { GoogleUser } from './google.user';
+import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   private readonly client: OAuth2Client;
@@ -31,35 +31,31 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
     return true;
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string}): Promise<GoogleUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
-    const config = ConfigController.getInstance().config;
-
-    const ticket = await this.client.verifyIdToken({
-      idToken: 'id_token',
-      audience: config.google.clientId,
-    });
-
-    const payload = ticket.getPayload();
-    if (isNil(payload)) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'Received invalid response from the Google API'
-      );
-    }
-
-    if (!payload.email_verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
-    }
+    const googleUser = await axios
+      .get(
+        `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${details.accessToken}&token_type=Bearer`,
+      )
+      .then((res) => res.data)
+      .catch((error) => {
+        console.error(`Failed to fetch user`);
+        throw new Error(error.message);
+      });
 
     let googlePayload: GoogleUser = {
-      id: payload.sub,
-/*      token: access_token,*/
-      email: payload.email,
-      data: {},
-      // clientId: context.clientId,
+      id: googleUser.id,
+      email: googleUser.email,
+      data: {
+        name: googleUser.name,
+        given_name: googleUser.givenName,
+        locale: googleUser.locale,
+        verified_email: googleUser.verified_email,
+        picture: googleUser.picture,
+        family_name: googleUser.familyName
+      },
     }
 
     return googlePayload;

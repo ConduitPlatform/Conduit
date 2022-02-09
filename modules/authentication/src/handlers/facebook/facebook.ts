@@ -55,9 +55,6 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       email: facebookResponse.data.email,
       data: {}
     };
-    delete facebookResponse.data.id;
-    delete facebookResponse.data.email;
-    payload.data = facebookResponse.data;
     return payload;
   }
 }
