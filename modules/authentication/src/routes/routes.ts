@@ -24,6 +24,8 @@ import { ConfigController } from '../config/Config.controller';
 import { GoogleSettings } from '../handlers/google/google.settings';
 import { FacebookSettings } from '../handlers/facebook/facebook.settings';
 import { TwitchSettings } from '../handlers/twitch/twitch.settings';
+import { GithubHandlers } from '../handlers/github/github';
+import { GithubSettings } from '../handlers/github/github.settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -32,6 +34,7 @@ export class AuthenticationRoutes {
   private facebookHandlers: FacebookHandlers;
   private googleHandlers: GoogleHandlers;
   private twitchHandlers: TwitchHandlers;
+  private githubHandlers: GithubHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
@@ -75,6 +78,9 @@ export class AuthenticationRoutes {
 
         authenticateTwitch: this.twitchHandlers.authorize.bind(this.twitchHandlers),
         beginAuthTwitch: this.twitchHandlers.redirect.bind(this.twitchHandlers),
+
+        authorizeGithub: this.githubHandlers.authorize.bind(this.githubHandlers),
+        beginAuthGithub: this.githubHandlers.redirect.bind(this.githubHandlers),
 
       })
       .catch((err: Error) => {
@@ -367,6 +373,61 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
           'beginAuthFacebook',
+        ),
+      );
+      enabled = true;
+    }
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+
+    const githubSettings: GithubSettings = {
+      providerName: 'github',
+      authorizeUrl: 'https://github.com/login/oauth/authorize?',
+      clientId: config.github.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/github',
+      response_type: 'code',
+      scope: 'user repo',
+      tokenUrl: "https://github.com/login/oauth/access_token",
+      clientSecret: config.github.clientSecret,
+      state: 'yourstate',
+      accessTokenMethod: 'POST',
+      finalRedirect: config.github.redirect_uri,
+      accountLinking: config.github.accountLinking,
+    };
+
+    this.githubHandlers = new GithubHandlers(this.grpcSdk,githubSettings);
+    authActive = await this.githubHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/github',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Github using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('GithubResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authorizeGithub',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/github',
+            description: `Begins the Github authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
+          'beginAuthGithub',
         ),
       );
       enabled = true;

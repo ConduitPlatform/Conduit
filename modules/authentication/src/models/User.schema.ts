@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -14,6 +10,17 @@ const schema = {
   hashedPassword: {
     type: TYPE.String,
     select: false,
+  },
+  github: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
   },
   google: {
     id: {

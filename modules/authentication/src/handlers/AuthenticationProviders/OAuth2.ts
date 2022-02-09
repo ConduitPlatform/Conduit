@@ -66,7 +66,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       data: null,
     };
     const providerResponse: any = await axios(providerOptions).catch((e:any) => console.log(e));
-    let access_token = providerResponse.data.access_token;
+    let access_token = providerResponse.data.access_token ?? providerResponse.data;
     let state = params.state.split('::');
     state = {
       clientId: state[0],
