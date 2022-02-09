@@ -74,7 +74,7 @@ export class AdminHandlers {
   async getDeclaredSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: any = {};
+    const query = '{}'
     const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
     const declaredSchemasDocumentsPromise = schemaAdapter.model
       .findMany(
@@ -99,7 +99,7 @@ export class AdminHandlers {
   async getDeclaredSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: any = {};
+    const query = '{}';
     const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
     const declaredSchemasExtensionsPromise = schemaAdapter.model
       .findMany(
