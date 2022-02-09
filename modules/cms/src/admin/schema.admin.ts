@@ -31,7 +31,10 @@ export class SchemaAdmin {
   }
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const query: {[p: string]: any} = { _id: call.request.params.id, name: { $nin: CMS_SYSTEM_SCHEMAS } };
+    const query: {[p: string]: any} = {
+      _id: call.request.params.id,
+      name: { $nin: CMS_SYSTEM_SCHEMAS }
+    };
     if (!isNil(call.request.params.owner)) {
       query.ownerModule = call.request.params.owner;
     }
@@ -79,16 +82,6 @@ export class SchemaAdmin {
     ]).catch((e) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-
-    for (const schema of schemas) {
-      if (schema.ownerModule !== 'cms') { // || CMS_SYSTEM_SCHEMAS.includes(schema.name)) {
-        schema.modelOptions.conduit.cms = {
-          enabled: true,
-          crudOperations: false,
-          authentication: false, // here due to type restriction
-        };
-      }
-    }
 
     return { schemas, count };
   }
