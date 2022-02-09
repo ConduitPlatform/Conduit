@@ -35,11 +35,9 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GithubUser> {
     let github_access_token = details.accessToken;
-    let [access_token,scope,token_type] = github_access_token.split('&');
-    access_token = access_token.split('=')[1];
     const githubProfile = await axios.get('https://api.github.com/user', {
       headers: {
-        Authorization: `token ${access_token}`,
+        Authorization: `token ${github_access_token}`,
       },
     });
     const githubPayload = {
