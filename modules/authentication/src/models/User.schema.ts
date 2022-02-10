@@ -90,7 +90,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class User extends ConduitActiveSchema<User> {

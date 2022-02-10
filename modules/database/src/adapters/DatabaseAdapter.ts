@@ -90,14 +90,15 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
       canCreate: true,
       canModify: 'Everything',
       canDelete: true,
-    };
+    } as const;
     if (!schema.schemaOptions.hasOwnProperty('conduit')) schema.schemaOptions.conduit = {};
     if (!schema.schemaOptions.conduit!.hasOwnProperty('permissions')) {
       schema.schemaOptions.conduit!.permissions = defaultPermissions;
     } else {
       Object.keys(defaultPermissions).forEach((perm) => {
-        if (!schema.schemaOptions.conduit!.permissions.hasOwnProperty(perm)) {
-          schema.schemaOptions.conduit!.permissions[perm] = defaultPermissions[perm as keyof typeof defaultPermissions];
+        if (!schema.schemaOptions.conduit!.permissions!.hasOwnProperty(perm)) {
+          // @ts-ignore
+          schema.schemaOptions.conduit!.permissions![perm] = defaultPermissions[perm as keyof typeof defaultPermissions];
         }
       });
     }

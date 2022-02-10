@@ -41,7 +41,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class Forms extends ConduitActiveSchema<Forms> {

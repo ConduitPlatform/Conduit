@@ -36,13 +36,13 @@ export const ConduitModelOptionsPermModifyType = ['Everything', 'Nothing', 'Exte
 export interface ConduitModelOptions {
   timestamps?: boolean;
   _id?: boolean;
-  permissions?: {
-    extendable: boolean,
-    canCreate: boolean,
-    canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
-    canDelete: boolean,
-  },
   conduit?: {
     [field: string]: any,
+    permissions?: {
+      extendable: boolean,
+      canCreate: boolean,
+      canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
+      canDelete: boolean,
+    },
   };
 }

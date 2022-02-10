@@ -28,7 +28,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class _StorageContainer extends ConduitActiveSchema<_StorageContainer> {

@@ -36,7 +36,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class Token extends ConduitActiveSchema<Token> {
