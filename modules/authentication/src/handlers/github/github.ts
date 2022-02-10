@@ -9,7 +9,7 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: GithubSettings) {
-    super(grpcSdk, 'github',settings);
+    super(grpcSdk, 'github', settings);
   }
 
   async validate(): Promise<Boolean> {
@@ -44,7 +44,7 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
       id: githubProfile.data.id,
       email: githubProfile.data.email,
       data: {},
-    }
+    };
     return githubPayload as any;
   }
 }

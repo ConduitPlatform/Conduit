@@ -12,7 +12,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
-    super(grpcSdk,'google',settings);
+    super(grpcSdk, 'google', settings);
     this.client = new OAuth2Client();
   }
 
@@ -31,7 +31,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
     return true;
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string}): Promise<GoogleUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
@@ -54,9 +54,9 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         locale: googleUser.locale,
         verified_email: googleUser.verified_email,
         picture: googleUser.picture,
-        family_name: googleUser.familyName
+        family_name: googleUser.familyName,
       },
-    }
+    };
 
     return googlePayload;
   }

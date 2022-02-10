@@ -9,7 +9,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: TwitchSettings) {
-    super(grpcSdk, 'twitch',settings);
+    super(grpcSdk, 'twitch', settings);
   }
 
   async validate(): Promise<Boolean> {

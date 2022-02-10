@@ -32,7 +32,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
   }
 
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser>{
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const facebookOptions: AxiosRequestConfig = {
@@ -44,7 +44,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       },
     };
 
-    const facebookResponse:any = await axios(facebookOptions);
+    const facebookResponse: any = await axios(facebookOptions);
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
@@ -53,7 +53,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
     let payload: FacebookUser = {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
-      data: {}
+      data: {},
     };
     return payload;
   }

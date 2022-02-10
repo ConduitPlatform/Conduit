@@ -332,7 +332,7 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/facebook',
       response_type: 'code',
       scope: 'email,public_profile',
-      tokenUrl: "https://graph.facebook.com/v12.0/oauth/access_token",
+      tokenUrl: 'https://graph.facebook.com/v12.0/oauth/access_token',
       clientSecret: config.facebook.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'GET',
@@ -340,7 +340,7 @@ export class AuthenticationRoutes {
       accountLinking: config.facebook.accountLinking,
     };
 
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk,facebookSettings);
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, facebookSettings);
     authActive = await this.facebookHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -405,7 +405,7 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/github',
       response_type: 'code',
       scope: 'user repo',
-      tokenUrl: "https://github.com/login/oauth/access_token",
+      tokenUrl: 'https://github.com/login/oauth/access_token',
       clientSecret: config.github.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'POST',
@@ -413,7 +413,7 @@ export class AuthenticationRoutes {
       accountLinking: config.github.accountLinking,
     };
 
-    this.githubHandlers = new GithubHandlers(this.grpcSdk,githubSettings);
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, githubSettings);
     authActive = await this.githubHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -461,7 +461,7 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/slack',
       response_type: 'code',
       scope: 'users.profile:read',
-      tokenUrl: "https://slack.com/api/oauth.access",
+      tokenUrl: 'https://slack.com/api/oauth.access',
       clientSecret: config.slack.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'POST',
@@ -469,7 +469,7 @@ export class AuthenticationRoutes {
       accountLinking: config.slack.accountLinking,
     };
 
-    this.slackHandlers = new SlackHandlers(this.grpcSdk,slackSettings);
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, slackSettings);
     authActive = await this.slackHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -516,16 +516,16 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/figma',
       response_type: 'code',
       scope: 'users.profile:read',
-      tokenUrl: "https://www.figma.com/api/oauth/token",
+      tokenUrl: 'https://www.figma.com/api/oauth/token',
       clientSecret: config.figma.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'POST',
       finalRedirect: config.figma.redirect_uri,
       accountLinking: config.figma.accountLinking,
-      grant_type: 'authorization_code'
+      grant_type: 'authorization_code',
     };
 
-    this.figmaHandlers = new FigmaHandlers(this.grpcSdk,figmaSettings);
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, figmaSettings);
     authActive = await this.figmaHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -572,17 +572,17 @@ export class AuthenticationRoutes {
       callbackUrl: serverConfig.url + '/hook/authentication/microsoft',
       response_type: 'code',
       scope: 'users.profile:read',
-      tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
       clientSecret: config.microsoft.clientSecret,
       state: 'yourstate',
       accessTokenMethod: 'POST',
       finalRedirect: config.microsoft.redirect_uri,
       accountLinking: config.microsoft.accountLinking,
-      grant_type: "authorization_code",
-      response_mode: "form_post"
+      grant_type: 'authorization_code',
+      response_mode: 'form_post',
     };
 
-    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk,microsoftSettings);
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, microsoftSettings);
     authActive = await this.microsoftHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -623,7 +623,7 @@ export class AuthenticationRoutes {
     config = ConfigController.getInstance().config;
     serverConfig = await this.grpcSdk.config.getServerConfig();
     const googleSettings: GoogleSettings = {
-      providerName:'google',
+      providerName: 'google',
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?',
       include_granted_scopes: true,
       clientId: config.google.clientId,
@@ -631,13 +631,13 @@ export class AuthenticationRoutes {
       response_type: 'code',
       clientSecret: config.google.clientSecret,
       tokenUrl: 'https://oauth2.googleapis.com/token',
-      grant_type: "authorization_code",
+      grant_type: 'authorization_code',
       finalRedirect: config.google.redirect_uri,
       accountLinking: config.google.accountLinking,
       state: 'yourstate',
-      accessTokenMethod: 'POST'
+      accessTokenMethod: 'POST',
     };
-    this.googleHandlers = new GoogleHandlers(this.grpcSdk,googleSettings);
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, googleSettings);
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -739,12 +739,12 @@ export class AuthenticationRoutes {
       clientSecret: config.twitch.clientSecret,
       tokenUrl: 'https://id.twitch.tv/oauth2/token',
       state: 'yourstate',
-      accessTokenMethod : 'POST',
+      accessTokenMethod: 'POST',
       finalRedirect: config.twitch.redirect_uri,
       accountLinking: config.twitch.accountLinking,
     };
 
-    this.twitchHandlers = new TwitchHandlers(this.grpcSdk,twitchSettings);
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, twitchSettings);
     authActive = await this.twitchHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));

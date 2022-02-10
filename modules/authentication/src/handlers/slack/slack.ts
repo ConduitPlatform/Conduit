@@ -31,18 +31,18 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
   }
 
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<SlackUser>{
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<SlackUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const slackOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://slack.com/api/users.profile.get',
       headers: {
-        "Authorization": "Bearer " + details.accessToken,
+        'Authorization': 'Bearer ' + details.accessToken,
       },
     };
 
-    const slackResponse :any = await axios(slackOptions);
+    const slackResponse: any = await axios(slackOptions);
     if (isNil(slackResponse.data.profile.email) || isNil(slackResponse.data.profile.avatar_hash)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with slack failed');
     }
@@ -51,7 +51,7 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
     let payload: SlackUser = {
       id: slackResponse.data.profile.avatar_hash,
       email: slackResponse.data.profile.email,
-      data: {}
+      data: {},
     };
     return payload;
   }

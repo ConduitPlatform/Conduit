@@ -32,9 +32,9 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     };
 
     let baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + "::" + options.scope;
-    let url = Object.keys(options).map((k:any) => {
-        return k + '=' + options[k];
+    options['state'] = call.request.context.clientId + '::' + options.scope;
+    let url = Object.keys(options).map((k: any) => {
+      return k + '=' + options[k];
     }).join('&');
     return baseUrl + url;
   };
@@ -58,17 +58,17 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       url: this.settings.tokenUrl,
       params: { ...myparams },
       headers: {
-        "Accept": "application/json"
+        'Accept': 'application/json',
       },
       data: null,
     };
-    const providerResponse: any = await axios(providerOptions).catch((e:any) => console.log(e));
+    const providerResponse: any = await axios(providerOptions).catch((e: any) => console.log(e));
     let access_token = providerResponse.data.access_token;
     let state = params.state.split('::');
     state = {
       clientId: state[0],
-      scopes: state[1]
-    }
+      scopes: state[1],
+    };
     let clientId = state.clientId;
     let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
     let user = await this.createOrUpdateUser(payload);
@@ -79,7 +79,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
         '?accessToken=' +
         (tokens.accessToken as any) +
         '&refreshToken=' +
-        (tokens.refreshToken as any)
+        (tokens.refreshToken as any),
     };
   }
 
@@ -155,6 +155,6 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
   abstract async validate(): Promise<Boolean>;
 
-  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string}): Promise<T>;
+  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 
 }

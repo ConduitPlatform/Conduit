@@ -3,5 +3,4 @@ import { OAuth2Settings } from '../AuthenticationProviders/interfaces/OAuth2Sett
 export interface SlackSettings extends OAuth2Settings {
 
 
-
 }

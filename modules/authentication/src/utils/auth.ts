@@ -76,7 +76,7 @@ export namespace AuthUtils {
 
   export function createUserTokensAsPromise(
     sdk: ConduitGrpcSdk,
-    tokenOptions: TokenOptions
+    tokenOptions: TokenOptions,
   ) {
     return Promise.all(createUserTokens(sdk, tokenOptions));
   }

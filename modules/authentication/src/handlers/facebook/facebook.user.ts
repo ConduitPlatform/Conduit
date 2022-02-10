@@ -1,5 +1,5 @@
-import { Payload } from "../AuthenticationProviders/interfaces/Payload";
+import { Payload } from '../AuthenticationProviders/interfaces/Payload';
 
-export interface FacebookUser extends Payload{
+export interface FacebookUser extends Payload {
 
 }
