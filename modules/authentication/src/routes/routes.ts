@@ -28,6 +28,8 @@ import { GithubHandlers } from '../handlers/github/github';
 import { GithubSettings } from '../handlers/github/github.settings';
 import { SlackSettings } from '../handlers/slack/slack.settings';
 import { SlackHandlers } from '../handlers/slack/slack';
+import { FigmaHandlers } from '../handlers/figma/figma';
+import { FigmaSettings } from '../handlers/figma/figma.settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -38,6 +40,7 @@ export class AuthenticationRoutes {
   private twitchHandlers: TwitchHandlers;
   private githubHandlers: GithubHandlers;
   private slackHandlers: SlackHandlers;
+  private figmaHandlers: FigmaHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
@@ -87,6 +90,9 @@ export class AuthenticationRoutes {
 
         authorizeSlack: this.slackHandlers.authorize.bind(this.slackHandlers),
         beginAuthSlack: this.slackHandlers.redirect.bind(this.slackHandlers),
+
+        authorizeFigma: this.figmaHandlers.authorize.bind(this.figmaHandlers),
+        beginAuthFigma: this.figmaHandlers.redirect.bind(this.figmaHandlers),
 
       })
       .catch((err: Error) => {
@@ -448,7 +454,7 @@ export class AuthenticationRoutes {
       clientId: config.slack.clientId,
       callbackUrl: serverConfig.url + '/hook/authentication/slack',
       response_type: 'code',
-      scope: 'user repo',
+      scope: 'users.profile:read',
       tokenUrl: "https://slack.com/api/oauth.access",
       clientSecret: config.slack.clientSecret,
       state: 'yourstate',
@@ -490,6 +496,61 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
           'beginAuthSlack',
+        ),
+      );
+      enabled = true;
+    }
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const figmaSettings: FigmaSettings = {
+      providerName: 'figma',
+      authorizeUrl: 'https://www.figma.com/oauth?',
+      clientId: config.figma.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/figma',
+      response_type: 'code',
+      scope: 'users.profile:read',
+      tokenUrl: "https://www.figma.com/api/oauth/token",
+      clientSecret: config.figma.clientSecret,
+      state: 'yourstate',
+      accessTokenMethod: 'POST',
+      finalRedirect: config.figma.redirect_uri,
+      accountLinking: config.figma.accountLinking,
+      grant_type: 'authorization_code'
+    };
+
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk,figmaSettings);
+    authActive = await this.figmaHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/figma',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Figma using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('FigmaResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authorizeFigma',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/figma',
+            description: `Begins the figma authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
+          'beginAuthFigma',
         ),
       );
       enabled = true;
