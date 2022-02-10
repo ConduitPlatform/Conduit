@@ -55,6 +55,17 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       data: {},
     };
     return payload;
+  }
 
+  async makeRequest(data: any) {
+    return {
+      method: this.settings.accessTokenMethod as any,
+      url: this.settings.tokenUrl,
+      params: { ...data },
+      headers: {
+        'Accept': 'application/json',
+      },
+      data: null,
+    };
   }
 }

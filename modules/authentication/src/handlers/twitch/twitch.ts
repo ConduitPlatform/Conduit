@@ -58,4 +58,16 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
 
     return payload;
   }
+
+  async makeRequest(data: any) {
+    return {
+      method: this.settings.accessTokenMethod as any,
+      url: this.settings.tokenUrl,
+      params: { ...data },
+      headers: {
+        'Accept': 'application/json',
+      },
+      data: null,
+    };
+  }
 }

@@ -45,7 +45,6 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
-      // add server config url here
       redirect_uri: 'http://localhost:3000/hook/authentication/' + this.settings.providerName,
     };
 
@@ -53,15 +52,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       myparams['grant_type'] = this.settings.grant_type;
     }
 
-    const providerOptions: AxiosRequestConfig = {
-      method: this.settings.accessTokenMethod as any,
-      url: this.settings.tokenUrl,
-      params: { ...myparams },
-      headers: {
-        'Accept': 'application/json',
-      },
-      data: null,
-    };
+    let providerOptions = await this.makeRequest(myparams);
     const providerResponse: any = await axios(providerOptions).catch((e: any) => console.log(e));
     let access_token = providerResponse.data.access_token;
     let state = params.state.split('::');
@@ -150,11 +141,11 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       accessToken: (accessToken as any).token,
       refreshToken: (refreshToken as any).token,
     };
-
   }
+
+  abstract async makeRequest(data: any): Promise<AxiosRequestConfig>;
 
   abstract async validate(): Promise<Boolean>;
 
   abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
-
 }

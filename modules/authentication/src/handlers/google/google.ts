@@ -57,7 +57,18 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         family_name: googleUser.familyName,
       },
     };
-
     return googlePayload;
+  }
+
+  async makeRequest(data: any) {
+    return  {
+      method: this.settings.accessTokenMethod as any,
+      url: this.settings.tokenUrl,
+      params: { ...data },
+      headers: {
+        'Accept': 'application/json',
+      },
+      data: null,
+    };
   }
 }
