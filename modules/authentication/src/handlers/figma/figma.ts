@@ -44,19 +44,18 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       data: null,
     };
 
-    const slackResponse :any = await axios(figmaOptions).catch((e:any) => console.log(e.message));
-    if (isNil(slackResponse.data.email) || isNil(slackResponse.data.id)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with slack failed');
+    const figmaResponse :any = await axios(figmaOptions).catch((e:any) => console.log(e.message));
+    if (isNil(figmaResponse.data.email) || isNil(figmaResponse.data.id)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with figma failed');
     }
 
 
     let payload: SlackUser = {
-      id: slackResponse.data.id,
-      email: slackResponse.data.email,
+      id: figmaResponse.data.id,
+      email: figmaResponse.data.email,
       data: {}
     };
     return payload;
-    //https://forum.figma.com/t/get-only-user-identity-via-oauth/9783
 
   }
 }
