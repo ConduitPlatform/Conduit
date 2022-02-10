@@ -1,7 +1,60 @@
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { wrapRouterGrpcFunction } from './wrapRouterFunctions';
 import { SocketProtoDescription } from '../interfaces';
+import path from 'path';
+import fs from 'fs';
 
+const protofile_template = `
+syntax = "proto3";
+package MODULE_NAME.router;
+
+service Router {
+ MODULE_FUNCTIONS
+}
+
+message RouterRequest {
+  string params = 1;
+  string path = 2;
+  string headers = 3;
+  string context = 4;
+}
+
+message RouterResponse {
+  string result = 1;
+  string redirect = 2;
+}
+
+message SocketRequest {
+  string event = 1;
+  string socketId = 2;
+  string params = 3;
+  string context = 4;
+}
+
+message SocketResponse {
+  string event = 1;
+  string data = 2;
+  repeated string receivers = 3;
+  repeated string rooms = 4;
+}
+`;
+
+export function constructProtoFile(moduleName: string, paths: any[]) {
+  let formattedModuleName = getFormattedModuleName(moduleName);
+  const protoFunctions = createProtoFunctions(paths);
+  let protoFile = protofile_template
+    .toString()
+    .replace('MODULE_FUNCTIONS', protoFunctions);
+  protoFile = protoFile.replace('MODULE_NAME', formattedModuleName);
+
+  let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+  fs.writeFileSync(protoPath, protoFile);
+  return { path: protoPath, name: formattedModuleName, file: protoFile };
+}
+
+function getFormattedModuleName(moduleName: string) {
+  return moduleName.replace('-', '_');
+}
 
 export function wrapFunctionsAsync(functions: {
   [name: string]:
@@ -30,7 +83,7 @@ export function createProtoFunctions(paths: any[]) {
 
 function createProtoFunctionsForSocket(
   path: SocketProtoDescription,
-  protoFunctions: string
+  protoFunctions: string,
 ) {
   let newFunctions = '';
   const events = JSON.parse(path.events);

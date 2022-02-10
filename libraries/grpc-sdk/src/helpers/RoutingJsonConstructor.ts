@@ -1,9 +1,4 @@
-import {
-  ConduitMiddleware,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  ConduitSocket,
-} from '../classes';
+import { ConduitMiddleware, ConduitRoute, ConduitRouteReturnDefinition, ConduitSocket } from '../classes';
 import { ConduitRouteOptions, EventsProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {

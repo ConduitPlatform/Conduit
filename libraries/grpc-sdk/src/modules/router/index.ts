@@ -1,45 +1,9 @@
-import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
-import fs from 'fs';
 import { RouterClient, SocketData } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
-import { createProtoFunctions } from '../../helpers/RoutingUtilities';
+import { constructProtoFile } from '../../helpers/RoutingUtilities';
 
-let protofile_template = `
-syntax = "proto3";
-package MODULE_NAME.router;
-
-service Router {
- MODULE_FUNCTIONS
-}
-
-message RouterRequest {
-  string params = 1;
-  string path = 2;
-  string headers = 3;
-  string context = 4;
-}
-
-message RouterResponse {
-  string result = 1;
-  string redirect = 2;
-}
-
-message SocketRequest {
-  string event = 1;
-  string socketId = 2;
-  string params = 3;
-  string context = 4;
-}
-
-message SocketResponse {
-  string event = 1;
-  string data = 2;
-  repeated string receivers = 3;
-  repeated string rooms = 4;
-}
-`;
 
 export class Router extends ConduitModule<RouterClient> {
   constructor(private readonly moduleName: string, url: string) {
@@ -47,9 +11,6 @@ export class Router extends ConduitModule<RouterClient> {
     this.initializeClient(RouterClient);
   }
 
-  getFormattedModuleName() {
-    return this.moduleName.replace('-', '_');
-  }
 
   sleep(ms: number) {
     return new Promise((resolve) => {
@@ -57,22 +18,18 @@ export class Router extends ConduitModule<RouterClient> {
     });
   }
 
+  /**
+   * @Deprecated
+   */
   async registerRouter(
     server: GrpcServer,
     paths: any[],
     functions: { [name: string]: Function },
   ): Promise<any> {
-    const protoFunctions = createProtoFunctions(paths);
-    let protoFile = protofile_template
-      .toString()
-      .replace('MODULE_FUNCTIONS', protoFunctions);
-    protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
 
-    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, protoFile);
+    let protoDescriptions = constructProtoFile(this.moduleName, paths);
     await server.addService(
-      protoPath,
-      this.getFormattedModuleName() + '.router.Router',
+      protoDescriptions.path, protoDescriptions.name + '.router.Router',
       functions,
     );
     // fs.unlinkSync(protoPath);
@@ -82,7 +39,7 @@ export class Router extends ConduitModule<RouterClient> {
     // not have the url of the service yet. In order to avoid this i've added the sleep period.
     // One case is to register to config module X and the admin package to request the url from
     // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it
-    return this.sleep(3000).then(() => this.register(paths, protoFile));
+    return this.sleep(3000).then(() => this.register(paths, protoDescriptions.file));
   }
 
   /**
@@ -100,15 +57,8 @@ export class Router extends ConduitModule<RouterClient> {
     return this.registerRouter(server, paths, modifiedFunctions);
   }
 
-  register(paths: any[], protoFile?: string, url?: string): Promise<any> {
-    if (!protoFile) {
-      const protoFunctions = createProtoFunctions(paths);
+  register(paths: any[], protoFile: string, url?: string): Promise<any> {
 
-      protoFile = protofile_template
-        .toString()
-        .replace('MODULE_FUNCTIONS', protoFunctions);
-      protoFile = protoFile.replace('MODULE_NAME', this.getFormattedModuleName());
-    }
     let request = {
       routes: paths,
       protoFile: protoFile,

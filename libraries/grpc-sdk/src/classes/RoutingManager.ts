@@ -8,11 +8,12 @@ import {
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { ConduitRouteReturnDefinition, GrpcServer } from '../classes';
 import { Router } from '../modules';
+import { RequestHandlers } from '../helpers';
 
 class RouteBuilder {
   private readonly _options!: ConduitRouteOptions;
   private _returns!: ConduitRouteReturnDefinition;
-  private _handler!: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>;
+  private _handler!: RequestHandlers;
 
   constructor(private readonly manager: RoutingManager) {
     this._options = {} as any;
@@ -80,7 +81,7 @@ class RouteBuilder {
     return this;
   }
 
-  handler(fn: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>): RouteBuilder {
+  handler(fn: RequestHandlers): RouteBuilder {
     this._handler = fn;
     return this;
   }
@@ -105,11 +106,11 @@ export class RoutingManager {
       options: ConduitRouteOptions,
       returns: { name: string; fields: string; },
       grpcFunctionName: string,
-      grpcFunction: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>;
+      grpcFunction: RequestHandlers;
     }
   } = {};
   private _routeHandlers: {
-    [key: string]: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>
+    [key: string]: RequestHandlers
   } = {};
 
   constructor(private readonly _router: Router, private readonly _server: GrpcServer) {
@@ -156,7 +157,7 @@ export class RoutingManager {
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
-  route(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>) {
+  route(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: RequestHandlers) {
     let routeObject: any = {
       options: input,
       returns: {
