@@ -17,11 +17,11 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
 
-    if (!authConfig.facebook.enabled) {
+    if (!authConfig.slack.enabled) {
       console.log('Slack not active');
       throw ConduitError.forbidden('Slack auth is deactivated');
     }
-    if (!authConfig.facebook.clientId) {
+    if (!authConfig.slack.clientId) {
       console.log('Slack not active');
       throw ConduitError.forbidden('Cannot enable slack auth due to missing clientId');
     }
