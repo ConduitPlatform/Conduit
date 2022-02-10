@@ -33,6 +33,17 @@ const schema = {
       type: TYPE.Date,
     },
   },
+  microsoft: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
   figma: {
     id: {
       type: TYPE.String,

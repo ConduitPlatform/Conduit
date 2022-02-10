@@ -31,18 +31,12 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       scope: call.request.params?.scopes,
     };
 
-    let retUrl = this.settings.authorizeUrl;
-    let length = Object.keys(options).length;
-    // options['state'] = JSON.stringify({ clientId: call.request.context.clientId, scope: options.scope });
-
+    let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + "::" + options.scope;
-    Object.keys(options).forEach((k, i) => {
-      if (k !== 'url' && !isNil(options[k])) {
-        retUrl += k + '=' + options[k];
-        if (i !== length) retUrl += '&';
-      }
-    });
-    return retUrl;
+    let url = Object.keys(options).map((k:any) => {
+        return k + '=' + options[k];
+    }).join('&');
+    return baseUrl + url;
   };
 
   async authorize(call: ParsedRouterRequest) {

@@ -30,6 +30,8 @@ import { SlackSettings } from '../handlers/slack/slack.settings';
 import { SlackHandlers } from '../handlers/slack/slack';
 import { FigmaHandlers } from '../handlers/figma/figma';
 import { FigmaSettings } from '../handlers/figma/figma.settings';
+import { MicrosoftHandlers } from '../handlers/microsoft/microsoft';
+import { MicrosoftSettings } from '../handlers/microsoft/microsoft.settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -41,6 +43,7 @@ export class AuthenticationRoutes {
   private githubHandlers: GithubHandlers;
   private slackHandlers: SlackHandlers;
   private figmaHandlers: FigmaHandlers;
+  private microsoftHandlers: MicrosoftHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
@@ -93,6 +96,9 @@ export class AuthenticationRoutes {
 
         authorizeFigma: this.figmaHandlers.authorize.bind(this.figmaHandlers),
         beginAuthFigma: this.figmaHandlers.redirect.bind(this.figmaHandlers),
+
+        authorizeMicrosoft: this.microsoftHandlers.authorize.bind(this.microsoftHandlers),
+        beginAuthMicrosoft: this.microsoftHandlers.redirect.bind(this.microsoftHandlers),
 
       })
       .catch((err: Error) => {
@@ -500,6 +506,7 @@ export class AuthenticationRoutes {
       );
       enabled = true;
     }
+
     config = ConfigController.getInstance().config;
     serverConfig = await this.grpcSdk.config.getServerConfig();
     const figmaSettings: FigmaSettings = {
@@ -551,6 +558,63 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
           'beginAuthFigma',
+        ),
+      );
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const microsoftSettings: MicrosoftSettings = {
+      providerName: 'microsoft',
+      authorizeUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?',
+      clientId: config.microsoft.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/microsoft',
+      response_type: 'code',
+      scope: 'users.profile:read',
+      tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      clientSecret: config.microsoft.clientSecret,
+      state: 'yourstate',
+      accessTokenMethod: 'POST',
+      finalRedirect: config.microsoft.redirect_uri,
+      accountLinking: config.microsoft.accountLinking,
+      grant_type: "authorization_code",
+      response_mode: "form_post"
+    };
+
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk,microsoftSettings);
+    authActive = await this.microsoftHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/microsoft',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Microsoft using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('MicrosoftResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authorizeMicrosoft',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/microsoft',
+            description: `Begins the figma authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
+          'beginAuthMicrosoft',
         ),
       );
       enabled = true;
