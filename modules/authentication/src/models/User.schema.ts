@@ -33,6 +33,17 @@ const schema = {
       type: TYPE.Date,
     },
   },
+  slack: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
   facebook: {
     id: {
       type: TYPE.String,

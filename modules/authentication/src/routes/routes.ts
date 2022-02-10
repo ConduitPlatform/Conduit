@@ -26,6 +26,8 @@ import { FacebookSettings } from '../handlers/facebook/facebook.settings';
 import { TwitchSettings } from '../handlers/twitch/twitch.settings';
 import { GithubHandlers } from '../handlers/github/github';
 import { GithubSettings } from '../handlers/github/github.settings';
+import { SlackSettings } from '../handlers/slack/slack.settings';
+import { SlackHandlers } from '../handlers/slack/slack';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
@@ -35,6 +37,7 @@ export class AuthenticationRoutes {
   private googleHandlers: GoogleHandlers;
   private twitchHandlers: TwitchHandlers;
   private githubHandlers: GithubHandlers;
+  private slackHandlers: SlackHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
 
@@ -81,6 +84,9 @@ export class AuthenticationRoutes {
 
         authorizeGithub: this.githubHandlers.authorize.bind(this.githubHandlers),
         beginAuthGithub: this.githubHandlers.redirect.bind(this.githubHandlers),
+
+        authorizeSlack: this.slackHandlers.authorize.bind(this.slackHandlers),
+        beginAuthSlack: this.slackHandlers.redirect.bind(this.slackHandlers),
 
       })
       .catch((err: Error) => {
@@ -428,6 +434,62 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
           'beginAuthGithub',
+        ),
+      );
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+
+    const slackSettings: SlackSettings = {
+      providerName: 'slack',
+      authorizeUrl: 'https://slack.com/oauth/authorize?',
+      clientId: config.slack.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/slack',
+      response_type: 'code',
+      scope: 'user repo',
+      tokenUrl: "https://slack.com/api/oauth.access",
+      clientSecret: config.slack.clientSecret,
+      state: 'yourstate',
+      accessTokenMethod: 'POST',
+      finalRedirect: config.slack.redirect_uri,
+      accountLinking: config.slack.accountLinking,
+    };
+
+    this.slackHandlers = new SlackHandlers(this.grpcSdk,slackSettings);
+    authActive = await this.slackHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/hook/slack',
+            action: ConduitRouteActions.GET,
+            description: `Login/register with Slack using redirection mechanism.`,
+            urlParams: {
+              code: ConduitString.Required,
+              state: ConduitString.Required,
+            },
+          },
+          new ConduitRouteReturnDefinition('SlackResponse', {
+            userId: ConduitString.Required,
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          'authorizeSlack',
+        ),
+      );
+      routesArray.push(
+        constructConduitRoute(
+          {
+            path: '/init/slack',
+            description: `Begins the slack authentication.`,
+            action: ConduitRouteActions.GET,
+          },
+          new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
+          'beginAuthSlack',
         ),
       );
       enabled = true;
