@@ -668,7 +668,7 @@ export class AuthenticationRoutes {
               state: ConduitString.Required,
             },
           },
-          new ConduitRouteReturnDefinition('FacebookResponse', {
+          new ConduitRouteReturnDefinition('GoogleResponse', {
             userId: ConduitString.Required,
             accessToken: ConduitString.Required,
             refreshToken: ConduitString.Required,

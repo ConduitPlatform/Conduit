@@ -28,7 +28,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig[this.providerName].enabled) {
-      console.log('github not active');
+      console.log(`${this.providerName} not active`);
       throw ConduitError.forbidden(`${this.providerName} auth is deactivated`);
     }
     if (
