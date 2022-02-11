@@ -1,4 +1,3 @@
-import { OAuth2Client } from 'google-auth-library';
 import ConduitGrpcSdk, { ConduitError, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { ConfigController } from '../../config/Config.controller';
 import { status } from '@grpc/grpc-js';
@@ -8,12 +7,10 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
-  private readonly client: OAuth2Client;
   private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
     super(grpcSdk, 'google', settings);
-    this.client = new OAuth2Client();
   }
 
   async validate(): Promise<Boolean> {
