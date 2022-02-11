@@ -1,5 +1,4 @@
-import ConduitGrpcSdk, { ConduitError, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
-import { ConfigController } from '../../config/Config.controller';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { GoogleSettings } from './google.settings';
@@ -7,25 +6,9 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
-  private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
     super(grpcSdk, 'google', settings);
-  }
-
-  async validate(): Promise<Boolean> {
-    const authConfig = ConfigController.getInstance().config;
-    if (!authConfig.google.enabled) {
-      console.log('Google not active');
-      throw ConduitError.forbidden('Google auth is deactivated');
-    }
-    if (!authConfig.google.clientId) {
-      console.log('Google not active');
-      throw ConduitError.forbidden('Cannot enable google auth due to missing clientId');
-    }
-    console.log('Google is active');
-    this.initialized = true;
-    return true;
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {

@@ -1,36 +1,13 @@
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
 import axios from 'axios';
-import { ConfigController } from '../../config/Config.controller';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { MicrosoftUser } from './microsoft.user';
 import { MicrosoftSettings } from './microsoft.settings';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
-  private initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, settings: MicrosoftSettings) {
     super(grpcSdk, 'microsoft', settings);
-  }
-
-  async validate(): Promise<Boolean> {
-    const authConfig = ConfigController.getInstance().config;
-    if (!authConfig.microsoft.enabled) {
-      console.log('microsoft not active');
-      throw ConduitError.forbidden('Microsoft auth is deactivated');
-    }
-    if (
-      !authConfig.microsoft ||
-      !authConfig.microsoft.clientId ||
-      !authConfig.microsoft.clientSecret
-    ) {
-      console.log('microsoft not active');
-      throw ConduitError.forbidden(
-        'Cannot enable microsoft auth due to missing clientId or client secret',
-      );
-    }
-    console.log('microsoft is active');
-    this.initialized = true;
-    return true;
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<MicrosoftUser> {

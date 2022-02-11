@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitError,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -16,12 +17,35 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
+  initialized: boolean = false;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
     this.settings = settings;
   }
+
+  async validate(): Promise<Boolean> {
+    const authConfig = ConfigController.getInstance().config;
+    if (!authConfig[this.providerName].enabled) {
+      console.log('github not active');
+      throw ConduitError.forbidden(`${this.providerName} auth is deactivated`);
+    }
+    if (
+      !authConfig[this.providerName] ||
+      !authConfig[this.providerName].clientId ||
+      !authConfig[this.providerName].clientSecret
+    ) {
+      console.log(`${this.providerName} is not active`);
+      throw ConduitError.forbidden(
+        `Cannot enable ${this.providerName} auth due to missing clientId or client secret`,
+      );
+    }
+    console.log(`${this.providerName} is active`);
+    this.initialized = true;
+    return true;
+  }
+
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let options: any = {
@@ -144,8 +168,5 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   }
 
   abstract async makeRequest(data: any): Promise<AxiosRequestConfig>;
-
-  abstract async validate(): Promise<Boolean>;
-
   abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 }
