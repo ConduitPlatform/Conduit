@@ -4,7 +4,8 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { status} from '@grpc/grpc-js';
+import { stitchSchema } from "../utils/extensions";
+import { status } from '@grpc/grpc-js';
 
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -95,8 +96,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     this.addSchemaPermissions(schema);
-
-    let newSchema = schemaConverter(schema);
+    const original: any = JSON.parse(JSON.stringify(schema));
+    stitchSchema(schema);
+    const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new MongooseSchema(
@@ -107,28 +109,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this
     );
     if (schema.name !== '_DeclaredSchema') {
-      await this.saveSchemaToDatabase(schema);
+      await this.saveSchemaToDatabase(original);
     }
 
     return this.models![schema.name];
-  }
-
-  getSchema(schemaName: string): ConduitSchema {
-    if (this.models && this.models![schemaName]) {
-      return this.models![schemaName].originalSchema;
-    }
-    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-  }
-
-  getSchemas(): ConduitSchema[] {
-    if (!this.models) {
-      return [];
-    }
-
-    const self = this;
-    return Object.keys(this.models).map((modelName) => {
-      return self.models![modelName].originalSchema;
-    });
   }
 
   getSchemaModel(schemaName: string): { model: MongooseSchema; relations: any } {
@@ -164,7 +148,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     delete this.models![schemaName];
     delete this.mongoose.connection.models[schemaName];
-    return 'Schema deleted!'
-    // TODO should we delete anything else?
+    return 'Schema deleted!';
   }
 }

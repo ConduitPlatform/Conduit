@@ -58,6 +58,26 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
+  setSchemaExtension(schema: ConduitSchema): Promise<any> {
+    return this.client!.setSchemaExtension(
+      {
+         schema: {
+           name: schema.name,
+           modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
+           modelOptions: '{}',
+           collectionName: '',
+         },
+      })
+      .then(res => {
+        return {
+          name: res.schema!.name,
+          modelSchema: JSON.parse(res.schema!.modelSchema),
+          modelOptions: JSON.parse(res.schema!.modelOptions),
+          collectionName: res.schema!.collectionName,
+        };
+      });
+  }
+
   processQuery(query: { [key: string]: any }) {
     return JSON.stringify(query);
   }

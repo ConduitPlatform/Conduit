@@ -27,10 +27,10 @@ const schema = new ConduitSchema(
         updatedAt: TYPE.Date,
       },
     ],
-  modelOptions: {
-    type: TYPE.JSON,
-    required: true
-  },
+    modelOptions: {
+      type: TYPE.JSON,
+      required: true
+    },
     ownerModule: {
       type: TYPE.String,
       required: true,

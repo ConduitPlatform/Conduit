@@ -1,7 +1,12 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  ConduitServiceModule,
+  GrpcServer,
+  GrpcError,
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
@@ -65,6 +70,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         getSchema: this.getSchema.bind(this),
         getSchemas: this.getSchemas.bind(this),
         deleteSchema: this.deleteSchema.bind(this),
+        setSchemaExtension: this.setSchemaExtension.bind(this),
         findOne: this.findOne.bind(this),
         findMany: this.findMany.bind(this),
         create: this.create.bind(this),
@@ -139,7 +145,7 @@ export class DatabaseProvider extends ConduitServiceModule {
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
       .then((schemaAdapter: SchemaAdapter<any>) => {
-        let originalSchema = {
+        const originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
           modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
@@ -217,6 +223,54 @@ export class DatabaseProvider extends ConduitServiceModule {
         (call as any).metadata.get('module-name')[0]
       );
       callback(null, { result: schemas });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
+    }
+  }
+
+  /**
+   * Create, update or delete caller module's extension for target schema
+   * @param call
+   * @param callback
+   */
+  async setSchemaExtension(call: CreateSchemaRequest, callback: SchemaResponse) {
+    const schemaName = call.request.schema.name;
+    const extOwner = (call as any).metadata.get('module-name')[0];
+    const extModel = JSON.parse(call.request.schema.modelSchema);
+    const schema = await this._activeAdapter.getBaseSchema(schemaName);
+    if (!schema) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    try {
+      await this._activeAdapter
+        .setSchemaExtension(schema, extOwner, extModel)
+        .then((schemaAdapter: SchemaAdapter<any>) => {
+          const originalSchema = {
+            name: schemaAdapter.originalSchema.name,
+            modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
+            modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
+            collectionName: schemaAdapter.originalSchema.collectionName,
+          };
+          this.publishSchema({
+            name: call.request.schema.name,
+            modelSchema: schemaAdapter.model,
+            modelOptions: schemaAdapter.originalSchema.schemaOptions,
+            collectionName: schemaAdapter.originalSchema.collectionName,
+            owner: schemaAdapter.originalSchema.ownerModule,
+          });
+          callback(null, {
+            schema: originalSchema,
+          });
+        })
+        .catch((err: any) => {
+          callback({
+            code: status.INTERNAL,
+            message: err.message,
+          });
+        });
     } catch (err) {
       callback({
         code: status.INTERNAL,

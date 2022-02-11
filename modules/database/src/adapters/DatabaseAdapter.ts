@@ -1,5 +1,7 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
+import { validateExtensionFields } from './utils/extensions';
+import { status } from "@grpc/grpc-js";
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -15,11 +17,40 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
    * Given a schema name, returns the schema adapter assigned
    * @param schemaName
    */
-  abstract getSchema(schemaName: string): ConduitSchema;
+  getSchema(schemaName: string): ConduitSchema {
+    if (this.models && this.models![schemaName]) {
+      return this.models[schemaName].originalSchema;
+    }
+    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+  }
 
-  abstract getSchemas(): ConduitSchema[];
+  getSchemas(): ConduitSchema[] {
+    if (!this.models) {
+      return [];
+    }
+    const self = this;
+    return Object.keys(this.models).map((modelName) => {
+      return self.models![modelName].originalSchema;
+    });
+  }
 
   abstract deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
+
+  async getBaseSchema(schemaName: string): Promise<ConduitSchema> {
+    if (this.models && this.models![schemaName]) {
+      const schema = this.models[schemaName].originalSchema;
+      return this.models['_DeclaredSchema'].findOne(
+        JSON.stringify({ name: schemaName }),
+        undefined,
+        undefined,
+      ).then((unstitched) => {
+        (schema.fields as any) = unstitched.fields;
+        return schema;
+      });
+    } else {
+      throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+    }
+  }
 
   abstract getSchemaModel(
     schemaName: string
@@ -50,7 +81,9 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
+            extensions: (schema as any).extensions,
           }),
+            true
         );
     } else {
       await this.models!['_DeclaredSchema']
@@ -59,6 +92,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
+          extensions: (schema as any).extensions,
         }));
     }
   }
@@ -73,6 +107,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           model.modelOptions
         );
         schema.ownerModule = model.ownerModule;
+        (schema as any).extensions = model.extensions;
         return schema;
       })
       .map((model: ConduitSchema) => {
@@ -83,6 +118,48 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   abstract ensureConnected(): Promise<any>;
+
+  setSchemaExtension(
+    schema: ConduitSchema,
+    extOwner: string,
+    extFields: ConduitSchema['fields']
+  ): Promise<SchemaAdapter<any>> {
+    if (!schema.schemaOptions.conduit ||
+        !schema.schemaOptions.conduit.permissions ||
+        !schema.schemaOptions.conduit.permissions.extendable
+    ) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
+    }
+    validateExtensionFields(schema, extFields, extOwner);
+    if (!(schema as any).extensions) {
+      (schema as any).extensions = [];
+    }
+    const extIndex = (schema as any).extensions.findIndex((ext: any) => ext.ownerModule === extOwner);
+    if (extIndex === -1) {
+      // Create Extension
+      if (Object.keys(extFields).length === 0) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Could not create schema extension with no custom fields');
+      }
+      (schema as any).extensions.push({
+        fields: extFields,
+        ownerModule: extOwner,
+        createdAt: new Date(), // TODO FORMAT
+        updatedAt: new Date(), // TODO FORMAT
+      });
+    } else {
+      if (Object.keys(extFields).length === 0) {
+        // Remove Extension
+        (schema as any).extensions.splice(extIndex, 1);
+      } else {
+        // Update Extension
+        (schema as any).extensions[extIndex].fields = extFields;
+        (schema as any).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
+      }
+    }
+    // (schema as any).schemaOptions = (schema as any).modelOptions;
+    // delete (schema as any).modelOptions;
+    return this.createSchemaFromAdapter(schema);
+  }
 
   protected addSchemaPermissions(schema: ConduitSchema) {
     const defaultPermissions = {
