@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import * as _ from 'lodash';
 import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
