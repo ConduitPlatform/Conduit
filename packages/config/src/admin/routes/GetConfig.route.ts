@@ -1,18 +1,19 @@
 import {
+  ConduitError,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteReturnDefinition,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   RouteOptionType,
   TYPE,
-  ConduitError,
-} from '@conduitplatform/conduit-commons';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/commons';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
+import * as models from '../../models';
 
 export function getGetConfigRoute(
   grpcSdk: ConduitGrpcSdk,
-  registeredModules: Map<string, string>
+  registeredModules: Map<string, string>,
 ) {
   return new ConduitRoute(
     {
@@ -26,7 +27,8 @@ export function getGetConfigRoute(
       config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
-      const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
+
+      const dbConfig = await models.Config.getInstance().findOne({});
       if (isNil(dbConfig)) {
         return { result: { config: {} } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
       }
@@ -85,6 +87,6 @@ export function getGetConfigRoute(
       }
 
       return { result: { config: finalConfig } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

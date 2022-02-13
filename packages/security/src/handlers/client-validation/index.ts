@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons, ConduitError } from '@conduitplatform/conduit-commons';
-import { DatabaseProvider } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitCommons, ConduitError } from '@conduitplatform/commons';
+import { DatabaseProvider } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import * as bcrypt from 'bcrypt';
 

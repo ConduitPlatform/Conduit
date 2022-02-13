@@ -14,7 +14,7 @@ import {
   ConduitRoute,
   ConduitRouteActions,
   TYPE,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';

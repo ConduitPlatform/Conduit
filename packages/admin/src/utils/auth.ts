@@ -1,6 +1,5 @@
 import * as jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
-import { ConduitCommons } from '@conduitplatform/conduit-commons';
 
 export function signToken(data: any, secret: string, expiresIn?: number) {
   return jwt.sign(data, secret, { expiresIn: expiresIn ?? '6 hours' });

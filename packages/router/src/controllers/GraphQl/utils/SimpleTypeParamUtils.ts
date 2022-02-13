@@ -1,4 +1,4 @@
-import { ConduitRouteOptionExtended } from '@conduitplatform/conduit-commons';
+import { ConduitRouteOptionExtended } from '@conduitplatform/commons';
 
 const GQL_PRIMITIVES = ['Number', 'Boolean', 'Date', 'String'];
 

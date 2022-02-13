@@ -1,5 +1,5 @@
-import { ConduitCommons, IConduitSecurity } from '@conduitplatform/conduit-commons';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitCommons, IConduitSecurity } from '@conduitplatform/commons';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';

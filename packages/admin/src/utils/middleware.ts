@@ -1,4 +1,4 @@
-import { ConduitCommons } from '@conduitplatform/conduit-commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 
 export async function isDev(conduit: ConduitCommons) {
   let isDev = false;
