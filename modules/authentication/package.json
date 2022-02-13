@@ -30,7 +30,7 @@
     "bcrypt": "^5.0.1",
     "convict": "^6.2.1",
     "google-auth-library": "^5.10.1",
-    "@grpc/grpc-js": "^1.3.4",
+    "@grpc/grpc-js": "^1.5.2",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",

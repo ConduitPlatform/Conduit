@@ -23,7 +23,7 @@
   "dependencies": {
     "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
     "convict": "^6.0.0",
-    "@grpc/grpc-js": "^1.3.4",
+    "@grpc/grpc-js": "^1.5.2",
     "lodash": "^4.17.15",
     "@grpc/proto-loader": "^0.5.4",
     "twilio": "3.54.2"
