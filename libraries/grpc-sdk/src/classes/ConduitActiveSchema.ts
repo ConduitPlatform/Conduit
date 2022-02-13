@@ -48,7 +48,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   }
 
   createMany(query: { [key: string]: any }): Promise<T[]> {
-    return this.dbInstance.findOne<T>(this.name, query);
+    return this.dbInstance.createMany<T>(this.name, query);
   }
 
   findByIdAndUpdate(
