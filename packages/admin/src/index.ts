@@ -90,14 +90,15 @@ export default class AdminModule extends IConduitAdmin {
       if (!call.request.routerUrl) {
         let result = this.conduit
           .getConfigManager()!
-          .getModuleUrlByInstance(call.getPeer());
+          .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
           return callback({
             code: status.INTERNAL,
             message: 'Error when registering routes',
           });
         }
-        call.request.routerUrl = result.url;
+        //(call as any).metadata.get('module-name')
+        call.request.routerUrl = result;
       }
       this.internalRegisterRoute(
         call.request.protoFile,

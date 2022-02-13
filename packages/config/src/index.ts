@@ -37,7 +37,7 @@ export default class ConfigManager implements IConfigManager {
       moduleList: this.moduleList.bind(this),
       watchModules: this.watchModules.bind(this),
       moduleHealthProbe: this.moduleHealthProbe.bind(this),
-      getModuleUrlByInstance: this.getModuleUrlByInstanceGrpc.bind(this),
+      getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this),
     });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
@@ -439,11 +439,11 @@ export default class ConfigManager implements IConfigManager {
     callback(null, { result: true });
   }
 
-  getModuleUrlByInstanceGrpc(call: any, callback: any) {
-    let instance = call.request.instancePeer;
-    let result = this.getModuleUrlByInstance(instance);
+  getModuleUrlByNameGrpc(call: any, callback: any) {
+    let name = call.request.name;
+    let result = this.getModuleUrlByName(name);
     if (result) {
-      callback(null, { moduleUrl: result.url, moduleName: result.moduleName });
+      callback(null, { moduleUrl: result });
     } else {
       callback({
         code: status.NOT_FOUND,
@@ -452,23 +452,25 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getModuleUrlByInstance(
-    instancePeer: string
-  ): { url: string; moduleName: string } | undefined {
-    let found = null;
-    Object.keys(this.moduleHealth).forEach((r) => {
-      Object.keys(this.moduleHealth[r]).forEach((i) => {
-        if (i.indexOf(instancePeer) !== -1) {
-          found = r;
-          return;
-        }
-      });
-    });
-    if (found) {
-      return { url: this.registeredModules.get(found)!, moduleName: found };
-    } else {
-      return undefined;
-    }
+  getModuleUrlByName(
+    name: string
+  ): string | undefined {
+    // let found = null;
+    // Object.keys(this.moduleHealth).forEach((r) => {
+    //   Object.keys(this.moduleHealth[r]).forEach((i) => {
+    //     if (i.indexOf(instancePeer) !== -1) {
+    //       found = r;
+    //       return;
+    //     }
+    //   });
+    // });
+    // if (found) {
+    //   return { url: this.registeredModules.get(found)!, moduleName: found };
+    // } else {
+    //   return undefined;
+    // }
+
+    return this.registeredModules.get(name)
   }
 
   private async _registerModule(

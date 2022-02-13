@@ -6,8 +6,8 @@ import {
   ConduitMiddleware,
   ConduitRoute,
   ConduitSocket,
-  IConduitRouter,
   grpcToConduitRoute,
+  IConduitRouter,
 } from '@conduitplatform/commons';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
@@ -27,7 +27,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     app: Application,
     grpcSdk: ConduitGrpcSdk,
     packageDefinition: any,
-    server: Server
+    server: Server,
   ) {
     this._app = app;
     this._routes = [];
@@ -71,7 +71,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         this.internalRegisterRoute(
           messageParsed.protofile,
           messageParsed.routes,
-          messageParsed.url
+          messageParsed.url,
         );
       } catch (err) {
         console.error(err);
@@ -121,7 +121,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         protofile,
         routes,
         url,
-      })
+      }),
     );
   }
 
@@ -131,26 +131,26 @@ export class ConduitDefaultRouter implements IConduitRouter {
       if (!call.request.routerUrl) {
         let result = ((this._app as any).conduit! as ConduitCommons)
           .getConfigManager()!
-          .getModuleUrlByInstance(call.getPeer());
+          .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
           return callback({
             code: status.INTERNAL,
             message: 'Error when registering routes',
           });
         }
-        call.request.routerUrl = result.url;
+        call.request.routerUrl = result;
       }
 
       this.internalRegisterRoute(
         call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
-        moduleName
+        moduleName,
       );
       this.updateState(
         call.request.protoFile,
         call.request.routes,
-        call.request.routerUrl
+        call.request.routerUrl,
       );
     } catch (err) {
       console.error(err);
@@ -174,13 +174,13 @@ export class ConduitDefaultRouter implements IConduitRouter {
         routes: routes,
         routerUrl: url,
       },
-      moduleName
+      moduleName,
     );
 
     processedRoutes.forEach((r) => {
       if (r instanceof ConduitMiddleware) {
         console.log(
-          'New middleware registered: ' + r.input.path + ' handler url: ' + url
+          'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
@@ -193,7 +193,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
           ' ' +
           r.input.path +
           ' handler url: ' +
-          url
+          url,
         );
         this._registerRoute(r);
       }
@@ -228,7 +228,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       routes.push(
         ...routesArray.map((route: any) => {
           return { action: route.options.action, path: route.options.path };
-        })
+        }),
       );
     });
 
@@ -248,7 +248,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   registerGlobalMiddleware(
     name: string,
     middleware: any,
-    socketMiddleware: boolean = false
+    socketMiddleware: boolean = false,
   ) {
     this._globalMiddlewares.push(name);
     this._internalRouter.registerMiddleware(middleware, socketMiddleware);
@@ -270,7 +270,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   registerExpressRouter(
     name: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void),
   ) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
@@ -278,7 +278,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
 
   registerDirectRouter(
     name: string,
-    router: (req: Request, res: Response, next: NextFunction) => void
+    router: (req: Request, res: Response, next: NextFunction) => void,
   ) {
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);

@@ -19,12 +19,12 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  getModuleUrlByInstance(
-    instancePeer: string,
-  ): Promise<{ url: string; moduleName: string }> {
-    return this.client!.getModuleUrlByInstance({ instancePeer })
+  getModuleUrlByName(
+    name: string,
+  ): Promise<{ url: string }> {
+    return this.client!.getModuleUrlByName({ name: name })
       .then(res => {
-        return { url: res.moduleUrl, moduleName: res.moduleName };
+        return { url: res.moduleUrl };
       });
   }
 
