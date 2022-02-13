@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "prebuild": "npm run install:protoc",
+    "prebuild": "npm run protoc",
     "build": "rimraf dist && tsc",
     "protoc": "sh build.sh"
   },

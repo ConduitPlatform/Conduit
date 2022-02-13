@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConfigDefinition, RegisterModuleRequest } from '../../protoUtils/core';
-import { ClientError, Status } from 'nice-grpc';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private emitter = new EventEmitter();
@@ -105,17 +104,13 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     const self = this;
     this.client!.moduleHealthProbe(request)
       .then(res => {
-        if (!res) {
-          if (self.coreLive) {
-            console.log('Core unhealthy');
-            self.coreLive = false;
-          }
-        } else {
-          if (!self.coreLive) {
-            console.log('Core is live');
-            self.coreLive = true;
-            self.watchModules();
-          }
+        if (!res && self.coreLive) {
+          console.log('Core unhealthy');
+          self.coreLive = false;
+        } else if (res && !self.coreLive) {
+          console.log('Core is live');
+          self.coreLive = true;
+          self.watchModules();
         }
       })
       .catch(e => {
@@ -136,25 +131,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       for await (let data of call) {
         self.emitter.emit('module-registered', data.modules);
       }
-    }catch (error){
-      if (error instanceof ClientError && error.code === Status.NOT_FOUND) {
-        // response = null;
-      } else {
-        // throw error;
-      }
-      // An error has occurred and the stream has been closed.
-      // call.cancel();
-      //clear event listeners once connection has been closed
-      // call.removeAllListeners();
+    } catch (error) {
       console.error('Connection to grpc server closed');
     }
-    // call.on('end', function() {
-    //   // The server has finished sending
-    //   console.log('Stream ended');
-    // });
-    // call.on('status', function(status: any) {
-    //   console.error('Connection status changed to : ', status);
-    // });
 
     return self.emitter;
   }
