@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   RouteOptionType,
   ConduitString,
   TYPE,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';

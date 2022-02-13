@@ -1,7 +1,7 @@
 import {
   ConduitActiveSchema,
   DatabaseProvider,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;

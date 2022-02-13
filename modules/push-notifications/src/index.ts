@@ -1,5 +1,5 @@
 import PushNotifications from './PushNotifications';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 if (!process.env.CONDUIT_SERVER) {
   throw new Error('Conduit server URL not provided');
