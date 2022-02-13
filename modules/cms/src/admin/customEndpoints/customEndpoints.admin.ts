@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { inputValidation, queryValidation, assignmentValidation } from './utils';
 import { isNil, isPlainObject } from 'lodash';

@@ -4,7 +4,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import ChatConfigSchema from './config';
 import { status } from '@grpc/grpc-js';
 import path from 'path';

@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) {
   const uniqueUsers = Array.from(new Set(users));
