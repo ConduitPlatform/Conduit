@@ -5,11 +5,11 @@ import {
   Config,
   DatabaseProvider,
   Email,
+  Forms,
   PushNotifications,
   Router,
   SMS,
   Storage,
-  Forms,
 } from './modules';
 import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
@@ -49,7 +49,8 @@ export default class ConduitGrpcSdk {
     this._config = new Config(this.name, this.serverUrl);
     this._admin = new Admin(this.name, this.serverUrl);
     this._router = new Router(this.name, this.serverUrl);
-    this.initializeModules().then(() => {});
+    this.initializeModules().then(() => {
+    });
     this.watchModules();
   }
 
@@ -165,24 +166,27 @@ export default class ConduitGrpcSdk {
   }
 
   watchModules() {
-    this.config.watchModules().on('module-registered', (modules: any) => {
-      Object.keys(this._modules).forEach((r) => {
-        let found = modules.filter((m: any) => m.moduleName === r);
-        if ((!found || found.length === 0) && this._availableModules[r]) {
-          this._modules[r]?.closeConnection();
-        }
+    this.config.watchModules()
+      .then(emitter => {
+        emitter.on('module-registered', (modules: any) => {
+          Object.keys(this._modules).forEach((r) => {
+            let found = modules.filter((m: any) => m.moduleName === r);
+            if ((!found || found.length === 0) && this._availableModules[r]) {
+              this._modules[r]?.closeConnection();
+            }
+          });
+          modules.forEach((m: any) => {
+            if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+              this._modules[m.moduleName] = new this._availableModules[m.moduleName](
+                this.name,
+                m.url,
+              );
+            } else if (this._availableModules[m.moduleName]) {
+              this._modules[m.moduleName]?.initializeClient();
+            }
+          });
+        });
       });
-      modules.forEach((m: any) => {
-        if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](
-            this.name,
-            m.url
-          );
-        } else if (this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName]?.initializeClient();
-        }
-      });
-    });
   }
 
   initializeEventBus(): Promise<any> {
@@ -213,7 +217,7 @@ export default class ConduitGrpcSdk {
           if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
             this._modules[m.moduleName] = new this._availableModules[m.moduleName](
               this.name,
-              m.url
+              m.url,
             );
           }
         });

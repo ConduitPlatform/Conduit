@@ -1,9 +1,9 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { CMSClient } from '../../protoUtils/cms';
+import { CMSDefinition } from '../../protoUtils/cms';
 
-export class CMS extends ConduitModule<CMSClient> {
+export class CMS extends ConduitModule<typeof CMSDefinition> {
   constructor(moduleName: string, url: string) {
     super(moduleName, url);
-    this.initializeClient(CMSClient);
+    this.initializeClient(CMSDefinition);
   }
 }
