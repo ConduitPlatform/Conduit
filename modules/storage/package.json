@@ -13,7 +13,7 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepare": "npm run build",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-storage:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/storage:latest"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +28,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "^1.0.1",
     "convict": "^6.0.0",
     "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
@@ -43,6 +43,6 @@
     "@types/uuid": "^7.0.2",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "typescript": "^3.8.3"
+    "typescript": "~4.2.0"
   }
 }

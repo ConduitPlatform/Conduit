@@ -1,5 +1,5 @@
 {
-  "name": "@conduitplatform/conduit-config",
+  "name": "@conduitplatform/config",
   "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,8 +15,8 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
-    "@conduitplatform/conduit-commons": "^1.0.0",
-    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/commons": "^1.0.0",
+    "@conduitplatform/grpc-sdk": "^1.0.1",
     "@types/request-promise": "^4.1.48",
     "axios": "0.20.0",
     "convict": "^5.2.0",
@@ -35,6 +35,6 @@
     "@types/lodash": "^4.14.149",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "typescript": "^3.7.5"
+    "typescript": "~4.2.0"
   }
 }

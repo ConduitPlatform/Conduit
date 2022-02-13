@@ -1,5 +1,5 @@
 {
-  "name": "@conduitplatform/conduit-commons",
+  "name": "@conduitplatform/commons",
   "version": "1.0.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,6 +40,6 @@
     "@types/validator": "^13.0.0",
     "express": "~4.16.1",
     "rimraf": "^3.0.2",
-    "typescript": "^3.7.5"
+    "typescript": "~4.2.0"
   }
 }

@@ -11,7 +11,7 @@
     "prepare": "npm run build",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-forms:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-forms:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/forms:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/forms:latest"
   },
   "license": "ISC",
   "directories": {
@@ -24,7 +24,7 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "^1.0.1",
     "@grpc/proto-loader": "^0.5.4",
     "axios": "0.21.4",
     "escape-string-regexp": "^4.0.0",
@@ -37,6 +37,6 @@
     "@types/lodash": "^4.14.149",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "typescript": "^3.8.3"
+    "typescript": "~4.2.0"
   }
 }
