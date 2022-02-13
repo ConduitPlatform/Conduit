@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "ssh://git@github.com/Quintessential-SFT/conduit.git",
+    "url": "ssh://git@github.com/ConduitPlatform/conduit.git",
     "directory": "libraries/grpc-sdk"
   },
   "devDependencies": {
