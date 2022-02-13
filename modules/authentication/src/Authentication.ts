@@ -9,7 +9,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { AuthenticationRoutes } from './routes/routes';
 import { ConfigController } from './config/Config.controller';
