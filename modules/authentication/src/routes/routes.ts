@@ -244,7 +244,7 @@ export class AuthenticationRoutes {
 
     config = ConfigController.getInstance().config;
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingController, new FacebookSettings(this.grpcSdk, config, serverConfig.serverUrl));
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingController, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
     authActive = await this.facebookHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
