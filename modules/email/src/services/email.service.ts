@@ -85,7 +85,7 @@ export class EmailService {
       if (templateFound && templateFound.externalManaged) {
         builder.setTemplate({
           id: templateFound._id,
-          variables: variables as any,
+          variables: variables as { [key: string]: any },
         });
       } else {
         const handled_body = handlebars.compile(templateFound!.body);

@@ -1,64 +1,57 @@
----
-name: Database
-route: /database
-menu: Modules
----
+# Database
 
-# Database module
+This module is capable of working with both SQL and NoSQL databases, through Sequelize and Mongoose respectively.<br />
+These ORMs were chosen due to their similar functions and architectures, allowing for the creation of a very consistent API.
 
-This module allows for basic functionality on both SQL DBs
-through Sequelize and MongoDB through Mongoose.
+In order to maintain a compatibility layer between the two ORMS, certain operations may not be supported.<br />
+New features are being added on-demand and when they can be adapted to both systems.
 
-Mongoose and Sequelize are used for their similar functions and architectures,
-which allow us to have a very consistent API. There isn't support for all operations
-that are available in the 2 ORMs, in order to have a compatibility layer. New features
-are being added on-demand and when it can be adapted to both systems.
+The query language used is BSON, since it is easy to serialize into string and deserialize back into
+query objects that can be easily manipulated in JS.<br />
+This means that the database module will almost always have better support for Mongo operations than SQL ones, 
+since the latter need to go through parsers that are otherwise unnecessary for Mongo.
 
-The query language of the module is BSON, since it is easy to serialize into string and deserialize into
-query objects that can be easily manipulated in JS. This means that the database module will almost always have
-better support for mongo operations than SQL, since SQL operations need to go through parsers that are otherwise
-unnecessary for mongo.
+# Supported Operators
 
-# Supported operations:
-- Equality - either by simple field check (ex: {name:"John"}) or by operator (ex: {name:{$eq:"John"}})
-- Inequality - (ex: {name:{$neq:"John"}})
-- In
-- Not In
-- Contains
-- Greater Than
-- Greater Than Equal
-- Less Than
-- Less Than Equal
-- AND
-- OR
+|  Operator  | Description                                                                                                              |
+| :--------: | :----------------------------------------------------------------------------------------------------------------------- |
+| `in`       | Matches any of the values specified in an array                                                                          |
+| `contains` | Checks if a value is contained in an array or not.                                                                       |
+| `nin`      | Selects the documents where the value of a field is not equal any value in the specified array.                          |
+| `eq`       | Matches documents where the value of a field equals the specified value.                                                 |
+| `ne`       | Selects the documents where the value of the field is not equal to the specified value                                   |
+| `lt`       | Selects the documents where the value of the field is less than (i.e. <) the specified value.                            |
+| `gt`       | Selects the documents where the value of the field is greater than (i.e. >) the specified value.                         |
+| `lte`      | Selects the documents where the value of the field is less or equal than (i.e. <=) the specified value.                  |
+| `gte`      | Selects the documents where the value of the field is greater or equal than (i.e. >=) the specified value.               |
+| `or`       | Performs OR operation on an array of two or more expressions and selects the documents that satisfy at least one         |
+| `and`      | Performs AND operation on an array of two or more expressions and selects the documents that satisfy at least one        |
+| `not`      | Performs NOT operation on an array of two or more expressions and selects the documents that do not match the expression |
+| `regex`    | Select the documents where the value of the field matches the regex.                                                     |
 
-These operators have been tested thoroughly in varying levels of complexity
+These operators have been tested thoroughly in varying levels of complexity.
 
-# Populations & relations
-Relations have been implemented with MongoDB in mind(for now). This means that they do not really exist inside the databases.
-Every relation is logical, and relation data is retrieved using mongoose's population functionality. The same reasoning has been
-carried over to sequelize, but is not as efficient(this is a todo item to create a sequelize-native solution with associations).
+# Populations & Relations
+
+Relations have been implemented with MongoDB in mind.<br />
+This means that they do not really exist inside the databases (for now).<br />
+Every relation is logical, and relation data is retrieved using Mongoose's population functionality.<br />
+The same reasoning has been carried over to Sequelize, but is not currently as efficient.
 
 ## Getting related fields
-Each field that is actually a relation can be filled(or populated), but supplying the relevant array. This creates a
-join operation that gets all the objects.
+
+Each relation field can be filled (or populated) by supplying a relevant array, creating a join operation that gets all the objects.
 
 ## Setting related fields
-While we advise creating each document seperately and setting the relation inside a model after the "child" document
-has been created, the database module supports "create with population" operations, where if you supply an entire object
-instead of an id in the place of the relation field, then the module will automatically create the associated document and
+
+While we advise creating each document seperately and setting the relation inside a model after the "child" document 
+has been created, the database module supports "create with population" operations, where if you supply an entire object 
+instead of an id in the place of the relation field, then the module will automatically create the associated document and 
 add its id in place of the data.
 
+# Sequelize Caveats
 
-## Sequelize Caveats
-Currently the sequelize implementation has the following limitations:
+Currently the Sequelize implementation has the following limitations:
 - No index creation
-- Update queries always update only the provided fields without the option to replace entire rows unless all columns are provided.
-This behaviour is supported only for not changing
+- Update queries only update provided fields without the option to replace entire rows, unless all columns are provided.
 - Like operations do not work
-
-#NOTE
-Mongoose and sequelize where selected due to their similar nature, so that we can maintain
-a compatibility layer fairly easily. This provider would probably be best to be exported as
-a library down the road. The purpose of the library is to provide a compatibility between MongoDB
-and sequelize.

@@ -1,5 +1,4 @@
 [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
-![.github/workflows/development.yml](https://github.com/Quintessential-SFT/conduit/workflows/.github/workflows/development.yml/badge.svg?branch=master)
 
 # Conduit Platform
 
@@ -7,9 +6,10 @@ Conduit is a NodeJS-based Backend as a Server, that aims to cut down development
 by providing ready-made modules that offer common functionality out of the box, and allowing
 maximum flexibility to add custom functionality.
 
-## Features
-- Transports: REST, GraphQL, WebSockets(via Socket.io) and grpc
-- Database Support for MongoDB and PostgreSQL(alpha)
+# Features ✔️
+
+- Transports: REST, GraphQL, WebSockets (via Socket.io) and gRPC
+- Database support for MongoDB and PostgreSQL (alpha)
 - In-memory database through Redis
 - All functionalities and routes available both as REST and GraphQL endpoints
 - CMS module to create and edit schemas from the admin panel and also 
@@ -17,46 +17,71 @@ maximum flexibility to add custom functionality.
 - Swagger docs and GraphQL explorer with full route documentation
 - Authentication system with JWT and 2FA, supporting ServiceAccounts/API keys as well as
 local(username/password or email/password), oAuth(Facebook, Google, Twitch)
-- Basic security built-in with Client Id/secret for all requests, rate limiting and helmet.
+- Basic security built-in with Client Id/secret for all requests, rate limiting and Helmet.
 - Emails with template support
 - SMS for 2FA or plain SMS send
 - Storage using either GCS or Azure Blob Storage (S3 coming soon)
-- Chat(alpha)
-- Forms for basic form submission and forwarding to email
+- Chat
+- Forms for basic form submission and email forwarding
 - Conduit SDK can be used to add new modules or custom services
 - so much more
 
-### Requirements
+# Requirements ⚡
 
 - NodeJS > 14
 - MongoDB or PostgreSQL
 - Desire to create something awesome
 
-### Running
+# Running 🔨
 
-- yarn
-- npx lerna run build
-- cd ./packages/core && yarn start
-- cd ./modules/database && yarn start
-- repeat for every module you need to bring online (Don't forget your env variables)
+```sh
+yarn
+npx lerna run build
+REDIS_HOST=localhost REDIS_PORT=6379 yarn --cwd ./packages/core start
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:55165 yarn --cwd ./modules/database start
+```
 
-### Environment Variables:
-Core: REDIS_HOST, REDIS_PORT
-Database: databaseURL, databaseType(sql or leave empty for mongo) + general module variables
-General Module:
-SERVICE_URL=0.0.0.0:55190; (used only in versions older than  0.11, otherwise the same as SERVICE_IP) 
-REGISTER_NAME=false; (set to true if running in k8s)
-CONDUIT_SERVER=0.0.0.0:55152; (the core module's IP and port)
-SERVICE_IP=0.0.0.0:55190 (always 0.0.0.0 and a port numer)
+Then repeat the last step for every additional module you need to bring online.
 
+```sh
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
+```
 
-## Info
+# Environment Variables 📃 <a name="env-vars"></a>
 
-- Core HTTP Server runs at: http://localhost:3000
-- Core Grpc Server runs at: localhost:55152
-- Core Socket Server runs at: localhost:3001
+## Core:
 
-## Roadmap
-* Payments module to facilitate payments with Stripe, BrainTree etc
-* Custom workflows with "Actor"
-* Performance improvements all around
+|  Variable        |  Description   | Required |  Example        |
+| :--------------: | :------------- | :------: | :-------------: |
+| `REDIS_HOST`     | Redis address  |   True   | `localhost`     |
+| `REDIS_PORT`     | Redis port     |   True   | `6379`          |
+
+## Database
+
+|  Variable        |  Description   | Required |  Example        |  Default                    |
+| :--------------: | :------------- | :------: | :-------------: | :-------------------------: |
+| `databaseURL`    | database URL   |  False   | `localhost`     | `mongodb://localhost:27017` |
+| `databaseType`   | db engine type |  False   | `sql`           | `mongodb`                   |
+
+Generic module env variables are also supported, with required ones being obligatory.
+
+## General Module
+
+|  Variable        |  Description                                  | Required |  Example        |
+| :--------------: | :-------------------------------------------- | :------: | :-------------: |
+| `CONDUIT_SERVER` | Conduit Core's address and port               |   True   | `0.0.0.0:55152` |
+| `SERVICE_IP`     | Always 0.0.0.0 and a port numer               |   True   | `0.0.0.0:55190` |
+| `SERVICE_URL`    | **Deprecated** in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
+| `REGISTER_NAME`  | Set to `true` if running in Kubernetes        |   False  | `true`          |
+
+# Information ℹ️
+
+- Core HTTP Server runs at: `http://localhost:3000`
+- Core Grpc Server runs at: `localhost:55152`
+- Core Socket Server runs at: `localhost:3001`
+
+# Roadmap 🏁
+
+- Payments module to facilitate payments with Stripe, BrainTree etc
+- Custom workflows with "Actor"
+- Optimization

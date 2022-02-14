@@ -5,6 +5,6 @@ import { ConduitRouteActions } from '.';
 export interface ConduitMiddlewareOptions {
   action?: ConduitRouteActions;
   path?: string;
-  name?: string;
+  name: string;
   description?: string;
 }

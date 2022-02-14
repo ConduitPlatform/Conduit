@@ -9,14 +9,17 @@ import ConduitGrpcSdk, {
   GrpcError,
   ConduitJson,
 } from '@conduitplatform/conduit-grpc-sdk';
-import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 
 export class AdminHandlers {
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>
   ) {
     this.registerAdminRoutes();
   }
@@ -46,7 +49,8 @@ export class AdminHandlers {
             limit: ConduitNumber.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemas', _DeclaredSchema.getInstance().fields),
+        new ConduitRouteReturnDefinition('GetDeclaredSchemas', this._activeAdapter.models!['_DeclaredSchema'].originalSchema.fields),
+
         'getDeclaredSchemas',
       ),
       constructConduitRoute(
@@ -70,8 +74,9 @@ export class AdminHandlers {
   async getDeclaredSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: any = {};
-    const declaredSchemasDocumentsPromise = _DeclaredSchema.getInstance()
+    const query = '{}'
+    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
+    const declaredSchemasDocumentsPromise = schemaAdapter.model
       .findMany(
         query,
         undefined,
@@ -79,7 +84,7 @@ export class AdminHandlers {
         limit,
         undefined,
       );
-    const totalCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
+    const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
     const [declaredSchemasDocuments, totalCount] = await Promise.all([
       declaredSchemasDocumentsPromise,
@@ -94,16 +99,17 @@ export class AdminHandlers {
   async getDeclaredSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: any = {};
-    const declaredSchemasExtensionsPromise = _DeclaredSchema.getInstance()
+    const query = '{}';
+    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
+    const declaredSchemasExtensionsPromise = schemaAdapter.model
       .findMany(
         query,
-        'name extensions',
         skip,
         limit,
+        'name extensions',
         undefined,
       );
-    const totalCountPromise = _DeclaredSchema.getInstance().countDocuments(query);
+    const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
     const [declaredSchemasExtensions, totalCount] = await Promise.all([
       declaredSchemasExtensionsPromise,

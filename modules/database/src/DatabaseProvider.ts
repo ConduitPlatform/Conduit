@@ -1,15 +1,13 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, {
-  ConduitSchema,
-  ConduitServiceModule,
-  GrpcServer,
-} from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
   CreateSchemaRequest,
+  DropCollectionRequest,
+  DropCollectionResponse,
   FindOneRequest,
   FindRequest,
   GetSchemaRequest,
@@ -20,11 +18,9 @@ import {
   SchemasResponse,
   UpdateManyRequest,
   UpdateRequest,
-  DropCollectionResponse,
-  DropCollectionRequest,
 } from './types';
-import * as models from './models';
-import { canCreate, canModify, canDelete } from './permissions';
+import * as models from './models/DeclaredSchema.schema';
+import { canCreate, canDelete, canModify } from './permissions';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -80,12 +76,17 @@ export class DatabaseProvider extends ConduitServiceModule {
         countDocuments: this.countDocuments.bind(this),
       }
     );
+    await this._activeAdapter.createSchemaFromAdapter(models.default);
+    await migrateModelOptions(this._activeAdapter);
+    await this._activeAdapter.recoverSchemasFromDatabase();
+    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter);
     await this.grpcServer.start();
   }
 
   async activate() {
     const self = this;
     await this.grpcSdk.initializeEventBus();
+
     self.grpcSdk.bus?.subscribe('database', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
@@ -114,12 +115,6 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
-    await this._activeAdapter.createSchemaFromAdapter(
-      models._DeclaredSchema.getInstance(this.grpcSdk.databaseProvider!)
-    );
-    await migrateModelOptions();
-    await this._activeAdapter.recoverSchemasFromDatabase();
-    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
   }
 
   /**

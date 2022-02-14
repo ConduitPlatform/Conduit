@@ -31,10 +31,14 @@ export class SchemaAdmin {
   }
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const requestedSchema = await _DeclaredSchema.getInstance().findOne({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+    const query: {[p: string]: any} = {
       _id: call.request.params.id,
-    });
+      name: { $nin: CMS_SYSTEM_SCHEMAS }
+    };
+    if (!isNil(call.request.params.owner)) {
+      query.ownerModule = call.request.params.owner;
+    }
+    const requestedSchema = await _DeclaredSchema.getInstance().findOne(query);
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -45,14 +49,22 @@ export class SchemaAdmin {
     const { search, sort, enabled } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: any = { ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS } },
-      identifier;
+    let query: {[p: string]: any} = { name: { $nin: CMS_SYSTEM_SCHEMAS } };
+    if (!isNil(call.request.params.owner)) {
+      query.ownerModule = call.request.params.owner;
+    }
+    let identifier;
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
     if (!isNil(enabled)) {
-      query['modelOptions.conduit.cms.enabled'] = enabled;
+      const enabledQuery = { $or: [{ ownerModule: { $ne: 'cms' } }, { 'modelOptions.conduit.cms.enabled': true }] };
+      const disabledQuery = { 'modelOptions.conduit.cms.enabled': false };
+      query = { $and: [
+        query,
+        enabled ? enabledQuery : disabledQuery
+      ]};
     }
 
     const schemasPromise = _DeclaredSchema.getInstance().findMany(
@@ -72,30 +84,6 @@ export class SchemaAdmin {
     });
 
     return { schemas, count };
-  }
-
-  async getSchemasFromOtherModules(
-    call: ParsedRouterRequest
-  ): Promise<UnparsedRouterResponse> {
-    const allSchemas = await this.database.getSchemas().catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-
-    const schemasFromCMS = await _DeclaredSchema.getInstance().findMany({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS }
-    });
-    const schemaNamesFromCMS = (schemasFromCMS as _DeclaredSchema[]).map(
-      (schema: _DeclaredSchema) => schema.name
-    );
-    const schemasFromOtherModules = allSchemas.filter((schema: any) => {
-      return !schemaNamesFromCMS.includes(schema.name);
-    });
-
-    return {
-      externalSchemas: schemasFromOtherModules.map((schema: any) => {
-        return { name: schema.name, fields: schema.modelSchema };
-      }),
-    };
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -454,7 +442,8 @@ export class SchemaAdmin {
 
   private patchSchemaPerms(
     schema: _DeclaredSchema,
-    perms: ConduitModelOptions['permissions'],
+    // @ts-ignore
+    perms: ConduitModelOptions['conduit']['permissions'],
   ) {
     if (perms!.canModify && !(ConduitModelOptionsPermModifyType.includes(perms!.canModify))) {
       throw new GrpcError(

@@ -29,7 +29,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-};
+} as const;
 const collectionName = undefined;
 
 export class ChatRoom extends ConduitActiveSchema<ChatRoom> {

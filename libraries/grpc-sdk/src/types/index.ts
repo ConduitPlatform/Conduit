@@ -6,7 +6,7 @@ export type GrpcResponse<T> = (
     code: number;
     message: string;
   } | null,
-  res?: T
+  res?: T,
 ) => void;
 
 export class GrpcError extends Error {
@@ -42,9 +42,7 @@ type Response = { result: string; redirect: string };
 type ResponseWithResult = { result: string };
 type ResponseWithRedirect = { redirect: string };
 
-export type RouterResponse = GrpcResponse<
-  Response | ResponseWithResult | ResponseWithRedirect
->;
+export type RouterResponse = GrpcResponse<Response | ResponseWithResult | ResponseWithRedirect>;
 
 export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
 export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
@@ -55,6 +53,21 @@ export type SocketRequest = GrpcRequest<{
   params: string;
   context: string;
 }>;
+export type ParsedSocketRequest = GrpcRequest<{
+  event: string;
+  socketId: string;
+  params: { [key: string]: any };
+  context: { [key: string]: any };
+}>;
+export type UnparsedSocketResponse =
+  | {
+  event: string;
+  data: string;
+  receivers?: string[];
+}
+  | {
+  rooms: string[];
+}
 
 type EventResponse = {
   event: string;

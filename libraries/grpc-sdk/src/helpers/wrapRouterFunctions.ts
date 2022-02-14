@@ -1,9 +1,11 @@
-import {
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-} from '../types';
+import { ParsedRouterRequest, ParsedSocketRequest, UnparsedRouterResponse, UnparsedSocketResponse } from '../types';
 
 import { status } from '@grpc/grpc-js';
+import { Status } from '@grpc/grpc-js/build/src/constants';
+
+export type RouterRequestHandler = (call: ParsedRouterRequest) => Promise<UnparsedRouterResponse>;
+export type SocketRequestHandler = (call: ParsedSocketRequest) => Promise<UnparsedSocketResponse>;
+export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
 
 export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
   return {
@@ -16,36 +18,42 @@ export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
   };
 }
 
+function generateLog(routerRequest: boolean, requestReceive: number, call: any, status?: Status) {
+  console.log(
+    routerRequest ? 'Request: ' : 'Socket: ' +
+    routerRequest ? call.request.path : call.request.event +
+      (routerRequest ? 'socket: ' + call.request.socket : '') +
+      ' ' +
+      status ?? '200' +
+      ' ' +
+      (Date.now() - requestReceive),
+  );
+}
+
+function parseRequestData(data: any) {
+  if (typeof data === 'string' && data.length !== 0) {
+    return JSON.parse(data);
+  } else if (typeof data === 'string') {
+    return {};
+  }
+}
+
 export function wrapRouterGrpcFunction(
-  fun: (call: ParsedRouterRequest) => Promise<UnparsedRouterResponse>
+  fun: RequestHandlers,
 ): (call: any, callback: any) => void {
   return (call: any, callback: any) => {
     let requestReceive = Date.now();
+    let routerRequest = true;
     try {
-      if (typeof call.request.context === 'string' && call.request.context.length !== 0) {
-        call.request.context = JSON.parse(call.request.context);
-      } else if (typeof call.request.context === 'string') {
-        call.request.context = {};
-      }
-      if (typeof call.request.params === 'string' && call.request.params.length !== 0) {
-        call.request.params = JSON.parse(call.request.params);
-      } else if (typeof call.request.params === 'string') {
-        call.request.params = {};
-      }
-      if (typeof call.request.headers === 'string' && call.request.headers.length !== 0) {
-        call.request.headers = JSON.parse(call.request.headers);
-      } else if (typeof call.request.headers === 'string') {
-        call.request.headers = {};
+      call.request.context = parseRequestData(call.request.context);
+      call.request.params = parseRequestData(call.request.params);
+
+      routerRequest = !call.request.hasOwnProperty('event');
+      if (routerRequest) {
+        call.request.headers = parseRequestData(call.request.headers);
       }
     } catch (e) {
-      console.log(
-        'Request: ' +
-          call.request.path +
-          ' ' +
-          status.INTERNAL +
-          ' ' +
-          (Date.now() - requestReceive)
-      );
+      generateLog(routerRequest, requestReceive, call, status.INTERNAL);
       console.log(e.message ?? 'Something went wrong');
       return callback({
         code: status.INTERNAL,
@@ -56,26 +64,27 @@ export function wrapRouterGrpcFunction(
     fun(call)
       .then((r) => {
         if (!r) return;
-        if (typeof r === 'string') {
-          callback(null, { result: r });
-        } else {
-          if (r.result) {
-            callback(null, { result: JSON.stringify(r.result) });
-          } else if (r.redirect) {
-            callback(null, { redirect: r.redirect, result: r.result ?? undefined });
+        if (routerRequest) {
+          if (typeof r === 'string') {
+            callback(null, { result: r });
           } else {
-            callback(null, { result: JSON.stringify(r) });
+            if (r.result || r.redirect) {
+              callback(null, {
+                redirect: r.redirect ?? undefined,
+                result: r.result ? JSON.stringify(r.result) : undefined,
+              });
+            } else {
+              callback(null, { result: JSON.stringify(r) });
+            }
           }
+        } else {
+          if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);
+          callback(null, r);
         }
-        console.log(
-          'Request: ' + call.request.path + ' 200 ' + (Date.now() - requestReceive)
-        );
+        generateLog(routerRequest, requestReceive, call, undefined);
       })
       .catch((error) => {
-        console.log(
-          'Request: ' + call.request.path + ' ' + error.code ??
-            status.INTERNAL + ' ' + (Date.now() - requestReceive)
-        );
+        generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
         console.log(error.message ?? 'Something went wrong');
         callback({
           code: error.code ?? status.INTERNAL,
