@@ -11,11 +11,10 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { FigmaUser } from './figma.user';
 import { FigmaSettings } from './figma.settings';
-import { SlackUser } from '../slack/slack.user';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk,  private readonly routingManager: RoutingManager, settings: FigmaSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FigmaSettings) {
     super(grpcSdk, 'figma', settings);
   }
 
@@ -36,10 +35,10 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with figma failed');
     }
 
-    let payload: SlackUser = {
+    let payload: FigmaUser = {
       id: figmaResponse.data.id,
       email: figmaResponse.data.email,
-      data: {},
+      data: { ...figmaResponse.data },
     };
     return payload;
   }

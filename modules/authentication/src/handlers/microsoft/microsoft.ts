@@ -27,7 +27,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     const payload: MicrosoftUser = {
       id: microsoftResponse.data.id,
       email: microsoftResponse.data.mail,
-      data: {},
+      data: { ...microsoftResponse.data },
     };
     return payload;
   }

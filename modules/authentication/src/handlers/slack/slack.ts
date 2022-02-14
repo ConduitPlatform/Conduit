@@ -38,7 +38,7 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
     let payload: SlackUser = {
       id: slackResponse.data.profile.avatar_hash,
       email: slackResponse.data.profile.email,
-      data: {},
+      data: { ...slackResponse.data.profile },
     };
     return payload;
   }

@@ -17,7 +17,7 @@ export class GithubSettings implements OAuth2Settings {
     this.providerName = 'github';
     this.clientId = config.github.clientId;
     this.clientSecret = config.github.clientSecret;
-    this.callbackUrl = serverUrl + 'hook/authentication/github';
+    this.callbackUrl = serverUrl + '/hook/authentication/github';
     this.responseType = 'code';
     this.accessTokenMethod = 'POST';
     this.finalRedirect = config.github.redirect_uri;

@@ -35,7 +35,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
     const payload: TwitchUser = {
       id: id,
       email: email,
-      data: {},
+      data: { ...response2.data.data[0] },
     };
 
     return payload;

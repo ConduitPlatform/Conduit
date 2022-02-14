@@ -11,7 +11,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 
 export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk,  private readonly routingManager: RoutingManager, settings: GithubSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GithubSettings) {
     super(grpcSdk, 'github', settings);
   }
 
@@ -22,10 +22,10 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
         Authorization: `token ${github_access_token}`,
       },
     });
-    const githubPayload = {
+    const githubPayload: GithubUser = {
       id: githubProfile.data.id,
       email: githubProfile.data.email,
-      data: {},
+      data: { ...githubProfile.data },
     };
     return githubPayload as any;
   }
