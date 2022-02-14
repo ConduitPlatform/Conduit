@@ -253,8 +253,6 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    config = ConfigController.getInstance().config;
-    serverConfig = await this.grpcSdk.config.getServerConfig();
     this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingController, new GoogleSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
@@ -264,6 +262,7 @@ export class AuthenticationRoutes {
       this.googleHandlers.declareRoutes();
       enabled = true;
     }
+
     this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingController, new GithubSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
@@ -273,9 +272,6 @@ export class AuthenticationRoutes {
       this.githubHandlers.declareRoutes();
       enabled = true;
     }
-
-    config = ConfigController.getInstance().config;
-    serverConfig = await this.grpcSdk.config.getServerConfig();
 
     this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingController, new SlackSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
@@ -287,8 +283,6 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    config = ConfigController.getInstance().config;
-    serverConfig = await this.grpcSdk.config.getServerConfig();
     this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingController, new FigmaSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.figmaHandlers
@@ -299,8 +293,6 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    config = ConfigController.getInstance().config;
-    serverConfig = await this.grpcSdk.config.getServerConfig();
     this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingController, new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.microsoftHandlers
@@ -336,9 +328,6 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
-
-    config = ConfigController.getInstance().config;
-    serverConfig = await this.grpcSdk.config.getServerConfig();
     this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingController, new TwitchSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.twitchHandlers
@@ -348,7 +337,6 @@ export class AuthenticationRoutes {
       this.twitchHandlers.declareRoutes();
       enabled = true;
     }
-
     if (enabled) {
       this._routingController.route(
         {
