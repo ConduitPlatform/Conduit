@@ -2,7 +2,7 @@ import { Payload } from '../../handlers/AuthenticationProviders/interfaces/Paylo
 
 export interface FigmaUser extends Payload {
   data: {
-    hande: string;
-    image_url: string;
+    handle?: string;
+    image_url?: string;
   }
 }
