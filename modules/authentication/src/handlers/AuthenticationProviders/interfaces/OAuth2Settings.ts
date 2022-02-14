@@ -12,4 +12,5 @@ export interface OAuth2Settings {
   state?: string;
   scope?: string;
   response_type?: string;
+  scopeSeperator?: string;
 }

@@ -7,8 +7,8 @@ import ConduitGrpcSdk, {
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
+  RoutingManager,
   UnparsedRouterResponse,
-  RoutingManager
 } from '@conduitplatform/conduit-grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
 import { GoogleHandlers } from '../handlers/google/google';
@@ -52,6 +52,8 @@ export class AuthenticationRoutes {
   }
 
   async registerRoutes() {
+    let config = null;
+    let serverConfig = null;
     this._routingController.clear();
     let enabled = false;
 
@@ -239,6 +241,23 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     errorMessage = null;
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const facebookSettings: FacebookSettings = {
+      providerName: 'facebook',
+      authorizeUrl: 'https://www.facebook.com/v11.0/dialog/oauth?',
+      clientId: config.facebook.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/facebook',
+      response_type: 'code',
+      tokenUrl: 'https://graph.facebook.com/v12.0/oauth/access_token',
+      clientSecret: config.facebook.clientSecret,
+      accessTokenMethod: 'GET',
+      finalRedirect: config.facebook.redirect_uri,
+      accountLinking: config.facebook.accountLinking,
+      scopeSeperator: ',',
+    };
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, facebookSettings);
     authActive = await this.facebookHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -260,9 +279,54 @@ export class AuthenticationRoutes {
         this.facebookHandlers.authenticate.bind(this.facebookHandlers),
       );
 
+      this._routingController.route(
+        {
+          path: '/init/facebook',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Facebook authentication`,
+        },
+        new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
+        this.facebookHandlers.redirect.bind(this.facebookHandlers),
+      );
+
+      this._routingController.route(
+        {
+          path: '/hook/facebook',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Facebook using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Optional],
+          },
+        },
+        new ConduitRouteReturnDefinition('FacebookResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.facebookHandlers.authorize.bind(this.facebookHandlers),
+      );
       enabled = true;
     }
 
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const googleSettings: GoogleSettings = {
+      providerName: 'google',
+      authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?',
+      include_granted_scopes: true,
+      clientId: config.google.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/google',
+      response_type: 'code',
+      clientSecret: config.google.clientSecret,
+      tokenUrl: 'https://oauth2.googleapis.com/token',
+      grant_type: 'authorization_code',
+      finalRedirect: config.google.redirect_uri,
+      accountLinking: config.google.accountLinking,
+      accessTokenMethod: 'POST',
+    };
+
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, googleSettings);
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -287,6 +351,240 @@ export class AuthenticationRoutes {
         this.googleHandlers.authenticate.bind(this.googleHandlers),
       );
 
+      this._routingController.route(
+        {
+          path: '/init/google',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Google authentication`,
+        },
+        new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
+        this.googleHandlers.redirect.bind(this.googleHandlers),
+      );
+
+      this._routingController.route(
+        {
+          path: '/hook/google',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Google using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition('GoogleResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.googleHandlers.authorize.bind(this.googleHandlers),
+      );
+
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const githubSettings: GithubSettings = {
+      providerName: 'github',
+      authorizeUrl: 'https://github.com/login/oauth/authorize?',
+      clientId: config.github.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/github',
+      response_type: 'code',
+      tokenUrl: 'https://github.com/login/oauth/access_token',
+      clientSecret: config.github.clientSecret,
+      accessTokenMethod: 'POST',
+      finalRedirect: config.github.redirect_uri,
+      accountLinking: config.github.accountLinking,
+    };
+
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, githubSettings);
+    errorMessage = null;
+    authActive = await this.googleHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this._routingController.route(
+        {
+          path: '/init/github',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Github authentication`,
+        },
+        new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
+        this.githubHandlers.redirect.bind(this.githubHandlers),
+      );
+
+      this._routingController.route(
+        {
+          path: '/hook/github',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Github using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition('GithubResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.githubHandlers.authorize.bind(this.githubHandlers),
+      );
+
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const slackSettings: SlackSettings = {
+      providerName: 'slack',
+      authorizeUrl: 'https://slack.com/oauth/authorize?',
+      clientId: config.slack.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/slack',
+      response_type: 'code',
+      tokenUrl: 'https://slack.com/api/oauth.access',
+      clientSecret: config.slack.clientSecret,
+      accessTokenMethod: 'POST',
+      finalRedirect: config.slack.redirect_uri,
+      accountLinking: config.slack.accountLinking,
+    };
+
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, slackSettings);
+    errorMessage = null;
+    authActive = await this.slackHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this._routingController.route(
+        {
+          path: '/init/slack',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Slack authentication`,
+        },
+        new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
+        this.slackHandlers.redirect.bind(this.slackHandlers),
+      );
+
+      this._routingController.route(
+        {
+          path: '/hook/slack',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Slack using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition('SlackResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.slackHandlers.authorize.bind(this.slackHandlers),
+      );
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const figmaSettings: FigmaSettings = {
+      providerName: 'figma',
+      authorizeUrl: 'https://www.figma.com/oauth?',
+      clientId: config.figma.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/figma',
+      response_type: 'code',
+      tokenUrl: 'https://www.figma.com/api/oauth/token',
+      clientSecret: config.figma.clientSecret,
+      accessTokenMethod: 'POST',
+      finalRedirect: config.figma.redirect_uri,
+      accountLinking: config.figma.accountLinking,
+      grant_type: 'authorization_code',
+    };
+
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, figmaSettings);
+    errorMessage = null;
+    authActive = await this.figmaHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this._routingController.route(
+        {
+          path: '/init/figma',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Figma authentication`,
+        },
+        new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
+        this.figmaHandlers.redirect.bind(this.figmaHandlers),
+      );
+      this._routingController.route(
+        {
+          path: '/hook/figma',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Figma using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition('FigmaResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.figmaHandlers.authorize.bind(this.figmaHandlers),
+      );
+      enabled = true;
+    }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    const microsoftSettings: MicrosoftSettings = {
+      providerName: 'microsoft',
+      authorizeUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?',
+      clientId: config.microsoft.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/microsoft',
+      response_type: 'code',
+      tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      clientSecret: config.microsoft.clientSecret,
+      accessTokenMethod: 'POST',
+      finalRedirect: config.microsoft.redirect_uri,
+      accountLinking: config.microsoft.accountLinking,
+      grant_type: 'authorization_code',
+      response_mode: 'form_post',
+    };
+
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, microsoftSettings);
+    errorMessage = null;
+    authActive = await this.microsoftHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this._routingController.route(
+        {
+          path: '/init/microsoft',
+          action: ConduitRouteActions.GET,
+          description: `Begins the Microsoft authentication`,
+        },
+        new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
+        this.microsoftHandlers.redirect.bind(this.microsoftHandlers),
+      );
+      this._routingController.route(
+        {
+          path: '/hook/microsoft',
+          action: ConduitRouteActions.GET,
+          description: `Login/register with Microsoft using redirection mechanism.`,
+          urlParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition('MicrosoftResponse', {
+          userId: ConduitString.Required,
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.microsoftHandlers.authorize.bind(this.microsoftHandlers),
+      );
       enabled = true;
     }
 
@@ -315,11 +613,31 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+
+    const twitchSettings: TwitchSettings = {
+      providerName: 'twitch',
+      authorizeUrl: 'https://id.twitch.tv/oauth2/authorize?',
+      clientId: config.twitch.clientId,
+      callbackUrl: serverConfig.url + '/hook/authentication/twitch',
+      response_type: 'code',
+      grant_type: 'authorization_code',
+      clientSecret: config.twitch.clientSecret,
+      tokenUrl: 'https://id.twitch.tv/oauth2/token',
+      accessTokenMethod: 'POST',
+      finalRedirect: config.twitch.redirect_uri,
+      accountLinking: config.twitch.accountLinking,
+    };
+
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, twitchSettings);
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
+
       this._routingController.route(
         {
           path: '/hook/twitch',
@@ -327,7 +645,7 @@ export class AuthenticationRoutes {
           description: `Login/register with Twitch using redirection mechanism.`,
           urlParams: {
             code: ConduitString.Required,
-            state: ConduitString.Required,
+            state: [ConduitString.Required],
           },
         },
         new ConduitRouteReturnDefinition('TwitchResponse', {
@@ -335,8 +653,9 @@ export class AuthenticationRoutes {
           accessToken: ConduitString.Required,
           refreshToken: ConduitString.Required,
         }),
-        this.twitchHandlers.authenticate.bind(this.twitchHandlers),
+        this.twitchHandlers.authorize.bind(this.twitchHandlers),
       );
+
       this._routingController.route(
         {
           path: '/init/twitch',
@@ -344,8 +663,9 @@ export class AuthenticationRoutes {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
-        this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
+        this.twitchHandlers.redirect.bind(this.twitchHandlers),
       );
+
       enabled = true;
     }
 

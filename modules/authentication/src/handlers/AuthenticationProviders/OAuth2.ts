@@ -56,7 +56,8 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     };
 
     let baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + '::' + options.scope;
+    options['state'] = call.request.context.clientId + ',' + options.scope;
+
     let url = Object.keys(options).map((k: any) => {
       return k + '=' + options[k];
     }).join('&');
@@ -79,10 +80,10 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let providerOptions = await this.makeRequest(myparams);
     const providerResponse: any = await axios(providerOptions).catch((e: any) => console.log(e));
     let access_token = providerResponse.data.access_token;
-    let state = params.state.split('::');
+    let state = params.state;
     state = {
       clientId: state[0],
-      scopes: state[1],
+      scopes: state.slice(1,state.length),
     };
     let clientId = state.clientId;
     let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
