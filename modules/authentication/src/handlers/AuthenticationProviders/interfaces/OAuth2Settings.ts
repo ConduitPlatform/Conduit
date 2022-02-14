@@ -8,9 +8,9 @@ export interface OAuth2Settings {
   clientId: string;
   clientSecret: string;
   accessTokenMethod: string;
-  grant_type?: string;
+  grantType?: string;
   state?: string;
   scope?: string;
-  response_type?: string;
+  responseType?: string;
   scopeSeperator?: string;
 }

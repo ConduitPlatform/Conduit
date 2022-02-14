@@ -1,5 +1,11 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  GrpcError,
+  RoutingManager,
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
@@ -9,7 +15,7 @@ import { SlackUser } from '../slack/slack.user';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: FigmaSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk,  private readonly routingManager: RoutingManager, settings: FigmaSettings) {
     super(grpcSdk, 'figma', settings);
   }
 
@@ -48,5 +54,34 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       },
       data: null,
     };
+  }
+
+  declareRoutes() {
+    this.routingManager.route(
+      {
+        path: '/init/figma',
+        action: ConduitRouteActions.GET,
+        description: `Begins the Figma authentication`,
+      },
+      new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
+      this.redirect.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/hook/figma',
+        action: ConduitRouteActions.GET,
+        description: `Login/register with Figma using redirection mechanism.`,
+        urlParams: {
+          code: ConduitString.Required,
+          state: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('FigmaResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required,
+      }),
+      this.authorize.bind(this),
+    );
   }
 }

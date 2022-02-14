@@ -1,4 +1,9 @@
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  RoutingManager,
+} from '@conduitplatform/conduit-grpc-sdk';
 import axios from 'axios';
 import { TwitchUser } from './twitch.user';
 import { TwitchSettings } from './twitch.settings';
@@ -6,7 +11,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: TwitchSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: TwitchSettings) {
     super(grpcSdk, 'twitch', settings);
   }
 
@@ -46,5 +51,36 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
       },
       data: null,
     };
+  }
+
+  declareRoutes() {
+    this.routingManager.route(
+      {
+        path: '/hook/twitch',
+        action: ConduitRouteActions.GET,
+        description: `Login/register with Twitch using redirection mechanism.`,
+        urlParams: {
+          code: ConduitString.Required,
+          state: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('TwitchResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required,
+      }),
+      this.authorize.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/init/twitch',
+        description: `Begins the Twitch authentication.`,
+        action: ConduitRouteActions.GET,
+      },
+      new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
+      this.redirect.bind(this),
+    );
+
   }
 }

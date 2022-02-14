@@ -51,7 +51,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let options: any = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
-      response_type: this.settings.response_type,
+      response_type: this.settings.responseType,
       scope: call.request.params?.scopes,
     };
 
@@ -66,18 +66,18 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
-    const myparams: any = {
+    const myParams: any = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
       redirect_uri: 'http://localhost:3000/hook/authentication/' + this.settings.providerName,
     };
 
-    if ((this.settings).hasOwnProperty('grant_type')) {
-      myparams['grant_type'] = this.settings.grant_type;
+    if ((this.settings).hasOwnProperty('grantType')) {
+      myParams['grant_type'] = this.settings.grantType;
     }
 
-    let providerOptions = await this.makeRequest(myparams);
+    let providerOptions = await this.makeRequest(myParams);
     const providerResponse: any = await axios(providerOptions).catch((e: any) => console.log(e));
     let access_token = providerResponse.data.access_token;
     let state = params.state;
@@ -167,7 +167,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       refreshToken: (refreshToken as any).token,
     };
   }
-
+  abstract declareRoutes(): void;
   abstract async makeRequest(data: any): Promise<AxiosRequestConfig>;
   abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 }

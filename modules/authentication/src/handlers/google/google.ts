@@ -1,4 +1,10 @@
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  GrpcError,
+  RoutingManager,
+} from '@conduitplatform/conduit-grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { GoogleSettings } from './google.settings';
@@ -6,8 +12,7 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GoogleSettings) {
     super(grpcSdk, 'google', settings);
   }
 
@@ -41,7 +46,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   }
 
   async makeRequest(data: any) {
-    return  {
+    return {
       method: this.settings.accessTokenMethod as any,
       url: this.settings.tokenUrl,
       params: { ...data },
@@ -50,5 +55,54 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       },
       data: null,
     };
+  }
+
+  declareRoutes() {
+    this.routingManager.route(
+      {
+        path: '/google',
+        action: ConduitRouteActions.POST,
+        description: `Login/register with Google by providing a token from the client.`,
+        bodyParams: {
+          id_token: ConduitString.Required,
+          access_token: ConduitString.Required,
+          expires_in: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GoogleResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required,
+      }),
+      this.authenticate.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/init/google',
+        action: ConduitRouteActions.GET,
+        description: `Begins the Google authentication`,
+      },
+      new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
+      this.redirect.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/hook/google',
+        action: ConduitRouteActions.GET,
+        description: `Login/register with Google using redirection mechanism.`,
+        urlParams: {
+          code: ConduitString.Required,
+          state: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('GoogleResponse', {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+        refreshToken: ConduitString.Required,
+      }),
+      this.authorize.bind(this),
+    );
   }
 }
