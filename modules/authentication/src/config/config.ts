@@ -47,6 +47,16 @@ export default {
       default: '',
       nullable: true,
     },
+    clientSecret: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
     accountLinking: {
       doc:
         'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',
@@ -64,9 +74,118 @@ export default {
       format: 'String',
       default: '',
     },
+    clientSecret: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
     accountLinking: {
       doc:
-        'When enabled, if a new facebook user matches with an existing email on the database, they will be enriched with facebook details',
+        'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
+      format: 'Boolean',
+      default: true,
+    },
+  },
+  github: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    clientId: {
+      doc: 'Github client id',
+      format: 'String',
+      default: '',
+    },
+    clientSecret: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+      optional: true,
+    },
+    accountLinking: {
+      doc:
+        'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
+      format: 'Boolean',
+      default: true,
+    },
+  },
+  slack: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    clientId: {
+      format: 'String',
+      default: '',
+    },
+    clientSecret: {
+      format: 'String',
+      default: '',
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+    },
+    accountLinking: {
+      doc:
+        'When enabled, if a new slack user matches with an existing email on the database, they will be enriched with slack details',
+      format: 'Boolean',
+      default: true,
+    },
+  },
+  figma: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    clientId: {
+      format: 'String',
+      default: '',
+    },
+    clientSecret: {
+      format: 'String',
+      default: '',
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+    },
+    accountLinking: {
+      doc:
+        'When enabled, if a new figma user matches with an existing email on the database, they will be enriched with figma details',
+      format: 'Boolean',
+      default: true,
+    },
+  },
+  microsoft: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    clientId: {
+      format: 'String',
+      default: '',
+    },
+    clientSecret: {
+      format: 'String',
+      default: '',
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+    },
+    accountLinking: {
+      doc:
+        'When enabled, if a new microsoft user matches with an existing email on the database, they will be enriched with microsoft details',
       format: 'Boolean',
       default: true,
     },
@@ -87,6 +206,12 @@ export default {
     redirect_uri: {
       format: 'String',
       default: '',
+    },
+    accountLinking: {
+      doc:
+          'When enabled, if a new twitch user matches with an existing email on the database, they will be enriched with twitch details',
+      format: 'Boolean',
+      default: true,
     },
   },
   service: {

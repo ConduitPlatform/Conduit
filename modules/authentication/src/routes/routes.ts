@@ -7,38 +7,53 @@ import ConduitGrpcSdk, {
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
+  RoutingManager,
   UnparsedRouterResponse,
-  RoutingManager
 } from '@conduitplatform/conduit-grpc-sdk';
-import { FacebookHandlers } from '../handlers/facebook';
-import { GoogleHandlers } from '../handlers/google';
+import { FacebookHandlers } from '../handlers/facebook/facebook';
+import { GoogleHandlers } from '../handlers/google/google';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
-import { TwitchHandlers } from '../handlers/twitch';
+import { TwitchHandlers } from '../handlers/twitch/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
+import { ConfigController } from '../config/Config.controller';
+import { GoogleSettings } from '../handlers/google/google.settings';
+import { FacebookSettings } from '../handlers/facebook/facebook.settings';
+import { TwitchSettings } from '../handlers/twitch/twitch.settings';
+import { GithubHandlers } from '../handlers/github/github';
+import { GithubSettings } from '../handlers/github/github.settings';
+import { SlackSettings } from '../handlers/slack/slack.settings';
+import { SlackHandlers } from '../handlers/slack/slack';
+import { FigmaHandlers } from '../handlers/figma/figma';
+import { FigmaSettings } from '../handlers/figma/figma.settings';
+import { MicrosoftHandlers } from '../handlers/microsoft/microsoft';
+import { MicrosoftSettings } from '../handlers/microsoft/microsoft.settings';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
-  private readonly facebookHandlers: FacebookHandlers;
-  private readonly googleHandlers: GoogleHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
-  private readonly twitchHandlers: TwitchHandlers;
+  private facebookHandlers: FacebookHandlers;
+  private googleHandlers: GoogleHandlers;
+  private twitchHandlers: TwitchHandlers;
+  private githubHandlers: GithubHandlers;
+  private slackHandlers: SlackHandlers;
+  private figmaHandlers: FigmaHandlers;
+  private microsoftHandlers: MicrosoftHandlers;
   private _routingController: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingController = new RoutingManager(this.grpcSdk.router, server);
     this.localHandlers = new LocalHandlers(grpcSdk);
-    this.facebookHandlers = new FacebookHandlers(grpcSdk);
-    this.googleHandlers = new GoogleHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
-    this.twitchHandlers = new TwitchHandlers(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
   }
 
   async registerRoutes() {
+    let config = null;
+    let serverConfig = null;
     this._routingController.clear();
     let enabled = false;
 
@@ -226,54 +241,65 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     errorMessage = null;
+
+    config = ConfigController.getInstance().config;
+    serverConfig = await this.grpcSdk.config.getServerConfig();
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingController, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
     authActive = await this.facebookHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      this._routingController.route(
-        {
-          path: '/facebook',
-          action: ConduitRouteActions.POST,
-          description: `Login/register with Facebook by providing a token from the client.`,
-          bodyParams: {
-            access_token: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('FacebookResponse', {
-          userId: ConduitString.Required,
-          accessToken: ConduitString.Required,
-          refreshToken: ConduitString.Required,
-        }),
-        this.facebookHandlers.authenticate.bind(this.facebookHandlers),
-      );
-
+      this.facebookHandlers.declareRoutes();
       enabled = true;
     }
 
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingController, new GoogleSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      this._routingController.route(
-        {
-          path: '/google',
-          action: ConduitRouteActions.POST,
-          description: `Login/register with Google by providing a token from the client.`,
-          bodyParams: {
-            id_token: ConduitString.Required,
-            access_token: ConduitString.Required,
-            expires_in: ConduitString.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('GoogleResponse', {
-          userId: ConduitString.Required,
-          accessToken: ConduitString.Required,
-          refreshToken: ConduitString.Required,
-        }),
-        this.googleHandlers.authenticate.bind(this.googleHandlers),
-      );
+      this.googleHandlers.declareRoutes();
+      enabled = true;
+    }
 
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingController, new GithubSettings(this.grpcSdk, config, serverConfig.url));
+    errorMessage = null;
+    authActive = await this.googleHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this.githubHandlers.declareRoutes();
+      enabled = true;
+    }
+
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingController, new SlackSettings(this.grpcSdk, config, serverConfig.url));
+    errorMessage = null;
+    authActive = await this.slackHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this.slackHandlers.declareRoutes();
+      enabled = true;
+    }
+
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingController, new FigmaSettings(this.grpcSdk, config, serverConfig.url));
+    errorMessage = null;
+    authActive = await this.figmaHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this.figmaHandlers.declareRoutes();
+      enabled = true;
+    }
+
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingController, new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
+    errorMessage = null;
+    authActive = await this.microsoftHandlers
+      .validate()
+      .catch((e: any) => (errorMessage = e));
+    if (!errorMessage && authActive) {
+      this.microsoftHandlers.declareRoutes();
       enabled = true;
     }
 
@@ -302,40 +328,15 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingController, new TwitchSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      this._routingController.route(
-        {
-          path: '/hook/twitch',
-          action: ConduitRouteActions.GET,
-          description: `Login/register with Twitch using redirection mechanism.`,
-          urlParams: {
-            code: ConduitString.Required,
-            state: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('TwitchResponse', {
-          userId: ConduitString.Required,
-          accessToken: ConduitString.Required,
-          refreshToken: ConduitString.Required,
-        }),
-        this.twitchHandlers.authenticate.bind(this.twitchHandlers),
-      );
-      this._routingController.route(
-        {
-          path: '/init/twitch',
-          description: `Begins the Twitch authentication.`,
-          action: ConduitRouteActions.GET,
-        },
-        new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
-        this.twitchHandlers.beginAuth.bind(this.twitchHandlers),
-      );
+      this.twitchHandlers.declareRoutes();
       enabled = true;
     }
-
     if (enabled) {
       this._routingController.route(
         {

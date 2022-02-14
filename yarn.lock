@@ -6443,7 +6443,7 @@ globby@^9.2.0:
     pify "^4.0.1"
     slash "^2.0.0"
 
-google-auth-library@^5.0.0, google-auth-library@^5.10.1, google-auth-library@^5.5.0:
+google-auth-library@^5.0.0, google-auth-library@^5.5.0:
   version "5.10.1"
   resolved "https://registry.yarnpkg.com/google-auth-library/-/google-auth-library-5.10.1.tgz#504ec75487ad140e68dd577c21affa363c87ddff"
   integrity sha512-rOlaok5vlpV9rSiUu5EpR0vVpc+PhN62oF4RyX/6++DG1VsaulAFEMlDYBLjJDDPI6OcNOCGAKy9UVB/3NIDXg==

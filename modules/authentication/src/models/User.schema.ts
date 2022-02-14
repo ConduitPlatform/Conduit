@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/conduit-grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -15,7 +11,51 @@ const schema = {
     type: TYPE.String,
     select: false,
   },
+  github: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
   google: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
+  microsoft: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
+  figma: {
+    id: {
+      type: TYPE.String,
+    },
+    token: {
+      type: TYPE.String,
+    },
+    tokenExpires: {
+      type: TYPE.Date,
+    },
+  },
+  slack: {
     id: {
       type: TYPE.String,
     },
