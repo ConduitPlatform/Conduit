@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   RoutingManager,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { GithubUser } from './github.user';
 import { GithubSettings } from './github.settings';
