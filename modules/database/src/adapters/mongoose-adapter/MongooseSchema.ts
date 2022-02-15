@@ -1,7 +1,7 @@
 import { Model, Mongoose, Schema } from 'mongoose';
 import { SchemaAdapter } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
 const EJSON = require('mongodb-extended-json');
 

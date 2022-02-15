@@ -12,7 +12,7 @@ service Config {
     rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
     rpc GetServerConfig (Empty) returns (GetConfigResponse);
     rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
-    rpc GetModuleUrlByInstance (ModuleByInstanceRequest) returns (ModuleByInstanceResponse);
+    rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
 }
 
 service Admin {
@@ -102,13 +102,12 @@ message ModuleHealthRequest {
     string url = 2;
 }
 
-message ModuleByInstanceRequest {
-    string instancePeer = 1;
+message ModuleByNameRequest {
+    string name = 1;
 }
 
-message ModuleByInstanceResponse {
+message ModuleByNameResponse {
     string moduleUrl = 1;
-    string moduleName = 2;
 }
 
 message RegisterModuleRequest {

@@ -1,5 +1,5 @@
 import { Application } from 'express';
-import { ConduitCommons } from '@conduitplatform/conduit-commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 
 export interface ConduitApp extends Application {
   conduit: ConduitCommons;

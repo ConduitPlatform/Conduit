@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
@@ -25,7 +25,7 @@ export class CustomEndpointHandler {
     const params = call.request.params;
     let searchQuery: any = {};
     let createString = '';
-    
+
     if (endpoint.operation !== OperationsEnum.POST) {
       try {
         searchQuery = constructQuery(

@@ -1,50 +1,26 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageClient } from '../../protoUtils/storage';
-import { ServiceError } from '@grpc/grpc-js';
+import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageDefinition } from '../../protoUtils/storage';
 
-export class Storage extends ConduitModule<StorageClient> {
+export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(moduleName: string, url: string) {
     super(moduleName, url);
-    this.initializeClient(StorageClient);
+    this.initializeClient(StorageDefinition);
   }
 
   setConfig(newConfig: any): Promise<SetConfigResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.setConfig(
-        { newConfig: JSON.stringify(newConfig) },
-        (err: ServiceError | null, res) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve(JSON.parse(res.updatedConfig));
-          }
-        }
-      );
-    });
+    return this.client!.setConfig(
+      { newConfig: JSON.stringify(newConfig) })
+      .then(res => {
+        return JSON.parse(res.updatedConfig);
+      });
   }
 
   getFile(id: string): Promise<FileResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.getFile({ id }, (err: ServiceError | null, res) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
-        }
-      });
-    });
+    return this.client!.getFile({ id });
   }
 
   getFileData(id: string): Promise<GetFileDataResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.getFileData({ id }, (err: ServiceError | null, res) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
-        }
-      });
-    });
+    return this.client!.getFileData({ id });
   }
 
   createFile(
@@ -52,19 +28,8 @@ export class Storage extends ConduitModule<StorageClient> {
     mimeType: string,
     data: string,
     folder: string,
-    isPublic: boolean = false
+    isPublic: boolean = false,
   ): Promise<FileResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.createFile(
-        { name, mimeType, data, folder, isPublic },
-        (err: ServiceError | null, res) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve({ id: res.id, name: res.name, url: res.url });
-          }
-        }
-      );
-    });
+    return this.client!.createFile({ name, mimeType, data, folder, isPublic });
   }
 }

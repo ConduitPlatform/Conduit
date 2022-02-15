@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '../config/Config.controller';
 import { Service } from '../models';
 import { status } from '@grpc/grpc-js';

@@ -1,4 +1,4 @@
-import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/conduit-commons';
+import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 

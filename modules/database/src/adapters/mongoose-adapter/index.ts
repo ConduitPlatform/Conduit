@@ -1,7 +1,7 @@
 import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { status} from '@grpc/grpc-js';
@@ -33,7 +33,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async ensureConnected(): Promise<any> {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let db = this.mongoose.connection;
       db.on('connected', () => {
         console.log('MongoDB: Database is connected');

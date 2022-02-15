@@ -1,20 +1,21 @@
 import {
   ConduitCommons,
+  ConduitError,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteReturnDefinition,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   RouteOptionType,
   TYPE,
-  ConduitError,
-} from '@conduitplatform/conduit-commons';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/commons';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
+import * as models from '../../models';
 
 export function getUpdateConfigRoute(
   grpcSdk: ConduitGrpcSdk,
   conduit: ConduitCommons,
-  registeredModules: Map<string, string>
+  registeredModules: Map<string, string>,
 ) {
   return new ConduitRoute(
     {
@@ -31,7 +32,7 @@ export function getUpdateConfigRoute(
       config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
-      const dbConfig = await grpcSdk.databaseProvider?.findOne('Config', {});
+      const dbConfig = await models.Config.getInstance().findOne({});
       if (isNil(dbConfig)) {
         throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
       }
@@ -93,6 +94,6 @@ export function getUpdateConfigRoute(
       }
 
       return { result: { config: updatedConfig } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

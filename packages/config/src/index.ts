@@ -1,8 +1,8 @@
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
-import { ConduitCommons, IConfigManager } from '@conduitplatform/conduit-commons';
+import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
@@ -20,7 +20,7 @@ export default class ConfigManager implements IConfigManager {
     private readonly sdk: ConduitCommons,
     server: Server,
     packageDefinition: any,
-    databaseCallback: any
+    databaseCallback: any,
   ) {
     const protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
@@ -37,7 +37,7 @@ export default class ConfigManager implements IConfigManager {
       moduleList: this.moduleList.bind(this),
       watchModules: this.watchModules.bind(this),
       moduleHealthProbe: this.moduleHealthProbe.bind(this),
-      getModuleUrlByInstance: this.getModuleUrlByInstanceGrpc.bind(this),
+      getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this),
     });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
@@ -97,7 +97,7 @@ export default class ConfigManager implements IConfigManager {
             self._registerModule(
               messageParsed.name,
               messageParsed.url,
-              messageParsed.instance
+              messageParsed.instance,
             );
           } else if (messageParsed.type === 'module-health') {
             self.updateModuleHealth(messageParsed.name, messageParsed.instance);
@@ -151,7 +151,7 @@ export default class ConfigManager implements IConfigManager {
         name,
         url,
         instance,
-      })
+      }),
     );
   }
 
@@ -241,8 +241,8 @@ export default class ConfigManager implements IConfigManager {
           }
           let modName = 'moduleConfigs.' + call.request.moduleName;
           return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
-              $set: { [modName]: newConfig },
-            })
+            $set: { [modName]: newConfig },
+          })
             .then((updatedConfig: any) => {
               delete updatedConfig._id;
               delete updatedConfig.createdAt;
@@ -250,7 +250,7 @@ export default class ConfigManager implements IConfigManager {
               delete updatedConfig.__v;
               return callback(null, {
                 result: JSON.stringify(
-                  updatedConfig['moduleConfigs'][call.request.moduleName]
+                  updatedConfig['moduleConfigs'][call.request.moduleName],
                 ),
               });
             });
@@ -324,8 +324,8 @@ export default class ConfigManager implements IConfigManager {
       }
       let modName = 'moduleConfigs.' + name;
       return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
-          $set: { [modName]: newModulesConfigSchemaFields },
-        })
+        $set: { [modName]: newModulesConfigSchemaFields },
+      })
         .then((updatedConfig: any) => {
           delete updatedConfig._id;
           delete updatedConfig.createdAt;
@@ -358,7 +358,7 @@ export default class ConfigManager implements IConfigManager {
     Object.keys(this.moduleHealth).forEach((r) => {
       let module = this.moduleHealth[r];
       let unhealthyInstances = Object.keys(module).filter(
-        (instance) => module[instance] + 5000 < Date.now()
+        (instance) => module[instance] + 5000 < Date.now(),
       );
       if (unhealthyInstances && unhealthyInstances.length > 0) {
         removedCount += unhealthyInstances.length;
@@ -369,7 +369,7 @@ export default class ConfigManager implements IConfigManager {
     });
     if (removedCount > 0) {
       let unhealthyModules = Object.keys(this.moduleHealth).filter(
-        (module) => Object.keys(module).length === 0
+        (module) => Object.keys(module).length === 0,
       );
       if (unhealthyModules && unhealthyModules.length > 0) {
         unhealthyModules.forEach((r) => {
@@ -427,23 +427,23 @@ export default class ConfigManager implements IConfigManager {
       call.request.moduleName,
       call.request.url,
       call.getPeer(),
-      true
+      true,
     );
     this.updateState(call.request.moduleName, call.request.url, call.getPeer());
     this.publishModuleData(
       'module-registered',
       call.request.moduleName,
       call.getPeer(),
-      call.request.url
+      call.request.url,
     );
     callback(null, { result: true });
   }
 
-  getModuleUrlByInstanceGrpc(call: any, callback: any) {
-    let instance = call.request.instancePeer;
-    let result = this.getModuleUrlByInstance(instance);
+  getModuleUrlByNameGrpc(call: any, callback: any) {
+    let name = call.request.name;
+    let result = this.getModuleUrlByName(name);
     if (result) {
-      callback(null, { moduleUrl: result.url, moduleName: result.moduleName });
+      callback(null, { moduleUrl: result });
     } else {
       callback({
         code: status.NOT_FOUND,
@@ -452,30 +452,17 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getModuleUrlByInstance(
-    instancePeer: string
-  ): { url: string; moduleName: string } | undefined {
-    let found = null;
-    Object.keys(this.moduleHealth).forEach((r) => {
-      Object.keys(this.moduleHealth[r]).forEach((i) => {
-        if (i.indexOf(instancePeer) !== -1) {
-          found = r;
-          return;
-        }
-      });
-    });
-    if (found) {
-      return { url: this.registeredModules.get(found)!, moduleName: found };
-    } else {
-      return undefined;
-    }
+  getModuleUrlByName(
+    name: string,
+  ): string | undefined {
+    return this.registeredModules.get(name);
   }
 
   private async _registerModule(
     moduleName: string,
     moduleUrl: string,
     instancePeer: string,
-    fromGrpc = false
+    fromGrpc = false,
   ) {
     let dbInit = false;
     if (!fromGrpc) {

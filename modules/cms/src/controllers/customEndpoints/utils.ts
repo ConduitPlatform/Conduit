@@ -5,7 +5,7 @@ import {
   ConduitRouteReturnDefinition,
   constructRoute,
   TYPE,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
 import { isNil } from 'lodash';
 

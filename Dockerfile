@@ -15,12 +15,12 @@ RUN apt update && \
 RUN npm install -g node-gyp ts-proto
 
 RUN yarn && \
-    npx lerna run build --scope=@conduitplatform/conduit-grpc-sdk
+    npx lerna run build --scope=@conduitplatform/grpc-sdk
 
 RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
-    elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/conduit-admin \
-    --scope=@conduitplatform/conduit-commons --scope=@conduitplatform/conduit-config \
-    --scope=@conduitplatform/core --scope=@conduitplatform/conduit-router --scope=@conduitplatform/conduit-security ; \
+    elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/admin \
+    --scope=@conduitplatform/commons --scope=@conduitplatform/config \
+    --scope=@conduitplatform/core --scope=@conduitplatform/router --scope=@conduitplatform/security ; \
     else cd /app/$BUILDING_SERVICE && yarn build && cd /app ; fi
 
 RUN npx lerna clean -y && rm -rf node_modules

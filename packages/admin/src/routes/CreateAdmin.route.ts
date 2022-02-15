@@ -6,7 +6,7 @@ import {
   ConduitRouteReturnDefinition,
   ConduitRouteParameters,
   ConduitString,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { hashPassword } from '../utils/auth';

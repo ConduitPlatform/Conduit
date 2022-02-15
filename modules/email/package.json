@@ -11,7 +11,7 @@
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/conduit-email:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/conduit-email:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/email:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/email:latest"
   },
   "directories": {
     "lib": "src"
@@ -24,9 +24,9 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@grpc/grpc-js": "^1.3.4",
+    "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
-    "@conduitplatform/conduit-grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "^1.0.1",
     "escape-string-regexp": "^4.0.0",
     "await-to-js": "^3.0.0",
     "convict": "^6.0.0",
@@ -48,7 +48,7 @@
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
     "smtp-server": "^3.6.0",
-    "typescript": "^3.8.3",
+    "typescript": "~4.2.0",
     "@types/mailgun-js": "^0.22.12",
     "@types/mandrill-api": "^1.0.30",
     "@types/nodemailer-mailgun-transport": "^1.4.1",

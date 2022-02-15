@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
 
 const schema = new ConduitSchema(
   '_DeclaredSchema',

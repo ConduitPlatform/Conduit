@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
 import { CustomEndpoints } from '../../models';
 import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import ChatModule from './Chat';
 
 if (!process.env.CONDUIT_SERVER) {

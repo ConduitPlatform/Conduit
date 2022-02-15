@@ -26,11 +26,11 @@ endif
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:latest $@
-	docker push ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:latest
+	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:latest $@
+	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest
 else
-	docker build --no-cache -t ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker push ghcr.io/conduitplatform/conduit-${IMAGE_NAME}:${IMAGE_TAG}
+	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} $@
+	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
 endif
 
 modules/authentication: conduit-builder

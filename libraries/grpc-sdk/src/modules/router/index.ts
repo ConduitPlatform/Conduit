@@ -1,14 +1,14 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { GrpcServer } from '../../classes';
-import { RouterClient, SocketData } from '../../protoUtils/core';
+import { RouterDefinition, SocketData } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
 import { constructProtoFile } from '../../helpers/RoutingUtilities';
 
 
-export class Router extends ConduitModule<RouterClient> {
+export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(private readonly moduleName: string, url: string) {
     super(moduleName, url);
-    this.initializeClient(RouterClient);
+    this.initializeClient(RouterDefinition);
   }
 
 
@@ -64,26 +64,10 @@ export class Router extends ConduitModule<RouterClient> {
       protoFile: protoFile,
       routerUrl: url,
     };
-    return new Promise((resolve, reject) => {
-      this.client?.registerConduitRoute(request, (err: any, res: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve('OK');
-        }
-      });
-    });
+    return this.client!.registerConduitRoute(request);
   }
 
   socketPush(data: SocketData) {
-    return new Promise((resolve, reject) => {
-      this.client?.socketPush(data, (err: any, res: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve('OK');
-        }
-      });
-    });
+    return this.client!.socketPush(data);
   }
 }

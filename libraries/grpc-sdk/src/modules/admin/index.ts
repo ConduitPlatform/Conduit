@@ -2,7 +2,7 @@ import path from 'path';
 import { ConduitModule } from '../../classes/ConduitModule';
 import fs from 'fs';
 import { GrpcServer } from '../../classes';
-import { AdminClient } from '../../protoUtils/core';
+import { AdminDefinition } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
 
 let protofile_template = `
@@ -26,10 +26,10 @@ message AdminResponse {
 }
 `;
 
-export class Admin extends ConduitModule<AdminClient> {
+export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(private readonly moduleName: string, url: string) {
     super(moduleName, url);
-    this.initializeClient(AdminClient);
+    this.initializeClient(AdminDefinition);
   }
 
   sleep(ms: number) {
@@ -93,14 +93,6 @@ export class Admin extends ConduitModule<AdminClient> {
       adminUrl: serverUrl,
     };
 
-    return new Promise((resolve, reject) => {
-      this.client?.registerAdminRoute(request, (err: any, res: any) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res.modules);
-        }
-      });
-    });
+    return this.client!.registerAdminRoute(request);
   }
 }

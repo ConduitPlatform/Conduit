@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   constructRoute,
   GrpcServer,
   TYPE,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { NotificationToken } from '../models';
 
 export class PushNotificationsRoutes {

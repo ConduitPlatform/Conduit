@@ -1,8 +1,8 @@
 import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
-import { RestController } from '@conduitplatform/conduit-router';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { RestController } from '@conduitplatform/router';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -11,7 +11,7 @@ import {
   IConduitAdmin,
   grpcToConduitRoute,
   ConduitRouteActions,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import { hashPassword } from './utils/auth';
@@ -90,14 +90,15 @@ export default class AdminModule extends IConduitAdmin {
       if (!call.request.routerUrl) {
         let result = this.conduit
           .getConfigManager()!
-          .getModuleUrlByInstance(call.getPeer());
+          .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
           return callback({
             code: status.INTERNAL,
             message: 'Error when registering routes',
           });
         }
-        call.request.routerUrl = result.url;
+        //(call as any).metadata.get('module-name')
+        call.request.routerUrl = result;
       }
       this.internalRegisterRoute(
         call.request.protoFile,

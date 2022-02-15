@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
@@ -19,7 +19,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   abstract getSchemas(): ConduitSchema[];
 
-  abstract async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
+  abstract deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
 
   abstract getSchemaModel(
     schemaName: string

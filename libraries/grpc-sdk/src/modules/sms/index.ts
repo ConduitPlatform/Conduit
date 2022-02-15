@@ -1,67 +1,29 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import {
-  SendSmsResponse,
-  SendVerificationCodeResponse,
-  SetConfigResponse,
-  SmsClient,
-  VerifyResponse,
-} from '../../protoUtils/sms';
-import { ServiceError } from '@grpc/grpc-js';
+import { SendSmsResponse, SendVerificationCodeResponse, SmsDefinition, VerifyResponse } from '../../protoUtils/sms';
 
-export class SMS extends ConduitModule<SmsClient> {
+export class SMS extends ConduitModule<typeof SmsDefinition> {
   constructor(moduleName: string, url: string) {
     super(moduleName, url);
-    this.initializeClient(SmsClient);
+    this.initializeClient(SmsDefinition);
   }
 
-  setConfig(newConfig: any): Promise<SetConfigResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.setConfig(
-        { newConfig: JSON.stringify(newConfig) },
-        (err: ServiceError | null, res) => {
-          if (err || !res) {
-            reject(err || 'Something went wrong');
-          } else {
-            resolve(JSON.parse(res.updatedConfig));
-          }
-        }
-      );
-    });
+  setConfig(newConfig: any): Promise<any> {
+    return this.client!.setConfig(
+      { newConfig: JSON.stringify(newConfig) })
+      .then(res => {
+        return JSON.parse(res.updatedConfig);
+      });
   }
 
   sendSms(to: string, message: string): Promise<SendSmsResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.sendSms({ to, message }, (err: ServiceError | null, res) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
-        }
-      });
-    });
+    return this.client!.sendSms({ to, message });
   }
 
   sendVerificationCode(to: string): Promise<SendVerificationCodeResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.sendVerificationCode({ to }, (err: ServiceError | null, res) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
-        }
-      });
-    });
+    return this.client!.sendVerificationCode({ to });
   }
 
   verify(verificationSid: string, code: string): Promise<VerifyResponse> {
-    return new Promise((resolve, reject) => {
-      this.client?.verify({ verificationSid, code }, (err: ServiceError | null, res) => {
-        if (err || !res) {
-          reject(err || 'Something went wrong');
-        } else {
-          resolve(res);
-        }
-      });
-    });
+    return this.client!.verify({ verificationSid, code });
   }
 }

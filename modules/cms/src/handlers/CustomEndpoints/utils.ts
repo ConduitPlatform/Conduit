@@ -1,4 +1,4 @@
-import { ConduitRouteActions } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
 import { isNil } from 'lodash';
 

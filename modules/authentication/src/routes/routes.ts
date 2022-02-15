@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RoutingManager,
   UnparsedRouterResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
 import { GoogleHandlers } from '../handlers/google/google';
 import { CommonHandlers } from '../handlers/common';

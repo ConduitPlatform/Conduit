@@ -9,7 +9,7 @@ import {
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { isNil } from 'lodash';
 import { ConduitRouter } from '../Router';
 import { SocketPush } from '../../models/SocketPush.model';

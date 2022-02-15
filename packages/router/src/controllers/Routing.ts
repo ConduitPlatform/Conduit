@@ -5,7 +5,7 @@ import {
   ConduitMiddleware,
   ConduitSocket,
   ConduitError,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import { SocketPush } from '../models/SocketPush.model';
