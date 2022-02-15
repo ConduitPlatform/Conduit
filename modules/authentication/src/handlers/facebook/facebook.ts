@@ -18,14 +18,24 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
     super(grpcSdk, 'facebook', settings);
     this.mapScopes = {
       email: 'email',
-      user: 'public_profile',
+      user_birthday: 'birthday',
+      user_gender: 'gender',
+      user_friends: 'friends',
+      public_profile: 'id,name,first_name,last_name,picture',
+      user_location: 'location',
+      user_link: 'link',
+      user_posts: 'posts',
+      user_photos: 'photos',
+      user_videos: 'videos',
+      user_hometown: 'hometown',
+      user_age_range: 'age_range',
+      user_likes: 'likes',
     };
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
 
     let constructedScopes = scopes.map((scope: any) => {
-      console.log(this.mapScopes[scope]);
       return this.mapScopes[scope];
     }).join(',');
 
@@ -35,20 +45,19 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: any }): Promise<FacebookUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const facebookOptions: AxiosRequestConfig = {
+
+    let facebookOptions: AxiosRequestConfig = {
       method: 'GET',
-      url: 'https://graph.facebook.com/v5.0/me',
+      url: 'https://graph.facebook.com/v13.0/me',
       params: {
         access_token: details.accessToken,
-        fields: 'email,id,name',
+        fields: details.scope,
       },
     };
-
     const facebookResponse: any = await axios(facebookOptions).catch((e: any) => console.log(e.message));
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
-
 
     let payload: FacebookUser = {
       id: facebookResponse.data.id,

@@ -12,7 +12,6 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { ConfigController } from '../../config/Config.controller';
-import { ConduitScopes } from '../../constants/ConduitScopes';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
@@ -48,36 +47,16 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     return true;
   }
 
-  checkScopes(scopes: string[]) {
-    if (isNil(scopes)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Scopes parameter is missing',
-      );
-    }
-    let abortedScopes: string[] = [];
-    for (const scope of scopes)
-      if (ConduitScopes.indexOf(scope) === -1) abortedScopes.push(scope);
-
-    if (abortedScopes.length > 1) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `There is no support for ${abortedScopes} scopes`,
-      );
-    }
-  }
-
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let scopes = call.request.params?.scopes;
     let options: any = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: call.request.params?.scopes,
+      scope: scopes,
     };
-    this.checkScopes(options.scope);
-    let scopes = await this.constructScopes(options.scope);
     let baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + ',' + scopes
+    options['state'] = call.request.context.clientId + ',' + scopes;
 
     let url = Object.keys(options).map((k: any) => {
       return k + '=' + options[k];
@@ -104,8 +83,9 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: state.slice(1, state.length),
+      scopes: await this.constructScopes(state.slice(1, state.length)),
     };
+
     let clientId = state.clientId;
     let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
     let user = await this.createOrUpdateUser(payload);
